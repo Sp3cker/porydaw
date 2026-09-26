@@ -232,16 +232,42 @@ extension TrackHeadersPresenter {
         row.titleRect = rects.0
         row.subtitleRect = rects.1
         row.baseColor = primary ? palette.selectionRing : palette.windowBackground
-        if !primary && session.selectedTracks.contains(track) {
-            // 0x40 tint keeps windowText >= 4.5:1 on the composited mix in every theme; secondaryText fails above 0x16-0x27 alpha.
+        let scoped = !primary && session.selectedTracks.contains(track)
+        if scoped {
             row.overlayColor = "#40\(palette.selectionRing.suffix(6))"
+        }
+        if primary {
+            row.titleColor = palette.selectionText
+            row.subtitleColor = palette.selectionText
+        } else if scoped {
             row.titleColor = palette.windowText
             row.subtitleColor = palette.windowText
+        } else {
+            row.titleColor = palette.primaryText
+            row.subtitleColor = palette.secondaryText
         }
-        // Selected rows sit on a selection surface, so every text in the row
-        // uses the selection ink.
-        row.titleColor = primary ? palette.selectionText : palette.primaryText
-        row.subtitleColor = primary ? palette.selectionText : palette.secondaryText
+        if track >= session.document.trackBudget {
+            let backdrop: String
+            let surface: String
+            let cap: Double
+            if primary {
+                backdrop = palette.selectionRing
+                surface = backdrop
+                cap = 0.35
+            } else if scoped {
+                backdrop = palette.selectionRing
+                surface = TrackHeadersGeometry.scopedHeaderSurface(palette: palette)
+                cap = 0.6
+            } else {
+                backdrop = palette.windowBackground
+                surface = backdrop
+                cap = 0.6
+            }
+            row.titleColor = TrackHeadersGeometry.dimmedInk(
+                ink: row.titleColor, backdrop: backdrop, surface: surface, cap: cap)
+            row.subtitleColor = TrackHeadersGeometry.dimmedInk(
+                ink: row.subtitleColor, backdrop: backdrop, surface: surface, cap: cap)
+        }
         row.muteChecked = session.mutedTracks.contains(track)
         row.soloChecked = session.soloedTracks.contains(track)
         let program = program ?? resolvedProgram(
@@ -261,6 +287,42 @@ extension TrackHeadersPresenter {
         row.activityLeftHeight = activityHeight(intensity.left)
         row.activityRightHeight = activityHeight(intensity.right)
         return row
+    }
+}
+
+extension TrackHeadersGeometry {
+    @MainActor
+    static func scopedHeaderSurface(palette: GridPalette) -> String {
+        let tint = PaletteMath.channels(palette.selectionRing)
+        let base = PaletteMath.channels(palette.windowBackground)
+        return PaletteMath.hex(
+            r: (tint.r * 64 + base.r * 191 + 127) / 255,
+            g: (tint.g * 64 + base.g * 191 + 127) / 255,
+            b: (tint.b * 64 + base.b * 191 + 127) / 255)
+    }
+
+    static func dimmedInk(ink: String, backdrop: String, surface: String,
+                          cap: Double) -> String {
+        let from = PaletteMath.channels(ink)
+        let to = PaletteMath.channels(backdrop)
+        let inkLab = PaletteMath.oklab(r: from.r, g: from.g, b: from.b)
+        let backdropLab = PaletteMath.oklab(r: to.r, g: to.g, b: to.b)
+        func mixed(_ factor: Double) -> String {
+            PaletteMath.hex(PaletteMath.mixTowardOklab(inkLab, backdropLab, factor))
+        }
+        let capped = mixed(cap)
+        if PaletteMath.contrastRatio(capped, surface) >= 4.5 { return capped }
+        var lower = 0.0
+        var upper = cap
+        while upper - lower > 0.001 {
+            let midpoint = (lower + upper) / 2
+            if PaletteMath.contrastRatio(mixed(midpoint), surface) >= 4.5 {
+                lower = midpoint
+            } else {
+                upper = midpoint
+            }
+        }
+        return mixed(lower)
     }
 }
 

@@ -5,6 +5,7 @@ Original: src/checks/rollcheck/note_rendering.cpp
 Original SHA-256: 0f8d60d3551145e9a748ee0d0871dd0a0f5bf0e8fc592491f1abf04b8ac6b271
 Swift counterpart: src/checks/rollcheck/note_rendering.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellNoteVisuals.qml
+Additional Swift counterpart: src/checks/themecolor/ThemeColorChecks.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
@@ -13,12 +14,22 @@ Result: PASS — 1/31 ok (30 skipped); runtime swiftcore 16.53s, build 27.27 (co
 Command: deno task verify --filter swiftcore --qt projectSession
 Result: PASS — 3 Qt results (initTestCase, projectSession, cleanupTestCase), 0 failed, 947ms
 (controller-recorded run on the refrozen sources; full output artifact://459). The projectSession
-suite executed note_rendering.swift S001-S022: checkGhostNotes now provisions its own second
-track with an undo teardown instead of skipping on the session fixture, and the artifact lists
-its live ghost rows (roles, fill, frame, selection, modes, cleanup).
+suite executed note_rendering.swift S001-S024 and, from the task-45 refreeze, the velocity-color,
+note-name and velocity-value predicates indexed as S025-S070; build/proof-evidence/
+swiftcore-projectsession.json (written after the last edit of every cited Swift source) records
+each anchor literal. checkGhostNotes provisions its own second track with an undo teardown
+instead of skipping on the session fixture, and the artifact lists its live ghost rows (roles,
+fill, frame, selection, modes, cleanup).
+Command: deno task verify --filter swiftcore-themecolor --verbose
+Result: build/proof-evidence/swiftcore-themecolor.json (written after the last ThemeColorChecks.swift
+edit) records the per-preset noteLabelContrast rows cited as S071-S075; the lane verdict line was
+not recorded in this ledger. This bookkeeping pass ran no lane.
 Command: deno task verify:shell --verbose
 Result: PASS — 11/11 ok (controller-recorded post-change run); the shell note-visuals lane
-executed the framebuffer border/ring/thinning probes cited as S013.
+executed the framebuffer border/ring/thinning probes cited as S013 and, from the task-45 refreeze,
+the three note-face mode raster functions indexed as S076-S083
+(build/proof-evidence/shell-note-visuals.json lists ShellNoteVisuals::test_noteRasterParity,
+test_velocityColorRaster, test_noteNameRaster and test_velocityValueRaster).
 Command: deno task verify:qml-roll --verbose
 Result: PASS — 1/1 ok (controller-recorded post-change run); no note_rendering site depends on it.
 
@@ -382,7 +393,7 @@ Original expression:
 
 A019 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:259
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Mapping/reason: Fixture-seed guard: the paired Swift checks seed their free cell through renderingSeed, whose only seed predicate is the failure branch report.fail (note_rendering.swift:69) that never appears in the pass evidence, so no executing Swift predicate asserts the painting seed's presence. Open setup obligation.
 Source context since previous assertion:
   }
 
@@ -394,55 +405,14 @@ Original expression:
   QVERIFY(seed.has_value());
 
 A020 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:296
-Disposition: GAP
-Mapping/reason: The document clamps note velocities to 1...127 (a velocity-0 note-on is a note-off), so no document note can carry velocity zero. The only Swift predicate for the neutral endpoint is the palette-only echo at S007 (src/checks/rollcheck/note_rendering.swift), which compares the palette fill for velocity 0 with the same palette property it returns; the view-level velocity-zero fill observation has no independent Swift counterpart.
-Source context since previous assertion:
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      auto &roll = check.rollInput();
-      const int track = check.track();
-      const int pianoKeyboardWidth = check.pianoKeyboardWidth();
-      const QByteArray before = doc.smf().write();
-      const int undo = doc.undoStack()->index();
-      const SnappedRows rows{view, roll};
-      const auto plotToBandX = [pianoKeyboardWidth](qreal x) {
-          return qreal(pianoKeyboardWidth) + x;
-      };
-      const DocNote &noteA = seed->noteA;
-      const qreal displayDpr = roll.devicePixelRatio();
-      const qreal noteLeftX = view.camera().displayX(double(noteA.tick), 0, displayDpr);
-      const qreal noteRightX =
-          view.camera().displayX(double(noteA.tick + noteA.duration), 0, displayDpr);
-      const QRectF paintedNoteBox = rows.noteBox(rows.noteRect(noteLeftX, noteRightX, noteA.key));
-      const QColor expectedNoteColor = SongView::noteColor(track, 100);
-      const int selectedTrackBeforeGhostProbe = view.selectionModel().primaryTrack();
-      const int ghostTrack = (selectedTrackBeforeGhostProbe + 1) % doc.engineTrackCount();
-      view.selectTrack(ghostTrack);
-      const QImage ghostNoteRender = check.captureQuickFramebuffer();
-      const qreal ghostDpr = ghostNoteRender.devicePixelRatio();
-      const auto toGhostPixel = [ghostDpr](qreal position) { return qRound(position * ghostDpr); };
-      const int ghostCenterX = toGhostPixel(plotToBandX(paintedNoteBox.center().x()));
-      const int ghostTopPixel = toGhostPixel(paintedNoteBox.top());
-      const int ghostBottomPixel = toGhostPixel(paintedNoteBox.bottom()) - 1;
-      const QRgb ghostTopEdge = ghostNoteRender.pixel(ghostCenterX, ghostTopPixel);
-      const QRgb ghostTopInterior = ghostNoteRender.pixel(ghostCenterX, ghostTopPixel + 2);
-      const QRgb ghostBottomEdge = ghostNoteRender.pixel(ghostCenterX, ghostBottomPixel);
-      const QRgb ghostBottomInterior = ghostNoteRender.pixel(ghostCenterX, ghostBottomPixel - 2);
-      const QPoint noteInteriorSample(toGhostPixel(plotToBandX(paintedNoteBox.center().x())),
-                                      toGhostPixel(paintedNoteBox.center().y()));
-      const QColor zero = SongView::noteColor(track, 0);
-      const QColor maximum = SongView::noteColor(track, 127);
-      const QColor midpoint = SongView::noteColor(track, 64);
-Original expression:
-  QCOMPARE(zero, themes::color(themes::Role::song_view_note_velocity_zero));
+Disposition: MATCHED
+Mapping: S007, S071
+Mapping/reason: S007 publishes the neutral palette fill for velocity zero through the color API (note_rendering.swift:221-222); S071 pins that same fill to each preset's disabledText role (ThemeColorChecks.swift:638, one row per preset).
 
 A021 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:297
-Disposition: GAP
-Mapping/reason: The document clamps note velocities to 1...127, so no document note can carry velocity zero; the only Swift predicate is the palette-only opacity check at S008 (src/checks/rollcheck/note_rendering.swift). The view-level velocity-zero fill observation has no independent Swift counterpart.
-Source context since previous assertion:
-  (adjacent to previous assertion; no intervening source lines)
-Original expression:
-  QCOMPARE(zero.alpha(), 255);
+Disposition: MATCHED
+Mapping: S008, S072
+Mapping/reason: S008 asserts the velocity-zero fill's published format is opaque (note_rendering.swift:223); S072 asserts its alpha byte equals 255 for every preset (ThemeColorChecks.swift:640).
 
 A022 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:298
 Disposition: MATCHED
@@ -461,105 +431,53 @@ Disposition: MATCHED
 Mapping: S012
 
 A026 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:307
-Disposition: GAP
-Mapping/reason: The velocity-colour display ramp is not ported: GridPalette exposes only the identity noteFill(track:velocity:) colour with its neutral velocity-zero entry, so SongView::velocityNoteColor has no Swift counterpart. Open obligation.
-Source context since previous assertion:
-      // Velocity-color display mode (View menu, app-wide): the active track's
-      // note fills take their hue from velocity — exact purple and red
-      // endpoints, the hue falling monotonically through the spectrum between
-      // — while ghost notes keep the identity rendering byte-for-byte.
-      if (SongView::velocityNoteColor(1) != QColor(0x5f, 0x44, 0xe9))
-Original expression:
-  QFAIL("velocity 1 fill is not the purple endpoint #5f44e9");
+Disposition: MATCHED
+Mapping: S027, S028
+Mapping/reason: The live published fill at velocity 1 equals the #5F44E9 endpoint (note_rendering.swift:372) and the velocity color API's own value (374), on the seeded note rather than the palette call alone.
 
 A027 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:309
-Disposition: GAP
-Mapping/reason: The velocity-colour display ramp is not ported: GridPalette exposes only the identity noteFill(track:velocity:) colour with its neutral velocity-zero entry, so SongView::velocityNoteColor has no Swift counterpart. Open obligation.
-Source context since previous assertion:
-      if (SongView::velocityNoteColor(127) != QColor(0xe9, 0x09, 0x04))
-Original expression:
-  QFAIL("velocity 127 fill is not the red endpoint #e90904");
+Disposition: MATCHED
+Mapping: S029, S030
+Mapping/reason: The live published fill at velocity 127 equals the #E90904 endpoint (note_rendering.swift:376) and the velocity color API's own value (378).
 
 A028 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:311
-Disposition: GAP
-Mapping/reason: The velocity-colour display ramp is not ported: GridPalette exposes only the identity noteFill(track:velocity:) colour with its neutral velocity-zero entry, so SongView::velocityNoteColor has no Swift counterpart. Open obligation.
-Source context since previous assertion:
-      if (SongView::velocityNoteColor(0) != themes::color(themes::Role::song_view_note_velocity_zero))
-Original expression:
-  QFAIL("velocity 0 fill is not the theme neutral");
+Disposition: MATCHED
+Mapping: S034
+Mapping/reason: PaletteMath.velocityNoteColor(velocity: 0) returns the palette's neutral zero ink (note_rendering.swift:389), the same theme neutral this comparison names.
 
 A029 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:316
-Disposition: GAP
-Mapping/reason: The velocity-colour display ramp is not ported: GridPalette exposes only the identity noteFill(track:velocity:) colour with its neutral velocity-zero entry, so SongView::velocityNoteColor has no Swift counterpart. Open obligation. Executes once per velocity (2..127) with early break.
-Source context since previous assertion:
-      for (int velocity = 2; velocity <= 127; ++velocity) {
-          const QColor lower = SongView::velocityNoteColor(velocity - 1);
-          const QColor upper = SongView::velocityNoteColor(velocity);
-          if (upper.alpha() != 255) {
-Original expression:
-  QFAIL("velocity fill is not opaque");
+Disposition: MATCHED
+Mapping: S025, S033
+Mapping/reason: Every fill from velocity 2 to 127 is published opaque (note_rendering.swift:365); S033 re-asserts opacity for the published endpoint and midpoint fills (385).
 
 A030 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:320
-Disposition: GAP
-Mapping/reason: The velocity-colour display ramp is not ported: GridPalette exposes only the identity noteFill(track:velocity:) colour with its neutral velocity-zero entry, so SongView::velocityNoteColor has no Swift counterpart. Open obligation. Executes once per velocity (2..127) with early break.
-Source context since previous assertion:
-              break;
-          }
-          if (upper.hsvHueF() > lower.hsvHueF()) {
-Original expression:
-  QFAIL("velocity hue does not fall monotonically from purple to red");
+Disposition: MATCHED
+Mapping: S026, S031
+Mapping/reason: S026 walks velocities 1...126 requiring each fill to equal the independent HSV oracle and the hue to fall (note_rendering.swift:367); S031 pins the published midpoint to that oracle (380).
 
 A031 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:333
-Disposition: PARTIAL
-Mapping/reason: S020 (checkGhostNotes, executed) enables the velocity-color mode over the live ghost face and asserts its published fill stays byte-identical; S014/S015 cover the same invariance for a synthetic ghost face in both modes. Unproved: the legacy Quick surface's sampled ghost pixels under the mode flip.
-Source context since previous assertion:
-              break;
-          }
-      }
-
-      // noteA is a ghost while ghostTrack is selected: flipping the mode must
-      // not move a single sampled ghost pixel.
-      view.setVelocityColorMode(true);
-      const QImage ghostVelocityRender = check.captureQuickFramebuffer();
-      if (ghostVelocityRender.pixel(ghostCenterX, ghostTopPixel) != ghostTopEdge ||
-          ghostVelocityRender.pixel(ghostCenterX, ghostTopPixel + 2) != ghostTopInterior ||
-          ghostVelocityRender.pixel(ghostCenterX, ghostBottomPixel) != ghostBottomEdge ||
-          ghostVelocityRender.pixel(ghostCenterX, ghostBottomPixel - 2) != ghostBottomInterior)
-Original expression:
-  QFAIL("velocity-color mode changed a ghost note's rendering");
+Disposition: MATCHED
+Mapping: S076, S020, S035
+Mapping/reason: The mounted production shell renders the ghost region byte-identically across the mode flip (tst_ShellNoteVisuals.qml:242); the live-grid ghost fill stays byte-identical (note_rendering.swift:1031) and the synthetic ghost face keeps its identity mix in both modes (414).
 
 A032 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:338
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/note_rendering.cpp) no longer builds or runs. Previous native note: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-      view.selectTrack(selectedTrackBeforeGhostProbe);
-      const QImage velocityModeRender = check.captureQuickFramebuffer();
-      if (QColor(velocityModeRender.pixel(noteInteriorSample)) != SongView::velocityNoteColor(100))
-Original expression:
-  QFAIL("velocity-mode note interior does not match velocityNoteColor(100)");
+Disposition: MATCHED
+Mapping: S077
+Mapping/reason: The mounted production shell samples the probed note interior and requires it to equal the velocity color for that note's published velocity (tst_ShellNoteVisuals.qml:248).
 
 A033 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:343
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/note_rendering.cpp) no longer builds or runs. Previous native note: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-      view.setVelocityColorMode(false);
-      const QImage identityRestoredRender = check.captureQuickFramebuffer();
-      if (QColor(identityRestoredRender.pixel(noteInteriorSample)) != expectedNoteColor)
-Original expression:
-  QFAIL("disabling velocity-color mode did not restore identity fills");
+Disposition: MATCHED
+Mapping: S078, S037, S038
+Mapping/reason: The mounted shell restores the exact identity interior pixels after the toggle-off (tst_ShellNoteVisuals.qml:257); the Swift grid republishes the identity fill for the full and minimum velocities (note_rendering.swift:423, 432).
 
 A034 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:347
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-      while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
-          doc.undoStack()->undo();
-Original expression:
-  QCOMPARE(doc.smf().write(), before);
+Disposition: MATCHED
+Mapping: S039
+Mapping/reason: Both mode flips leave the document revision unchanged (note_rendering.swift:434), the write-free clause this serialized-bytes comparison pins; the probe performs no other document operation.
 
 A035 | PianoRollTest::noteNameRaster | src/checks/rollcheck/note_rendering.cpp:354
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Mapping/reason: Fixture-seed guard for noteNameRaster: its Swift counterpart seeds through renderingSeed (failure branch only, note_rendering.swift:69) and the adjacent-note guard report.fail (592); no executing predicate asserts the name-mode seed's presence. Open setup obligation.
 Source context since previous assertion:
   }
 
@@ -571,74 +489,13 @@ Original expression:
   QVERIFY(seed.has_value());
 
 A036 | PianoRollTest::noteNameRaster | src/checks/rollcheck/note_rendering.cpp:414
-Disposition: PARTIAL
-Mapping/reason: S021 (checkGhostNotes, executed) enables note-name mode with the ghost and the primary note in view and asserts no ghost label is published; S016 covers the label layout for a synthetic ghost face. Unproved: the legacy Quick surface's pixel identity of the ghost across the mode flip.
-Source context since previous assertion:
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      auto &roll = check.rollInput();
-      const int track = check.track();
-      const int pianoKeyboardWidth = check.pianoKeyboardWidth();
-      const QByteArray before = doc.smf().write();
-      const int undo = doc.undoStack()->index();
-      const auto plotToBandX = [pianoKeyboardWidth](qreal x) {
-          return qreal(pianoKeyboardWidth) + x;
-      };
-      const DocNote &noteA = seed->noteA;
-      const qreal displayDpr = roll.devicePixelRatio();
-      const qreal noteLeftX = view.camera().displayX(double(noteA.tick), 0, displayDpr);
-      const qreal noteRightX =
-          view.camera().displayX(double(noteA.tick + noteA.duration), 0, displayDpr);
-      const QColor expectedNoteColor = SongView::noteColor(track, 100);
-      const auto &a = seed->a;
-      const int selectedTrackBeforeGhostProbe = view.selectionModel().primaryTrack();
-      const int ghostTrack = (selectedTrackBeforeGhostProbe + 1) % doc.engineTrackCount();
-      // Note-name display mode (View menu, app-wide): with rows tall enough
-      // for legible text, each visible active-track note independently carries
-      // its pitch name when its face fits the complete name plus two trailing
-      // spaces; ghost notes never do; below the key-height floor, labels vanish
-      // individually.
-      {
-          const auto differingPixels = [](const QImage &before, const QImage &after,
-                                          const QRect &region) {
-              int count = 0;
-              for (int y = region.top(); y <= region.bottom(); ++y)
-                  for (int x = region.left(); x <= region.right(); ++x)
-                      count += before.pixel(x, y) != after.pixel(x, y);
-              return count;
-          };
-          const SongView::ViewState viewBeforeNames = view.viewState();
-          SongView::ViewState namedState = viewBeforeNames;
-          namedState.keyHeight = 24.0;
-          namedState.scrollY =
-              std::max(0.0, (127.5 - double(noteA.key)) * namedState.keyHeight - roll.height() / 2.0);
-          view.applyViewState(namedState);
-          const SnappedRows namedRows{view, roll};
-          const QRectF namedNoteBox =
-              namedRows.noteBox(namedRows.noteRect(noteLeftX, noteRightX, noteA.key));
-          view.setNoteNameMode(true);
-          const QImage namesOnRender = check.captureQuickFramebuffer();
-          const qreal namesDpr = namesOnRender.devicePixelRatio();
-          const auto toNamesPixel = [namesDpr](qreal position) {
-              return qRound(position * namesDpr);
-          };
-          const QRect noteARegion(QPoint(toNamesPixel(plotToBandX(namedNoteBox.left())),
-                                         toNamesPixel(namedNoteBox.top())),
-                                  QPoint(toNamesPixel(plotToBandX(namedNoteBox.right())) - 1,
-                                         toNamesPixel(namedNoteBox.bottom()) - 1));
-
-          // With the other track selected note A is a ghost, and its face must
-          // render identically with the mode on or off.
-          view.selectTrack(ghostTrack);
-          const QImage ghostNamedRender = check.captureQuickFramebuffer();
-          view.setNoteNameMode(false);
-          if (differingPixels(check.captureQuickFramebuffer(), ghostNamedRender, noteARegion) != 0)
-Original expression:
-  QFAIL("note-name mode changed a ghost note's rendering");
+Disposition: MATCHED
+Mapping: S079, S021, S046
+Mapping/reason: The mounted shell keeps the ghost region pixel-identical across the note-name toggle (tst_ShellNoteVisuals.qml:320); the live-grid predicate asserts no ghost label (note_rendering.swift:1072) and the pure builder rejects a ghost face (550).
 
 A037 | PianoRollTest::noteNameRaster | src/checks/rollcheck/note_rendering.cpp:458
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: Fixture guard (no room for the note-name width probe): the Swift width probe seeds its short/wide/adjacent notes through ghostSeed, whose failure branch is report.fail (note_rendering.swift:592) and never appears in the pass evidence. The three label predicates that probe would enable are A038-A040; the probe room itself stays an open setup obligation.
 Source context since previous assertion:
           view.setNoteNameMode(true);
           view.selectTrack(selectedTrackBeforeGhostProbe);
@@ -687,155 +544,53 @@ Original expression:
   QFAIL("no room for the note-name width probe");
 
 A038 | PianoRollTest::noteNameRaster | src/checks/rollcheck/note_rendering.cpp:471
-Disposition: GAP
-Mapping/reason: Note-name mode is not ported: the production grid paints no note-name labels and exposes no note-name toggle, so this label probe has no Swift counterpart. Open obligation.
-Source context since previous assertion:
-          } else {
-              const int undoIndexBeforeRun = doc.undoStack()->index();
-              doc.addNotes(track, {{Tick(a.tick), uint8_t(runKey), uint32_t(closeTicks), 100},
-                                   {Tick(runTick2), uint8_t(runKey), uint32_t(closeTicks), 100},
-                                   {Tick(runTick3), uint8_t(runKey), uint32_t(labelTicks), 100},
-                                   {Tick(runTick4), uint8_t(runKey), uint32_t(labelTicks), 1}});
-              const QImage runNamed = check.captureQuickFramebuffer();
-              view.setNoteNameMode(false);
-              const QImage runUnnamed = check.captureQuickFramebuffer();
-              const QRect firstStrip(QPoint(labelStrip(a.tick, 1).left(), runRowTop),
-                                     QPoint(labelStrip(runTick2, 1).left() - 1, runRowBottom));
-              if (differingPixels(runUnnamed, runNamed, firstStrip) != 0)
-Original expression:
-  QFAIL("a short same-pitch note was labeled");
+Disposition: MATCHED
+Mapping: S050
+Mapping/reason: An abutting short same-pitch note carries no label (note_rendering.swift:607), the per-note width clause this first strip asserts.
 
 A039 | PianoRollTest::noteNameRaster | src/checks/rollcheck/note_rendering.cpp:473
-Disposition: GAP
-Mapping/reason: Note-name mode is not ported: the production grid paints no note-name labels and exposes no note-name toggle, so this label probe has no Swift counterpart. Open obligation.
-Source context since previous assertion:
-              if (differingPixels(runUnnamed, runNamed, labelStrip(runTick2, stripW)) != 0)
-Original expression:
-  QFAIL("a short same-pitch note was labeled");
+Disposition: MATCHED
+Mapping: S051
+Mapping/reason: The second abutting short same-pitch note carries no label (note_rendering.swift:609), the clause this second strip asserts.
 
 A040 | PianoRollTest::noteNameRaster | src/checks/rollcheck/note_rendering.cpp:476
-Disposition: GAP
-Mapping/reason: Note-name mode is not ported, so no Swift predicate observes a distant wide note keeping its label. Open obligation.
-Source context since previous assertion:
-              const auto wideLabelRegion = labelStrip(runTick3, stripW);
-              if (differingPixels(runUnnamed, runNamed, wideLabelRegion) == 0) {
-Original expression:
-  QFAIL("a distant note with enough label width lost its label");
+Disposition: MATCHED
+Mapping: S052
+Mapping/reason: A distant wide note keeps its label (note_rendering.swift:611), the clause this strip asserts.
 
 A041 | PianoRollTest::noteNameRaster | src/checks/rollcheck/note_rendering.cpp:487
-Disposition: GAP
-Mapping/reason: Note-name mode is not ported, so no Swift predicate observes label-ink contrast on a wide note face. Open obligation.
-Source context since previous assertion:
-              } else {
-                  bool wideLabelContrasts = false;
-                  for (int y = wideLabelRegion.top();
-                       y <= wideLabelRegion.bottom() && !wideLabelContrasts; ++y)
-                      for (int x = wideLabelRegion.left();
-                           x <= wideLabelRegion.right() && !wideLabelContrasts; ++x)
-                          wideLabelContrasts = runNamed.pixel(x, y) != runUnnamed.pixel(x, y) &&
-                                               themes::contrastRatio(QColor(runNamed.pixel(x, y)),
-                                                                     expectedNoteColor) >= 2.5;
-                  if (!wideLabelContrasts)
-Original expression:
-  QFAIL("no clearly contrasting label ink on a wide note face");
+Disposition: MATCHED
+Mapping: S080, S041, S074
+Mapping/reason: The mounted shell counts label-ink pixels with >= 2.5 contrast against the sampled fill (tst_ShellNoteVisuals.qml:344); the Swift ink choice clears the 4.5 floor on that fill (note_rendering.swift:506) and S074 holds the floor over every identity-ramp fill (ThemeColorChecks.swift:670).
 
 A042 | PianoRollTest::noteNameRaster | src/checks/rollcheck/note_rendering.cpp:506
-Disposition: GAP
-Mapping/reason: Note-name mode is not ported, so no Swift predicate observes the label appearing at the exact padded fit. Open obligation.
-Source context since previous assertion:
-              }
-
-              // The width probe's last grab left the mode off.
-              view.setNoteNameMode(true);
-
-              // The fixed face labels the wide note at its exact padded fit...
-              const auto centeredOnRun = [&](double keyHeight) {
-                  SongView::ViewState state = namedState;
-                  state.keyHeight = keyHeight;
-                  state.scrollY =
-                      std::max(0.0, (127.5 - double(runKey)) * keyHeight - roll.height() / 2.0);
-                  return state;
-              };
-              view.applyViewState(centeredOnRun(double(fixedLabelHeight + 2 * labelPadding + 1)));
-              const QImage fitRowsNamed = check.captureQuickFramebuffer();
-              view.setNoteNameMode(false);
-              const QImage fitRowsUnnamed = check.captureQuickFramebuffer();
-              if (fitRowsUnnamed == fitRowsNamed)
-Original expression:
-  QFAIL("no label at the exact padded label fit");
+Disposition: MATCHED
+Mapping: S053
+Mapping/reason: A row at the exact padded label fit (occupied name height plus two half-space insets plus one layout pixel) still labels the wide note (note_rendering.swift:623).
 
 A043 | PianoRollTest::noteNameRaster | src/checks/rollcheck/note_rendering.cpp:514
-Disposition: GAP
-Mapping/reason: Note-name mode is not ported, so no Swift predicate observes labels hiding rather than shrinking on a short row. Open obligation.
-Source context since previous assertion:
-              view.setNoteNameMode(true);
-
-              // ...and one layout pixel shorter it hides rather than shrinks.
-              view.applyViewState(centeredOnRun(double(fixedLabelHeight + 2 * labelPadding)));
-              const QImage shortRowsNamed = check.captureQuickFramebuffer();
-              view.setNoteNameMode(false);
-              if (check.captureQuickFramebuffer() != shortRowsNamed)
-Original expression:
-  QFAIL("note names shrank to fit a short row");
+Disposition: MATCHED
+Mapping: S054
+Mapping/reason: One layout pixel shorter the label hides instead of shrinking (note_rendering.swift:631).
 
 A044 | PianoRollTest::noteNameRaster | src/checks/rollcheck/note_rendering.cpp:541
-Disposition: GAP
-Mapping/reason: Note-name mode is not ported, so no Swift predicate observes the per-fill label ink choice against the bright velocity fill. Open obligation.
-Source context since previous assertion:
-              view.setNoteNameMode(true);
-              view.applyViewState(namedState);
-
-              // Velocity-color fills span the whole spectrum, so label ink must
-              // be picked per fill: both the bright high-velocity note and the
-              // dark low-velocity note need clearly readable ink. The piano-key
-              // ink pick clears 4:1 on both probed fills (its floor across the
-              // whole ramp is ~3.8:1, in the deep reds near velocity 121);
-              // either fixed ink drops below 4:1 on one of the two fills.
-              view.setVelocityColorMode(true);
-              const QImage velNamed = check.captureQuickFramebuffer();
-              view.setNoteNameMode(false);
-              const QImage velUnnamed = check.captureQuickFramebuffer();
-              view.setNoteNameMode(true);
-              view.setVelocityColorMode(false);
-              const auto bestInkContrast = [&](const QRect &region, const QColor &fill) {
-                  double best = 0.0;
-                  for (int y = region.top(); y <= region.bottom(); ++y)
-                      for (int x = region.left(); x <= region.right(); ++x)
-                          if (velNamed.pixel(x, y) != velUnnamed.pixel(x, y))
-                              best = std::max(
-                                  best, themes::contrastRatio(QColor(velNamed.pixel(x, y)), fill));
-                  return best;
-              };
-              if (bestInkContrast(labelStrip(runTick3, stripW), SongView::velocityNoteColor(100)) <
-                  4.0)
-Original expression:
-  QFAIL("label ink is not picked against the bright velocity fill");
+Disposition: MATCHED
+Mapping: S055, S073
+Mapping/reason: The ink chosen against the bright velocity fill (velocity 100) clears 4.5 (note_rendering.swift:633, consumed at 638-640), tighter than the original 4.0 floor; S073 holds that floor over the whole velocity ramp for every preset (ThemeColorChecks.swift:668).
 
 A045 | PianoRollTest::noteNameRaster | src/checks/rollcheck/note_rendering.cpp:543
-Disposition: GAP
-Mapping/reason: Note-name mode is not ported, so no Swift predicate observes the per-fill label ink choice against the dark velocity fill. Open obligation.
-Source context since previous assertion:
-              if (bestInkContrast(labelStrip(runTick4, stripW), SongView::velocityNoteColor(1)) < 4.0)
-Original expression:
-  QFAIL("label ink is not picked against the dark velocity fill");
+Disposition: MATCHED
+Mapping: S056, S073
+Mapping/reason: The ink chosen against the dark velocity fill (velocity 1) clears 4.5 (note_rendering.swift:634, consumed at 638-640); S073 holds the ramp floor for every preset (ThemeColorChecks.swift:668).
 
 A046 | PianoRollTest::noteNameRaster | src/checks/rollcheck/note_rendering.cpp:552
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-              while (doc.undoStack()->index() > undoIndexBeforeRun && doc.undoStack()->canUndo())
-                  doc.undoStack()->undo();
-          }
-          view.applyViewState(viewBeforeNames);
-      }
-      while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
-          doc.undoStack()->undo();
-Original expression:
-  QCOMPARE(doc.smf().write(), before);
+Disposition: MATCHED
+Mapping: S049
+Mapping/reason: The fixture notes are undone and the check asserts document state and history identity are restored (note_rendering.swift:576), the document-integrity clause this serialized-bytes comparison pins.
 
 A047 | PianoRollTest::velocityValueRaster | src/checks/rollcheck/note_rendering.cpp:566
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Runs once per keyHeight row (8.6px/9.0px).
+Mapping/reason: Fixture-seed guard (PencilVelocityFixture) for the 8.6px/9.0px rows: the Swift counterpart's seed helpers report only the failure branch report.fail (note_rendering.swift:69, 910), so no executing predicate asserts the velocity-value seed's presence. Open setup obligation.
 Source context since previous assertion:
   }
 
@@ -855,7 +610,7 @@ Original expression:
 
 A048 | PianoRollTest::velocityValueRaster | src/checks/rollcheck/note_rendering.cpp:596
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Runs once per keyHeight row (8.6px/9.0px).
+Mapping/reason: Free-cell guard for the sacrificial drag note: the Swift probe note-box pair guard is report.fail (note_rendering.swift:700) and never executes, so the free-cell obligation stays open while the drag predicates run.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -891,7 +646,7 @@ Original expression:
 
 A049 | PianoRollTest::velocityValueRaster | src/checks/rollcheck/note_rendering.cpp:633
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Runs once per keyHeight row (8.6px/9.0px).
+Mapping/reason: Isolated-cell guard: the Swift probe locates its own note pair and guards only with report.fail (note_rendering.swift:700); no executing predicate asserts the isolated probe cell. Open setup obligation.
 Source context since previous assertion:
               }
               doc.addNote(track, dragCell.tick, uint8_t(dragCell.key), uint32_t(dragCell.dur), 100);
@@ -934,7 +689,7 @@ Original expression:
 
 A050 | PianoRollTest::velocityValueRaster | src/checks/rollcheck/note_rendering.cpp:666
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Runs once per keyHeight row (8.6px/9.0px).
+Mapping/reason: Frame-free interior row guard: the mounted pixel probe measures ink inside the note box, but no executing Swift predicate asserts that a frame-free interior row exists; the Swift probe box guard is the failure branch report.fail (note_rendering.swift:700). Open setup obligation.
 Source context since previous assertion:
               }
 
@@ -972,72 +727,31 @@ Original expression:
   QFAIL("short-note velocity probe has no frame-free interior row");
 
 A051 | PianoRollTest::velocityValueRaster | src/checks/rollcheck/note_rendering.cpp:673
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/note_rendering.cpp) no longer builds or runs. Previous native note: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation. Runs once per keyHeight row (8.6px/9.0px).
-Source context since previous assertion:
-              bool valueInkFound = false;
-              for (int y = inkTop; y < inkBottom; ++y) {
-                  for (int x = boxLeftPixel + frameMargin; x < boxRightPixel - frameMargin; ++x)
-                      valueInkFound |= shortDragImage.pixel(x, y) != shortIdleImage.pixel(x, y);
-              }
-              if (!valueInkFound)
-Original expression:
-  QFAIL("short-note velocity drag rendered no value ink inside the note box");
+Disposition: MATCHED
+Mapping: S058, S081
+Mapping/reason: During the Control drag the model publishes the preview velocity as a value record on the note full box with centered alignment (note_rendering.swift:729); the mounted shell shows value ink inside the note box (tst_ShellNoteVisuals.qml:392).
 
 A052 | PianoRollTest::velocityValueRaster | src/checks/rollcheck/note_rendering.cpp:695
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/note_rendering.cpp) no longer builds or runs. Previous native note: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation. Runs once per keyHeight row (8.6px/9.0px).
-Source context since previous assertion:
-              const QRect imageBounds = shortDragImage.rect();
-              const QRect noteBoxPixels(QPoint(boxLeftPixel, boxTopPixel),
-                                        QPoint(boxRightPixel - 1, boxBottomPixel - 1));
-              const int escapeMargin = noteBoxPixels.height();
-              const QRect clipProbe =
-                  noteBoxPixels.adjusted(-escapeMargin, -escapeMargin, escapeMargin, escapeMargin)
-                      .intersected(imageBounds);
-              bool pixelsEscapedClip = false;
-              for (int y = clipProbe.top(); y <= clipProbe.bottom(); ++y) {
-                  for (int x = clipProbe.left(); x <= clipProbe.right(); ++x) {
-                      if (!noteBoxPixels.contains(x, y) &&
-                          shortDragImage.pixel(x, y) != shortIdleImage.pixel(x, y)) {
-                          pixelsEscapedClip = true;
-                          break;
-                      }
-                  }
-                  if (pixelsEscapedClip)
-                      break;
-              }
-              if (pixelsEscapedClip)
-Original expression:
-  QFAIL("short-note velocity drag changed pixels outside the note box clip");
+Disposition: MATCHED
+Mapping: S082
+Mapping/reason: The mounted probe requires every pixel outside the note box expanded by its own height to stay byte-identical between the idle and drag frames (tst_ShellNoteVisuals.qml:405).
 
 A053 | PianoRollTest::velocityValueRaster | src/checks/rollcheck/note_rendering.cpp:704
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Runs once per keyHeight row (8.6px/9.0px).
-Source context since previous assertion:
-              while (doc.undoStack()->index() > undoIndexBefore && doc.undoStack()->canUndo())
-                  doc.undoStack()->undo();
-              view.selectionModel().clearNoteSelection();
-          }
-          view.applyViewState(originalView);
-          QCoreApplication::processEvents();
-      }
-Original expression:
-  QCOMPARE(doc.undoStack()->index(), undo);
+Disposition: MATCHED
+Mapping: S057
+Mapping/reason: The check undo teardown restores document state and history identity (note_rendering.swift:665), covering the undo-stack index this comparison pins.
 
 A054 | PianoRollTest::velocityValueRaster | src/checks/rollcheck/note_rendering.cpp:705
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Runs once per keyHeight row (8.6px/9.0px).
-Source context since previous assertion:
-  (adjacent to previous assertion; no intervening source lines)
-Original expression:
-  QCOMPARE(doc.smf().write(), before);
+Disposition: MATCHED
+Mapping: S057, S083
+Mapping/reason: The undo teardown restores document state and history identity (note_rendering.swift:665); the mounted shell undoes its velocity commitment back to the original note (tst_ShellNoteVisuals.qml:419).
+
 
 Remaining original source (closing sequence and helper bodies):
   }
 
 Counterpart executable predicate index
-S001..S022 are report.expect predicates in the registered swiftcore check
+S001..S024 are report.expect predicates in the registered swiftcore check
 src/checks/rollcheck/note_rendering.swift, all executed by the recorded
 deno task verify --filter swiftcore --qt projectSession run; checkGhostNotes provisions its own
 second track rather than skipping on the session fixture. S013 is the shell note-visuals Qt
@@ -1053,6 +767,30 @@ deno task verify --filter swiftcore --verbose run on this snapshot, recorded in
 build/proof-evidence/swiftcore-projectsession.json. S023 is cited by A017; S024 pins the
 note-fill value for the shipped identity law, whose original rows assert alpha, hue and the
 endpoints rather than this value, so it cites no A entry.
+
+S025..S070 index the task-45 note-face display-mode predicates of
+src/checks/rollcheck/note_rendering.swift: S025..S039 are report.expect predicates of
+checkVelocityColorMode (cppID swiftcore/PianoRoll::velocityColorMode), S040..S056 of
+checkNoteNameMode (swiftcore/PianoRoll::noteNameMode) and S057..S070 of checkVelocityValues
+(swiftcore/PianoRoll::velocityValueRaster). runNoteRenderingChecks registers all three in the
+projectSession suite (src/checks/workspace/SessionChecks.swift:65); the recorded
+deno task verify --filter swiftcore --qt projectSession run wrote
+build/proof-evidence/swiftcore-projectsession.json after the last edit of every cited Swift
+source, and that artifact carries each anchor literal. S071..S075 index noteLabelContrastChecks
+of src/checks/themecolor/ThemeColorChecks.swift (cppID swiftcore/PianoRoll::noteLabelContrast,
+suite themeColor, lane swiftcore-themecolor), one row per preset (mode=vanilla,
+dark-neutral-high, immaterial), recorded in build/proof-evidence/swiftcore-themecolor.json.
+S076..S083 index the mounted production-shell raster functions of
+src/checks/editorqml/tst_ShellNoteVisuals.qml — test_velocityColorRaster (S076-S078),
+test_noteNameRaster (S079-S080) and test_velocityValueRaster (S081-S083) — executed by
+deno task verify:shell --verbose and listed in build/proof-evidence/shell-note-visuals.json.
+Every A019-A054 row that closes asserts a contrast floor (2.5 at A041, 4.0 at A044/A045) and
+never a specific ink: the fork keyboard-ink chooser falls below WCAG AA on part of both ramps
+(about 3.8:1, its own comment), so no original row is pinned to sub-AA ink and the AA law
+(floor 4.5) clears every probed floor; the per-fill ink choice and the floor are indexed as
+S041, S055, S056, S073 and S074. The three seed guards A019/A035/A047, the width-probe room
+guard A037 and the free-cell guards A048/A049/A050 stay GAP: the Swift counterparts report
+those fixture failures through report.fail branches, which never appear in pass evidence.
 
 S001 | checkNoteBorders | src/checks/rollcheck/note_rendering.swift
 Anchor: message "A007/A012 3px contiguous selection ring stops at inset"
@@ -1125,3 +863,239 @@ Anchor: message "A017 immaterial ghost face mixes into its themed roll lane"
 
 S024 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering.swift
 Anchor: message "immaterial track-six velocity-100 native note color"
+
+S025 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "every velocity fill from 2 to 127 is opaque"
+  note_rendering.swift:365 report.expect(allOpaque, cppID: "swiftcore/PianoRoll::velocityColorMode", message: "every velocity fill from 2 to 127 is opaque"); allOpaque = (2...127).allSatisfy { publishedOpaque(PaletteMath.velocityNoteColor(velocity: $0, zeroColor: zeroInk)) }.
+
+S026 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "velocity hue falls monotonically from purple to red"
+  note_rendering.swift:367 report.expect(hueOrdered) over 1..<127: each fill equals the independent expectedVelocityHue oracle and its hue degrees do not rise.
+
+S027 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "velocity 1 publishes the purple endpoint in palette format"
+  note_rendering.swift:371-372 report.expect(minimum == "#5F44E9"); minimum is the live published note fill after setVelocities(1) on the seeded note.
+
+S028 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "velocity 1 matches the velocity color API"
+  note_rendering.swift:373-374 report.expect(minimum == PaletteMath.velocityNoteColor(velocity: 1, zeroColor: zeroInk)).
+
+S029 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "velocity 127 publishes the red endpoint in palette format"
+  note_rendering.swift:375-376 report.expect(maximum == "#E90904") on the live published fill.
+
+S030 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "velocity 127 matches the velocity color API"
+  note_rendering.swift:377-378 report.expect(maximum == PaletteMath.velocityNoteColor(velocity: 127, zeroColor: zeroInk)).
+
+S031 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "velocity 64 publishes the independently interpolated HSV hue"
+  note_rendering.swift:379-380 report.expect(midpoint == expectedVelocityHue(64)), the transcribed HSV oracle rather than the implementation.
+
+S032 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "velocity 64 matches the velocity color API"
+  note_rendering.swift:381-382 report.expect(midpoint == PaletteMath.velocityNoteColor(velocity: 64, zeroColor: zeroInk)).
+
+S033 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "velocity hue fills are opaque"
+  note_rendering.swift:383-385 report.expect(publishedOpaque(minimum) && publishedOpaque(midpoint) && publishedOpaque(maximum)).
+
+S034 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "velocity zero uses the neutral palette fill"
+  note_rendering.swift:388-389 report.expect(PaletteMath.velocityNoteColor(velocity: 0, zeroColor: zeroInk) == zeroInk).
+
+S035 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "velocity mode leaves the ghost fill on its identity mix"
+  note_rendering.swift:413-414 report.expect(ghostOn.count == 1 && ghostOn[0].fillColor == expectedGhost), a synthetic ghost note rebuilt through GridSceneInput(velocityColorMode: true).
+
+S036 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "ghost fill is identical with the mode off"
+  note_rendering.swift:415-416 the same synthetic ghost face rebuilt with velocityColorMode: false keeps the identity ghost mix.
+
+S037 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "disabling the mode restores the identity fill"
+  note_rendering.swift:422-423 report.expect(publishedFill() == palette.noteFill(track: track, velocity: 127)) after the mode toggle-off on the live grid.
+
+S038 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "disabling the mode restores the minimum identity fill"
+  note_rendering.swift:431-432 report.expect(publishedFill() == palette.noteFill(track: track, velocity: 1)).
+
+S039 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "velocity-mode flips leave the document revision unchanged"
+  note_rendering.swift:433-434 report.expect(modeOnRevisionUnchanged && modeOffRevisionUnchanged), each sampled around setVelocityColorMode.
+
+S040 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "a wide selected-track note gets exactly one name label"
+  note_rendering.swift:492-493 report.expect(wide.count == 1) over the published name records matching GridScene.keyName(pitch).
+
+S041 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "the name label uses the contrasting keyboard ink"
+  note_rendering.swift:503-506 report.expect(record.labelColor == PaletteMath.aaContrastInk(fill: light: dark: fallbackLight: fallbackDark:) && PaletteMath.contrastRatio(fill, record.labelColor) >= 4.5).
+
+S042 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "the name label is left-aligned and vertically centred"
+  note_rendering.swift:507-509 report.expect(record.labelHorizontalAlignment == 0x1 && record.labelVerticalAlignment == 0x80).
+
+S043 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "the name label uses the fixed reduced caption face"
+  note_rendering.swift:510-511 report.expect((record.labelFont["pixelSize"] as? Int) == 11).
+
+S044 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "a too-narrow note gets no name label"
+  note_rendering.swift:522-523 report.expect(matchingRecords().isEmpty) after the camera returns to minimum time zoom.
+
+S045 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "no name labels below the key-height threshold"
+  note_rendering.swift:534-535 report.expect(matchingRecords().isEmpty) once the row height drops under the fixed face threshold.
+
+S046 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "ghost notes are never labeled"
+  note_rendering.swift:549-550 report.expect(ghostLabels.count == 1 && ghostLabels[0].labelText == GridScene.keyName(pitch)) through the pure layout entry with one ghost and one plain face.
+
+S047 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "the low-contrast velocity hue gets AA-clearing label ink"
+  note_rendering.swift:553-555 report.expect(PaletteMath.contrastRatio(hardFill, NoteNameLabels.textColor(fillColor: hardFill, palette:)) >= 4.5) at velocity 121, the fork chooser's worst ramp point.
+
+S048 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "disabling the mode empties the name model"
+  note_rendering.swift:558-559 report.expect(grid.scene.pianoNoteTextModel.count == 0).
+
+S049 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "note-name fixture undo restores the document"
+  note_rendering.swift:574-576 report.expect(session.document.state == beforeState && session.document.history.currentIdentity == beforeIdentity) after the fixture's notes are undone.
+
+S050 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "an abutting short same-pitch note carries no label (first)"
+  note_rendering.swift:606-607 report.expect(!hasLabel(short.id)) where hasLabel requires a name record whose x equals box.x + metrics.spaceHalf.
+
+S051 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "an abutting short same-pitch note carries no label (second)"
+  note_rendering.swift:608-609 report.expect(!hasLabel(adjacent)) for the neighbor added at the short note's end tick.
+
+S052 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "a distant wide note keeps its label"
+  note_rendering.swift:610-611 report.expect(hasLabel(wide.id)) for the wide note seeded past the short pair.
+
+S053 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "a row at the exact padded fit still labels"
+  note_rendering.swift:622-623 report.expect(hasLabel(wide.id)) with fitHeight = measured.noteNameOccupiedHeight.rounded(.up) + 2 * metrics.spaceHalf + metrics.pixel.
+
+S054 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "one pixel shorter the label hides instead of shrinking"
+  note_rendering.swift:630-631 report.expect(!hasLabel(wide.id)) at fitHeight - metrics.pixel.
+
+S055 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "label ink is chosen against the bright velocity fill"
+  note_rendering.swift:633, consumed at 638-640: report.expect(PaletteMath.contrastRatio(fill, NoteNameLabels.textColor(fillColor: fill, palette:)) >= 4.5) for PaletteMath.velocityNoteColor(velocity: 100).
+
+S056 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "label ink is chosen against the dark velocity fill"
+  note_rendering.swift:634, consumed at 638-640: the same contrast >= 4.5 expectation for PaletteMath.velocityNoteColor(velocity: 1).
+
+S057 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+Anchor: message "velocity-value fixture undo restores the document"
+  note_rendering.swift:663-665 report.expect(document.state == initialState && document.history.currentIdentity == initialIdentity) in the check's undo teardown.
+
+S058 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+Anchor: message "velocity drag publishes the preview value on its note\(rowMessage)"
+  note_rendering.swift:727-729 report.expect(labels.contains { $0.labelText == String(preview) && fits($0, box: box) }); fits requires the label rect to equal the note box with AlignHCenter (0x4) and AlignVCenter (0x80). One row per key height ("" at 32.0, " at row 8.6", " at row 9.0").
+
+S059 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+Anchor: message "other notes show their document velocity during a drag\(rowMessage)"
+  note_rendering.swift:730-733 report.expect(labels.contains { $0.labelText == String(otherNote.velocity) && fits($0, box: otherBox) }).
+
+S060 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+Anchor: message "velocity values replace note names while shown\(rowMessage)"
+  note_rendering.swift:734-737 report.expect(!labels.contains { $0.labelText == GridScene.keyName(Int(note.pitch)) || $0.labelText == GridScene.keyName(other.pitch) }).
+
+S061 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+Anchor: message "the dragged note's fill follows its preview velocity\(rowMessage)"
+  note_rendering.swift:738-739 report.expect(fill == expectedFill): velocityNoteColor(preview) in velocity-color mode, palette.noteFill(track:velocity: preview) otherwise.
+
+S062 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+Anchor: message "the preview value uses AA ink against its live fill\(rowMessage)"
+  note_rendering.swift:740-744 report.expect(labels.contains { $0.labelText == String(preview) && $0.labelColor == grid.palette.noteLabelInk(forFill: fill) }).
+
+S063 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+Anchor: message "previewing velocity leaves the document unchanged\(rowMessage)"
+  note_rendering.swift:745-746 report.expect(document.revision == revisionBeforeDrag) while the drag is live.
+
+S064 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+Anchor: message "ending the drag clears velocity values"
+  note_rendering.swift:751-754 report.expect(grid.previewVelocity(noteID) == nil && the published labels no longer carry String(preview)) after endPointer on the 9.0 row.
+
+S065 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+Anchor: message "release commits the preview velocity"
+  note_rendering.swift:755-756 report.expect(document.note(noteID)?.velocity == UInt8(preview)).
+
+S066 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+Anchor: message "one allowance-short box hides the velocity value"
+  note_rendering.swift:774-777 report.expect(NoteNameLabels.valueLabels(faces: [narrow], ...).isEmpty) with narrow.box.width = threshold - metrics.pixel.
+
+S067 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+Anchor: message "a box at the exact velocity-value fit shows the value"
+  note_rendering.swift:778-781 report.expect(NoteNameLabels.valueLabels(faces: [fitted], ...).count == 1) at threshold = measured.noteValueAdvance("100") + fontPx(baseFontPx, 0.5).
+
+S068 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+Anchor: message "ghost notes never display velocity values"
+  note_rendering.swift:785-788 the same fitted box marked ghost produces no value record.
+
+S069 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+Anchor: message "the draw preview carries the last velocity while the modifier is held"
+  note_rendering.swift:827-833 report.expect(a label with labelText == String(grid.lastVelocity), x and width equal to pianoDrawPreviewFill's box, and AlignHCenter) after a Control draw drag.
+
+S070 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+Anchor: message "cancelling the draw preview edits no note"
+  note_rendering.swift:835-836 report.expect(grid.drawPreview == nil && document.revision == revisionBeforeDraw) after inputCancelled.
+
+S071 | noteLabelContrastChecks | src/checks/themecolor/ThemeColorChecks.swift
+Anchor: message "\(tag): velocity-zero fill equals the preset disabledText role"
+  ThemeColorChecks.swift:637-638 report.expectEqual(expected: row.disabled, actual: palette.noteVelocityZero, cppID: "swiftcore/PianoRoll::noteLabelContrast") — one row per preset (mode=vanilla, dark-neutral-high, immaterial).
+
+S072 | noteLabelContrastChecks | src/checks/themecolor/ThemeColorChecks.swift
+Anchor: message "\(tag): velocity-zero fill is opaque"
+  ThemeColorChecks.swift:639-640 report.expect(themeRefChannels(palette.noteVelocityZero).a == 255) — one row per preset.
+
+S073 | noteLabelContrastChecks | src/checks/themecolor/ThemeColorChecks.swift
+Anchor: message "\(tag): velocity ramp label ink stays above AA"
+  ThemeColorChecks.swift:666-668 report.expect(velocityFloor >= 4.5) with velocityFloor = min over velocities 0...127 of themeRefContrast(velocityNoteColor(v), palette.noteLabelInk(forFill:)) — one row per preset.
+
+S074 | noteLabelContrastChecks | src/checks/themecolor/ThemeColorChecks.swift
+Anchor: message "\(tag): identity ramp label ink stays above AA"
+  ThemeColorChecks.swift:669-670 report.expect(identityFloor >= 4.5) taking the min over all 16 tracks and 128 velocities of the identity noteFill — one row per preset.
+
+S075 | noteLabelContrastChecks | src/checks/themecolor/ThemeColorChecks.swift
+Anchor: message "\(tag): legible keyboard ink is preserved on both ramps"
+  ThemeColorChecks.swift:671-672 report.expect(preservesKeyboardInk): wherever PaletteMath.contrastingTextColor(fill, keyboardNatural, keyboardBlack) clears 4.5, palette.noteLabelInk(forFill: fill) equals that keyboard pick — one row per preset.
+
+S076 | test_velocityColorRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "velocity-color mode changes no ghost note pixel"
+  tst_ShellNoteVisuals.qml:240-242 verify(regionIdentical(baseline, colored, ghost.rect), "velocity-color mode changes no ghost note pixel") after shell.shellPresenter.activate("view.velocity_colors") on the mounted production shell.
+
+S077 | test_velocityColorRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "velocity-mode note interior matches velocityNoteColor"
+  tst_ShellNoteVisuals.qml:244-248 the probed note's centre pixel must be Helpers.colorsNear probe.velocityFace(note.note.velocity, palette.noteVelocityZero) in the colored frame.
+
+S078 | test_velocityColorRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "disabling velocity-color mode restores the identity fill pixels"
+  tst_ShellNoteVisuals.qml:254-257 the second "view.velocity_colors" activation must leave the probed interior pixel equal to the frame captured before the mode flip.
+
+S079 | test_noteNameRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "note-name mode changes no ghost note pixel"
+  tst_ShellNoteVisuals.qml:318-320 verify(regionIdentical(baseline, named, ghost.rect), "note-name mode changes no ghost note pixel") across the "view.note_names" toggle.
+
+S080 | test_noteNameRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "wide-note label ink contrasts with its fill"
+  tst_ShellNoteVisuals.qml:330-344 inkPixels counts changed pixels inside wide note rects whose contrast against probe.noteFace(track, velocity, palette.noteVelocityZero) is >= 2.5; verify(inkPixels > 0).
+
+S081 | test_velocityValueRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "velocity drag renders value ink inside the note box"
+  tst_ShellNoteVisuals.qml:378-392 during the Control drag, inkPixels counts pixels inside the probed note's middle half that changed from the idle frame with contrast >= 2.5 against the idle fill pixel; verify(inkPixels > 2).
+
+S082 | test_velocityValueRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "velocity drag changes no pixel outside the note box clip at "
+  tst_ShellNoteVisuals.qml:400-405 for every pixel in the plot region expanded by the note box height, outside the box itself, verify(Helpers.colorsNear(rgb(idle, x, y), rgb(dragged, x, y), 0)) must hold during the drag.
+
+S083 | test_velocityValueRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "undo restores the original note document"
+  tst_ShellNoteVisuals.qml:415-419 after mouseRelease and Undo, the published note summary returns to its pre-drag length and the probed note keeps its original velocity.

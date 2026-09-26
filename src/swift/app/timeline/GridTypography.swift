@@ -2,7 +2,7 @@ import NativeGridTypography
 import QtBridge
 
 enum GridFontKind {
-    case ruler, beat, bold, sig, chip, keyLabel, noteName
+    case ruler, beat, bold, sig, chip, keyLabel, noteName, noteValue
 }
 
 struct GridFontSpec {
@@ -40,15 +40,18 @@ struct GridTypography {
     /// Occupied height (ascent + descent, i.e. QFontMetrics height) of the
     /// fixed note-name face, for the padded row-height gate in NoteNameLabels.
     let noteNameOccupiedHeight: Double
+    let noteValueOccupiedHeight: Double
+    let noteValueVisible: Bool
     private let rulerMetrics: NativeFontMetrics
     private let beatMetrics: NativeFontMetrics
     private let boldMetrics: NativeFontMetrics
     private let signatureMetrics: NativeFontMetrics
     private let chipWidths: [Double]
     private let noteNameWidths: [Double]
+    private let noteValueMetrics: NativeFontMetrics
     private let fontMaps: [GridFontKind: [String: QVariantSettable]]
 
-    init(fonts: [GridFontKind: GridFontSpec], rowHeight: Double) {
+    init(fonts: [GridFontKind: GridFontSpec], rowHeight: Double, pixel: Double = 1) {
         func measure(_ kind: GridFontKind) -> NativeFontMetrics {
             NativeFontMetrics(fonts[kind]!)
         }
@@ -67,12 +70,26 @@ struct GridTypography {
         boldMetrics = bold
         signatureMetrics = measure(.sig)
         let keyLabelFit = measure(.keyLabel).fittedSize(rowHeight: rowHeight)
+        guard let valueBase = fonts[.noteValue] else {
+            preconditionFailure("GridTypography requires the note-value face")
+        }
+        let valueFit = measure(.noteValue).fittedSize(
+            rowHeight: (rowHeight - pixel).rounded(.down))
+        let valueSize = max(1, valueFit - 1)
+        let valueSpec = GridFontSpec(
+            family: valueBase.family, pixelSize: valueSize, weight: valueBase.weight,
+            letterSpacing: valueBase.letterSpacing)
+        let value = NativeFontMetrics(valueSpec)
+        noteValueMetrics = value
+        noteValueOccupiedHeight = value.extents.height
+        noteValueVisible = valueFit > 0 && value.extents.height <= (rowHeight - pixel).rounded(.down)
         chipWidths = (0..<128).map { chip.advance(GridScene.keyName($0)) }
         let noteName = measure(.noteName)
         noteNameOccupiedHeight = noteName.extents.height
         noteNameWidths = (0..<128).map { noteName.advance(GridScene.keyName($0)) }
         var maps = fonts.mapValues { $0.map }
         maps[.keyLabel]!["pixelSize"] = keyLabelFit
+        maps[.noteValue] = valueSpec.map
         fontMaps = maps
     }
 
@@ -100,6 +117,7 @@ struct GridTypography {
     /// Advance of the pitch name in the fixed note-name face, for the
     /// complete-name-plus-two-trailing-spaces fit rule in NoteNameLabels.
     func noteNameAdvance(pitch: Int) -> Double { noteNameWidths[pitch] }
+    func noteValueAdvance(_ text: String) -> Double { noteValueMetrics.advance(text) }
 
     func fontMap(_ kind: GridFontKind) -> [String: QVariantSettable] { fontMaps[kind]! }
 
@@ -121,6 +139,7 @@ struct GridTypography {
             .chip: typography.caption,
             .keyLabel: derived(typography.body, px: typography.caption.pixelSize),
             .noteName: derived(typography.noteName, px: noteNamePx),
+            .noteValue: typography.body,
         ]
     }
 }

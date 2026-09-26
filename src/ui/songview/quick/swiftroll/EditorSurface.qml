@@ -48,6 +48,7 @@ Item {
     readonly property var rulerMenu: applicationSession.rulerMenuPresenter()
     property point timeSelectionMenuPosition: Qt.point(0, 0)
     property bool timeMenuFocus: false
+    property bool menuDismissReturnsFocus: false
     property bool insertPromptHadFocus: false
     readonly property int menuHorizontalPadding: applicationSession.timeSigHost.layoutSpaces.two
     readonly property int menuVerticalPadding: applicationSession.timeSigHost.layoutSpaces.half
@@ -97,10 +98,14 @@ Item {
             gridModel.activateGridMenuRow(actionId)
         } else if (panel.rowObjectNamePrefix === "rulerMenuRow_") {
             const targetTick = rulerMenu.targetTick()
+            const wasTimeMenu = rulerMenu.menuKind === 2
+            root.menuDismissReturnsFocus = true
             const openPrompt = rulerMenu.activate(actionId)
             timeSigHost.closeTimeSigMenu()
             if (openPrompt)
                 timeSigHost.openTimeSigPrompt(targetTick)
+            else if (wasTimeMenu && !rulerMenu.insertTimePromptOpen)
+                rollInput.forceActiveFocus(Qt.OtherFocusReason)
         }
     }
 
@@ -108,12 +113,6 @@ Item {
         target: root.applicationSession
         function onTimeSigPromptOpenChanged() {
             if (!root.applicationSession.timeSigPromptOpen)
-                rulerInput.forceActiveFocus(Qt.OtherFocusReason)
-        }
-        function onTimeSigMenuOpenChanged() {
-            if (!root.applicationSession.timeSigMenuOpen
-                && !root.applicationSession.timeSigPromptOpen
-                && (!root.rulerMenu || !root.rulerMenu.insertTimePromptOpen))
                 rulerInput.forceActiveFocus(Qt.OtherFocusReason)
         }
     }
@@ -131,10 +130,22 @@ Item {
     Connections {
         target: root.rulerMenu
         function onIsOpenChanged() {
-            if (!root.rulerMenu.isOpen && root.timeMenuFocus
-                && !root.applicationSession.timeSigPromptOpen) {
+            if (root.rulerMenu.isOpen) {
+                root.menuDismissReturnsFocus = false
+                return
+            }
+            const returnFocus = root.menuDismissReturnsFocus
+            root.menuDismissReturnsFocus = false
+            if (root.timeSigHost && root.timeSigHost.timeSigMenuOpen)
+                root.timeSigHost.closeTimeSigMenu()
+            if (root.timeMenuFocus) {
                 root.timeMenuFocus = false
-                rollInput.forceActiveFocus(Qt.OtherFocusReason)
+                if (returnFocus && !root.applicationSession.timeSigPromptOpen
+                    && !root.rulerMenu.insertTimePromptOpen)
+                    rollInput.forceActiveFocus(Qt.OtherFocusReason)
+            } else if (returnFocus && !root.applicationSession.timeSigPromptOpen
+                       && !root.rulerMenu.insertTimePromptOpen) {
+                rulerInput.forceActiveFocus(Qt.OtherFocusReason)
             }
         }
     }
@@ -493,7 +504,7 @@ Item {
                                         root.gridModel.updateRightPointer(x, y)
                                 }
                                 else if (buttons & Qt.LeftButton)
-                                    root.gridModel.updatePointer(x, y)
+                                    root.gridModel.updatePointer(x, y, modifiers)
                                 else
                                     root.gridModel.updateHover(x, y)
                             }
@@ -746,6 +757,17 @@ Item {
         anchors.fill: parent
         z: 10
         active: root.headersModel.menuOpen
+        Connections {
+            target: root.headersModel
+            function onMenuOpenChanged() {
+                if (!root.headersModel.menuOpen)
+                    Qt.callLater(function() {
+                        if (!root.headersModel.menuOpen && root.headersModel.renamingTrack < 0
+                            && trackHeaders.bandVisible)
+                            trackHeaders.restoreHeaderFocus()
+                    })
+            }
+        }
         sourceComponent: Component {
             Item {
                 focus: true
@@ -853,12 +875,16 @@ Item {
             Item {
                 focus: true
                 Keys.onEscapePressed: (event) => {
+                    root.menuDismissReturnsFocus = true
                     root.timeSigHost.closeTimeSigMenu()
                     event.accepted = true
                 }
                 MouseArea {
                     anchors.fill: parent
-                    onPressed: root.timeSigHost.closeTimeSigMenu()
+                    onPressed: {
+                        root.menuDismissReturnsFocus = true
+                        root.timeSigHost.closeTimeSigMenu()
+                    }
                 }
                 MenuMeasure {
                     id: rulerMeasure

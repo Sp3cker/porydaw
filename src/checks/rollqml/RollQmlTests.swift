@@ -35,13 +35,13 @@ enum RollQmlLane {
     /// names and never enumerates the directory itself.
     private static let suiteEnvironmentKey = "PORYDAW_ROLL_QML_SUITE"
 
-    /// The standalone runner owns fixture staging for both named songs — the
-    /// same two-song project the shell lane stages.
     private static let fixtureFiles = [
         "sound/song_table.inc",
+        "sound/music_player_table.inc",
         "sound/songs/midi/midi.cfg",
         "sound/songs/midi/mus_route101.mid",
         "sound/songs/midi/mus_littleroot_test.mid",
+        "sound/songs/midi/se_fanfare_1trk.mid",
         "sound/direct_sound_data.inc",
         "sound/direct_sound_samples/fixture_bass.bin",
         "sound/direct_sound_samples/fixture_drum.bin",
@@ -52,16 +52,13 @@ enum RollQmlLane {
         "sound/programmable_wave_samples/fixture_saw.pcm",
         "sound/keysplit_tables.inc",
         "sound/voicegroups/fixture_rich.inc",
+        "sound/voicegroups/dummy.inc",
         "sound/voicegroups/fixture_keys.inc",
         "sound/voicegroups/fixture_bass.inc",
         "sound/voicegroups/fixture_drums_a.inc",
         "sound/voicegroups/fixture_drums_b.inc",
     ]
 
-    /// The lane's single entry: the two-song fixture set from
-    /// `src/checks/checkcatalog.cpp` (`fixtures::decompProjectFiles()` +
-    /// `fixtures::richVoicegroupFiles()`), exactly the shape `run_checks.ts`
-    /// reads from the harness's `--manifest`.
     private static var manifestLine: String {
         let files = fixtureFiles.map { "\"" + $0 + "\"" }.joined(separator: ",")
         let entry = #"{"name":"\#(entryName)","argv":["{scratch}"],"binary":"checks","windowing":"offscreen","framework":"qt-test","optIn":false,"scratchKind":"existing-directory","fixtureRootKind":"decomp-project","fixtureFiles":[\#(files)]}"#
@@ -591,19 +588,23 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
         document?.camera.pixelsPerTick ?? 0
     }
 
-    // ---- track header activity ------------------------------------------------
-
-    /// One deterministic activity frame through the production presenter, so a
-    /// case can draw meter levels without the audio engine running.
     public func presentHeaderActivity(track: Int, left: Int, right: Int,
                                       playing: Bool) -> Bool {
+        guard let session else { return false }
+        pushTrackActivity(presenter: session.trackHeadersPresenter(), track: track,
+                          left: left, right: right, elapsed: 60, playing: playing)
+        return true
+    }
+
+    @QtIgnored
+    public func pushTrackActivity(presenter: TrackHeadersPresenter, track: Int,
+                                  left: Int, right: Int, elapsed: Double,
+                                  playing: Bool) {
         precondition((0..<16).contains(track) && (0...255).contains(left)
                      && (0...255).contains(right))
-        guard let session else { return false }
         var levels = Array(repeating: AudioActivityLevel(), count: 16)
         levels[track] = AudioActivityLevel(left: UInt8(left), right: UInt8(right))
-        session.trackHeadersPresenter().advanceActivity(levels: levels,
-                                                        elapsedSeconds: 60, playing: playing)
-        return true
+        presenter.advanceActivity(levels: levels, elapsedSeconds: Float(elapsed),
+                                  playing: playing)
     }
 }

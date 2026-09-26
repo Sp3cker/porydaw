@@ -378,15 +378,10 @@ Rectangle {
             value: bar.presenter.outputVolume
             visible: bar.outputFits
             Accessible.description: qsTr("Does not change the song volume")
-            Basic.ToolTip.text: qsTr("Does not change the song volume")
-            Basic.ToolTip.visible: hovered
             Layout.preferredWidth: implicitWidth
             Layout.preferredHeight: implicitHeight
             onValueCommitted: percent => bar.presenter.commitOutputVolume(percent)
         }
-        // QToolBar still reserves its clipped output controls at large fonts.
-        // Absorb the unavailable trailing space here rather than stretching
-        // the buttons, clock or scale strip away from their widget positions.
         Item {
             visible: !bar.outputFits
             Layout.fillWidth: true

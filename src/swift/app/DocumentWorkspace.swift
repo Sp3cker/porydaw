@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawAppCommands
 
 /// Owns one document's editor presenters and all document-scoped publication wiring.
 /// The application replaces and tears down this object as a single unit;
@@ -79,6 +80,9 @@ public final class DocumentWorkspace {
         self.pitchBend = pitchBend
         grid.onPitchBendRequested = { [weak pitchBend] in
             pitchBend?.openSelected() ?? false
+        }
+        pitchBend.onSoloTracksRequested = { [weak grid] in
+            grid?.performCommand(command: EditCommand.soloTracks.rawValue)
         }
         let headers = TrackHeadersPresenter(typography: typography)
         headers.attach(session: session, palette: grid.palette)
@@ -306,6 +310,7 @@ public final class DocumentWorkspace {
     }
 
     private func sessionDidChange(_ change: SessionChange) {
+        rulerMenu.sessionDidChange(change)
         let documentChanged = change.domains.contains(.document)
         let fullPageDomains: SessionChangeDomains = [.document, .selection, .bank]
         if documentChanged {

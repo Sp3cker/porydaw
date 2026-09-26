@@ -146,6 +146,11 @@ public final class ShellPresenter: QmlInstantiableStatus {
     @QtTracked public var dockColumnWidth = 280
     @QtTracked public var dockSongsRatio = 0.5
     @QtTracked public var polyphonyVisible = false
+    @QtTracked public var windowX = -1
+    @QtTracked public var windowY = -1
+    @QtTracked public var windowWidth = -1
+    @QtTracked public var windowHeight = -1
+    @QtTracked public var windowMaximized = false
     @QtTracked public var statusText = "Ready"
     @QtTracked public var windowTitle = "porydaw"
     @QtTracked public var windowModified = false
@@ -220,8 +225,8 @@ public final class ShellPresenter: QmlInstantiableStatus {
         case "edit.undo": return session.songOpen && session.canUndo
         case "edit.redo": return session.songOpen && session.canRedo
         case "edit.song_settings": return session.songOpen
-        case "transport.follow_playhead":
-            return session.songOpen
+        case "transport.follow_playhead", "transport.resonance":
+            return true
         case "transport.go_to_start", "transport.play_pause":
             return session.songOpen && session.transportBarPresenter().state != 0
         case "transport.play":
@@ -231,7 +236,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
             return session.songOpen && session.transportBarPresenter().state == 3
         case "transport.stop":
             return session.songOpen && session.transportBarPresenter().state > 1
-        case "transport.loop", "transport.resonance":
+        case "transport.loop":
             return session.songOpen && session.transportBarPresenter().state != 0
         case "view.event_list", "view.automation_drawer", "view.velocity_drawer",
             "view.voice_changes_drawer":
@@ -481,6 +486,34 @@ public final class ShellPresenter: QmlInstantiableStatus {
         let store = PreferencesStore()
         dockColumnWidth = store.int(key: "swiftDock.columnWidth", fallback: 280)
         dockSongsRatio = store.double(key: "swiftDock.songsRatio", fallback: 0.5)
+        let frame = store.string(key: "windowGeometry", fallback: "").split(
+            separator: ",", omittingEmptySubsequences: false).compactMap { Int($0) }
+        if frame.count == 4, frame[2] > 0, frame[3] > 0 {
+            windowX = frame[0]
+            windowY = frame[1]
+            windowWidth = frame[2]
+            windowHeight = frame[3]
+        }
+        let state = store.string(key: "windowState", fallback: "").split(separator: ",")
+        windowMaximized = state.contains("maximized")
+        polyphonyVisible = state.contains("debugger")
+        session.polyphony.setVisible(showing: polyphonyVisible)
+        session.songDockController().presenter.restoreFromPreferences()
+    }
+
+    public func persistSessionState(x: Int, y: Int, width: Int, height: Int,
+                                    maximized: Bool, debuggerVisible: Bool) {
+        let store = PreferencesStore()
+        store.setString(key: "windowGeometry", value: "\(x),\(y),\(width),\(height)")
+        var state: [String] = []
+        if maximized { state.append("maximized") }
+        if debuggerVisible { state.append("debugger") }
+        store.setString(key: "windowState", value: state.joined(separator: ","))
+        let songs = session.songDockController().presenter
+        store.setString(key: "songFilterText", value: songs.searchText)
+        store.setInt(key: "songFilterSort", value: songs.sortIndex)
+        store.setString(key: "songFilterCategory", value: songs.categoryPrefix())
+        store.synchronize()
     }
 
     public func setDockColumnWidth(width: Int) {

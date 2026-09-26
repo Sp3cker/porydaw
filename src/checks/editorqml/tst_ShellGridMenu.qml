@@ -486,6 +486,8 @@ TestCase {
         tryCompare(menuOwner, "isOpen", false)
         tryCompare(roll, "activeFocus", true)
         compare(grid.appliedRevisionText, before)
+        tryVerify(rulerMenuGone, 3000,
+                  "clearing the time selection unmounts its panel before the ruler menu opens")
         mouseClick(ruler, midX, y, Qt.RightButton)
         menu = panel()
         tryVerify(function() { return menu.rowItem(3) !== null }, 3000)
@@ -679,6 +681,32 @@ TestCase {
                "release commits the captured press tick, not the release tick")
         keyClick(Qt.Key_Escape)
         tryVerify(rulerMenuGone, 3000)
+    }
+
+    function test_rulerEscapeDismissesWithoutHistoryWriteAndRefocuses() {
+        var session = openSong()
+        var ruler = control("timelineRulerInput")
+        var grid = surface().gridModel
+        var owner = surface().rulerMenu
+        var x = ruler.width * 0.3
+        var y = ruler.height * 0.75
+        mousePress(ruler, x, y, Qt.RightButton)
+        mouseRelease(ruler, x, y, Qt.RightButton)
+        tryCompare(owner, "isOpen", true)
+        tryVerify(rulerMenuShown, 3000)
+        var revision = grid.appliedRevisionText
+        var canUndo = session.canUndo
+        var canRedo = session.canRedo
+        var cursor = grid.editCursorTick
+        keyClick(Qt.Key_Escape)
+        tryCompare(owner, "isOpen", false)
+        tryVerify(rulerMenuGone, 3000)
+        compare(grid.appliedRevisionText, revision,
+                "Escape dismisses the ruler menu without changing the document")
+        compare(session.canUndo, canUndo, "Escape does not add an undo entry")
+        compare(session.canRedo, canRedo, "Escape does not change redo history")
+        compare(grid.editCursorTick, cursor, "Escape keeps the committed ruler cursor")
+        tryCompare(ruler, "activeFocus", true)
     }
 
     function test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel() {
@@ -968,6 +996,24 @@ TestCase {
         pasteIndex = rulerRowIndex(menu, 13)
         verify(menu.rowItem(pasteIndex).itemData.enabled,
                "the reopened time-selection menu enables Paste for the copied range clip")
+        var otherControl = control("timelineRulerDivisionControl")
+        otherControl.forceActiveFocus()
+        tryCompare(otherControl, "activeFocus", true)
+        verify(bootstrap.clearClipboardProbe())
+        tryVerify(rulerMenuGone, 3000,
+                  "a clipboard eligibility flip retires the open time menu")
+        compare(grid.appliedRevisionText, revision,
+                "clipboard retirement does not edit the document")
+        tryCompare(otherControl, "activeFocus", true)
+        menu = openTimeMenu(range.midX)
+        compare(rulerRowEnabled(menu, 13), false,
+                "a rebuilt time menu disables Paste after clipboard clearing")
+        clickRow(menu, rulerRowIndex(menu, 11))
+        tryVerify(rulerMenuGone, 3000)
+
+        menu = openTimeMenu(range.midX)
+        pasteIndex = rulerRowIndex(menu, 13)
+        verify(menu.rowItem(pasteIndex).itemData.enabled)
         clickRow(menu, pasteIndex)
         tryVerify(rulerMenuGone, 3000,
                   "the enabled time-menu Paste activation closes the menu")
@@ -1002,6 +1048,10 @@ TestCase {
         tryVerify(function() {
             return grid.appliedRevisionText !== revision && noteLayout() !== layout
         }, 3000, "the in-selection Insert Time row shifts the rendered notes")
+        verify(Math.abs(rulerTickX(grid.editCursorTick) - range.startX) <= rulerCellPixels(),
+               "the ruler Insert Time row parks the cursor at the selected start seam")
+        compare(session.gridCommandAvailable(17), true,
+                "the ruler insertion retains the time selection over the blank span")
         session.requestUndo()
         verify(waitForNative(function() { return noteLayout() === layout }, 5000),
                "one undo restores the rendered notes before the ruler insertion")
@@ -1018,6 +1068,10 @@ TestCase {
         tryVerify(function() {
             return grid.appliedRevisionText !== revision && noteLayout() !== layout
         }, 3000, "the time-menu Insert Time row shifts the rendered notes")
+        verify(Math.abs(rulerTickX(grid.editCursorTick) - range.startX) <= rulerCellPixels(),
+               "the time-menu Insert Time row parks the cursor at the selected start seam")
+        compare(session.gridCommandAvailable(17), true,
+                "the time-menu insertion retains the time selection over the blank span")
         session.requestUndo()
         verify(waitForNative(function() { return noteLayout() === layout }, 5000),
                "one undo restores the rendered notes before the time-menu insertion")

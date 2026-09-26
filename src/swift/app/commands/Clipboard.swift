@@ -571,6 +571,35 @@ public struct RangeContents: Sendable {
 @MainActor
 public final class GridClipboard {
     nonisolated public init() {}
+    private var changeObservers: [UUID: () -> Void] = [:]
+    private var nativeObserver: UnsafeMutableRawPointer?
+
+    isolated deinit {
+        if let nativeObserver { pd_clipboard_unobserve(nativeObserver) }
+    }
+
+    public func addChangeObserver(_ observer: @escaping () -> Void) -> UUID {
+        if nativeObserver == nil {
+            guard let observerToken = pd_clipboard_observe(Unmanaged.passUnretained(self).toOpaque(), { context in
+                guard let context else { return }
+                let clipboard = Unmanaged<GridClipboard>.fromOpaque(context).takeUnretainedValue()
+                for callback in clipboard.changeObservers.values { callback() }
+            }) else { return UUID() }
+            nativeObserver = observerToken
+        }
+        let token = UUID()
+        changeObservers[token] = observer
+        return token
+    }
+
+    public func removeChangeObserver(_ token: UUID) {
+        changeObservers.removeValue(forKey: token)
+        if changeObservers.isEmpty, let nativeObserver {
+            pd_clipboard_unobserve(nativeObserver)
+            self.nativeObserver = nil
+        }
+    }
+
     public func write(_ clip: PorydawClip, ticksPerBeat: UInt32) -> Bool {
         guard let data = ClipboardCodec.encode(clip, ticksPerBeat: ticksPerBeat) else { return false }
         return data.withUnsafeBytes { bytes in

@@ -28,12 +28,49 @@ internal func runTransportBarChecks(_ report: CheckReport) {
     report.expectEqual(expected: "4:1", actual: TransportBarPresenter.measure(at: 264, timeline: timeline),
                        cppID: id, what: "new 3/4 segment advances after three beats")
     checkRestoredOutputVolumeAfterAttachment(report)
+    checkTransportTogglePreferences(report)
 
     guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
         report.fail("swiftcore/DocumentWorkspace::audibleMix", "missing --swiftcore fixture root")
         return
     }
     checkSelectedWorkspaceAudio(report, fixtureRoot: fixtureRoot)
+}
+
+@MainActor
+private func checkTransportTogglePreferences(_ report: CheckReport) {
+    let id = "swiftcore/TransportBar::togglePreferences"
+    let store = PreferencesStore()
+    defer {
+        store.remove(key: "followPlayhead")
+        store.remove(key: "dsp.resonanceSuppression")
+        store.synchronize()
+    }
+    store.setBool(key: "followPlayhead", value: false)
+    store.setBool(key: "dsp.resonanceSuppression", value: true)
+    store.synchronize()
+    let session = ApplicationSession()
+    defer {
+        session.hostClosing()
+        session.acknowledgeGridDetached()
+    }
+    guard let audio = session.transportAudio else {
+        report.fail(id, "native audio failed to initialize: \(session.lastSaveError)")
+        return
+    }
+    let presenter = session.transportBarPresenter()
+    presenter.restoreTransportToggles()
+    report.expectEqual(expected: false, actual: presenter.followPlayhead, cppID: id,
+                       what: "stored follow-playhead preference restores into the transport presenter")
+    report.expectEqual(expected: true, actual: audio.resonanceSuppression, cppID: id,
+                       what: "stored resonance suppression restores into the audio engine")
+    presenter.setFollowPlayhead(enabled: true)
+    report.expectEqual(expected: true, actual: store.bool(key: "followPlayhead", fallback: false),
+                       cppID: id, what: "toggling follow playhead stores its preference on change")
+    presenter.setResonanceSuppression(enabled: false)
+    report.expectEqual(expected: false,
+                       actual: store.bool(key: "dsp.resonanceSuppression", fallback: true),
+                       cppID: id, what: "toggling resonance suppression stores its preference on change")
 }
 
 @MainActor

@@ -8,25 +8,39 @@ Additional Swift counterpart: src/checks/editorqml/tst_ShellPitchBend.qml
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
-Scope: A001, A003-A005, A009-A015, A033-A035 and A094-A099 are closed by task 40
-against the native pitchBendOwnerLifetimePredicates and
+Scope: A001, A003-A005, A009-A015, A033-A035 and A094-A099 are closed by task
+40 against the native pitchBendOwnerLifetimePredicates and
 pitchBendUnterminatedPredicates rows in src/checks/rollcheck/pitch_bend.swift
-(swiftcore-projectsession lane; SessionChecks.swift:75) and the mounted predicates
-in src/checks/editorqml/tst_ShellPitchBend.qml (ShellQmlTests.swift:64-65, lane
-shell-pitch-bend). A016-A032, A036, A038, A040-A066 and A068-A093 stay GAP:
-description/idle/enter/internal-refresh, roll-click and outside-click dismissal,
-cursor, focus return and deactivate dismissal causes belong to later
-pitch-bend/ED12 slices; A002, A006-A008, A037, A039 and A067 keep their earlier
-dispositions.
-Disclosed deviations: the anchored form is a single-scene overlay mounted in the
-timeline window (EditorSurface.qml:942-998) instead of the fork's shared-canvas
-QuickPopupSession, so destroyed-editor rows map to Loader deactivation (findChild
-null) rather than QPointer nullness; the mounted external mutation is a redo of a
-real roll Delete where the fork programs moveNotes to track 1, and the native break
-is moveNotes(byTicks: 1) plus deleteNotes; the shrink is 12 x the resolved base
-font px instead of the fork's raw 160 px; the unterminated fixture appends one
-unpaired note-on to makeMidiFixture instead of the fork's setUp(true).
-Disposition tally: 99 sites: 26 MATCHED, 1 PARTIAL, 72 GAP.
+(swiftcore-projectsession lane; SessionChecks.swift:75) and the mounted
+predicates in src/checks/editorqml/tst_ShellPitchBend.qml
+(ShellQmlTests.swift:64-65, lane shell-pitch-bend). A016-A032 are closed by
+task 41 against the native pitchBendFineRampPredicates,
+pitchBendControllerPredicates, pitchBendSetterPredicates and
+pitchBendParityPredicates rows in src/checks/rollcheck/pitch_bend.swift:649-940
+and the mounted test_wheelInsideCanvasOnly,
+test_pointerScrubsUndoAndStationaryClick and
+test_scrubHoverAndIdleEnterKeepEditor in
+src/checks/editorqml/tst_ShellPitchBend.qml:637-739. A036, A038, A040-A066 and
+A068-A093 stay GAP: roll-click and outside-click dismissal, cursor, focus
+return and deactivate dismissal causes belong to later pitch-bend/ED12 slices;
+A002, A006-A008, A037, A039 and A067 keep their earlier dispositions.
+Disclosed deviations: the anchored form is a single-scene overlay mounted in
+the timeline window (EditorSurface.qml:942-998) instead of the fork's
+shared-canvas QuickPopupSession, so destroyed-editor rows map to Loader
+deactivation (findChild null) rather than QPointer nullness; the mounted
+external mutation is a redo of a real roll Delete where the fork programs
+moveNotes to track 1, and the native break is moveNotes(byTicks: 1) plus
+deleteNotes; the shrink is 12 x the resolved base font px instead of the fork's
+raw 160 px; the unterminated fixture appends one unpaired note-on to
+makeMidiFixture instead of the fork's setUp(true). Task-41 disclosures: the
+description rows read the popup's published description string (the mounted
+lane asserts "12 semitones" on the presenter's description, the fork on the
+editor's); the idle move lands on the mounted graph item's canvas rather than
+the shared canvas window; the internal-edit journey drives the wheel through
+PitchBendScene.wheel and the scrub through presenter.setBendRange, the commit
+entry DragInput writes; the identity rows compare the mounted popup item
+(findChild) and the presenter instead of QPointer equality.
+Disposition tally: 99 sites: 43 MATCHED, 1 PARTIAL, 55 GAP.
 
 Command: deno task verify --filter swiftcore --verbose (task-40 implementer run)
 Result: the controller reports the new pitch-bend rows PASSED inside the
@@ -41,6 +55,38 @@ test_gAnchorsPopupAndShrinkingWindowReclamps,
 test_externalRedoDeletesAnchorAndUnloadsPopup and test_livePreviewSurvivesUndoRedo
 alongside the seven unchanged tests. The ledger agent read the recording and did
 not re-run the lane.
+Command: deno task verify --filter swiftcore-projectsession --verbose (task-41 implementer final run)
+Result: PASS - ok, 1/37 checks (the filter selects the swiftcore-projectsession
+check); build/proof-evidence/swiftcore-projectsession.json (5427 passes, recorded
+2026-09-26 11:27) carries the pitchBendFineRampPredicates activeBENDR rows (the
+open editor reads the active BENDR value and the description reflects the active
+BENDR semitones), the pitchBendControllerPredicates wheel rows and the
+pitchBendSetterPredicates scrub rows cited below. The ledger agent read the
+recording; it did not re-run the lane.
+Command: deno task verify:shell --filter shell-pitch-bend --verbose (task-41 implementer run)
+Result: PASS - ok, 1/26 checks; build/proof-evidence/shell-pitch-bend.json (recorded
+2026-09-26 11:27:22) lists test_wheelInsideCanvasOnly,
+test_pointerScrubsUndoAndStationaryClick and test_scrubHoverAndIdleEnterKeepEditor
+alongside the twelve other tests. The ledger agent read the recording; it did not
+re-run the lane.
+
+Verification: the native predicates execute on the swiftcore-projectsession
+lane (SessionChecks.swift:75 passes the suite's DocumentSession) and the
+mounted predicates on the shell-pitch-bend lane (ShellQmlTests.swift:64-65).
+This bookkeeping pass read the recordings at
+build/proof-evidence/swiftcore-projectsession.json and
+build/proof-evidence/shell-pitch-bend.json and did not execute either lane. The
+mounted recording was made from the revision of
+src/checks/editorqml/tst_ShellPitchBend.qml (SHA-256
+5a84bdc2474eed910ccb848f8f442b712c7560f23ba4206ee4cf57cedc64182d); that file is
+still being edited by the concurrent shell-hygiene work of another task (a
+per-test init() preference reset), whose hunks touch none of the mapped
+predicates, messages or test-function names, so this ledger pins the recording
+revision rather than the moving working-tree revision. The controller re-runs
+the shell lane on the final tree before committing and that run refreshes this
+evidence. The native counterpart src/checks/rollcheck/pitch_bend.swift carries
+the SHA-256 2a365c34d1f4f91a289b93e0ac4b4aabd414a225456b9bf1c191827a9faca3f9
+pinned by the task-41 handoff.
 
 PitchBendEditingTest::popup/pitchGraph/modGraph/drawPitchCurve/drawModCurve
 and PitchBendFixture helpers live in src/checks/pitchbend/fixture.cpp with
@@ -221,8 +267,8 @@ Original expression:
       QVERIFY(resizedPopup.bottom() <= resizedHost.bottom());
 
 A016 | PitchBendEditingTest::popupDescriptionReflectsActiveBendr | src/checks/pitchbend/lifecycle.cpp:105
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - the mounted G journey realizes the anchored popup for the active-BENDR fixture (S001 selects its anchor, S002 realizes the popup) and the native activeBendRangeDescription block opens the same editor through pitchBendCheckScene; popup existence rides the route result
 Source context since previous assertion:
       m_fixture.assertNoteSelection();
   }
@@ -236,24 +282,24 @@ Original expression:
       QVERIFY(editorResult);
 
 A017 | PitchBendEditingTest::popupDescriptionReflectsActiveBendr | src/checks/pitchbend/lifecycle.cpp:107
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S021 - the open editor reads the active BENDR value from the note's channel lane (bendRange == 12)
 Source context since previous assertion:
       songview::PitchBendEditor &editor = *editorResult;
 Original expression:
       QCOMPARE(editor.bendRange(), 12);
 
 A018 | PitchBendEditingTest::popupDescriptionReflectsActiveBendr | src/checks/pitchbend/lifecycle.cpp:108
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S022 - the description contains "12 semitones" for the active BENDR value
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(editor.description().contains(QStringLiteral("12 semitones")));
 
 A019 | PitchBendEditingTest::idleMouseMovementPreservesPopup | src/checks/pitchbend/lifecycle.cpp:114
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - the G journey realizes the anchored popup this row's editor comes from
 Source context since previous assertion:
   }
 
@@ -264,8 +310,8 @@ Original expression:
       QVERIFY(editorResult);
 
 A020 | PitchBendEditingTest::idleMouseMovementPreservesPopup | src/checks/pitchbend/lifecycle.cpp:117
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S023 + S031 - presenter.pitchGraph() is a non-optional production accessor; the mounted idle journey finds the pitchBendGraph item and S023 proves that graph took the idle move, while S031 executes against the same graph natively (the A052 precedent)
 Source context since previous assertion:
       QPointer<songview::PitchBendEditor> editor = editorResult;
       songview::PitchBendGraph *graphResult = pitchGraph();
@@ -273,8 +319,8 @@ Original expression:
       QVERIFY(graphResult);
 
 A021 | PitchBendEditingTest::idleMouseMovementPreservesPopup | src/checks/pitchbend/lifecycle.cpp:123
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S023 - a mouse move across the mounted canvas at an idle point keeps the popup open
 Source context since previous assertion:
       songview::PitchBendGraph &graph = *graphResult;
       // Idle hover follows the production path: the move lands on the shared
@@ -285,16 +331,16 @@ Original expression:
       QVERIFY(editor && editor->isOpen());
 
 A022 | PitchBendEditingTest::idleMouseMovementPreservesPopup | src/checks/pitchbend/lifecycle.cpp:124
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S025 - the idle move and the Enter keys preserve the same editor identity (the mounted compare of findChild("pitchBendPopup") with the realized popup)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.popup() == editor);
 
 A023 | PitchBendEditingTest::enterKeyDoesNotDismissPopup | src/checks/pitchbend/lifecycle.cpp:130
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - the G journey realizes the anchored popup for the Enter journey
 Source context since previous assertion:
   }
 
@@ -305,8 +351,8 @@ Original expression:
       QVERIFY(editorResult);
 
 A024 | PitchBendEditingTest::enterKeyDoesNotDismissPopup | src/checks/pitchbend/lifecycle.cpp:133
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S024 - Enter and Return do not dismiss the popup (the editor stays open after both key clicks)
 Source context since previous assertion:
       songview::PitchBendEditor &editor = *editorResult;
       QTest::keyClick(&m_fixture.timelineWindow(), Qt::Key_Enter);
@@ -314,16 +360,16 @@ Original expression:
       QVERIFY(editor.isOpen());
 
 A025 | PitchBendEditingTest::enterKeyDoesNotDismissPopup | src/checks/pitchbend/lifecycle.cpp:134
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S025 - the popup identity survives the Enter keys
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.popup() == &editor);
 
 A026 | PitchBendEditingTest::internalEditsAndRefreshesKeepPopupOpen | src/checks/pitchbend/lifecycle.cpp:140
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - the G journey realizes the anchored popup for the internal-edit/refresh journey
 Source context since previous assertion:
   }
 
@@ -334,8 +380,8 @@ Original expression:
       QVERIFY(editorResult);
 
 A027 | PitchBendEditingTest::internalEditsAndRefreshesKeepPopupOpen | src/checks/pitchbend/lifecycle.cpp:143
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S026 + S031 - presenter.pitchGraph() is a non-optional production accessor and both predicates execute against that graph (the native wheel S031, the mounted wheel on the real item S026)
 Source context since previous assertion:
       songview::PitchBendEditor &editor = *editorResult;
       songview::PitchBendGraph *graphResult = pitchGraph();
@@ -343,32 +389,32 @@ Original expression:
       QVERIFY(graphResult);
 
 A028 | PitchBendEditingTest::internalEditsAndRefreshesKeepPopupOpen | src/checks/pitchbend/lifecycle.cpp:145
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S031 + S026 - the inside wheel raises BENDR one step per notch and writes one document revision, so the wheel reached the graph
 Source context since previous assertion:
       songview::PitchBendGraph &graph = *graphResult;
 Original expression:
       QVERIFY(m_fixture.wheel(graph, graph.canvasRect().center(), QPoint(0, 120)));
 
 A029 | PitchBendEditingTest::internalEditsAndRefreshesKeepPopupOpen | src/checks/pitchbend/lifecycle.cpp:147
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S027 - the mounted journey presses the real bendRangeSpin item and commits one entry, so the field is realized and wired (its findChild null guard is unmessaged)
 Source context since previous assertion:
       QQuickItem *bend = m_fixture.item(QStringLiteral("bendRangeSpin"));
 Original expression:
       QVERIFY(bend);
 
 A030 | PitchBendEditingTest::internalEditsAndRefreshesKeepPopupOpen | src/checks/pitchbend/lifecycle.cpp:148
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S030 + S027 - the native setBendRange call and the mounted pointer scrub over the production DragInput are the same ingress
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.scrub(*bend, 1));
 
 A031 | PitchBendEditingTest::internalEditsAndRefreshesKeepPopupOpen | src/checks/pitchbend/lifecycle.cpp:151
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S028 + S029 - the internal wheel edit and the refresh keep the same editor open
 Source context since previous assertion:
       m_fixture.view().updateSong(m_fixture.view().timeline());
       QCoreApplication::processEvents();
@@ -376,8 +422,8 @@ Original expression:
       QVERIFY(editor.isOpen());
 
 A032 | PitchBendEditingTest::internalEditsAndRefreshesKeepPopupOpen | src/checks/pitchbend/lifecycle.cpp:152
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S028 - internal edits and refreshes keep the same editor open; the presenter identity the mounted row compares (findChild == the realized popup) is the Swift form of popup() == &editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -1064,11 +1110,36 @@ Anchor: message "an unterminated note leaves the editor closed"
 S020 | pitchBendUnterminatedPredicates | src/checks/rollcheck/pitch_bend.swift
 Anchor: message "refusing the unterminated note leaves the song bytes unchanged"
 
+S021 | pitchBendFineRampPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the open editor reads the active BENDR value"
+S022 | pitchBendFineRampPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the description reflects the active BENDR semitones"
+S023 | test_scrubHoverAndIdleEnterKeepEditor | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "idle mouse motion keeps the popup open"
+S024 | test_scrubHoverAndIdleEnterKeepEditor | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "Enter does not dismiss the popup"
+S025 | test_scrubHoverAndIdleEnterKeepEditor | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "idle mouse and Enter preserve the editor identity"
+S026 | test_wheelInsideCanvasOnly | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the inside wheel writes one document revision"
+S027 | test_pointerScrubsUndoAndStationaryClick | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the BENDR pointer scrub pushes exactly one history entry"
+S028 | pitchBendControllerPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "internal edits and refreshes keep the same editor open"
+S029 | pitchBendSetterPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "controller edits and refresh keep the same editor open"
+S030 | pitchBendSetterPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "a pointer scrub raises BENDR by one"
+S031 | pitchBendControllerPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "wheeling inside the pitch graph raises BENDR one step per notch"
+
 The mounted predicates carry no line numbers by design: the reader resolves the
 index's message literal inside the named function (see `deno task proof show
 pitchbend/lifecycle.cpp S001`). The remaining predicates of the three task-40
 mounted journeys and of the two native blocks are indexed in proof.curve.txt
 (S102-S128 and S064-S101); they cover curve.cpp clauses, so they carry no
-lifecycle.cpp site here. Uncited index entries in this file: S005 (the
-inside-window clause of the already-MATCHED pre-shrink rows) and S010 (the fork's
-trailing assertNoteSelection, which is no A row).
+lifecycle.cpp site here. Task 41's mounted wheel/scrub/idle-Enter predicates and
+the native controller/scrub/active-BENDR predicates are indexed in this file as
+S021-S031 because they cover its A016-A032 rows. Uncited index entries in this
+file: S005 (the inside-window clause of the already-MATCHED pre-shrink rows) and
+S010 (the fork's trailing assertNoteSelection, which is no A row).

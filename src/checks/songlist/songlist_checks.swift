@@ -337,6 +337,30 @@ private func songListRestoreFilters(_ report: CheckReport) {
                        what: "out-of-range sort index is ignored")
 }
 
+@MainActor
+private func songListPreferenceRestore(_ report: CheckReport) {
+    let id = "swiftcore/SongList::preferenceRestore"
+    let store = PreferencesStore()
+    defer {
+        store.remove(key: "songFilterText")
+        store.remove(key: "songFilterSort")
+        store.remove(key: "songFilterCategory")
+        store.synchronize()
+    }
+    store.setString(key: "songFilterText", value: "route")
+    store.setInt(key: "songFilterSort", value: 1)
+    store.setString(key: "songFilterCategory", value: "mus_")
+    store.synchronize()
+    let presenter = SongListPresenter()
+    presenter.restoreFromPreferences()
+    presenter.setSongs(songListFixture())
+    report.expectEqual(expected: true,
+                       actual: presenter.searchText == "route" && presenter.sortIndex == 1
+                           && presenter.categoryPrefix() == "mus_"
+                           && rowLabels(presenter) == ["mus_route101", "mus_route102"],
+                       cppID: id, what: "stored song filters restore into the songs presenter")
+}
+
 // MARK: - Entry point
 
 @MainActor
@@ -347,4 +371,5 @@ internal func runSongListModelChecks(_ report: CheckReport) {
     songListSort(report)
     songListSelectionAndActivation(report)
     songListRestoreFilters(report)
+    songListPreferenceRestore(report)
 }

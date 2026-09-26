@@ -20,11 +20,32 @@ Result: PASS — 11/11 ShellGridMenu rows (Totals line: 9 test_ functions plus i
 cleanupTestCase); controller run of `deno task verify:shell --filter shell-grid-menu` —
 shell-grid-menu PASS. It executed the mounted clipboard and Insert Time cases that source
 S008-S014.
-Counts: MATCHED 15, PARTIAL 6, GAP 69, RETIRED-REPRESENTATION 10.
+Command: deno task verify --filter swiftcore --verbose (task-38b frozen sources)
+Command: deno task verify:shell --filter shell-grid-menu --verbose (task-38b frozen sources)
+Command: deno task verify:shell --filter shell-clipboard --verbose (task-38b frozen sources)
+Result: evidence rows recorded, lane green status pending controller re-run on the settled tree.
+Provenance: the task-38b predicate rows above are read from build/proof-evidence:
+swiftcore-projectsession.json (mtime 11:09, its swift_core_check objects compiled
+11:07:47, i.e. after the frozen timemenu.swift 11:05:12 / ruler_loop_menu.swift
+11:03:44 / AutomationSelectionCommands.swift 11:02:51 edits) carries the S015-S036
+messages under cppIDs swiftcore/PianoRoll::timeSelectionMenuInsertTimeAndStaleNoOp,
+timeSelectionSwiftMenuInsertAndStale, timeSelectionMenuClipboardRetirement,
+rejectedNotePastePreservesViewState, emptyTimeSelectionNudge and
+timeMenuNoteDuplicateAvailability; shell-grid-menu.json (11:00) lists
+test_rulerClipboardRowsFollowClipAndTimeSelection and
+test_rulerSelectionInsertTimeRowsShiftNotesAndUndo (S037-S050); shell-clipboard.json
+(10:57) lists test_roundTripReplacement and test_trackExpandingRangePaste
+(S051-S068). The controller records that the final 38b fixture/guard/alias edits
+have no confirmed post-edit green lane yet, so these rows are executed per
+build/proof-evidence and await the controller's re-run for a green confirmation.
+This proof-only reconciliation ran no lane, rebuilt nothing and re-ran no check.
+
+
+Counts: MATCHED 57, PARTIAL 14, GAP 19, NATIVE 0, RETIRED-REPRESENTATION 10.
 
 A001 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:105
 Disposition: GAP
-Mapping/reason: GAP — fixture seed guard (QVERIFY seed presence) with no executing Swift predicate; the Swift counterpart builds its own synthetic fixture. Open setup obligation.
+Mapping/reason: GAP — fixture seed guard (QVERIFY seed presence) with no executing Swift predicate; the Swift counterpart builds its own synthetic fixture and guards the seed through report.fail, not an asserting predicate. Open setup obligation.
 Source context since previous assertion:
   #include "checks/rollcheck/tst_pianoroll.h"
 
@@ -135,7 +156,7 @@ Original expression:
 
 A002 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:112
 Disposition: GAP
-Mapping/reason: GAP — seed-note reachability guard (findNote of the time-menu seed at track/tick/key) with no executing Swift predicate; the Swift counterpart builds its own synthetic fixture. Closed by a Swift predicate observing the seeded note presence at this slot track/tick/key.
+Mapping/reason: GAP — seed-note reachability guard (findNote of the time-menu seed at track/tick/key) with no executing Swift predicate; the Swift counterpart seeds its own synthetic note and guards it through report.fail. Open setup obligation.
 Source context since previous assertion:
   ;
       SongDocument &doc = check.document();
@@ -149,8 +170,8 @@ Original expression:
                "time menu seed note was not found")
 
 A003 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:125
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: MATCHED
+Mapping: S037
 Source context since previous assertion:
   ;
       doc.moveNotes({moved}, int64_t(snapCell), 0);
@@ -169,8 +190,8 @@ Original expression:
                "Copy did not seed a non-empty range clip on the clipboard")
 
 A004 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:128
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: MATCHED
+Mapping: S009, S025, S027
 Source context since previous assertion:
   ;
       // Native clipboard change notifications can arrive after setMimeData returns.
@@ -179,7 +200,7 @@ Original expression:
 
 A005 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:133
 Disposition: PARTIAL
-Mapping/reason: S007 (timemenu.swift checkTimeMenuHalfOpenBoundary, executed) opens the range menu at a press one tick inside the interval and asserts the typed time-range menu (menuKind 2) is open. Unproved: the rendered canvas menu session/panel and the native right-click delivery this row drives.
+Mapping/reason: PARTIAL: S007 (checkTimeMenuHalfOpenBoundary) opens the typed time-range menu at a press one tick inside the interval, so the presenter open state is executing. Unproved: the rendered canvas menu session/panel and the native right-click delivery this row drives.
 Source context since previous assertion:
   ;
 
@@ -202,8 +223,8 @@ Disposition: MATCHED
 Mapping: S010
 
 A009 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:144
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: MATCHED
+Mapping: S017, S024
 Source context since previous assertion:
   ;
 Original expression:
@@ -211,8 +232,8 @@ Original expression:
                "the shared time menu has no Clear row")
 
 A010 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:157
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: MATCHED
+Mapping: S023, S026, S029, S041, S042
 Source context since previous assertion:
   ;
 
@@ -231,8 +252,8 @@ Original expression:
                    "the Paste eligibility flip did not retire the open time menu")
 
 A011 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:161
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S027 reopens the presenter menu after the eligibility flip and asserts isOpen with the rebuilt Paste row enabled (the reopened menu this row samples). Unproved: the rendered canvas menu session/panel and the native right-click delivery.
 Source context since previous assertion:
   ;
       const SharedTimeMenu copyMenu =
@@ -241,8 +262,8 @@ Original expression:
   QVERIFY2(copyMenu.session, qUtf8Printable(copyMenu.diagnostic))
 
 A012 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:163
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: MATCHED
+Mapping: S010, S024
 Source context since previous assertion:
   ;
       const int copyMenuRow = timeMenuRow(*copyMenu.model, songview::TimeSelectionAction::Copy);
@@ -251,8 +272,8 @@ Original expression:
                "the reopened shared time menu has no enabled Copy row")
 
 A013 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:165
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: MATCHED
+Mapping: S037, S038
 Source context since previous assertion:
   ;
 Original expression:
@@ -260,8 +281,8 @@ Original expression:
                "the Copy row did not receive a real click")
 
 A014 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:168
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: MATCHED
+Mapping: S038
 Source context since previous assertion:
   ;
       QCoreApplication::processEvents();
@@ -270,8 +291,8 @@ Original expression:
                "the Copy activation left the menu open")
 
 A015 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:172
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S037 reads the decoded copied range clip and asserts a positive span with a non-empty note payload. Unproved: the exact span equality with the fixture snap cell.
 Source context since previous assertion:
   ;
       const std::optional<songview::Clip> copied =
@@ -281,8 +302,8 @@ Original expression:
                "the menu Copy row did not restore the copied range span")
 
 A016 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:185
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S051/S052 assert the copied payload carries each source note with its relTick, key, duration and velocity (note-selection copy) and S037 asserts the range copy carried a non-empty note payload. Unproved: the relTick/key of the range copy note payload.
 Source context since previous assertion:
   ;
       const bool restoredNote =
@@ -300,8 +321,8 @@ Original expression:
   QVERIFY2(restoredNote, "the menu Copy row did not restore the copied note payload")
 
 A017 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:186
-Disposition: GAP
-Mapping/reason: GAP: the shared time-selection menu itself is unported (no Swift menu surface; menu-row clicks, enablement, and menu-driven history depth below remain open). Only the insert-time document model is Swift-tested (S001).
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S039 asserts the rendered Copy activation leaves the document revision unchanged. Unproved: the song-byte and undo-index/undo-count equality the original compares.
 Source context since previous assertion:
   ;
 Original expression:
@@ -310,8 +331,8 @@ Original expression:
                "the menu Copy row mutated the document")
 
 A018 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:194
-Disposition: PARTIAL
-Mapping/reason: S011 (tst_ShellGridMenu.qml test_rulerClipboardRowsFollowClipAndTimeSelection, mounted) observes the rendered Paste row disabled while the clipboard holds no decodable clip. Unproved: the window Edit action's paste-clip-present flag this row reads, and the encoded empty-clip fixture.
+Disposition: MATCHED
+Mapping: S023, S024, S043
 Source context since previous assertion:
   ;
 
@@ -330,8 +351,8 @@ Disposition: MATCHED
 Mapping: S008
 
 A021 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:200
-Disposition: PARTIAL
-Mapping/reason: S011 (tst_ShellGridMenu.qml test_rulerClipboardRowsFollowClipAndTimeSelection, mounted) opens the rendered time-selection menu while the native clipboard holds an empty, undecodable payload and asserts the Paste row renders disabled. Unproved: the decodable-but-empty clip branch of this row (the mounted fixture poisons the clipboard with zero bytes, not an encoded empty clip).
+Disposition: MATCHED
+Mapping: S011, S023, S024, S028
 Source context since previous assertion:
   ;
 Original expression:
@@ -347,8 +368,8 @@ Disposition: MATCHED
 Mapping: S012
 
 A024 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:207
-Disposition: GAP
-Mapping/reason: GAP: the shared time-selection menu itself is unported (no Swift menu surface; menu-row clicks, enablement, and menu-driven history depth below remain open). Only the insert-time document model is Swift-tested (S001).
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S040 asserts the rendered disabled-Paste click leaves the document revision unchanged. Unproved: the song-byte and undo-index/undo-count equality the original compares.
 Source context since previous assertion:
   ;
 Original expression:
@@ -358,7 +379,7 @@ Original expression:
 
 A025 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:216
 Disposition: GAP
-Mapping/reason: GAP — fixture seed guard (QVERIFY seed presence) with no executing Swift predicate; the Swift counterpart builds its own synthetic fixture. Open setup obligation.
+Mapping/reason: GAP — fixture seed guard (QVERIFY seed presence) with no executing Swift predicate; checkRejectedTimeMenuPaste builds its own synthetic fixture without a seeded note. Open setup obligation.
 Source context since previous assertion:
   ;
   }
@@ -372,7 +393,7 @@ Original expression:
 
 A026 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:223
 Disposition: GAP
-Mapping/reason: GAP — seed-note reachability guard (findNote of the rejected-paste seed at track/tick/key) with no executing Swift predicate; the Swift counterpart builds its own synthetic fixture. Closed by a Swift predicate observing the seeded note presence at this slot track/tick/key.
+Mapping/reason: GAP — seed-note reachability guard (findNote of the rejected-paste seed at track/tick/key) with no executing Swift predicate; the Swift rejected-paste fixture seeds no note. Open setup obligation.
 Source context since previous assertion:
   ;
       SongDocument &doc = check.document();
@@ -386,7 +407,7 @@ Original expression:
 
 A027 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:228
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Mapping/reason: GAP — native QSignalSpy validity guard (SongView::statusMessage) with no executing counterpart predicate; S054 reads the status value rather than the signal-spy precondition.
 Source context since previous assertion:
   ;
       const clipcheck_support::ClipboardStateGuard clipboardGuard;
@@ -398,15 +419,15 @@ Original expression:
 
 A028 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:229
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Mapping/reason: GAP — native QSignalSpy validity guard (SongView::editCursorMoved) with no executing counterpart predicate; S034/S055 read the cursor value rather than the signal-spy precondition.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(cursorMoves.isValid())
 
 A029 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:269
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S031 stages the conflicting payload on the native clipboard and S032 opens the menu for the menu-entry variants and asserts the Paste row eligible (isOpen) before the rejected activation. Unproved: the rendered canvas menu session/panel and the native right-click delivery.
 Source context since previous assertion:
   ;
 
@@ -453,7 +474,7 @@ Original expression:
 
 A030 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:271
 Disposition: MATCHED
-Mapping: S009
+Mapping: S032
 
 A031 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:272
 Disposition: MATCHED
@@ -464,8 +485,8 @@ Disposition: MATCHED
 Mapping: S013
 
 A033 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:278
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: MATCHED
+Mapping: S033
 Source context since previous assertion:
   ;
               } else {
@@ -476,120 +497,120 @@ Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A034 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:279
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: MATCHED
+Mapping: S033, S054
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.revision(), revision)
 
 A035 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:280
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: MATCHED
+Mapping: S033, S061
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.undoStack()->index(), undoIndex)
 
 A036 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:281
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: MATCHED
+Mapping: S033
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.undoStack()->count(), undoCount)
 
 A037 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:282
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: MATCHED
+Mapping: S033, S062
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.undoStack()->canRedo(), canRedo)
 
 A038 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:283
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: MATCHED
+Mapping: S034, S053
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(view.selectionModel().noteSelection() == selectedNotes)
 
 A039 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:284
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: MATCHED
+Mapping: S034
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(view.selectionModel().timeSelection().startTick, selectedTime.startTick)
 
 A040 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:285
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: MATCHED
+Mapping: S034
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(view.selectionModel().timeSelection().endTick, selectedTime.endTick)
 
 A041 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:286
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: MATCHED
+Mapping: S034
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(view.selectionModel().timeSelection().scope, selectedTime.scope)
 
 A042 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:287
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: MATCHED
+Mapping: S034
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(view.selectionModel().storedTrackScope(), trackScope)
 
 A043 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:288
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: MATCHED
+Mapping: S034, S055, S059
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(view.editCursorTick(), destination)
 
 A044 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:289
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: MATCHED
+Mapping: S034, S056
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(view.camera().scrollX(), scrollX)
 
 A045 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:290
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: MATCHED
+Mapping: S034, S057
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(view.camera().scrollY(), scrollY)
 
 A046 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:291
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S059 (mounted key paste) asserts zero cursor-movement emissions while S034/S055 assert the cursor value unchanged across all eight variants. Unproved: the zero emission count for the six menu-entry variants (the Swift predicate compares values, not emissions).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(cursorMoves.count(), 0)
 
 A047 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:292
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S060 (mounted key paste) asserts zero status announcements while S034/S058 assert the status text unchanged across all eight variants. Unproved: the zero announcement count for the six menu-entry variants.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(announcements.count(), 0)
 
 A048 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:305
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: MATCHED
+Mapping: S063, S066
 Source context since previous assertion:
   ;
           }
@@ -608,24 +629,24 @@ Original expression:
   QVERIFY(doc.findNote(check.track(), base, uint8_t(cell.key), &pasted))
 
 A049 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:306
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: MATCHED
+Mapping: S063, S066
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(pasted.duration, 2 * snap)
 
 A050 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:307
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: MATCHED
+Mapping: S063, S066
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(pasted.velocity, uint8_t(90))
 
 A051 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:308
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S066 asserts the range-clip paste advances the cursor by the clip span and S063 asserts the note-clip paste advances it past the pasted notes. Unproved: the exact note-clip advance value the original pins (2 * snap).
 Source context since previous assertion:
   ;
 Original expression:
@@ -633,15 +654,15 @@ Original expression:
 
 A052 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:309
 Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Mapping/reason: GAP — no executing predicate starts the admitted paste with an active time selection and asserts it is dropped: both mounted admitted-paste fixtures paste without a time selection, and the Swift admitted path has no predicate. Missing assertion site.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!view.selectionModel().timeSelection().active())
 
 A053 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:311
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: MATCHED
+Mapping: S063
 Source context since previous assertion:
   ;
           if (!rangeClip)
@@ -650,7 +671,7 @@ Original expression:
 
 A054 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:312
 Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Mapping/reason: GAP — no executing predicate counts the cursor-move emissions of the admitted paste; the mounted fixtures read the cursor value only.
 Source context since previous assertion:
   ;
 Original expression:
@@ -658,23 +679,23 @@ Original expression:
 
 A055 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:313
 Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Mapping/reason: GAP — no executing predicate asserts the single status announcement the admitted paste publishes.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(announcements.count(), 1)
 
 A056 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:314
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: MATCHED
+Mapping: S064, S065
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.undoStack()->index(), undoIndex + 1)
 
 A057 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:317
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S064 (one undo removes both pasted notes) and S068 (the range paste undo restores both target tracks baseline notes) prove the undo round-trip at the rendered-note level. Unproved: the song-byte equality the original compares.
 Source context since previous assertion:
   ;
           const QByteArray accepted = doc.smf().write();
@@ -683,8 +704,8 @@ Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A058 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:319
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S067 (the redo restores both pasted notes and the cursor) and S065 (Redo is enabled after Undo) prove the redo round-trip at the rendered-note level. Unproved: the song-byte equality the original compares.
 Source context since previous assertion:
   ;
           doc.undoStack()->redo();
@@ -692,8 +713,8 @@ Original expression:
   QCOMPARE(doc.smf().write(), accepted)
 
 A059 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:335
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S035 asserts the empty-content nudge moves the band start past the song end. Unproved: the exact snapped start tick and the retained band length the original pins.
 Source context since previous assertion:
   ;
           doc.undoStack()->undo();
@@ -716,39 +737,39 @@ Original expression:
 
 A060 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:336
 Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Mapping/reason: GAP — no executing predicate asserts the nudged band end tick (next + snap); S035 observes only that the start moved.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(view.selectionModel().timeSelection().endTick, next + snap)
 
 A061 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:337
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: MATCHED
+Mapping: S036
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.smf().write(), beforeNudge)
 
 A062 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:338
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: MATCHED
+Mapping: S036
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.revision(), revision)
 
 A063 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:339
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: MATCHED
+Mapping: S036
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.undoStack()->index(), undoIndex)
 
 A064 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:340
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: MATCHED
+Mapping: S036
 Source context since previous assertion:
   ;
 Original expression:
@@ -756,7 +777,7 @@ Original expression:
 
 A065 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:353
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Mapping/reason: GAP — native focus-setup guard (SongView::focusTimelineBand for the roll band); the mounted escape scenarios take roll focus with forceActiveFocus, which carries no message anchor. Open setup obligation.
 Source context since previous assertion:
   ;
   }
@@ -777,7 +798,7 @@ Original expression:
 
 A066 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:359
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Mapping/reason: GAP — native focus identity guard (QGuiApplication::focusWindow/focusObject on the roll input) with no executing counterpart predicate.
 Source context since previous assertion:
   ;
       QCoreApplication::sendPostedEvents();
@@ -795,7 +816,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A068 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:370
 Disposition: GAP
-Mapping/reason: GAP — fixture seed guard (QVERIFY seed presence) with no executing Swift predicate; the Swift counterpart builds its own synthetic fixture. Open setup obligation.
+Mapping/reason: GAP — seed-note reachability guard (findNote of the escape-scenario seed) with no executing Swift predicate; the Swift escape scenario has no seeded-note predicate. Open setup obligation.
 Source context since previous assertion:
   ;
       SongDocument &doc = check.document();
@@ -812,7 +833,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A070 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:391
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Mapping/reason: GAP — the mounted time-menu Escape assertions (tst_ShellGridMenu.qml test_rulerLoopAndSelectedTimeRowsExecuteFromRenderedPanels and test_rulerClipboardRowsFollowClipAndTimeSelection) verify the dismissal without a message argument, so no S entry can anchor them; no presenter-level Escape predicate exists. Missing message anchor.
 Source context since previous assertion:
   ;
       QTest::keyClick(opened.session->window(), Qt::Key_Escape);
@@ -823,7 +844,7 @@ Original expression:
 
 A071 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:393
 Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Mapping/reason: GAP — no executing predicate asserts the time selection survives a time-menu Escape; the mounted escape assertions carry no message.
 Source context since previous assertion:
   ;
 Original expression:
@@ -832,7 +853,7 @@ Original expression:
 
 A072 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:395
 Disposition: GAP
-Mapping/reason: GAP: the shared time-selection menu itself is unported (no Swift menu surface; menu-row clicks, enablement, and menu-driven history depth below remain open). Only the insert-time document model is Swift-tested (S001).
+Mapping/reason: GAP — no executing predicate asserts the time-menu Escape wrote nothing (revision/bytes/history).
 Source context since previous assertion:
   ;
 Original expression:
@@ -842,7 +863,7 @@ Original expression:
 
 A073 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:398
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Mapping/reason: GAP — no message-anchored predicate observes focus returning to the roll band after a time-menu Escape; the mounted roll-focus assertions follow row activations and carry no message.
 Source context since previous assertion:
   ;
 Original expression:
@@ -853,8 +874,8 @@ A074 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck
 Disposition: RETIRED-REPRESENTATION
 
 A075 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:408
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: MATCHED
+Mapping: S021
 Source context since previous assertion:
   ;
       view.selectionModel().clearTimeSelection();
@@ -863,8 +884,8 @@ Original expression:
                    "clearing the selection did not retire the open time menu")
 
 A076 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:410
-Disposition: GAP
-Mapping/reason: GAP: the shared time-selection menu itself is unported (no Swift menu surface; menu-row clicks, enablement, and menu-driven history depth below remain open). Only the insert-time document model is Swift-tested (S001).
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S021 asserts the history identity unchanged after the stale Duplicate activation, so the retire-without-dispatch shape is proved. Unproved: the song-byte and revision equality the original compares.
 Source context since previous assertion:
   ;
 Original expression:
@@ -877,7 +898,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A078 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:426
 Disposition: GAP
-Mapping/reason: GAP — fixture seed guard (QVERIFY seed presence) with no executing Swift predicate; the Swift counterpart builds its own synthetic fixture. Open setup obligation.
+Mapping/reason: GAP — seed-note reachability guard (findNote of the insert-time seed) with no executing Swift predicate; the Swift insert-time checks build their own synthetic fixture. Open setup obligation.
 Source context since previous assertion:
   ;
       SongDocument &doc = check.document();
@@ -894,8 +915,8 @@ A079 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollc
 Disposition: RETIRED-REPRESENTATION
 
 A080 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:444
-Disposition: PARTIAL
-Mapping/reason: src/checks/rollcheck/timemenu.swift checkTimeSelectionMenuCommands asserts a typed Insert Time row after applying a time range; execution and rendered QML click for this row remain unverified.
+Disposition: MATCHED
+Mapping: S017
 Source context since previous assertion:
   ;
       const int insertRow = timeMenuRow(*opened.model, songview::TimeSelectionAction::InsertBlank);
@@ -903,8 +924,8 @@ Original expression:
   QVERIFY2(insertRow >= 0, "the shared time menu has no Insert Time row")
 
 A081 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:445
-Disposition: PARTIAL
-Mapping/reason: src/checks/rollcheck/timemenu.swift checkTimeSelectionMenuCommands asserts the Insert Time row enabled for a live range; execution and native fixture parity remain unverified.
+Disposition: MATCHED
+Mapping: S017, S048
 Source context since previous assertion:
   ;
 Original expression:
@@ -912,8 +933,8 @@ Original expression:
                "the shared time menu rendered an enabled Insert Time row as disabled")
 
 A082 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:447
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: MATCHED
+Mapping: S049, S050
 Source context since previous assertion:
   ;
 Original expression:
@@ -921,8 +942,8 @@ Original expression:
                "the Insert Time row did not receive a real click")
 
 A083 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:450
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: MATCHED
+Mapping: S049
 Source context since previous assertion:
   ;
       QCoreApplication::processEvents();
@@ -931,8 +952,8 @@ Original expression:
                "the Insert Time activation left the shared time menu open")
 
 A084 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:452
-Disposition: GAP
-Mapping/reason: GAP: the shared time-selection menu itself is unported (no Swift menu surface; menu-row clicks, enablement, and menu-driven history depth below remain open). Only the insert-time document model is Swift-tested (S001).
+Disposition: MATCHED
+Mapping: S015, S016, S018, S020
 Source context since previous assertion:
   ;
 Original expression:
@@ -941,8 +962,8 @@ Original expression:
                "the Insert Time row did not shift the selected note by the span")
 
 A085 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:455
-Disposition: GAP
-Mapping/reason: GAP: the shared time-selection menu itself is unported (no Swift menu surface; menu-row clicks, enablement, and menu-driven history depth below remain open). Only the insert-time document model is Swift-tested (S001).
+Disposition: MATCHED
+Mapping: S019, S044, S046
 Source context since previous assertion:
   ;
 Original expression:
@@ -950,8 +971,8 @@ Original expression:
                "the menu Insert Time row did not commit the edit cursor to the seam")
 
 A086 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:459
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: MATCHED
+Mapping: S019, S045, S047
 Source context since previous assertion:
   ;
       const songview::EditorSelectionModel::TimeSelection insertedSelection =
@@ -962,8 +983,8 @@ Original expression:
                "the menu Insert Time row did not retain the selection over the blank span")
 
 A087 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:462
-Disposition: GAP
-Mapping/reason: GAP: the shared time-selection menu itself is unported (no Swift menu surface; menu-row clicks, enablement, and menu-driven history depth below remain open). Only the insert-time document model is Swift-tested (S001).
+Disposition: MATCHED
+Mapping: S020
 Source context since previous assertion:
   ;
 Original expression:
@@ -971,8 +992,8 @@ Original expression:
                "the Insert Time row did not commit exactly one undo transaction")
 
 A088 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:465
-Disposition: PARTIAL
-Mapping/reason: S014 (tst_ShellGridMenu.qml test_rulerSelectionInsertTimeRowsShiftNotesAndUndo, mounted) clicks the rendered time-selection Insert Time row and asserts one undo restores the rendered note layout; S001 remains model-level byte evidence. Unproved: the mounted byte equality (QML observes rendered notes, not song bytes).
+Disposition: MATCHED
+Mapping: S001, S014, S020
 
 A089 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:473
 Disposition: RETIRED-REPRESENTATION
@@ -1025,8 +1046,8 @@ Original expression:
                "the sweep seed note was not found for the note-only Duplicate check")
 
 A100 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:534
-Disposition: GAP
-Mapping/reason: GAP — after clearing the time sweep and selecting a note, the mounted Swift menu test does not verify that Duplicate stays enabled for the note-only selection.
+Disposition: MATCHED
+Mapping: S030
 Source context since previous assertion:
   ;
       view.selectionModel().setNoteSelection({seedNote.noteId});
@@ -1041,6 +1062,26 @@ shell QML test and prove a roll-origin sweep and rendered-menu eligibility. S008
 same mounted test file: they seed the native clipboard through the rendered Copy row (or poison it
 with an empty payload), click rendered time-menu rows, and observe Paste/Copy/Cut enablement,
 menu dismissal and the rendered note layout after Insert Time and undo.
+
+S015-S036 are the task-38b presenter predicates of src/checks/rollcheck/timemenu.swift:
+S015/S016 the model Insert Time transaction and its single undo (checkTimeMenuInsertTime),
+S017-S021 the typed time-menu Insert Time row, its undoable insertion, its cursor/seam commit
+with retained selection and its stale selection loss (checkTimeSelectionMenuCommands), S022 the
+half-open end boundary (checkTimeMenuHalfOpenBoundary), S023-S029 the live clipboard eligibility
+and retirement set (checkTimeMenuClipboardRetirement), S030 the note-only Duplicate arm
+(checkNoteDuplicateArming), S031-S034 the eight-variant rejected-paste invariant matrix
+(checkRejectedTimeMenuPaste) and S035/S036 the empty-content band nudge
+(checkEmptyTimeSelectionNudge). S037-S050 are the task-38b mounted predicates of
+src/checks/editorqml/tst_ShellGridMenu.qml: S037-S043 the rendered Copy payload, Copy
+activation, disabled-Paste no-write and the clipboard-flip retirement/rebuild of the time menu,
+and S044-S050 the ruler- and time-menu Insert Time cursor/seam/selection retention rows.
+S051-S068 are the task-38b mounted predicates of src/checks/editorqml/tst_ShellClipboard.qml:
+S051-S062 the copied payload and the rejected-paste view-state, history, undo/redo and
+announcement invariants of the key paste, S063-S065/S067 the admitted span-0 paste with its
+undo/redo round-trip, and S066/S068 the admitted range clip's span advance and undo.
+S022 pins the outside branch of the same half-open presenter check; no timemenu.cpp site
+drives the interval-end press (that site is ruler_loop_menu.cpp A110-A113, indexed by
+proof.ruler_loop_menu.txt).
 
 S001 | checkTimeMenuInsertTime | src/checks/rollcheck/timemenu.swift
 Anchor: message "A088: one undo restores the bytes before time insertion"
@@ -1083,6 +1124,168 @@ Anchor: message "the enabled time-menu Paste activation closes the menu"
 
 S014 | test_rulerSelectionInsertTimeRowsShiftNotesAndUndo | src/checks/editorqml/tst_ShellGridMenu.qml
 Anchor: message "one undo restores the rendered notes before the time-menu insertion"
+
+S015 | checkTimeMenuInsertTime | src/checks/rollcheck/timemenu.swift
+Anchor: message "the selected span inserts blank time"
+
+S016 | checkTimeMenuInsertTime | src/checks/rollcheck/timemenu.swift
+Anchor: message "A084: the seed shifts from the selection start to its end in one transaction"
+
+S017 | checkTimeSelectionMenuCommands | src/checks/rollcheck/timemenu.swift
+Anchor: message "a selected interval opens an enabled Insert Time row"
+
+S018 | checkTimeSelectionMenuCommands | src/checks/rollcheck/timemenu.swift
+Anchor: message "the row applies one undoable range insertion"
+
+S019 | checkTimeSelectionMenuCommands | src/checks/rollcheck/timemenu.swift
+Anchor: message "the Insert Time row commits at the seam and retains the blank selection"
+
+S020 | checkTimeSelectionMenuCommands | src/checks/rollcheck/timemenu.swift
+Anchor: message "one undo restores the document before the menu insertion"
+
+S021 | checkTimeSelectionMenuCommands | src/checks/rollcheck/timemenu.swift
+Anchor: message "a stale duplicate click cannot write after selection loss"
+
+S022 | checkTimeMenuHalfOpenBoundary | src/checks/rollcheck/timemenu.swift
+Anchor: message "a press at the interval end is outside the half-open selection"
+
+S023 | checkTimeMenuClipboardRetirement | src/checks/rollcheck/timemenu.swift
+Anchor: message "an empty clip reaches the native clipboard"
+
+S024 | checkTimeMenuClipboardRetirement | src/checks/rollcheck/timemenu.swift
+Anchor: message "Paste starts disabled for an empty clip while Copy and Clear remain enabled"
+
+S025 | checkTimeMenuClipboardRetirement | src/checks/rollcheck/timemenu.swift
+Anchor: message "a non-empty note clip reaches the native clipboard"
+
+S026 | checkTimeMenuClipboardRetirement | src/checks/rollcheck/timemenu.swift
+Anchor: message "the clipboard change retires the open time menu without a write"
+
+S027 | checkTimeMenuClipboardRetirement | src/checks/rollcheck/timemenu.swift
+Anchor: message "the rebuilt Paste row follows the decodable non-empty clipboard"
+
+S028 | checkTimeMenuClipboardRetirement | src/checks/rollcheck/timemenu.swift
+Anchor: message "the native clipboard accepts the emptied clip"
+
+S029 | checkTimeMenuClipboardRetirement | src/checks/rollcheck/timemenu.swift
+Anchor: message "emptying the clipboard retires the enabled Paste menu without a write"
+
+S030 | checkNoteDuplicateArming | src/checks/rollcheck/timemenu.swift
+Anchor: message "Duplicate stays enabled for a note-only selection"
+
+S031 | checkRejectedTimeMenuPaste | src/checks/rollcheck/timemenu.swift
+Anchor: message "a conflicting \(variant) payload reaches the native clipboard"
+
+S032 | checkRejectedTimeMenuPaste | src/checks/rollcheck/timemenu.swift
+Anchor: message "Paste remains eligible for the \(variant) payload"
+
+S033 | checkRejectedTimeMenuPaste | src/checks/rollcheck/timemenu.swift
+Anchor: message "a conflicting \(variant) paste preserves song and history"
+
+S034 | checkRejectedTimeMenuPaste | src/checks/rollcheck/timemenu.swift
+Anchor: message "a conflicting \(variant) paste preserves selection and view"
+
+S035 | checkEmptyTimeSelectionNudge | src/checks/rollcheck/timemenu.swift
+Anchor: message "an empty-content nudge moves the band past the song end"
+
+S036 | checkEmptyTimeSelectionNudge | src/checks/rollcheck/timemenu.swift
+Anchor: message "nudging an empty band publishes no document edit"
+
+S037 | test_rulerClipboardRowsFollowClipAndTimeSelection | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the Copy row writes a decodable non-empty range clip"
+
+S038 | test_rulerClipboardRowsFollowClipAndTimeSelection | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the Copy activation closes the time-selection menu"
+
+S039 | test_rulerClipboardRowsFollowClipAndTimeSelection | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the Copy row leaves the document unchanged"
+
+S040 | test_rulerClipboardRowsFollowClipAndTimeSelection | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the disabled time-menu Paste click writes nothing"
+
+S041 | test_rulerClipboardRowsFollowClipAndTimeSelection | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "a clipboard eligibility flip retires the open time menu"
+
+S042 | test_rulerClipboardRowsFollowClipAndTimeSelection | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "clipboard retirement does not edit the document"
+
+S043 | test_rulerClipboardRowsFollowClipAndTimeSelection | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "a rebuilt time menu disables Paste after clipboard clearing"
+
+S044 | test_rulerSelectionInsertTimeRowsShiftNotesAndUndo | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the ruler Insert Time row parks the cursor at the selected start seam"
+
+S045 | test_rulerSelectionInsertTimeRowsShiftNotesAndUndo | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the ruler insertion retains the time selection over the blank span"
+
+S046 | test_rulerSelectionInsertTimeRowsShiftNotesAndUndo | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the time-menu Insert Time row parks the cursor at the selected start seam"
+
+S047 | test_rulerSelectionInsertTimeRowsShiftNotesAndUndo | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the time-menu insertion retains the time selection over the blank span"
+
+S048 | test_rulerSelectionInsertTimeRowsShiftNotesAndUndo | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the time-selection menu offers an enabled Insert Time row"
+
+S049 | test_rulerSelectionInsertTimeRowsShiftNotesAndUndo | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the time-menu Insert Time activation closes the menu"
+
+S050 | test_rulerSelectionInsertTimeRowsShiftNotesAndUndo | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the time-menu Insert Time row shifts the rendered notes"
+
+S051 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboard.qml
+Anchor: message "the payload carries the first note"
+
+S052 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboard.qml
+Anchor: message "the payload carries the second note"
+
+S053 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboard.qml
+Anchor: message "a conflicting note paste preserves document notes and selection"
+
+S054 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboard.qml
+Anchor: message "a conflicting note paste preserves the document revision"
+
+S055 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboard.qml
+Anchor: message "a conflicting note paste preserves the edit cursor"
+
+S056 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboard.qml
+Anchor: message "a conflicting note paste preserves horizontal camera scroll"
+
+S057 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboard.qml
+Anchor: message "a conflicting note paste preserves vertical camera scroll"
+
+S058 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboard.qml
+Anchor: message "a conflicting note paste preserves status"
+
+S059 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboard.qml
+Anchor: message "a conflicting note paste emits no cursor movement"
+
+S060 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboard.qml
+Anchor: message "a conflicting note paste emits no status announcement"
+
+S061 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboard.qml
+Anchor: message "a conflicting note paste preserves Undo"
+
+S062 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboard.qml
+Anchor: message "a conflicting note paste preserves Redo"
+
+S063 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboard.qml
+Anchor: message "span-0 paste publishes two selected notes and the cursor"
+
+S064 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboard.qml
+Anchor: message "Undo removes both pasted notes"
+
+S065 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboard.qml
+Anchor: message "Redo is enabled after Undo"
+
+S066 | test_trackExpandingRangePaste | src/checks/editorqml/tst_ShellClipboard.qml
+Anchor: message "real Paste publishes both target tracks and advances by span"
+
+S067 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboard.qml
+Anchor: message "Redo restores both pasted notes and the cursor"
+
+S068 | test_trackExpandingRangePaste | src/checks/editorqml/tst_ShellClipboard.qml
+Anchor: message "Undo restores both target tracks' baseline notes"
 
 Remaining original source (closing sequence and helper bodies):
   ;

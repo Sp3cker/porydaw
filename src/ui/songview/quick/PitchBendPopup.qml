@@ -62,9 +62,14 @@ Rectangle {
         onWheel: (wheel) => wheel.accepted = true
     }
 
-    // The focused graph or numeric field claims its own keys first. The
-    // popup handles Escape and vertex deletion; no timeline command may leak
-    // through this shared overlay.
+    Keys.onShortcutOverride: (event) => {
+        if (bridge && bridge.isOpen
+                && !bendRangeField.textInput.activeFocus
+                && !lfoSpeedField.textInput.activeFocus
+                && !event.matches(StandardKey.Undo) && !event.matches(StandardKey.Redo))
+            event.accepted = true
+    }
+
     Keys.onPressed: (event) => {
         if (event.key === Qt.Key_Escape)
             bridge.cancelAndClose()

@@ -10,13 +10,13 @@ Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted n
 Command: deno task verify --filter swiftcore --verbose --qt projectSession -maxwarnings 100000
 Result: PASS (3 passed, 0 failed; covering PASS IDs renameTargetRowAndScrolledTitleResolve, renameMenuTargetsAndBegins). Full-suite PASS not claimed (concurrent-slice noise during the run).
 Converted-window command: deno task verify:qml-roll --verbose
-Converted-window result: PASS (lane frozen diagnostic run, 1/1 SwiftRollTrackHeaders); test_renameEditorBoundToTrackRow (:156-174) exercises A017-A019, test_reorderMarkerStaysInsideInput (:176-192) exercises A047-A048, test_headerMenuRenameRowActivates (:194-211) exercises A004 through the mounted panel. This proof-only pass cites the exercised lines without re-running the suite.
-Verified QML SHA-256: 43eb0128d4e291db0844ec3b9412204bc85411ebfa7e47a259c260edd58e916d
-Production surface: src/ui/songview/quick/swiftroll/EditorSurface.qml SHA-256 98ab54f1f86e393ffcaaaea037a1230f3b22deb1937458be342fbd248569d74f (re-pinned by task 32 and task 33, then by the task-34b/35 grid cutover, whose GridRowControl key handling and rollInput hover/pointer edits shifted the later lines; the cited ranges are re-verified on the frozen tree: header menu loader :742-790 with QuickMenuPanel at :762-786, presenter property :21, menu-action routing :90-106 with the header branch at :95-96, header band mount :206-218; Main-authorized parity fix for the previously unrendered presenter menu)
+Converted-window result: PASS (build/proof-evidence/swiftroll-window.json records SwiftRollTrackHeaders::test_zMountedRenameAndReorderCommit and test_headerMenuRenameRowActivates as executed lane functions; this proof-only pass cites the exercised anchors without re-running the suite). Exercised functions on the frozen tree: test_renameEditorBoundToTrackRow (:301-320) exercises A017-A019, test_reorderMarkerStaysInsideInput (:321-338) exercises A046-A048, test_headerMenuRenameRowActivates (:339-359) exercises A007/A010, test_zMountedRenameAndReorderCommit (:569-606) exercises A005/A011, test_zMountedMenuDispatchAndDismissal (:487-568) exercises A005.
+Verified QML SHA-256: e5583fc8c00ed942e3d550bc148a005f0778dc0b0ff8d50f177682ca43cabde1 (src/checks/rollqml/tst_SwiftRollTrackHeaders.qml)
+Production surface: src/ui/songview/quick/swiftroll/EditorSurface.qml SHA-256 3d5180399d5d8370d75fc3e6e7498188abdc76b90a0195436b1ceda69fa9f98d (re-pinned by task 32 and task 33, then by the task-34b/35 grid cutover and by task 48, whose headerMenuLoader focus deferral shifted the later lines; the cited ranges are re-verified on the frozen tree: header menu loader :755-814 with QuickMenuPanel at :786-810, presenter property :20, menu-action routing :89-107 with the header branch at :94-95, header band mount :217-231; Main-authorized parity fix for the previously unrendered presenter menu)
 
 A001 | commitRename | src/checks/trackheaders/trackheadermutations.cpp:55
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: PARTIAL
+Mapping/reason: Native fixture focus establishment (fixture.focusInput) inside the shared commitRename helper is setup, not an observable; the converted lane asserts the band input keeps keyboard focus across an outside dismissal (S082) and that the mounted editor accepts focus (S080), so the establishment clause itself stays unproved.
 Source context since previous assertion:
   #include "checks/trackheaders/tst_trackheaders.h"
 
@@ -88,32 +88,16 @@ Disposition: MATCHED
 Mapping: S074, S075, S076
 
 A005 | commitRename | src/checks/trackheaders/trackheadermutations.cpp:71
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      const quick_popup::PromptGuard guard(fixture.view());
-      QTest::mouseClick(session->window(), Qt::RightButton, Qt::NoModifier,
-                        fixture.input().mapToScene(*title).toPoint());
-Original expression:
-  QVERIFY2(QTest::qWaitFor([&session] {
-                   return session->isOpen() && quick_popup::menuPanel(*session) &&
-                          quick_popup::menuModel(*quick_popup::menuPanel(*session)) != nullptr;
-               }),
-               "the header right-press did not open the shared menu")
+Disposition: MATCHED
+Mapping: S077
 
 A006 | commitRename | src/checks/trackheaders/trackheadermutations.cpp:80
 Disposition: MATCHED
 Mapping: S062
 
 A007 | commitRename | src/checks/trackheaders/trackheadermutations.cpp:81
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY2(quick_popup::clickMenuRow(*session, renameRow),
-               "the Rename track row did not receive a real click")
+Disposition: MATCHED
+Mapping: S078
 
 A008 | commitRename | src/checks/trackheaders/trackheadermutations.cpp:84
 Disposition: MATCHED
@@ -124,22 +108,12 @@ Disposition: MATCHED
 Mapping: S064
 
 A010 | commitRename | src/checks/trackheaders/trackheadermutations.cpp:86
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-Original expression:
-  QTRY_VERIFY(fixture.rename().isVisible())
+Disposition: MATCHED
+Mapping: S079
 
 A011 | commitRename | src/checks/trackheaders/trackheadermutations.cpp:88
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      // The fixture's rename() accessor already resolves the named TextInput.
-Original expression:
-  QTRY_VERIFY2(fixture.rename().hasActiveFocus(),
-                   "the Quick rename input did not adopt the draft focus")
+Disposition: MATCHED
+Mapping: S080
 
 A012 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:107
 Disposition: MATCHED
@@ -158,13 +132,8 @@ Disposition: MATCHED
 Mapping: S002
 
 A016 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:116
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      checks::support::pumpQuick();
-Original expression:
-  QVERIFY(fx.rename().isVisible())
+Disposition: MATCHED
+Mapping: S066
 
 A017 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:118
 Disposition: MATCHED
@@ -186,8 +155,8 @@ A021 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheader
 Disposition: MATCHED
 
 A022 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:126
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: PARTIAL
+Mapping/reason: Presenter predicates S003/S004 prove a cancelled rename closes the editor and drops the draft, and S081 proves the mounted editor closes after a commit; unproved: no converted predicate observes the mounted editor after a discarded rename, which is only exercised unasserted in the lane's cleanup.
 Source context since previous assertion:
   ;
 Original expression:
@@ -208,8 +177,8 @@ A026 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheader
 Disposition: MATCHED
 
 A027 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:139
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: PARTIAL
+Mapping/reason: Presenter predicate S004 (hidden cancels draft permanently) proves a cancelled rename drops the draft, and S081 proves the mounted editor closes after a commit; unproved: no converted predicate observes the mounted editor after a transient cancellation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -287,13 +256,8 @@ Disposition: MATCHED
 Mapping: S015
 
 A046 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:187
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      checks::support::pumpQuick();
-Original expression:
-  QVERIFY(fx.marker().isVisible())
+Disposition: MATCHED
+Mapping: S071
 
 A047 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:188
 Disposition: MATCHED
@@ -1200,3 +1164,21 @@ Anchor: message "headerMenuRow_3"
 
 S076 | test_headerMenuRenameRowActivates | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: message "renamingTrack"
+
+S077 | test_zMountedMenuDispatchAndDismissal | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "the header menu lists the fork's five actions"
+
+S078 | test_headerMenuRenameRowActivates | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "rename action opens an editor on the targeted track"
+
+S079 | test_headerMenuRenameRowActivates | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "rename action mounts the track-header editor"
+
+S080 | test_zMountedRenameAndReorderCommit | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "the mounted editor accepts keyboard focus"
+
+S081 | test_zMountedRenameAndReorderCommit | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "mounted rename closes its editor after commit"
+
+S082 | test_zMountedMenuDispatchAndDismissal | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "the band keeps keyboard focus across outside dismissal"

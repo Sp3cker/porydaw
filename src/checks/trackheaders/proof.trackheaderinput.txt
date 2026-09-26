@@ -10,9 +10,9 @@ Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted n
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run.
 Converted-window command: deno task verify:qml-roll --verbose
-Converted-window result: PASS (lane frozen diagnostic run, 1/1 SwiftRollTrackHeaders); test_mountedBandGeometryAndRows (:109-132) exercises A001-A003, A005-A008 and A010-A017, test_scrollThumbAtBothLimits (:136-154) exercises A088-A089. This proof-only pass cites the exercised lines without re-running the suite.
-Verified QML SHA-256: 43eb0128d4e291db0844ec3b9412204bc85411ebfa7e47a259c260edd58e916d
-Production surface: src/ui/songview/quick/swiftroll/EditorSurface.qml SHA-256 98ab54f1f86e393ffcaaaea037a1230f3b22deb1937458be342fbd248569d74f (re-pinned by task 32 and task 33, then by the task-34b/35 grid cutover, whose GridRowControl key handling and rollInput hover/pointer edits shifted the later lines; the cited ranges are re-verified on the frozen tree: the header presenter property is :21, menu-action routing :90-106 with the header branch at :95-96, and the header band mount :206-218)
+Converted-window result: PASS (lane frozen diagnostic run, 1/1 SwiftRollTrackHeaders; not re-run by this proof-only pass). Exercised functions on the frozen tree: test_mountedBandGeometryAndRows (:235-265) exercises A001-A003, A005-A008 and A010-A017, test_scrollThumbAtBothLimits (:280-300) exercises A088-A089. This proof-only pass cites the exercised lines without re-running the suite.
+Verified QML SHA-256: e5583fc8c00ed942e3d550bc148a005f0778dc0b0ff8d50f177682ca43cabde1 (src/checks/rollqml/tst_SwiftRollTrackHeaders.qml)
+Production surface: src/ui/songview/quick/swiftroll/EditorSurface.qml SHA-256 3d5180399d5d8370d75fc3e6e7498188abdc76b90a0195436b1ceda69fa9f98d (re-pinned by task 32 and task 33, then by the task-34b/35 grid cutover and by task 48, whose headerMenuLoader focus deferral shifted the later lines; the cited ranges are re-verified on the frozen tree: the header presenter property is :20, menu-action routing :89-107 with the header branch at :94-95, and the header band mount :217-231)
 
 A001 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:80
 Disposition: MATCHED

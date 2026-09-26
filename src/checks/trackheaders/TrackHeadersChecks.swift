@@ -63,6 +63,7 @@ internal func runTrackHeadersChecks(_ report: CheckReport, session: DocumentSess
                       cppID: geometryID,
                       message: "at base \(base), both toggle borders and text fit within the header content column")
     }
+    trackHeaderBudgetStyling(report, suite: session, service: service)
     unattachedModelPublishesSafeZeroGeometry(report, suite: session, service: service)
     reorderSlotsResolveInsertionTargetsAndUndoRestores(report, suite: session, service: service)
     headerReconciliationUnchanged(report, suite: session, service: service)
@@ -75,6 +76,73 @@ internal func runTrackHeadersChecks(_ report: CheckReport, session: DocumentSess
     } catch {
         report.fail("swiftcore/TrackHeaders::supplementalAwaitedVoiceUndo", "history regression failed: \(error)")
     }
+}
+
+@MainActor
+private func trackHeaderBudgetStyling(_ report: CheckReport, suite: DocumentSession,
+                                      service: ProjectService) {
+    let fixture = TrackHeadersFixture(suite: suite, service: service, trackBudget: 1)
+    let session = fixture.session
+    let headers = fixture.headers
+    let palette = GridPalette()
+    let id = "swiftcore/TrackHeaders::budgetStyling"
+    func row(_ track: Int) -> TrackHeaderRowHandle {
+        headers.rows[fixture.rowForTrack(track)!]
+    }
+    func lab(_ color: String) -> PaletteMath.Oklab {
+        let rgb = PaletteMath.channels(color)
+        return PaletteMath.oklab(r: rgb.r, g: rgb.g, b: rgb.b)
+    }
+    func distance(_ first: String, _ second: String) -> Double {
+        let a = lab(first), b = lab(second)
+        return hypot(hypot(a.lightness - b.lightness, a.a - b.a), a.b - b.b)
+    }
+    let normal = row(1)
+    report.expect(normal.titleColor != palette.primaryText
+                  && distance(normal.titleColor, palette.windowBackground)
+                     < distance(palette.primaryText, palette.windowBackground),
+                  cppID: id, message: "a track beyond the budget dims its title toward the window surface")
+    report.expect(normal.subtitleColor != palette.secondaryText
+                  && distance(normal.subtitleColor, palette.windowBackground)
+                     < distance(palette.secondaryText, palette.windowBackground),
+                  cppID: id, message: "a track beyond the budget dims its subtitle toward the window surface")
+    report.expect(row(0).titleColor == palette.selectionText,
+                  cppID: id, message: "rows within the budget keep their full ink")
+    report.expect(row(0).subtitleColor == palette.selectionText,
+                  cppID: id, message: "rows within the budget keep their full subtitle ink")
+    let addFixture = TrackHeadersFixture(suite: suite, service: service, trackBudget: 3)
+    let baselineFixture = TrackHeadersFixture(suite: suite, service: service)
+    let addRow = addFixture.headers.rows[addFixture.headers.rows.count - 1]
+    let baselineAdd = baselineFixture.headers.rows[baselineFixture.headers.rows.count - 1]
+    report.expect(addRow.isAddTrack && addRow.titleColor == baselineAdd.titleColor
+                  && addRow.subtitleColor == baselineAdd.subtitleColor,
+                  cppID: id, message: "the add-track row never dims")
+    let forkTitle = PaletteMath.hex(PaletteMath.mixTowardOklab(
+        lab(palette.primaryText), lab(palette.windowBackground), 0.6))
+    report.expect(distance(normal.titleColor, palette.primaryText)
+                  <= distance(forkTitle, palette.primaryText),
+                  cppID: id, message: "over-budget dimming never exceeds the fork mix")
+    let forkSubtitle = PaletteMath.hex(PaletteMath.mixTowardOklab(
+        lab(palette.secondaryText), lab(palette.windowBackground), 0.6))
+    report.expect(distance(normal.subtitleColor, palette.secondaryText)
+                  <= distance(forkSubtitle, palette.secondaryText),
+                  cppID: id, message: "over-budget subtitle dimming never exceeds the fork mix")
+    session.selectedTrack = 1
+    headers.refreshFromDocument()
+    let primary = row(1)
+    report.expect(primary.titleColor != palette.selectionText
+                  && PaletteMath.contrastRatio(primary.titleColor, palette.selectionRing) >= 4.5,
+                  cppID: id, message: "a selected over-budget row dims on its selection surface")
+    session.selectedTrack = 0
+    session.adjustTrackScope(track: 1, action: .toggle)
+    headers.refreshFromDocument()
+    let scoped = row(1)
+    let surface = TrackHeadersGeometry.scopedHeaderSurface(palette: palette)
+    report.expect(scoped.titleColor != palette.windowText
+                  && PaletteMath.contrastRatio(scoped.titleColor, surface) >= 4.5,
+                  cppID: id, message: "an in-scope over-budget row dims over its tinted surface")
+    report.expect(scoped.titleColor == scoped.subtitleColor,
+                  cppID: id, message: "an in-scope row labels both texts with the window ink")
 }
 
 @MainActor

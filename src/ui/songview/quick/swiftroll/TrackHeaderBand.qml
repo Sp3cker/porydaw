@@ -60,6 +60,10 @@ Item {
                                                Math.round(subtitleMetrics.lineSpacing))
     }
 
+    function restoreHeaderFocus() {
+        headerInput.forceActiveFocus(Qt.OtherFocusReason)
+    }
+
     Component.onCompleted: {
         root.headersModel.dragDistance = Qt.styleHints.startDragDistance
         configureTextMetrics()
@@ -267,6 +271,7 @@ Item {
                             }
 
                             Item {
+                                objectName: "timelineHeaderActivity_" + trackHeaderRow.track
                                 width: root.headersModel.activityWidth
                                 height: Math.max(0, trackHeaderRow.height - root.headersModel.separatorWidth)
                                 visible: !trackHeaderRow.isAddTrack

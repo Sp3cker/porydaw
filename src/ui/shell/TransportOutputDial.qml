@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls.Basic as Basic
 import Porydaw.Ui
 
 Item {
@@ -17,6 +18,8 @@ Item {
     activeFocusOnTab: true
     Accessible.role: Accessible.Slider
     Accessible.name: qsTr("Application output volume")
+    Basic.ToolTip.text: qsTr("Application output volume. Does not change the song volume or saved song settings.")
+    Basic.ToolTip.visible: hovered
 
     Repeater {
         model: 11
@@ -62,18 +65,23 @@ Item {
     MouseArea {
         anchors.fill: parent
         hoverEnabled: true
-        property real pressedY: 0
-        property int pressedValue: 0
+        property real dragLastY: 0
+        property real stepAccumulator: 0
         onPressed: mouse => {
-            pressedY = mouse.y
-            pressedValue = dial.value
+            dragLastY = mouse.y
+            stepAccumulator = 0
             dial.forceActiveFocus(Qt.MouseFocusReason)
         }
         onPositionChanged: mouse => {
             if (!pressed) return
             const rate = mouse.modifiers & Qt.ShiftModifier ? 0.2 : 0.5
-            dial.valueCommitted(Math.max(0, Math.min(100,
-                pressedValue + Math.trunc((mouse.y - pressedY) * rate))))
+            stepAccumulator += (mouse.y - dragLastY) * rate
+            dragLastY = mouse.y
+            const steps = Math.trunc(stepAccumulator)
+            if (steps !== 0) {
+                stepAccumulator -= steps
+                dial.valueCommitted(Math.max(0, Math.min(100, dial.value + steps)))
+            }
         }
         onWheel: wheel => {
             dial.valueCommitted(Math.max(0, Math.min(100,

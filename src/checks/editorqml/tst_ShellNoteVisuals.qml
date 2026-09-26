@@ -156,6 +156,269 @@ TestCase {
         return ""
     }
 
+    function openNotes() {
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "the production ShellWindow loads")
+        shell.requestActivate()
+        tryCompare(shell, "active", true, 3000)
+        var session = shell.shellPresenter.session
+        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        verify(waitForNative(function() {
+            return session.songOpen || session.lastSaveError.length > 0
+        }, 30000), "the staged song resolves")
+        verify(session.songOpen, "Route 101 loads from the staged project")
+        var surface = selectedSurface()
+        verify(surface !== null, "the selected tab page is mounted")
+        var grid = surface.gridModel
+        verify(waitForNative(function() { return grid.renderedNoteCount > 0 }, 5000),
+               "the roll publishes notes")
+        var plot = findChild(surface, "timelineQuickRollPlot")
+        var fills = findChild(surface, "timelineQuickPianoNoteFills")
+        verify(plot !== null && fills !== null, "the roll plot and fill layer are mounted")
+        return { surface: surface, grid: grid, plot: plot, fills: fills,
+                 session: session }
+    }
+
+    function rgb(image, x, y) {
+        return [image.red(x, y), image.green(x, y), image.blue(x, y)]
+    }
+    function contrast(first, second) {
+        function linear(channel) {
+            var unit = channel / 255
+            return unit <= 0.04045 ? unit / 12.92
+                : Math.pow((unit + 0.055) / 1.055, 2.4)
+        }
+        function luminance(color) {
+            return 0.2126 * linear(color[0]) + 0.7152 * linear(color[1])
+                + 0.0722 * linear(color[2])
+        }
+        var a = luminance(first), b = luminance(second)
+        return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)
+    }
+
+    function regionChanged(before, after, rect, border) {
+        for (var y = rect.y + border; y < rect.y + rect.h - border; ++y)
+            for (var x = rect.x + border; x < rect.x + rect.w - border; ++x)
+                if (!Helpers.colorsNear(rgb(before, x, y), rgb(after, x, y), 0))
+                    return true
+        return false
+    }
+
+    function regionIdentical(before, after, rect) {
+        for (var y = rect.y; y < rect.y + rect.h; ++y)
+            for (var x = rect.x; x < rect.x + rect.w; ++x)
+                if (!Helpers.colorsNear(rgb(before, x, y), rgb(after, x, y), 0))
+                    return false
+        return true
+    }
+
+    function trackFace(context, image, ghost) {
+        var notes = publishedNotes(context.grid)
+        verify(notes !== null, "the note summary is valid")
+        var track = context.grid.trackIndex
+        var candidates = notes.filter(function(note) {
+            return (note.track !== track) === ghost
+        })
+        return visibleNote(context.fills, context.plot, image, shellDpr(image),
+                           candidates, undefined)
+    }
+
+    function test_velocityColorRaster() {
+        var context = openNotes()
+        var baseline = grabShell()
+        verify(baseline !== null, "the identity roll renders a frame")
+        var ghost = trackFace(context, baseline, true)
+        var note = trackFace(context, baseline, false)
+        verify(ghost !== null, "a visible other-track note guards the ghost comparison")
+        verify(note !== null, "a visible current-track note guards the fill probe")
+        var before = rgb(baseline, note.rect.x + Math.floor(note.rect.w / 2),
+                         note.rect.y + Math.floor(note.rect.h / 2))
+        shell.shellPresenter.activate("view.velocity_colors")
+        verify(waitForNative(function() { return context.session.velocityColorMode }, 5000),
+               "the menu enables velocity-color rendering")
+        var colored = grabShell()
+        verify(colored !== null, "the velocity-color mode renders a frame")
+        verify(regionIdentical(baseline, colored, ghost.rect),
+               "velocity-color mode changes no ghost note pixel")
+        var expected = Helpers.channels(probe.velocityFace(
+            note.note.velocity, context.grid.palette.noteVelocityZero))
+        var actual = rgb(colored, note.rect.x + Math.floor(note.rect.w / 2),
+                         note.rect.y + Math.floor(note.rect.h / 2))
+        verify(Helpers.colorsNear(actual, expected),
+               "velocity-mode note interior matches velocityNoteColor")
+        shell.shellPresenter.activate("view.velocity_colors")
+        verify(waitForNative(function() { return !context.session.velocityColorMode }, 5000),
+               "the menu disables velocity-color rendering")
+        var restored = grabShell()
+        verify(restored !== null, "the identity mode renders again")
+        verify(Helpers.colorsNear(
+            rgb(restored, note.rect.x + Math.floor(note.rect.w / 2),
+                note.rect.y + Math.floor(note.rect.h / 2)), before),
+            "disabling velocity-color mode restores the identity fill pixels")
+    }
+
+    function test_noteNameRaster() {
+        var context = openNotes()
+        context.grid.handleWheel(0, 1600, 0, 0, Qt.ControlModifier, 0,
+                                 false, 0, context.plot.height / 2)
+        context.grid.setCameraHScroll(context.grid.cameraMinHScroll)
+        var roll = findChild(context.surface, "swiftRollInput")
+        verify(roll !== null, "the roll pointer surface is mounted")
+        var ghost = null
+        var lane = null
+        var step = context.plot.height / 2
+        var attempts = Math.ceil(context.grid.cameraMaxVScroll / step) + 1
+        for (var index = 0; index <= attempts; ++index) {
+            context.grid.setCameraVScroll(Math.min(context.grid.cameraMaxVScroll, index * step))
+            var frame = grabShell()
+            if (frame === null)
+                continue
+            ghost = trackFace(context, frame, true)
+            if (ghost === null)
+                continue
+            var grid = context.grid
+            var ppt = grid.beatWidth / grid.ticksPerBeat
+            var snap = grid.snapTicks
+            var tick = Math.ceil(((grid.cameraScrollX + 24) / ppt) / snap) * snap
+            if ((tick + 12 * snap) * ppt - grid.cameraScrollX > context.plot.width - 24)
+                continue
+            var occupied = publishedNotes(grid)
+            var first = Math.ceil(grid.cameraScrollY / grid.rowHeight) + 2
+            var last = Math.floor((grid.cameraScrollY + context.plot.height)
+                                  / grid.rowHeight) - 2
+            for (var row = first; row <= last; ++row) {
+                var pitch = 127 - row
+                if (!occupied.some(function(n) { return n.pitch === pitch })) {
+                    lane = { tick: tick, pitch: pitch }
+                    break
+                }
+            }
+            if (lane !== null)
+                break
+        }
+        verify(ghost !== null && lane !== null,
+               "a visible ghost and free wide-note lane share the fixture viewport")
+        var beforeCount = publishedNotes(context.grid).length
+        var x0 = lane.tick * ppt - context.grid.cameraScrollX + 1
+        var x1 = (lane.tick + 12 * snap) * ppt - context.grid.cameraScrollX - 1
+        var y0 = (127 - lane.pitch + 0.5) * context.grid.rowHeight
+            - context.grid.cameraScrollY
+        mousePress(roll, x0, y0, Qt.LeftButton)
+        mouseMove(roll, x1, y0, -1, Qt.LeftButton)
+        mouseRelease(roll, x1, y0, Qt.LeftButton)
+        verify(waitForNative(function() {
+            return publishedNotes(context.grid).length === beforeCount + 1
+        }, 5000), "the mounted roll seeds a wide name-bearing note")
+        var baseline = grabShell()
+        verify(baseline !== null, "the unlabeled roll renders a frame")
+        shell.shellPresenter.activate("view.note_names")
+        verify(waitForNative(function() { return context.session.noteNameMode }, 5000),
+               "the menu enables note-name rendering")
+        var named = grabShell()
+        verify(named !== null, "the named roll renders a frame")
+        verify(regionIdentical(baseline, named, ghost.rect),
+               "note-name mode changes no ghost note pixel")
+        var notes = publishedNotes(context.grid)
+        var inkPixels = 0
+        for (var i = 0; i < notes.length; ++i) {
+            if (notes[i].track !== context.grid.trackIndex)
+                continue
+            var item = noteItem(context.fills, notes[i].id)
+            if (!item || !item.visible)
+                continue
+            var noteRect = deviceRect(item, context.plot, named, shellDpr(named))
+            if (noteRect.w <= 20 || noteRect.h <= 12)
+                continue
+            var noteFill = probe.noteFace(
+                notes[i].track, notes[i].velocity, context.grid.palette.noteVelocityZero)
+            var ink = Helpers.channels(context.grid.palette.noteLabelInk(noteFill))
+            for (var y = noteRect.y + 2; y < noteRect.y + noteRect.h - 2; ++y)
+                for (var x = noteRect.x + 2; x < noteRect.x + noteRect.w - 2; ++x) {
+                    var painted = rgb(named, x, y)
+                    if (Helpers.colorsNear(painted, ink)
+                            && !Helpers.colorsNear(rgb(baseline, x, y), ink)
+                            && contrast(painted, Helpers.channels(noteFill)) >= 2.5)
+                        ++inkPixels
+                }
+        }
+        verify(inkPixels > 0, "wide-note label ink contrasts with its fill")
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true, 3000)
+        keySequence(StandardKey.Undo)
+        verify(waitForNative(function() {
+            return publishedNotes(context.grid).length === beforeCount
+        }, 5000), "undo removes the seeded name fixture note")
+    }
+
+    function test_velocityValueRaster() {
+        var context = openNotes()
+        var roll = findChild(context.surface, "swiftRollInput")
+        verify(roll !== null, "the roll pointer surface is mounted")
+        var initial = grabShell()
+        verify(initial !== null, "the idle roll renders a frame")
+        var target = trackFace(context, initial, false)
+        verify(target !== null, "a visible note guards the velocity drag")
+        var anchor = target.item.mapToItem(context.plot, target.item.width / 2, 0)
+        context.grid.handleWheel(0, 600, 0, 0, 0, 0, false, anchor.x, 0)
+        var idle = grabShell()
+        verify(idle !== null, "the zoomed idle roll renders a frame")
+        target = trackFace(context, idle, false)
+        verify(target !== null && target.rect.w > 45 && target.rect.h > 8,
+               "a visible wide note guards the velocity drag")
+        var summary = context.grid.noteSummary
+        var dpr = shellDpr(idle)
+        var origin = win(target.item, 0, 0)
+        var rollOrigin = win(roll, 0, 0)
+        var px = origin.x - rollOrigin.x + target.item.width / 2
+        var py = origin.y - rollOrigin.y + target.item.height / 2
+        mousePress(roll, px, py, Qt.LeftButton, Qt.ControlModifier)
+        mouseMove(roll, px, py - context.grid.dragDistance - 2,
+                  -1, Qt.LeftButton, Qt.ControlModifier)
+        verify(waitForNative(function() {
+            return context.grid.statusText.indexOf("velocity") >= 0
+        }, 5000), "the control gesture enters velocity preview")
+        var dragged = grabShell()
+        verify(dragged !== null, "the velocity drag renders a frame")
+        var inkPixels = 0
+        var fillPixel = rgb(idle, target.rect.x + Math.floor(target.rect.w / 2),
+                            target.rect.y + Math.floor(target.rect.h / 2))
+        for (var iy = target.rect.y + Math.ceil(target.rect.h / 4);
+             iy < target.rect.y + Math.floor(3 * target.rect.h / 4); ++iy)
+            for (var ix = target.rect.x + Math.ceil(target.rect.w / 4);
+                 ix < target.rect.x + Math.floor(3 * target.rect.w / 4); ++ix)
+                if (!Helpers.colorsNear(rgb(idle, ix, iy), rgb(dragged, ix, iy), 0)
+                        && contrast(rgb(dragged, ix, iy), fillPixel) >= 2.5)
+                    ++inkPixels
+        verify(inkPixels > 2, "velocity drag renders value ink inside the note box")
+        var plotRect = deviceRect(context.plot, context.plot, idle, dpr)
+        var margin = target.rect.h
+        var left = Math.max(plotRect.x, target.rect.x - margin)
+        var top = Math.max(plotRect.y, target.rect.y - margin)
+        var right = Math.min(plotRect.x + plotRect.w, target.rect.x + target.rect.w + margin)
+        var bottom = Math.min(plotRect.y + plotRect.h, target.rect.y + target.rect.h + margin)
+        for (var y = top; y < bottom; ++y)
+            for (var x = left; x < right; ++x) {
+                var inBox = x >= target.rect.x && x < target.rect.x + target.rect.w
+                    && y >= target.rect.y && y < target.rect.y + target.rect.h
+                if (!inBox)
+                    verify(Helpers.colorsNear(rgb(idle, x, y), rgb(dragged, x, y), 0),
+                           "velocity drag changes no pixel outside the note box clip at "
+                           + x + "," + y)
+            }
+        mouseRelease(roll, px, py - context.grid.dragDistance - 2,
+                     Qt.LeftButton, Qt.ControlModifier)
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true, 3000)
+        keySequence(StandardKey.Undo)
+        verify(waitForNative(function() {
+            var now = publishedNotes(context.grid)
+            return now && now.length === JSON.parse(summary).length
+                && now.some(function(n) {
+                    return n.id === target.note.id && n.velocity === target.note.velocity
+                })
+        }, 5000), "undo restores the original note document")
+    }
+
     function test_noteRasterParity() {
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production ShellWindow loads")

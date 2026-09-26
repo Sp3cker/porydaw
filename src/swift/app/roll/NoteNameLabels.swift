@@ -7,6 +7,7 @@ import QtBridge
 struct NoteNameFace {
     let pitch: Int
     let box: (x: Double, y: Double, w: Double, h: Double)
+    let velocity: Int
     let fillColor: String
     let ghost: Bool
 }
@@ -20,7 +21,6 @@ struct NoteNameFace {
 /// pianoroll_geometry.cpp): with the mode on, each visible selected-track
 /// (non-ghost) note carries its pitch name when the fixed face fits the
 /// complete name plus two trailing spaces; ghost notes are never labeled.
-/// Velocity-value labels shown during a velocity drag are out of scope.
 @MainActor
 enum NoteNameLabels {
     /// Old `kNoteNameMinKeyH` (pianoroll.cpp): device-independent pixels of
@@ -55,12 +55,8 @@ enum NoteNameLabels {
         width >= spaceHalf + advance(pitch) + spaceTwo
     }
 
-    /// Contrasting label ink for a note fill: mirrors songview
-    /// contrastingTextColor (detail.cpp), choosing between the piano
-    /// keyboard's natural- and black-key inks by WCAG contrast ratio.
     static func textColor(fillColor: String, palette: GridPalette) -> String {
-        PaletteMath.contrastingTextColor(
-            fill: fillColor, light: palette.keyboardNatural, dark: palette.keyboardBlack)
+        palette.noteLabelInk(forFill: fillColor)
     }
 
     /// One left-aligned, vertically centred record per labelable face.
@@ -93,6 +89,22 @@ enum NoteNameLabels {
                     max(0, face.box.h - 2 * spaceHalf)),
                 text: name, color: textColor(fillColor: face.fillColor, palette: palette),
                 font: font, horizontal: 0x1, vertical: 0x80))
+        }
+        return records
+    }
+    static func valueLabels(
+        faces: [NoteNameFace], allowance: Double,
+        advance: (String) -> Double, font: [String: QVariantSettable],
+        palette: GridPalette
+    ) -> [SceneText] {
+        var records: [SceneText] = []
+        for face in faces where !face.ghost {
+            let text = String(face.velocity)
+            guard face.box.w >= advance(text) + allowance else { continue }
+            records.append(SceneText(
+                rect: face.box, text: text,
+                color: textColor(fillColor: face.fillColor, palette: palette),
+                font: font, horizontal: 0x4, vertical: 0x80))
         }
         return records
     }

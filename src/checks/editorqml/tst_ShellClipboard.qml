@@ -18,6 +18,9 @@ TestCase {
 
     ShellQmlBootstrap { id: bootstrap }
     GridInputClipProbe { id: clipProbe }
+    SignalSpy { id: rejectedCursorSpy; signalName: "editCursorTickChanged" }
+    SignalSpy { id: rejectedStatusSpy; signalName: "statusTextChanged" }
+
 
     Component { id: shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
 
@@ -231,6 +234,53 @@ TestCase {
         var copiedEnd = Math.max(source.tick - copiedOrigin + source.duration,
                                  secondSource.tick - copiedOrigin + secondSource.duration)
         var copiedPayload = copiedText
+        var conflicting = JSON.parse(copiedPayload)
+        conflicting.tracks[0].notes[1].key = conflicting.tracks[0].notes[0].key
+        conflicting.tracks[0].notes[1].relTick = conflicting.tracks[0].notes[0].relTick + 1
+        verify(clipProbe.writeClipJson(JSON.stringify(conflicting)),
+               "an incoming overlap is staged for rejection")
+        grid.setEditCursorTick(copiedOrigin)
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true)
+        wait(0)
+        var rejectedNotes = grid.noteSummary
+        var rejectedRevision = grid.appliedRevisionText
+        var rejectedCursor = grid.editCursorTick
+        var rejectedScrollX = grid.cameraScrollX
+        var rejectedScrollY = grid.cameraScrollY
+        var rejectedStatus = grid.statusText
+        var rejectedUndo = shell.shellPresenter.actionEnabled("edit.undo")
+        var rejectedRedo = shell.shellPresenter.actionEnabled("edit.redo")
+        rejectedCursorSpy.target = grid
+        rejectedStatusSpy.target = grid
+        rejectedCursorSpy.clear()
+        rejectedStatusSpy.clear()
+        keySequence(StandardKey.Paste)
+        compare(grid.noteSummary, rejectedNotes,
+                "a conflicting note paste preserves document notes and selection")
+        compare(grid.appliedRevisionText, rejectedRevision,
+                "a conflicting note paste preserves the document revision")
+        compare(grid.editCursorTick, rejectedCursor,
+                "a conflicting note paste preserves the edit cursor")
+        compare(grid.cameraScrollX, rejectedScrollX,
+                "a conflicting note paste preserves horizontal camera scroll")
+        compare(grid.cameraScrollY, rejectedScrollY,
+                "a conflicting note paste preserves vertical camera scroll")
+        compare(grid.statusText, rejectedStatus,
+                "a conflicting note paste preserves status")
+        compare(rejectedCursorSpy.count, 0,
+                "a conflicting note paste emits no cursor movement")
+        compare(rejectedStatusSpy.count, 0,
+                "a conflicting note paste emits no status announcement")
+        compare(shell.shellPresenter.actionEnabled("edit.undo"), rejectedUndo,
+                "a conflicting note paste preserves Undo")
+        compare(shell.shellPresenter.actionEnabled("edit.redo"), rejectedRedo,
+                "a conflicting note paste preserves Redo")
+        rejectedCursorSpy.target = null
+        rejectedStatusSpy.target = null
+        verify(clipProbe.writeClipJson(copiedPayload),
+               "the non-conflicting copied payload is restored for the accepted paste")
+
 
         var beforePaste = gridNotes(grid)
         var snap = grid.snapTicks

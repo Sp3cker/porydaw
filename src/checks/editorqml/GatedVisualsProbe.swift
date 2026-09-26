@@ -53,6 +53,9 @@ public final class GatedVisualsProbe: QmlInstantiableStatus {
     public func noteFace(track: Int, velocity: Int, zeroColor: String) -> String {
         PaletteMath.noteFill(track: track, velocity: velocity, zeroColor: zeroColor)
     }
+    public func velocityFace(velocity: Int, zeroColor: String) -> String {
+        PaletteMath.velocityNoteColor(velocity: velocity, zeroColor: zeroColor)
+    }
 
     public func withRelativeAlpha(color: String, alpha: Int) -> String {
         let c = PaletteMath.channels(color)

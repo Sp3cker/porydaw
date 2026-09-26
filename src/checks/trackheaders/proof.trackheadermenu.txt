@@ -10,9 +10,10 @@ Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted n
 Command: deno task verify --filter swiftcore --verbose --qt projectSession -maxwarnings 100000
 Result: PASS (3 passed, 0 failed; PASS IDs renameTargetRowAndScrolledTitleResolve, renameMenuTargetsAndBegins, headerMenuTargetRowResolvesByTrack). Full-suite PASS not claimed (concurrent-slice noise during the run).
 Converted-window command: deno task verify:qml-roll --verbose
-Converted-window result: PASS (lane frozen diagnostic run, 1/1 SwiftRollTrackHeaders); test_headerMenuFrameHasOutsideInputPoint (:213-251) exercises A142-A143. This proof-only pass cites the exercised lines without re-running the suite.
-Verified QML SHA-256: 43eb0128d4e291db0844ec3b9412204bc85411ebfa7e47a259c260edd58e916d
-Production surface: src/ui/songview/quick/swiftroll/EditorSurface.qml SHA-256 98ab54f1f86e393ffcaaaea037a1230f3b22deb1937458be342fbd248569d74f (re-pinned by task 32 and task 33, then by the task-34b/35 grid cutover, whose GridRowControl key handling and rollInput hover/pointer edits shifted the later lines; the cited ranges are re-verified on the frozen tree: header menu loader :742-790 with QuickMenuPanel at :762-786, presenter property :21, menu-action routing :90-106 with the header branch at :95-96, header band mount :206-218)
+Converted-window result: PASS (build/proof-evidence/swiftroll-window.json records SwiftRollTrackHeaders::test_zMountedMenuDispatchAndDismissal and test_zMountedRenameAndReorderCommit plus SwiftRollTrackHeaderCapacity::test_capacityMenuDisablesDuplicate as executed lane functions; this proof-only pass cites the exercised anchors without re-running the suite). Exercised functions on the frozen tree: test_headerMenuFrameHasOutsideInputPoint (:360-398) exercises A142-A143, test_headerMenuRenameRowActivates (:339-359) exercises A045/A048, test_zMountedMenuDispatchAndDismissal (:487-568) exercises A021/A030-A031/A061/A071/A087/A073/A089/A110/A013/A145/A149 and the dismissal focus rows, test_capacityMenuDisablesDuplicate (tst_SwiftRollTrackHeaderCapacity.qml:77-110) exercises A021.
+Verified QML SHA-256: e5583fc8c00ed942e3d550bc148a005f0778dc0b0ff8d50f177682ca43cabde1 (src/checks/rollqml/tst_SwiftRollTrackHeaders.qml)
+Verified capacity QML SHA-256: aa93e230e22b718c31f79119c0389736d811ae062fb2f193aee4203ce7ae66bc (src/checks/rollqml/tst_SwiftRollTrackHeaderCapacity.qml)
+Production surface: src/ui/songview/quick/swiftroll/EditorSurface.qml SHA-256 3d5180399d5d8370d75fc3e6e7498188abdc76b90a0195436b1ceda69fa9f98d (re-pinned by task 32 and task 33, then by the task-34b/35 grid cutover and by task 48, whose headerMenuLoader focus deferral shifted the later lines; the cited ranges are re-verified on the frozen tree: header menu loader :755-814 with QuickMenuPanel at :786-810, presenter property :20, menu-action routing :89-107 with the header branch at :94-95, header band mount :217-231)
 
 A001 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:109
 Disposition: MATCHED
@@ -23,8 +24,8 @@ Disposition: MATCHED
 Mapping: S001
 
 A003 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:119
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: PARTIAL
+Mapping/reason: Native fixture pre-menu focus establishment (fx.focusInput) is setup, not an observable; the converted lane drives the band input by pointer and asserts focus restoration after dismissal (S063, S064, S065), so the establishment clause itself stays unproved.
 Source context since previous assertion:
   ;
       const QByteArray before = doc.smf().write();
@@ -72,13 +73,8 @@ Disposition: MATCHED
 Mapping: S004
 
 A013 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:148
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001-S011 in src/checks/trackheaders/trackheadermenu.swift prove menu dismissal; native Quick focus restoration stays unproved against the frozen QML surface: headerInput is a component-private id (TrackHeaderBand.qml, reached only by objectName) with no focus-restoration seam, and no predicate in tst_SwiftRollTrackHeaders.qml observes active focus.
-Source context since previous assertion:
-  ;
-Original expression:
-  QTRY_VERIFY2(fx.input().hasActiveFocus(),
-                   "Escape did not restore the pre-menu header band focus")
+Disposition: MATCHED
+Mapping: S063
 
 A014 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:150
 Disposition: MATCHED
@@ -107,15 +103,8 @@ Disposition: MATCHED
 Mapping: S009
 
 A021 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:170
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      const QByteArray capacityBytes = doc.smf().write();
-      const int capacityUndo = doc.undoStack()->index();
-Original expression:
-  QVERIFY2(quick_popup::clickMenuRow(*capacity.session, duplicateRow),
-               "the disabled Duplicate row did not receive a real click")
+Disposition: MATCHED
+Mapping: S068
 
 A022 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:173
 Disposition: MATCHED
@@ -156,26 +145,12 @@ Disposition: MATCHED
 Mapping: S013
 
 A030 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:198
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY2(quick_popup::clickMenuRow(*opened.session,
-                                         headerMenuRow(*opened.model, HeaderMenuAction::ChangeVoice)),
-               "the Change voice row did not receive a real click")
+Disposition: MATCHED
+Mapping: S057
 
 A031 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:204
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      QCoreApplication::processEvents();
-      // The pick closes the menu before the queued mutation reopens the shared
-      // session as the async voice picker; the panel is the menu observable.
-Original expression:
-  QVERIFY2(!quick_popup::menuPanel(*opened.session),
-               "the Change voice pick left the header menu panel open")
+Disposition: MATCHED
+Mapping: S056
 
 A032 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:206
 Disposition: MATCHED
@@ -262,14 +237,8 @@ A044 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/
 Disposition: MATCHED
 
 A045 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:242
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY2(quick_popup::clickMenuRow(*opened.session,
-                                         headerMenuRow(*opened.model, HeaderMenuAction::RenameTrack)),
-               "the Rename track row did not receive a real click")
+Disposition: MATCHED
+Mapping: S066
 
 A046 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:248
 Disposition: MATCHED
@@ -280,12 +249,8 @@ Disposition: MATCHED
 Mapping: S019
 
 A048 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:250
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(fx.rename().isVisible())
+Disposition: MATCHED
+Mapping: S067
 
 A049 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:251
 Disposition: GAP
@@ -343,18 +308,8 @@ A060 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/check
 Disposition: MATCHED
 
 A061 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:281
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      const uint64_t beforeReveal = doc.revision();
-      const int undoBeforeReveal = doc.undoStack()->index();
-      QSignalSpy reveal(&fx.view(), &SongView::revealVoiceRequested);
-Original expression:
-  QVERIFY2(quick_popup::clickMenuRow(
-                   *voiceMenu.session,
-                   headerMenuRow(*voiceMenu.model, HeaderMenuAction::ShowVoiceInVoicegroup)),
-               "the Show voice row did not receive a real click")
+Disposition: MATCHED
+Mapping: S058
 
 A062 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:286
 Disposition: MATCHED
@@ -376,7 +331,7 @@ Disposition: MATCHED
 
 A067 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:291
 Disposition: PARTIAL
-Mapping/reason: Related predicates S022-S035 in src/checks/trackheaders/trackheadermenu.swift prove the reveal dispatch; header band focus retention stays unproved: headerInput is a component-private id (TrackHeaderBand.qml) and the frozen QML suite asserts geometry and dismissal only, never focus state.
+Mapping/reason: Related predicates S022-S035 in src/checks/trackheaders/trackheadermenu.swift prove the reveal dispatch and S058 proves the mounted Show voice pick closes the menu; the reveal dispatch's focus retention stays unproved: the frozen QML suite asserts activeFocus after duplicate, delete, escape and outside dismissal but never after the Show voice dispatch.
 Source context since previous assertion:
   ;
 Original expression:
@@ -395,28 +350,16 @@ Disposition: MATCHED
 Mapping: S025
 
 A071 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:305
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY2(quick_popup::clickMenuRow(
-                   *duplicateMenu.session,
-                   headerMenuRow(*duplicateMenu.model, HeaderMenuAction::DuplicateTrack)),
-               "the Duplicate track row did not receive a real click")
+Disposition: MATCHED
+Mapping: S059
 
 A072 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:310
 Disposition: MATCHED
 Mapping: S026
 
 A073 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:311
-Disposition: PARTIAL
-Mapping/reason: Related predicates S022-S035 in src/checks/trackheaders/trackheadermenu.swift prove the duplicate dispatch; header band focus retention stays unproved: headerInput is a component-private id (TrackHeaderBand.qml) and the frozen QML suite asserts geometry and dismissal only, never focus state.
-Source context since previous assertion:
-  ;
-Original expression:
-  QTRY_VERIFY2(fx.input().hasActiveFocus(),
-                   "the duplicate dispatch did not retain header band focus")
+Disposition: MATCHED
+Mapping: S061
 
 A074 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:313
 Disposition: MATCHED
@@ -470,30 +413,16 @@ A086 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/check
 Disposition: MATCHED
 
 A087 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:337
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      const QByteArray beforeDelete = doc.smf().write();
-      const int undoBeforeDelete = doc.undoStack()->index();
-Original expression:
-  QVERIFY2(
-          quick_popup::clickMenuRow(*deleteMenu.session,
-                                    headerMenuRow(*deleteMenu.model, HeaderMenuAction::DeleteTrack)),
-          "the Delete track row did not receive a real click")
+Disposition: MATCHED
+Mapping: S060
 
 A088 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:342
 Disposition: MATCHED
 Mapping: S032
 
 A089 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:343
-Disposition: PARTIAL
-Mapping/reason: Related predicates S022-S035 in src/checks/trackheaders/trackheadermenu.swift prove the delete dispatch; header band focus retention stays unproved: headerInput is a component-private id (TrackHeaderBand.qml) and the frozen QML suite asserts geometry and dismissal only, never focus state.
-Source context since previous assertion:
-  ;
-Original expression:
-  QTRY_VERIFY2(fx.input().hasActiveFocus(),
-                   "the delete dispatch did not retain header band focus")
+Disposition: MATCHED
+Mapping: S062
 
 A090 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:345
 Disposition: MATCHED
@@ -548,7 +477,7 @@ Mapping: S037
 
 A101 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:377
 Disposition: PARTIAL
-Mapping/reason: Related predicates S036-S039 in src/checks/trackheaders/trackheadermenu.swift prove menu cancellation; which item holds active focus stays unproved: the frozen QML suite never observes activeFocusItem, and the dismissed panel versus band focus identity has no converted predicate (headerInput id is private to TrackHeaderBand.qml).
+Mapping/reason: Related predicates S036-S039 in src/checks/trackheaders/trackheadermenu.swift prove menu cancellation; the converted lane asserts active band focus after escape, dispatch and outside dismissal (S063, S065), but no converted predicate exercises the structural-remap cancellation path, so which item holds focus after that cancellation stays unproved.
 Source context since previous assertion:
   ;
       checks::support::pumpQuick();
@@ -558,7 +487,7 @@ Original expression:
 
 A102 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:379
 Disposition: PARTIAL
-Mapping/reason: Related predicates S036-S039 in src/checks/trackheaders/trackheadermenu.swift prove menu cancellation; focus-item identity stays unproved: no frozen QML predicate observes activeFocusItem or distinguishes quickMenuPanelRoot/quickMenuFrame from the band input, whose headerInput id is private to TrackHeaderBand.qml.
+Mapping/reason: Related predicates S036-S039 in src/checks/trackheaders/trackheadermenu.swift prove menu cancellation; the converted lane asserts active band focus after the dismissals it drives (S063, S065), but no converted predicate performs the structural remap, so the focus-item identity after a remap cancellation stays unproved.
 Source context since previous assertion:
   ;
       const QString focusName = focus->objectName();
@@ -595,17 +524,8 @@ Disposition: MATCHED
 Mapping: S036
 
 A110 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:414
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-              afterRemap = doc.smf().write();
-          },
-          static_cast<Qt::ConnectionType>(Qt::DirectConnection | Qt::SingleShotConnection));
-Original expression:
-  QVERIFY2(quick_popup::clickMenuRow(*stale.session,
-                                         headerMenuRow(*stale.model, HeaderMenuAction::ChangeVoice)),
-               "the stale Change voice row did not receive a real click")
+Disposition: MATCHED
+Mapping: S057, S038
 
 A111 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:417
 Disposition: MATCHED
@@ -735,8 +655,8 @@ Disposition: MATCHED
 Mapping: S042
 
 A140 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:516
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: PARTIAL
+Mapping/reason: Native fixture pre-menu focus establishment (fx.focusInput) is setup, not an observable; the converted lane asserts band focus is kept across the outside dismissal (S065), so the establishment clause itself stays unproved.
 Source context since previous assertion:
   ;
       const QByteArray before = doc.smf().write();
@@ -763,14 +683,8 @@ Disposition: MATCHED
 Mapping: S042
 
 A145 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:533
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      checks::support::pumpQuick();
-Original expression:
-  QVERIFY2(!quick_popup::popupSession(fx.view())->isOpen(),
-               "the outside dismissal opened a new menu")
+Disposition: MATCHED
+Mapping: S064
 
 A146 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:535
 Disposition: MATCHED
@@ -783,13 +697,8 @@ A148 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | sr
 Disposition: MATCHED
 
 A149 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:538
-Disposition: PARTIAL
-Mapping/reason: Related predicates S042-S044 in src/checks/trackheaders/trackheadermenu.swift plus converted-window outside dismissal S054-S055 prove the outside press dismisses; header band focus restoration stays unproved: headerInput is a component-private id (TrackHeaderBand.qml) with no focus-restoration seam in the frozen QML surface.
-Source context since previous assertion:
-  ;
-Original expression:
-  QTRY_VERIFY2(fx.input().hasActiveFocus(),
-                   "the outside dismissal did not restore the header band focus")
+Disposition: MATCHED
+Mapping: S065
 
 A150 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:544
 Disposition: MATCHED
@@ -799,16 +708,8 @@ Disposition: MATCHED
 Mapping: S042
 
 A152 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:551
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      QTest::mouseRelease(reopened.session->window(), Qt::RightButton, Qt::NoModifier, outsideScene);
-      QCoreApplication::processEvents();
-      checks::support::pumpQuick();
-Original expression:
-  QVERIFY2(!quick_popup::popupSession(fx.view())->isOpen(),
-               "the swallowed release opened a new menu")
+Disposition: MATCHED
+Mapping: S064
 
 A153 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:553
 Disposition: MATCHED
@@ -991,3 +892,42 @@ Anchor: message "timelineTrackHeaderRows" #2
 
 S055 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
+
+S056 | test_zMountedMenuDispatchAndDismissal | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "change voice closes the mounted menu"
+
+S057 | test_zMountedMenuDispatchAndDismissal | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "change voice requests the selected track's picker"
+
+S058 | test_zMountedMenuDispatchAndDismissal | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "show voice in voicegroup closes the menu"
+
+S059 | test_zMountedMenuDispatchAndDismissal | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "duplicate adds a track from the mounted menu"
+
+S060 | test_zMountedMenuDispatchAndDismissal | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "delete removes a track from the mounted menu"
+
+S061 | test_zMountedMenuDispatchAndDismissal | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "duplicate dispatch restores header keyboard focus"
+
+S062 | test_zMountedMenuDispatchAndDismissal | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "delete dispatch restores header keyboard focus"
+
+S063 | test_zMountedMenuDispatchAndDismissal | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "escape dismissal restores header keyboard focus"
+
+S064 | test_zMountedMenuDispatchAndDismissal | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "an outside release does not reopen the header menu"
+
+S065 | test_zMountedMenuDispatchAndDismissal | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "the band keeps keyboard focus across outside dismissal"
+
+S066 | test_headerMenuRenameRowActivates | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "rename action opens an editor on the targeted track"
+
+S067 | test_headerMenuRenameRowActivates | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "rename action mounts the track-header editor"
+
+S068 | test_capacityMenuDisablesDuplicate | src/checks/rollqml/tst_SwiftRollTrackHeaderCapacity.qml
+Anchor: message "clicking the disabled duplicate neither dispatches nor dismisses"

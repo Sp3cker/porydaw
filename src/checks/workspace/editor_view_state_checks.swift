@@ -71,4 +71,18 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
                        cppID: codec, what: "application preferences retain one lane blob")
     report.expect(FileManager.default.fileExists(atPath: CheckEnvironment.fixturePath("settings.plist") ?? ""),
                   cppID: codec, message: "preferences land in the staged scratch plist")
+
+    let reset = "swiftcore/PreferencesStore::reset"
+    store.setString(key: "windowState", value: "debugger")
+    store.setInt(key: "songFilterSort", value: 1)
+    store.setBool(key: "followPlayhead", value: false)
+    store.synchronize()
+    let keys = ["lastProjectDir", "lastOpenSongs", "lastSongLabel",
+                "editorDrawer.automationLanes", "windowState", "songFilterSort",
+                "followPlayhead"]
+    let seeded = keys.allSatisfy { store.hasValue(key: $0) }
+    let resetSucceeded = store.resetPreferences()
+    let cleared = keys.allSatisfy { !store.hasValue(key: $0) }
+    report.expect(seeded && resetSucceeded && cleared, cppID: reset,
+                  message: "resetPreferences clears every stored key")
 }

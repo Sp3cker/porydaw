@@ -72,11 +72,24 @@ public final class RulerMenuPresenter {
     private var pendingInsert: (tick: Tick, revision: UInt64, beatTicks: UInt32, beatsPerBar: UInt32)?
     @QtIgnored public var onSeek: ((Tick) -> Void)?
     private var rowSnapshot: [RulerMenuRow] = []
+    private var clipboardObserver: UUID?
+    private var selectionObserver: UUID?
 
     public init(session: DocumentSession, grid: PianoGrid, automation: AutomationPage) {
         self.session = session
         self.grid = grid
         self.automation = automation
+        selectionObserver = session.addSelectionTransitionObserver { [weak self] _ in
+            if self?.isOpen == true { self?.close() }
+        }
+        clipboardObserver = automation.clipboard.addChangeObserver { [weak self] in
+            if self?.isOpen == true { self?.close() }
+        }
+    }
+
+    isolated deinit {
+        if let clipboardObserver { automation.clipboard.removeChangeObserver(clipboardObserver) }
+        if let selectionObserver { session.removeSelectionTransitionObserver(selectionObserver) }
     }
 
     public func captureRulerPress(contentX: Double, pointerY: Double) {
@@ -163,10 +176,14 @@ public final class RulerMenuPresenter {
     }
 
     private var canPaste: Bool {
-        guard automation.selectionCommandAvailable(command: .paste),
-              let clip = automation.clipboard.read()?.clip else { return false }
-        return clip.tracks.contains { !$0.notes.isEmpty }
-            || clip.lanes.contains { !$0.points.isEmpty } || !clip.tempo.isEmpty
+        automation.selectionCommandAvailable(command: .paste)
+    }
+
+    @QtIgnored
+    public func sessionDidChange(_ change: SessionChange) {
+        if isOpen && (change.revision != capturedRevision || change.domains.contains(.selection)) {
+            close()
+        }
     }
 
     public func close() {

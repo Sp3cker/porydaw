@@ -4,12 +4,10 @@
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QMimeData>
+#include <QObject>
 #include <QThread>
 
 #include <limits>
-
-// Qt owns the platform clipboard on every OS (Cocoa, Win32/OLE, X11, Wayland).
-// Swift encodes and decodes the clip; these two calls only move its bytes.
 
 namespace {
 constexpr auto kClipMimeType = "application/x-porydaw-clip";
@@ -46,4 +44,21 @@ extern "C" bool pd_clipboard_read(void *context, PdConsumeBytesCallback consume)
     consume(context, reinterpret_cast<const uint8_t *>(payload.constData()),
             size_t(payload.size()));
     return true;
+}
+
+extern "C" void *pd_clipboard_observe(void *context, PdClipboardChangedCallback changed)
+{
+    if (!onGuiThread() || changed == nullptr)
+        return nullptr;
+    auto *clipboard = QGuiApplication::clipboard();
+    auto *observer = new QObject(clipboard);
+    QObject::connect(clipboard, &QClipboard::dataChanged, observer,
+                     [context, changed] { changed(context); });
+    return observer;
+}
+
+extern "C" void pd_clipboard_unobserve(void *token)
+{
+    if (onGuiThread())
+        delete static_cast<QObject *>(token);
 }

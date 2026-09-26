@@ -118,6 +118,7 @@ struct GridSceneInput {
     /// and the draw preview; note-name mode labels selected-track faces.
     var velocityColorMode = false
     var noteNameMode = false
+    var showVelocityValues = false
     /// Advance of a pitch name in the fixed note-name face, and that face's
     /// occupied height, for the NoteNameLabels gates. Zero without typography,
     /// in which case no label is built (see rebuildNotes).
@@ -796,8 +797,8 @@ public final class GridScene {
                 if !ghostPass {
                     faces.append(
                         NoteNameFace(
-                            pitch: pitch,
-                            box: (box.x, box.y, box.w, box.h),
+                            pitch: pitch, box: (box.x, box.y, box.w, box.h),
+                            velocity: note.velocity,
                             fillColor: fillColor, ghost: false))
                 }
             }
@@ -813,6 +814,7 @@ public final class GridScene {
         let snapshot = camera.snapshot
 
         var preview: [SceneRect] = []
+        var previewFace: NoteNameFace?
         var overlay: [SceneRect] = []
         if let drawn = input.drawPreview {
             let box = m.noteBox(
@@ -821,18 +823,17 @@ public final class GridScene {
                 x1: camera.displayX(
                     tick: Double(drawn.tick + drawn.duration), origin: 0, dpr: m.dpr),
                 pitch: drawn.pitch)
-            preview.append(
-                SceneRect(
-                    x: box.x, y: box.y, width: box.w, height: box.h,
-                    fillColor: input.velocityColorMode
-                        ? PaletteMath.velocityNoteColor(
-                            velocity: input.lastVelocity,
-                            zeroColor: p.noteVelocityZero)
-                        : PaletteMath.noteFill(
-                            track: 0,
-                            velocity: input.lastVelocity,
-                            zeroColor: p.noteVelocityZero),
-                    primitiveName: "drawPreview"))
+            let fill = input.velocityColorMode
+                ? PaletteMath.velocityNoteColor(
+                    velocity: input.lastVelocity, zeroColor: p.noteVelocityZero)
+                : PaletteMath.noteFill(
+                    track: 0, velocity: input.lastVelocity, zeroColor: p.noteVelocityZero)
+            preview.append(SceneRect(
+                x: box.x, y: box.y, width: box.w, height: box.h,
+                fillColor: fill, primitiveName: "drawPreview"))
+            previewFace = NoteNameFace(
+                pitch: drawn.pitch, box: (box.x, box.y, box.w, box.h),
+                velocity: input.lastVelocity, fillColor: fill, ghost: false)
             addNoteBorder(&overlay, box: box, insetPixels: 0, input: input)
         }
         if let band = input.selectionBand {
@@ -941,7 +942,18 @@ public final class GridScene {
         sync(pianoDrawPreviewFill, preview)
         sync(pianoOverlay, overlay)
 
-        if input.noteNameMode, input.typography != nil {
+        if input.showVelocityValues, let typography = input.typography,
+           typography.noteValueVisible {
+            var faces = cachedNoteFaces
+            if let previewFace { faces.append(previewFace) }
+            syncText(
+                pianoNoteTextModel,
+                NoteNameLabels.valueLabels(
+                    faces: faces, allowance: fontPx(m.baseFontPx, 0.5),
+                    advance: typography.noteValueAdvance, font: input.fontSpec(.noteValue),
+                    palette: p),
+                signatures: &noteTextSignatures)
+        } else if !input.showVelocityValues, input.noteNameMode, input.typography != nil {
             syncText(
                 pianoNoteTextModel,
                 NoteNameLabels.labels(

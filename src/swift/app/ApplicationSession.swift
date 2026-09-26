@@ -1052,6 +1052,13 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 guard let self, let workspace else { return }
                 self.seekToTick(tick, in: workspace)
             }
+            workspace.pitchBend.onAuditionFromTick = { [weak self, weak workspace] tick in
+                guard let self, let workspace, self.workspace === workspace,
+                      let audio = self.audio, audio.songLoaded else { return }
+                self.publishSeek(tick: tick, timeline: workspace.session.timeline,
+                                 startPlayback: true)
+                self.transportBar.refresh()
+            }
             // New tabs receive the current View menu display modes: the grid
             // defaults both off, and each setter no-ops (without rebuilding)
             // when the mode is already off.

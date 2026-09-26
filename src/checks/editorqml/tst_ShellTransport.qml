@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import QtTest
 import "GatedVisualsHelpers.js" as Helpers
 import "NativeWait.js" as NativeWait
@@ -125,7 +126,7 @@ TestCase {
             }
         }
         for (let index = 0; index < ids.length; ++index)
-            parity(index, false)
+            parity(index, index === 5 || index === 6)
 
         bar = openSong()
         const transport = bar.presenter
@@ -372,6 +373,72 @@ TestCase {
         bar = openShell()
         compare(bar.presenter.outputVolume, outputAcrossTabs,
                 "application output preference survives a fresh shell session")
+    }
+
+    function test_unloadedTransportPreferencesStayActionable() {
+        const bar = openShell()
+        compare(findChild(bar, "transport.follow-playhead").actionable, true,
+                "follow playhead stays enabled without an open song")
+        compare(findChild(bar, "transport.resonance").actionable, true,
+                "resonance suppression stays enabled without an open song")
+    }
+
+    function test_outputDialIncrementalDrag() {
+        const bar = openShell()
+        const output = findChild(bar, "transportOutputVolume")
+        bar.presenter.setOutputVolume(40)
+        const x = output.width / 2
+        const y = output.height / 2
+        mousePress(output, x, y, Qt.LeftButton)
+        compare(bar.presenter.outputVolume, 40,
+                "pressing the output dial without dragging leaves the volume unchanged")
+        mouseMove(output, x, y + 140, -1, Qt.LeftButton)
+        tryCompare(bar.presenter, "outputVolume", 100)
+        mouseMove(output, x, y + 130, -1, Qt.LeftButton)
+        compare(bar.presenter.outputVolume, 95,
+                "dragging the output dial accumulates steps from the pointer's last position")
+        mouseRelease(output, x, y + 130, Qt.LeftButton)
+        output.valueCommitted(100)
+    }
+
+    function test_transportTogglePreferencesSurviveRelaunch() {
+        settings.setBool("followPlayhead", true)
+        settings.setBool("dsp.resonanceSuppression", false)
+        settings.synchronize()
+        var bar = openShell()
+        const follow = findChild(bar, "transport.follow-playhead")
+        const resonance = findChild(bar, "transport.resonance")
+        mouseClick(follow, follow.width / 2, follow.height / 2)
+        mouseClick(resonance, resonance.width / 2, resonance.height / 2)
+        compare(bar.presenter.followPlayhead, false)
+        compare(bar.presenter.resonanceSuppression, true)
+        cleanup()
+        bar = openShell()
+        compare(bar.presenter.followPlayhead, false,
+                "the follow-playhead preference survives a fresh shell session")
+        compare(bar.presenter.resonanceSuppression, true,
+                "the resonance-suppression preference survives a fresh shell session")
+        bar.presenter.setFollowPlayhead(true)
+        bar.presenter.setResonanceSuppression(false)
+    }
+
+    function test_outputDialFineDragAndTooltip() {
+        const bar = openShell()
+        const output = findChild(bar, "transportOutputVolume")
+        bar.presenter.setOutputVolume(40)
+        const x = output.width / 2
+        const y = output.height / 2
+        keyPress(Qt.Key_Shift)
+        mousePress(output, x, y, Qt.LeftButton, Qt.ShiftModifier)
+        mouseMove(output, x, y + 10, -1, Qt.LeftButton, Qt.ShiftModifier)
+        mouseRelease(output, x, y + 10, Qt.LeftButton, Qt.ShiftModifier)
+        keyRelease(Qt.Key_Shift)
+        compare(bar.presenter.outputVolume, 42,
+                "shift dragging the output dial uses the fine rate")
+        compare(output.ToolTip.text,
+                "Application output volume. Does not change the song volume or saved song settings.",
+                "the output dial tooltip explains it does not change the song volume")
+        output.valueCommitted(100)
     }
 
     function test_outputVolumeSurvivesShellRelaunch() {

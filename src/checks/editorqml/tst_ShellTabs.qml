@@ -28,6 +28,10 @@ TestCase {
     }
 
 
+    function init() {
+        verify(bootstrap.resetPreferences(), "each shell starts with fresh window state")
+    }
+
     function cleanup() {
         if (!shell)
             return

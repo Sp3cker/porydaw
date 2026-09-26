@@ -6,6 +6,9 @@ Original SHA-256: 7cebe66a4323ed77638ac8c03ab07a4c28896e50abbf4b0ea58157c9c537ee
 Swift counterpart: src/checks/workspace/SessionChecks.swift
 Swift counterpart: src/checks/workspace/transport_checks.swift
 QML counterpart: src/checks/editorqml/tst_ShellTransport.qml
+Swift counterpart: src/checks/songlist/songlist_checks.swift
+QML counterpart: src/checks/editorqml/tst_ShellSongs.qml
+QML counterpart: src/checks/editorqml/tst_ShellWindow.qml
 Swift counterpart: src/checks/workspace/session_editor_semantics.swift
 Swift counterpart: src/checks/workspace/session_io.swift
 Swift counterpart: src/checks/workspace/session_playback.swift
@@ -21,7 +24,7 @@ Shared SHA-256: 79d2a5010d685bd2a2ec6547db1c7430319c5006b18827f97fed1d49239ac306
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 WorkspaceTabsTest::transportVolumesAndRaster covers the transport bar before any project is open (disabled scale controls, reserved time-strip geometry, dial raster ticks) and with two tabs (toolbar order, output-volume dial versus song master-volume spin, mouse-drag dial behavior, shortcut-override filtering).
-tabs_transport.cpp contributes 73 sites: 9 MATCHED, 3 PARTIAL, 42 GAP, 19 RETIRED-REPRESENTATION. The
+tabs_transport.cpp contributes 73 sites: 12 MATCHED, 3 PARTIAL, 39 GAP, 19 RETIRED-REPRESENTATION. The
 shell-transport TestCase mounts ShellWindow with a live project and two tabs;
 
 Command: deno task verify --filter projectstore --filter swiftcore --verbose
@@ -29,6 +32,25 @@ Result: PASS — 24 applicable entries, 7 filtered skips (controller-run final r
 sources pinned above; the ledger agent did not run it).
 Command: deno task verify:shell --filter shell-transport --verbose
 Result: PASS — shell-transport 1/1 applicable (4.78s).
+
+Task 44 note (SH06 preference remainder): the preference behaviors this task added have no original
+site in tabs_transport.cpp, so they enter this index only as predicates S190-S209 — followPlayhead
+and dsp.resonanceSuppression restore plus persist-on-change, the output dial's incremental
+accumulator law, the mounted dial tooltip, the windowGeometry and windowState frame restore
+(Polyphony debugger visibility rides windowState) with its offscreen guard, and the songFilterText,
+songFilterSort and songFilterCategory restore with the missing-category fallback. A043 (dial tooltip)
+and A049 (press without a drag) move from GAP to MATCHED on S202 and S197; A058 stays PARTIAL
+(nothing indexed here asserts the SongDocument master-volume config), and A051/A052 keep their
+earlier MATCHED disposition because the new dial predicate asserts the accumulator law rather than
+the drag direction those two sites assert. The tally line above is reconciled to the file's actual
+dispositions; its earlier "9 MATCHED, 42 GAP" predated A024's MATCHED flip.
+Accepted deviation (controller ruling): windowGeometry and windowState are written as Swift strings
+under the fork keys, so a fork install's QByteArray payloads read as absent and a fork install
+migrates toggles and filters only; no site here is MATCHED on fork geometry blobs.
+Verification reused for this revision (implementer-run on this tree; the ledger agent did not run
+it): deno task build:checks ok; deno task verify --filter swiftcore-projectsession --verbose 1/37 ok;
+deno task verify:shell --filter shell-transport / shell-songs / shellwindow --verbose 1/26 ok each;
+deno task verify:bridge 0 baselined findings.
 
 No native execution remains: the QtTest suites declared in
 src/checks/workspace/tst_workspacesessions.h
@@ -299,8 +321,8 @@ Original expression:
   QCOMPARE(dial->maximum(), 100)
 
 A043 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:161
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the native output-volume dial tooltip text (src/ui/transportbar.cpp owns the native transport chrome and is compiled into no target; src/ui/shell/ShellWindow.qml exposes transport menu actions only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping/reason: Related predicate S202 (mounted shell-transport test_outputDialFineDragAndTooltip reads the mounted dial's attached ToolTip.text through the production ShellWindow transport toolbar and compares it with "Application output volume. Does not change the song volume or saved song settings."; message "the output dial tooltip explains it does not change the song volume"). Same observable clause as the original's dial->toolTip().contains("Does not change the song volume"): the Swift-owned TransportOutputDial.qml dial carries that exact fork tooltip string, so the substring clause is entailed by the mounted equality; a tooltip is static text, so the original's two-tab fixture adds nothing and the predicate mounts the song-less transport.
 Source context since previous assertion:
   ;
 Original expression:
@@ -342,8 +364,8 @@ A048 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_
 Disposition: MATCHED
 
 A049 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:174
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the native output-volume dial press/release interaction (src/ui/transportbar.cpp owns the native transport chrome and is compiled into no target; src/ui/shell/ShellWindow.qml exposes transport menu actions only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping/reason: Related predicate S197 (mounted shell-transport test_outputDialIncrementalDrag sets bar.presenter.setOutputVolume(40), presses the mounted dial at its centre without any pointer motion, and compares bar.presenter.outputVolume with 40; message "pressing the output dial without dragging leaves the volume unchanged"). Same observable clause as the original's dial->setValue(50); press; release; QCOMPARE(dial->value(), 50): a press with no pointer movement must not jump the value. TransportOutputDial.qml commits only from MouseArea onPressed (records dragLastY, zeroes stepAccumulator, takes focus) and onPositionChanged while pressed, so the release the original also sends is a no-op on both paths; the original's two-tab fixture is not needed for the press path, and the predicate drives the same production dial.
 Source context since previous assertion:
   ;
 
@@ -1101,3 +1123,63 @@ Anchor: message "the same Space shortcut pauses playback"
 
 S189 | test_outputVolumeSurvivesShellRelaunch | src/checks/editorqml/tst_ShellTransport.qml
 Anchor: message "application output preference survives a fresh shell session"
+
+S190 | checkTransportTogglePreferences | src/checks/workspace/transport_checks.swift
+Anchor: message "stored follow-playhead preference restores into the transport presenter"
+
+S191 | checkTransportTogglePreferences | src/checks/workspace/transport_checks.swift
+Anchor: message "stored resonance suppression restores into the audio engine"
+
+S192 | checkTransportTogglePreferences | src/checks/workspace/transport_checks.swift
+Anchor: message "toggling follow playhead stores its preference on change"
+
+S193 | checkTransportTogglePreferences | src/checks/workspace/transport_checks.swift
+Anchor: message "toggling resonance suppression stores its preference on change"
+
+S194 | songListPreferenceRestore | src/checks/songlist/songlist_checks.swift
+Anchor: message "stored song filters restore into the songs presenter"
+
+S195 | test_unloadedTransportPreferencesStayActionable | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "follow playhead stays enabled without an open song"
+
+S196 | test_unloadedTransportPreferencesStayActionable | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "resonance suppression stays enabled without an open song"
+
+S197 | test_outputDialIncrementalDrag | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "pressing the output dial without dragging leaves the volume unchanged"
+
+S198 | test_outputDialIncrementalDrag | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "dragging the output dial accumulates steps from the pointer's last position"
+
+S199 | test_transportTogglePreferencesSurviveRelaunch | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "the follow-playhead preference survives a fresh shell session"
+
+S200 | test_transportTogglePreferencesSurviveRelaunch | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "the resonance-suppression preference survives a fresh shell session"
+
+S201 | test_outputDialFineDragAndTooltip | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "shift dragging the output dial uses the fine rate"
+
+S202 | test_outputDialFineDragAndTooltip | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "the output dial tooltip explains it does not change the song volume"
+
+S203 | test_songFiltersSurviveShellRelaunch | src/checks/editorqml/tst_ShellSongs.qml
+Anchor: message "song filter text, sort and category restore across a fresh shell session"
+
+S204 | test_unknownStoredSongCategoryFallsBackToAll | src/checks/editorqml/tst_ShellSongs.qml
+Anchor: message "a restored category the project does not have falls back to all songs"
+
+S205 | test_savedWindowFrameRestoresAcrossShellSessions | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "a saved window frame restores across a fresh shell session"
+
+S206 | test_offscreenWindowFrameIsIgnored | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "an offscreen saved frame is ignored"
+
+S207 | test_maximizedAndDebuggerWindowStateRestores | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the maximized flag restores across a fresh shell session"
+
+S208 | test_maximizedAndDebuggerWindowStateRestores | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "debugger visibility restores with the window state"
+
+S209 | test_sessionPreferencesRetainForkKeySpellings | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "preferences keep the fork's on-disk key spellings"

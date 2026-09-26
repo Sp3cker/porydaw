@@ -8,8 +8,10 @@ Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted n
 
 
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run.
-Converted-window command: deno task verify:qml --verbose
+Result: pending integrated run (not re-run by this proof-only pass; the cited Swiftcore anchors are classified executed by build/proof-evidence/swiftcore-projectsession.json).
+Converted-window command: deno task verify:qml-roll --verbose
+Converted-window result: PASS (build/proof-evidence/swiftroll-window.json records SwiftRollTrackHeaders::test_zMountedMeterWindowRasterAndScopedRows as an executed lane function; this proof-only pass cites the exercised anchors without re-running the suite).
+Verified QML SHA-256: e5583fc8c00ed942e3d550bc148a005f0778dc0b0ff8d50f177682ca43cabde1 (src/checks/rollqml/tst_SwiftRollTrackHeaders.qml)
 
 A001 | TrackActivityMeterTest::init | src/checks/trackheaders/tst_trackactivitymeter.cpp:96
 Disposition: RETIRED-REPRESENTATION
@@ -34,21 +36,8 @@ Original expression:
   QVERIFY(m_model)
 
 A004 | TrackActivityMeterTest::init | src/checks/trackheaders/tst_trackactivitymeter.cpp:102
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(QTest::qWaitFor([this] {
-          QQuickItem *const root = m_quick ? m_quick->rootObject() : nullptr;
-          auto *const input = root ? root->findChild<songview::TimelineInputItem *>(
-                                         QStringLiteral("timelineTrackHeadersInput"))
-                                   : nullptr;
-          const auto &band =
-              m_view->timelineBandLayout().geometry(songview::TimelineBand::TrackHeaders);
-          return m_window && m_window->isVisible() && m_window->isExposed() && input && band &&
-                 !band->rect.isEmpty() && input->width() > 0.0 && input->height() > 0.0;
-      }))
+Disposition: MATCHED
+Mapping: S028
 
 A005 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:139
 Disposition: PARTIAL
@@ -101,12 +90,8 @@ Disposition: MATCHED
 Mapping: S015
 
 A010 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:149
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; the presenter takes dpr as a parameter but the native Quick window devicePixelRatio has no counterpart.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(std::abs(dpr - m_quick->quickDevicePixelRatio()) < 0.001)
+Disposition: MATCHED
+Mapping: S029, S030
 
 A011 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:152
 Disposition: PARTIAL
@@ -178,36 +163,16 @@ Disposition: MATCHED
 Mapping: S017
 
 A018 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:180
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      levels[kTrack] = {shared, shared};
-      changes = {};
-      present(levels, true);
-      const QImage within = captureRow(*m_view, *m_model, row, error);
-Original expression:
-  QVERIFY2(!within.isNull(), qPrintable(error))
+Disposition: MATCHED
+Mapping: S032
 
 A019 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:185
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      levels[kTrack] = {uint8_t(shared + 1), uint8_t(shared + 1)};
-      changes = {};
-      present(levels, true);
-      const QImage samePixel = captureRow(*m_view, *m_model, row, error);
-Original expression:
-  QVERIFY2(!samePixel.isNull(), qPrintable(error))
+Disposition: MATCHED
+Mapping: S033
 
 A020 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:186
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; retained row identity S018 proves the underlying state, but the raster image equality has no presenter counterpart.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(samePixel, within)
+Disposition: MATCHED
+Mapping: S035
 
 A021 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:187
 Disposition: MATCHED
@@ -218,24 +183,12 @@ Disposition: MATCHED
 Mapping: S019
 
 A023 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:195
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      levels[kTrack] = {across, across};
-      changes = {};
-      present(levels, true);
-      const QImage changed = captureRow(*m_view, *m_model, row, error);
-Original expression:
-  QVERIFY2(!changed.isNull(), qPrintable(error))
+Disposition: MATCHED
+Mapping: S038
 
 A024 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:196
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; the changed height S020 proves the underlying state, but the raster image inequality has no presenter counterpart.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(changed != within)
+Disposition: MATCHED
+Mapping: S034, S038
 
 A025 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:197
 Disposition: PARTIAL
@@ -277,24 +230,8 @@ A030 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/ch
 Disposition: RETIRED-REPRESENTATION
 
 A031 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:227
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      const qreal dpr = active.devicePixelRatio();
-      DataChange changes;
-      const QMetaObject::Connection connection = QObject::connect(
-          m_model, &QAbstractItemModel::dataChanged, m_view.get(),
-          [&changes](const QModelIndex &first, const QModelIndex &last, const QList<int> &roles) {
-              ++changes.count;
-              changes.first = first.row();
-              changes.last = last.row();
-              changes.roles = roles;
-          });
-      present({}, false);
-      const QImage paused = captureRow(*m_view, *m_model, row, error);
-Original expression:
-  QVERIFY2(!paused.isNull(), qPrintable(error))
+Disposition: MATCHED
+Mapping: S038
 
 A032 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:228
 Disposition: PARTIAL
@@ -357,48 +294,24 @@ Original expression:
   QCOMPARE(paused.height(), trackheaders_test::devicePixelSpan(origin.y(), meterHeight, dpr))
 
 A039 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:239
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(paused.devicePixelRatio(), dpr)
+Disposition: MATCHED
+Mapping: S036, S037
 
 A040 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:240
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: PARTIAL
+Mapping/reason: Converted-window evidence: the paused band raster is re-captured and its right column counted at the snapped device-pixel height (S038), and the paused fills are asserted at the observed window ratio (S036, S037). Unproved: no converted predicate asserts the captured raster's opacity (the fork's isOpaque alpha scan); converted window grabs are opaque by construction.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(trackheaders_test::isOpaque(paused))
 
 A041 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:252
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; the paused fill S021 proves the state, but the raster column scan has no presenter counterpart.
-Source context since previous assertion:
-  ;
-      int completeColumns = 0;
-      for (const int x : {paused.width() / 4, paused.width() / 2, paused.width() * 3 / 4}) {
-          const QColor bottom = paused.pixelColor(x, paused.height() - 1);
-          int filled = 0;
-          for (int yPixel = paused.height() - 1;
-               yPixel >= 0 && paused.pixelColor(x, yPixel) == bottom; --yPixel) {
-              ++filled;
-          }
-          if (filled >= paused.height() - 1)
-              ++completeColumns;
-      }
-Original expression:
-  QVERIFY(completeColumns >= 2)
+Disposition: MATCHED
+Mapping: S038
 
 A042 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:253
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(active.pixelColor(active.width() / 4, active.height() / 4) !=
-              paused.pixelColor(paused.width() / 4, paused.height() / 4))
+Disposition: MATCHED
+Mapping: S034, S038
 
 A043 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:258
 Disposition: MATCHED
@@ -413,32 +326,16 @@ Disposition: MATCHED
 Mapping: S025
 
 A046 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:274
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      QString error;
-      TrackActivityLevels stereo{};
-      stereo[kTrack] = {255, 64};
-      present(stereo, true);
-      const QImage image = captureRow(*m_view, *m_model, row, error);
-Original expression:
-  QVERIFY2(!image.isNull(), qPrintable(error))
+Disposition: MATCHED
+Mapping: S032
 
 A047 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:277
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      const int left = image.width() / 4;
-      const int right = image.width() * 3 / 4;
-Original expression:
-  QVERIFY(image.pixelColor(left, image.height() / 8) !=
-              image.pixelColor(right, image.height() / 8))
+Disposition: MATCHED
+Mapping: S031, S034
 
 A048 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:279
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: PARTIAL
+Mapping/reason: Converted-window evidence: the left channel's painted device-pixel rows equal the snapped height (S034) and the right channel's active height is the snapped partial value (S031). Unproved: no converted predicate counts the active right channel's painted rows, so the fork's bottom-row two-channel equality at the active stereo state has no counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -457,8 +354,8 @@ A051 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/
 Disposition: RETIRED-REPRESENTATION
 
 A052 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:309
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: PARTIAL
+Mapping/reason: Converted-window evidence: the lane asserts the neighbor row's heights stay zero and its delegate stays mounted (S039). Unproved: the converted lane drives only the first row, so the second row's band raster is never captured.
 Source context since previous assertion:
   ;
       const QImage secondImage = captureRow(*m_view, *m_model, second, error);
@@ -466,29 +363,24 @@ Original expression:
   QVERIFY2(!secondImage.isNull(), qPrintable(error))
 
 A053 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:310
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: PARTIAL
+Mapping/reason: Converted-window evidence: the lane captures the driven row's band raster (S032). Unproved: no converted predicate asserts the captured raster's opacity (the fork's isOpaque alpha scan); converted window grabs are opaque by construction.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(trackheaders_test::isOpaque(firstImage))
 
 A054 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:311
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: PARTIAL
+Mapping/reason: Converted-window evidence: the neighbor row stays unpainted and its delegate mounted (S039). Unproved: no converted predicate asserts the captured raster's opacity, and the lane never captures the second row's raster.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(trackheaders_test::isOpaque(secondImage))
 
 A055 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:312
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(firstImage.pixelColor(firstImage.width() / 4, firstImage.height() - 1) !=
-              secondImage.pixelColor(secondImage.width() / 4, secondImage.height() - 1))
+Disposition: MATCHED
+Mapping: S039
 
 A056 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:314
 Disposition: PARTIAL
@@ -593,11 +485,11 @@ Anchor: function
 S017 | physical | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: function
 
-S018 | physical | src/checks/trackheaders/tst_trackactivitymeter.swift
-Anchor: function
+S018 | trackActivityPhysicalPixelPredicates | src/checks/trackheaders/tst_trackactivitymeter.swift
+Anchor: message "same physical pixel publishes no row"
 
-S019 | physical | src/checks/trackheaders/tst_trackactivitymeter.swift
-Anchor: function
+S019 | trackActivityPhysicalPixelPredicates | src/checks/trackheaders/tst_trackactivitymeter.swift
+Anchor: message "crossing physical boundary changes height"
 
 S020 | physical | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: function
@@ -622,3 +514,39 @@ Anchor: function
 
 S027 | physical | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: function
+
+S028 | test_zMountedMeterWindowRasterAndScopedRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "the converted window exposes the mounted header band"
+
+S029 | test_zMountedMeterWindowRasterAndScopedRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "meter height follows the window's device pixel ratio"
+
+S030 | test_zMountedMeterWindowRasterAndScopedRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "the meter snaps to whole device pixels at the window's ratio"
+
+S031 | test_zMountedMeterWindowRasterAndScopedRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "right meter height follows the window's device pixel ratio"
+
+S032 | test_zMountedMeterWindowRasterAndScopedRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "the mounted activity meter captures a raster image"
+
+S033 | test_zMountedMeterWindowRasterAndScopedRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "the activity raster has physical rows"
+
+S034 | test_zMountedMeterWindowRasterAndScopedRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "the meter paints its active bar at the snapped device-pixel height"
+
+S035 | test_zMountedMeterWindowRasterAndScopedRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "an unchanged physical height repaints the same meter raster"
+
+S036 | test_zMountedMeterWindowRasterAndScopedRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "paused activity fills the left channel at the observed ratio"
+
+S037 | test_zMountedMeterWindowRasterAndScopedRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "paused activity fills the right channel at the observed ratio"
+
+S038 | test_zMountedMeterWindowRasterAndScopedRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "paused right channel paints a full-height device-pixel raster"
+
+S039 | test_zMountedMeterWindowRasterAndScopedRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "activity republishes only the driven row"

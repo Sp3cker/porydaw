@@ -9,6 +9,7 @@ func runNoteRenderingChecks(_ report: CheckReport, session: DocumentSession) {
     checkIdentityNoteColors(report, session: session)
     checkVelocityColorMode(report, session: session)
     checkNoteNameMode(report, session: session)
+    checkVelocityValues(report, session: session)
     checkGhostNotes(report, session: session)
     checkProjectionEconomy(report, session: session)
     checkRulerSweepSingleTrackScope(report, session: session)
@@ -292,6 +293,22 @@ private func expectedVelocityHue(_ velocity: Int) -> String {
     }
     return String(format: "#%02X%02X%02X", quantize(rgb.0), quantize(rgb.1), quantize(rgb.2))
 }
+private func hueDegrees(_ color: String) -> Double? {
+    guard color.count == 7 else { return nil }
+    let channels = Array(color.dropFirst())
+    guard let red = Int(String(channels[0...1]), radix: 16),
+          let green = Int(String(channels[2...3]), radix: 16),
+          let blue = Int(String(channels[4...5]), radix: 16)
+    else { return nil }
+    let r = Double(red), g = Double(green), b = Double(blue)
+    let high = max(r, g, b), low = min(r, g, b)
+    let spread = high - low
+    if spread == 0 { return 0 }
+    if high == r { return ((g - b) / spread + (g < b ? 6 : 0)) * 60 }
+    if high == g { return ((b - r) / spread + 2) * 60 }
+    return ((r - g) / spread + 4) * 60
+}
+
 
 @MainActor
 private func checkVelocityColorMode(_ report: CheckReport, session: DocumentSession) {
@@ -315,7 +332,10 @@ private func checkVelocityColorMode(_ report: CheckReport, session: DocumentSess
         firstNoteRect(named: "gridNote_\(noteID.rawValue)",
                       in: grid.scene.pianoNoteFills)?.fillColor
     }
+    let revisionBeforeFlip = session.document.revision
+    let zeroInk = palette.noteVelocityZero
     grid.setVelocityColorMode(enabled: true)
+    let modeOnRevisionUnchanged = session.document.revision == revisionBeforeFlip
     var hues: [Int: String] = [:]
     for velocity in [1, 64, 127] {
         guard session.document.setVelocities([NoteVelocity(noteID: noteID, velocity: velocity)],
@@ -331,10 +351,23 @@ private func checkVelocityColorMode(_ report: CheckReport, session: DocumentSess
         }
         hues[velocity] = fill
     }
+    let allOpaque = (2...127).allSatisfy { velocity in
+        publishedOpaque(PaletteMath.velocityNoteColor(velocity: velocity, zeroColor: zeroInk))
+    }
+    let hueOrdered = (1..<127).allSatisfy { velocity in
+        let first = PaletteMath.velocityNoteColor(velocity: velocity, zeroColor: zeroInk)
+        let next = PaletteMath.velocityNoteColor(velocity: velocity + 1, zeroColor: zeroInk)
+        return first == expectedVelocityHue(velocity)
+            && next == expectedVelocityHue(velocity + 1)
+            && (hueDegrees(first).flatMap { a in hueDegrees(next).map { a >= $0 } } ?? false)
+    }
+    report.expect(allOpaque, cppID: id,
+                  message: "every velocity fill from 2 to 127 is opaque")
+    report.expect(hueOrdered, cppID: id,
+                  message: "velocity hue falls monotonically from purple to red")
     let minimum = hues[1] ?? ""
     let midpoint = hues[64] ?? ""
     let maximum = hues[127] ?? ""
-    let zeroInk = palette.noteVelocityZero
     report.expect(minimum == "#5F44E9", cppID: id,
                   message: "velocity 1 publishes the purple endpoint in palette format")
     report.expect(minimum == PaletteMath.velocityNoteColor(velocity: 1, zeroColor: zeroInk),
@@ -383,7 +416,9 @@ private func checkVelocityColorMode(_ report: CheckReport, session: DocumentSess
                   message: "ghost fill is identical with the mode off")
     // Mode off restores identity fills on the live grid.
     grid.refreshFromSession()
+    let revisionBeforeModeOff = session.document.revision
     grid.setVelocityColorMode(enabled: false)
+    let modeOffRevisionUnchanged = session.document.revision == revisionBeforeModeOff
     report.expect(publishedFill() == palette.noteFill(track: track, velocity: 127), cppID: id,
                   message: "disabling the mode restores the identity fill")
     guard session.document.setVelocities([NoteVelocity(noteID: noteID, velocity: 1)],
@@ -395,6 +430,8 @@ private func checkVelocityColorMode(_ report: CheckReport, session: DocumentSess
     grid.refreshFromSession()
     report.expect(publishedFill() == palette.noteFill(track: track, velocity: 1), cppID: id,
                   message: "disabling the mode restores the minimum identity fill")
+    report.expect(modeOnRevisionUnchanged && modeOffRevisionUnchanged, cppID: id,
+                  message: "velocity-mode flips leave the document revision unchanged")
 }
 
 @MainActor
@@ -459,10 +496,12 @@ private func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) 
                                  in: grid.scene.pianoNoteFills)?.fillColor ?? ""
         let light = grid.palette.keyboardNatural
         let dark = grid.palette.keyboardBlack
-        let expectedInk = PaletteMath.contrastRatio(fill, light)
-            >= PaletteMath.contrastRatio(fill, dark) ? light : dark
+        let expectedInk = PaletteMath.aaContrastInk(
+            fill: fill, light: light, dark: dark,
+            fallbackLight: grid.palette.noteLabelAaLight,
+            fallbackDark: grid.palette.noteLabelAaDark)
         report.expect(record.labelColor == expectedInk
-                          && (record.labelColor == light || record.labelColor == dark),
+                          && PaletteMath.contrastRatio(fill, record.labelColor) >= 4.5,
                       cppID: id,
                       message: "the name label uses the contrasting keyboard ink")
         report.expect(record.labelHorizontalAlignment == 0x1
@@ -498,9 +537,9 @@ private func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) 
     // PianoGrid only presents the selected track, so exercise the pure
     // function with a synthetic ghost face.
     let faces = [
-        NoteNameFace(pitch: pitch, box: (0, 0, 200, 24),
+        NoteNameFace(pitch: pitch, box: (0, 0, 200, 24), velocity: 100,
                      fillColor: grid.palette.noteVelocityZero, ghost: true),
-        NoteNameFace(pitch: pitch, box: (0, 0, 200, 24),
+        NoteNameFace(pitch: pitch, box: (0, 0, 200, 24), velocity: 100,
                      fillColor: grid.palette.noteVelocityZero, ghost: false),
     ]
     let ghostLabels = NoteNameLabels.labels(
@@ -509,10 +548,294 @@ private func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) 
         font: [:], palette: grid.palette)
     report.expect(ghostLabels.count == 1 && ghostLabels[0].labelText == GridScene.keyName(pitch),
                   cppID: id, message: "ghost notes are never labeled")
+    let hardFill = PaletteMath.velocityNoteColor(
+        velocity: 121, zeroColor: grid.palette.noteVelocityZero)
+    report.expect(PaletteMath.contrastRatio(
+        hardFill, NoteNameLabels.textColor(fillColor: hardFill, palette: grid.palette)) >= 4.5,
+        cppID: id, message: "the low-contrast velocity hue gets AA-clearing label ink")
     // Mode off empties the model unconditionally.
     grid.setNoteNameMode(enabled: false)
     report.expect(grid.scene.pianoNoteTextModel.count == 0, cppID: id,
                   message: "disabling the mode empties the name model")
+    let beforeState = session.document.state
+    let beforeIdentity = session.document.history.currentIdentity
+    session.mutateCamera { camera in
+        _ = camera.setKeyHeight(32)
+        _ = camera.setTimeZoom(20)
+        _ = camera.setHScroll(camera.snapshot.minHScroll)
+        _ = camera.setVScroll(max(0, (127.5 - Double(pitch)) * 32 - 160))
+    }
+    grid.refreshCamera()
+    defer {
+        while session.document.history.currentIdentity != beforeIdentity
+                  && session.document.history.canUndo {
+            guard session.document.history.undoDocument() else { break }
+        }
+        report.expect(session.document.state == beforeState
+                          && session.document.history.currentIdentity == beforeIdentity,
+                      cppID: id, message: "note-name fixture undo restores the document")
+    }
+    guard let short = ghostSeed(report, id: id, session: session, grid: grid,
+                                track: grid.trackIndex, spanCells: 1,
+                                nearPitch: pitch, excluding: [pitch]),
+          let wide = ghostSeed(report, id: id, session: session, grid: grid,
+                               track: grid.trackIndex, spanCells: 12,
+                               nearPitch: pitch, excluding: [pitch, short.pitch]) else { return }
+    let nextTick = short.tick + short.duration
+    guard !session.document.notes(in: grid.trackIndex).contains(where: {
+        Int($0.pitch) == short.pitch && Int($0.tick) < nextTick + short.duration
+            && Int($0.tick) + Int($0.duration) > nextTick
+    }), let adjacent = try? session.document.addNotes([
+        NewNote(track: grid.trackIndex, tick: Tick(nextTick), pitch: UInt8(short.pitch),
+                duration: Tick(short.duration), velocity: 1)
+    ]).first else {
+        report.fail(id, "adjacent short name-note fixture could not be seeded")
+        return
+    }
+    grid.refreshFromSession()
+    grid.setNoteNameMode(enabled: true)
+    func hasLabel(_ noteID: NoteID) -> Bool {
+        guard let note = session.document.note(noteID),
+              let box = noteBox(grid, session: session, note: note) else { return false }
+        return grid.scene.pianoNoteTextModel.asArray.contains {
+            $0.labelText == GridScene.keyName(Int(note.pitch))
+                && renderingNear(($0.labelRect["x"] as? Double) ?? -.infinity,
+                                 box.x + grid.metrics.spaceHalf)
+        }
+    }
+    report.expect(!hasLabel(short.id), cppID: id,
+                  message: "an abutting short same-pitch note carries no label (first)")
+    report.expect(!hasLabel(adjacent), cppID: id,
+                  message: "an abutting short same-pitch note carries no label (second)")
+    report.expect(hasLabel(wide.id), cppID: id,
+                  message: "a distant wide note keeps its label")
+    let noteFonts = GridTypography.fonts(
+        metrics: grid.metrics, typography: Typography(baseFontPx: 13))
+    let measured = GridTypography(fonts: noteFonts, rowHeight: 32, pixel: grid.metrics.pixel)
+    let fitHeight = measured.noteNameOccupiedHeight.rounded(.up)
+        + 2 * grid.metrics.spaceHalf + grid.metrics.pixel
+    session.mutateCamera { camera in
+        _ = camera.setKeyHeight(fitHeight)
+        _ = camera.setVScroll(max(0, (127.5 - Double(wide.pitch)) * fitHeight - 160))
+    }
+    grid.refreshCamera()
+    report.expect(hasLabel(wide.id), cppID: id,
+                  message: "a row at the exact padded fit still labels")
+    session.mutateCamera { camera in
+        _ = camera.setKeyHeight(fitHeight - grid.metrics.pixel)
+        _ = camera.setVScroll(max(0, (127.5 - Double(wide.pitch))
+                                 * (fitHeight - grid.metrics.pixel) - 160))
+    }
+    grid.refreshCamera()
+    report.expect(!hasLabel(wide.id), cppID: id,
+                  message: "one pixel shorter the label hides instead of shrinking")
+    for (velocity, label) in [
+        (100, "label ink is chosen against the bright velocity fill"),
+        (1, "label ink is chosen against the dark velocity fill"),
+    ] {
+        let fill = PaletteMath.velocityNoteColor(
+            velocity: velocity, zeroColor: grid.palette.noteVelocityZero)
+        report.expect(PaletteMath.contrastRatio(
+            fill, NoteNameLabels.textColor(fillColor: fill, palette: grid.palette)) >= 4.5,
+            cppID: id, message: label)
+    }
+    grid.setNoteNameMode(enabled: false)
+}
+
+@MainActor
+private func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::velocityValueRaster"
+    let oldCamera = session.camera
+    let document = session.document
+    let initialState = document.state
+    let initialIdentity = document.history.currentIdentity
+    let priorSelection = session.selectedNoteOrder
+    let grid = PianoGrid(session: session)
+    defer {
+        if grid.interactionActive {
+            grid.inputCancelled(reason: GridCancelReason.pointerUngrabbed.rawValue)
+        }
+        while document.history.currentIdentity != initialIdentity && document.history.canUndo {
+            guard document.history.undoDocument() else { break }
+        }
+        session.setSelectedNotes(priorSelection)
+        session.mutateCamera { $0 = oldCamera }
+        report.expect(document.state == initialState
+                          && document.history.currentIdentity == initialIdentity,
+                      cppID: id, message: "velocity-value fixture undo restores the document")
+    }
+    grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 1)
+    grid.resetCameraScroll()
+    _ = session.mutateCamera { _ = $0.setTimeZoom(35) }
+    grid.refreshCamera()
+    guard let noteID = renderingSeed(report, id: id, session: session, grid: grid),
+          let note = document.note(noteID) else { return }
+    session.mutateCamera { camera in
+        _ = camera.setKeyHeight(32)
+        _ = camera.setVScroll(max(0, (127.5 - Double(note.pitch)) * 32 - 160))
+    }
+    grid.refreshCamera()
+    guard let other = ghostSeed(report, id: id, session: session, grid: grid,
+                                track: grid.trackIndex, spanCells: 1,
+                                nearPitch: Int(note.pitch),
+                                excluding: [Int(note.pitch)]),
+          let otherNote = document.note(other.id) else { return }
+    session.mutateCamera { camera in
+        _ = camera.setTimeZoom(280)
+        _ = camera.setHScroll(max(camera.snapshot.minHScroll,
+                                  camera.contentX(tick: Double(note.tick)) - 160))
+    }
+    grid.refreshCamera()
+    let revisionBeforeDrag = document.revision
+    grid.setNoteNameMode(enabled: true)
+    for height in [32.0, 8.6, 9.0] {
+        let rowMessage = height == 32.0 ? "" : " at row \(height)"
+        session.mutateCamera { camera in
+            _ = camera.setKeyHeight(height)
+            _ = camera.setVScroll(max(0, (127.5 - Double(note.pitch)) * height - 160))
+        }
+        grid.refreshCamera()
+        guard let box = noteBox(grid, session: session, note: note),
+              let otherBox = noteBox(grid, session: session, note: otherNote) else {
+            report.fail(id, "velocity-value fixture has no visible pair of note boxes")
+            return
+        }
+        let x = box.x + box.w / 2, y = box.y + box.h / 2
+        grid.setVelocityColorMode(enabled: height == 9.0)
+        grid.beginPointer(x: x, y: y, modifiers: 0x0400_0000)
+        grid.updatePointer(x: x, y: y - grid.dragDistance - 2, modifiers: 0x0400_0000)
+        guard let preview = grid.previewVelocity(noteID) else {
+            report.fail(id, "control drag did not publish a preview velocity")
+            return
+        }
+        let labels = grid.scene.pianoNoteTextModel.asArray
+        let fill = firstNoteRect(named: "gridNote_\(noteID.rawValue)",
+                                 in: grid.scene.pianoNoteFills)?.fillColor ?? ""
+        let expectedFill = height == 9.0
+            ? PaletteMath.velocityNoteColor(
+                velocity: preview, zeroColor: grid.palette.noteVelocityZero)
+            : grid.palette.noteFill(track: grid.trackIndex, velocity: preview)
+        func fits(_ label: SceneText, box: (x: Double, y: Double, w: Double, h: Double))
+            -> Bool {
+            renderingNear((label.labelRect["x"] as? Double) ?? -.infinity, box.x)
+                && renderingNear((label.labelRect["y"] as? Double) ?? -.infinity, box.y)
+                && renderingNear((label.labelRect["width"] as? Double) ?? -.infinity, box.w)
+                && renderingNear((label.labelRect["height"] as? Double) ?? -.infinity, box.h)
+                && label.labelHorizontalAlignment == 0x4
+                && label.labelVerticalAlignment == 0x80
+        }
+        report.expect(labels.contains { $0.labelText == String(preview) && fits($0, box: box) },
+                      cppID: id,
+                      message: "velocity drag publishes the preview value on its note\(rowMessage)")
+        report.expect(labels.contains {
+            $0.labelText == String(otherNote.velocity) && fits($0, box: otherBox)
+        }, cppID: id,
+           message: "other notes show their document velocity during a drag\(rowMessage)")
+        report.expect(!labels.contains {
+            $0.labelText == GridScene.keyName(Int(note.pitch))
+                || $0.labelText == GridScene.keyName(other.pitch)
+        }, cppID: id, message: "velocity values replace note names while shown\(rowMessage)")
+        report.expect(fill == expectedFill, cppID: id,
+                      message: "the dragged note's fill follows its preview velocity\(rowMessage)")
+        report.expect(labels.contains {
+            $0.labelText == String(preview)
+                && $0.labelColor == grid.palette.noteLabelInk(forFill: fill)
+        }, cppID: id,
+           message: "the preview value uses AA ink against its live fill\(rowMessage)")
+        report.expect(document.revision == revisionBeforeDrag, cppID: id,
+                      message: "previewing velocity leaves the document unchanged\(rowMessage)")
+        if height != 9.0 {
+            grid.inputCancelled(reason: GridCancelReason.pointerUngrabbed.rawValue)
+        } else {
+            grid.endPointer(x: x, y: y - grid.dragDistance - 2)
+            report.expect(grid.previewVelocity(noteID) == nil
+                              && grid.scene.pianoNoteTextModel.asArray.allSatisfy {
+                                  $0.labelText != String(preview)
+                              }, cppID: id, message: "ending the drag clears velocity values")
+            report.expect(document.note(noteID)?.velocity == UInt8(preview), cppID: id,
+                          message: "release commits the preview velocity")
+        }
+    }
+    let measured = GridTypography(
+        fonts: GridTypography.fonts(
+            metrics: grid.metrics, typography: Typography(baseFontPx: 13)),
+        rowHeight: 9, pixel: grid.metrics.pixel)
+    let allowance = fontPx(grid.metrics.baseFontPx, 0.5)
+    let value = NoteNameFace(
+        pitch: Int(note.pitch), box: (0, 0, 0, 9), velocity: 100,
+        fillColor: grid.palette.noteVelocityZero, ghost: false)
+    let threshold = measured.noteValueAdvance("100") + allowance
+    let narrow = NoteNameFace(
+        pitch: value.pitch, box: (0, 0, threshold - grid.metrics.pixel, 9),
+        velocity: value.velocity, fillColor: value.fillColor, ghost: false)
+    let fitted = NoteNameFace(
+        pitch: value.pitch, box: (0, 0, threshold, 9),
+        velocity: value.velocity, fillColor: value.fillColor, ghost: false)
+    report.expect(NoteNameLabels.valueLabels(
+        faces: [narrow], allowance: allowance, advance: measured.noteValueAdvance,
+        font: measured.fontMap(.noteValue), palette: grid.palette).isEmpty,
+        cppID: id, message: "one allowance-short box hides the velocity value")
+    report.expect(NoteNameLabels.valueLabels(
+        faces: [fitted], allowance: allowance, advance: measured.noteValueAdvance,
+        font: measured.fontMap(.noteValue), palette: grid.palette).count == 1,
+        cppID: id, message: "a box at the exact velocity-value fit shows the value")
+    let ghost = NoteNameFace(
+        pitch: value.pitch, box: fitted.box, velocity: 100,
+        fillColor: value.fillColor, ghost: true)
+    report.expect(NoteNameLabels.valueLabels(
+        faces: [ghost], allowance: allowance, advance: measured.noteValueAdvance,
+        font: measured.fontMap(.noteValue), palette: grid.palette).isEmpty,
+        cppID: id, message: "ghost notes never display velocity values")
+    let camera = session.camera
+    let snapshot = camera.snapshot
+    let occupiedPitches = Set(document.notes(in: grid.trackIndex).map { Int($0.pitch) })
+    let freeRow = (24...115).first { pitch in
+        guard !occupiedPitches.contains(pitch) else { return false }
+        let row = camera.projection.row(forPitch: pitch)
+        guard row != PitchProjection.hiddenRow,
+              let top = camera.projection.rowTop(
+                row, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY,
+                dpr: grid.devicePixelRatio),
+              let bottom = camera.projection.rowBottom(
+                row, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY,
+                dpr: grid.devicePixelRatio) else { return false }
+        return top >= 8 && bottom <= snapshot.rollHeight - 8
+    }
+    guard let freeRow else {
+        report.fail(id, "no empty visible row for the draw preview")
+        return
+    }
+    let row = camera.projection.row(forPitch: freeRow)
+    guard let top = camera.projection.rowTop(
+        row, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY,
+        dpr: grid.devicePixelRatio),
+          let bottom = camera.projection.rowBottom(
+            row, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY,
+            dpr: grid.devicePixelRatio) else {
+        report.fail(id, "draw preview row cannot be projected")
+        return
+    }
+    let drawY = (top + bottom) / 2
+    let revisionBeforeDraw = document.revision
+    grid.beginPointer(x: 80, y: drawY, modifiers: 0x0400_0000)
+    grid.updatePointer(x: 220, y: drawY, modifiers: 0x0400_0000)
+    guard grid.drawPreview != nil,
+          let previewBox = grid.scene.pianoDrawPreviewFill.asArray.first else {
+        report.fail(id, "control draw did not emit a preview box")
+        return
+    }
+    report.expect(grid.scene.pianoNoteTextModel.asArray.contains {
+        $0.labelText == String(grid.lastVelocity)
+            && renderingNear(($0.labelRect["x"] as? Double) ?? -.infinity, previewBox.x)
+            && renderingNear(($0.labelRect["width"] as? Double) ?? -.infinity,
+                             previewBox.width)
+            && $0.labelHorizontalAlignment == 0x4
+    }, cppID: id, message: "the draw preview carries the last velocity while the modifier is held")
+    grid.inputCancelled(reason: GridCancelReason.pointerUngrabbed.rawValue)
+    report.expect(grid.drawPreview == nil && document.revision == revisionBeforeDraw,
+                  cppID: id, message: "cancelling the draw preview edits no note")
+    grid.setNoteNameMode(enabled: false)
+    grid.setVelocityColorMode(enabled: false)
 }
 
 @MainActor

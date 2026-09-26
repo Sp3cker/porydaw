@@ -1,5 +1,6 @@
 import Foundation
 import PorydawApp
+import PorydawAppCommands
 import PorydawCore
 
 @MainActor
@@ -7,6 +8,10 @@ func runTimemenuChecks(_ report: CheckReport, session: DocumentSession) {
     checkTimeMenuInsertTime(report, session: session)
     checkTimeSelectionMenuCommands(report, session: session)
     checkTimeMenuHalfOpenBoundary(report, session: session)
+    checkTimeMenuClipboardRetirement(report, session: session)
+    checkEmptyTimeSelectionNudge(report, session: session)
+    checkRejectedTimeMenuPaste(report, session: session)
+    checkNoteDuplicateArming(report, session: session)
 }
 
 @MainActor
@@ -85,13 +90,19 @@ private func checkTimeSelectionMenuCommands(_ report: CheckReport, session: Docu
                   && menu.rows[3].actionId == 1 && menu.rows[3].enabled,
                   cppID: id, message: "a selected interval opens an enabled Insert Time row")
     let before = session.document.history.currentIdentity
+    let bytes = coreTimeBytes(session.document)
+    let selection = session.timeSelection
     _ = menu.activate(actionId: 1)
     report.expect(!menu.isOpen && session.document.history.currentIdentity != before,
                   cppID: id, message: "the row applies one undoable range insertion")
+    report.expect(session.editCursor == start && session.timeSelection == selection
+                  && session.document.note(added[0])?.tick == end + 6,
+                  cppID: id, message: "the Insert Time row commits at the seam and retains the blank selection")
     if session.document.history.currentIdentity != before {
         _ = session.document.history.undoDocument()
     }
-    report.expect(session.document.history.currentIdentity == before, cppID: id,
+    report.expect(session.document.history.currentIdentity == before
+                  && coreTimeBytes(session.document) == bytes, cppID: id,
                   message: "one undo restores the document before the menu insertion")
 
     menu.openTimeSelection(contentX: midpoint)
@@ -100,6 +111,190 @@ private func checkTimeSelectionMenuCommands(_ report: CheckReport, session: Docu
     _ = menu.activate(actionId: 6)
     report.expect(!menu.isOpen && session.document.history.currentIdentity == identity,
                   cppID: id, message: "a stale duplicate click cannot write after selection loss")
+}
+
+@MainActor
+private func checkTimeMenuClipboardRetirement(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::timeSelectionMenuClipboardRetirement"
+    let saved = drawerAutomationPorydawSelectionClipboardState()
+    defer { saved.restore() }
+    let clipboard = GridClipboard()
+    report.expect(clipboard.write(PorydawClip(),
+                                  ticksPerBeat: UInt32(session.document.ticksPerBeat)),
+                  cppID: id, message: "an empty clip reaches the native clipboard")
+    let palette = GridPalette()
+    let grid = PianoGrid(session: session, palette: palette)
+    let automation = AutomationPage(baseFontPx: grid.baseFontPx)
+    automation.attach(session: session, palette: palette)
+    defer { automation.detach() }
+    let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
+    let previousTrack = session.selectedTrack
+    if previousTrack == nil { session.selectPrimaryTrack(0) }
+    defer { session.selectedTrack = previousTrack }
+    let band = AutomationTimeSelection(range: TimeRange(startTick: 72, endTick: 96),
+                                       scope: .tracks([session.selectedTrack ?? 0]))
+    session.applyTimeSelection(band)
+    defer { session.clearTimeSelection() }
+    let midpoint = session.camera.contentX(tick: 84)
+    menu.openTimeSelection(contentX: midpoint)
+    let identity = session.document.history.currentIdentity
+    report.expect(menu.isOpen && !menu.rows[6].enabled && menu.rows[0].enabled
+                  && menu.rows[8].enabled, cppID: id,
+                  message: "Paste starts disabled for an empty clip while Copy and Clear remain enabled")
+    let note = ClipNote(relTick: 0, key: 60, duration: 6, velocity: 100)
+    report.expect(clipboard.write(PorydawClip(tracks: [
+        ClipTrack(track: session.selectedTrack ?? 0, notes: [note])
+    ]), ticksPerBeat: UInt32(session.document.ticksPerBeat)), cppID: id,
+                  message: "a non-empty note clip reaches the native clipboard")
+    report.expect(!menu.isOpen && session.document.history.currentIdentity == identity,
+                  cppID: id, message: "the clipboard change retires the open time menu without a write")
+    menu.openTimeSelection(contentX: midpoint)
+    report.expect(menu.isOpen && menu.rows[6].enabled, cppID: id,
+                  message: "the rebuilt Paste row follows the decodable non-empty clipboard")
+    report.expect(clipboard.write(PorydawClip(),
+                                  ticksPerBeat: UInt32(session.document.ticksPerBeat)),
+                  cppID: id, message: "the native clipboard accepts the emptied clip")
+    report.expect(!menu.isOpen && session.document.history.currentIdentity == identity,
+                  cppID: id, message: "emptying the clipboard retires the enabled Paste menu without a write")
+}
+
+@MainActor
+private func checkNoteDuplicateArming(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::timeMenuNoteDuplicateAvailability"
+    let oldTrack = session.selectedTrack
+    let oldNotes = session.selectedNoteOrder
+    defer {
+        session.selectedTrack = oldTrack
+        session.setSelectedNotes(oldNotes)
+    }
+    guard let note = session.document.notes(in: 0).first else {
+        report.fail(id, "the availability fixture has no source note")
+        return
+    }
+    session.selectPrimaryTrack(0)
+    session.clearTimeSelection()
+    session.setSelectedNotes([note.id])
+    let grid = PianoGrid(session: session)
+    report.expect(session.timeSelection == nil
+                  && grid.commandAvailable(command: EditCommand.duplicate.rawValue),
+                  cppID: id, message: "Duplicate stays enabled for a note-only selection")
+}
+
+@MainActor
+private func checkRejectedTimeMenuPaste(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::rejectedNotePastePreservesViewState"
+    let saved = drawerAutomationPorydawSelectionClipboardState()
+    defer { saved.restore() }
+    let clipboard = GridClipboard()
+    let grid = PianoGrid(session: session)
+    let automation = AutomationPage(baseFontPx: grid.baseFontPx)
+    automation.attach(session: session, palette: GridPalette())
+    defer { automation.detach() }
+    let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
+    let oldTrack = session.selectedTrack
+    let oldNotes = session.selectedNoteOrder
+    let oldTime = session.timeSelection
+    let oldCursor = session.editCursor
+    defer {
+        session.clearTimeSelection()
+        session.selectedTrack = oldTrack
+        if let oldTime { session.applyTimeSelection(oldTime) }
+        else { session.setSelectedNotes(oldNotes) }
+        session.editCursor = oldCursor
+    }
+    if oldTrack == nil { session.selectPrimaryTrack(0) }
+    let destination = Tick(grid.snapTickDown(Double(session.timeline.lengthTicks + 96)))
+    let track = session.selectedTrack ?? 0
+    let conflicting = [
+        ClipNote(relTick: 0, key: 55, duration: 12, velocity: 91),
+        ClipNote(relTick: 1, key: 55, duration: 12, velocity: 91)
+    ]
+    for span: Tick in [0, 24] {
+        for selected in [false, true] {
+            for fromMenu in [false, true] {
+                let variant = "\(span == 0 ? "notes" : "range"), "
+                    + "\(selected ? "selected" : "unselected"), "
+                    + "\(fromMenu ? "menu" : "key")"
+                session.applyTimeSelection(selected
+                    ? AutomationTimeSelection(range: TimeRange(
+                        startTick: destination, endTick: destination + 24),
+                        scope: .tracks([track])) : nil)
+                session.editCursor = destination
+                report.expect(clipboard.write(PorydawClip(span: span, tracks: [
+                    ClipTrack(track: track, notes: conflicting)
+                ]), ticksPerBeat: UInt32(session.document.ticksPerBeat)),
+                cppID: id, message: "a conflicting \(variant) payload reaches the native clipboard")
+                if fromMenu {
+                    let contentX = session.camera.contentX(
+                        tick: Double(destination + (selected ? 6 : 0)))
+                    if selected { menu.openTimeSelection(contentX: contentX) }
+                    else { openRejectedPasteRulerMenu(menu, at: contentX) }
+                    report.expect(menu.isOpen && menu.rows[selected ? 6 : 1].enabled,
+                                  cppID: id, message: "Paste remains eligible for the \(variant) payload")
+                }
+                let bytes = coreTimeBytes(session.document)
+                let revision = session.document.revision
+                let undoIndex = session.document.history.undoIndex
+                let undoCount = session.document.history.undoCount
+                let canRedo = session.document.history.canRedo
+                let notes = session.selectedNoteOrder
+                let time = session.timeSelection
+                let scope = session.selectedTracks
+                let cursor = session.editCursor
+                let camera = session.camera.snapshot
+                let status = grid.statusText
+                if fromMenu { _ = menu.activate(actionId: 13) }
+                else { _ = automation.consumeSelectionCommand(command: .paste) }
+                report.expect(coreTimeBytes(session.document) == bytes
+                              && session.document.revision == revision
+                              && session.document.history.undoIndex == undoIndex
+                              && session.document.history.undoCount == undoCount
+                              && session.document.history.canRedo == canRedo,
+                              cppID: id, message: "a conflicting \(variant) paste preserves song and history")
+                report.expect(session.selectedNoteOrder == notes && session.timeSelection == time
+                              && session.selectedTracks == scope && session.editCursor == cursor
+                              && session.camera.snapshot == camera && grid.statusText == status,
+                              cppID: id, message: "a conflicting \(variant) paste preserves selection and view")
+            }
+        }
+    }
+    session.clearTimeSelection()
+}
+
+@MainActor
+private func openRejectedPasteRulerMenu(_ menu: RulerMenuPresenter, at contentX: Double) {
+    menu.captureRulerPress(contentX: contentX, pointerY: 0)
+    menu.openRulerAtRelease()
+}
+
+@MainActor
+private func checkEmptyTimeSelectionNudge(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::emptyTimeSelectionNudge"
+    let grid = PianoGrid(session: session)
+    let automation = AutomationPage(baseFontPx: grid.baseFontPx)
+    automation.attach(session: session, palette: GridPalette())
+    defer { automation.detach() }
+    let oldTrack = session.selectedTrack
+    if oldTrack == nil { session.selectPrimaryTrack(0) }
+    defer { session.selectedTrack = oldTrack }
+    let start = Tick(grid.snapTickDown(Double(session.timeline.lengthTicks + 96)))
+    let selection = AutomationTimeSelection(
+        range: TimeRange(startTick: start, endTick: start + 24),
+        scope: .tracks([session.selectedTrack ?? 0]))
+    session.applyTimeSelection(selection)
+    defer { session.clearTimeSelection() }
+    let bytes = coreTimeBytes(session.document)
+    let revision = session.document.revision
+    let undoIndex = session.document.history.undoIndex
+    let undoCount = session.document.history.undoCount
+    report.expect(automation.consumeSelectionCommand(command: .nudgeRight)
+                  && (session.timeSelection?.range.startTick ?? start) > start,
+                  cppID: id, message: "an empty-content nudge moves the band past the song end")
+    report.expect(coreTimeBytes(session.document) == bytes
+                  && session.document.revision == revision
+                  && session.document.history.undoIndex == undoIndex
+                  && session.document.history.undoCount == undoCount,
+                  cppID: id, message: "nudging an empty band publishes no document edit")
 }
 
 @MainActor

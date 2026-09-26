@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 
 /// Ports the pure colour/resolver/contrast rules of
 /// `src/checks/themelayout/tst_themelayout_color.cpp` and the portable
@@ -69,9 +69,11 @@ internal func runThemeColorChecks(_ report: CheckReport) {
     themeModeAndContrastValidation(report)
     themePresetValueChecks(report)
     themeTextContrastChecks(report)
+    trackHeaderBudgetContrastChecks(report)
     polyphonyFlashContrastChecks(report)
     themeGridContrastChecks(report)
     themeTrackIdentityChecks(report)
+    noteLabelContrastChecks(report)
     themeCommitPreviewRevertChecks(report)
 }
 
@@ -483,6 +485,40 @@ private func themeTextContrastChecks(_ report: CheckReport) {
 }
 
 @MainActor
+private func trackHeaderBudgetContrastChecks(_ report: CheckReport) {
+    let id = "swiftcore/TrackHeaders::budgetContrast"
+    for preset in themePresetRows {
+        let palette = themeAppliedPalette(mode: preset.mode, contrast: 50)
+        let scopedSurface = TrackHeadersGeometry.scopedHeaderSurface(palette: palette)
+        let states: [(name: String, title: String, subtitle: String,
+                      backdrop: String, surface: String, cap: Double)] = [
+            ("normal", palette.primaryText, palette.secondaryText,
+             palette.windowBackground, palette.windowBackground, 0.6),
+            ("primary", palette.selectionText, palette.selectionText,
+             palette.selectionRing, palette.selectionRing, 0.35),
+            ("in-scope", palette.windowText, palette.windowText,
+             palette.selectionRing, scopedSurface, 0.6),
+        ]
+        for state in states {
+            let title = TrackHeadersGeometry.dimmedInk(
+                ink: state.title, backdrop: state.backdrop,
+                surface: state.surface, cap: state.cap)
+            let subtitle = TrackHeadersGeometry.dimmedInk(
+                ink: state.subtitle, backdrop: state.backdrop,
+                surface: state.surface, cap: state.cap)
+            let titleRatio = PaletteMath.contrastRatio(title, state.surface)
+            let subtitleRatio = PaletteMath.contrastRatio(subtitle, state.surface)
+            report.expect(titleRatio >= 4.5,
+                          cppID: id,
+                          message: "\(preset.mode): dimmed title on \(state.name) surface contrast \(String(format: "%.2f", titleRatio)) (floor 4.5)")
+            report.expect(subtitleRatio >= 4.5,
+                          cppID: id,
+                          message: "\(preset.mode): dimmed subtitle on \(state.name) surface contrast \(String(format: "%.2f", subtitleRatio)) (floor 4.5)")
+        }
+    }
+}
+
+@MainActor
 private func polyphonyFlashContrastChecks(_ report: CheckReport) {
     let id = "swiftcore/PolyphonyPanel::flashContrast"
     for row in themePresetRows {
@@ -590,4 +626,49 @@ private func themeCommitPreviewRevertChecks(_ report: CheckReport) {
                        cppID: themeDialogID, what: "revert restores the committed link accent")
     report.expectEqual(expected: committed.gridLine, actual: reverted.gridLine,
                        cppID: themeDialogID, what: "revert restores the committed grid value")
+}
+
+@MainActor
+private func noteLabelContrastChecks(_ report: CheckReport) {
+    let id = "swiftcore/PianoRoll::noteLabelContrast"
+    for row in themePresetRows {
+        let palette = themeAppliedPalette(mode: row.mode, contrast: 50)
+        let tag = "mode=\(row.mode)"
+        report.expectEqual(expected: row.disabled, actual: palette.noteVelocityZero,
+                           cppID: id, what: "\(tag): velocity-zero fill equals the preset disabledText role")
+        report.expect(themeRefChannels(palette.noteVelocityZero).a == 255, cppID: id,
+                      message: "\(tag): velocity-zero fill is opaque")
+        var velocityFloor = Double.infinity
+        var identityFloor = Double.infinity
+        var preservesKeyboardInk = true
+        for velocity in 0...127 {
+            let velocityFill = PaletteMath.velocityNoteColor(
+                velocity: velocity, zeroColor: palette.noteVelocityZero)
+            let ink = palette.noteLabelInk(forFill: velocityFill)
+            velocityFloor = min(velocityFloor, themeRefContrast(velocityFill, ink))
+            let keyboard = PaletteMath.contrastingTextColor(
+                fill: velocityFill, light: palette.keyboardNatural,
+                dark: palette.keyboardBlack)
+            if themeRefContrast(velocityFill, keyboard) >= 4.5 {
+                preservesKeyboardInk = preservesKeyboardInk && ink == keyboard
+            }
+            for track in 0..<16 {
+                let identityFill = palette.noteFill(track: track, velocity: velocity)
+                let identityInk = palette.noteLabelInk(forFill: identityFill)
+                identityFloor = min(identityFloor, themeRefContrast(identityFill, identityInk))
+                let identityKeyboard = PaletteMath.contrastingTextColor(
+                    fill: identityFill, light: palette.keyboardNatural,
+                    dark: palette.keyboardBlack)
+                if themeRefContrast(identityFill, identityKeyboard) >= 4.5 {
+                    preservesKeyboardInk = preservesKeyboardInk && identityInk == identityKeyboard
+                }
+            }
+        }
+        report.expect(velocityFloor >= 4.5, cppID: id,
+                      message: "\(tag): velocity ramp label ink stays above AA")
+        report.expect(identityFloor >= 4.5, cppID: id,
+                      message: "\(tag): identity ramp label ink stays above AA")
+        report.expect(preservesKeyboardInk, cppID: id,
+                      message: "\(tag): legible keyboard ink is preserved on both ramps")
+    }
 }

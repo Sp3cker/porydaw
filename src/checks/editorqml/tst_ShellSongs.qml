@@ -18,6 +18,10 @@ TestCase {
     ShellQmlBootstrap { id: bootstrap }
     Component { id: shellComponent; ShellWindow { width: 1100; height: 550; visible: true } }
 
+    function init() {
+        verify(bootstrap.resetPreferences(), "each shell starts with fresh window and filter state")
+    }
+
     function waitForNative(predicate, timeoutMs) {
         return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
     }
@@ -353,6 +357,63 @@ TestCase {
                "deletion moves the .mid to .porydaw/trash")
         verify(!bootstrap.dockVoicegroupExists(),
                "deleting with the checked option removes the unused voicegroup source")
+    }
+
+    function test_songFiltersSurviveShellRelaunch() {
+        const settings = bootstrap.preferences
+        settings.setString("lastProjectDir", "")
+        shell = shellComponent.createObject(null)
+        verify(shell !== null)
+        const session = shell.shellPresenter.session
+        session.openProject(bootstrap.projectRoot)
+        verify(waitForNative(function() { return session.projectOpen }, 30000),
+               "the filter fixture project opens")
+        const search = findChild(shell, "songListSearch")
+        const sort = findChild(shell, "songListSort")
+        verify(search && sort && findChild(shell, "songListCategory"),
+               "the mounted Songs filters are available")
+        search.forceActiveFocus()
+        for (const key of [Qt.Key_R, Qt.Key_O, Qt.Key_U, Qt.Key_T, Qt.Key_E])
+            keyClick(key)
+        tryCompare(presenter(), "searchText", "route")
+        sort.currentIndex = 1
+        presenter().selectSort(1)
+        presenter().selectCategory(1)
+        const prefix = presenter().categoryPrefix()
+        verify(prefix !== "", "the mounted Songs panel selects a real category")
+        cleanup()
+        shell = shellComponent.createObject(null)
+        verify(shell !== null)
+        const restored = shell.shellPresenter.session
+        restored.openProject(bootstrap.projectRoot)
+        verify(waitForNative(function() { return restored.projectOpen }, 30000))
+        tryVerify(function() {
+            return findChild(shell, "songListSearch").text === "route"
+                && presenter().searchText === "route"
+                && findChild(shell, "songListSort").currentIndex === 1
+                && presenter().sortIndex === 1
+                && presenter().categoryPrefix() === prefix
+                && findChild(shell, "songListCategory").currentIndex === presenter().categoryIndex
+                && presenter().categoryIndex > 0
+        }, 3000, "song filter text, sort and category restore across a fresh shell session")
+        cleanup()
+        settings.setString("songFilterText", "")
+        settings.setInt("songFilterSort", 0)
+        settings.setString("songFilterCategory", "")
+    }
+
+    function test_unknownStoredSongCategoryFallsBackToAll() {
+        const settings = bootstrap.preferences
+        settings.setString("lastProjectDir", "")
+        settings.setString("songFilterCategory", "zz")
+        shell = shellComponent.createObject(null)
+        verify(shell !== null)
+        const session = shell.shellPresenter.session
+        session.openProject(bootstrap.projectRoot)
+        verify(waitForNative(function() { return session.projectOpen }, 30000))
+        tryCompare(presenter(), "categoryIndex", 0)
+        compare(presenter().categoryPrefix(), "",
+                "a restored category the project does not have falls back to all songs")
     }
 
     function test_constrainedVoiceEditorRemainsScrollable() {

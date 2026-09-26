@@ -31,6 +31,12 @@ TestCase {
     }
     Component { id: referenceComponent; PolyphonyPanel {} }
 
+    function init() {
+        verify(bootstrap.resetPreferences(), "each shell starts with fresh window state")
+        verify(!bootstrap.preferences.hasValue("windowState"),
+               "the prior shell's debugger state is cleared")
+    }
+
     function waitForNative(predicate, timeoutMs) {
         return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
     }

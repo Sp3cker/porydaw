@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawAppCommands
 import QtBridge
 
 /// One document-scoped popup. Draft gestures stay in the kernels; only completed
@@ -29,6 +30,8 @@ public final class PitchBendPresenter {
     private var endSpeed = 22
     private var currentPitch: PitchBendLane?
     private var currentMod: PitchBendLane?
+    @QtIgnored public var onAuditionFromTick: ((Tick) -> Void)?
+    @QtIgnored public var onSoloTracksRequested: (() -> Void)?
 
     public init(session: DocumentSession, grid: PianoGrid, palette: GridPalette,
                 typography: Typography = Typography(baseFontPx: 13)) {
@@ -222,8 +225,14 @@ public final class PitchBendPresenter {
             currentMod?.kernel.finish()
             return true
         }
-        _ = modifiers
-        _ = autoRepeat
+        if !autoRepeat && KeybindingRegistry().matches(key, modifiers, "transport.play_pause") {
+            if let note { onAuditionFromTick?(Tick(note.tick)) }
+            return true
+        }
+        if KeybindingRegistry().matches(key, modifiers, "roll.solo_tracks") {
+            onSoloTracksRequested?()
+            return true
+        }
         return false
     }
 
@@ -254,11 +263,18 @@ public final class PitchBendPresenter {
         }
         points[Int(note.tick)] = entering
         points[noteEnd] = ending
+        let session = self.session
         return PitchBendKernel(lane: graphLane, geometry: geometry,
                                startTick: Int(note.tick), endTick: noteEnd,
-                               snapTicks: Int(session.grid.snapTicksAt(note.tick,
-                                                                       camera: session.camera)),
                                fineTicks: Int(session.grid.fineGridTicks(camera: session.camera)),
+                               snap: { [unowned session] tick, fine in
+                                   Int(session.grid.snapTick(tick, camera: session.camera,
+                                                             fine: fine))
+                               },
+                               snapUp: { [unowned session] tick, fine in
+                                   Int(session.grid.snapTickUp(tick + 0.5,
+                                                               camera: session.camera, fine: fine))
+                               },
                                points: points, endValue: ending)
     }
 

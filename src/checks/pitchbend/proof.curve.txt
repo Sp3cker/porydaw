@@ -11,13 +11,17 @@ Scope: A001-A057 are closed against the native document predicates in
 src/checks/rollcheck/pitch_bend.swift (registered as checkcatalog.cpp:124,
 swiftcore-projectsession) and the mounted predicates in
 src/checks/editorqml/tst_ShellPitchBend.qml (ShellQmlTests.swift:64-65, lane
-shell-pitch-bend); A088-A123 stay GAP for the deferred ED10 slices. A058-A087
+shell-pitch-bend); A058-A087
 are closed by task 40 against the native pitchBendOwnerLifetimePredicates,
 pitchBendExternalPreviewPredicates and pitchBendUnterminatedPredicates rows in
 src/checks/rollcheck/pitch_bend.swift:479-626 and the mounted predicates in
 test_gAnchorsPopupAndShrinkingWindowReclamps,
 test_externalRedoDeletesAnchorAndUnloadsPopup and test_livePreviewSurvivesUndoRedo
-in src/checks/editorqml/tst_ShellPitchBend.qml:486-630. Disclosed
+in src/checks/editorqml/tst_ShellPitchBend.qml:486-630. A088-A123 are closed by task 41
+against the native pitchBendResetPredicates, pitchBendFineRampPredicates and
+pitchBendParityPredicates rows in src/checks/rollcheck/pitch_bend.swift:649-940
+and the mounted test_noteScopedCurveAndControls in
+src/checks/editorqml/tst_ShellPitchBend.qml:326-440. Disclosed
 deviations: the native navigation predicate calls presenter.routeUnclaimedKey
 directly instead of the mounted window key event (mounted coverage S050-S053);
 the native undo rows call document.history.undoDocument() where the mounted lane
@@ -33,8 +37,14 @@ note set; the native external break is moveNotes(byTicks: 1) plus deleteNotes
 external mutation is a redo of a real roll Delete rather than the fork's
 programmatic move to track 1; destroyed-editor rows map to Loader deactivation
 (findChild null) instead of the fork's QPointer nullness after
-drainDeferredDeletes.
-Disposition tally: 123 sites: 84 MATCHED, 3 PARTIAL, 36 GAP.
+drainDeferredDeletes. Task-41 disclosures: the mod-stroke, Alt-ramp and seam
+journeys stage their strokes through pitchBendDrawCurve/pitchBendStroke over
+canvas fractions instead of the fork's fixture helpers; the seam fixture uses the
+fork's denomPow2 parametrization (8 beats over 2^3) through
+document.setTimeSignature; the mod-reset ingress is presenter.resetModCurve plus
+the mounted click on the real modWheelReset item (its findChild null guard is
+unmessaged).
+Disposition tally: 123 sites: 120 MATCHED, 3 PARTIAL.
 
 Command: deno task verify --filter swiftcore --verbose (task-40 implementer run)
 Result: the controller reports the new pitch-bend rows PASSED inside the
@@ -49,17 +59,39 @@ test_gAnchorsPopupAndShrinkingWindowReclamps,
 test_externalRedoDeletesAnchorAndUnloadsPopup and
 test_livePreviewSurvivesUndoRedo alongside the seven unchanged tests. The ledger
 agent read the recording; it did not re-run the lane.
+Command: deno task verify --filter swiftcore-projectsession --verbose (task-41 implementer final run)
+Result: PASS - ok, 1/37 checks (the filter selects the swiftcore-projectsession
+check); build/proof-evidence/swiftcore-projectsession.json (5427 passes, recorded
+2026-09-26 11:27) carries every row of pitchBendResetPredicates,
+pitchBendFineRampPredicates, pitchBendControllerPredicates and
+pitchBendParityPredicates. The ledger agent read the recording; it did not re-run
+the lane.
+Command: deno task verify:shell --filter shell-pitch-bend --verbose (task-41 implementer run)
+Result: PASS - ok, 1/26 checks; build/proof-evidence/shell-pitch-bend.json (recorded
+2026-09-26 11:27:22) lists test_noteScopedCurveAndControls alongside the other
+eleven tests. The ledger agent read the recording; it did not re-run the lane.
 Command: deno task verify:bridge
 Result: PASS - 0 findings. Controller-accepted implementer run; not re-run here.
 
-Verification: the native predicates execute on the swiftcore-projectsession lane
-(SessionChecks.swift:75 passes the suite's DocumentSession) and the mounted
-predicates on the shell-pitch-bend lane (ShellQmlTests.swift:64-65); this
-bookkeeping pass read the recorded evidence at
+Verification: the native predicates execute on the swiftcore-projectsession
+lane (SessionChecks.swift:75 passes the suite's DocumentSession) and the
+mounted predicates on the shell-pitch-bend lane (ShellQmlTests.swift:64-65);
+this bookkeeping pass read the recorded evidence at
 build/proof-evidence/swiftcore-projectsession.json and
 build/proof-evidence/shell-pitch-bend.json and did not execute either lane. The
 lane-level result for the task-40 native rows is the controller-reported
-implementer run described above, not an observation of this pass.
+implementer run described above, not an observation of this pass. The mounted
+recording was made from the revision of
+src/checks/editorqml/tst_ShellPitchBend.qml (SHA-256
+5a84bdc2474eed910ccb848f8f442b712c7560f23ba4206ee4cf57cedc64182d); that file is
+still being edited by the concurrent shell-hygiene work of another task (a
+per-test init() preference reset), whose hunks touch none of the mapped
+predicates, messages or test-function names, so this ledger pins the recording
+revision rather than the moving working-tree revision. The controller re-runs
+the shell lane on the final tree before committing and that run refreshes this
+evidence. The native counterpart src/checks/rollcheck/pitch_bend.swift carries
+the SHA-256 2a365c34d1f4f91a289b93e0ac4b4aabd414a225456b9bf1c191827a9faca3f9
+pinned by the task-41 handoff.
 Task 32's fix round added the popup-face predicates S061-S063 (popup title, caption
 and readout faces against the published roles; the drag-input body face; and the
 13->26->13 republish round trip), executed by pitchBendReadoutPredicates under
@@ -902,8 +934,8 @@ Original expression:
       QVERIFY(!m_fixture.popup());
 
 A088 | PitchBendEditingTest::modWheelFreehandStrokeAndUndo | src/checks/pitchbend/curve.cpp:290
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - pitchBendCheckScene(report, cppID: modWheelStrokeAndReset) opens the selected note's editor and asserts it stays open for this journey; the Swift popup is the presenter realized by that route
 Source context since previous assertion:
   }
 
@@ -914,8 +946,8 @@ Original expression:
       QVERIFY(editorResult);
 
 A089 | PitchBendEditingTest::modWheelFreehandStrokeAndUndo | src/checks/pitchbend/curve.cpp:293
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S129 + S148 - presenter.modGraph() is a non-optional production accessor, so the mod-lane existence clause rides the journey (S129 executes against that graph) and the mounted popup verifies both Swift-backed lane items are non-null (S148); the fork's modGraph() pointer lookup has no separate Swift predicate (the A052 precedent)
 Source context since previous assertion:
       songview::PitchBendEditor &editor = *editorResult;
       songview::PitchBendGraph *graph = modGraph();
@@ -923,8 +955,8 @@ Original expression:
       QVERIFY(graph);
 
 A090 | PitchBendEditingTest::modWheelFreehandStrokeAndUndo | src/checks/pitchbend/curve.cpp:297
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S129 - the mod-wheel stroke commits note-scoped CC1 with an interior point above zero, so the stroke was delivered and committed; the harness stroke's bool return formulates that delivery. Registered deviation: the native stroke is the canvas-fraction press/drag/release of pitchBendDrawCurve instead of the fork's fixture helper
 Source context since previous assertion:
       const QByteArray before = m_fixture.smf();
       const int endValue = m_fixture.effectiveLaneValue(1, m_fixture.endTick(), 0);
@@ -933,16 +965,16 @@ Original expression:
       QVERIFY(drawModCurve(*graph));
 
 A091 | PitchBendEditingTest::modWheelFreehandStrokeAndUndo | src/checks/pitchbend/curve.cpp:298
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S129 - one commitment pushes exactly one history entry (undoIndex == index + 1)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), index + 1);
 
 A092 | PitchBendEditingTest::modWheelFreehandStrokeAndUndo | src/checks/pitchbend/curve.cpp:300
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S129 - an interior CC1 point carries a value above zero
 Source context since previous assertion:
       const std::vector<DocLanePoint> interior = m_fixture.interiorPoints(1);
 Original expression:
@@ -950,40 +982,40 @@ Original expression:
                           [](const DocLanePoint &point) { return point.value > 0; }));
 
 A093 | PitchBendEditingTest::modWheelFreehandStrokeAndUndo | src/checks/pitchbend/curve.cpp:302
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S130 - the note-off CC1 point keeps its pre-stroke effective value
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.hasLanePoint(1, m_fixture.endTick(), endValue));
 
 A094 | PitchBendEditingTest::modWheelFreehandStrokeAndUndo | src/checks/pitchbend/curve.cpp:303
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S131 - undoDocument() succeeds under the open editor and returns the song to the pre-stroke bytes
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.sendUndo());
 
 A095 | PitchBendEditingTest::modWheelFreehandStrokeAndUndo | src/checks/pitchbend/curve.cpp:304
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S131 - coreTimeBytes equals the captured pre-stroke bytes
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.smf(), before);
 
 A096 | PitchBendEditingTest::modWheelFreehandStrokeAndUndo | src/checks/pitchbend/curve.cpp:305
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S131 - the editor stays open through the undo
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(editor.isOpen());
 
 A097 | PitchBendEditingTest::altDragCreatesFineGridRamp | src/checks/pitchbend/curve.cpp:311
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - pitchBendCheckScene(report, cppID: fineGridRamp) opens and keeps open the selected note's editor for the Alt journey
 Source context since previous assertion:
   }
 
@@ -994,8 +1026,8 @@ Original expression:
       QVERIFY(editorResult);
 
 A098 | PitchBendEditingTest::altDragCreatesFineGridRamp | src/checks/pitchbend/curve.cpp:314
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S137 + S148 - presenter.pitchGraph() is a non-optional production accessor; S137 executes the Alt stroke through that graph and S148 verifies the mounted lane item exists (the A052 precedent)
 Source context since previous assertion:
       songview::PitchBendEditor &editor = *editorResult;
       songview::PitchBendGraph *graphResult = pitchGraph();
@@ -1003,8 +1035,8 @@ Original expression:
       QVERIFY(graphResult);
 
 A099 | PitchBendEditingTest::altDragCreatesFineGridRamp | src/checks/pitchbend/curve.cpp:318
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S137 - the Alt drag commits one entry with at least three interior pitch-bend points, so the Alt modifier reached the kernel
 Source context since previous assertion:
       songview::PitchBendGraph &graph = *graphResult;
       const QByteArray before = m_fixture.smf();
@@ -1014,40 +1046,40 @@ Original expression:
                                Qt::AltModifier));
 
 A100 | PitchBendEditingTest::altDragCreatesFineGridRamp | src/checks/pitchbend/curve.cpp:320
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S137 - the Alt stroke pushed exactly one history entry (undoIndex == index + 1)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), index + 1);
 
 A101 | PitchBendEditingTest::altDragCreatesFineGridRamp | src/checks/pitchbend/curve.cpp:322
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S137 - the committed interior point count is at least three
 Source context since previous assertion:
       const std::vector<DocLanePoint> points = m_fixture.interiorPoints(DOC_CC_BEND);
 Original expression:
       QVERIFY(points.size() >= 3);
 
 A102 | PitchBendEditingTest::altDragCreatesFineGridRamp | src/checks/pitchbend/curve.cpp:324
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S138 - consecutive interior ticks never step further than the live fine stride (session.grid.fineGridTicks(camera:))
 Source context since previous assertion:
       for (size_t i = 1; i < points.size(); ++i) {
 Original expression:
           QVERIFY(points[i].tick - points[i - 1].tick <= m_fixture.view().grid().fineGridTicks());
 
 A103 | PitchBendEditingTest::altDragCreatesFineGridRamp | src/checks/pitchbend/curve.cpp:325
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S139 - consecutive interior values rise strictly
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
           QVERIFY(points[i].value > points[i - 1].value);
 
 A104 | PitchBendEditingTest::altDragCreatesFineGridRamp | src/checks/pitchbend/curve.cpp:328
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S140 - undoDocument() succeeds and restores the exact pre-stroke bytes
 Source context since previous assertion:
       }
       m_fixture.document().undoStack()->undo();
@@ -1055,16 +1087,16 @@ Original expression:
       QCOMPARE(m_fixture.smf(), before);
 
 A105 | PitchBendEditingTest::altDragCreatesFineGridRamp | src/checks/pitchbend/curve.cpp:329
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S140 - the editor stays open through the undo
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(editor.isOpen());
 
 A106 | PitchBendEditingTest::strokeAcrossSignatureBoundaryAlignsToDynamicGrid | src/checks/pitchbend/curve.cpp:340
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S141 - addNotes returns the seam note and openSelected resolves it, the Swift form of the fixture's findNote guard; the executed predicate proves the anchored editor opened on that note (endTick 672)
 Source context since previous assertion:
   }
 
@@ -1080,8 +1112,8 @@ Original expression:
       QVERIFY(m_fixture.document().findNote(0, start, 61, &boundaryNote));
 
 A107 | PitchBendEditingTest::strokeAcrossSignatureBoundaryAlignsToDynamicGrid | src/checks/pitchbend/curve.cpp:344
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S141 - the G route realizes the editor for the seam note
 Source context since previous assertion:
       m_fixture.view().selectionModel().setNoteSelection({boundaryNote.noteId});
       m_fixture.rollInput().forceActiveFocus(Qt::OtherFocusReason);
@@ -1090,32 +1122,32 @@ Original expression:
       QVERIFY(QTest::qWaitFor([this] { return m_fixture.popup() != nullptr; }));
 
 A108 | PitchBendEditingTest::strokeAcrossSignatureBoundaryAlignsToDynamicGrid | src/checks/pitchbend/curve.cpp:346
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S141 - openSelected() returning true is the editor-existence result
 Source context since previous assertion:
       songview::PitchBendEditor *editor = m_fixture.popup();
 Original expression:
       QVERIFY(editor);
 
 A109 | PitchBendEditingTest::strokeAcrossSignatureBoundaryAlignsToDynamicGrid | src/checks/pitchbend/curve.cpp:347
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S141 - kernel.endTick == 672 (tick 288 + duration 384) is the fork's editor->endTick() == start + duration
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(editor->endTick(), start + duration);
 
 A110 | PitchBendEditingTest::strokeAcrossSignatureBoundaryAlignsToDynamicGrid | src/checks/pitchbend/curve.cpp:349
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S141 + S142 - presenter.pitchGraph() is a non-optional production accessor and S142 executes the committed seam stroke through it (the A052 precedent)
 Source context since previous assertion:
       songview::PitchBendGraph *graph = m_fixture.graph(QStringLiteral("pitchBendGraph"));
 Original expression:
       QVERIFY(graph);
 
 A111 | PitchBendEditingTest::strokeAcrossSignatureBoundaryAlignsToDynamicGrid | src/checks/pitchbend/curve.cpp:350
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S142 - the stroke committed interior points on the lattice, so the harness stroke was delivered
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -1123,8 +1155,8 @@ Original expression:
           m_fixture.stroke(*graph, canvasPoint(*graph, 0.10, 0.80), canvasPoint(*graph, 0.90, 0.20)));
 
 A112 | PitchBendEditingTest::strokeAcrossSignatureBoundaryAlignsToDynamicGrid | src/checks/pitchbend/curve.cpp:359
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S142 (+ S143 for the re-stroke after a grid change) - every committed interior point satisfies session.grid.snapTick(point.tick, camera:) == point.tick
 Source context since previous assertion:
       bool before = false;
       bool after = false;
@@ -1137,8 +1169,8 @@ Original expression:
           QCOMPARE(m_fixture.view().grid().snapTick(double(point.tick)), point.tick);
 
 A113 | PitchBendEditingTest::strokeAcrossSignatureBoundaryAlignsToDynamicGrid | src/checks/pitchbend/curve.cpp:363
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S144 - at least one committed interior point lands before the signature seam (tick 480)
 Source context since previous assertion:
           before |= point.tick < boundary;
           after |= point.tick > boundary;
@@ -1147,16 +1179,16 @@ Original expression:
       QVERIFY(before);
 
 A114 | PitchBendEditingTest::strokeAcrossSignatureBoundaryAlignsToDynamicGrid | src/checks/pitchbend/curve.cpp:364
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S144 - at least one committed interior point lands at or after the signature seam
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(after);
 
 A115 | PitchBendEditingTest::modWheelResetZeroesLane | src/checks/pitchbend/curve.cpp:370
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - pitchBendCheckScene(report, cppID: modWheelStrokeAndReset) opens and keeps open the editor for this reset journey
 Source context since previous assertion:
   }
 
@@ -1167,8 +1199,8 @@ Original expression:
       QVERIFY(editorResult);
 
 A116 | PitchBendEditingTest::modWheelResetZeroesLane | src/checks/pitchbend/curve.cpp:373
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S148 + S133 - presenter.modGraph() is a non-optional production accessor; S148 verifies the mounted mod lane item and S133 reads the same kernel after the reset
 Source context since previous assertion:
       songview::PitchBendEditor &editor = *editorResult;
       songview::PitchBendGraph *graph = modGraph();
@@ -1176,16 +1208,16 @@ Original expression:
       QVERIFY(graph);
 
 A117 | PitchBendEditingTest::modWheelResetZeroesLane | src/checks/pitchbend/curve.cpp:374
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S129 - the mod stroke committed note-scoped CC1 with interior motion, so drawModCurve was applied
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(drawModCurve(*graph));
 
 A118 | PitchBendEditingTest::modWheelResetZeroesLane | src/checks/pitchbend/curve.cpp:378
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S149 + S132 - the mounted journey clicks the real modWheelReset item and the reset writes the default curve, so the item is realized and wired (its findChild null guard is unmessaged); the native S132 proves the same commit through resetModCurve
 Source context since previous assertion:
       const int endValue = m_fixture.effectiveLaneValue(1, m_fixture.endTick(), 0);
       const int index = m_fixture.document().undoStack()->index();
@@ -1194,40 +1226,40 @@ Original expression:
       QVERIFY(reset);
 
 A119 | PitchBendEditingTest::modWheelResetZeroesLane | src/checks/pitchbend/curve.cpp:379
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S149 + S132 - the click on the real reset item and the native resetModCurve call are the same ingress
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.click(*reset));
 
 A120 | PitchBendEditingTest::modWheelResetZeroesLane | src/checks/pitchbend/curve.cpp:380
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S132 - the mod-wheel reset pushes exactly one history entry
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), index + 1);
 
 A121 | PitchBendEditingTest::modWheelResetZeroesLane | src/checks/pitchbend/curve.cpp:382
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S133 - every committed CC1 point across the note span is zero after the reset
 Source context since previous assertion:
       for (const DocLanePoint &point : m_fixture.interiorPoints(1))
 Original expression:
           QCOMPARE(point.value, 0);
 
 A122 | PitchBendEditingTest::modWheelResetZeroesLane | src/checks/pitchbend/curve.cpp:383
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S134 - the note-off CC1 point keeps the captured effective value
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.hasLanePoint(1, m_fixture.endTick(), endValue));
 
 A123 | PitchBendEditingTest::modWheelResetZeroesLane | src/checks/pitchbend/curve.cpp:384
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S135 - the reset keeps the editor open
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -1568,11 +1600,62 @@ Anchor: message "the live preview survives redo of the external edit"
 S128 | test_livePreviewSurvivesUndoRedo | src/checks/editorqml/tst_ShellPitchBend.qml
 Anchor: message "Escape closes the editor after the external-edit cycle"
 
+S129 | pitchBendResetPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "a mod-wheel stroke writes note-scoped CC1 with interior motion"
+S130 | pitchBendResetPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the mod-wheel stroke preserves the note-off lane value"
+S131 | pitchBendResetPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "undoing the mod-wheel stroke restores the exact prior song bytes with the editor open"
+S132 | pitchBendResetPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the mod-wheel reset pushes one history entry"
+S133 | pitchBendResetPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the mod-wheel reset zeroes the lane over the note span"
+S134 | pitchBendResetPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the mod-wheel reset preserves the note-off lane value"
+S135 | pitchBendResetPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the mod-wheel reset keeps the editor open"
+S136 | pitchBendResetPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "undoing the mod-wheel reset restores the drawn curve bytes"
+S137 | pitchBendFineRampPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "an Alt drag commits a fine-grid ramp"
+S138 | pitchBendFineRampPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "fine-grid ramp spacing never exceeds the fine stride"
+S139 | pitchBendFineRampPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the Alt ramp rises monotonically"
+S140 | pitchBendFineRampPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "undoing the Alt ramp restores the exact prior song bytes with the editor open"
+S141 | pitchBendParityPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "a note across a signature seam opens its editor" #2
+S142 | pitchBendParityPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "every committed point sits on the dynamic snap lattice" #1
+S143 | pitchBendParityPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "every committed point sits on the dynamic snap lattice after a grid change"
+S144 | pitchBendParityPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "committed points straddle the signature seam"
+S145 | pitchBendParityPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "every committed point sits on the live snap lattice after a zoom change"
+S146 | pitchBendParityPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the zoomed stroke samples every live grid cell"
+S147 | pitchBendResetPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "internal edits and refreshes keep the same editor open"
+S148 | test_noteScopedCurveAndControls | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the selected note presents both Swift-backed lanes"
+S149 | test_noteScopedCurveAndControls | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "modulation reset writes the default curve"
+
 Executed coverage without an A row: S073 (the undoDocument push result) and
 S077 (undo leaves the dismissed anchored editor closed); no
 duplicateNoteAtSameTickDoesNotAnchorStaleNote row asserts either, and the three
-mounted journey predicates S114-S116 stage the redo-deletion journey whose unload
-predicate S118 is cited above.
+mounted journey predicates S114-S116 stage the redo-deletion journey whose
+unload predicate S118 is cited above. Task 41's S136 (undoing the mod-wheel
+reset restores the drawn curve bytes) has no curve.cpp site:
+modWheelResetZeroesLane ends at editor.isOpen(), so the reset's undo is proved
+only in proof.controller.txt (A065-A067, S020). S145 and S146 (the live-lattice
+and grid-cell-coverage predicates after a camera zoom) also execute without an
+A row: they strengthen the lattice closure beyond the fork's seam rows, which
+use a fixed camera. S147 (the mod journey's refresh liveness: internal edits
+and refreshes keep the same editor open) has no curve.cpp site either: the
+fork's mod-stroke rows assert isOpen after the undo, which S131 covers.
 
 Unindexed by design: pitchBendSharedGridPredicates (cppID
 swiftcore/PitchBendEditingTest::sharedGridSnap, message "clock grid selection permits a

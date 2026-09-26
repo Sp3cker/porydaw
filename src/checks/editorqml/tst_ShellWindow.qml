@@ -172,7 +172,72 @@ TestCase {
         return null
     }
 
+    function test_savedWindowFrameRestoresAcrossShellSessions() {
+        bootstrap.resetPreferences()
+        shell = shellComponent.createObject(null)
+        verify(shell !== null)
+        const screen = Qt.application.screens[0]
+        shell.x = screen.virtualX + Math.floor(screen.width / 6)
+        shell.y = screen.virtualY + Math.floor(screen.height / 6)
+        shell.width = 850
+        shell.height = 580
+        const frame = [shell.x, shell.y, shell.width, shell.height]
+        cleanup()
+        shell = shellComponent.createObject(null)
+        verify(shell !== null)
+        compare([shell.x, shell.y, shell.width, shell.height], frame,
+                "a saved window frame restores across a fresh shell session")
+    }
+
+    function test_offscreenWindowFrameIsIgnored() {
+        bootstrap.resetPreferences()
+        settings.setString("windowGeometry", "-99999,-99999,850,580")
+        shell = intrinsicShellComponent.createObject(null)
+        verify(shell !== null)
+        const session = shell.shellPresenter.session
+        compare(shell.width === session.baseFontPx * 92 && shell.height === session.baseFontPx * 57,
+                true, "an offscreen saved frame is ignored")
+    }
+
+    function test_maximizedAndDebuggerWindowStateRestores() {
+        bootstrap.resetPreferences()
+        settings.setString("windowState", "maximized,debugger")
+        shell = shellComponent.createObject(null)
+        verify(shell !== null)
+        shell.requestActivate()
+        tryCompare(shell, "active", true, 3000)
+        compare(shell.shellPresenter.windowMaximized && shell.visibility === Window.Maximized,
+                true, "the maximized flag restores across a fresh shell session")
+        compare(shell.shellPresenter.polyphonyVisible
+                && findChild(shell, "shellPolyphonyDock").visible,
+                true, "debugger visibility restores with the window state")
+    }
+
+    function test_sessionPreferencesRetainForkKeySpellings() {
+        bootstrap.resetPreferences()
+        shell = shellComponent.createObject(null)
+        verify(shell !== null)
+        const transport = shell.shellPresenter.session.transportBarPresenter()
+        transport.setFollowPlayhead(false)
+        transport.setResonanceSuppression(true)
+        transport.commitOutputVolume(72)
+        const songs = shell.shellPresenter.session.songDockController().songListPresenter()
+        songs.restoreFilters("route", 1, "mus_")
+        shell.shellPresenter.polyphonyVisible = true
+        cleanup()
+        compare(settings.bool("followPlayhead", true) === false
+                && settings.bool("dsp.resonanceSuppression", false) === true
+                && settings.int("outputVolume", 0) === 72
+                && settings.hasValue("windowGeometry") && settings.hasValue("windowState")
+                && settings.string("songFilterText", "") === "route"
+                && settings.int("songFilterSort", -1) === 1
+                && settings.string("songFilterCategory", "") === "mus_"
+                && !settings.hasValue("dsp/resonanceSuppression"),
+                true, "preferences keep the fork's on-disk key spellings")
+    }
+
     function test_chromeTypographyAndWindowGeometry() {
+        bootstrap.resetPreferences()
         shell = intrinsicShellComponent.createObject(null)
         verify(shell !== null, "production window mounts at its natural size")
         const session = shell.shellPresenter.session

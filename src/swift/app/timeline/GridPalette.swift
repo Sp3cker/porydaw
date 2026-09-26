@@ -203,6 +203,14 @@ public enum PaletteMath {
     public static func contrastingTextColor(fill: String, light: String, dark: String) -> String {
         contrastRatio(fill, light) >= contrastRatio(fill, dark) ? light : dark
     }
+    public static func aaContrastInk(
+        fill: String, light: String, dark: String,
+        fallbackLight: String, fallbackDark: String
+    ) -> String {
+        let preferred = contrastingTextColor(fill: fill, light: light, dark: dark)
+        if contrastRatio(fill, preferred) >= 4.5 { return preferred }
+        return contrastingTextColor(fill: fill, light: fallbackLight, dark: fallbackDark)
+    }
 
     static func ghostFill(track: Int, accidentalRow: Bool,
                           rollBackground: String, accidentalLane: String) -> String {
@@ -318,6 +326,13 @@ public final class GridPalette {
                                  PaletteMath.oklab(r: 0x04, g: 0x00, b: 0x00), 0.15))
 
     public var noteVelocityZero: String = "#8B847E"
+    public let noteLabelAaLight: String = "#FFFFFF"
+    public let noteLabelAaDark: String = "#000000"
+    public func noteLabelInk(forFill fill: String) -> String {
+        PaletteMath.aaContrastInk(
+            fill: fill, light: keyboardNatural, dark: keyboardBlack,
+            fallbackLight: noteLabelAaLight, fallbackDark: noteLabelAaDark)
+    }
     public func noteFill(track: Int, velocity: Int) -> String {
         PaletteMath.noteFill(track: track, velocity: velocity, zeroColor: noteVelocityZero)
     }

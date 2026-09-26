@@ -10,7 +10,11 @@ extension AutomationPage {
     @QtIgnored
     public func selectionCommandAvailable(command: EditCommand) -> Bool {
         guard let session else { return false }
-        if command == .paste { return activeTrack() != nil && hasClipboard }
+        if command == .paste {
+            guard !session.isClosed, let clip = clipboard.read()?.clip else { return false }
+            return clip.tracks.contains { !$0.notes.isEmpty }
+                || clip.lanes.contains { !$0.points.isEmpty } || !clip.tempo.isEmpty
+        }
         guard let selection, selection.isActive else { return false }
         switch editCommandPolicy(command).rangeOperation {
         case .none: return false
@@ -88,21 +92,15 @@ extension AutomationPage {
         guard let session, let track = activeTrack(), let decoded = clipboard.read() else { return nil }
         let clip = ClipboardCodec.rescale(decoded.clip, sourceTicksPerBeat: decoded.ticksPerBeat,
                                           destinationTicksPerBeat: UInt32(session.document.ticksPerBeat))
-        let destination = cursor
-        guard let anticipated = ClipboardSemantics.pasteCursor(for: clip, at: destination) else { return nil }
+        guard ClipboardSemantics.pasteCursor(for: clip, at: cursor) != nil else { return nil }
         return session.withStateChanges {
-            let priorCursor = session.editCursor
-            session.editCursor = anticipated
-            guard let result = ClipboardSemantics.paste(clip, at: destination, selectedTrack: track,
-                                                        into: session.document) else {
-                session.editCursor = priorCursor
-                return nil
-            }
+            guard let result = ClipboardSemantics.paste(clip, at: cursor, selectedTrack: track,
+                                                        into: session.document) else { return nil }
             session.editCursor = result.nextCursor
             if clip.span == 0 { session.setSelectedNotes(result.insertedNoteIDs) }
             else { clearTimeSelection() }
             refreshFromDocument()
-            _ = session.mutateCamera { _ = $0.ensureTickVisible(UInt64(destination), dpr: devicePixelRatio) }
+            _ = session.mutateCamera { _ = $0.ensureTickVisible(UInt64(cursor), dpr: devicePixelRatio) }
             return result.nextCursor
         }
     }

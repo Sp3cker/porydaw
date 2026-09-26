@@ -189,6 +189,7 @@ Item {
         // even with frozen hover membership.
         HoverHint {
             id: scrubHint
+            objectName: control.inputObjectName + "ScrubHint"
 
             source: input
             hintService: control.hintService

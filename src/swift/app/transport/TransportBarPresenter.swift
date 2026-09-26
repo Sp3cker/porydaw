@@ -175,12 +175,24 @@ public final class TransportBarPresenter {
         followPlayhead = enabled
         onAvailabilityChanged?()
         session?.playheadPresenter().setFollowEnabled(enabled)
+        let store = PreferencesStore()
+        store.setBool(key: "followPlayhead", value: enabled)
+        store.synchronize()
     }
 
     public func setResonanceSuppression(enabled: Bool) {
         guard let audio = session?.transportAudio else { return }
         audio.setResonanceSuppression(enabled)
         refresh()
+        let store = PreferencesStore()
+        store.setBool(key: "dsp.resonanceSuppression", value: resonanceSuppression)
+        store.synchronize()
+    }
+
+    public func restoreTransportToggles() {
+        let store = PreferencesStore()
+        setFollowPlayhead(enabled: store.bool(key: "followPlayhead", fallback: true))
+        setResonanceSuppression(enabled: store.bool(key: "dsp.resonanceSuppression", fallback: false))
     }
 
     public func restoreOutputVolume() {

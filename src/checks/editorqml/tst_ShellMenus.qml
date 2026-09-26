@@ -141,10 +141,11 @@ TestCase {
         var stop = checkMenuItem(transportMenu, "transport.stop", "Stop")
         var loop = checkMenuItem(transportMenu, "transport.loop", "Toggle Loop")
         var follow = checkMenuItem(transportMenu, "transport.follow_playhead", "Follow Playhead")
-        var transportRows = [goToStart, play, playPause, pause, stop, loop, follow]
+        var transportRows = [goToStart, play, playPause, pause, stop, loop]
         for (var rowIndex = 0; rowIndex < transportRows.length; ++rowIndex)
             compare(transportRows[rowIndex].enabled, false,
                     "no song disables " + transportRows[rowIndex].objectName)
+        compare(follow.enabled, true, "Follow Playhead stays enabled without a song")
         compare(loop.checkable, true, "Loop is checkable")
         compare(follow.checkable, true, "Follow Playhead is checkable")
         compare(goToStart.checkable, false, "Go to Start is not checkable")

@@ -7,6 +7,7 @@ import QtBridge
 public final class PreferencesStore: QmlInstantiableStatus {
     private static var applicationID: CFString = cfString("com.sp3cker.porydaw")
     private static var isStaged = false
+    private static var stagedPlistPath: String?
 
     public required init() {}
     public func componentComplete() {}
@@ -22,6 +23,7 @@ public final class PreferencesStore: QmlInstantiableStatus {
             }
         }
         applicationID = cfString(path)
+        stagedPlistPath = path
         isStaged = true
     }
 
@@ -91,10 +93,24 @@ public final class PreferencesStore: QmlInstantiableStatus {
     public func remove(key: String) { set(key, nil) }
 
     public func resetPreferences() -> Bool {
-        if let keys = CFPreferencesCopyKeyList(Self.applicationID, kCFPreferencesCurrentUser,
-                                                 kCFPreferencesAnyHost) as? [String] {
-            for key in keys { remove(key: key) }
+        guard CFPreferencesAppSynchronize(Self.applicationID) else { return false }
+        let keys: [String]
+        if let path = Self.stagedPlistPath {
+            if FileManager.default.fileExists(atPath: path) {
+                guard let data = FileManager.default.contents(atPath: path),
+                      let entries = try? PropertyListSerialization.propertyList(
+                          from: data, options: 0, format: nil) as? [String: Any] else {
+                    return false
+                }
+                keys = Array(entries.keys)
+            } else {
+                keys = []
+            }
+        } else {
+            keys = CFPreferencesCopyKeyList(Self.applicationID, kCFPreferencesCurrentUser,
+                                            kCFPreferencesAnyHost) as? [String] ?? []
         }
+        for key in keys { remove(key: key) }
         return CFPreferencesAppSynchronize(Self.applicationID)
     }
 

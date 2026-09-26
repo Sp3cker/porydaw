@@ -50,6 +50,7 @@ public final class PianoGrid {
     private let commands: NoteCommands
     private(set) var notes: [GridNote] = []
     private var gesture: GridGesture?
+    private var pointerModifiers = 0
     private var rightGesture: GridGesture?
     private var rightBandDemoted = false
     private var suppressedLeftRelease = false
@@ -593,6 +594,7 @@ public final class PianoGrid {
     public func beginPointer(x: Double, y: Double, modifiers: Int) {
         guard gesture == nil else { return }
         suppressedLeftRelease = false
+        pointerModifiers = modifiers
         stopAudition()
         pendingVelocityReanchor = nil
         let pressTick = session.camera.tickAtContentX(x)
@@ -683,7 +685,8 @@ public final class PianoGrid {
         publishOutputs()
     }
 
-    public func updatePointer(x: Double, y: Double) {
+    public func updatePointer(x: Double, y: Double, modifiers: Int = 0) {
+        pointerModifiers = modifiers
         guard let gesture, !gesture.isRight else { return }
         if case .velocity(let state) = gesture, state.preview == nil,
            abs(y - state.pressY) < dragDistance { return }
@@ -763,6 +766,7 @@ public final class PianoGrid {
         }
         pendingControlToggle = nil
         pendingVelocityReanchor = nil
+        pointerModifiers = 0
         self.gesture = nil
         stopAudition()
         activeNoteId = 0
@@ -815,6 +819,7 @@ public final class PianoGrid {
         if case .pendingDraw = gesture {
             // PendingDraw remains parked until its own release.
         } else if gesture != nil {
+            pointerModifiers = 0
             gesture = nil
             suppressedLeftRelease = true
             pendingVelocityReanchor = nil
@@ -947,6 +952,7 @@ public final class PianoGrid {
         releaseBandAudition()
         pendingControlToggle = nil
         pendingVelocityReanchor = nil
+        pointerModifiers = 0
         gesture = nil
         rightGesture = nil
         suppressedLeftRelease = false
@@ -1113,16 +1119,38 @@ public final class PianoGrid {
 
     @QtIgnored
     private func sceneInput() -> GridSceneInput {
-        GridSceneInput(
+        let visibleNotes: [GridNote]
+        if case .velocity(let state) = gesture, state.preview != nil {
+            visibleNotes = notes.map { note in
+                guard let velocity = previewVelocity(note.noteId) else { return note }
+                return GridNote(
+                    noteId: note.noteId, tick: note.tick, duration: note.duration,
+                    pitch: note.pitch, track: note.track, velocity: velocity,
+                    ghost: note.ghost)
+            }
+        } else {
+            visibleNotes = notes
+        }
+        let showVelocityValues: Bool
+        switch gesture {
+        case .velocity:
+            showVelocityValues = true
+        case .draw, .pendingDraw:
+            showVelocityValues = pointerModifiers & QtFact.controlModifier != 0
+        default:
+            showVelocityValues = false
+        }
+        return GridSceneInput(
             metrics: metrics, grid: session.grid, palette: palette, camera: session.camera,
             contentEndTick: contentEndTick, scale: session.scaleProjection,
             rulerHeight: rulerHeight,
-            typography: typography, fontSpec: { self.fontSpec($0) }, notes: notes,
+            typography: typography, fontSpec: { self.fontSpec($0) }, notes: visibleNotes,
             displayedNote: { self.displayedNote($0) },
             isSelected: { self.session.selectedNotes.contains($0) },
             drawPreview: drawPreview, lastVelocity: lastVelocity,
             hoverKey: hoverKey, selectionBand: selectionBand,
             velocityColorMode: velocityColorMode, noteNameMode: noteNameMode,
+            showVelocityValues: showVelocityValues,
             noteNameAdvance: { self.typography?.noteNameAdvance(pitch: $0) ?? 0 },
             noteNameOccupiedHeight: typography?.noteNameOccupiedHeight ?? 0,
             timeSelection: session.timeSelection,
@@ -1201,7 +1229,8 @@ public final class PianoGrid {
             && current.rowHeight == key.rowHeight { return false }
         measurementFonts = GridTypography.fonts(
             metrics: metrics, typography: roleTypography)
-        let measured = GridTypography(fonts: measurementFonts, rowHeight: cameraRowHeight)
+        let measured = GridTypography(
+            fonts: measurementFonts, rowHeight: cameraRowHeight, pixel: metrics.pixel)
         typography = measured
         typographyKey = key
         if rulerHeight != measured.boldHeight + 1 + measured.rulerHeight + 1 {

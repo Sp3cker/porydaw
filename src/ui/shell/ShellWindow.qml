@@ -17,6 +17,8 @@ ThemedWindow {
     property bool establishApplicationIdentity: false
     property int actionRevision: 0
     property bool dockSettingsReady: false
+    property var normalFrame: null
+    property bool sessionStatePersisted: false
     readonly property int bodyFontPx: shell.session.bodyFontPx
     property int chromeBaseFontPx: shell.session.baseFontPx
     property var chromeTypography: shell.session.typographyFonts
@@ -74,9 +76,26 @@ ThemedWindow {
             Qt.application.domain = ""
         }
         shell.configureSettings(Qt.application.name)
+        if (shell.windowX >= 0) {
+            const centerX = shell.windowX + shell.windowWidth / 2
+            const centerY = shell.windowY + shell.windowHeight / 2
+            for (const screen of Qt.application.screens) {
+                if (centerX >= screen.virtualX && centerX < screen.virtualX + screen.width
+                        && centerY >= screen.virtualY && centerY < screen.virtualY + screen.height) {
+                    root.x = shell.windowX
+                    root.y = shell.windowY
+                    root.width = shell.windowWidth
+                    root.height = shell.windowHeight
+                    break
+                }
+            }
+        }
+        if (shell.windowMaximized)
+            root.visibility = Window.Maximized
         root.dockSettingsReady = true
         shell.session.restoreDisplayModes()
         transportBar.presenter.restoreOutputVolume()
+        transportBar.presenter.restoreTransportToggles()
         shell.settingsStore.restoreFromPreferences()
         shell.restoreAppearance()
         shell.openStartup()
@@ -161,9 +180,26 @@ ThemedWindow {
         if (!visible)
             shell.session.cancelGridInput(2)
     }
+    function trackNormalFrame() {
+        if (visibility !== Window.Maximized && width > 0 && height > 0)
+            normalFrame = { x: x, y: y, width: width, height: height }
+    }
+    onXChanged: trackNormalFrame()
+    onYChanged: trackNormalFrame()
+    onWidthChanged: trackNormalFrame()
+    onHeightChanged: trackNormalFrame()
+    onVisibilityChanged: trackNormalFrame()
     onClosing: close => {
-        if (!shell.beginClose())
+        if (!shell.beginClose()) {
             close.accepted = false
+            return
+        }
+        if (!sessionStatePersisted) {
+            const frame = normalFrame || { x: root.x, y: root.y, width: root.width, height: root.height }
+            shell.persistSessionState(frame.x, frame.y, frame.width, frame.height,
+                                      root.visibility === Window.Maximized, shell.polyphonyVisible)
+            sessionStatePersisted = true
+        }
     }
     Connections {
         target: shell

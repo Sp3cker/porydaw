@@ -21,7 +21,8 @@ struct TrackHeadersFixture {
         return map.tracks.prefix(map.usedTrackCount).map(\.channel)
     }
 
-    init(suite: DocumentSession, service: ProjectService, configured: Bool = true) {
+    init(suite: DocumentSession, service: ProjectService, configured: Bool = true,
+         trackBudget: Int = 16) {
         let file = MidiFile(division: 24, chunks: [
             MidiChunk(events: [.meta(type: 0x51, data: [0x07, 0xA1, 0x20])], endTick: 96),
             MidiChunk(events: [
@@ -38,7 +39,7 @@ struct TrackHeadersFixture {
             ], endTick: 96),
         ])
         let document = SongDocument(file: file, config: suite.document.state.config,
-                                    source: suite.document.source, trackBudget: 16)
+                                    source: suite.document.source, trackBudget: trackBudget)
         session = DocumentSession(document: document, service: service,
                                   lease: suite.bankLease, slots: suite.bankSlots,
                                   dirty: false, loadName: suite.bankLoadName,

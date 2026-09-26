@@ -113,8 +113,10 @@ public final class SongListPresenter {
     /// the current search text, sort, and — if it still exists — category.
     @QtIgnored
     public func setSongs(_ newSongs: [SongListing]) {
+        let category = categoryPrefix()
         songs = newSongs.filter(\.isPlayable)
         rebuildCategories()
+        if songs.isEmpty { pendingCategory = category }
         rebuildList()
     }
 
@@ -168,6 +170,13 @@ public final class SongListPresenter {
         }
         searchText = search
         rebuildList()
+    }
+
+    public func restoreFromPreferences() {
+        let store = PreferencesStore()
+        restoreFilters(search: store.string(key: "songFilterText", fallback: ""),
+                       sort: store.int(key: "songFilterSort", fallback: 0),
+                       category: store.string(key: "songFilterCategory", fallback: ""))
     }
 
     /// Focuses the search field and selects its text (surface-side effect).

@@ -3,12 +3,77 @@ Assertion correspondence: pitchbend/controller.cpp
 Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
 Original: src/checks/pitchbend/controller.cpp
 Original SHA-256: f2f50d6ea38be071de97fe3d39e97769756278039343cca176b422330ef92491
-Swift counterpart: none identified
+Swift counterpart: src/checks/rollcheck/pitch_bend.swift
+Additional Swift counterpart: src/checks/editorqml/tst_ShellPitchBend.qml
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
+Scope: all 81 sites are closed by task 41 against the native
+pitchBendControllerPredicates, pitchBendSetterPredicates,
+pitchBendResetPredicates and the popup-key arbitration block of
+pitchBendParityPredicates in src/checks/rollcheck/pitch_bend.swift:739-940
+(swiftcore-projectsession lane, SessionChecks.swift:75 passes the suite's
+DocumentSession) and the mounted test_wheelInsideCanvasOnly,
+test_pointerScrubsUndoAndStationaryClick,
+test_scrubHoverAndIdleEnterKeepEditor,
+test_popupSpaceAuditionSoloAndMuteAbsorption and
+test_noteScopedCurveAndControls in src/checks/editorqml/tst_ShellPitchBend.qml
+(shell-pitch-bend lane, ShellQmlTests.swift:64-65). Eleven sites stay PARTIAL:
+A007-A009 (the two-notch wheel data row, whose range/description/lane values
+execute without a message anchor) and A011-A018 (the window cursor, which QML
+TestCase cannot read). A023's earlier PARTIAL closes: the mounted journey now
+performs the fork's pointer scrub over the production DragInput.
+Disclosed deviations: the native scrub rows execute through
+presenter.setBendRange and presenter.setLfoSpeed, the commit entry the
+DragInput writes; the pointer-scrub gesture itself executes on the mounted
+lane; the cursor rows assert the production HoverHandler's advertised shape and
+real hover delivery instead of the window cursor; the native arbitration rows
+observe the routed callbacks
+(presenter.onAuditionFromTick/onSoloTracksRequested) while the window-shortcut
+non-delivery for M and the audible playback execute mounted; the
+stationary-click row reads the field's activeFocus property where the fork
+compares the window's activeFocusItem; the two-notch wheel phase is two mounted
+events of 120 and 240 units instead of one 240-unit event.
+Disposition tally: 81 sites: 70 MATCHED, 11 PARTIAL.
 
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run.
+Command: deno task verify --filter swiftcore-projectsession --verbose (task-41 implementer final run)
+Result: PASS - ok, 1/37 checks (the filter selects the swiftcore-projectsession
+check); build/proof-evidence/swiftcore-projectsession.json (5427 passes) carries
+every row of pitchBendControllerPredicates, pitchBendSetterPredicates and the
+pitch-reset block of pitchBendResetPredicates plus the popup-key arbitration rows
+of pitchBendParityPredicates. The ledger agent read the recording; it did not
+re-run the lane.
+Command: deno task verify:shell --filter shell-pitch-bend --verbose (task-41 implementer run)
+Result: PASS - ok, 1/26 checks; build/proof-evidence/shell-pitch-bend.json (recorded
+2026-09-26 11:27:22) lists test_wheelInsideCanvasOnly,
+test_pointerScrubsUndoAndStationaryClick, test_scrubHoverAndIdleEnterKeepEditor,
+test_popupSpaceAuditionSoloAndMuteAbsorption and test_noteScopedCurveAndControls
+alongside the earlier ten tests. The ledger agent read the recording; it did not
+re-run the lane.
+Command: deno task verify --filter swiftcore --verbose (task-41 implementer run)
+Result: 12/37 checks ran ok before the final lattice-check edits; the implementer's
+report records RED-before-repair on the new Space and S arbitration predicates and
+claims no full-lane PASS after those edits. The native row evidence is the focused
+swiftcore-projectsession run above.
+Command: deno task verify:bridge
+Result: PASS - 0 findings. Controller-accepted implementer run; not re-run here.
+
+Verification: the native predicates execute on the swiftcore-projectsession
+lane (SessionChecks.swift:75 passes the suite's DocumentSession) and the
+mounted predicates on the shell-pitch-bend lane (ShellQmlTests.swift:64-65).
+This bookkeeping pass read the recordings at
+build/proof-evidence/swiftcore-projectsession.json and
+build/proof-evidence/shell-pitch-bend.json and did not execute either lane. The
+mounted recording was made from the revision of
+src/checks/editorqml/tst_ShellPitchBend.qml (SHA-256
+5a84bdc2474eed910ccb848f8f442b712c7560f23ba4206ee4cf57cedc64182d); that file
+has since been edited by the concurrent shell-hygiene work of another task (a
+per-test init() preference reset, still in flux while this bookkeeping pass
+ran), whose hunks touch none of the mapped predicates, messages or
+test-function names, so the mounted verdicts below are inherited from the
+recording and no final hash is pinned for that file. The native counterpart
+src/checks/rollcheck/pitch_bend.swift carries the SHA-256
+2a365c34d1f4f91a289b93e0ac4b4aabd414a225456b9bf1c191827a9faca3f9 pinned by the
+task-41 handoff.
 
 PitchBendEditingTest::popup/pitchGraph/modGraph/drawPitchCurve/drawModCurve
 and PitchBendFixture helpers live in src/checks/pitchbend/fixture.cpp with
@@ -16,8 +81,8 @@ declarations in src/checks/pitchbend/tst_pitchbendediting.h
 (SHA-256 7580a8bae6dab536e3f3a4ceeb170a23d047ee5cf3459bb5e1584e4b2e64b895).
 
 A001 | PitchBendEditingTest::wheelScrollConfinesBendRangeToNoteSpan | src/checks/pitchbend/controller.cpp:53
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - pitchBendCheckScene(report, cppID: wheelAndControllerWrites) opens the selected note's editor and asserts it stays open for this journey; the Swift popup is the presenter realized by that route
 Source context since previous assertion:
   #include "checks/pitchbend/tst_pitchbendediting.h"
 
@@ -75,8 +140,8 @@ Original expression:
       QVERIFY(editorResult);
 
 A002 | PitchBendEditingTest::wheelScrollConfinesBendRangeToNoteSpan | src/checks/pitchbend/controller.cpp:56
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S028 + S029 - presenter.pitchGraph() is a non-optional production accessor, so the graph-existence clause rides the scene route (S001/S002); the mounted wheel journey finds the mounted pitchBendGraph item and S028/S029 prove that same graph took the inside and the outside wheel events (the A052 precedent)
 Source context since previous assertion:
       songview::PitchBendEditor &editor = *editorResult;
       songview::PitchBendGraph *graphResult = pitchGraph();
@@ -84,8 +149,8 @@ Original expression:
       QVERIFY(graphResult);
 
 A003 | PitchBendEditingTest::wheelScrollConfinesBendRangeToNoteSpan | src/checks/pitchbend/controller.cpp:62
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S003 + S026 + S028 + S029 + S031 - the mounted journey delivers a real wheel to the mounted pitch graph in all three configurations of this data table (inside one notch S026/S028, outside corner S029, inside two notches S031) and the native S003 executes the inside single-notch case; the fork's wheel() bool is harness delivery and the mounted mouseWheel call is the Swift inlet
 Source context since previous assertion:
       songview::PitchBendGraph &graph = *graphResult;
       const int initialRange = editor.bendRange();
@@ -96,24 +161,24 @@ Original expression:
       QVERIFY(m_fixture.wheel(graph, point, QPoint(0, 120 * delta)));
 
 A004 | PitchBendEditingTest::wheelScrollConfinesBendRangeToNoteSpan | src/checks/pitchbend/controller.cpp:64
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S029 - the mounted outside-canvas wheel leaves the revision text and bendRange unchanged, so no history entry is pushed (the fork's if (!inside) branch)
 Source context since previous assertion:
       if (!inside) {
 Original expression:
           QCOMPARE(m_fixture.document().undoStack()->index(), index);
 
 A005 | PitchBendEditingTest::wheelScrollConfinesBendRangeToNoteSpan | src/checks/pitchbend/controller.cpp:65
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S029 - the mounted outside-canvas wheel leaves bendRange at its prior value
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
           QCOMPARE(editor.bendRange(), initialRange);
 
 A006 | PitchBendEditingTest::wheelScrollConfinesBendRangeToNoteSpan | src/checks/pitchbend/controller.cpp:68
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S003 + S028 + S030 + S031 - the native wheel predicate asserts document.history.undoIndex == index + 1 for one notch and the mounted journey asserts one revision per notch (S028), the second note-scoped edit of the two-notch phase (S030) and one entry for that gesture (S031)
 Source context since previous assertion:
           return;
       }
@@ -121,16 +186,16 @@ Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), index + 1);
 
 A007 | PitchBendEditingTest::wheelScrollConfinesBendRangeToNoteSpan | src/checks/pitchbend/controller.cpp:69
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: PARTIAL
+Mapping/reason: S003 + S028 cover the inside-graph data row (one notch raises BENDR by one); unproved: the inside-multiple-notches data row's bendRange == initialRange + 2, which executes only in the unmessaged tryCompare(opened.editor, "bendRange", range + 3) in test_wheelInsideCanvasOnly and so carries no anchor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(editor.bendRange(), initialRange + delta);
 
 A008 | PitchBendEditingTest::wheelScrollConfinesBendRangeToNoteSpan | src/checks/pitchbend/controller.cpp:70
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: PARTIAL
+Mapping/reason: S004 + S027 cover the inside-graph data row's description ("<range+1> semitones") after one notch; unproved: the inside-multiple-notches data row's description, which no executing mounted assert reads after the 240 phase
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -138,24 +203,24 @@ Original expression:
           editor.description().contains(QStringLiteral("%1 semitones").arg(initialRange + delta)));
 
 A009 | PitchBendEditingTest::wheelScrollConfinesBendRangeToNoteSpan | src/checks/pitchbend/controller.cpp:72
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: PARTIAL
+Mapping/reason: S005 covers the inside-graph data row's note-tick channel value (the new range) and the note-off restoration; unproved: the inside-multiple-notches data row's note-tick channel value, which no predicate reads after the 240 phase
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.hasLanePoint(0x14, m_fixture.note().tick, initialRange + delta));
 
 A010 | PitchBendEditingTest::wheelScrollConfinesBendRangeToNoteSpan | src/checks/pitchbend/controller.cpp:73
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S005 - the note-bounded write restores the pre-wheel value at the note-off tick
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.hasLanePoint(0x14, m_fixture.endTick(), initialRange));
 
 A011 | PitchBendEditingTest::controllerInputsAdvertiseScrubCursor | src/checks/pitchbend/controller.cpp:79
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: PARTIAL
+Mapping/reason: window cursor unobservable; advertised HoverHandler shape + real hover delivery proven. S001 + S002 realize the scene this journey runs in, but the journey's window-cursor clause cannot be read: QML TestCase cannot query the window cursor
 Source context since previous assertion:
   }
 
@@ -166,8 +231,8 @@ Original expression:
       QVERIFY(editorResult);
 
 A012 | PitchBendEditingTest::controllerInputsAdvertiseScrubCursor | src/checks/pitchbend/controller.cpp:83
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: PARTIAL
+Mapping/reason: window cursor unobservable; advertised HoverHandler shape + real hover delivery proven. S040 proves the bendRangeSpin field's production scrub hint exists and takes a real hover; the item-existence clause rides that ingress, the window cursor does not
 Source context since previous assertion:
       QQuickItem *bend = m_fixture.item(QStringLiteral("bendRangeSpin"));
       QQuickItem *lfo = m_fixture.item(QStringLiteral("lfoSpeedSpin"));
@@ -176,56 +241,56 @@ Original expression:
       QVERIFY(bend);
 
 A013 | PitchBendEditingTest::controllerInputsAdvertiseScrubCursor | src/checks/pitchbend/controller.cpp:84
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: PARTIAL
+Mapping/reason: window cursor unobservable; advertised HoverHandler shape + real hover delivery proven. S040 proves the lfoSpeedSpin field's production scrub hint exists and takes a real hover; the item-existence clause rides that ingress, the window cursor does not
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(lfo);
 
 A014 | PitchBendEditingTest::controllerInputsAdvertiseScrubCursor | src/checks/pitchbend/controller.cpp:85
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: PARTIAL
+Mapping/reason: window cursor unobservable; advertised HoverHandler shape + real hover delivery proven. The mounted lane runs a visible, exposed shell window (S040's real hover delivery requires it); the fork's view.isVisible()/isExposed() observation itself has no Swift predicate
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(QTest::qWaitFor([&view] { return view.isVisible() && view.isExposed(); }));
 
 A015 | PitchBendEditingTest::controllerInputsAdvertiseScrubCursor | src/checks/pitchbend/controller.cpp:86
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: PARTIAL
+Mapping/reason: window cursor unobservable; advertised HoverHandler shape + real hover delivery proven. S040 delivers a real mouse move over bendRangeSpin and the production hint reports hovered true; the window cursor Qt renders from that hover cannot be read
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(hover(view, *bend));
 
 A016 | PitchBendEditingTest::controllerInputsAdvertiseScrubCursor | src/checks/pitchbend/controller.cpp:87
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: PARTIAL
+Mapping/reason: window cursor unobservable; advertised HoverHandler shape + real hover delivery proven. S041 asserts the bendRangeSpin hint advertises cursorShape === Qt.SizeVerCursor, the shape the fork reads from the window cursor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QTRY_COMPARE(view.cursor().shape(), Qt::SizeVerCursor);
 
 A017 | PitchBendEditingTest::controllerInputsAdvertiseScrubCursor | src/checks/pitchbend/controller.cpp:88
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: PARTIAL
+Mapping/reason: window cursor unobservable; advertised HoverHandler shape + real hover delivery proven. S040 delivers a real mouse move over lfoSpeedSpin and the production hint reports hovered true; the window cursor Qt renders from that hover cannot be read
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(hover(view, *lfo));
 
 A018 | PitchBendEditingTest::controllerInputsAdvertiseScrubCursor | src/checks/pitchbend/controller.cpp:89
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: PARTIAL
+Mapping/reason: window cursor unobservable; advertised HoverHandler shape + real hover delivery proven. S041 asserts the lfoSpeedSpin hint advertises cursorShape === Qt.SizeVerCursor, the shape the fork reads from the window cursor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QTRY_COMPARE(view.cursor().shape(), Qt::SizeVerCursor);
 
 A019 | PitchBendEditingTest::bendRangeScrubWritesNoteBoundedCC14 | src/checks/pitchbend/controller.cpp:95
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - pitchBendCheckScene opens the selected note's editor and keeps it open for the bendRange scrub journey
 Source context since previous assertion:
   }
 
@@ -236,8 +301,8 @@ Original expression:
       QVERIFY(editorResult);
 
 A020 | PitchBendEditingTest::bendRangeScrubWritesNoteBoundedCC14 | src/checks/pitchbend/controller.cpp:98
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S032 - the mounted BENDR pointer scrub presses the real bendRangeSpin item and commits one entry, so the field is realized and wired (its findChild null guard is unmessaged)
 Source context since previous assertion:
       songview::PitchBendEditor &editor = *editorResult;
       QQuickItem *bend = m_fixture.item(QStringLiteral("bendRangeSpin"));
@@ -245,8 +310,8 @@ Original expression:
       QVERIFY(bend);
 
 A021 | PitchBendEditingTest::bendRangeScrubWritesNoteBoundedCC14 | src/checks/pitchbend/controller.cpp:102
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S008 + S032 - the native setBendRange call and the mounted pointer scrub over the production DragInput are the same ingress
 Source context since previous assertion:
       const int before = editor.bendRange();
       const int endValue = m_fixture.effectiveLaneValue(0x14, m_fixture.endTick(), 2);
@@ -255,48 +320,48 @@ Original expression:
       QVERIFY(m_fixture.scrub(*bend, 1));
 
 A022 | PitchBendEditingTest::bendRangeScrubWritesNoteBoundedCC14 | src/checks/pitchbend/controller.cpp:103
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S007 + S032 - the native setter pushes exactly one history entry and the mounted scrub pushes exactly one revision
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), index + 1);
 
 A023 | PitchBendEditingTest::bendRangeScrubWritesNoteBoundedCC14 | src/checks/pitchbend/controller.cpp:104
-Disposition: PARTIAL
-Mapping/reason: tst_ShellPitchBend.qml test_noteScopedCurveAndControls asserts a one-step BENDR increase using the same DragInput, but the oracle uses a pointer scrub.
+Disposition: MATCHED
+Mapping/reason: S008 + S032 - the mounted pointer scrub over the production DragInput raises BENDR by exactly one, closing this row's earlier PARTIAL (the fork's pointer scrub is now the executed gesture); registered deviation: the native row executes through presenter.setBendRange, the commit entry DragInput writes
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(editor.bendRange(), before + 1);
 
 A024 | PitchBendEditingTest::bendRangeScrubWritesNoteBoundedCC14 | src/checks/pitchbend/controller.cpp:105
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S009 - the scrubbed BENDR write lands on the note tick with the raised value
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.hasLanePoint(0x14, m_fixture.note().tick, before + 1));
 
 A025 | PitchBendEditingTest::bendRangeScrubWritesNoteBoundedCC14 | src/checks/pitchbend/controller.cpp:106
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S009 - the scrubbed BENDR write restores the note-off value
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.hasLanePoint(0x14, m_fixture.endTick(), endValue));
 
 A026 | PitchBendEditingTest::bendRangeScrubWritesNoteBoundedCC14 | src/checks/pitchbend/controller.cpp:107
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S013 - the controller edits and the refresh keep the same editor open
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(editor.isOpen());
 
 A027 | PitchBendEditingTest::lfoSpeedShiftScrubWritesNoteBoundedCC15 | src/checks/pitchbend/controller.cpp:113
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - pitchBendCheckScene opens the selected note's editor and keeps it open for the LFO scrub journey
 Source context since previous assertion:
   }
 
@@ -307,8 +372,8 @@ Original expression:
       QVERIFY(editorResult);
 
 A028 | PitchBendEditingTest::lfoSpeedShiftScrubWritesNoteBoundedCC15 | src/checks/pitchbend/controller.cpp:116
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S033 - the mounted LFO scrub presses the real lfoSpeedSpin item and commits one entry, so the field is realized and wired (its findChild null guard is unmessaged)
 Source context since previous assertion:
       songview::PitchBendEditor &editor = *editorResult;
       QQuickItem *lfo = m_fixture.item(QStringLiteral("lfoSpeedSpin"));
@@ -316,8 +381,8 @@ Original expression:
       QVERIFY(lfo);
 
 A029 | PitchBendEditingTest::lfoSpeedShiftScrubWritesNoteBoundedCC15 | src/checks/pitchbend/controller.cpp:120
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S011 + S033 - the native setLfoSpeed call and the mounted shift scrub over the production DragInput are the same ingress
 Source context since previous assertion:
       const int before = editor.lfoSpeed();
       const int endValue = m_fixture.effectiveLaneValue(0x15, m_fixture.endTick(), 22);
@@ -326,48 +391,48 @@ Original expression:
       QVERIFY(m_fixture.scrub(*lfo, 1, Qt::ShiftModifier));
 
 A030 | PitchBendEditingTest::lfoSpeedShiftScrubWritesNoteBoundedCC15 | src/checks/pitchbend/controller.cpp:121
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S010 + S033 - the native setter pushes exactly one history entry and the mounted shift scrub pushes exactly one revision
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), index + 1);
 
 A031 | PitchBendEditingTest::lfoSpeedShiftScrubWritesNoteBoundedCC15 | src/checks/pitchbend/controller.cpp:122
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S011 - a shift scrub raises LFO speed by exactly one; registered deviation: the native row executes through presenter.setLfoSpeed, the commit entry DragInput writes
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(editor.lfoSpeed(), before + 1);
 
 A032 | PitchBendEditingTest::lfoSpeedShiftScrubWritesNoteBoundedCC15 | src/checks/pitchbend/controller.cpp:123
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S012 - the scrubbed LFO write lands on the note tick with the raised value
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.hasLanePoint(0x15, m_fixture.note().tick, before + 1));
 
 A033 | PitchBendEditingTest::lfoSpeedShiftScrubWritesNoteBoundedCC15 | src/checks/pitchbend/controller.cpp:124
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S012 - the scrubbed LFO write restores the note-off value
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.hasLanePoint(0x15, m_fixture.endTick(), endValue));
 
 A034 | PitchBendEditingTest::lfoSpeedShiftScrubWritesNoteBoundedCC15 | src/checks/pitchbend/controller.cpp:125
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S013 - the controller edits and the refresh keep the same editor open
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(editor.isOpen());
 
 A035 | PitchBendEditingTest::controllerStationaryClickFocusesAndSelectsText | src/checks/pitchbend/controller.cpp:131
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - pitchBendCheckScene opens the selected note's editor and keeps it open for the stationary-click journey
 Source context since previous assertion:
   }
 
@@ -378,8 +443,8 @@ Original expression:
       QVERIFY(editorResult);
 
 A036 | PitchBendEditingTest::controllerStationaryClickFocusesAndSelectsText | src/checks/pitchbend/controller.cpp:134
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S034 + S035 - the mounted stationary click lands on the real lfoSpeedInput item, which focuses and selects its text (its findChild null guard is unmessaged)
 Source context since previous assertion:
       songview::PitchBendEditor &editor = *editorResult;
       QQuickItem *input = m_fixture.item(QStringLiteral("lfoSpeedInput"));
@@ -387,8 +452,8 @@ Original expression:
       QVERIFY(input);
 
 A037 | PitchBendEditingTest::controllerStationaryClickFocusesAndSelectsText | src/checks/pitchbend/controller.cpp:138
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S034 + S035 - the click on the real field is the ingress whose focus and selection the following rows assert
 Source context since previous assertion:
       const QByteArray before = m_fixture.smf();
       const int index = m_fixture.document().undoStack()->index();
@@ -397,48 +462,48 @@ Original expression:
       QVERIFY(m_fixture.click(*input));
 
 A038 | PitchBendEditingTest::controllerStationaryClickFocusesAndSelectsText | src/checks/pitchbend/controller.cpp:140
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S037 - a stationary click writes no document revision
 Source context since previous assertion:
       QCoreApplication::processEvents();
 Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), index);
 
 A039 | PitchBendEditingTest::controllerStationaryClickFocusesAndSelectsText | src/checks/pitchbend/controller.cpp:141
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S037 - the revision text is unchanged, so no serialized byte changed
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.smf(), before);
 
 A040 | PitchBendEditingTest::controllerStationaryClickFocusesAndSelectsText | src/checks/pitchbend/controller.cpp:142
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S036 - a stationary click edits nothing (lfoSpeed keeps its value)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(editor.lfoSpeed(), lfo);
 
 A041 | PitchBendEditingTest::controllerStationaryClickFocusesAndSelectsText | src/checks/pitchbend/controller.cpp:143
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S034 - a stationary click focuses the field; registered deviation: the mounted predicate reads the field's activeFocus property where the fork compares the window's activeFocusItem with the input
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.timelineWindow().activeFocusItem(), input);
 
 A042 | PitchBendEditingTest::controllerStationaryClickFocusesAndSelectsText | src/checks/pitchbend/controller.cpp:144
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S035 - a stationary click leaves non-empty selectedText on the field
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(!input->property("selectedText").toString().isEmpty());
 
 A043 | PitchBendEditingTest::controllerUndoChainingPreservesPopupSession | src/checks/pitchbend/controller.cpp:150
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - pitchBendCheckScene opens the selected note's editor and keeps it open for the chained-undo journey
 Source context since previous assertion:
   }
 
@@ -449,8 +514,8 @@ Original expression:
       QVERIFY(editorResult);
 
 A044 | PitchBendEditingTest::controllerUndoChainingPreservesPopupSession | src/checks/pitchbend/controller.cpp:154
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S032 - the mounted BENDR pointer scrub presses the real bendRangeSpin item and commits one entry
 Source context since previous assertion:
       songview::PitchBendEditor &editor = *editorResult;
       QQuickItem *bend = m_fixture.item(QStringLiteral("bendRangeSpin"));
@@ -459,16 +524,16 @@ Original expression:
       QVERIFY(bend);
 
 A045 | PitchBendEditingTest::controllerUndoChainingPreservesPopupSession | src/checks/pitchbend/controller.cpp:155
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S033 - the mounted LFO pointer scrub presses the real lfoSpeedSpin item and commits one entry
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(lfo);
 
 A046 | PitchBendEditingTest::controllerUndoChainingPreservesPopupSession | src/checks/pitchbend/controller.cpp:158
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S008 + S032 - the first controller write is the BENDR scrub (one step)
 Source context since previous assertion:
       const QByteArray baseline = m_fixture.smf();
       const int index = m_fixture.document().undoStack()->index();
@@ -476,80 +541,80 @@ Original expression:
       QVERIFY(m_fixture.scrub(*bend, 1));
 
 A047 | PitchBendEditingTest::controllerUndoChainingPreservesPopupSession | src/checks/pitchbend/controller.cpp:160
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S011 + S033 - the second controller write is the shift-scrub LFO raise (one step)
 Source context since previous assertion:
       const QByteArray afterBend = m_fixture.smf();
 Original expression:
       QVERIFY(m_fixture.scrub(*lfo, 1, Qt::ShiftModifier));
 
 A048 | PitchBendEditingTest::controllerUndoChainingPreservesPopupSession | src/checks/pitchbend/controller.cpp:161
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S014 + S038 - the first undoDocument succeeds with the bend-only bytes restored and the editor open (native) and the mounted journey's first undo steps back from the LFO scrub
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.sendUndo());
 
 A049 | PitchBendEditingTest::controllerUndoChainingPreservesPopupSession | src/checks/pitchbend/controller.cpp:162
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S014 - the first undo leaves the history index at index + 1
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), index + 1);
 
 A050 | PitchBendEditingTest::controllerUndoChainingPreservesPopupSession | src/checks/pitchbend/controller.cpp:163
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S014 - the first undo restores the bend-only bytes (coreTimeBytes)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.smf(), afterBend);
 
 A051 | PitchBendEditingTest::controllerUndoChainingPreservesPopupSession | src/checks/pitchbend/controller.cpp:164
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S014 - the editor stays open through the first undo
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(editor.isOpen());
 
 A052 | PitchBendEditingTest::controllerUndoChainingPreservesPopupSession | src/checks/pitchbend/controller.cpp:165
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S015 + S039 - the second undoDocument succeeds with the baseline bytes restored (native) and the mounted journey's second undo steps back from the BENDR scrub
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.sendUndo());
 
 A053 | PitchBendEditingTest::controllerUndoChainingPreservesPopupSession | src/checks/pitchbend/controller.cpp:166
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S015 - the second undo returns the history index to the journey's starting index
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), index);
 
 A054 | PitchBendEditingTest::controllerUndoChainingPreservesPopupSession | src/checks/pitchbend/controller.cpp:167
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S015 - the second undo restores the baseline bytes (coreTimeBytes)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.smf(), baseline);
 
 A055 | PitchBendEditingTest::controllerUndoChainingPreservesPopupSession | src/checks/pitchbend/controller.cpp:168
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S015 - the editor stays open through the second undo
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(editor.isOpen());
 
 A056 | PitchBendEditingTest::resetButtonZeroesCurveAndRestoresEndValue | src/checks/pitchbend/controller.cpp:174
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - the pitchCurveReset block runs inside the scene pitchBendCheckScene opened and keeps open for this journey
 Source context since previous assertion:
   }
 
@@ -560,8 +625,8 @@ Original expression:
       QVERIFY(editorResult);
 
 A057 | PitchBendEditingTest::resetButtonZeroesCurveAndRestoresEndValue | src/checks/pitchbend/controller.cpp:177
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S016 + S017 - presenter.pitchGraph() is a non-optional production accessor and both predicates execute against that graph (the A052 precedent)
 Source context since previous assertion:
       songview::PitchBendEditor &editor = *editorResult;
       songview::PitchBendGraph *graph = pitchGraph();
@@ -569,16 +634,16 @@ Original expression:
       QVERIFY(graph);
 
 A058 | PitchBendEditingTest::resetButtonZeroesCurveAndRestoresEndValue | src/checks/pitchbend/controller.cpp:178
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S020 + S049 - undoing the reset restores the drawn curve bytes with non-zero interior points (S020), so the pre-reset pitch stroke had committed; the mounted lane draws that curve through the real Shift-line ingress (S049). Registered deviation: the harness stroke's own bool return has no separate Swift predicate
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(drawPitchCurve(*graph));
 
 A059 | PitchBendEditingTest::resetButtonZeroesCurveAndRestoresEndValue | src/checks/pitchbend/controller.cpp:183
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S050 - the mounted journey clicks the real pitchBendReset item and the reset writes the default curve, so the item is realized and wired (its findChild null guard is unmessaged)
 Source context since previous assertion:
       const int endValue = m_fixture.effectiveLaneValue(DOC_CC_BEND, m_fixture.endTick(), 0);
       const QByteArray beforeReset = m_fixture.smf();
@@ -588,72 +653,72 @@ Original expression:
       QVERIFY(reset);
 
 A060 | PitchBendEditingTest::resetButtonZeroesCurveAndRestoresEndValue | src/checks/pitchbend/controller.cpp:184
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S050 + S016 - the native resetPitchCurve call and the mounted click on the real reset item are the same ingress
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.click(*reset));
 
 A061 | PitchBendEditingTest::resetButtonZeroesCurveAndRestoresEndValue | src/checks/pitchbend/controller.cpp:185
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S016 - the pitch reset pushes exactly one history entry
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), index + 1);
 
 A062 | PitchBendEditingTest::resetButtonZeroesCurveAndRestoresEndValue | src/checks/pitchbend/controller.cpp:186
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S017 - the pitch reset zeroes the curve over the note span
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(spanIsDefault(m_fixture, DOC_CC_BEND, 0));
 
 A063 | PitchBendEditingTest::resetButtonZeroesCurveAndRestoresEndValue | src/checks/pitchbend/controller.cpp:187
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S018 - the pitch reset restores the note-off value
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.hasLanePoint(DOC_CC_BEND, m_fixture.endTick(), endValue));
 
 A064 | PitchBendEditingTest::resetButtonZeroesCurveAndRestoresEndValue | src/checks/pitchbend/controller.cpp:188
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S019 - the pitch reset keeps the editor open
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(editor.isOpen());
 
 A065 | PitchBendEditingTest::resetButtonZeroesCurveAndRestoresEndValue | src/checks/pitchbend/controller.cpp:190
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S020 - undoDocument succeeds and the drawn bytes return, so the reset's single entry is undone; the fork formulates that as undoStack()->index() == index, the pre-reset index S016 pins at index + 1
 Source context since previous assertion:
       m_fixture.document().undoStack()->undo();
 Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), index);
 
 A066 | PitchBendEditingTest::resetButtonZeroesCurveAndRestoresEndValue | src/checks/pitchbend/controller.cpp:191
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S020 - the undo restores the exact pre-reset bytes (coreTimeBytes == the drawn curve bytes)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.smf(), beforeReset);
 
 A067 | PitchBendEditingTest::resetButtonZeroesCurveAndRestoresEndValue | src/checks/pitchbend/controller.cpp:192
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S020 - the restored curve holds a non-zero interior point, so the span is no longer all-default
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(!spanIsDefault(m_fixture, DOC_CC_BEND, 0));
 
 A068 | PitchBendEditingTest::spaceAuditionsNoteFromStartTick | src/checks/pitchbend/controller.cpp:198
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - pitchBendCheckScene opens the selected note's editor and keeps it open for the Space-audition journey
 Source context since previous assertion:
   }
 
@@ -664,8 +729,8 @@ Original expression:
       QVERIFY(editorResult);
 
 A069 | PitchBendEditingTest::spaceAuditionsNoteFromStartTick | src/checks/pitchbend/controller.cpp:203
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S021 + S043 - the routed Space fires the audition callback once (native) and the mounted key click starts the popup transport; the fork's QSignalSpy validity formulates that signal reaching the view
 Source context since previous assertion:
       songview::PitchBendEditor &editor = *editorResult;
       const QByteArray before = m_fixture.smf();
@@ -675,8 +740,8 @@ Original expression:
       QVERIFY(audition.isValid());
 
 A070 | PitchBendEditingTest::spaceAuditionsNoteFromStartTick | src/checks/pitchbend/controller.cpp:206
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S043 + S044 - the popup's ShortcutOverride acceptance is observed through its effect: the popup-routed audition runs (S043) from the note's start tick (S044) instead of the window transport shortcut, which would play from the edit cursor. The native lane cannot send a QML ShortcutOverride, so the mounted journey carries this row
 Source context since previous assertion:
       QKeyEvent overrideEvent(QEvent::ShortcutOverride, Qt::Key_Space, Qt::NoModifier);
       QCoreApplication::sendEvent(&m_fixture.timelineWindow(), &overrideEvent);
@@ -684,48 +749,48 @@ Original expression:
       QVERIFY(overrideEvent.isAccepted());
 
 A071 | PitchBendEditingTest::spaceAuditionsNoteFromStartTick | src/checks/pitchbend/controller.cpp:208
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S021 + S022 + S043 - the native recorder collects exactly one audition (S021) and repeats nothing on autoRepeat (S022); the mounted click starts exactly one audition
 Source context since previous assertion:
       QTest::keyClick(&m_fixture.timelineWindow(), Qt::Key_Space);
 Original expression:
       QCOMPARE(audition.count(), 1);
 
 A072 | PitchBendEditingTest::spaceAuditionsNoteFromStartTick | src/checks/pitchbend/controller.cpp:209
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S021 + S044 - the recorded audition tick is the note's start tick and the mounted playhead lands at that tick, not the edit cursor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(audition.front().front().toULongLong(), m_fixture.note().tick);
 
 A073 | PitchBendEditingTest::spaceAuditionsNoteFromStartTick | src/checks/pitchbend/controller.cpp:210
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S025 + S048 - the routed keys leave the history index and the song bytes unchanged with the editor open
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), index);
 
 A074 | PitchBendEditingTest::spaceAuditionsNoteFromStartTick | src/checks/pitchbend/controller.cpp:211
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S025 + S048 - coreTimeBytes is unchanged and the mounted revision text is unchanged, so no serialized byte changed
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.smf(), before);
 
 A075 | PitchBendEditingTest::spaceAuditionsNoteFromStartTick | src/checks/pitchbend/controller.cpp:212
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S025 - the editor stays open through the audition routes
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(editor.isOpen());
 
 A076 | PitchBendEditingTest::soloAndMuteKeyArbitration | src/checks/pitchbend/controller.cpp:218
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 + S042 - pitchBendCheckScene opens the selected note's editor and keeps it open for the arbitration journey, and the mounted journey proves the popup anchors one selected note before the key clicks
 Source context since previous assertion:
   }
 
@@ -736,8 +801,8 @@ Original expression:
       QVERIFY(editorResult);
 
 A077 | PitchBendEditingTest::soloAndMuteKeyArbitration | src/checks/pitchbend/controller.cpp:224
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S024 + S047 - M stays absorbed (the native route returns false) and the mounted mute flag keeps its checked state with no revision
 Source context since previous assertion:
       const QByteArray before = m_fixture.smf();
       const int index = m_fixture.document().undoStack()->index();
@@ -748,32 +813,32 @@ Original expression:
       QCOMPARE(m_fixture.view().muteMask(), mute);
 
 A078 | PitchBendEditingTest::soloAndMuteKeyArbitration | src/checks/pitchbend/controller.cpp:226
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S023 + S045 - the first S leaves the selected track's solo flag toggled exactly once
 Source context since previous assertion:
       QTest::keyClick(&m_fixture.timelineWindow(), Qt::Key_S);
 Original expression:
       QCOMPARE(m_fixture.view().soloMask(), solo ^ uint32_t{1});
 
 A079 | PitchBendEditingTest::soloAndMuteKeyArbitration | src/checks/pitchbend/controller.cpp:228
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S046 - a second S restores the selected track's solo flag
 Source context since previous assertion:
       QTest::keyClick(&m_fixture.timelineWindow(), Qt::Key_S);
 Original expression:
       QCOMPARE(m_fixture.view().soloMask(), solo);
 
 A080 | PitchBendEditingTest::soloAndMuteKeyArbitration | src/checks/pitchbend/controller.cpp:229
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S025 + S048 - the routed keys leave the history index unchanged
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), index);
 
 A081 | PitchBendEditingTest::soloAndMuteKeyArbitration | src/checks/pitchbend/controller.cpp:230
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S025 + S048 - the routed keys leave the song bytes unchanged
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -782,6 +847,113 @@ Original expression:
 Remaining original source (closing sequence and helper bodies):
   }
 
-Swift assertion predicates
-None: no Swift counterpart file carries report.expect*/expectEqual predicates
-for this suite.
+Swift assertion predicates (native predicates execute through the
+swiftcore-projectsession lane; mounted predicates through the shell-pitch-bend
+lane)
+
+S001 | pitchBendCheckScene | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the Edit→Pitch Bend route opens the selected note's editor"
+S002 | pitchBendCheckScene | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the opened editor stays open"
+S003 | pitchBendControllerPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "wheeling inside the pitch graph raises BENDR one step per notch"
+S004 | pitchBendControllerPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the description reflects the active BENDR semitones"
+S005 | pitchBendControllerPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the wheeled BENDR write is note-bounded"
+S006 | pitchBendControllerPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "internal edits and refreshes keep the same editor open"
+S007 | pitchBendSetterPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "scrubbing the bend range pushes exactly one history entry"
+S008 | pitchBendSetterPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "a pointer scrub raises BENDR by one"
+S009 | pitchBendSetterPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the scrubbed BENDR write is note-bounded"
+S010 | pitchBendSetterPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "shift-scrubbing the LFO field pushes exactly one history entry"
+S011 | pitchBendSetterPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "a shift scrub raises LFO speed by one"
+S012 | pitchBendSetterPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the scrubbed LFO write is note-bounded"
+S013 | pitchBendSetterPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "controller edits and refresh keep the same editor open"
+S014 | pitchBendSetterPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the first controller undo restores the bend-only bytes with the editor open"
+S015 | pitchBendSetterPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the second controller undo restores the baseline bytes with the editor open"
+S016 | pitchBendResetPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the pitch reset pushes one history entry"
+S017 | pitchBendResetPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the pitch reset zeroes the curve over the note span"
+S018 | pitchBendResetPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the pitch reset restores the note-off value"
+S019 | pitchBendResetPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the pitch reset keeps the editor open"
+S020 | pitchBendResetPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "undoing the pitch reset restores the drawn curve bytes"
+S021 | pitchBendParityPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "Space auditions from the note's start tick"
+S022 | pitchBendParityPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "held Space does not repeat the note audition"
+S023 | pitchBendParityPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "S toggles solo exactly once while the popup is open"
+S024 | pitchBendParityPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "M stays absorbed while the popup has focus"
+S025 | pitchBendParityPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "auditioning from the popup changes no document bytes with the editor open"
+S026 | test_wheelInsideCanvasOnly | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the inside wheel writes one document revision"
+S027 | test_wheelInsideCanvasOnly | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the description reports the newly wheeled range"
+S028 | test_wheelInsideCanvasOnly | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "one wheel notch pushes exactly one history entry"
+S029 | test_wheelInsideCanvasOnly | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "wheeling outside the graph canvas writes nothing"
+S030 | test_wheelInsideCanvasOnly | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "two wheel notches commit the second note-scoped edit"
+S031 | test_wheelInsideCanvasOnly | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "a two-notch wheel gesture commits one controller write"
+S032 | test_pointerScrubsUndoAndStationaryClick | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the BENDR pointer scrub pushes exactly one history entry"
+S033 | test_pointerScrubsUndoAndStationaryClick | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the LFO pointer scrub pushes exactly one history entry"
+S034 | test_pointerScrubsUndoAndStationaryClick | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "a stationary click focuses the field"
+S035 | test_pointerScrubsUndoAndStationaryClick | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "a stationary click selects the field text"
+S036 | test_pointerScrubsUndoAndStationaryClick | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "a stationary click edits nothing"
+S037 | test_pointerScrubsUndoAndStationaryClick | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "a stationary click writes no document revision"
+S038 | test_pointerScrubsUndoAndStationaryClick | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "undo steps back from the LFO scrub"
+S039 | test_pointerScrubsUndoAndStationaryClick | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "a second undo steps back from the BENDR scrub"
+S040 | test_scrubHoverAndIdleEnterKeepEditor | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the scrub field advertises a hover handler"
+S041 | test_scrubHoverAndIdleEnterKeepEditor | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the scrub fields advertise the vertical scrub cursor"
+S042 | test_popupSpaceAuditionSoloAndMuteAbsorption | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the popup anchors one selected note"
+S043 | test_popupSpaceAuditionSoloAndMuteAbsorption | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "Space auditions through the popup transport"
+S044 | test_popupSpaceAuditionSoloAndMuteAbsorption | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the popup audition starts at the note tick, not the edit cursor"
+S045 | test_popupSpaceAuditionSoloAndMuteAbsorption | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "S toggles solo exactly once while the popup is open"
+S046 | test_popupSpaceAuditionSoloAndMuteAbsorption | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "a second S restores the selected track solo flag"
+S047 | test_popupSpaceAuditionSoloAndMuteAbsorption | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "M remains absorbed inside the popup"
+S048 | test_popupSpaceAuditionSoloAndMuteAbsorption | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "Space, S and M write no song revision"
+S049 | test_noteScopedCurveAndControls | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the committed Shift-line writes note-scoped pitch bend"
+S050 | test_noteScopedCurveAndControls | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "pitch reset writes the default curve"
+
+Uncited index entries: S006 (the wheel journey's editor liveness; no
+wheelScrollConfinesBendRangeToNoteSpan row asserts the editor stays open after the
+wheel's document refresh, so the predicate has no controller.cpp site). S038 and
+S039 read the mounted history text rather than the presenter for the undo chain,
+so they anchor the chained-undo rows through the shared journey.

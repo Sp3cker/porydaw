@@ -23,6 +23,10 @@ TestCase {
     Component { id: shellComponent; ShellWindow { width: 1100; height: 720; visible: true } }
 
 
+    function init() {
+        verify(bootstrap.resetPreferences(), "each shell starts with fresh window state")
+    }
+
     function waitForNative(predicate, timeoutMs) {
         return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
     }

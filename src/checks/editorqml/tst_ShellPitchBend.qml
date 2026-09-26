@@ -19,6 +19,10 @@ TestCase {
     ShellQmlBootstrap { id: bootstrap }
     Component { id: shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
 
+    function init() {
+        verify(bootstrap.resetPreferences(), "each shell starts with fresh window state")
+    }
+
     function waitForNative(predicate, timeoutMs) {
         return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
     }
@@ -627,5 +631,161 @@ TestCase {
         tryCompare(opened.editor, "isOpen", false)
         compare(findChild(opened.view, "pitchBendPopup"), null,
                 "Escape closes the editor after the external-edit cycle")
+    }
+    function test_wheelInsideCanvasOnly() {
+        const opened = openViaG()
+        const graph = findChild(opened.view, "pitchBendGraph")
+        const canvas = graph.canvasRect
+        const centerX = canvas.x + canvas.width / 2
+        const centerY = canvas.y + canvas.height / 2
+        const before = opened.grid.appliedRevisionText
+        const range = opened.editor.bendRange
+        mouseWheel(graph, centerX, centerY, 0, 120)
+        tryCompare(opened.editor, "bendRange", range + 1)
+        verify(waitForNative(function() {
+            return opened.grid.appliedRevisionText !== before
+        }, 5000), "the inside wheel writes one document revision")
+        verify(opened.editor.description.indexOf((range + 1) + " semitones") >= 0,
+               "the description reports the newly wheeled range")
+        const once = opened.grid.appliedRevisionText
+        compare(Number(once), Number(before) + 1,
+                "one wheel notch pushes exactly one history entry")
+        const margin = opened.grid.baseFontPx / 3
+        mouseWheel(graph, Math.max(0, canvas.x - margin), centerY, 0, 120)
+        verify(opened.editor.bendRange === range + 1
+               && opened.grid.appliedRevisionText === once,
+               "wheeling outside the graph canvas writes nothing")
+        mouseWheel(graph, centerX, centerY, 0, 240)
+        tryCompare(opened.editor, "bendRange", range + 3)
+        verify(waitForNative(function() {
+            return opened.grid.appliedRevisionText !== once
+        }, 5000), "two wheel notches commit the second note-scoped edit")
+        compare(Number(opened.grid.appliedRevisionText), Number(once) + 1,
+                "a two-notch wheel gesture commits one controller write")
+        compare(opened.editor.isOpen, true)
+    }
+
+    function test_pointerScrubsUndoAndStationaryClick() {
+        const opened = openViaG()
+        const range = findChild(opened.view, "bendRangeSpin")
+        const speed = findChild(opened.view, "lfoSpeedSpin")
+        const input = findChild(opened.view, "lfoSpeedInput")
+        verify(range !== null && speed !== null && input !== null)
+        const before = opened.grid.appliedRevisionText
+        const bend = opened.editor.bendRange
+        const lfo = opened.editor.lfoSpeed
+        const rangeDistance = range.appearance.dragThreshold + 2
+        mousePress(range, range.width / 2, range.height / 2, Qt.LeftButton)
+        mouseMove(range, range.width / 2, range.height / 2 - rangeDistance, -1, Qt.LeftButton)
+        mouseRelease(range, range.width / 2, range.height / 2 - rangeDistance, Qt.LeftButton)
+        tryCompare(opened.editor, "bendRange", bend + 1)
+        verify(waitForNative(function() { return opened.grid.appliedRevisionText !== before }, 5000))
+        const first = opened.grid.appliedRevisionText
+        compare(Number(first), Number(before) + 1,
+                "the BENDR pointer scrub pushes exactly one history entry")
+        const speedDistance = speed.appearance.dragThreshold + 5
+        mousePress(speed, speed.width / 2, speed.height / 2,
+                   Qt.LeftButton, Qt.ShiftModifier)
+        mouseMove(speed, speed.width / 2, speed.height / 2 - speedDistance,
+                  -1, Qt.LeftButton, Qt.ShiftModifier)
+        mouseRelease(speed, speed.width / 2, speed.height / 2 - speedDistance,
+                     Qt.LeftButton, Qt.ShiftModifier)
+        tryCompare(opened.editor, "lfoSpeed", lfo + 1)
+        verify(waitForNative(function() { return opened.grid.appliedRevisionText !== first }, 5000))
+        const second = opened.grid.appliedRevisionText
+        compare(Number(second), Number(first) + 1,
+                "the LFO pointer scrub pushes exactly one history entry")
+        mouseClick(input, input.width / 2, input.height / 2, Qt.LeftButton)
+        tryCompare(input, "activeFocus", true, 5000,
+                   "a stationary click focuses the field")
+        tryVerify(function() { return input.selectedText.length > 0 }, 5000,
+                  "a stationary click selects the field text")
+        compare(opened.editor.lfoSpeed, lfo + 1, "a stationary click edits nothing")
+        compare(opened.grid.appliedRevisionText, second,
+                "a stationary click writes no document revision")
+        shell.shellPresenter.session.requestUndo()
+        verify(waitForNative(function() {
+            return opened.editor.lfoSpeed === lfo && opened.grid.appliedRevisionText !== second
+        }, 5000), "undo steps back from the LFO scrub")
+        shell.shellPresenter.session.requestUndo()
+        verify(waitForNative(function() {
+            return opened.editor.bendRange === bend && opened.grid.appliedRevisionText !== first
+        }, 5000), "a second undo steps back from the BENDR scrub")
+        compare(opened.editor.isOpen, true)
+    }
+
+    function test_scrubHoverAndIdleEnterKeepEditor() {
+        const opened = openViaG()
+        const graph = findChild(opened.view, "pitchBendGraph")
+        for (const name of ["bendRange", "lfoSpeed"]) {
+            const field = findChild(opened.view, name + "Spin")
+            const hint = findChild(opened.view, name + "InputScrubHint")
+            verify(field !== null && hint !== null, "the scrub field advertises a hover handler")
+            mouseMove(field, field.width / 2, field.height / 2)
+            tryCompare(hint, "hovered", true)
+            compare(hint.cursorShape, Qt.SizeVerCursor,
+                    "the scrub fields advertise the vertical scrub cursor")
+        }
+        const canvas = graph.canvasRect
+        mouseMove(graph, canvas.x + canvas.width / 2, canvas.y + canvas.height / 2)
+        compare(opened.editor.isOpen, true, "idle mouse motion keeps the popup open")
+        keyClick(Qt.Key_Enter)
+        keyClick(Qt.Key_Return)
+        compare(opened.editor.isOpen, true, "Enter does not dismiss the popup")
+        compare(findChild(opened.view, "pitchBendPopup"), opened.popup,
+                "idle mouse and Enter preserve the editor identity")
+    }
+
+    function test_popupSpaceAuditionSoloAndMuteAbsorption() {
+        const opened = openViaG()
+        const graph = findChild(opened.view, "pitchBendGraph")
+        const selected = JSON.parse(opened.grid.noteSummary).find(function(note) {
+            return note.selected
+        })
+        verify(selected !== undefined, "the popup anchors one selected note")
+        const solo = findChild(opened.view, "timelineHeaderSolo_" + selected.track)
+        const mute = findChild(opened.view, "timelineHeaderMute_" + selected.track)
+        const bar = findChild(shell, "transportToolbar")
+        verify(solo !== null && mute !== null && bar !== null)
+        const originalSolo = solo.checked
+        const originalMute = mute.checked
+        const before = opened.grid.appliedRevisionText
+        graph.forceActiveFocus(Qt.OtherFocusReason)
+        keyClick(Qt.Key_Space)
+        verify(waitForNative(function() { return bar.presenter.state === 3 }, 5000),
+               "Space auditions through the popup transport")
+        verify(Math.abs(shell.shellPresenter.session.playheadPresenter().tick - selected.tick)
+               < opened.grid.ticksPerBeat,
+               "the popup audition starts at the note tick, not the edit cursor")
+        compare(opened.grid.appliedRevisionText, before)
+        compare(opened.editor.isOpen, true)
+        keyClick(Qt.Key_S)
+        tryCompare(solo, "checked", !originalSolo, 5000,
+                   "S toggles solo exactly once while the popup is open")
+        keyClick(Qt.Key_S)
+        tryCompare(solo, "checked", originalSolo, 5000,
+                   "a second S restores the selected track solo flag")
+        keyClick(Qt.Key_M)
+        compare(mute.checked, originalMute, "M remains absorbed inside the popup")
+        compare(opened.grid.appliedRevisionText, before,
+                "Space, S and M write no song revision")
+    }
+    function test_windowUndoReachesOpenPopup() {
+        const opened = openViaG()
+        const graph = findChild(opened.view, "pitchBendGraph")
+        const baseline = opened.grid.appliedRevisionText
+        const original = graph.curveSegmentCount
+        strokePitchCanvas(graph, 0.20, 0.75, 0.80, 0.25, Qt.NoModifier)
+        verify(waitForNative(function() {
+            return opened.grid.appliedRevisionText !== baseline
+        }, 5000), "the popup stroke creates an undoable song revision")
+        const edited = opened.grid.appliedRevisionText
+        keySequence(StandardKey.Undo)
+        verify(waitForNative(function() {
+            return graph.curveSegmentCount === original
+                && opened.grid.appliedRevisionText !== edited
+        }, 5000), "the window Undo command reaches the open pitch popup")
+        compare(opened.editor.isOpen, true)
+        compare(findChild(opened.view, "pitchBendPopup"), opened.popup)
     }
 }

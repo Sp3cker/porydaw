@@ -13,9 +13,58 @@ func runRulerLoopMenuChecks(_ report: CheckReport, session: DocumentSession) {
     checkRulerInsertTime(report, session: session)
     checkRenderedRulerMenuCommands(report, session: session)
     checkRulerInsertTimePrompt(report, session: session)
+    checkRulerMenuRetirement(report, session: session)
     checkRulerSweepScopeTapAndChip(report, session: session)
     checkRulerSeekEmission(report, session: session)
     checkRulerDeferredTiming(report, session: session)
+}
+
+@MainActor
+private func checkRulerMenuRetirement(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::rulerMenuLiveRetirement"
+    let palette = GridPalette()
+    let grid = PianoGrid(session: session, palette: palette)
+    let automation = AutomationPage(baseFontPx: grid.baseFontPx)
+    automation.attach(session: session, palette: palette)
+    defer { automation.detach() }
+    let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
+    let oldChange = session.onChange
+    session.onChange = { change in
+        menu.sessionDidChange(change)
+        oldChange?(change)
+    }
+    defer { session.onChange = oldChange }
+    let oldCursor = session.editCursor
+    defer { session.editCursor = oldCursor }
+    let entryIdentity = session.document.history.currentIdentity
+    defer {
+        while session.document.history.currentIdentity != entryIdentity
+            && session.document.history.canUndo {
+            guard session.document.history.undoDocument() else { break }
+        }
+    }
+    session.document.setLoop(end: false, tick: nil)
+    session.document.setLoop(end: true, tick: nil)
+    let at = session.camera.contentX(tick: 48)
+    openRulerMenu(menu, at: at)
+    let revision = session.document.revision
+    let identity = session.document.history.currentIdentity
+    report.expect(menu.isOpen && !menu.rows[5].enabled && menu.rows[0].enabled,
+                  cppID: id, message: "an unmarked ruler enables Insert Time but not Remove Loop")
+    report.expect(!menu.activate(actionId: 4) && menu.isOpen
+                  && session.document.history.currentIdentity == identity,
+                  cppID: id, message: "a disabled Remove Loop click keeps the ruler menu open without a write")
+    session.document.setLoop(end: false, tick: 48)
+    report.expect(!menu.isOpen && session.document.revision != revision,
+                  cppID: id, message: "a document edit retires the open ruler menu")
+    _ = session.document.history.undoDocument()
+    openRulerMenu(menu, at: at)
+    let selection = AutomationTimeSelection(range: TimeRange(startTick: 48, endTick: 72),
+                                            scope: .tracks([session.selectedTrack ?? 0]))
+    session.applyTimeSelection(selection)
+    report.expect(!menu.isOpen && session.timeSelection == selection,
+                  cppID: id, message: "a selection change retires the open ruler menu")
+    session.clearTimeSelection()
 }
 
 @MainActor
