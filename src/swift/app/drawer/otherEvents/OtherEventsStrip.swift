@@ -17,6 +17,12 @@ public struct OtherEventsMarker: Equatable {
 }
 
 public enum OtherEventsStrip {
+    public struct Classification {
+        public let items: [OtherEventsStripItem]
+        public let orphanNoteOffs: Int
+        public let unpairedNoteOns: Int
+    }
+
     public static func bandHeight(baseFontPx: Double, appFontLineSpacing: Double) -> Int {
         let base = baseFontPx.isFinite && baseFontPx > 0
             ? baseFontPx : GridCameraPolicy.seedBaseFontPx
@@ -25,6 +31,10 @@ public enum OtherEventsStrip {
     }
 
     public static func items(timeline: PlaybackTimeline) -> [OtherEventsStripItem] {
+        classify(timeline: timeline).items
+    }
+
+    public static func classify(timeline: PlaybackTimeline) -> Classification {
         let events = timeline.events
         let ccEvents = events.enumerated().compactMap { index, event -> Xcmd.Event? in
             guard event.type == 0xB else { return nil }
@@ -34,6 +44,7 @@ public enum OtherEventsStrip {
         let consumed = Set(Xcmd.project(ccEvents).consumed)
         var open = Array(repeating: 0, count: TrackLimits.hardwareCapacity * 128)
         var result: [OtherEventsStripItem] = []
+        var orphanNoteOffs = 0
         result.reserveCapacity(events.count + timeline.otherEvents.count)
         for (index, event) in events.enumerated() {
             if consumed.contains(UInt64(index)) { continue }
@@ -44,6 +55,7 @@ public enum OtherEventsStrip {
             case 0x8:
                 let slot = track * 128 + Int(event.data0 & 0x7F)
                 if open[slot] == 0 {
+                    orphanNoteOffs += 1
                     result.append(OtherEventsStripItem(tick: event.tick, sample: event.sample,
                         track: track,
                         label: "Note off (key \(event.data0)) without a note on"))
@@ -64,10 +76,12 @@ public enum OtherEventsStrip {
             result.append(OtherEventsStripItem(tick: other.tick, sample: other.sample,
                                                track: other.track, label: other.label))
         }
-        return result.enumerated().sorted {
+        let items = result.enumerated().sorted {
             $0.element.tick == $1.element.tick ? $0.offset < $1.offset
                 : $0.element.tick < $1.element.tick
         }.map(\.element)
+        return Classification(items: items, orphanNoteOffs: orphanNoteOffs,
+                              unpairedNoteOns: open.reduce(0, +))
     }
 
     @MainActor

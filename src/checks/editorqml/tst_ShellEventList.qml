@@ -252,6 +252,10 @@ TestCase {
         keyClick(Qt.Key_Delete)
         tryCompare(presenter, "rowCount", beforeDelete - 2, 3000,
                    "Delete removes exactly two event rows, not the roll selection")
+        compare(presenter.currentRow, -1,
+                "the Delete key removes the selected rows and clears their cursor")
+        for (let row = 0; row < presenter.rowCount; ++row)
+            verify(!presenter.isSelected(row), "the Delete key clears every selected event row")
         for (let row = 0; row < presenter.rowCount; ++row)
             verify(presenter.rowTick(row) !== firstTick
                    && presenter.rowTick(row) !== secondTick,
@@ -426,6 +430,27 @@ TestCase {
                     "row header")
         matchesFont(findChild(page, "eventListCell_0_0"), fonts.tableMono,
                     "numeric table cell")
+        for (let column = 2; column <= 4; ++column) {
+            const numeric = findChild(page, "eventListCell_0_" + column)
+            matchesFont(numeric, fonts.tableMono, "numeric table cell " + column)
+            compare(numeric.font.letterSpacing, page.tableFont.letterSpacing,
+                    "numeric columns keep the mono tracking")
+        }
+        const lastRow = presenter.rowCount - 1
+        table.positionViewAtRow(lastRow, TableView.AlignBottom)
+        table.forceLayout()
+        tryVerify(function() {
+            return table.itemAtCell(Qt.point(0, lastRow)) !== null
+                && table.itemAtCell(Qt.point(4, lastRow)) !== null
+        }, 3000, "the final event row renders its numeric columns")
+        for (const column of [0, 2, 3, 4]) {
+            const numeric = findChild(page, "eventListCell_" + lastRow + "_" + column)
+            matchesFont(numeric, fonts.tableMono, "final row numeric column " + column)
+            compare(numeric.font.letterSpacing, page.tableFont.letterSpacing,
+                    "the final event row retains mono tracking")
+        }
+        table.positionViewAtRow(0, TableView.AlignTop)
+        table.forceLayout()
         matchesFont(findChild(page, "eventListCell_0_1"), fonts.body,
                     "text table cell")
         table.positionViewAtRow(20, TableView.AlignTop)
@@ -779,6 +804,8 @@ TestCase {
         compare(voice.revealSlotId, 0, "track-one program points at voice zero")
         compare(voice.currentSlot, 0, "the voicegroup selects voice zero")
         tryCompare(presenter, "menuOpen", false, 3000)
+        tryVerify(function() { return findChild(page, "quickMenuPanelRoot") === null },
+                  3000, "the dismissed menu releases the table before another right click")
 
         let movable = -1
         for (let row = 1; row < presenter.rowCount - 1; ++row) {
@@ -908,6 +935,69 @@ TestCase {
                 "a cross-tick row drop leaves the neighbors in place")
         compare(fixture.session.canRedo, true, "refused drop pushes no undo step")
         compare(presenter.editing, false, "a refused drag does not enter cell editing")
+        const tab = findChild(shell.sceneLoader.item,
+                              "songTab_" + fixture.session.songTabs.selectedId)
+        const surface = tab ? findChild(tab, "swiftRollOverlay") : null
+        verify(surface && surface.gridModel, "the mounted roll owns the document cursor")
+        surface.gridModel.setEditCursorTick(100000)
+        presenter.selectRow(-1, Qt.NoModifier)
+        presenter.addEvent()
+        let off = -1
+        for (let row = 0; row < presenter.rowCount - 1; ++row) {
+            if (presenter.tickString(row) === "100000") {
+                off = row
+                break
+            }
+        }
+        verify(off >= 0, "a raw event is added after the fixture's ticks")
+        presenter.selectRow(off, Qt.NoModifier)
+        presenter.openTypeMenu(0, 0)
+        presenter.activateMenuAction(0)
+        compare(presenter.rowType(off), 0, "the setup event becomes a note-off")
+        presenter.selectRow(off, Qt.NoModifier)
+        presenter.addEvent()
+        let partner = -1
+        for (let row = 0; row < presenter.rowCount - 1; ++row) {
+            if (presenter.tickString(row) === "100000" && row !== off) {
+                partner = row
+                break
+            }
+        }
+        verify(partner >= 0, "a second event shares the note's tick")
+        presenter.selectRow(partner, Qt.NoModifier)
+        presenter.openTypeMenu(0, 0)
+        presenter.activateMenuAction(1)
+        let on = -1
+        off = -1
+        for (let row = 0; row < presenter.rowCount - 1; ++row) {
+            if (presenter.tickString(row) !== "100000")
+                continue
+            if (presenter.rowType(row) === 0)
+                off = row
+            if (presenter.rowType(row) === 1)
+                on = row
+        }
+        verify(off >= 0 && on === off + 1,
+               "the note-off is pinned ahead of its note-on")
+        const beforeRun = cellAt(table, on, 0)
+        const beforeRunSummary = presenter.cellDisplay(on, 6)
+        const beforeRunY = -on * page.rowHeight
+        mousePress(beforeRun, beforeRun.width / 2, beforeRun.height / 2)
+        mouseMove(beforeRun, beforeRun.width / 2, beforeRunY)
+        compare(page.dragDropGap, -1, "a drop before the run start has no legal gap")
+        mouseRelease(beforeRun, beforeRun.width / 2, beforeRunY)
+        compare(presenter.cellDisplay(on, 6), beforeRunSummary,
+                "a drop before the run start refuses the reorder")
+        compare(presenter.editing, false, "the before-run release starts no editor")
+        const pinnedCell = cellAt(table, off, 0)
+        mousePress(pinnedCell, pinnedCell.width / 2, pinnedCell.height / 2)
+        mouseMove(pinnedCell, pinnedCell.width / 2, page.rowHeight)
+        compare(page.dragDropGap, -1, "the pinned note rejects the pointer gap")
+        mouseRelease(pinnedCell, pinnedCell.width / 2, page.rowHeight)
+        compare(presenter.rowType(off), 0,
+                "a drop across the pinned note refuses the reorder")
+        compare(presenter.rowType(on), 1)
+        compare(presenter.editing, false, "the pinned release starts no editor")
     }
     function test_drawerFocusCommitsAndOwnsDelete() {
         const fixture = openEventListFixture()
@@ -972,5 +1062,324 @@ TestCase {
                 restored = true
         }
         verify(restored, "one undo restores the edit; drawer Delete pushed no step")
+    }
+    function test_menuKeyboardNavigation() {
+        const fixture = openEventListFixture()
+        const presenter = fixture.presenter
+        const filter = findChild(fixture.page, "eventListFilter")
+        verify(filter && filter.enabled, "the rendered filter toolbar control is enabled")
+        mouseClick(filter, filter.width / 2, filter.height / 2)
+        tryCompare(presenter, "menuOpen", true, 3000)
+        let menu = null
+        tryVerify(function() {
+            menu = findChild(fixture.page, "quickMenuPanelRoot")
+            return menu && menu.rowCount === 7
+        }, 3000, "the filter menu opens with the seven category rows")
+        for (let row = 0; row < menu.rowCount; ++row) {
+            const item = menu.rowItem(row)
+            verify(item && item.active, "every filter category is interactive")
+            compare(item.itemData.checked,
+                    (presenter.filterMask & item.itemData.actionId) !== 0,
+                    "menu ticks mirror the checked role")
+        }
+        compare(menu.highlightedRow, -1, "the menu opens without a highlighted row")
+        keyClick(Qt.Key_Up)
+        tryCompare(menu, "highlightedRow", 6, 3000,
+                   "Up with no highlight wraps to the last active row")
+        const hovered = menu.rowItem(1)
+        mouseMove(hovered, hovered.width / 2, hovered.height / 2)
+        tryCompare(menu, "highlightedRow", 1, 3000,
+                   "hover highlights the category row")
+        mouseMove(fixture.page, fixture.page.width - 1, fixture.page.height - 1)
+        keyClick(Qt.Key_M)
+        tryCompare(menu, "highlightedRow", 6, 3000,
+                   "type-ahead selects the matching category")
+        keyClick(Qt.Key_Down)
+        tryCompare(menu, "highlightedRow", 0, 3000,
+                   "Down wraps onto the first category")
+        const mask = presenter.filterMask
+        keyClick(Qt.Key_Return)
+        tryCompare(presenter, "filterMask", mask ^ 1, 3000,
+                   "Return toggles the highlighted category")
+        tryCompare(presenter, "menuOpen", true, 3000,
+                   "activating a category keeps the session open on a rebuilt model")
+        tryVerify(function() {
+            const rebuilt = findChild(fixture.page, "quickMenuPanelRoot")
+            const row = rebuilt && rebuilt.rowItem(0)
+            return rebuilt && row && row.itemData.actionId === 1
+                && !row.itemData.checked
+        }, 3000, "the rebuilt menu updates the activated category")
+        tryCompare(findChild(fixture.page, "quickMenuPanelRoot"), "highlightedRow", 0, 3000,
+                   "the rebuilt menu restores the highlight by id")
+        keyClick(Qt.Key_Escape)
+        tryCompare(presenter, "menuOpen", false, 3000,
+                   "Escape cancels the filter menu without activating")
+        mouseClick(filter, filter.width / 2, filter.height / 2)
+        tryCompare(presenter, "menuOpen", true, 3000)
+        const cell = cellAt(fixture.table, 0, 0)
+        const priorEditing = presenter.editing
+        let reopened = null
+        tryVerify(function() {
+            reopened = findChild(fixture.page, "quickMenuPanelRoot")
+            return reopened !== null
+        }, 3000, "the reopened filter menu is rendered")
+        const position = cell.mapToItem(fixture.page, cell.width / 2, cell.height / 2)
+        verify(position.x < reopened.menuOrigin.x
+               || position.x > reopened.menuOrigin.x + reopened.menuWidth
+               || position.y < reopened.menuOrigin.y
+               || position.y > reopened.menuOrigin.y + reopened.menuHeight,
+               "the table-cell press is outside the menu frame")
+        mousePress(cell, cell.width / 2, cell.height / 2)
+        tryCompare(presenter, "menuOpen", false, 3000,
+                   "a table-cell press while the menu is open only closes the menu")
+        compare(presenter.editing, priorEditing)
+        mouseRelease(cell, cell.width / 2, cell.height / 2)
+        compare(presenter.editing, priorEditing,
+                "the paired release never starts an editor")
+    }
+
+    function test_fullFilterMatrixThroughMountedMenu() {
+        const fixture = openEventListFixture()
+        const presenter = fixture.presenter
+        const table = fixture.table
+        const categories = [1, 2, 4, 8, 16, 32, 64]
+        const counts = {}
+        for (const bit of categories)
+            counts[bit] = 0
+        const bitForType = [1, 1, 16, 2, 4, 16, 8, 32, 32, 64, 64]
+        const total = presenter.rowCount
+        verify(total > 1, "the loaded song exposes real filterable event rows")
+        for (let row = 0; row < total - 1; ++row)
+            counts[bitForType[presenter.rowType(row)]]++
+        compare(categories.reduce(function(sum, bit) { return sum + counts[bit] }, 0),
+                total - 1, "every mounted row belongs to exactly one filter category")
+        const filter = findChild(fixture.page, "eventListFilter")
+        mouseClick(filter, filter.width / 2, filter.height / 2)
+        tryCompare(presenter, "menuOpen", true, 3000)
+        let expected = total
+        for (let index = 0; index < categories.length; ++index) {
+            const bit = categories[index]
+            let menu = null
+            let item = null
+            tryVerify(function() {
+                menu = findChild(fixture.page, "quickMenuPanelRoot")
+                item = menu ? menu.rowItem(index) : null
+                return item && item.active && item.itemData.actionId === bit
+                    && item.itemData.checked
+            }, 3000, "the visible category row is checked before its click")
+            const label = item.itemData.text
+            mouseClick(item, item.width / 2, item.height / 2)
+            expected -= counts[bit]
+            tryCompare(presenter, "rowCount", expected, 3000,
+                       "hiding " + label + " shrinks the table to its ledger count")
+            tryCompare(table, "rows", expected, 3000)
+            compare(presenter.filterMask & bit, 0, "the clicked category is excluded")
+            compare(presenter.menuOpen, true, "the filter menu survives category toggles")
+        }
+        compare(presenter.rowCount, 1, "an empty mask leaves only the EOT row")
+        compare(presenter.rowKind(0), 2, "the remaining mounted row is the EOT")
+        for (let index = 0; index < categories.length; ++index) {
+            const bit = categories[index]
+            let menu = null
+            let item = null
+            tryVerify(function() {
+                menu = findChild(fixture.page, "quickMenuPanelRoot")
+                item = menu ? menu.rowItem(index) : null
+                return item && item.active && item.itemData.actionId === bit
+                    && !item.itemData.checked
+            }, 3000, "the hidden category remains available to restore")
+            const label = item.itemData.text
+            mouseClick(item, item.width / 2, item.height / 2)
+            expected += counts[bit]
+            tryCompare(table, "rows", expected, 3000,
+                       "restoring " + label + " returns its mounted rows")
+        }
+        compare(presenter.rowCount, total, "all categories restore every original event row")
+        keyClick(Qt.Key_Escape)
+        tryCompare(presenter, "menuOpen", false, 3000)
+    }
+
+    function test_rowMenuRetiresOnContextMoves() {
+        const fixture = openEventListFixture()
+        const presenter = fixture.presenter
+        presenter.selectRow(0, Qt.NoModifier)
+        presenter.openRowMenu(0, 0)
+        tryCompare(presenter, "menuOpen", true, 3000)
+        presenter.selectRow(1, Qt.NoModifier)
+        tryCompare(presenter, "menuOpen", false, 3000,
+                   "a moved row context retires the row menu")
+        presenter.openRowMenu(0, 0)
+        tryCompare(presenter, "menuOpen", true, 3000)
+        presenter.selectRow(2, Qt.ControlModifier)
+        tryCompare(presenter, "menuOpen", false, 3000,
+                   "a selection change retires the row menu")
+        presenter.openFilterMenu(0, 0)
+        presenter.selectRow(3, Qt.NoModifier)
+        tryCompare(presenter, "menuOpen", true, 3000,
+                   "row changes leave the filter menu open")
+        presenter.dismissMenu()
+        presenter.openRowMenu(0, 0)
+        tryCompare(presenter, "menuOpen", true, 3000)
+        const originalChunk = presenter.chunkIndex
+        const otherChunk = presenter.chunkIndex === 0 ? 1 : 0
+        presenter.setChunk(otherChunk, false)
+        tryCompare(presenter, "menuOpen", false, 3000,
+                   "a chunk switch retires the row menu")
+        presenter.setChunk(originalChunk, false)
+        presenter.selectRow(0, Qt.NoModifier)
+        presenter.openRowMenu(0, 0)
+        tryCompare(presenter, "menuOpen", true, 3000)
+        const count = presenter.rowCount
+        presenter.addEvent()
+        tryCompare(presenter, "rowCount", count + 1, 3000)
+        tryCompare(presenter, "menuOpen", false, 3000,
+                   "a document edit retires the row menu")
+    }
+
+    function test_resizedHeaderAndDoubleClickEditor() {
+        const fixture = openEventListFixture()
+        const presenter = fixture.presenter
+        const page = fixture.page
+        const handle = findChild(page, "eventListColumnResizeHandle1")
+        verify(handle && handle.visible, "the Type handle is rendered")
+        const before = presenter.savedColumnWidth(1)
+        const x = handle.width / 2
+        const y = handle.height / 2
+        mousePress(handle, x, y)
+        for (let move = 1; move <= 4; ++move)
+            mouseMove(handle, x + move * 10, y)
+        mouseRelease(handle, x + 40, y)
+        tryVerify(function() {
+            return presenter.savedColumnWidth(1) > before + 20
+        }, 3000, "a real handle drag widens the persisted column")
+
+        let row = -1
+        for (let index = 0; index < presenter.rowCount - 1; ++index) {
+            if (presenter.isCellEditable(index, 0)) {
+                row = index
+                break
+            }
+        }
+        verify(row >= 0, "the mounted table has an editable tick")
+        const cell = cellAt(fixture.table, row, 0)
+        mouseDoubleClickSequence(cell, cell.width / 2, cell.height / 2)
+        tryCompare(presenter, "editing", true, 3000,
+                   "double-click opens the tick cell editor")
+        verify(presenter.finishEditing("", false), "the editor cancels after its open proof")
+    }
+
+    function test_rowMenuContextThroughRenderedTable() {
+        const fixture = openEventListFixture()
+        const presenter = fixture.presenter
+        const page = fixture.page
+        const first = cellAt(fixture.table, 0, 0)
+        mouseClick(first, first.width / 2, first.height / 2, Qt.RightButton)
+        tryCompare(presenter, "menuOpen", true, 3000,
+                   "right-clicking a row opens its menu on that row")
+        compare(presenter.currentRow, 0, "the row menu captures its selected row")
+        const beforeCount = presenter.rowCount
+        let insert = null
+        tryVerify(function() {
+            const menu = findChild(page, "quickMenuPanelRoot")
+            insert = menu && menu.rowCount > 0 ? menu.rowItem(0) : null
+            return insert && insert.active && insert.itemData.text === "Insert event"
+        }, 3000, "the Insert row is rendered")
+        mouseClick(insert, insert.width / 2, insert.height / 2)
+        tryCompare(presenter, "menuOpen", false, 3000)
+        compare(presenter.rowCount, beforeCount + 1,
+                "activating Insert closes the menu and inserts one event")
+        verify(fixture.session.canUndo, "the Insert action is undoable")
+        fixture.session.requestUndo()
+        verify(waitForNative(function() { return fixture.session.canRedo }, 3000),
+               "the Insert action has one undo transition")
+        compare(presenter.rowCount, beforeCount, "undo restores the previous row count")
+        fixture.session.requestRedo()
+        verify(waitForNative(function() { return presenter.rowCount === beforeCount + 1 }, 3000),
+               "redo restores the inserted row")
+        const target = cellAt(fixture.table, 1, 0)
+        mouseClick(target, target.width / 2, target.height / 2, Qt.RightButton)
+        tryCompare(presenter, "menuOpen", true, 3000)
+        const selected = presenter.currentRow
+        let menu = null
+        tryVerify(function() {
+            menu = findChild(page, "quickMenuPanelRoot")
+            return menu !== null
+        }, 3000, "the row menu is mounted")
+        verify(page.width - 1 > menu.menuOrigin.x + menu.menuWidth
+               || page.height - 1 > menu.menuOrigin.y + menu.menuHeight,
+               "the press location lies outside the menu frame")
+        mousePress(page, page.width - 1, page.height - 1, Qt.RightButton)
+        tryCompare(presenter, "menuOpen", false, 3000,
+                   "an outside right press cancels the menu without moving the current row")
+        compare(presenter.currentRow, selected)
+        mouseRelease(page, page.width - 1, page.height - 1, Qt.RightButton)
+        compare(presenter.menuOpen, false, "the paired right release reopens nothing")
+    }
+
+    function test_chunkWheelAndDrawerFocus() {
+        const fixture = openEventListFixture()
+        const presenter = fixture.presenter
+        const page = fixture.page
+        const table = fixture.table
+        const scrollbar = findChild(page, "eventListVerticalScrollBar")
+        verify(scrollbar && scrollbar.maximum > 0,
+               "the mounted Event List exceeds its viewport")
+        mouseWheel(scrollbar, scrollbar.width / 2, scrollbar.height / 2, 0, -72000)
+        tryCompare(table, "contentY", scrollbar.maximum, 3000,
+                   "wheel past either end clamps the table")
+        mouseWheel(scrollbar, scrollbar.width / 2, scrollbar.height / 2, 0, 144000)
+        tryCompare(table, "contentY", 0, 3000,
+                   "the reverse wheel clamps at the top of the table")
+        const chunkButton = findChild(page, "eventListChunk")
+        verify(chunkButton && chunkButton.enabled, "the chunk selector is mounted")
+        mouseClick(chunkButton, chunkButton.width / 2, chunkButton.height / 2)
+        let menu = null
+        tryVerify(function() {
+            menu = findChild(page, "quickMenuPanelRoot")
+            return menu && menu.rowCount > 1
+        }, 3000, "chunk selection opens the rendered choices")
+        const target = presenter.chunkIndex === 0 ? 1 : 0
+        const choice = menu.rowItem(target)
+        verify(choice && choice.active, "the target chunk is selectable")
+        mouseClick(choice, choice.width / 2, choice.height / 2)
+        tryCompare(presenter, "chunkIndex", target, 3000,
+                   "a track selection echoes its chunk through the page")
+        compare(presenter.chunk, target)
+        tryCompare(table, "rows", presenter.rowCount, 3000,
+                   "the table mirrors the chunk's events plus tempo rows and one EOT")
+        const last = presenter.rowCount - 1
+        verify(presenter.rowKind(last) === 2 && last >= 1,
+               "the selected chunk keeps exactly one terminal row")
+
+
+        const tab = findChild(shell.sceneLoader.item,
+                              "songTab_" + fixture.session.songTabs.selectedId)
+        const input = findChild(tab, "drawerBarInput")
+        verify(input && input.visible, "the drawer bar input is mounted")
+        presenter.selectRow(0, Qt.NoModifier)
+        const row = presenter.currentRow
+        mouseClick(input, input.width / 2, input.height / 2)
+        const bar = input.parent
+        tryCompare(bar, "activeFocus", true, 3000)
+        keyClick(Qt.Key_Down)
+        keyClick(Qt.Key_Up)
+        compare(presenter.currentRow, row, "drawer focus keeps the event rows put")
+        compare(bar.activeFocus, true, "the drawer retains focus through both keys")
+    }
+
+    function test_viewStateVisibilityFlag() {
+        const fixture = openEventListFixture()
+        const session = fixture.session
+        const presenter = fixture.presenter
+        verify(session.songTabs.selectedTabShowsEvents && presenter.visible,
+               "the view state records the event list once visible")
+        shell.shellPresenter.activate("view.event_list")
+        tryCompare(session.songTabs, "selectedTabShowsEvents", false, 3000,
+                   "applying the hidden event-list flag hides the current tab")
+        tryCompare(presenter, "visible", false, 3000)
+        shell.shellPresenter.activate("view.event_list")
+        tryCompare(session.songTabs, "selectedTabShowsEvents", true, 3000,
+                   "showing the event list restores the flag")
+        tryCompare(presenter, "visible", true, 3000)
     }
 }

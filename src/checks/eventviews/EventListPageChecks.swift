@@ -125,6 +125,8 @@ internal func runEventListPageChecks(_ report: CheckReport, session suite: Docum
     eventListTempoContract(report, suite: suite, service: service)
     eventListDeleteMatrix(report, suite: suite, service: service)
     eventListRowMenuContract(report, suite: suite, service: service)
+    eventListFilterMatrix(report, suite: suite, service: service)
+    eventListMenuInvalidation(report, suite: suite, service: service)
 }
 
 @MainActor
@@ -169,6 +171,8 @@ private func eventListTypographyParity(_ report: CheckReport) {
     presenter.configureTypography(typography: doubledTypography)
     report.expect(presenter.savedColumnWidth(column: 1) == 200,
                   cppID: pageID, message: "user-resized Type column survives font changes")
+    report.expect(presenter.columnWidths.count == defaults.count, cppID: pageID,
+                  message: "the resized store keeps six entries")
     report.expect(presenter.savedColumnWidth(column: 0) == 140
                   && presenter.savedColumnWidth(column: 2) == 72,
                   cppID: pageID, message: "untouched columns rederive after Type resize")
@@ -962,4 +966,100 @@ internal func eventListRowMenuContract(_ report: CheckReport, suite: DocumentSes
                   && presenter.menuItems.asArray[1].separator
                   && !presenter.menuItems.asArray[2].enabled,
                   cppID: id, message: "end row menu has Insert and disabled Delete without Move")
+}
+
+@MainActor
+private func eventListFilterMatrix(_ report: CheckReport, suite: DocumentSession,
+                                   service: ProjectService) {
+    let events: [MidiEvent] = [
+        .meta(tick: 0, type: 0x51, data: [0x07, 0xA1, 0x20]),
+        .meta(tick: 0, type: 0x58, data: [4, 2, 24, 8]),
+        .meta(tick: 0, type: 0x06, data: Array("marker".utf8)),
+        .channel(status: 0xC0, data0: 0),
+        .channel(tick: 8, status: 0xB0, data0: 7, data1: 80),
+        .channel(tick: 12, status: 0x90, data0: 60, data1: 90),
+        .channel(tick: 30, status: 0x80, data0: 60),
+        .channel(tick: 60, status: 0xB0, data0: 7, data1: 20),
+        .channel(tick: 60, status: 0xB0, data0: 10, data1: 30),
+        .channel(tick: 70, status: 0x90, data0: 64, data1: 70),
+        .channel(tick: 90, status: 0x80, data0: 64),
+    ]
+    let document = SongDocument(
+        file: MidiFile(division: 24, chunks: [MidiChunk(events: events, endTick: 120)]),
+        config: suite.document.state.config, source: suite.document.source,
+        trackBudget: suite.document.trackBudget)
+    let session = DocumentSession(
+        document: document, service: service, lease: suite.bankLease,
+        slots: suite.bankSlots, dirty: false, loadName: suite.bankLoadName,
+        sampleRate: 48_000)
+    let presenter = EventListPresenter()
+    presenter.attach(session: session)
+    presenter.setVisible(visible: true)
+    let id = "eventviews/EventViewsChromeTest::filterMatrix"
+    report.expect(presenter.rowCount == 12, cppID: id,
+                  message: "all categories expose eleven events and the end row")
+    presenter.openFilterMenu(x: 0, y: 0)
+    for (bit, remaining, category) in [(64, 9, "meta"), (1, 5, "notes"),
+                                        (2, 2, "controls"), (4, 1, "program"),
+                                        (8, 1, "bend"), (16, 1, "aftertouch"),
+                                        (32, 1, "SysEx")] {
+        presenter.activateMenuAction(actionId: bit)
+        report.expect(presenter.rowCount == remaining, cppID: id,
+                      message: "hiding \(category) leaves its ledger row count")
+    }
+    report.expect(presenter.model.rows.count == 1
+                  && presenter.model.rows[0].isEndOfTrack, cppID: id,
+                  message: "an empty mask leaves only the EOT row")
+    for bit in [64, 1, 2, 4, 8, 16, 32] {
+        presenter.activateMenuAction(actionId: bit)
+    }
+    report.expect(presenter.rowCount == 12, cppID: id,
+                  message: "restoring every category restores eleven event rows")
+}
+
+@MainActor
+private func eventListMenuInvalidation(_ report: CheckReport, suite: DocumentSession,
+                                       service: ProjectService) {
+    let document = SongDocument(
+        file: MidiFile(division: 24, chunks: [
+            MidiChunk(events: [
+                .channel(tick: 0, status: 0xB0, data0: 7, data1: 80),
+                .channel(tick: 12, status: 0xB0, data0: 10, data1: 40),
+            ], endTick: 96),
+            MidiChunk(events: [.meta(tick: 12, type: 6, data: [1])], endTick: 96),
+        ]), config: suite.document.state.config, source: suite.document.source,
+        trackBudget: suite.document.trackBudget)
+    let session = DocumentSession(
+        document: document, service: service, lease: suite.bankLease,
+        slots: suite.bankSlots, dirty: false, loadName: suite.bankLoadName,
+        sampleRate: 48_000)
+    let presenter = EventListPresenter()
+    session.onChange = { [weak presenter] change in presenter?.documentDidChange(change) }
+    presenter.attach(session: session)
+    presenter.setVisible(visible: true)
+    let id = "eventviews/EventViewsChromeTest::rowMenu"
+    presenter.selectRow(row: 0, modifiers: 0)
+    presenter.openRowMenu(x: 0, y: 0)
+    presenter.focusRow(row: 1)
+    report.expect(!presenter.menuOpen && presenter.currentRow == 1, cppID: id,
+                  message: "a moved row context retires the row menu")
+    presenter.openRowMenu(x: 0, y: 0)
+    presenter.selectRow(row: 0, modifiers: 0x0400_0000)
+    report.expect(!presenter.menuOpen, cppID: id,
+                  message: "a selection change retires the row menu")
+    presenter.openRowMenu(x: 0, y: 0)
+    presenter.setChunk(index: 1)
+    report.expect(!presenter.menuOpen && presenter.chunkIndex == 1, cppID: id,
+                  message: "a chunk switch retires the row menu")
+    presenter.selectRow(row: 0, modifiers: 0)
+    presenter.openRowMenu(x: 0, y: 0)
+    document.editTempo(TempoEdit(add: [
+        TempoPoint(tick: 36, microsecondsPerQuarterNote: 600_000),
+    ]))
+    report.expect(!presenter.menuOpen, cppID: id,
+                  message: "a document edit retires the row menu")
+    presenter.openFilterMenu(x: 0, y: 0)
+    presenter.focusRow(row: 1)
+    report.expect(presenter.menuOpen && presenter.currentRow == 1,
+                  cppID: id, message: "row changes leave the filter menu open")
 }

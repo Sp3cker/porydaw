@@ -154,6 +154,9 @@ public final class EventListPresenter {
     /// unless selection changes the mapped chunk.
     @QtIgnored
     public func documentDidChange(_ change: SessionChange) {
+        if change.domains.contains(.document) || change.trackRemap != nil {
+            invalidateRowMenu()
+        }
         guard attached, let session, !session.isClosed else { return }
 
         if change.domains.contains(.bank) {
@@ -170,6 +173,7 @@ public final class EventListPresenter {
         if change.domains.contains(.selection), visible,
            let selectedChunk = mappedChunk(for: session.selectedTrack, in: session.document),
            selectedChunk != chunkIndex {
+            invalidateRowMenu()
             chunkIndex = selectedChunk
             chunkChangedBySelection = true
         }
@@ -182,6 +186,7 @@ public final class EventListPresenter {
     @QtIgnored
     public func refresh() {
         guard attached else { return }
+        invalidateRowMenu()
         rebuildFromDocument(preservingCurrentRow: true)
     }
     /// Selects a document chunk and resets row focus as the native controller
@@ -195,6 +200,7 @@ public final class EventListPresenter {
         guard let session, !session.isClosed else { return }
         let target = session.document.rawChunks.indices.contains(index) ? index : -1
         guard target != chunkIndex else { return }
+        invalidateRowMenu()
         chunk = target
 
         chunkIndex = target
@@ -245,9 +251,11 @@ public final class EventListPresenter {
     public func focusRow(row: Int) {
         guard attached, let session, !session.isClosed,
               let tick = model.rowTick(row: row) else { return }
+        let oldRow = currentRow
         let oldPlayRow = model.playRow
         model.setCurrentRow(row)
         currentRow = model.currentRow
+        if currentRow != oldRow { invalidateRowMenu() }
         session.editCursor = tick
         publishPlayheadTransition(from: oldPlayRow)
     }
@@ -297,9 +305,16 @@ public final class EventListPresenter {
     // the document policy and interaction implementations live in extensions.
     public func isSelected(row: Int) -> Bool { dispatchIsSelected(row: row) }
     public func selectRow(row: Int, modifiers: Int) {
+        let previous = selectedRows
+        let previousRow = currentRow
         dispatchSelectRow(row: row, modifiers: modifiers)
+        if selectedRows != previous || currentRow != previousRow { invalidateRowMenu() }
     }
-    public func selectAll() { dispatchSelectAll() }
+    public func selectAll() {
+        let previous = selectedRows
+        dispatchSelectAll()
+        if selectedRows != previous { invalidateRowMenu() }
+    }
     public func setVisible(visible: Bool) { dispatchSetVisible(visible: visible) }
     public func isCellEditable(row: Int, column: Int) -> Bool {
         dispatchIsCellEditable(row: row, column: column)

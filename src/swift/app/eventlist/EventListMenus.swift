@@ -160,6 +160,12 @@ extension EventListPresenter {
         menuSeparatorCount = 0
     }
 
+    func invalidateRowMenu() {
+        if menuOpen && menuKind == .row {
+            dispatchDismissMenu()
+        }
+    }
+
     func dispatchActivateMenuAction(actionId: Int) {
         guard menuOpen, menuItems.asArray.contains(where: {
             $0.actionId == actionId && $0.enabled && !$0.separator

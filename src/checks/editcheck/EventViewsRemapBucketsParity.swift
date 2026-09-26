@@ -221,8 +221,46 @@ private func bucketParitySum(_ report: CheckReport) {
         report.expectEqual(expected: 1, actual: timeline.otherEvents.count, cppID: bucketSumID, what: entry.name + ": marker survives as one other event")
         let terminated = notes.count - unterminated
         report.expectEqual(expected: entry.pairedOffs, actual: terminated, cppID: bucketSumID, what: entry.name + ": paired off count follows terminated notes")
+        let classification = OtherEventsStrip.classify(timeline: timeline)
+        let stripFromEvents = classification.items.count - timeline.otherEvents.count
+        report.expect(classification.items.count >= timeline.otherEvents.count,
+                      cppID: bucketSumID,
+                      message: entry.name + ": the strip never drops the timeline's other events")
+        report.expectEqual(expected: entry.orphan ? 1 : 0,
+                           actual: classification.orphanNoteOffs, cppID: bucketSumID,
+                           what: entry.name + ": orphan note offs project into the strip bucket")
+        report.expectEqual(expected: expectedUnterminated,
+                           actual: classification.unpairedNoteOns, cppID: bucketSumID,
+                           what: entry.name + ": unterminated note ons stay countable")
+        report.expectEqual(expected: entry.orphan ? 1 : 0, actual: stripFromEvents,
+                           cppID: bucketSumID,
+                           what: entry.name + ": the strip accounts for unmatched timeline events")
+        if entry.unpaired {
+            let note = notes.first(where: { $0.pitch == 72 })
+            let zeroDuration = note.map {
+                $0.tick == 100 && $0.isUnterminated && $0.duration == 0
+                    && UInt64($0.tick) + UInt64($0.duration) == 100
+            } ?? false
+            report.expect(zeroDuration, cppID: bucketSumID,
+                          message: entry.name + ": an unterminated note projects zero duration")
+        }
+        report.expectEqual(expected: timeline.events.count,
+                           actual: notes.count + terminated + laneSeven + laneTen
+                               + document.lanePoints(track: 0, lane: .voice).count
+                               + stripFromEvents + timeline.tempoMap.count,
+                           cppID: bucketSumID,
+                           what: entry.name + ": every timeline event lands in exactly one song-view bucket")
     }
+    let overfull = MidiFile(division: 24, chunks: (0..<17).map { index in
+        MidiChunk(events: [.channel(status: 0xC0 | UInt8(index % 16), data0: 0)],
+                  endTick: 120)
+    })
+    let dropped = PlaybackTimeline.build(state: SongDocument(file: overfull).state,
+                                         sampleRate: 48000.0)
+    report.expectEqual(expected: 1, actual: dropped.droppedTracks, cppID: bucketSumID,
+                       what: "a seventeenth track drops exactly one engine track")
 }
+
 
 @MainActor
 private func clockParityFile() -> MidiFile {

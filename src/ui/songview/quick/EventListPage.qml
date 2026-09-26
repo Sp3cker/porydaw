@@ -1240,18 +1240,75 @@ FocusScope {
         anchors.fill: parent
         z: 10
         active: page.controller.menuOpen
+        visible: page.controller.menuOpen
         sourceComponent: Component {
             Item {
+                id: menuHost
                 focus: true
-                Keys.onEscapePressed: (event) => {
-                    page.controller.dismissMenu()
+                property string typeAhead: ""
+                function matchingRow(prefix) {
+                    const count = menuPanel.rowCount
+                    for (let offset = 1; offset <= count; ++offset) {
+                        const index = (menuPanel.highlightedRow + offset + count) % count
+                        const row = menuPanel.rowItem(index)
+                        if (row && row.active
+                            && row.itemData.text.toLowerCase().startsWith(prefix.toLowerCase()))
+                            return index
+                    }
+                    return -1
+                }
+                Keys.onPressed: (event) => {
+                    if (event.key === Qt.Key_Escape) {
+                        page.controller.dismissMenu()
+                    } else if (event.key === Qt.Key_Up || event.key === Qt.Key_Down) {
+                        const count = menuPanel.rowCount
+                        if (count > 0) {
+                            const direction = event.key === Qt.Key_Down ? 1 : -1
+                            const start = menuPanel.highlightedRow >= 0
+                                    ? menuPanel.highlightedRow : (direction > 0 ? -1 : 0)
+                            for (let offset = 1; offset <= count; ++offset) {
+                                const row = (start + direction * offset + count * 2) % count
+                                const item = menuPanel.rowItem(row)
+                                if (item && item.active) {
+                                    page.hoverRow(menuPanel, row)
+                                    break
+                                }
+                            }
+                        }
+                    } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                        if (menuPanel.highlightedRow >= 0)
+                            page.activateRow(menuPanel, menuPanel.highlightedRow)
+                    } else if (!(event.modifiers & (Qt.ControlModifier | Qt.AltModifier
+                                                     | Qt.MetaModifier))
+                               && event.text.length === 1 && event.text >= " ") {
+                        menuHost.typeAhead += event.text
+                        let row = menuHost.matchingRow(menuHost.typeAhead)
+                        if (row < 0 && menuHost.typeAhead.length > 1) {
+                            menuHost.typeAhead = event.text
+                            row = menuHost.matchingRow(menuHost.typeAhead)
+                        }
+                        if (row >= 0)
+                            page.hoverRow(menuPanel, row)
+                        typeAheadReset.restart()
+                    } else {
+                        event.accepted = false
+                        return
+                    }
                     event.accepted = true
+                }
+                Timer {
+                    id: typeAheadReset
+                    interval: 1000
+                    onTriggered: menuHost.typeAhead = ""
                 }
                 MouseArea {
                     anchors.fill: parent
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    enabled: page.controller.menuOpen
                     onPressed: page.controller.dismissMenu()
                 }
                 QuickMenuPanel {
+                    id: menuPanel
                     anchors.fill: parent
                     host: page
                     rootLevel: true
@@ -1301,8 +1358,23 @@ FocusScope {
     function hoverRow(panel, row) { panel.highlightedRow = row }
     function activateRow(panel, row) {
         const item = panel.rowItem(row)
-        if (item && item.active)
-            controller.activateMenuAction(item.itemData.actionId)
+        if (!item || !item.active)
+            return
+        const actionId = item.itemData.actionId
+        controller.activateMenuAction(actionId)
+        if (controller.menuOpen) {
+            Qt.callLater(function() {
+                if (!controller.menuOpen)
+                    return
+                for (let index = 0; index < panel.rowCount; ++index) {
+                    const candidate = panel.rowItem(index)
+                    if (candidate && candidate.itemData.actionId === actionId) {
+                        page.hoverRow(panel, index)
+                        return
+                    }
+                }
+            })
+        }
     }
     onVisibleChanged: {
         if (controller)

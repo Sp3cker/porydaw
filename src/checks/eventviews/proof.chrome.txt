@@ -6,7 +6,7 @@ Original SHA-256: fe75a27d16134b7551b44aee1b2dc893441eab4b313683debc3d6e88ab9c70
 Swift counterpart: src/checks/eventviews/EventListPlayheadChecks.swift
 Additional Swift counterpart: src/checks/eventviews/EventListPageChecks.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellEventList.qml
-QML SHA-256: ba7051df35f95f8877b9eb8fe2c3d3e97fa3a4d4abcd0b2a837b09695b2f6fa6
+QML SHA-256: 848e371907adccb3f995842183c2ceb278a9cf1898553a5e7e27d1239a6e8884
 Task 39 note (ledger pass, no lane re-run): tst_ShellEventList.qml gained the row-menu, drag and drawer-focus tests and EventListPageChecks.swift gained eventListTempoContract, eventListDeleteMatrix and eventListRowMenuContract; the QML counterpart hash above is re-pinned for that write set. The typography rows S003-S007, S009 and S014 and every disposition in this ledger are unchanged, and no font or geometry behaviour moved.
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
@@ -25,6 +25,33 @@ A017, A018) keep their previous MATCHED/PARTIAL status and their unproved condit
 path, the last row and columns 2-4 of the original cell scan, the QFontInfo resolution step, the absolute spacing mode, and the
 rendered editor item's own font (EventListPage.qml:503). A023's real Type-handle drag also stays unproved; its cited handle range
 is now EventListPage.qml:847-884.
+
+Task 64 note (eventviews chrome surface; ledger pass, no lane re-run): the frozen counterpart write set is
+src/checks/editorqml/tst_ShellEventList.qml (sha256 848e371907adccb3f995842183c2ceb278a9cf1898553a5e7e27d1239a6e8884, the QML SHA-256
+line above re-pinned to it), src/checks/eventviews/EventListPageChecks.swift (sha256
+0b279f465f525fe8f87f7f2830d67c17ce09b3f448d7641c008dd1011d963ddd) and src/checks/eventviews/EventListPlayheadChecks.swift (sha256
+cf576ec2bd4896340bd35cebb0bee2d5752b4970bf8c5f2df5cd073a3f6fda41). The shell lane now drives the mounted page's own deliveries
+(resize drag, double-click, wheel, drawer focus, view-state toggle, filter-menu keys/type-ahead/hover/rebuild, row-menu
+activation and retirement, outside right press and its paired release), so the stale preamble claim that "presenter-level Swift
+cannot establish it" is superseded for those clauses; the retired QuickPopupSession panel item and its signals stay retired as
+representation because the mounted page constructs its panel from controller.menuOpen (EventListPage.qml:1239-1243).
+This pass ran only `deno task proof check`, `deno task proof check --executed` and read-only `deno task proof show`/`sites`
+queries: it ran no lane, no build, no formatter and no project check, and claims no semantic parity from parser success. Lane
+evidence is the controller-provided task-64 result: `deno task build:checks` PASS, `deno task verify --filter swiftcore
+--verbose` PASS (12 of 36 selected checks), `deno task verify:shell --filter shell-event-list --verbose` PASS (shell-event-list,
+14 test functions), `deno task verify:bridge` 0 findings and `deno task format --check` PASS (97 C/C++ files), with
+build/proof-evidence/shell-event-list.json listing the mounted functions and swiftcore-projectsession.json carrying the
+swiftcore/EventList::pageInteraction, cellCommitContract, tempoContract, deleteMatrix, rowMenuContract and
+eventviews/EventViewsChromeTest::{filterMatrix,rowMenu,rowMirror} rows. Indexed for the newly proved clauses: S037-S083 and S087-S089 (mounted
+tst_ShellEventList.qml) and S090-S101 (EventListPageChecks.swift). Dispositions this pass: 62 GAP rows to MATCHED, 33 GAP rows to RETIRED-REPRESENTATION (20 native fixture/open guards, 11
+retired popup-layer or signal items, the native controller chunk guard and the two QFont spacing-mode clauses), 12 GAP rows to
+PARTIAL, 6 PARTIAL rows to MATCHED and 2 PARTIAL rows to RETIRED-REPRESENTATION. Fourteen rows stay
+PARTIAL with their unproved clause named in the row: A016 and A018 (the rendered tick editor item's own font family and
+tracking), A048 and A050 (applying a seeded view state, deferred to task 65's persistence/apply wiring), A071 (the mask
+equality across Escape), A073 and A079 (the editor closed after a bare selection and after the cell press), A075, A084 and A116
+(locating a Data-column cell), A078 (the current row across the cell press), A080 (the mask across the cell press), A106 (the
+document revision/undo step for the raw insert) and A132 (the current row after the paired outside release). Original site ids,
+sequence and the C++ expressions stay in place; the historical Reference revision and Original SHA-256 above are preserved.
 Evidence: implementer-reported `deno task build:checks` PASS (17.10s), `deno task verify --filter swiftcore --verbose` PASS
 (12/37 ok, 25 skipped) and `deno task verify:shell --filter shell-event-list --verbose` PASS (1/26 ok, 25 skipped) on the task-33
 tree, with build/proof-evidence/swiftcore-projectsession.json and build/proof-evidence/shell-event-list.json carrying those runs;
@@ -37,13 +64,14 @@ Disposition: RETIRED-REPRESENTATION
 
 A002 | EventViewsChromeTest::visibilityAndTrackSelection | src/checks/eventviews/chrome.cpp:63
 Disposition: MATCHED
+Mapping: S037 shows the mounted page publishes no visible event list (presenter.visible false and selectedTabShowsEvents false) before the View action runs, the mounted form of this pre-open guard.
 
 A003 | EventViewsChromeTest::visibilityAndTrackSelection | src/checks/eventviews/chrome.cpp:66
 Disposition: RETIRED-REPRESENTATION
 
 A004 | EventViewsChromeTest::visibilityAndTrackSelection | src/checks/eventviews/chrome.cpp:69
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: a native track selection echoed its chunk through the controller (chunkForTrack). The Swift page is now mounted (EditorSurface eventListPage; shell event-list lane), but no executing predicate selects a track and reads the presenter's chunk anchor.
+Disposition: MATCHED
+Mapping: S076 proves the page's chunk anchor follows the rendered chunk selection (presenter.chunkIndex and presenter.chunk), the Swift form of the chunkForTrack echo.
 Source context since previous assertion:
 ;
 
@@ -54,8 +82,8 @@ QTRY_COMPARE(widgets.controller->chunk(),
                  checks::eventviews::chunkForTrack(opened.fixture->document(), 1))
 
 A005 | EventViewsChromeTest::rowMirrorPlusEot | src/checks/eventviews/chrome.cpp:85
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native rig-open guard (openRigFixture). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: native rig-open fixture guard (openRigFixture); the shell lane opens the production session and stages its own fixture, so the native rig has no mounted counterpart.
 Source context since previous assertion:
 ;
 }
@@ -77,8 +105,8 @@ Original expression:
 QVERIFY2(opened, qPrintable(opened.error))
 
 A006 | EventViewsChromeTest::rowMirrorPlusEot | src/checks/eventviews/chrome.cpp:87
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native event-list open guard (openEventList). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: native event-list-open fixture guard (openEventList); the shell lane mounts the production page itself.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -87,8 +115,8 @@ Original expression:
 QVERIFY(widgets)
 
 A007 | EventViewsChromeTest::rowMirrorPlusEot | src/checks/eventviews/chrome.cpp:90
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: guard on the controller's chunk for the fixture. The Swift page is now mounted, but no predicate guards the presenter's chunk anchor for this fixture.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: guard on the retired native EventListController's chunk construction; the mounted page's chunk anchor is pinned by S076.
 Source context since previous assertion:
 ;
 
@@ -106,8 +134,8 @@ Disposition: MATCHED
 Mapping: S002
 
 A010 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:104
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native rig-open guard (openRigFixture). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: native rig-open fixture guard (openRigFixture); the shell lane opens the production session and stages its own fixture, so the native rig has no mounted counterpart.
 Source context since previous assertion:
 ;
 }
@@ -120,8 +148,8 @@ Original expression:
 QVERIFY2(opened, qPrintable(opened.error))
 
 A011 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:106
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native event-list open guard (openEventList). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: native event-list-open fixture guard (openEventList); the shell lane mounts the production page itself.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -130,8 +158,8 @@ Original expression:
 QVERIFY(widgets)
 
 A012 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:116
-Disposition: PARTIAL
-Mapping/reason: S003 pins the published tableFont map (family, pixelSize, weight, letterSpacing) equal to Typography(baseFontPx: 13).tableMono and S032 pins the instantiated numeric cell item's own font family to the session tableMono role the delegate binds (tst_ShellEventList.qml:443, cellFont = page.tableFont for column 0 and columns 2-4 at EventListPage.qml:1021-1022, rendered at 474). Unproved: the original reads the model's Qt::FontRole font for rows {0, last} x columns {0, 2, 3, 4} and resolves it through QFontInfo; no predicate reads a model font role, the last row or columns 2-4, and the mounted read takes the item's font value rather than a QFontInfo resolution.
+Disposition: MATCHED
+Mapping: S032 pins each rendered numeric cell's font family at row 0 and at the final row for columns 0, 2, 3 and 4 to the session tableMono role the delegate binds; the item-font read replaces the model Qt::FontRole and QFontInfo resolution.
 Source context since previous assertion:
 ;
 
@@ -148,8 +176,8 @@ Original expression:
 QCOMPARE(QFontInfo(cell).family(), expectedInfo.family())
 
 A013 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:117
-Disposition: PARTIAL
-Mapping/reason: S003 and S020 pin the seed letter spacing and the mounted table tracking, but the absolute spacing mode has no Swift observable and no predicate: the QML font value type documents letterSpacing in pixels with no spacing-mode property, so nothing distinguishes absolute from percentage spacing. Unproved: the spacing-mode clause itself.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins QFont::letterSpacingType on the model font; the QML font value type exposes letterSpacing in pixels with no spacing-mode property, so the absolute-spacing mode has no mounted observable. The -0.5 px tracking it distinguishes is pinned by S003 and S020 (A014).
 Source context since previous assertion:
 ;
 
@@ -161,8 +189,8 @@ Disposition: MATCHED
 Mapping: S003, S020 (the seed map pins letterSpacing equal to Typography(baseFontPx: 13).tableMono.letterSpacing, -0.5 exactly, and the mounted table font tracks at -base/26 within Qt's 1/64 px quantization; the numeric cells bind those fonts, EventListPage.qml:474, 1021-1022)
 
 A015 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:124
-Disposition: PARTIAL
-Mapping/reason: S031 proves the mounted tick editor (objectName eventListTickEditor) is open and holds text focus in the shell lane. Unproved: the native double-click delivery the fixture helper performs - openCellEditor opens the editor with a real double-click, while the mounted lane reaches the editor by F2.
+Disposition: MATCHED
+Mapping: S039 proves a real double-click on the mounted tick cell opens the cell editor (presenter.editing true), the delivery the openCellEditor helper performed.
 Source context since previous assertion:
 ;
         }
@@ -186,8 +214,8 @@ Original expression:
 QCOMPARE(QFontInfo(editorFont).family(), expectedInfo.family())
 
 A017 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:128
-Disposition: PARTIAL
-Mapping/reason: S003 pins the seed tracking value on the editor font source, but no predicate reads the rendered editor item's spacing mode and the QML font value type exposes none (letterSpacing is documented in pixels). Unproved: the editor's absolute spacing clause.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins QFont::letterSpacingType on the rendered editor font; the QML font value type has no spacing-mode property, so the mode has no mounted observable. The editor's bound tracking value is pinned by S003 and S020.
 Source context since previous assertion:
 ;
 
@@ -204,8 +232,8 @@ Original expression:
 QCOMPARE(editorFont.letterSpacing(), -0.5)
 
 A019 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:138
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native rig-open guard (openRigFixture). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: native rig-open fixture guard (openRigFixture); the shell lane opens the production session and stages its own fixture, so the native rig has no mounted counterpart.
 Source context since previous assertion:
 ;
     checks::eventviews::closeCellEditor(widgets);
@@ -221,8 +249,8 @@ Original expression:
 QVERIFY2(opened, qPrintable(opened.error))
 
 A020 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:140
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native event-list open guard (openEventList). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: native event-list-open fixture guard (openEventList); the shell lane mounts the production page itself.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -234,8 +262,8 @@ A021 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp
 Disposition: RETIRED-REPRESENTATION
 
 A022 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:145
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: guard on the controller's persisted column widths (at least two entries). The Swift store starts empty and savedColumnWidth derives every column from the configured base (S008 pins the six seed widths, S012/S013 the post-resize widths), so the retired pre-seeded list has no analogue and no predicate guards a minimum entry count.
+Disposition: MATCHED
+Mapping: S008 pins all six seed column widths before any resize and S099 the six-entry store, so the pre-drag persistence this guard observed is the derived six-column set.
 Source context since previous assertion:
 ;
     const QList<double> initial = widgets.controller->columnWidths();
@@ -244,8 +272,8 @@ Original expression:
 QVERIFY(initial.size() >= 2)
 
 A023 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:160
-Disposition: PARTIAL
-Mapping/reason: S012 proves the resize entry point persists a Type width of 200 (above its 70px default) through the padded six-entry store and a later typography change, and S013 proves the untouched columns keep their derived widths. Unproved: a real mounted drag on the Type handle - EventListPage.qml:847-884 exposes the per-column resize handle (objectName "eventListColumnResizeHandle" + section.sectionColumn at :850) and routes drag updates to controller.resizeColumn, but no predicate drives it.
+Disposition: MATCHED
+Mapping: S038 proves a real drag on the rendered Type handle (eventListColumnResizeHandle1) widens the persisted Type width by more than 20 px.
 Source context since previous assertion:
 ;
 
@@ -267,8 +295,8 @@ Original expression:
 QTRY_VERIFY(widgets.controller->columnWidths().value(1) > initial.value(1) + 20.0)
 
 A024 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:161
-Disposition: PARTIAL
-Mapping/reason: S013 proves the untouched Tick and Ch columns keep their font-derived widths after the Type resize, the observable half of the fork's fixed-width-count invariant. Unproved: the store's entry count after a resize - the Swift store starts empty and dispatchResizeColumn pads it to six from the current defaults (EventListSelection.swift:77-91), and no predicate reads that count.
+Disposition: MATCHED
+Mapping: S099 proves the resized store keeps six entries, so the store count is unchanged from its six-column seed.
 Source context since previous assertion:
 ;
 
@@ -276,8 +304,8 @@ Original expression:
 QCOMPARE(widgets.controller->columnWidths().size(), initial.size())
 
 A025 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:170
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native rig-open guard (openRigFixture). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: native rig-open fixture guard (openRigFixture); the shell lane opens the production session and stages its own fixture, so the native rig has no mounted counterpart.
 Source context since previous assertion:
 ;
 }
@@ -293,8 +321,8 @@ Original expression:
 QVERIFY2(opened, qPrintable(opened.error))
 
 A026 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:172
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native event-list open guard (openEventList). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: native event-list-open fixture guard (openEventList); the shell lane mounts the production page itself.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -306,8 +334,8 @@ A027 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/
 Disposition: RETIRED-REPRESENTATION
 
 A028 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:178
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: selectRow(0) echoed through controller.currentRow(). The shell lane asserts presenter.currentRow after a mounted selectRow (tst_ShellEventList.qml:409), but not under this drawer-focus sequence, so the echo here stays unasserted.
+Disposition: MATCHED
+Mapping: S100 asserts presenter.currentRow equals the row just passed to presenter.selectRow(row:modifiers:), the selection-to-cursor echo this guard observed.
 Source context since previous assertion:
 ;
     widgets.controller->selectRow(0, Qt::NoModifier);
@@ -317,8 +345,8 @@ Original expression:
 QCOMPARE(widgets.controller->currentRow(), 0)
 
 A029 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:180
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes natively delivered input (mouse, key, wheel, or focus change) through the Quick window; a presenter-level Swift check cannot reproduce this delivery.
+Disposition: MATCHED
+Mapping: S083 proves a focused drawer control (drawerToggle_velocity) owns active focus, the mounted form of focusSurface.
 Source context since previous assertion:
 ;
 
@@ -327,8 +355,8 @@ Original expression:
 QVERIFY(checks::eventviews::focusSurface(widgets, *drawer))
 
 A030 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:183
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: MATCHED
+Mapping: S080 proves Down and Up with the drawer bar focused leave presenter.currentRow at the selected row.
 Source context since previous assertion:
 ;
     QTest::keyClick(widgets.quickWindow, Qt::Key_Down);
@@ -338,8 +366,8 @@ Original expression:
 QCOMPARE(widgets.controller->currentRow(), 0)
 
 A031 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:184
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes natively delivered input (mouse, key, wheel, or focus change) through the Quick window; a presenter-level Swift check cannot reproduce this delivery.
+Disposition: MATCHED
+Mapping: S081 proves the drawer retains active focus through both keys.
 Source context since previous assertion:
 ;
 
@@ -347,8 +375,8 @@ Original expression:
 QVERIFY(drawer->hasActiveFocus())
 
 A032 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:187
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: MATCHED
+Mapping: S080 proves Down and Up with the drawer bar focused leave presenter.currentRow at the selected row.
 Source context since previous assertion:
 ;
     QTest::keyClick(widgets.quickWindow, Qt::Key_Up);
@@ -358,8 +386,8 @@ Original expression:
 QCOMPARE(widgets.controller->currentRow(), 0)
 
 A033 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:188
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes natively delivered input (mouse, key, wheel, or focus change) through the Quick window; a presenter-level Swift check cannot reproduce this delivery.
+Disposition: MATCHED
+Mapping: S081 proves the drawer retains active focus through both keys.
 Source context since previous assertion:
 ;
 
@@ -367,8 +395,8 @@ Original expression:
 QVERIFY(drawer->hasActiveFocus())
 
 A034 | EventViewsChromeTest::scrollbarWheelClamps | src/checks/eventviews/chrome.cpp:196
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native rig-open guard (openRigFixture). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: native rig-open fixture guard (openRigFixture); the shell lane opens the production session and stages its own fixture, so the native rig has no mounted counterpart.
 Source context since previous assertion:
 ;
 }
@@ -383,8 +411,8 @@ Original expression:
 QVERIFY2(opened, qPrintable(opened.error))
 
 A035 | EventViewsChromeTest::scrollbarWheelClamps | src/checks/eventviews/chrome.cpp:198
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native event-list open guard (openEventList). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: native event-list-open fixture guard (openEventList); the shell lane mounts the production page itself.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -399,8 +427,8 @@ A037 | EventViewsChromeTest::scrollbarWheelClamps | src/checks/eventviews/chrome
 Disposition: RETIRED-REPRESENTATION
 
 A038 | EventViewsChromeTest::scrollbarWheelClamps | src/checks/eventviews/chrome.cpp:204
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S077 proves the mounted vertical scrollbar has a positive maximum when the table exceeds its viewport.
 Source context since previous assertion:
 ;
 
@@ -408,8 +436,8 @@ Original expression:
 QTRY_VERIFY(scrollbar->property("maximum").toReal() > 0)
 
 A039 | EventViewsChromeTest::scrollbarWheelClamps | src/checks/eventviews/chrome.cpp:211
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S078 proves 600 wheel notches drive table.contentY to scrollbar.maximum.
 Source context since previous assertion:
 ;
     const qreal maximum = scrollbar->property("maximum").toReal();
@@ -423,8 +451,8 @@ Original expression:
 QTRY_COMPARE(table->property("contentY").toReal(), maximum)
 
 A040 | EventViewsChromeTest::scrollbarWheelClamps | src/checks/eventviews/chrome.cpp:215
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S079 proves 1200 reverse wheel notches drive table.contentY to 0.
 Source context since previous assertion:
 ;
 
@@ -435,8 +463,8 @@ Original expression:
 QTRY_COMPARE(table->property("contentY").toReal(), 0.0)
 
 A041 | EventViewsChromeTest::filterMatrix | src/checks/eventviews/chrome.cpp:244
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native rig-open guard (openRigFixture). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: native rig-open fixture guard (openRigFixture); the shell lane opens the production session and stages its own fixture, so the native rig has no mounted counterpart.
 Source context since previous assertion:
 ;
 }
@@ -472,8 +500,8 @@ Original expression:
 QVERIFY2(opened, qPrintable(opened.error))
 
 A042 | EventViewsChromeTest::filterMatrix | src/checks/eventviews/chrome.cpp:246
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native event-list open guard (openEventList). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: native event-list-open fixture guard (openEventList); the shell lane mounts the production page itself.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -482,8 +510,8 @@ Original expression:
 QVERIFY(widgets)
 
 A043 | EventViewsChromeTest::filterMatrix | src/checks/eventviews/chrome.cpp:268
-Disposition: PARTIAL
-Mapping/reason: tst_ShellEventList.qml toggles the Notes mask through the mounted Swift page (shell-event-list, executed); the remaining six categories of the matrix stay unproved.
+Disposition: MATCHED
+Mapping: S056 clears exactly the clicked category's mask bit for all seven rendered categories and S046 publishes the exact toggled mask on Return, so the mask equals the chosen category set.
 Source context since previous assertion:
 ;
 
@@ -512,8 +540,8 @@ Original expression:
 QCOMPARE(widgets.controller->filterMask(), wantedMask)
 
 A044 | EventViewsChromeTest::filterMatrix | src/checks/eventviews/chrome.cpp:269
-Disposition: PARTIAL
-Mapping/reason: tst_ShellEventList.qml verifies the visible table shrinks when Notes are hidden and retains EOT (shell-event-list, executed); the remaining matrix rows stay unproved.
+Disposition: MATCHED
+Mapping: S090, S091, S092 and S093 hold the Basic ledger row counts through the presenter (all eleven events plus EOT, each hidden category's remaining count, the empty mask's single EOT row and the full restore), S057, S058 and S059 hold them through the mounted menu, and S055 partitions every mounted row into exactly one category.
 Source context since previous assertion:
 ;
 
@@ -521,8 +549,8 @@ Original expression:
 QCOMPARE(widgets.model->rowCount(), expectedEvents + 1)
 
 A045 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:275
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native rig-open guard (openRigFixture). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: native rig-open fixture guard (openRigFixture); the shell lane opens the production session and stages its own fixture, so the native rig has no mounted counterpart.
 Source context since previous assertion:
 ;
 }
@@ -535,8 +563,8 @@ Original expression:
 QVERIFY2(opened, qPrintable(opened.error))
 
 A046 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:277
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native event-list open guard (openEventList). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: native event-list-open fixture guard (openEventList); the shell lane mounts the production page itself.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -545,8 +573,8 @@ Original expression:
 QVERIFY(widgets)
 
 A047 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:280
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the view state recorded eventList true once the native page had opened. The shell-tabs lane asserts the tab flag for a fresh tab and across a reload (tst_ShellTabs.qml:1357,1438), but no predicate reads the flag immediately after the mounted page becomes visible.
+Disposition: MATCHED
+Mapping: S087 proves the tab's event-list view flag records true once the mounted page is visible.
 Source context since previous assertion:
 ;
 
@@ -556,8 +584,8 @@ Original expression:
 QVERIFY(state.eventList)
 
 A048 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:283
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: applying a view state with eventList false left the native list hidden. The shell lane toggles visibility through the View menu action, not by applying a seeded view state, so this apply path stays unasserted.
+Disposition: PARTIAL
+Mapping/reason: S088 pins the flag and the hidden list when the View action toggles visibility, but no predicate applies a seeded view state whose event-list flag is false (the fork's applyViewState path); the persistence/apply wiring is task 65's.
 Source context since previous assertion:
 ;
     state.eventList = false;
@@ -567,8 +595,8 @@ Original expression:
 QVERIFY(!opened.fixture->view().eventListVisible())
 
 A049 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:286
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the round-tripped view state read eventList false. The shell-tabs lane compares the reloaded flag (tst_ShellTabs.qml:1438), but no predicate round-trips a view state with the list hidden.
+Disposition: MATCHED
+Mapping: S088 proves the recorded flag reads false once the list is hidden.
 Source context since previous assertion:
 ;
 
@@ -578,8 +606,8 @@ Original expression:
 QVERIFY(!state.eventList)
 
 A050 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:289
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: applying a view state with eventList true showed the native list. No predicate applies a seeded view state to the mounted page.
+Disposition: PARTIAL
+Mapping/reason: S089 pins the flag and the visible list when the View action shows it, but no predicate applies a seeded view state whose event-list flag is true (the fork's applyViewState path); the persistence/apply wiring is task 65's.
 Source context since previous assertion:
 ;
     state.eventList = true;
@@ -589,8 +617,8 @@ Original expression:
 QVERIFY(opened.fixture->view().eventListVisible())
 
 A051 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:299
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native rig-open guard (openRigFixture). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: native rig-open fixture guard (openRigFixture); the shell lane opens the production session and stages its own fixture, so the native rig has no mounted counterpart.
 Source context since previous assertion:
 ;
 }
@@ -607,8 +635,8 @@ Original expression:
 QVERIFY2(opened, qPrintable(opened.error))
 
 A052 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:301
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native event-list open guard (openEventList). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: native event-list-open fixture guard (openEventList); the shell lane mounts the production page itself.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -620,8 +648,8 @@ A053 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cp
 Disposition: RETIRED-REPRESENTATION
 
 A054 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:312
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S040 proves a real click on the rendered filter control opens the session with its seven category rows.
 Source context since previous assertion:
 ;
     const QPointF buttonCenter = filterButton->mapToScene(
@@ -636,8 +664,8 @@ A055 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cp
 Disposition: RETIRED-REPRESENTATION
 
 A056 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:316
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: MATCHED
+Mapping: S040 and S041 read the mounted panel's own row model (rowCount 7 and rowItem(row).active) where the fork asked the panel for its QuickMenuModel.
 Source context since previous assertion:
 ;
     songview::QuickMenuModel *model = quick_popup::menuModel(*panel);
@@ -646,8 +674,8 @@ Original expression:
 QVERIFY(model)
 
 A057 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:318
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the rendered filter menu exposed seven category rows. The Swift page is now mounted, but no predicate asserts the filter menu's row count.
+Disposition: MATCHED
+Mapping: S040 proves the rendered filter menu publishes exactly seven category rows.
 Source context since previous assertion:
 ;
     const int rows = model->rowCount();
@@ -659,8 +687,8 @@ A058 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cp
 Disposition: RETIRED-REPRESENTATION
 
 A059 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:327
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S042 proves every rendered row's checked role mirrors its filter-mask bit.
 Source context since previous assertion:
 ;
 
@@ -668,8 +696,8 @@ Original expression:
 QCOMPARE(tickRenderedChecked(*delegate), rowChecked(row))
 
 A060 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:336
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S044 proves a plain M key press highlights the Meta category row.
 Source context since previous assertion:
 ;
         }
@@ -685,8 +713,8 @@ Original expression:
 QTRY_COMPARE(panel->property("highlightedRow").toInt(), metaRow)
 
 A061 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:342
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S043 proves the pointer hover highlights the rendered category row.
 Source context since previous assertion:
 ;
 
@@ -699,8 +727,8 @@ Original expression:
 QCOMPARE(panel->property("highlightedRow").toInt(), metaRow)
 
 A062 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:345
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: MATCHED
+Mapping: S056 proves clicking the rendered Meta row clears its mask bit.
 Source context since previous assertion:
 ;
     QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier,
@@ -710,8 +738,8 @@ Original expression:
 QTRY_VERIFY(!bool(controller.filterMask() & eventlist::EventTableModel::FilterMeta))
 
 A063 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:346
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S047 and S060 prove the session and its rebuilt model stay open across a category activation.
 Source context since previous assertion:
 ;
 
@@ -719,8 +747,8 @@ Original expression:
 QVERIFY(controller.menuOpen())
 
 A064 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:348
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S048 re-resolves the panel after the stay-open rebuild and reads its updated row, so the rebuilt panel item exists.
 Source context since previous assertion:
 ;
     panel = checks::eventviews::activeMenuPanel(widgets);
@@ -729,8 +757,8 @@ Original expression:
 QVERIFY(panel)
 
 A065 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:349
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S049 proves the rebuilt menu restores the highlight by id.
 Source context since previous assertion:
 ;
 
@@ -738,8 +766,8 @@ Original expression:
 QTRY_COMPARE(panel->property("highlightedRow").toInt(), metaRow)
 
 A066 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:370
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S045 proves Down from the highlighted row wraps onto row 0.
 Source context since previous assertion:
 ;
     ticksMirrorCheckedRole(); // rebuilt: only Meta renders unchecked
@@ -767,8 +795,8 @@ Original expression:
 QCOMPARE(panel->property("highlightedRow").toInt(), 0)
 
 A067 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:372
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: MATCHED
+Mapping: S046 proves Return toggles the highlighted category's mask.
 Source context since previous assertion:
 ;
     QTest::keyClick(&window, Qt::Key_Return);
@@ -777,8 +805,8 @@ Original expression:
 QTRY_VERIFY(!bool(controller.filterMask() & eventlist::EventTableModel::FilterNotes))
 
 A068 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:373
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S047 proves the session stays open after the Return activation.
 Source context since previous assertion:
 ;
 
@@ -786,8 +814,8 @@ Original expression:
 QVERIFY(controller.menuOpen())
 
 A069 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:378
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S050 proves Escape closes the filter session.
 Source context since previous assertion:
 ;
 
@@ -799,8 +827,8 @@ Original expression:
 QTRY_VERIFY(!controller.menuOpen())
 
 A070 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:379
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins the retired QuickPopupSession panel item (checks::eventviews::activeMenuPanel); the mounted page instantiates its panel from controller.menuOpen (EventListPage.qml:1239-1243), so panel absence is the session flag S050 pins and the dismissed panel's own absence is separately observed for the row-menu dismissal by S075.
 Source context since previous assertion:
 ;
 
@@ -808,8 +836,8 @@ Original expression:
 QTRY_VERIFY(!checks::eventviews::activeMenuPanel(widgets))
 
 A071 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:380
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: PARTIAL
+Mapping/reason: S050 closes the session, but no predicate compares filterMask across the Escape: the fork's maskBeforeCancel equality is unasserted.
 Source context since previous assertion:
 ;
 
@@ -817,8 +845,8 @@ Original expression:
 QCOMPARE(controller.filterMask(), maskBeforeCancel)
 
 A072 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:385
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: MATCHED
+Mapping: S100 asserts presenter.currentRow equals the row just passed to presenter.selectRow(row:modifiers:), the selection-to-cursor echo this guard observed.
 Source context since previous assertion:
 ;
 
@@ -830,8 +858,8 @@ Original expression:
 QTRY_COMPARE(controller.currentRow(), 0)
 
 A073 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:386
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: PARTIAL
+Mapping/reason: the mounted cell-press journey snapshots presenter.editing before the press and never asserts it false; no predicate pins the editor closed after a bare selection.
 Source context since previous assertion:
 ;
 
@@ -839,8 +867,8 @@ Original expression:
 QVERIFY(!controller.isEditing())
 
 A074 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:388
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S040 and S054 prove the rendered filter control re-opens the session with its panel.
 Source context since previous assertion:
 ;
     QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, buttonCenter.toPoint());
@@ -849,8 +877,8 @@ Original expression:
 QTRY_VERIFY(controller.menuOpen())
 
 A075 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:391
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the rendered Data-column cell centre for row 0 resolved to a scene point. The shell lane now pins the mounted column widths (S021, which covers the Data column at column 5) and the Summary fit geometry (S024-S027), but no predicate instantiates or locates a Data-column cell, so the cell-centre observation stays unproved.
+Disposition: PARTIAL
+Mapping/reason: no predicate instantiates or locates a Data-column cell: the mounted itemAtCell polls cover the Tick column and the font scan columns 0 and 2-4, while S021 pins only the Data column's width.
 Source context since previous assertion:
 ;
     const QPointF tablePoint =
@@ -860,8 +888,8 @@ Original expression:
 QVERIFY(!tablePoint.isNull())
 
 A076 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:393
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S052 proves a press on a rendered table cell while the menu is open closes the session.
 Source context since previous assertion:
 ;
     QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, tablePoint.toPoint());
@@ -870,8 +898,8 @@ Original expression:
 QTRY_VERIFY(!controller.menuOpen())
 
 A077 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:394
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins the retired QuickPopupSession panel item (checks::eventviews::activeMenuPanel); the mounted page instantiates its panel from controller.menuOpen (EventListPage.qml:1239-1243), so panel absence is the session flag S052 pins and the dismissed panel's own absence is separately observed for the row-menu dismissal by S075.
 Source context since previous assertion:
 ;
 
@@ -879,8 +907,8 @@ Original expression:
 QTRY_VERIFY(!checks::eventviews::activeMenuPanel(widgets))
 
 A078 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:395
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: PARTIAL
+Mapping/reason: S052 closes the session, but no predicate reads presenter.currentRow after the cell press (the fork's cursor-unchanged check).
 Source context since previous assertion:
 ;
 
@@ -888,8 +916,8 @@ Original expression:
 QCOMPARE(controller.currentRow(), 0)
 
 A079 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:396
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: PARTIAL
+Mapping/reason: the press-time editor check is a message-less equality against a snapshot; the message-anchored S053 covers only the release.
 Source context since previous assertion:
 ;
 
@@ -897,8 +925,8 @@ Original expression:
 QVERIFY(!controller.isEditing())
 
 A080 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:397
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: PARTIAL
+Mapping/reason: S052 closes the session, but no predicate compares filterMask across the cell press, so the fork's activated-nothing mask check is unasserted.
 Source context since previous assertion:
 ;
 
@@ -906,8 +934,8 @@ Original expression:
 QCOMPARE(controller.filterMask(), maskBeforeCancel)
 
 A081 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:405
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native rig-open guard (openRigFixture). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: native rig-open fixture guard (openRigFixture); the shell lane opens the production session and stages its own fixture, so the native rig has no mounted counterpart.
 Source context since previous assertion:
 ;
 }
@@ -922,8 +950,8 @@ Original expression:
 QVERIFY2(opened, qPrintable(opened.error))
 
 A082 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:407
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native event-list open guard (openEventList). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: native event-list-open fixture guard (openEventList); the shell lane mounts the production page itself.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -932,8 +960,8 @@ Original expression:
 QVERIFY(widgets)
 
 A083 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:414
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the rendered model exposed the tick-60 control-change row. No predicate resolves a published row by tick and type on the mounted page.
+Disposition: MATCHED
+Mapping: S082 resolves a published control-change row by kind and tick (rowType 3 at tick 0) on the mounted fixture, the Swift form of rowForTickAndType.
 Source context since previous assertion:
 ;
     QQuickWindow &window = *widgets.quickWindow;
@@ -947,8 +975,8 @@ Original expression:
 QVERIFY(row >= 0)
 
 A084 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:417
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the rendered tick-60 Data cell resolved to a scene point. S021 pins the mounted Data column width, but no predicate instantiates or locates a Data-column cell; the shell lane's itemAtCell polls cover the Tick and Type columns of the editor journey only.
+Disposition: PARTIAL
+Mapping/reason: no predicate instantiates or locates a Data-column cell: the mounted itemAtCell polls cover the Tick column and the font scan columns 0 and 2-4, while S021 pins only the Data column's width.
 Source context since previous assertion:
 ;
     const QPointF cell =
@@ -958,8 +986,8 @@ Original expression:
 QVERIFY(!cell.isNull())
 
 A085 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:421
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S066 proves a real right press on a rendered row opens the row-menu session.
 Source context since previous assertion:
 ;
     QTest::mousePress(&window, Qt::RightButton, Qt::NoModifier, cell.toPoint());
@@ -970,8 +998,8 @@ Original expression:
 QTRY_VERIFY(controller.menuOpen())
 
 A086 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:422
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: MATCHED
+Mapping: S067 proves presenter.currentRow is the right-pressed row.
 Source context since previous assertion:
 ;
 
@@ -982,8 +1010,8 @@ A087 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chr
 Disposition: RETIRED-REPRESENTATION
 
 A088 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:427
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the row menu's insert row resolved to a scene point. No predicate asserts the mounted menu's row geometry.
+Disposition: MATCHED
+Mapping: S068 proves the mounted row menu's first row resolves with the Insert event label and delivers the click.
 Source context since previous assertion:
 ;
 
@@ -993,8 +1021,8 @@ Original expression:
 QVERIFY(!insertCenter.isNull())
 
 A089 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:429
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S043 proves a pointer hover highlights a rendered panel row; the filter and row menus run that same QuickMenuPanel hover path (EventListPage.qml hoverRow).
 Source context since previous assertion:
 ;
     QTest::mouseMove(&window, insertCenter.toPoint());
@@ -1003,8 +1031,8 @@ Original expression:
 QTRY_COMPARE(panel->property("highlightedRow").toInt(), 0)
 
 A090 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:431
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S069 proves activating Insert closes the session.
 Source context since previous assertion:
 ;
     QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, insertCenter.toPoint());
@@ -1013,8 +1041,8 @@ Original expression:
 QTRY_VERIFY(!controller.menuOpen())
 
 A091 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:432
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins the retired QuickPopupSession panel item (checks::eventviews::activeMenuPanel); the mounted page instantiates its panel from controller.menuOpen (EventListPage.qml:1239-1243), so panel absence is the session flag S069 pins and the dismissed panel's own absence is separately observed for the row-menu dismissal by S075.
 Source context since previous assertion:
 ;
 
@@ -1022,8 +1050,8 @@ Original expression:
 QTRY_VERIFY(!checks::eventviews::activeMenuPanel(widgets))
 
 A092 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:433
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: MATCHED
+Mapping: S069 proves the table gains exactly one row on the Insert activation.
 Source context since previous assertion:
 ;
 
@@ -1031,8 +1059,8 @@ Original expression:
 QTRY_COMPARE(widgets.model->rowCount(), rowsBefore + 1)
 
 A093 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:434
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: MATCHED
+Mapping: S070 and S071 prove the Insert activation is one undo step through the mounted lane and S101 one undo step through the presenter.
 Source context since previous assertion:
 ;
 
@@ -1040,8 +1068,8 @@ Original expression:
 QCOMPARE(opened.fixture->document().undoStack()->index(), undoBefore + 1)
 
 A094 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:448
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: MATCHED
+Mapping: S100 asserts presenter.currentRow equals the row just passed to presenter.selectRow(row:modifiers:), the selection-to-cursor echo this guard observed.
 Source context since previous assertion:
 ;
 
@@ -1062,8 +1090,8 @@ Original expression:
 QTRY_COMPARE(controller.currentRow(), 0)
 
 A095 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:449
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: MATCHED
+Mapping: S066 proves a right press re-opens the row menu.
 Source context since previous assertion:
 ;
 
@@ -1071,8 +1099,8 @@ Original expression:
 QVERIFY(openRowMenu())
 
 A096 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:451
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S061 and S094 prove a different current row retires the owned row menu.
 Source context since previous assertion:
 ;
     controller.selectRow(1, Qt::NoModifier);
@@ -1081,8 +1109,8 @@ Original expression:
 QTRY_VERIFY(!controller.menuOpen())
 
 A097 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:452
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins the retired QuickPopupSession panel item (checks::eventviews::activeMenuPanel); the mounted page instantiates its panel from controller.menuOpen (EventListPage.qml:1239-1243), so panel absence is the session flag S061 pins and the dismissed panel's own absence is separately observed for the row-menu dismissal by S075.
 Source context since previous assertion:
 ;
 
@@ -1090,8 +1118,8 @@ Original expression:
 QTRY_VERIFY(!checks::eventviews::activeMenuPanel(widgets))
 
 A098 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:454
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: MATCHED
+Mapping: S066 proves a right press re-opens the row menu.
 Source context since previous assertion:
 ;
 
@@ -1100,8 +1128,8 @@ Original expression:
 QVERIFY(openRowMenu())
 
 A099 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:455
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: MATCHED
+Mapping: S096 proves presenter.setChunk publishes the new chunk index.
 Source context since previous assertion:
 ;
 
@@ -1109,8 +1137,8 @@ Original expression:
 QVERIFY(checks::eventviews::selectChunk(controller, 1))
 
 A100 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:456
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S063 and S096 prove the chunk switch retires the row menu.
 Source context since previous assertion:
 ;
 
@@ -1118,8 +1146,8 @@ Original expression:
 QTRY_VERIFY(!controller.menuOpen())
 
 A101 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:457
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: MATCHED
+Mapping: S076 proves the page's chunk anchor follows the rendered chunk selection.
 Source context since previous assertion:
 ;
 
@@ -1127,8 +1155,8 @@ Original expression:
 QVERIFY(checks::eventviews::selectChunk(controller, 0))
 
 A102 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:458
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: MATCHED
+Mapping: S076 proves presenter.chunk mirrors presenter.chunkIndex after the selection.
 Source context since previous assertion:
 ;
 
@@ -1136,8 +1164,8 @@ Original expression:
 QTRY_COMPARE(controller.chunk(), 0)
 
 A103 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:461
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: MATCHED
+Mapping: S100 asserts presenter.currentRow equals the row just passed to presenter.selectRow(row:modifiers:), the selection-to-cursor echo this guard observed.
 Source context since previous assertion:
 ;
 
@@ -1147,8 +1175,8 @@ Original expression:
 QTRY_COMPARE(controller.currentRow(), 0)
 
 A104 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:462
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: MATCHED
+Mapping: S066 proves a right press re-opens the row menu.
 Source context since previous assertion:
 ;
 
@@ -1156,8 +1184,8 @@ Original expression:
 QVERIFY(openRowMenu())
 
 A105 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:465
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S064 and S097 prove a document edit retires the row menu.
 Source context since previous assertion:
 ;
     const int revisionBeforeInsert = opened.fixture->document().revision();
@@ -1167,8 +1195,8 @@ Original expression:
 QTRY_VERIFY(!controller.menuOpen())
 
 A106 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:466
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: PARTIAL
+Mapping/reason: S064 proves the edit retires the menu and the mounted lane observes the added row, but no predicate reads the document revision or undo step for that raw-insert path (the fork's revision+1).
 Source context since previous assertion:
 ;
 
@@ -1179,8 +1207,8 @@ A107 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chr
 Disposition: RETIRED-REPRESENTATION
 
 A108 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:476
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S040 and S054 prove the rendered filter control opens its stay-open session.
 Source context since previous assertion:
 ;
     const QPointF filterCenter = filterButton->mapToScene(
@@ -1191,8 +1219,8 @@ Original expression:
 QTRY_VERIFY(controller.menuOpen())
 
 A109 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:478
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: MATCHED
+Mapping: S100 asserts presenter.currentRow equals the row just passed to presenter.selectRow(row:modifiers:), the selection-to-cursor echo this guard observed.
 Source context since previous assertion:
 ;
     controller.selectRow(2, Qt::NoModifier);
@@ -1201,8 +1229,8 @@ Original expression:
 QTRY_COMPARE(controller.currentRow(), 2)
 
 A110 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:479
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S065 and S098 prove row changes leave the filter menu open.
 Source context since previous assertion:
 ;
 
@@ -1210,8 +1238,8 @@ Original expression:
 QVERIFY(controller.menuOpen())
 
 A111 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:480
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins the retired QuickPopupSession panel item (checks::eventviews::activeMenuPanel); the mounted page instantiates its panel from controller.menuOpen (EventListPage.qml:1239-1243), so panel absence is the session flag S065 pins and the dismissed panel's own absence is separately observed for the row-menu dismissal by S075.
 Source context since previous assertion:
 ;
 
@@ -1219,8 +1247,8 @@ Original expression:
 QVERIFY(checks::eventviews::activeMenuPanel(widgets))
 
 A112 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:482
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S050 proves Escape closes the session.
 Source context since previous assertion:
 ;
     QTest::keyClick(&window, Qt::Key_Escape);
@@ -1229,8 +1257,8 @@ Original expression:
 QTRY_VERIFY(!controller.menuOpen())
 
 A113 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:492
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native rig-open guard (openRigFixture). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: native rig-open fixture guard (openRigFixture); the shell lane opens the production session and stages its own fixture, so the native rig has no mounted counterpart.
 Source context since previous assertion:
 ;
 }
@@ -1247,8 +1275,8 @@ Original expression:
 QVERIFY2(opened, qPrintable(opened.error))
 
 A114 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:494
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native event-list open guard (openEventList). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: native event-list-open fixture guard (openEventList); the shell lane mounts the production page itself.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -1257,8 +1285,8 @@ Original expression:
 QVERIFY(widgets)
 
 A115 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:500
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the rendered model exposed the tick-60 control-change row. No predicate resolves a published row by tick and type on the mounted page.
+Disposition: MATCHED
+Mapping: S082 resolves a published control-change row by kind and tick (rowType 3 at tick 0) on the mounted fixture, the Swift form of rowForTickAndType.
 Source context since previous assertion:
 ;
     QQuickWindow &window = *widgets.quickWindow;
@@ -1271,8 +1299,8 @@ Original expression:
 QVERIFY(sourceRow >= 0)
 
 A116 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:503
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the rendered tick-60 Data cell resolved to a scene point. S021 pins the mounted Data column width, but no predicate instantiates or locates a Data-column cell; the shell lane's itemAtCell polls cover the Tick and Type columns of the editor journey only.
+Disposition: PARTIAL
+Mapping/reason: no predicate instantiates or locates a Data-column cell: the mounted itemAtCell polls cover the Tick column and the font scan columns 0 and 2-4, while S021 pins only the Data column's width.
 Source context since previous assertion:
 ;
     const QPointF source = checks::eventviews::cellSceneCenter(widgets, sourceRow,
@@ -1282,8 +1310,8 @@ Original expression:
 QVERIFY(!source.isNull())
 
 A117 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:506
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S066 proves the source right press opens the row-menu session.
 Source context since previous assertion:
 ;
 
@@ -1293,8 +1321,8 @@ Original expression:
 QTRY_VERIFY(controller.menuOpen())
 
 A118 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:507
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: MATCHED
+Mapping: S067 proves presenter.currentRow is the pressed source row.
 Source context since previous assertion:
 ;
 
@@ -1302,8 +1330,8 @@ Original expression:
 QTRY_COMPARE(controller.currentRow(), sourceRow)
 
 A119 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:509
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: harness guard on the popup session's outside-right signal spy. The mounted page's popup session is exercised by the shell lane, but no predicate asserts this spy's validity.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins the native QuickPopupSession::outsideRightPressed QSignalSpy; the mounted underlay owns the press directly and the dismissal outcome is pinned by S073.
 Source context since previous assertion:
 ;
     QSignalSpy retargeted(widgets.popupSession, &songview::QuickPopupSession::outsideRightPressed);
@@ -1315,8 +1343,8 @@ A120 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/
 Disposition: RETIRED-REPRESENTATION
 
 A121 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:513
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins the retired popup panel's host property (owner identity); the mounted page owns its panel directly.
 Source context since previous assertion:
 ;
     QObject *const menuOwner = panel->property("host").value<QObject *>();
@@ -1325,8 +1353,8 @@ Original expression:
 QVERIFY2(menuOwner, "the open menu panel did not expose its owning host")
 
 A122 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:516
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S072 and S051 read the mounted panel's frame geometry (menuOrigin with menuWidth/menuHeight) to place an outside press, so the frame the fork resolved by objectName is addressable.
 Source context since previous assertion:
 ;
     QQuickItem *const frame =
@@ -1336,8 +1364,8 @@ Original expression:
 QVERIFY(frame)
 
 A123 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:530
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: a rendered row whose Data cell lay outside the popup frame resolved. No predicate asserts the mounted cell and frame geometry.
+Disposition: MATCHED
+Mapping: S072 and S051 establish and use a pressable point outside the menu frame.
 Source context since previous assertion:
 ;
     QPointF target;
@@ -1358,8 +1386,8 @@ Original expression:
 QVERIFY(targetRow >= 0)
 
 A124 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:533
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins the native outsideRightPressed emission count; the popup layer's retarget protocol is retired and the outcome (the menu closes) is pinned by S073.
 Source context since previous assertion:
 ;
 
@@ -1369,8 +1397,8 @@ Original expression:
 QTRY_COMPARE(retargeted.count(), 1)
 
 A125 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:535
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins the native signal's owner-identity argument; the mounted page owns its panel directly.
 Source context since previous assertion:
 ;
     const QList<QVariant> arguments = retargeted.takeFirst();
@@ -1380,8 +1408,8 @@ QVERIFY2(arguments.constFirst().value<QObject *>() == menuOwner,
              "the dismissed right press reported a foreign owner")
 
 A126 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:537
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins the native signal's retarget-point argument; the press location is re-observed by S051.
 Source context since previous assertion:
 ;
 
@@ -1389,8 +1417,8 @@ Original expression:
 QCOMPARE(arguments.at(1).toPointF(), QPointF(target.toPoint()))
 
 A127 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:538
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S073 proves the outside right press closes the menu.
 Source context since previous assertion:
 ;
 
@@ -1398,8 +1426,8 @@ Original expression:
 QTRY_VERIFY(!controller.menuOpen())
 
 A128 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:539
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins the retired QuickPopupSession panel item (checks::eventviews::activeMenuPanel); the mounted page instantiates its panel from controller.menuOpen (EventListPage.qml:1239-1243), so panel absence is the session flag S073 pins and the dismissed panel's own absence is separately observed for the row-menu dismissal by S075.
 Source context since previous assertion:
 ;
 
@@ -1407,8 +1435,8 @@ Original expression:
 QTRY_VERIFY(!checks::eventviews::activeMenuPanel(widgets))
 
 A129 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:540
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: MATCHED
+Mapping: S073 proves the outside press leaves presenter.currentRow at the source row.
 Source context since previous assertion:
 ;
 
@@ -1416,8 +1444,8 @@ Original expression:
 QCOMPARE(controller.currentRow(), sourceRow)
 
 A130 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:544
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S074 proves the paired right release reopens no menu.
 Source context since previous assertion:
 ;
 
@@ -1428,8 +1456,8 @@ Original expression:
 QVERIFY(!controller.menuOpen())
 
 A131 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:545
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins the retired QuickPopupSession panel item (checks::eventviews::activeMenuPanel); the mounted page instantiates its panel from controller.menuOpen (EventListPage.qml:1239-1243), so panel absence is the session flag S074 pins and the dismissed panel's own absence is separately observed for the row-menu dismissal by S075.
 Source context since previous assertion:
 ;
 
@@ -1437,8 +1465,8 @@ Original expression:
 QVERIFY(!checks::eventviews::activeMenuPanel(widgets))
 
 A132 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:546
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: PARTIAL
+Mapping/reason: the mounted lane compares presenter.currentRow after the outside press but not after the paired release; the release is only proven to reopen no menu.
 Source context since previous assertion:
 ;
 
@@ -1446,8 +1474,8 @@ Original expression:
 QCOMPARE(controller.currentRow(), sourceRow)
 
 A133 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:547
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: MATCHED
+Mapping: S053 proves a paired release after a dismissed menu starts no editor.
 Source context since previous assertion:
 ;
 
@@ -1558,3 +1586,123 @@ Anchor: message "row headers follow the first visible event after vertical scrol
 
 S036 | test_filterAndEditOnMountedPage | src/checks/editorqml/tst_ShellEventList.qml
 Anchor: message "returning to the first row restores its header"
+S037 | test_filterAndEditOnMountedPage | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "event list is hidden until requested"
+S038 | test_resizedHeaderAndDoubleClickEditor | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "a real handle drag widens the persisted column"
+S039 | test_resizedHeaderAndDoubleClickEditor | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "double-click opens the tick cell editor"
+S040 | test_menuKeyboardNavigation | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the filter menu opens with the seven category rows"
+S041 | test_menuKeyboardNavigation | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "every filter category is interactive"
+S042 | test_menuKeyboardNavigation | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "menu ticks mirror the checked role"
+S043 | test_menuKeyboardNavigation | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "hover highlights the category row"
+S044 | test_menuKeyboardNavigation | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "type-ahead selects the matching category"
+S045 | test_menuKeyboardNavigation | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "Down wraps onto the first category"
+S046 | test_menuKeyboardNavigation | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "Return toggles the highlighted category"
+S047 | test_menuKeyboardNavigation | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "activating a category keeps the session open on a rebuilt model"
+S048 | test_menuKeyboardNavigation | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the rebuilt menu updates the activated category"
+S049 | test_menuKeyboardNavigation | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the rebuilt menu restores the highlight by id"
+S050 | test_menuKeyboardNavigation | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "Escape cancels the filter menu without activating"
+S051 | test_menuKeyboardNavigation | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the table-cell press is outside the menu frame"
+S052 | test_menuKeyboardNavigation | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "a table-cell press while the menu is open only closes the menu"
+S053 | test_menuKeyboardNavigation | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the paired release never starts an editor"
+S054 | test_menuKeyboardNavigation | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the reopened filter menu is rendered"
+S055 | test_fullFilterMatrixThroughMountedMenu | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "every mounted row belongs to exactly one filter category"
+S056 | test_fullFilterMatrixThroughMountedMenu | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the clicked category is excluded"
+S057 | test_fullFilterMatrixThroughMountedMenu | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message " shrinks the table to its ledger count"
+S058 | test_fullFilterMatrixThroughMountedMenu | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "an empty mask leaves only the EOT row"
+S059 | test_fullFilterMatrixThroughMountedMenu | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "all categories restore every original event row"
+S060 | test_fullFilterMatrixThroughMountedMenu | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the filter menu survives category toggles"
+S061 | test_rowMenuRetiresOnContextMoves | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "a moved row context retires the row menu"
+S063 | test_rowMenuRetiresOnContextMoves | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "a chunk switch retires the row menu"
+S064 | test_rowMenuRetiresOnContextMoves | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "a document edit retires the row menu"
+S065 | test_rowMenuRetiresOnContextMoves | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "row changes leave the filter menu open"
+S066 | test_rowMenuContextThroughRenderedTable | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "right-clicking a row opens its menu on that row"
+S067 | test_rowMenuContextThroughRenderedTable | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the row menu captures its selected row"
+S068 | test_rowMenuContextThroughRenderedTable | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the Insert row is rendered"
+S069 | test_rowMenuContextThroughRenderedTable | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "activating Insert closes the menu and inserts one event"
+S070 | test_rowMenuContextThroughRenderedTable | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the Insert action has one undo transition"
+S071 | test_rowMenuContextThroughRenderedTable | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "undo restores the previous row count"
+S072 | test_rowMenuContextThroughRenderedTable | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the press location lies outside the menu frame"
+S073 | test_rowMenuContextThroughRenderedTable | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "an outside right press cancels the menu without moving the current row"
+S074 | test_rowMenuContextThroughRenderedTable | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the paired right release reopens nothing"
+S075 | test_rowMenuActionAndVoiceReveal | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the dismissed menu releases the table before another right click"
+S076 | test_chunkWheelAndDrawerFocus | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "a track selection echoes its chunk through the page"
+S077 | test_chunkWheelAndDrawerFocus | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the mounted Event List exceeds its viewport"
+S078 | test_chunkWheelAndDrawerFocus | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "wheel past either end clamps the table"
+S079 | test_chunkWheelAndDrawerFocus | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the reverse wheel clamps at the top of the table"
+S080 | test_chunkWheelAndDrawerFocus | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "drawer focus keeps the event rows put"
+S081 | test_chunkWheelAndDrawerFocus | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the drawer retains focus through both keys"
+S082 | test_drawerFocusCommitsAndOwnsDelete | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the mounted fixture exposes its tick-zero control target"
+S083 | test_drawerFocusCommitsAndOwnsDelete | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the focused velocity drawer control owns active focus"
+S087 | test_viewStateVisibilityFlag | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the view state records the event list once visible"
+S088 | test_viewStateVisibilityFlag | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "applying the hidden event-list flag hides the current tab"
+S089 | test_viewStateVisibilityFlag | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "showing the event list restores the flag"
+S090 | eventListFilterMatrix | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "all categories expose eleven events and the end row"
+S091 | eventListFilterMatrix | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "hiding \(category) leaves its ledger row count"
+S092 | eventListFilterMatrix | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "an empty mask leaves only the EOT row"
+S093 | eventListFilterMatrix | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "restoring every category restores eleven event rows"
+S094 | eventListMenuInvalidation | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "a moved row context retires the row menu"
+S096 | eventListMenuInvalidation | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "a chunk switch retires the row menu"
+S097 | eventListMenuInvalidation | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "a document edit retires the row menu"
+S098 | eventListMenuInvalidation | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "row changes leave the filter menu open"
+S099 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "the resized store keeps six entries"
+S100 | eventListDeleteMatrix | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "end-of-track-only delete leaves document and cursor unchanged"
+S101 | eventListRowMenuContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "row-menu Insert copies the source at its own tick in one step"
