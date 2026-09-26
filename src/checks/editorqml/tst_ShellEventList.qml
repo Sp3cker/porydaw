@@ -399,8 +399,6 @@ TestCase {
         const table = findChild(page, "eventListTable")
         verify(table !== null, "the mounted table is available for in-cell editing")
 
-        // The muted EOT label (AA-gated tableSecondaryText) must render on
-        // both stripe parities; deleting one row flips the EOT row's parity.
         function eotLabel() {
             const eotRow = presenter.rowCount - 1
             const cell = table.itemAtCell(Qt.point(1, eotRow))
@@ -418,8 +416,9 @@ TestCase {
                       "the EOT label cell is rendered")
             return eotLabel()
         }
-        compare(mountedEotLabel().color, page.tableSecondaryText,
-                "the EOT label renders in muted secondary text")
+        compare(mountedEotLabel().color, presenter.rowCount % 2 === 0 ? page.tableText
+                                                                   : page.tableSecondaryText,
+                "the EOT label resolves muted ink for the base stripe or row ink on the alternate stripe")
 
         let note = -1
         for (let row = 0; row < presenter.rowCount - 1; ++row) {
@@ -489,7 +488,60 @@ TestCase {
         keyClick(Qt.Key_Delete)
         tryCompare(presenter, "rowCount", beforeDelete - 1, 3000,
                    "deleting one row flips the EOT row's stripe parity")
-        compare(mountedEotLabel().color, page.tableSecondaryText,
-                "the EOT label stays muted on the flipped stripe parity")
+        compare(mountedEotLabel().color, (presenter.rowCount - 1) % 2 === 1 ? page.tableText
+                                                                          : page.tableSecondaryText,
+                "the flipped stripe parity keeps the muted EOT ink AA against its fill")
+    }
+
+    function test_eventListRowsFollowAppliedTheme() {
+        settings.setValue("theme/mode", "dark-neutral-high")
+        settings.setValue("theme/grid-line-contrast", 50)
+        settings.setValue("lastProjectDir", "")
+        settings.sync()
+        shell = shellComponent.createObject(null)
+        verify(shell !== null)
+        shell.requestActivate()
+        tryCompare(shell, "active", true, 3000)
+        const session = shell.shellPresenter.session
+        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        verify(waitForNative(function() {
+            return session.songOpen || session.lastSaveError.length > 0
+        }, 30000), "song load settles")
+        verify(session.songOpen, session.lastSaveError)
+        shell.shellPresenter.activate("view.event_list")
+        tryCompare(session.songTabs, "selectedTabShowsEvents", true, 3000)
+        let page = null
+        tryVerify(function() {
+            page = findChild(shell.sceneLoader.item, "eventListPage")
+            return page !== null && page.visible
+        }, 3000, "event list is mounted")
+        verify(session.eventListPresenter().rowCount >= 3,
+               "fixture has event rows behind the table")
+
+        const palette = session.palette
+        verify(Qt.colorEqual(page.tableBackground, palette.menuBackground),
+               "row backgrounds use the theme's item surface, not the roll color")
+        verify(Qt.colorEqual(page.tableAlternateBackground, palette.alternateBackground),
+               "alternate rows use the theme's alternate item surface")
+        verify(Qt.colorEqual(page.tableText, palette.windowText),
+               "row text uses the theme's item text")
+        verify(Qt.colorEqual(page.tableSelectedBackground, palette.tabSelectedBackground),
+               "selected rows use the theme's selection surface")
+        verify(Qt.colorEqual(page.headerBackground, palette.chromeBackground),
+               "the header band uses chrome")
+
+        shell.shellPresenter.restoreAppearance("vanilla", "50", Qt.application.name)
+        tryCompare(shell.shellPresenter, "themeMode", "vanilla", 3000)
+        tryVerify(function() {
+            return Qt.colorEqual(page.tableBackground, session.palette.menuBackground)
+        }, 3000, "the mounted table rebinds its row background to the new theme")
+        verify(Qt.colorEqual(page.tableAlternateBackground, session.palette.alternateBackground),
+               "alternate stripes follow the theme swap")
+
+        shell.shellPresenter.restoreAppearance("dark-neutral-high", "50", Qt.application.name)
+        tryCompare(shell.shellPresenter, "themeMode", "dark-neutral-high", 3000)
+        tryVerify(function() {
+            return Qt.colorEqual(page.tableBackground, session.palette.menuBackground)
+        }, 3000, "the mounted table returns to the dark item surface")
     }
 }

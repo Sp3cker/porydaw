@@ -223,6 +223,10 @@ TestCase {
         verify(rows.count > 0)
         compare(h.contentHeight, rows.count * h.rowHeight)
         verify(Object.keys(h.appearance).length > 0)
+        var firstRow = rows.itemAt(0)
+        verify(firstRow !== null && !firstRow.isAddTrack)
+        compare(firstRow.subtitle, "000 fixture_loop (Sample)",
+                "the first track header spells the loaded bank's display name")
     }
 
     function test_addTrackRowPublishesUsableFonts() {

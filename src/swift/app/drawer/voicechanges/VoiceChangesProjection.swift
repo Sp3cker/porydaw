@@ -344,7 +344,7 @@ enum VoiceChangesProjection {
         let label = VoiceLanePolicy.label(slot: slot, view: view)
         return VoiceReadoutProjection(
             slot: slot,
-            blank: view?.voice == nil,
+            blank: view?.voice == nil && view?.tone == nil,
             symbol: view?.voice?.symbol ?? "",
             text: label.isEmpty ? "No voice" : label,
             rect: VoiceMarkerHandle.rect(pad, 0, max(0, plotWidth - 2 * pad), plotHeight))
@@ -449,7 +449,7 @@ enum VoiceChangesProjection {
             handle.identity = entry.identity
             handle.tick = Double(entry.tick)
             handle.value = entry.value
-            handle.slotBlank = view?.voice == nil
+            handle.slotBlank = view?.voice == nil && view?.tone == nil
             handle.symbol = view?.voice?.symbol ?? ""
             handle.label = drawn
             handle.labelRect = VoiceMarkerHandle.rect(labelX, labelY, labelWidth, labelHeight)
@@ -476,7 +476,7 @@ enum VoiceChangesProjection {
             let row = VoicePickerRowHandle()
             row.program = program
             row.label = VoiceLanePolicy.pickerLabel(slot: program, view: view)
-            row.blank = view?.voice == nil
+            row.blank = view?.voice == nil && view?.tone == nil
             row.symbol = view?.voice?.symbol ?? ""
             row.selected = program == selected
             return row

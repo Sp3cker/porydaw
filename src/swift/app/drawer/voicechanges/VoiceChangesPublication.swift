@@ -251,7 +251,7 @@ extension VoiceChangesPage {
         let view = slots.indices.contains(slot) ? slots[slot] : nil
         publishReadout(VoiceReadoutValues(
             slot: slot,
-            blank: view?.voice == nil,
+            blank: view?.voice == nil && view?.tone == nil,
             symbol: view?.voice?.symbol ?? "",
             text: {
                 let label = VoiceChangesScene.sceneContextLabel(slot: slot, slots: slots)

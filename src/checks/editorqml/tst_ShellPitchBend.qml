@@ -155,7 +155,7 @@ TestCase {
         const grid = view.gridModel
         const roll = findChild(view, "swiftRollInput")
         const plot = findChild(view, "timelineQuickRollPlot")
-        verify(roll !== null && plot !== null)
+        verify(roll !== null && plot !== null, "the roll input and plot mount on the surface")
         const note = visibleNote(view, grid, roll, plot)
         verify(note !== null, "a selected track's editable note is revealed: " + noteProbe)
         mouseClick(roll, note.x, note.y, Qt.LeftButton)
@@ -166,7 +166,7 @@ TestCase {
                   "the popup loader realizes the published open state")
         const popup = findChild(view, "pitchBendPopup")
         const graph = findChild(view, "pitchBendGraph")
-        verify(popup !== null && graph !== null)
+        verify(popup !== null && graph !== null, "the popup realizes its pitch graph")
         verify(graph.activeFocus, "the popup graph holds the keyboard focus")
         return { app: app, editor: editor, graph: graph, grid: grid,
                  popup: popup, view: view }

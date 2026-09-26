@@ -135,8 +135,6 @@ extension EventListPresenter {
     func dispatchAddEvent() {
         guard let session, !session.isClosed,
               session.document.rawChunks.indices.contains(chunkIndex) else { return }
-        // The EOT sentinel has no source event: the original refuses the
-        // row-menu insert on it (insertCopyOfRow no-ops without a source).
         if let row = model.row(at: currentRow), row.isEndOfTrack { return }
         if chunkIndex == 0, let tempo = model.row(at: currentRow)?.tempo {
             session.document.editTempo(TempoEdit(add: [TempoPoint(

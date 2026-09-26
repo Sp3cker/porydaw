@@ -57,6 +57,7 @@ public struct EventListModel: Equatable, Sendable {
     public private(set) var currentRow = -1
     public private(set) var playRow = -1
     public private(set) var playheadTick = -1.0
+    public var voiceNames: [String] = []
 
     private var hasSource = false
 

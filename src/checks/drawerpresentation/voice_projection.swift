@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 
 @MainActor
@@ -109,17 +109,117 @@ func drawerVoiceSlotLabels(_ report: CheckReport, session: DocumentSession,
     report.expect(label.hasPrefix(String(format: "%03d ", slot)), cppID: drawerVoiceLabelID,
                   message: "a slot label starts with its zero-padded program number "
                       + "(\"\(label)\")")
-    let type = voiceTypeName(macro: view.voice?.macro)
-    if let symbol = view.voice?.symbol, !symbol.isEmpty {
-        report.expect(label.contains(symbol), cppID: drawerVoiceLabelID,
-                      message: "a named slot label carries its source symbol")
-        report.expect(label.contains("(\(type))"), cppID: drawerVoiceLabelID,
-                      message: "a named slot label carries its declared type in parentheses")
-    } else {
-        report.expect(label.contains(type), cppID: drawerVoiceLabelID,
-                      message: "a slot with no source symbol names its declared type "
-                          + "(\"\(label)\")")
+    func slotLabel(_ slot: Int, macro: Int32?, symbol: String, kind: Int32 = BankSlotKind.editable) -> String {
+        let view = BankSlotView(kind: kind,
+                                voice: macro.map { BankVoice(macro: $0, symbol: symbol) })
+        return VoiceLanePolicy.label(slot: slot, view: view)
     }
+    report.expectEqual(expected: "000 fixture_loop (Sample)",
+                       actual: slotLabel(0, macro: BankVoiceMacro.directSound,
+                                         symbol: "DirectSoundWaveData_fixture_loop"),
+                       cppID: drawerVoiceLabelID,
+                       what: "a direct-sound slot keeps its sample type")
+    report.expectEqual(expected: "002 fixture_bass (Sample (fixed pitch))",
+                       actual: slotLabel(2, macro: BankVoiceMacro.directSoundNoResample,
+                                         symbol: "DirectSoundWaveData_fixture_bass"),
+                       cppID: drawerVoiceLabelID,
+                       what: "a no-resample slot keeps its fixed-pitch type")
+    report.expectEqual(expected: "003 fixture_drum (Sample (reverse))",
+                       actual: slotLabel(3, macro: BankVoiceMacro.directSoundAlt,
+                                         symbol: "DirectSoundWaveData_fixture_drum"),
+                       cppID: drawerVoiceLabelID,
+                       what: "an alternate slot keeps its reverse type")
+    report.expectEqual(expected: "006 fixture_pulse (Wave)",
+                       actual: slotLabel(6, macro: BankVoiceMacro.programmableWave,
+                                         symbol: "ProgrammableWaveData_fixture_pulse"),
+                       cppID: drawerVoiceLabelID,
+                       what: "a programmable-wave slot keeps its wave type")
+    report.expectEqual(expected: "004 Square 1",
+                       actual: slotLabel(4, macro: BankVoiceMacro.square1, symbol: ""),
+                       cppID: drawerVoiceLabelID,
+                       what: "a CGB slot without a source name names only its type")
+    report.expectEqual(expected: "009 Voice",
+                       actual: slotLabel(9, macro: 99, symbol: ""),
+                       cppID: drawerVoiceLabelID,
+                       what: "an unknown-type slot falls back to the bare Voice word")
+    report.expectEqual(expected: "007 DirectSoundWaveData_ (Sample)",
+                       actual: slotLabel(7, macro: BankVoiceMacro.directSound,
+                                         symbol: "DirectSoundWaveData_"),
+                       cppID: drawerVoiceLabelID,
+                       what: "a symbol that is only a known prefix survives unchanged")
+    report.expectEqual(expected: "010 x (Sample)",
+                       actual: slotLabel(10, macro: BankVoiceMacro.directSound,
+                                         symbol: "voicegroup_x"),
+                       cppID: drawerVoiceLabelID,
+                       what: "the voicegroup_ prefix strips like the wave prefixes")
+    report.expectEqual(expected: "011 DirectSoundWaveData_fixture_pluck (Sample)",
+                       actual: slotLabel(11, macro: BankVoiceMacro.directSound,
+                                         symbol: "DirectSoundWaveData_DirectSoundWaveData_fixture_pluck"),
+                       cppID: drawerVoiceLabelID,
+                       what: "only one leading prefix strips")
+    report.expectEqual(expected: "012 " + String(repeating: "q", count: 47) + " (Sample)",
+                       actual: slotLabel(12, macro: BankVoiceMacro.directSound,
+                                         symbol: "DirectSoundWaveData_" + String(repeating: "q", count: 60)),
+                       cppID: drawerVoiceLabelID,
+                       what: "the display name truncates at the loader's 47-byte limit")
+    report.expectEqual(expected: "013 myvoice (Sample)",
+                       actual: slotLabel(13, macro: BankVoiceMacro.directSound,
+                                         symbol: "myvoice"),
+                       cppID: drawerVoiceLabelID,
+                       what: "a plain symbol with no known prefix passes through")
+    report.expectEqual(expected: "015 myvoice",
+                       actual: slotLabel(15, macro: 99, symbol: "myvoice"),
+                       cppID: drawerVoiceLabelID,
+                       what: "a named slot with no type name drops the parentheses")
+
+    let toneView = BankSlotView(kind: BankSlotKind.readOnlyVoice,
+                                tone: BankTone(name: "missing_cry_sample", type: 0x20,
+                                               isSynth: false,
+                                               adsr: BankToneAdsr(attack: 255, decay: 0,
+                                                                  sustain: 255, release: 0)))
+    report.expectEqual(expected: "014 missing_cry_sample (Sample)",
+                       actual: VoiceLanePolicy.label(slot: 14, view: toneView),
+                       cppID: drawerVoiceLabelID,
+                       what: "a tone-only slot labels the loaded tone like the header")
+    var toneSlots = [BankSlotView](repeating: BankSlotView(), count: 16)
+    toneSlots[14] = toneView
+    let tonePickerRow = VoiceChangesProjection.pickerRows(programs: [14], slots: toneSlots,
+                                                        selected: 14)[0]
+    report.expectEqual(expected: "014  missing_cry_sample (Sample)", actual: tonePickerRow.label,
+                       cppID: drawerVoiceLabelID,
+                       what: "the picker spells the tone slot with its own separator")
+    report.expect(!tonePickerRow.blank, cppID: drawerVoiceLabelID,
+                  message: "a tone-only slot is not blank")
+    let toneReadout = VoiceChangesProjection.readout(firstProgram: 14, tick: 0, points: [],
+                                                     slots: toneSlots, pad: 1,
+                                                     plotWidth: 100, plotHeight: 20)
+    report.expectEqual(expected: "014 missing_cry_sample (Sample)", actual: toneReadout.text,
+                       cppID: drawerVoiceLabelID,
+                       what: "the context readout names the tone slot")
+    report.expect(!toneReadout.blank, cppID: drawerVoiceLabelID,
+                  message: "the readout keeps a tone slot un-blank")
+
+    let toneService = ProjectService()
+    var headerSlots = [BankSlotView](repeating: BankSlotView(), count: 16)
+    headerSlots[0] = toneView
+    let toneDocument = SongDocument(file: MidiFile(division: 24, chunks: [
+        MidiChunk(events: [.meta(type: 0x51, data: [0x07, 0xA1, 0x20])], endTick: 96),
+        MidiChunk(events: [
+            .meta(type: 0x03, data: Array("Tone".utf8)),
+            .channel(status: 0xC0, data0: 0),
+            .channel(tick: 24, status: 0x90, data0: 60, data1: 100),
+        ], endTick: 96),
+    ]), config: session.document.state.config,
+        source: session.document.source, trackBudget: 16)
+    let toneSession = DocumentSession(document: toneDocument, service: toneService,
+                                      lease: session.bankLease, slots: headerSlots,
+                                      dirty: false, loadName: session.bankLoadName)
+    let headers = TrackHeadersPresenter(baseFontPx: 13)
+    headers.attach(session: toneSession, palette: GridPalette())
+    report.expectEqual(expected: "000 missing_cry_sample (Sample)",
+                       actual: headers.rows[0].subtitle,
+                       cppID: drawerVoiceLabelID,
+                       what: "the track header subtitle names the tone slot")
     report.expectEqual(expected: "→ \(label)", actual: VoiceLanePolicy.hoverLabel(label), cppID: drawerVoiceLabelID,
                        what: "the hover spelling is the label with the legacy arrow")
     report.expectEqual(expected: "", actual: VoiceLanePolicy.hoverLabel(""), cppID: drawerVoiceLabelID,

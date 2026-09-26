@@ -916,13 +916,13 @@ S028 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.sw
 Anchor: message "a slot label starts with its zero-padded program number "
 
 S029 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift
-Anchor: message "a named slot label carries its source symbol"
+Anchor: message "a direct-sound slot keeps its sample type"
 
 S030 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift
-Anchor: message "a named slot label carries its declared type in parentheses"
+Anchor: message "a no-resample slot keeps its fixed-pitch type"
 
 S031 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift
-Anchor: message "a slot with no source symbol names its declared type "
+Anchor: message "a CGB slot without a source name names only its type"
 
 S032 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift
 Anchor: message "the hover spelling is the label with the legacy arrow"

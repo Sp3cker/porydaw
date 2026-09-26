@@ -12,11 +12,11 @@ Additional Swift counterpart: src/checks/editorqml/tst_ShellEventList.qml
 Production counterpart: src/swift/core/EventEditing.swift
 Production SHA-256: b57268432916d1edba50c9facc7527915156d719fe210565126f296d3905b6d1
 Event-list production counterpart: src/swift/app/eventlist/EventListEditing.swift
-Event-list production SHA-256: 95cc687cb09221967099ce100e771cf93be071ee9ec8c2a8e6ce385a25150c3e
+Event-list production SHA-256: c11bec00c9401b164b3b64d5a8ea1622c8c50a825f83f366416194c188686f7f
 Event-list production counterpart: src/swift/app/eventlist/EventListPresenter.swift
-Event-list production SHA-256: 46049a398ded42bccc35a36ffd2ff81d6e06a59bcf31c19cd3b852497ce7b703
+Event-list production SHA-256: c013d53629c3e2800cd7493bdfb218b133f4ccea755696f057954269c4fb5b3d
 Event-list production counterpart: src/ui/songview/quick/EventListPage.qml
-Event-list production SHA-256: efd21f86ea1ba9bd5b82d1f8358028e0041a5bd0d41f7592fe67b1eddc9b4b1b
+Event-list production SHA-256: ea8bdd47f03a36f6f69faaf24f31118bd2f13ed2d73e0abe52c326818bdedcb4
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
@@ -2785,7 +2785,7 @@ S253 | test_tickBoundariesThroughMountedEditor | src/checks/editorqml/tst_ShellE
 Anchor: message "the committed row republishes at kMaxTick"
 
 S254 | test_tickBoundariesThroughMountedEditor | src/checks/editorqml/tst_ShellEventList.qml
-Anchor: message "the EOT label renders in muted secondary text"
+Anchor: message "the EOT label resolves muted ink for the base stripe or row ink on the alternate stripe"
 
 S255 | test_tickBoundariesThroughMountedEditor | src/checks/editorqml/tst_ShellEventList.qml
-Anchor: message "the EOT label stays muted on the flipped stripe parity"
+Anchor: message "the flipped stripe parity keeps the muted EOT ink AA against its fill"

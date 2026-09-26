@@ -83,9 +83,15 @@ public final class EventListPresenter {
     @QtIgnored var menuKind: EventListMenuKind?
     @QtIgnored var menuRow = -1
     @QtIgnored weak var session: DocumentSession?
+    private var appearancePalette: GridPalette
 
-    public init() {
-        appearance = EventListAppearance.roles()
+    public init(palette: GridPalette = GridPalette()) {
+        appearancePalette = palette
+        appearance = EventListAppearance.roles(palette: palette)
+    }
+
+    public func refreshAppearance() {
+        appearance = EventListAppearance.roles(palette: appearancePalette)
     }
 
     /// Installs one document and rebuilds its configured chunk synchronously.
@@ -134,6 +140,11 @@ public final class EventListPresenter {
     @QtIgnored
     public func documentDidChange(_ change: SessionChange) {
         guard attached, let session, !session.isClosed else { return }
+
+        if change.domains.contains(.bank) {
+            model.voiceNames = voiceNames()
+            tableRevision &+= 1
+        }
 
         let documentChanged = change.domains.contains(.document) || change.trackRemap != nil
         if documentChanged, let remap = change.trackRemap {
@@ -380,6 +391,7 @@ public final class EventListPresenter {
                         preservingCurrentRow: preservingCurrentRow)
         chunk = chunkIndex
         selectedRows = selectedRows.filter { model.rows.indices.contains($0) }
+        model.voiceNames = voiceNames()
         publishRows()
     }
 
@@ -416,5 +428,12 @@ public final class EventListPresenter {
         scrollToRowRequested &+= 1
         onScrollToRow?(row)
         scrollToRow(row: row)
+    }
+
+    private func voiceNames() -> [String] {
+        (session?.bankSlots ?? []).map {
+            let name = VoiceLanePolicy.shortName($0)
+            return name == "Voice" ? "" : name
+        }
     }
 }

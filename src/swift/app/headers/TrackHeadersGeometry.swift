@@ -253,8 +253,11 @@ extension TrackHeadersPresenter {
             track: track, session: session,
             tick: playing ? playheadTick : session.editCursor)
         if program < 0 { row.subtitle = "(no voice set)" }
-        else if session.bankSlots.indices.contains(program), session.bankSlots[program].voice != nil {
-            row.subtitle = VoiceLanePolicy.label(slot: program, view: session.bankSlots[program])
+        else if session.bankSlots.indices.contains(program),
+                session.bankSlots[program].voice != nil
+                || session.bankSlots[program].tone != nil {
+            row.subtitle = VoiceLanePolicy.label(slot: program,
+                                                 view: session.bankSlots[program])
         } else { row.subtitle = String(format: "%03d Voice", program) }
         let identity = PaletteMath.trackIdentityOklab(track)
         row.activityActiveColor = PaletteMath.trackIdentityFills[PaletteMath.trackIdentityIndex(track)]

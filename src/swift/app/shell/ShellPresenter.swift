@@ -465,6 +465,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         themeMode = ShellAppearance.mode(mode)
         self.gridLineContrast = ShellAppearance.contrast(gridLineContrast)
         ShellAppearance.apply(to: session.palette, mode: themeMode, contrast: self.gridLineContrast)
+        session.eventListPresenter().refreshAppearance()
         if session.songOpen { session.gridPresenter().reloadVisuals() }
     }
 

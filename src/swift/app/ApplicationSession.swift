@@ -110,7 +110,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
         emptyDrawerPresenter = EditorDrawerPresenter()
         playhead = SharedPlayheadPresenter()
         playheadGuides = PlayheadGuidesPresenter()
-        eventList = EventListPresenter()
+        eventList = EventListPresenter(palette: palette)
         transportBar = TransportBarPresenter()
         polyphony = PolyphonyPanelPresenter()
         do {

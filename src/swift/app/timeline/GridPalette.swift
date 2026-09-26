@@ -248,6 +248,7 @@ public final class GridPalette {
     public var separator: String = "#5B5652"
     public var outline: String = "#8C857F"
     public var focusOutline: String = "#8C857F"
+    public var scrollbarHandle: String = "#A49D97"
     public var buttonBackground: String = "#E1DBD6"
     public var buttonText: String = "#302C29"
     public var buttonPressedBackground: String = "#F5B61C"

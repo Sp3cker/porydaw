@@ -19,6 +19,7 @@ public enum ShellAppearance {
         let itemHover: String
         let secondary: String
         let input: String
+        let scrollbar: String
         let alternate: String
         let warning: String
         let error: String
@@ -40,7 +41,7 @@ public enum ShellAppearance {
         accent: "#00CADB", chrome: "#BDB5AF", separator: "#5B5652", control: "#E1DBD6",
         controlHover: "#ECE7E1", controlPressed: "#F5B61C",
         item: "#D2D0CA", itemHover: "#E7E2DC", secondary: "#4D4742",
-        input: "#F3F0ED", alternate: "#D1CBC5", warning: "#644100", error: "#8D1B1F",
+        input: "#F3F0ED", scrollbar: "#A49D97", alternate: "#D1CBC5", warning: "#644100", error: "#8D1B1F",
         grid: "#3F040000", roll: "#D4CCC7", accidental: "#B4ACA6",
         keyboardSeparator: "#BCB4AF", keyboardLabel: "#1A1A1A")
 
@@ -50,7 +51,7 @@ public enum ShellAppearance {
         accent: "#037384", chrome: "#424242", separator: "#262626", control: "#1A1A1A",
         controlHover: "#5C5C5C", controlPressed: "#00D3F2",
         item: "#424242", itemHover: "#5B5B5B", secondary: "#BDBDBD",
-        input: "#252525", alternate: "#575757", warning: "#E2A854", error: "#F09999",
+        input: "#252525", scrollbar: "#262626", alternate: "#575757", warning: "#E2A854", error: "#F09999",
         grid: "#54030303", roll: "#454545", accidental: "#303030",
         keyboardSeparator: "#9A9A9A", keyboardLabel: "#1A1A1A")
 
@@ -60,7 +61,7 @@ public enum ShellAppearance {
         accent: "#008493", chrome: "#363941", separator: "#292A2E", control: "#292A2E",
         controlHover: "#52555E", controlPressed: "#F98CBE",
         item: "#393C43", itemHover: "#51545C", secondary: "#A5A8B0",
-        input: "#25272B", alternate: "#52545C", warning: "#E2A854", error: "#F09999",
+        input: "#25272B", scrollbar: "#212225", alternate: "#52545C", warning: "#E2A854", error: "#F09999",
         grid: "#54030606", roll: "#3C3F46", accidental: "#282B32",
         keyboardSeparator: "#9A9A9A", keyboardLabel: "#1A1A1A")
 
@@ -138,6 +139,7 @@ public enum ShellAppearance {
         palette.tabHoverBackground = colors.controlHover
         palette.tabSelectedBackground = colors.selection
         palette.tabPressedBackground = colors.controlPressed
+        palette.scrollbarHandle = colors.scrollbar
         // Qt control-palette surfaces: editable fields and tooltips use the
         // preset's input swatch, where text and placeholder ink keep 4.5:1.
         palette.inputBackground = colors.input
