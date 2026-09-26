@@ -69,6 +69,7 @@ internal func runThemeColorChecks(_ report: CheckReport) {
     themeModeAndContrastValidation(report)
     themePresetValueChecks(report)
     themeTextContrastChecks(report)
+    polyphonyFlashContrastChecks(report)
     themeGridContrastChecks(report)
     themeTrackIdentityChecks(report)
     themeCommitPreviewRevertChecks(report)
@@ -267,6 +268,8 @@ private func themePresetValueChecks(_ report: CheckReport) {
                            cppID: themeCompletenessID, what: "\(tag): separator")
         report.expectEqual(expected: row.control, actual: palette.buttonBackground,
                            cppID: themeCompletenessID, what: "\(tag): button surface")
+        report.expectEqual(expected: "#D92626", actual: palette.polyphonyFlashBackground,
+                           cppID: themeCompletenessID, what: "\(tag): polyphony flash identity")
         report.expectEqual(expected: palette.buttonBackground, actual: palette.tabBackground,
                            cppID: themeCompletenessID, what: "\(tag): tab and button share the control surface")
         report.expectEqual(expected: row.controlHover, actual: palette.buttonHoverBackground,
@@ -476,6 +479,21 @@ private func themeTextContrastChecks(_ report: CheckReport) {
             report.expect(ratio >= 4.5, cppID: themeCompletenessID,
                           message: "\(tag): \(pair.inkName) on \(surfaceLabel) contrast \(String(format: "%.2f", ratio)) (floor 4.5)")
         }
+    }
+}
+
+@MainActor
+private func polyphonyFlashContrastChecks(_ report: CheckReport) {
+    let id = "swiftcore/PolyphonyPanel::flashContrast"
+    for row in themePresetRows {
+        let palette = themeAppliedPalette(mode: row.mode, contrast: 50)
+        let flashSurface = themeCompositeHex("#8CD92626", over: palette.buttonBackground)
+        let flashRatio = themeRefContrast(palette.windowText, flashSurface)
+        report.expect(flashRatio >= 4.5, cppID: id,
+                      message: "mode=\(row.mode): windowText on polyphonyFlashBackground@0.55 over buttonBackground contrast \(String(format: "%.2f", flashRatio)) (floor 4.5)")
+        let restingRatio = themeRefContrast(palette.windowText, palette.buttonBackground)
+        report.expect(restingRatio >= 4.5, cppID: id,
+                      message: "mode=\(row.mode): windowText on buttonBackground contrast \(String(format: "%.2f", restingRatio)) (floor 4.5)")
     }
 }
 

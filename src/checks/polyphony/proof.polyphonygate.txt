@@ -3,16 +3,23 @@ Assertion correspondence: polyphony/polyphonygate.cpp
 Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/polyphony/polyphonygate.cpp
 Original SHA-256: a774e7d77d8958c264bc662a3e488340f711bee41490f756bc6f56d72134de97
-Swift counterpart: src/checks/polyphony/PolyphonyPanelChecks.swift and src/checks/editorqml/tst_ShellPolyphony.qml (not yet executed)
+Swift counterpart: src/checks/polyphony/PolyphonyPanelChecks.swift
+Additional Swift counterpart: src/checks/editorqml/tst_ShellPolyphony.qml
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
-Command: deno task verify --filter polycheck --verbose
-Result: pending integrated run.
+Command: deno task verify --filter swiftcore-themecolor --verbose
+Result: PASS (1/37) — implementer-reported run on the frozen task-43 tree (deno task build:checks PASS, 28.80s); records the invert-visibility gate rows indexed below. This bookkeeping pass ran no lane.
+
+Command: deno task verify:shell --filter shell-polyphony --verbose
+Result: PASS (1/26, 25 skipped) — implementer-reported run on the frozen task-43 tree; records the mounted dock visibility and checkbox-state rows indexed below. This bookkeeping pass ran no lane.
+
+Command: deno task proof check
+Result: PASS — structure, entry IDs, metadata and anchor resolution only; not execution, source freshness or parity. Execution verdicts come from build/proof-evidence/swiftcore-themecolor.json and build/proof-evidence/shell-polyphony.json.
 
 A001 | PolyphonyGateTest::hiddenDockCheckboxIsInert | src/checks/polyphony/polyphonygate.cpp:43
 Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Mapping/reason: Gate-window precondition: QVERIFY2(prepareGateWindow(), "polyphony gate requires a real initialized audio device") (polyphonygate.cpp:43). The Swift gate builds NativeAudio() and reports a failure through report.fail(invertID, "audio device initialization failed: ...") (PolyphonyPanelChecks.swift:116-118) — a failure guard, not an executing predicate — so no message-anchored assertion records the precondition.
 Source context since previous assertion:
   #include "checks/polyphony/tst_polyphonycheck.h"
 
@@ -60,24 +67,27 @@ Original expression:
   QVERIFY2(prepareGateWindow(), "polyphony gate requires a real initialized audio device");
 
 A002 | PolyphonyGateTest::hiddenDockCheckboxIsInert | src/checks/polyphony/polyphonygate.cpp:44
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S006
+Mapping/reason: S006 asserts the debugger starts both untracked and hidden (!presenter.polyphonyVisible && !dock().visible, tst_ShellPolyphony.qml:113-114).
 Source context since previous assertion:
   QVERIFY2(prepareGateWindow(), "polyphony gate requires a real initialized audio device");
 Original expression:
   QVERIFY(!m_window->m_polyDock->isVisible());
 
 A003 | PolyphonyGateTest::hiddenDockCheckboxIsInert | src/checks/polyphony/polyphonygate.cpp:45
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S001
+Mapping/reason: S001 asserts a fresh NativeAudio attach leaves the renderer invert off (PolyphonyPanelChecks.swift:100-101), the same fresh-attach read this site makes.
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
   QVERIFY(!m_window->m_audio.polyDebugInvert());
 
 A004 | PolyphonyGateTest::hiddenDockCheckboxIsInert | src/checks/polyphony/polyphonygate.cpp:47
-Disposition: PARTIAL
-Mapping/reason: PolyphonyPanelChecks.swift asserts hidden checked state cannot invert NativeAudio; deno task verify --filter swiftcore passed.
+Disposition: MATCHED
+Mapping: S002
+Mapping/reason: S002 asserts a hidden panel's checked state cannot invert the renderer (!audio.polyDebugInvert && panel.invertChecked, PolyphonyPanelChecks.swift:102-105), covering this site's post-check read.
 Source context since previous assertion:
   QVERIFY(!m_window->m_audio.polyDebugInvert());
       m_window->m_polyPanel->setInvertChecked(true);
@@ -86,7 +96,7 @@ Original expression:
 
 A005 | PolyphonyGateTest::visibleCheckedDockInverts | src/checks/polyphony/polyphonygate.cpp:52
 Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Mapping/reason: Gate-window precondition: QVERIFY2(prepareGateWindow(), "polyphony gate requires a real initialized audio device") (polyphonygate.cpp:52). The Swift gate builds NativeAudio() and reports a failure through report.fail(invertID, "audio device initialization failed: ...") (PolyphonyPanelChecks.swift:116-118) — a failure guard, not an executing predicate — so no message-anchored assertion records the precondition.
 Source context since previous assertion:
   QVERIFY(!m_window->m_audio.polyDebugInvert());
   }
@@ -97,8 +107,9 @@ Original expression:
   QVERIFY2(prepareGateWindow(), "polyphony gate requires a real initialized audio device");
 
 A006 | PolyphonyGateTest::visibleCheckedDockInverts | src/checks/polyphony/polyphonygate.cpp:56
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S007
+Mapping/reason: S007 asserts the mounted ShellWindow dock becomes visible when the presenter's tracked visibility turns on (tst_ShellPolyphony.qml:121-122); this site reads the shown dock's visibility.
 Source context since previous assertion:
   QVERIFY2(prepareGateWindow(), "polyphony gate requires a real initialized audio device");
       m_window->m_polyPanel->setInvertChecked(true);
@@ -108,8 +119,9 @@ Original expression:
   QVERIFY(m_window->m_polyDock->isVisible());
 
 A007 | PolyphonyGateTest::visibleCheckedDockInverts | src/checks/polyphony/polyphonygate.cpp:57
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S003
+Mapping/reason: S003 asserts a checked panel that becomes visible enables renderer invert (PolyphonyPanelChecks.swift:106-108).
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
@@ -117,7 +129,7 @@ Original expression:
 
 A008 | PolyphonyGateTest::closingDockSuspendsAndReopenResumes | src/checks/polyphony/polyphonygate.cpp:62
 Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Mapping/reason: Gate-window precondition: QVERIFY2(prepareGateWindow(), "polyphony gate requires a real initialized audio device") (polyphonygate.cpp:62). The Swift gate builds NativeAudio() and reports a failure through report.fail(invertID, "audio device initialization failed: ...") (PolyphonyPanelChecks.swift:116-118) — a failure guard, not an executing predicate — so no message-anchored assertion records the precondition.
 Source context since previous assertion:
   QVERIFY(m_window->m_audio.polyDebugInvert());
   }
@@ -128,8 +140,9 @@ Original expression:
   QVERIFY2(prepareGateWindow(), "polyphony gate requires a real initialized audio device");
 
 A009 | PolyphonyGateTest::closingDockSuspendsAndReopenResumes | src/checks/polyphony/polyphonygate.cpp:66
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S003
+Mapping/reason: S003 asserts the same checked-and-shown invert enable this site reads (PolyphonyPanelChecks.swift:106-108).
 Source context since previous assertion:
   QVERIFY2(prepareGateWindow(), "polyphony gate requires a real initialized audio device");
       m_window->m_polyPanel->setInvertChecked(true);
@@ -139,8 +152,9 @@ Original expression:
   QVERIFY(m_window->m_audio.polyDebugInvert());
 
 A010 | PolyphonyGateTest::closingDockSuspendsAndReopenResumes | src/checks/polyphony/polyphonygate.cpp:70
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S004
+Mapping/reason: S004 asserts hiding the panel suspends renderer invert (!audio.polyDebugInvert, PolyphonyPanelChecks.swift:109-111), the read this site makes after close.
 Source context since previous assertion:
   QVERIFY(m_window->m_audio.polyDebugInvert());
 
@@ -150,16 +164,18 @@ Original expression:
   QVERIFY(!m_window->m_audio.polyDebugInvert());
 
 A011 | PolyphonyGateTest::closingDockSuspendsAndReopenResumes | src/checks/polyphony/polyphonygate.cpp:71
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S004, S008
+Mapping/reason: S004 keeps panel.invertChecked true after the hide and S008 asserts the mounted checkbox stays checked after the close button (tst_ShellPolyphony.qml:138).
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
   QVERIFY(m_window->m_polyPanel->invertChecked());
 
 A012 | PolyphonyGateTest::closingDockSuspendsAndReopenResumes | src/checks/polyphony/polyphonygate.cpp:75
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S003, S009
+Mapping/reason: S003 asserts reopening a checked panel re-enables renderer invert (PolyphonyPanelChecks.swift:106-108) and S009 asserts the mounted checkbox is still checked when the dock reopens (tst_ShellPolyphony.qml:142).
 Source context since previous assertion:
   QVERIFY(m_window->m_polyPanel->invertChecked());
 
@@ -170,7 +186,7 @@ Original expression:
 
 A013 | PolyphonyGateTest::uncheckingDockTurnsInvertOff | src/checks/polyphony/polyphonygate.cpp:80
 Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Mapping/reason: Gate-window precondition: QVERIFY2(prepareGateWindow(), "polyphony gate requires a real initialized audio device") (polyphonygate.cpp:80). The Swift gate builds NativeAudio() and reports a failure through report.fail(invertID, "audio device initialization failed: ...") (PolyphonyPanelChecks.swift:116-118) — a failure guard, not an executing predicate — so no message-anchored assertion records the precondition.
 Source context since previous assertion:
   QVERIFY(m_window->m_audio.polyDebugInvert());
   }
@@ -181,8 +197,9 @@ Original expression:
   QVERIFY2(prepareGateWindow(), "polyphony gate requires a real initialized audio device");
 
 A014 | PolyphonyGateTest::uncheckingDockTurnsInvertOff | src/checks/polyphony/polyphonygate.cpp:84
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S003
+Mapping/reason: S003 asserts a checked panel that becomes visible enables renderer invert (PolyphonyPanelChecks.swift:106-108); this site is the unchecked-run setup read.
 Source context since previous assertion:
   QVERIFY2(prepareGateWindow(), "polyphony gate requires a real initialized audio device");
       m_window->m_polyPanel->setInvertChecked(true);
@@ -192,8 +209,9 @@ Original expression:
   QVERIFY(m_window->m_audio.polyDebugInvert());
 
 A015 | PolyphonyGateTest::uncheckingDockTurnsInvertOff | src/checks/polyphony/polyphonygate.cpp:86
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S005
+Mapping/reason: S005 asserts unchecking an open panel disables renderer invert (!audio.polyDebugInvert, PolyphonyPanelChecks.swift:112-115).
 Source context since previous assertion:
   QVERIFY(m_window->m_audio.polyDebugInvert());
       m_window->m_polyPanel->setInvertChecked(false);
@@ -212,3 +230,41 @@ Remaining original source (closing sequence and helper bodies):
       arguments.append(qtArguments);
       return QTest::qExec(&test, arguments);
   }
+
+Swift assertion predicates
+
+S001 | runPolyphonyPanelChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "a fresh attach leaves renderer invert off"
+  PolyphonyPanelChecks.swift:99-101 panel.attach(audio: audio); report.expect(!audio.polyDebugInvert, cppID: invertID, message: "a fresh attach leaves renderer invert off")
+
+S002 | runPolyphonyPanelChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "hidden checkbox retains state without inverting audio"
+  PolyphonyPanelChecks.swift:102-105 panel.setVisible(showing: false); panel.setInvertChecked(checked: true); report.expect(!audio.polyDebugInvert && panel.invertChecked, cppID: invertID, message: "hidden checkbox retains state without inverting audio")
+
+S003 | runPolyphonyPanelChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "reopening checked panel enables audio invert"
+  PolyphonyPanelChecks.swift:106-108 panel.setVisible(showing: true); report.expect(audio.polyDebugInvert, cppID: invertID, message: "reopening checked panel enables audio invert")
+
+S004 | runPolyphonyPanelChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "closing panel suspends invert but remembers checkbox"
+  PolyphonyPanelChecks.swift:109-111 panel.setVisible(showing: false); report.expect(!audio.polyDebugInvert && panel.invertChecked, cppID: invertID, message: "closing panel suspends invert but remembers checkbox")
+
+S005 | runPolyphonyPanelChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "unchecking an open panel disables renderer invert"
+  PolyphonyPanelChecks.swift:112-115 panel.setVisible(showing: true); panel.setInvertChecked(checked: false); report.expect(!audio.polyDebugInvert, cppID: invertID, message: "unchecking an open panel disables renderer invert")
+
+S006 | test_viewActionAndEventNavigation | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "the debugger starts hidden"
+  tst_ShellPolyphony.qml:113-114 verify(!presenter.polyphonyVisible && !dock().visible, "the debugger starts hidden")
+
+S007 | test_viewActionAndEventNavigation | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "ShellWindow dock reacts to the presenter visibility change"
+  tst_ShellPolyphony.qml:121-122 tryVerify(function() { return dock().visible }, 3000, "ShellWindow dock reacts to the presenter visibility change")
+
+S008 | test_viewActionAndEventNavigation | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "closing preserves the invert checkbox state"
+  tst_ShellPolyphony.qml:138 verify(poly.invertChecked, "closing preserves the invert checkbox state")
+
+S009 | test_viewActionAndEventNavigation | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "reopening restores the checked option"
+  tst_ShellPolyphony.qml:142 verify(checkbox.checked, "reopening restores the checked option")

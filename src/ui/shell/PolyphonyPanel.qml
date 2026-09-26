@@ -208,12 +208,18 @@ Item {
                                     required property int dropped
                                     required property int cutOff
                                     required property int tailCut
-                                    required property bool flash
+                                    required property real flashAlpha
                                     width: rows.width
                                     height: Math.round(panel.em * 30 / 12)
-                                    color: flash ? panel.colors.polyphonyFlashBackground : panel.colors.buttonBackground
+                                    color: panel.colors.buttonBackground
                                     border.color: panel.colors.outline
                                     border.width: 0.5
+                                    Rectangle {
+                                        objectName: "polyphonyFlashOverlay"
+                                        anchors.fill: parent
+                                        color: panel.colors.polyphonyFlashBackground
+                                        opacity: counterRow.flashAlpha
+                                    }
                                     Row {
                                         anchors.fill: parent
                                         Repeater {
@@ -236,7 +242,7 @@ Item {
                                                     elide: Text.ElideRight
                                                     font: Qt.font(panel.typography.body)
                                                     verticalAlignment: Text.AlignVCenter
-                                                    color: counterRow.flash ? panel.colors.polyphonyFlashText : panel.colors.windowText
+                                                    color: panel.colors.windowText
                                                 }
                                             }
                                         }
@@ -275,6 +281,9 @@ Item {
                 color: panel.colors.buttonBackground
                 border.color: panel.colors.outline
                 border.width: 1
+                HoverHandler { id: logHover }
+                ToolTip.text: qsTr("Double-click an event to jump to its position.")
+                ToolTip.visible: logHover.hovered
                 ListView {
                     id: list
                     objectName: "polyphonyEventRows"
@@ -298,9 +307,11 @@ Item {
                                 : eventRow.kind === 1 ? panel.colors.warningText : panel.colors.secondaryText
                             elide: Text.ElideRight
                         }
-                        TapHandler {
+                        MouseArea {
+                            anchors.fill: parent
                             acceptedButtons: Qt.LeftButton
-                            onTapped: panel.presenter.activateEvent(eventRow.index, panel.Screen.devicePixelRatio)
+                            onDoubleClicked: panel.presenter.activateEvent(eventRow.index,
+                                                                            panel.Screen.devicePixelRatio)
                         }
                     }
                 }

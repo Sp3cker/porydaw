@@ -12,6 +12,7 @@ public final class PolyphonyShellProbe: QmlInstantiableStatus {
         ProcessInfo.processInfo.environment["PORYDAW_POLYPHONY_PROFILE"] ?? ""
     private let fixture = PolyphonyPanelPresenter()
     private var jumpedTick = -1
+    private var stealCount: UInt32 = 1
 
     public init() {
         fixture.onJump = { [weak self] tick, _, _, _ in
@@ -21,12 +22,18 @@ public final class PolyphonyShellProbe: QmlInstantiableStatus {
     public func componentComplete() {}
 
     public func fixturePresenter() -> PolyphonyPanelPresenter {
+        stealCount = 1
         jumpedTick = -1
         publishFixture()
         return fixture
     }
 
     public func lastJumpTick() -> Int { jumpedTick }
+    public func bumpOverflowCounter() {
+        stealCount += 1
+        publishFixture()
+    }
+
 
     @QtIgnored
     private func publishFixture() {
@@ -45,7 +52,7 @@ public final class PolyphonyShellProbe: QmlInstantiableStatus {
         snapshot.pcm[Int(MAX_PCM_CHANNELS)] = AudioPolyChannel(on: true, releasing: false,
                                                                 track: 4, midiKey: 72)
         snapshot.cgb[0] = AudioPolyChannel(on: true, releasing: false, track: 0, midiKey: 60)
-        snapshot.steal[2] = 1
+        snapshot.steal[2] = stealCount
         snapshot.tailCut[2] = 1
         snapshot.drop[1] = 1
         snapshot.events[0] = M4APolyEvent(type: 1, trackIndex: 2, midiKey: 60,
@@ -66,7 +73,8 @@ public final class PolyphonyShellProbe: QmlInstantiableStatus {
     }
 
     public func artifactPath(root: String, profile: String, state: String) -> String {
-        URL(fileURLWithPath: root, isDirectory: true)
-            .appendingPathComponent("polyphony-\(profile)-\(state).png").path
+        let suffix = state.isEmpty ? "" : "-\(state)"
+        return URL(fileURLWithPath: root, isDirectory: true)
+            .appendingPathComponent("polyphony-\(profile)\(suffix).png").path
     }
 }

@@ -23,14 +23,14 @@ public final class PolyphonyCounterRow {
     public var dropped: Int
     public var cutOff: Int
     public var tailCut: Int
-    public var flash: Bool
+    public var flashAlpha: Double
 
-    init(name: String, dropped: Int, cutOff: Int, tailCut: Int, flash: Bool) {
+    init(name: String, dropped: Int, cutOff: Int, tailCut: Int, flashAlpha: Double) {
         self.name = name
         self.dropped = dropped
         self.cutOff = cutOff
         self.tailCut = tailCut
-        self.flash = flash
+        self.flashAlpha = flashAlpha
     }
 }
 
@@ -126,11 +126,10 @@ public final class PolyphonyPanelPresenter {
     }
 
     @QtIgnored
-    public func update(_ snapshot: AudioPolySnapshot) {
+    public func update(_ snapshot: AudioPolySnapshot, now: ContinuousClock.Instant = .now) {
         showingShadow = snapshot.invert
         let pcmCount = min(Int(snapshot.maxPcmChannels), Int(MAX_PCM_CHANNELS), snapshot.pcm.count)
         if lastChannelSnapshot.map({ Self.sameChannels($0, snapshot) }) != true {
-            // A channel repaint is necessary only when a cell's observed state changes.
             pcm.reset(to: makeChannels(snapshot.pcm.prefix(pcmCount), cgb: false, shadow: false))
             cgb.reset(to: makeChannels(snapshot.cgb.prefix(Int(MAX_CGB_CHANNELS)), cgb: true,
                                        shadow: false))
@@ -169,13 +168,11 @@ public final class PolyphonyPanelPresenter {
         }
         seenTotal = snapshot.eventTotal
 
-        let now = ContinuousClock.now
         var current: [PolyphonyCounterRow] = []
         let count = min(snapshot.drop.count, snapshot.steal.count, snapshot.tailCut.count)
         if previousCounters.count != count {
             previousCounters = Array(repeating: (0, 0, 0), count: count)
             flashUntil = Array(repeating: now, count: count)
-            // A first observation is a baseline, not an increase.
             for i in 0..<count {
                 previousCounters[i] = (snapshot.drop[i], snapshot.steal[i], snapshot.tailCut[i])
             }
@@ -189,8 +186,11 @@ public final class PolyphonyPanelPresenter {
             previousCounters[i] = (drop, steal, tail)
             guard drop != 0 || steal != 0 || tail != 0 else { continue }
             let name = i < trackNames.count ? trackNames[i].trimmingCharacters(in: .whitespacesAndNewlines) : ""
+            let remaining = now.duration(to: flashUntil[i]).components
+            let alpha = now < flashUntil[i]
+                ? 0.55 * (Double(remaining.seconds) + Double(remaining.attoseconds) / 1e18) : 0
             current.append(PolyphonyCounterRow(name: name.isEmpty ? "Track \(i + 1)" : name,
-                dropped: Int(drop), cutOff: Int(steal), tailCut: Int(tail), flash: now < flashUntil[i]))
+                dropped: Int(drop), cutOff: Int(steal), tailCut: Int(tail), flashAlpha: alpha))
         }
         counters.reset(to: current)
         counterCount = current.count

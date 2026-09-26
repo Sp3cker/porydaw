@@ -38,9 +38,10 @@ func runPolyphonyPanelChecks(_ report: CheckReport) {
     report.expectEqual(expected: 1, actual: panel.counters[0].dropped, cppID: id, what: "drop counter projects unchanged")
     report.expectEqual(expected: 2, actual: panel.counters[1].cutOff, cppID: id, what: "steal counter projects unchanged")
     report.expectEqual(expected: 3, actual: panel.counters[1].tailCut, cppID: id, what: "tail counter projects unchanged")
+    flashFadeLawChecks(report, snapshot: snapshot)
     snapshot.steal[2] += 1
     panel.update(snapshot)
-    report.expect(panel.counters[1].flash, cppID: id, message: "counter increase highlights its track")
+    report.expect(panel.counters[1].flashAlpha > 0.5, cppID: id, message: "counter increase highlights its track")
     snapshot.invert = false
     panel.update(snapshot)
     report.expectEqual(expected: 0, actual: panel.shadowPcm.count, cppID: id, what: "normal mode hides shadow allocation")
@@ -61,6 +62,7 @@ func runPolyphonyPanelChecks(_ report: CheckReport) {
     report.expect(panel.events[1].text.contains("2:1.0")
         && panel.events[1].text.contains("Trk 3")
         && panel.events[1].text.contains("C4")
+        && panel.events[1].text.contains("(voice 5)")
         && panel.events[1].text.contains("cut off by Trk 5"),
         cppID: eventID, message: "positioned steal formats bar beat track and key")
     var jumped: (UInt32, Int, Int, Double)?
@@ -95,6 +97,8 @@ func runPolyphonyPanelChecks(_ report: CheckReport) {
     do {
         let audio = try NativeAudio()
         panel.attach(audio: audio)
+        report.expect(!audio.polyDebugInvert, cppID: invertID,
+                      message: "a fresh attach leaves renderer invert off")
         panel.setVisible(showing: false)
         panel.setInvertChecked(checked: true)
         report.expect(!audio.polyDebugInvert && panel.invertChecked,
@@ -112,4 +116,51 @@ func runPolyphonyPanelChecks(_ report: CheckReport) {
     } catch {
         report.fail(invertID, "audio device initialization failed: \(error)")
     }
+}
+
+@MainActor
+private func flashFadeLawChecks(_ report: CheckReport, snapshot: AudioPolySnapshot) {
+    let id = "swiftcore/PolyphonyPanel::flashFadeLaw"
+    let panel = PolyphonyPanelPresenter()
+    let start = ContinuousClock.now
+    var sample = snapshot
+    panel.update(sample, now: start)
+    report.expect(panel.counters[1].flashAlpha == 0, cppID: id,
+                  message: "first observation is a baseline without flash")
+    sample.steal[2] += 1
+    panel.update(sample, now: start)
+    report.expect(abs(panel.counters[1].flashAlpha - 0.55) < 0.0001, cppID: id,
+                  message: "counter increase restarts a linear fade from full emphasis")
+    panel.update(sample, now: start.advanced(by: .milliseconds(100)))
+    report.expect(abs(panel.counters[1].flashAlpha - 0.495) < 0.0001, cppID: id,
+                  message: "counter fade decays linearly toward zero")
+    panel.update(sample, now: start.advanced(by: .milliseconds(600)))
+    report.expect(abs(panel.counters[1].flashAlpha - 0.22) < 0.0001, cppID: id,
+                  message: "counter fade decays linearly toward zero at six tenths")
+    sample.steal[2] -= 1
+    panel.update(sample, now: start.advanced(by: .milliseconds(600)))
+    report.expect(abs(panel.counters[1].flashAlpha - 0.22) < 0.0001, cppID: id,
+                  message: "a counter decrease does not restart the fade")
+    panel.update(sample, now: start.advanced(by: .seconds(1)))
+    report.expect(panel.counters[1].flashAlpha == 0, cppID: id,
+                  message: "the fade expires at one second")
+    panel.update(sample, now: start.advanced(by: .milliseconds(1500)))
+    report.expect(panel.counters[1].flashAlpha == 0, cppID: id,
+                  message: "the fade stays expired after one second")
+    sample.steal[2] += 1
+    panel.update(sample, now: start.advanced(by: .milliseconds(1500)))
+    report.expect(abs(panel.counters[1].flashAlpha - 0.55) < 0.0001, cppID: id,
+                  message: "a new increase restarts the fade window")
+    panel.clear()
+    panel.update(sample, now: start.advanced(by: .seconds(2)))
+    report.expect(panel.counters[1].flashAlpha == 0, cppID: id,
+                  message: "reset re-arms the first sample as a baseline")
+    sample.eventTotal = 2
+    panel.update(sample, now: start.advanced(by: .seconds(2)))
+    sample.steal[2] += 1
+    panel.update(sample, now: start.advanced(by: .seconds(2)))
+    sample.eventTotal = 1
+    panel.update(sample, now: start.advanced(by: .seconds(2)))
+    report.expect(panel.counters[1].flashAlpha == 0, cppID: id,
+                  message: "a lower event total rebases the flash baseline")
 }

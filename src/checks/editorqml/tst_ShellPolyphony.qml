@@ -4,6 +4,7 @@ import QtTest
 import ShellQmlCheck 1.0
 import Porydaw.Ui
 import "NativeWait.js" as NativeWait
+import "TextContrastAudit.js" as Audit
 
 TestCase {
     id: testCase
@@ -175,9 +176,45 @@ TestCase {
         mouseClick(live, live.width / 2, live.height / 2)
         compare(probe.lastJumpTick(), -1,
                 "live overflow cannot request a document cursor jump")
+        mouseDoubleClickSequence(live, live.width / 2, live.height / 2, Qt.LeftButton)
+        compare(probe.lastJumpTick(), -1,
+                "double-clicking live overflow cannot request a document cursor jump")
         mouseClick(row, row.width / 2, row.height / 2)
+        compare(probe.lastJumpTick(), -1,
+                "single-clicking a positioned log row does not jump")
+        mouseDoubleClickSequence(row, row.width / 2, row.height / 2, Qt.LeftButton)
         compare(probe.lastJumpTick(), 96,
-                "clicking a positioned log row requests the event's document tick")
+                "double-clicking a positioned log row requests the event's document tick")
+        probe.bumpOverflowCounter()
+        var overflowCell = findChild(referencePane, "polyphonyOverflowRow_1")
+        verify(overflowCell, "the increasing track has a rendered counter row")
+        var flashingRow = overflowCell.parent.parent
+        verify(flashingRow.flashAlpha > 0.5, "counter increase highlights its track")
+        var flashOverlay = findChild(flashingRow, "polyphonyFlashOverlay")
+        verify(flashOverlay && flashOverlay.opacity > 0.5,
+               "the counter row paints its translucent flash overlay")
+        scroll.contentY = 0
+        verify(waitForPolish(referencePane), "flashing track scrolls into the viewport")
+        var flashingText = findChild(flashingRow, "polyphonyCounterText")
+        waitForRendering(referencePane)
+        var observation = Audit.measure(flashingText, grabImage(shell.contentItem), shell.contentItem)
+        verify(observation !== null, "the flashing counter text is painted on the row")
+        verify(observation.ratio >= observation.required,
+               "flashing counter text meets WCAG AA on its faded row surface: "
+               + observation.fg + " on " + observation.bg + " = " + observation.ratio)
+        var flashSaved = false
+        verify(referencePane.grabToImage(function(result) {
+            flashSaved = result.saveToFile("file://" + probe.artifactPath(bootstrap.projectRoot,
+                                                                          "flash", ""))
+        }), "flashing pane capture starts")
+        tryVerify(function() { return flashSaved }, 5000,
+                  "the polyphony-flash.png artifact captures the painted flash")
+        referencePane.height = referencePane.em * 30
+        verify(waitForPolish(referencePane), "short pane settles its scroll extent")
+        verify(scroll.contentHeight > scroll.height,
+               "a short pane keeps the log reachable by scrolling")
+        referencePane.height = 600
+        verify(waitForPolish(referencePane), "reference pane returns to its original height")
         var reset = findChild(referencePane, "polyphonyReset")
         mouseClick(reset, reset.width / 2, reset.height / 2)
         compare(fixture.eventCount, 0, "Reset clears visible diagnostic events")

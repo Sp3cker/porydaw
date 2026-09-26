@@ -3,16 +3,24 @@ Assertion correspondence: polyphony/polyphonypanel.cpp
 Reference revision: 3f830ceb349b6f5dd6e7fc76b035a83ec0cbd3d9
 Original: src/checks/polyphony/polyphonypanel.cpp
 Original SHA-256: abf46ceceb9c32a53043fc6bff7f71eb62d9f747dc6674c3e3fdcf55ad305769
-Swift counterpart: src/checks/polyphony/PolyphonyPanelChecks.swift and src/checks/editorqml/tst_ShellPolyphony.qml (not yet executed)
+Swift counterpart: src/checks/polyphony/PolyphonyPanelChecks.swift
+Additional Swift counterpart: src/checks/editorqml/tst_ShellPolyphony.qml
+Additional Swift counterpart: src/checks/themecolor/ThemeColorChecks.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
-Command: deno task verify --filter polycheck --verbose
-Result: pending integrated run.
+Command: deno task verify --filter swiftcore-themecolor --verbose
+Result: PASS (1/37) — implementer-reported run on the frozen task-43 tree (deno task build:checks PASS, 28.80s); records the polyphony projection, ring/jump/cap, flash-fade-law, flash-contrast and invert-gate rows indexed below. This bookkeeping pass ran no lane.
+
+Command: deno task verify:shell --filter shell-polyphony --verbose
+Result: PASS (1/26, 25 skipped) — implementer-reported run on the frozen task-43 tree. RED before the gesture fix: "single-clicking a positioned log row does not jump" reported actual 96 vs expected -1. Records the mounted gesture, flash-overlay, rendered-flash contrast, artifact and short-pane scroll rows indexed below. This bookkeeping pass ran no lane.
+
+Command: deno task proof check
+Result: PASS — structure, entry IDs, metadata and anchor resolution only; not execution, source freshness or parity. Execution verdicts come from build/proof-evidence/swiftcore-themecolor.json and build/proof-evidence/shell-polyphony.json.
 
 A001 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:133
 Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Mapping/reason: Fixture-setup precondition (MidiTimeline::build result); the Swift checks drive PolyphonyPanelPresenter from AudioPolySnapshot values and assert no analogous fixture precondition, so the guard has no executing counterpart.
 Source context since previous assertion:
   #include "checks/polyphony/tst_polyphonycheck.h"
 
@@ -150,8 +158,9 @@ Original expression:
   QVERIFY(fixture.timeline);
 
 A002 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:136
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S001
+Mapping/reason: S001 asserts the ring fixture's log row count equals its two ring events (PolyphonyPanelChecks.swift:59), the one-row-per-event law this site reads at three events.
 Source context since previous assertion:
   QVERIFY(fixture.timeline);
       fixture.panel->updateSnapshot(richSnapshot());
@@ -159,8 +168,9 @@ Original expression:
   QCOMPARE(fixture.panel->logRowCount(), 3);
 
 A003 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:140
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S002
+Mapping/reason: S002 asserts the newest log row carries the live token (events[0].text contains "live", PolyphonyPanelChecks.swift:60-61).
 Source context since previous assertion:
   QCOMPARE(fixture.panel->logRowCount(), 3);
       const QString newest = fixture.panel->logRowText(0);
@@ -170,8 +180,9 @@ Original expression:
   QVERIFY(newest.contains(QStringLiteral("live")));
 
 A004 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:141
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S002
+Mapping/reason: The same predicate's dropped token covers this site (events[0].text contains "dropped").
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
@@ -179,7 +190,7 @@ Original expression:
 
 A005 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:142
 Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Mapping/reason: No equivalent assertion: the Swift ring fixture builds only the positioned steal and the live drop (PolyphonyPanelChecks.swift:50-58), so no predicate formats a tail-cut row's tick 216 as bar:beat 3:2.0; S003 asserts the bar:beat law on the steal row only.
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
@@ -187,47 +198,52 @@ Original expression:
 
 A006 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:143
 Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Mapping/reason: No equivalent assertion: no Swift or QML predicate reads the tail-cut row's "tail cut" label; S002 covers the live/dropped labels and S003 the positioned-steal tokens.
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
   QVERIFY(middle.contains(QStringLiteral("tail cut")));
 
 A007 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:144
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S003
+Mapping/reason: S003 asserts the positioned row's bar:beat token "2:1.0" for tick 96 (PolyphonyPanelChecks.swift:62-67).
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
   QVERIFY(oldest.contains(QStringLiteral("2:1.0")));
 
 A008 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:145
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S003
+Mapping/reason: The same predicate asserts the "Trk 3" token derived from the event's trackIndex 2.
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
   QVERIFY(oldest.contains(QStringLiteral("Trk 3")));
 
 A009 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:146
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S003
+Mapping/reason: The same predicate asserts the "C4" key token for midiKey 60.
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
   QVERIFY(oldest.contains(QStringLiteral("C4")));
 
 A010 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:147
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S003
+Mapping/reason: The same predicate asserts the voice token "(voice 5)" for program 5; the Swift fixture publishes no voice names, so the fallback token stands in for the fork fixture's "voice_piano".
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
   QVERIFY(oldest.contains(QStringLiteral("voice_piano")));
 
 A011 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:148
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S003
+Mapping/reason: The same predicate asserts the "cut off by Trk 5" token for byTrack 4.
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
@@ -235,7 +251,7 @@ Original expression:
 
 A012 | PolyphonyGateTest::positionedLogRowJumpsAndLiveDoesNot | src/checks/polyphony/polyphonypanel.cpp:155
 Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Mapping/reason: Harness guard: QSignalSpy validity of the jump emission. The Swift check installs the typed presenter onJump callback directly and asserts the delivered tuple (S005) and the live no-jump (S004); no predicate asserts spy validity.
 Source context since previous assertion:
   QVERIFY(oldest.contains(QStringLiteral("cut off by Trk 5")));
   }
@@ -248,8 +264,9 @@ Original expression:
   QVERIFY(jumped.isValid());
 
 A013 | PolyphonyGateTest::positionedLogRowJumpsAndLiveDoesNot | src/checks/polyphony/polyphonypanel.cpp:159
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: PARTIAL
+Mapping: S005
+Mapping/reason: PARTIAL: S005 asserts the payload of one activateEvent call (tick 96, track 2, key 60, dpr 2) and S036 the tick of one mounted double-click, but the original's exactly-one emission count is unproved — neither the Swift callback nor the QML probe counts onJump invocations.
 Source context since previous assertion:
   QVERIFY(jumped.isValid());
       fixture.panel->updateSnapshot(richSnapshot());
@@ -259,8 +276,9 @@ Original expression:
   QCOMPARE(jumped.count(), 1);
 
 A014 | PolyphonyGateTest::positionedLogRowJumpsAndLiveDoesNot | src/checks/polyphony/polyphonypanel.cpp:161
-Disposition: PARTIAL
-Mapping/reason: PolyphonyPanelChecks.swift asserts the positioned event requests tick 96 and tst_ShellPolyphony.qml exercises the production event row using an isolated fixture; deno task verify --filter swiftcore and deno task verify:shell --filter shell-polyphony --verbose passed.
+Disposition: MATCHED
+Mapping: S005, S036
+Mapping/reason: S005 asserts jump tick 96 for the positioned row and S036 asserts the mounted production row requests document tick 96 on double-click.
 Source context since previous assertion:
   QCOMPARE(jumped.count(), 1);
       const QList<QVariant> jump = jumped.takeFirst();
@@ -268,24 +286,27 @@ Original expression:
   QCOMPARE(jump[0].toULongLong(), uint64_t(96));
 
 A015 | PolyphonyGateTest::positionedLogRowJumpsAndLiveDoesNot | src/checks/polyphony/polyphonypanel.cpp:162
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S005
+Mapping/reason: The same predicate asserts the emitted track 2 (jumped?.1 == 2).
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
   QCOMPARE(jump[1].toInt(), 2);
 
 A016 | PolyphonyGateTest::positionedLogRowJumpsAndLiveDoesNot | src/checks/polyphony/polyphonypanel.cpp:163
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S005
+Mapping/reason: The same predicate asserts the emitted midiKey 60 (jumped?.2 == 60).
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
   QCOMPARE(jump[2].toInt(), 60);
 
 A017 | PolyphonyGateTest::positionedLogRowJumpsAndLiveDoesNot | src/checks/polyphony/polyphonypanel.cpp:165
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S004, S033
+Mapping/reason: S004 asserts a live-sentinel activation delivers no jump (jumped == nil) and S033 asserts the mounted live row's single click requests no document cursor.
 Source context since previous assertion:
   QCOMPARE(jump[2].toInt(), 60);
       fixture.panel->activateLogRow(0);
@@ -293,8 +314,9 @@ Original expression:
   QCOMPARE(jumped.count(), 0);
 
 A018 | PolyphonyGateTest::resetRebasesLog | src/checks/polyphony/polyphonypanel.cpp:175
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S006
+Mapping/reason: S006 asserts the smaller-eventTotal snapshot rebases the run to its one retained event.
 Source context since previous assertion:
   QCOMPARE(jumped.count(), 0);
   }
@@ -310,8 +332,9 @@ Original expression:
   QCOMPARE(fixture.panel->logRowCount(), 1);
 
 A019 | PolyphonyGateTest::logCapIs500 | src/checks/polyphony/polyphonypanel.cpp:194
-Disposition: PARTIAL
-Mapping/reason: PolyphonyPanelChecks.swift asserts a 500-row cap after repeated ring bursts; deno task verify --filter swiftcore passed.
+Disposition: MATCHED
+Mapping: S007, S008
+Mapping/reason: S007 asserts ten 60-event bursts leave exactly 500 retained events and S008 that the newest retained event is first (cap and newest-first trim).
 Source context since previous assertion:
   QCOMPARE(fixture.panel->logRowCount(), 1);
   }
@@ -336,8 +359,9 @@ Original expression:
   QCOMPARE(fixture.panel->logRowCount(), 500);
 
 A020 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:204
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S044, S047
+Mapping/reason: The profile children mount the production pane at the frozen narrow geometry (380x760, the size this site grabs) and S044 asserts their rendered capture is written to the artifact path; S047 is the test_visualProfiles entry point recorded in build/proof-evidence/shell-polyphony.json.
 Source context since previous assertion:
   QCOMPARE(fixture.panel->logRowCount(), 500);
   }
@@ -353,8 +377,9 @@ Original expression:
   QVERIFY(fixture.panel->grab().save(m_screenshotPath));
 
 A021 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:208
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S030
+Mapping/reason: S030 asserts the mounted production pane is visible when its dock opens (tst_ShellPolyphony.qml:126-127); this site reads the same widget visibility after the narrow resize the following geometry rows depend on.
 Source context since previous assertion:
   QVERIFY(fixture.panel->grab().save(m_screenshotPath));
 
@@ -364,16 +389,18 @@ Original expression:
   QTRY_VERIFY(fixture.panel->isVisible());
 
 A022 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:209
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S043, S047
+Mapping/reason: S043 compares the production pane's wideLayout against the frozen profile's captured responsive state; the narrow-vanilla/narrow-darkneutralhigh baselines (380x760) resolve false across the four DPR/font children.
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
   QTRY_VERIFY(!fixture.panel->wideLayoutActive());
 
 A023 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:210
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: PARTIAL
+Mapping: S046, S047
+Mapping/reason: PARTIAL: S046 pins the production pane's overflow-section rect against the frozen widget baseline for this narrow profile (position and size within 2*px) and the pinned rect satisfies the original inequality, but no predicate restates the overflow-section-over-usage-section comparison — the usage section rect itself is not a pinned region.
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
@@ -381,8 +408,9 @@ Original expression:
                   fixture.panel->usageSectionRect().bottom());
 
 A024 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:212
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: PARTIAL
+Mapping: S045, S047
+Mapping/reason: PARTIAL: the narrow profile children relayout the usage channel flow and S045 asserts each group settles at the profile width, but no predicate asserts the channel grid's unclipped containment (gridFullyVisible).
 Source context since previous assertion:
   QTRY_VERIFY(fixture.panel->overflowSectionRect().top() >=
                   fixture.panel->usageSectionRect().bottom());
@@ -390,8 +418,9 @@ Original expression:
   QTRY_VERIFY(fixture.panel->gridFullyVisible());
 
 A025 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:216
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S043, S047
+Mapping/reason: S043 resolves the wide-vanilla/wide-darkneutralhigh profiles (900x600) to wideLayout true across the four children.
 Source context since previous assertion:
   QTRY_VERIFY(fixture.panel->gridFullyVisible());
 
@@ -401,8 +430,9 @@ Original expression:
   QTRY_VERIFY(fixture.panel->wideLayoutActive());
 
 A026 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:217
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: PARTIAL
+Mapping: S046, S047
+Mapping/reason: PARTIAL: S046 pins the overflow-section rect at the wide profile (left edge 572 against the pinned usage heading's 8..566) but no predicate restates the overflow-left-over-usage-right comparison.
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
@@ -410,8 +440,9 @@ Original expression:
                   fixture.panel->usageSectionRect().right());
 
 A027 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:219
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: PARTIAL
+Mapping: S045, S047
+Mapping/reason: PARTIAL: as A024 at the wide profile; the channel flow settle is asserted, grid containment is not.
 Source context since previous assertion:
   QTRY_VERIFY(fixture.panel->overflowSectionRect().left() >=
                   fixture.panel->usageSectionRect().right());
@@ -419,8 +450,9 @@ Original expression:
   QTRY_VERIFY(fixture.panel->gridFullyVisible());
 
 A028 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:221
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S044, S047
+Mapping/reason: The profile children capture the production pane at the frozen wide geometry (900x600, the size this site grabs) and S044 asserts the artifact is written.
 Source context since previous assertion:
   QTRY_VERIFY(fixture.panel->gridFullyVisible());
       if (!m_screenshotPath.isEmpty())
@@ -429,8 +461,9 @@ Original expression:
               derivedScreenshotPath(m_screenshotPath, QStringLiteral("-wide"))));
 
 A029 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:226
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: PARTIAL
+Mapping: S041, S047
+Mapping/reason: PARTIAL: the short-pane block (referencePane.height = em*30) exercises the short geometry and S041 asserts the log scrolls there, but no predicate asserts channel-grid containment at the short size.
 Source context since previous assertion:
   QVERIFY(fixture.panel->grab().save(
               derivedScreenshotPath(m_screenshotPath, QStringLiteral("-wide"))));
@@ -441,16 +474,18 @@ Original expression:
   QTRY_VERIFY(fixture.panel->gridFullyVisible());
 
 A030 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:227
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: MATCHED
+Mapping: S041
+Mapping/reason: S041 asserts the short pane's log content exceeds its viewport (contentHeight > height), the scroll extent this site reads as vScrollRange() > 0.
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
   QTRY_VERIFY(fixture.panel->vScrollRange() > 0);
 
 A031 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:229
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: PARTIAL
+Mapping: S044, S047
+Mapping/reason: PARTIAL: S044 asserts the profile children write rendered captures for the narrow and wide states, but no short (380x240) capture state exists; the unproved part is the short-geometry artifact.
 Source context since previous assertion:
   QTRY_VERIFY(fixture.panel->vScrollRange() > 0);
       if (!m_screenshotPath.isEmpty())
@@ -459,8 +494,9 @@ Original expression:
               derivedScreenshotPath(m_screenshotPath, QStringLiteral("-short"))));
 
 A032 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:234
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: PARTIAL
+Mapping: S047
+Mapping/reason: PARTIAL: the restored pane is re-polished ("reference pane returns to its original height", tst_ShellPolyphony.qml:216-217) but no predicate asserts its scroll extent returns to zero; S041 covers only the short state's positive extent.
 Source context since previous assertion:
   QVERIFY(fixture.panel->grab().save(
               derivedScreenshotPath(m_screenshotPath, QStringLiteral("-short"))));
@@ -474,3 +510,193 @@ Remaining original source (closing sequence and helper bodies):
   }
 
   } // namespace checks
+
+Swift assertion predicates
+
+S001 | runPolyphonyPanelChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "ring drains oldest first"
+  PolyphonyPanelChecks.swift:59 report.expectEqual(expected: 2, actual: panel.eventCount, cppID: eventID, what: "ring drains oldest first")
+
+S002 | runPolyphonyPanelChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "newest live drop appears first"
+  PolyphonyPanelChecks.swift:60-61 report.expect(panel.events[0].text.contains("live") && panel.events[0].text.contains("dropped"), cppID: eventID, message: "newest live drop appears first")
+
+S003 | runPolyphonyPanelChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "positioned steal formats bar beat track and key"
+  PolyphonyPanelChecks.swift:62-67 report.expect(panel.events[1].text.contains("2:1.0") && ...contains("Trk 3") && ...contains("C4") && ...contains("(voice 5)") && ...contains("cut off by Trk 5"), cppID: eventID, message: "positioned steal formats bar beat track and key")
+
+S004 | runPolyphonyPanelChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "live sentinel cannot jump"
+  PolyphonyPanelChecks.swift:70-71 panel.activateEvent(index: 0, devicePixelRatio: 2); report.expect(jumped == nil, cppID: eventID, message: "live sentinel cannot jump")
+
+S005 | runPolyphonyPanelChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "positioned row jumps to the precise note"
+  PolyphonyPanelChecks.swift:72-74 panel.activateEvent(index: 1, devicePixelRatio: 2); report.expect(jumped?.0 == 96 && jumped?.1 == 2 && jumped?.2 == 60 && jumped?.3 == 2, cppID: eventID, message: "positioned row jumps to the precise note")
+
+S006 | runPolyphonyPanelChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "smaller ring total rebases an old run"
+  PolyphonyPanelChecks.swift:76-80 snapshot.eventTotal = 1; panel.update(snapshot); report.expectEqual(expected: 1, actual: panel.eventCount, cppID: eventID, what: "smaller ring total rebases an old run")
+
+S007 | runPolyphonyPanelChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "ten 60-event bursts retain only the latest 500"
+  PolyphonyPanelChecks.swift:81-92 ten 60-event bursts through presenter.update; report.expectEqual(expected: 500, actual: panel.eventCount, cppID: eventID, what: "ten 60-event bursts retain only the latest 500")
+
+S008 | runPolyphonyPanelChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "newest retained event is first"
+  PolyphonyPanelChecks.swift:93-94 report.expectEqual(expected: Double(600), actual: panel.events[0].tick, cppID: eventID, what: "newest retained event is first")
+
+S009 | runPolyphonyPanelChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "a fresh attach leaves renderer invert off"
+  PolyphonyPanelChecks.swift:99-101 panel.attach(audio: audio); report.expect(!audio.polyDebugInvert, cppID: invertID, message: "a fresh attach leaves renderer invert off")
+
+S010 | runPolyphonyPanelChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "hidden checkbox retains state without inverting audio"
+  PolyphonyPanelChecks.swift:102-105 panel.setVisible(showing: false); panel.setInvertChecked(checked: true); report.expect(!audio.polyDebugInvert && panel.invertChecked, cppID: invertID, message: "hidden checkbox retains state without inverting audio")
+
+S011 | runPolyphonyPanelChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "reopening checked panel enables audio invert"
+  PolyphonyPanelChecks.swift:106-108 panel.setVisible(showing: true); report.expect(audio.polyDebugInvert, cppID: invertID, message: "reopening checked panel enables audio invert")
+
+S012 | runPolyphonyPanelChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "closing panel suspends invert but remembers checkbox"
+  PolyphonyPanelChecks.swift:109-111 panel.setVisible(showing: false); report.expect(!audio.polyDebugInvert && panel.invertChecked, cppID: invertID, message: "closing panel suspends invert but remembers checkbox")
+
+S013 | runPolyphonyPanelChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "unchecking an open panel disables renderer invert"
+  PolyphonyPanelChecks.swift:112-115 panel.setVisible(showing: true); panel.setInvertChecked(checked: false); report.expect(!audio.polyDebugInvert, cppID: invertID, message: "unchecking an open panel disables renderer invert")
+
+S014 | runPolyphonyPanelChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "counter increase highlights its track"
+  PolyphonyPanelChecks.swift:42-44 snapshot.steal[2] += 1; panel.update(snapshot); report.expect(panel.counters[1].flashAlpha > 0.5, cppID: id, message: "counter increase highlights its track")
+
+S015 | flashFadeLawChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "first observation is a baseline without flash"
+  PolyphonyPanelChecks.swift:127-129 panel.update(sample, now: start); report.expect(panel.counters[1].flashAlpha == 0, cppID: id, message: "first observation is a baseline without flash")
+
+S016 | flashFadeLawChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "counter increase restarts a linear fade from full emphasis"
+  PolyphonyPanelChecks.swift:130-133 sample.steal[2] += 1; panel.update(sample, now: start); report.expect(abs(panel.counters[1].flashAlpha - 0.55) < 0.0001, cppID: id, message: "counter increase restarts a linear fade from full emphasis")
+
+S017 | flashFadeLawChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "counter fade decays linearly toward zero"
+  PolyphonyPanelChecks.swift:134-136 panel.update(sample, now: start.advanced(by: .milliseconds(100))); report.expect(abs(panel.counters[1].flashAlpha - 0.495) < 0.0001, cppID: id, message: "counter fade decays linearly toward zero")
+
+S018 | flashFadeLawChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "counter fade decays linearly toward zero at six tenths"
+  PolyphonyPanelChecks.swift:137-139 panel.update(sample, now: start.advanced(by: .milliseconds(600))); report.expect(abs(panel.counters[1].flashAlpha - 0.22) < 0.0001, cppID: id, message: "counter fade decays linearly toward zero at six tenths")
+
+S019 | flashFadeLawChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "a counter decrease does not restart the fade"
+  PolyphonyPanelChecks.swift:140-143 sample.steal[2] -= 1; panel.update(sample, now: start.advanced(by: .milliseconds(600))); report.expect(abs(panel.counters[1].flashAlpha - 0.22) < 0.0001, cppID: id, message: "a counter decrease does not restart the fade")
+
+S020 | flashFadeLawChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "the fade expires at one second"
+  PolyphonyPanelChecks.swift:144-146 panel.update(sample, now: start.advanced(by: .seconds(1))); report.expect(panel.counters[1].flashAlpha == 0, cppID: id, message: "the fade expires at one second")
+
+S021 | flashFadeLawChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "the fade stays expired after one second"
+  PolyphonyPanelChecks.swift:147-149 panel.update(sample, now: start.advanced(by: .milliseconds(1500))); report.expect(panel.counters[1].flashAlpha == 0, cppID: id, message: "the fade stays expired after one second")
+
+S022 | flashFadeLawChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "a new increase restarts the fade window"
+  PolyphonyPanelChecks.swift:150-153 sample.steal[2] += 1; panel.update(sample, now: start.advanced(by: .milliseconds(1500))); report.expect(abs(panel.counters[1].flashAlpha - 0.55) < 0.0001, cppID: id, message: "a new increase restarts the fade window")
+
+S023 | flashFadeLawChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "reset re-arms the first sample as a baseline"
+  PolyphonyPanelChecks.swift:154-157 panel.clear(); panel.update(sample, now: start.advanced(by: .seconds(2))); report.expect(panel.counters[1].flashAlpha == 0, cppID: id, message: "reset re-arms the first sample as a baseline")
+
+S024 | flashFadeLawChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
+Anchor: message "a lower event total rebases the flash baseline"
+  PolyphonyPanelChecks.swift:158-165 sample.eventTotal = 2 then increase then sample.eventTotal = 1; report.expect(panel.counters[1].flashAlpha == 0, cppID: id, message: "a lower event total rebases the flash baseline")
+
+S025 | themePresetValueChecks | src/checks/themecolor/ThemeColorChecks.swift
+Anchor: message "\(tag): polyphony flash identity"
+  ThemeColorChecks.swift:271-272 report.expectEqual(expected: "#D92626", actual: palette.polyphonyFlashBackground, cppID: themeCompletenessID, what: "\(tag): polyphony flash identity") — one row per preset (mode=vanilla, dark-neutral-high, immaterial).
+
+S026 | polyphonyFlashContrastChecks | src/checks/themecolor/ThemeColorChecks.swift
+Anchor: message "mode=\(row.mode): windowText on polyphonyFlashBackground@0.55 over buttonBackground contrast \(String(format: "
+  ThemeColorChecks.swift:489-493 per preset: themeCompositeHex("#8CD92626", over: palette.buttonBackground) then report.expect(flashRatio >= 4.5, cppID: "swiftcore/PolyphonyPanel::flashContrast", message: "mode=\(row.mode): windowText on polyphonyFlashBackground@0.55 over buttonBackground contrast <ratio> (floor 4.5)")
+
+S027 | polyphonyFlashContrastChecks | src/checks/themecolor/ThemeColorChecks.swift
+Anchor: message "mode=\(row.mode): windowText on buttonBackground contrast \(String(format: "
+  ThemeColorChecks.swift:494-496 per preset: report.expect(restingRatio >= 4.5, cppID: "swiftcore/PolyphonyPanel::flashContrast", message: "mode=\(row.mode): windowText on buttonBackground contrast <ratio> (floor 4.5)")
+
+S028 | test_viewActionAndEventNavigation | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "the debugger starts hidden"
+  tst_ShellPolyphony.qml:113-114 verify(!presenter.polyphonyVisible && !dock().visible, "the debugger starts hidden")
+
+S029 | test_viewActionAndEventNavigation | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "ShellWindow dock reacts to the presenter visibility change"
+  tst_ShellPolyphony.qml:121-122 tryVerify(function() { return dock().visible }, 3000, "ShellWindow dock reacts to the presenter visibility change")
+
+S030 | test_viewActionAndEventNavigation | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "the mounted polyphony pane follows its dock"
+  tst_ShellPolyphony.qml:126-127 tryVerify(function() { return mountedPanel.visible }, 3000, "the mounted polyphony pane follows its dock")
+
+S031 | test_viewActionAndEventNavigation | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "closing preserves the invert checkbox state"
+  tst_ShellPolyphony.qml:138 verify(poly.invertChecked, "closing preserves the invert checkbox state")
+
+S032 | test_viewActionAndEventNavigation | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "reopening restores the checked option"
+  tst_ShellPolyphony.qml:142 verify(checkbox.checked, "reopening restores the checked option")
+
+S033 | test_viewActionAndEventNavigation | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "live overflow cannot request a document cursor jump"
+  tst_ShellPolyphony.qml:177-178 mouseClick(live, ...); compare(probe.lastJumpTick(), -1, "live overflow cannot request a document cursor jump")
+
+S034 | test_viewActionAndEventNavigation | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "double-clicking live overflow cannot request a document cursor jump"
+  tst_ShellPolyphony.qml:180-181 mouseDoubleClickSequence(live, ...); compare(probe.lastJumpTick(), -1, "double-clicking live overflow cannot request a document cursor jump")
+
+S035 | test_viewActionAndEventNavigation | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "single-clicking a positioned log row does not jump"
+  tst_ShellPolyphony.qml:183-184 mouseClick(row, ...); compare(probe.lastJumpTick(), -1, "single-clicking a positioned log row does not jump")
+
+S036 | test_viewActionAndEventNavigation | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "double-clicking a positioned log row requests the event's document tick"
+  tst_ShellPolyphony.qml:186-187 mouseDoubleClickSequence(row, ...); compare(probe.lastJumpTick(), 96, "double-clicking a positioned log row requests the event's document tick")
+
+S037 | test_viewActionAndEventNavigation | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "counter increase highlights its track"
+  tst_ShellPolyphony.qml:188-192 probe.bumpOverflowCounter(); verify(flashingRow.flashAlpha > 0.5, "counter increase highlights its track")
+
+S038 | test_viewActionAndEventNavigation | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "the counter row paints its translucent flash overlay"
+  tst_ShellPolyphony.qml:193-195 verify(flashOverlay && flashOverlay.opacity > 0.5, "the counter row paints its translucent flash overlay")
+
+S039 | test_viewActionAndEventNavigation | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "flashing counter text meets WCAG AA on its faded row surface: "
+  tst_ShellPolyphony.qml:200-204 Audit.measure(flashingText, grabImage(shell.contentItem), shell.contentItem); verify(observation.ratio >= observation.required, "flashing counter text meets WCAG AA on its faded row surface: " + observation.fg + " on " + observation.bg + " = " + observation.ratio)
+
+S040 | test_viewActionAndEventNavigation | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "the polyphony-flash.png artifact captures the painted flash"
+  tst_ShellPolyphony.qml:205-211 referencePane.grabToImage(... saveToFile(probe.artifactPath(root, "flash", ""))); tryVerify(function() { return flashSaved }, 5000, "the polyphony-flash.png artifact captures the painted flash")
+
+S041 | test_viewActionAndEventNavigation | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "a short pane keeps the log reachable by scrolling"
+  tst_ShellPolyphony.qml:212-215 referencePane.height = referencePane.em * 30; verify(scroll.contentHeight > scroll.height, "a short pane keeps the log reachable by scrolling")
+
+S042 | test_viewActionAndEventNavigation | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "Reset clears visible diagnostic events"
+  tst_ShellPolyphony.qml:219-220 mouseClick(reset, ...); compare(fixture.eventCount, 0, "Reset clears visible diagnostic events")
+
+S043 | test_visualProfiles | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "the widget's responsive breakpoint matches the frozen profile"
+  tst_ShellPolyphony.qml:290-291 compare(pane.wideLayout, state.indexOf("wide-") === 0, "the widget's responsive breakpoint matches the frozen profile")
+
+S044 | test_visualProfiles | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message " production pane captured against widget baseline"
+  tst_ShellPolyphony.qml:303-309 pane.grabToImage(... saveToFile(probe.artifactPath(root, profile, state))); tryVerify(function() { return saved }, 5000, state + " production pane captured against widget baseline")
+
+S045 | test_visualProfiles | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "channel flow relayout settles at the profile width"
+  tst_ShellPolyphony.qml:277-282 findChild(pane, "polyphonyUsageSection").children[1].children; verify(waitForPolish(usageGroups[group].children[1]), "channel flow relayout settles at the profile width")
+
+S046 | test_visualProfiles | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "poly.overflow-section"
+  tst_ShellPolyphony.qml:300 compareRegion(baseline, "poly.overflow-section", findChild(pane, "polyphonyOverflowSection"), px * 2) — compareRegion asserts position and size against the frozen widget baseline within the tolerance (tst_ShellPolyphony.qml:247-262).
+
+S047 | test_visualProfiles | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: function
+  Profile-child entry point recorded in build/proof-evidence/shell-polyphony.json as ::ShellPolyphony::test_visualProfiles (four DPR/font children); the tier anchor for the frozen-widget-baseline rows A020-A032.
