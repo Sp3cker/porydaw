@@ -8,6 +8,7 @@ Additional Swift counterpart: src/checks/velocity/tst_velocityediting.swift
 Additional Swift counterpart: src/checks/velocity/VelocityRollCoreChecks.swift
 Additional Swift counterpart: src/checks/rollcheck/static/camera.swift
 Additional Swift counterpart: src/checks/keyboard/KeybindingRegistryChecks.swift
+Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Command: deno task verify:qml --verbose
@@ -15,6 +16,7 @@ Result: PASS — drawer lane PASS (drawer 1/1; profiles all 4) on the task-6 set
 tst_EditorDrawer.qml. Controller-run; the ledger agent did not run it.
 Command: deno task build:checks; deno task verify --filter swiftcore-projectsession --verbose (sibling velocity lane)
 Result: PASS — provided by the implementer (agent://Task59a, locked build) for the frozen Stage A tree: build ok; 1/36 ok (35 sibling harnesses skipped by the filter), and the cited VelocityRollCore / VelocityClickSelection / drawerVelocityProjectionRefresh / click-case predicates appear in that lane's evidence (build/proof-evidence/swiftcore-projectsession.json); the keybinding and camera anchors appear in the same lane. Not re-run by the ledger writer.
+Note: Stage B evidence fresh 2026-09-26: the editorqml-drawer lane functions[] pass record lists 86 passing functions including test_productionVelocityMountedInk/TransientInk/DetentRepaint. S130-S138 below execute green, but the cited rows stay PARTIAL: each native clause observes the quick-scene layer (VelocityGrid/VelocityStems/VelocityNodes/VelocityTransient ink, exact-black/mid/track-fill identity, chrome detentVisible flag), which no composed-model predicate establishes.
 
 A001 | createVelocityFixture | src/checks/drawerpresentation/velocity.cpp:39
 Disposition: RETIRED-REPRESENTATION
@@ -206,8 +208,8 @@ Disposition: MATCHED
 Mapping: S003
 
 A041 | VelocityPageTest::gridAndPanClamp | src/checks/drawerpresentation/velocity.cpp:205
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/velocity.cpp) no longer builds or runs. Previous native note: Original native quick-scene layer obligation: VelocityGrid ink at the past-end grid point. A page-level Swift predicate cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: The mounted page paints a past-end grid rect with the model fill across the plot height in a passing lane; the quick-scene VelocityGrid layer observation is unproved. [S130]
 Original expression:
   QVERIFY(std::any_of(colors.cbegin(), colors.cend(), [&](const QColor &color) {
           return layerTouches(
@@ -308,8 +310,8 @@ Disposition: MATCHED
 Mapping: S059
 
 A062 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:332
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/velocity.cpp) no longer builds or runs. Previous native note: Original native quick-scene layer obligation: VelocityStems stem ink for the outsider note. A page-level Swift predicate cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: The mounted outsider stem paints visible with the model stem color while unselected in a passing lane; the quick-scene VelocityStems layer observation is unproved. [S131]
 Original expression:
   QVERIFY(checks::support::layerHasColorIn(
           stems,
@@ -319,46 +321,46 @@ Original expression:
           stemColor))
 
 A063 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:338
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/velocity.cpp) no longer builds or runs. Previous native note: Original native quick-scene layer obligation: VelocityNodes highlight ink on the selected node. A page-level Swift predicate cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: The mounted selected node paints the highlight ring in the selection-ring color in a passing lane; the quick-scene VelocityNodes highlight-layer observation is unproved. [S132]
 Original expression:
   QVERIFY(checks::support::layerHasColorIn(nodes, selectedProbe,
                                                fixture.inputItem->palette().highlight().color()))
 
 A064 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:340
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/velocity.cpp) no longer builds or runs. Previous native note: Original native quick-scene layer obligation: VelocityNodes base ink on the outsider node. A page-level Swift predicate cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: The mounted unselected node paints its base fill and outline in a passing lane; the exact-black base ink is unproved. [S133]
 Original expression:
   QVERIFY(checks::support::layerHasColorIn(nodes, outsiderProbe, Qt::black))
 
 A065 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:341
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/velocity.cpp) no longer builds or runs. Previous native note: Original native quick-scene layer obligation: VelocityNodes track-fill ink on the outsider node. A page-level Swift predicate cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: The mounted unselected node paints its model fill in a passing lane; the track-fill color identity is unproved. [S133]
 Original expression:
   QVERIFY(checks::support::layerHasColorIn(nodes, outsiderProbe, trackFill))
 
 A066 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:346
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/velocity.cpp) no longer builds or runs. Previous native note: Original native quick-scene layer obligation: VelocityNodes dimmed ink on the deselected node. A page-level Swift predicate cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: The mounted deselected node paints dimmed with no outline in the model fill in a passing lane; the mid-color identity is unproved. [S134]
 Original expression:
   QVERIFY(checks::support::layerHasColorIn(dimmedNodes, outsiderProbe,
                                                fixture.inputItem->palette().mid().color()))
 
 A067 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:348
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/velocity.cpp) no longer builds or runs. Previous native note: Original native quick-scene layer obligation: absence of the base ink on the dimmed node. A page-level Swift predicate cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: The mounted dimmed node drops its outline in a passing lane; the quick-scene absence-of-base layer observation is unproved. [S134]
 Original expression:
   QVERIFY(!checks::support::layerHasColorIn(dimmedNodes, outsiderProbe, Qt::black))
 
 A068 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:354
 Disposition: PARTIAL
-Mapping/reason: The Swift predicate asserts detentsAvailable for a per-key PSG context; the composed drawer item's visible state for the wave context is unproved. [S057]
+Mapping/reason: The mounted square-voice ruler paints live graduation rows with the composed detent control visible and enabled in a passing lane; the chrome-level detentVisible flag behind the composed item is unproved. [S057][S138]
 Original expression:
   QVERIFY(fixture.detentItem->isVisible())
 
 A069 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:355
 Disposition: PARTIAL
-Mapping/reason: The Swift predicate asserts the PSG context's detentsAvailable; the chrome-level detentVisible flag behind the composed item is unproved. [S057]
+Mapping/reason: The mounted square-voice ruler paints live graduation rows with the composed detent control visible and enabled in a passing lane; the chrome-level detentVisible flag behind the composed item is unproved. [S057][S138]
 Original expression:
   QVERIFY(fixture.drawerChrome->detentVisible())
 
@@ -468,22 +470,22 @@ Original expression:
   QCOMPARE(view.voiceContext(expected[index]).voice, &fixture.voicegroup.voices[0])
 
 A089 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:446
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/velocity.cpp) no longer builds or runs. Previous native note: Original native quick-scene layer obligation: VelocityTransient fill ink over the dragged selector. A page-level Swift predicate cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: The mounted right-drag band paints its fill in the selection-fill color in a passing lane; the quick-scene VelocityTransient layer observation is unproved. [S135]
 Original expression:
   QVERIFY(layerTouches(*fixture.rig->quickScene(),
                            songview::TimelineQuickLayer::VelocityTransient, selector, fill))
 
 A090 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:448
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/velocity.cpp) no longer builds or runs. Previous native note: Original native quick-scene layer obligation: VelocityTransient edge ink over the dragged selector. A page-level Swift predicate cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: The mounted right-drag band paints its edge in the selection-edge color in a passing lane; the quick-scene VelocityTransient layer observation is unproved. [S136]
 Original expression:
   QVERIFY(layerTouches(*fixture.rig->quickScene(),
                            songview::TimelineQuickLayer::VelocityTransient, selector, edge))
 
 A091 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:453
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/velocity.cpp) no longer builds or runs. Previous native note: Original native quick-scene layer obligation: the VelocityTransient layer empties after the band release. A page-level Swift predicate cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: The mounted band publishes no fill or edge after release in a passing lane; the quick-scene layer-empty observation is unproved. [S137]
 Original expression:
   QVERIFY(
           layerEmpty(*fixture.rig->quickScene(), songview::TimelineQuickLayer::VelocityTransient))
@@ -1049,3 +1051,30 @@ Anchor: message "undo restores the exact pre-drag song bytes"
 
 S129 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
 Anchor: message "redo restores the exact committed song bytes"
+
+S130 | test_productionVelocityMountedInk | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the grid paints the past-end point"
+
+S131 | test_productionVelocityMountedInk | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "an outsider stem paints without a node highlight"
+
+S132 | test_productionVelocityMountedInk | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the selected node paints the highlight ink"
+
+S133 | test_productionVelocityMountedInk | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the unselected node paints its base fill and outline"
+
+S134 | test_productionVelocityMountedInk | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the unselected node paints the dimmed ink"
+
+S135 | test_productionVelocityTransientInk | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the transient band paints its fill over the dragged selector"
+
+S136 | test_productionVelocityTransientInk | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the transient band paints its edge over the dragged selector"
+
+S137 | test_productionVelocityTransientInk | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the transient band empties after the band release"
+
+S138 | test_productionVelocityDetentRepaint | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the intrinsic ruler paints its live graduation rows (drawn "

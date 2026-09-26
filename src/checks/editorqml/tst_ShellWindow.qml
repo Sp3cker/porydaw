@@ -1174,6 +1174,42 @@ TestCase {
                 "lane-flavored Ctrl+D leaves unrelated notes byte-identical")
     }
 
+    function test_kVelocityStemEscapeFromRollFocus() {
+        openTwoSongShell()
+        var surface = selectedSurface()
+        var session = shell.shellPresenter.session
+        var grid = surface.gridModel
+        selectDrawnVelocityNote(surface)
+        var plot = findChild(surface, "velocityPlotInput")
+        var node = findChild(surface, "velocityNodeFill")
+        var stem = findChild(node.parent, "velocityNodeStem")
+        var roll = findChild(surface, "swiftRollInput")
+        verify(plot && node && stem && roll && stem.width > node.width,
+               "the mounted shell exposes a selected velocity duration stem and roll")
+        var original = grid.noteSummary
+        var revision = grid.appliedRevisionText
+        var selected = session.velocityPage().selectedCount
+        var press = stem.mapToItem(plot, stem.width * 3 / 4, stem.height / 2)
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true, 3000)
+        mousePress(plot, press.x, press.y, Qt.LeftButton)
+        mouseMove(plot, press.x, press.y - node.height * 2, -1, Qt.LeftButton)
+        tryCompare(session.velocityPage(), "interactionActive", true, 3000)
+        keyClick(Qt.Key_Right)
+        keyClick(Qt.Key_Delete)
+        compare(grid.noteSummary, original, "routed edit keys cannot mutate a live velocity stem drag")
+        compare(grid.appliedRevisionText, revision, "held edit keys leave the document revision frozen")
+        keyClick(Qt.Key_Escape)
+        tryCompare(session.velocityPage(), "interactionActive", false, 3000)
+        mouseRelease(plot, press.x, press.y - node.height * 2, Qt.LeftButton)
+        compare(session.velocityPage().selectedCount, selected,
+                "the first routed Escape retains the captured note selection")
+        compare(grid.noteSummary, original, "Escape and release roll back the velocity stem preview")
+        compare(grid.appliedRevisionText, revision, "Escape and release commit no document edit")
+        keyClick(Qt.Key_Escape)
+        tryCompare(session.velocityPage(), "selectedCount", 0, 3000)
+    }
+
     function test_kVelocityGestureTermination_data() {
         return [
             { tag: "page-switch", route: "page-switch" },

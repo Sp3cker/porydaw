@@ -2814,6 +2814,8 @@ TestCase {
 
         var nodes = testCase.velocityNodes()
         var trackNotes = testCase.primaryGridNotes()
+        verify(trackNotes.length > 0 && testCase.playheadPresenter().timelineAttached,
+               "the mounted page publishes a live timeline for the staged song")
         compare(nodes.length, trackNotes.length,
                 "every note of the primary track published a node")
         var published = nodes.map(function(node) {
@@ -2842,6 +2844,429 @@ TestCase {
             compare(testCase.velocityModel().detentsEnabled, enabledBefore)
         }
         testCase.auditVisibleTextInk(page, "velocity page")
+    }
+
+    function test_productionVelocityMountedInk() {
+        if (testCase.containerPhase) skip("production composition only")
+        var page = testCase.mountProductionVelocity("velocity-mounted-ink")
+        var model = testCase.velocityModel()
+        var plot = testCase.velocityPlot()
+        var input = testCase.velocityPlotInput()
+        var gridModel = testCase.surface.gridModel
+        gridModel.setCameraHScroll(0)
+        var nodes = testCase.velocityNodes()
+        verify(nodes.length > 2, "the staged song exposes selected and outsider nodes")
+        tryVerify(function() {
+            nodes = testCase.velocityNodes()
+            var node = nodes[0]
+            var center = node.mapToItem(input, node.width / 2, node.height / 2)
+            return center.x >= 0 && center.x < input.width
+                && center.y > 0 && center.y < input.height
+        }, 3000, "the staged node is inside the mounted plot before selection")
+        var first = nodes[0]
+        var outsider = nodes[2]
+        var firstRow = first.parent.model
+        var outsiderRow = outsider.parent.model
+        var stem = findChild(outsider.parent, "velocityNodeStem")
+        verify(stem && stem.visible && stem.width > 0 && stem.height > 0
+               && String(stem.color).toLowerCase() === outsiderRow.stemColor.toLowerCase()
+               && !outsiderRow.selected,
+               "an outsider stem paints without a node highlight")
+        var outsiderRing = findChild(outsider.parent, "velocityNodeRing")
+        verify(!outsiderRow.selected && !outsiderRow.dimmed && !outsiderRing.visible
+               && outsider.border.width > 0
+               && String(outsider.color).toLowerCase() === outsiderRow.fillColor.toLowerCase(),
+               "the unselected node paints its base fill and outline")
+        var selectedId = firstRow.noteIdText
+        var outsiderId = outsiderRow.noteIdText
+        testCase.clickNode(first)
+        tryCompare(model, "selectedCount", 1)
+        tryVerify(function() {
+            return testCase.selectedNoteId() === parseInt(selectedId, 10)
+        }, 3000, "the mounted node press selects its source note")
+        tryVerify(function() {
+            first = testCase.velocityNodes().find(function(item) {
+                return item.parent.model.noteIdText === selectedId
+            })
+            if (!first)
+                return false
+            firstRow = first.parent.model
+            var ring = findChild(first.parent, "velocityNodeRing")
+            return firstRow.selected && ring && ring.visible && ring.border.width > 0
+                && String(ring.border.color).toLowerCase() === firstRow.ringColor.toLowerCase()
+                && String(ring.border.color).toLowerCase()
+                   === String(page.gridPalette.selectionRing).toLowerCase()
+        }, 3000, "the selected node paints the highlight ink")
+        var second = testCase.velocityNodes()[1]
+        var point = second.mapToItem(input, second.width / 2, second.height / 2)
+        mouseClick(input, point.x, point.y, Qt.LeftButton, Qt.ControlModifier)
+        tryCompare(model, "selectedCount", 2)
+        tryVerify(function() {
+            outsider = testCase.velocityNodes().find(function(item) {
+                return item.parent.model.noteIdText === outsiderId
+            })
+            if (!outsider)
+                return false
+            outsiderRow = outsider.parent.model
+            return outsiderRow.dimmed && !outsiderRow.selected && outsider.border.width === 0
+                && String(outsider.color).toLowerCase() === outsiderRow.fillColor.toLowerCase()
+                && String(outsider.color).toLowerCase()
+                   === String(page.gridPalette.outline).toLowerCase()
+        }, 3000, "the unselected node paints the dimmed ink")
+        var latestTick = testCase.primaryGridNotes().reduce(function(latest, note) {
+            return Math.max(latest, note.tick + note.duration)
+        }, 0)
+        gridModel.setCameraHScroll(latestTick * gridModel.beatWidth / gridModel.ticksPerBeat
+                                   - plot.width / 2)
+        var lastX = latestTick * gridModel.beatWidth / gridModel.ticksPerBeat
+                    - gridModel.cameraScrollX
+        var grid = findChild(plot, "velocityGridLines")
+        var gridRect = testCase.collectByName(grid, "velocityGrid", [])
+        verify(grid && gridRect.some(function(item) {
+                   return item.x > lastX && item.x < plot.width && item.visible
+                       && item.height === plot.height
+                       && String(item.color).toLowerCase()
+                          === String(item.model.fillColor).toLowerCase()
+               }), "the grid paints the past-end point")
+        verify(session.handleGridEscape(), "the mounted ink journey clears its note selection")
+        tryCompare(model, "selectedCount", 0)
+        gridModel.setCameraHScroll(0)
+        tryVerify(function() {
+            var start = testCase.velocityNodes().find(function(item) {
+                return item.parent.model.noteIdText === selectedId
+            })
+            if (!start)
+                return false
+            var center = start.mapToItem(input, start.width / 2, start.height / 2)
+            return center.x >= 0 && center.x < input.width
+                && center.y > 0 && center.y < input.height
+        }, 3000, "the mounted ink journey restores its initial plotted camera")
+    }
+
+    function test_productionVelocityTransientInk() {
+        if (testCase.containerPhase) skip("production composition only")
+        var page = testCase.mountProductionVelocity("velocity-transient-ink")
+        var plot = testCase.velocityPlot()
+        var input = testCase.velocityPlotInput()
+        var margin = testCase.surface.gridModel.baseFontPx
+        var startX = plot.width - margin
+        var startY = plot.height - margin
+        mousePress(input, startX, startY, Qt.RightButton)
+        mouseMove(input, startX - plot.width / 3, startY - plot.height / 3,
+                  -1, Qt.RightButton)
+        var transient = findChild(plot, "velocityTransient")
+        tryVerify(function() {
+            return testCase.collectByName(transient, "velocityBandFill", []).length === 1
+                && testCase.collectByName(transient, "velocityBandEdge", []).length > 0
+        }, 1000, "a right drag publishes the band and its edge")
+        var fill = testCase.collectByName(transient, "velocityBandFill", [])
+        var edge = testCase.collectByName(transient, "velocityBandEdge", [])
+        verify(fill.length === 1 && fill[0].visible && fill[0].width > 0
+               && fill[0].height > 0 && String(fill[0].color).toLowerCase()
+                  === String(page.gridPalette.selectionFill).toLowerCase(),
+               "the transient band paints its fill over the dragged selector")
+        verify(edge.length > 0 && edge.some(function(item) {
+                   return item.visible && item.width > 0 && item.height > 0
+                       && String(item.color).toLowerCase()
+                          === String(page.gridPalette.selectionEdge).toLowerCase()
+               }), "the transient band paints its edge over the dragged selector")
+        mouseRelease(input, startX - plot.width / 3, startY - plot.height / 3,
+                     Qt.RightButton)
+        verify(testCase.collectByName(transient, "velocityBandFill", []).length === 0
+               && testCase.collectByName(transient, "velocityBandEdge", []).length === 0,
+               "the transient band empties after the band release")
+    }
+
+    function test_productionVelocityDetentRepaint() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionVoice("velocity-detent-context")
+        var voiceModel = testCase.voiceModel()
+        var before = testCase.voiceMarkerLines().length
+        var column = testCase.freeVoiceColumn(testCase.surface.gridModel.beatWidth * 2)
+        verify(column >= 0, "the staged voice lane has a free column before its notes")
+        testCase.doubleClickPlot(column)
+        tryCompare(voiceModel, "pickerOpen", true)
+        testCase.awaitVoicePickerFocus()
+        testCase.typeProgram(4)
+        tryCompare(voiceModel, "pickerHasMatch", true)
+        var insertedTick = bootstrap.voicePickerTargetTick()
+        keyClick(Qt.Key_Return)
+        tryCompare(voiceModel, "pickerOpen", false)
+        tryVerify(function() { return testCase.voiceMarkerLines().length === before + 1 },
+                  1000, "the mounted picker published a square-voice change (tick "
+                        + insertedTick + ", before " + before + ", after "
+                        + testCase.voiceMarkerLines().length + ")")
+        try {
+            testCase.mountProductionVelocity("velocity-detent-repaint",
+                { "velocityVisible": true, "voiceChangesVisible": true, "activePage": "velocity" })
+            var nodes = testCase.velocityNodes()
+            var node = nodes.find(function(item) { return item.parent.model.tick > insertedTick })
+            verify(node, "the staged song has a note after the square voice change")
+            testCase.clickNode(node)
+            var model = testCase.velocityModel()
+            tryCompare(model, "detentsAvailable", true)
+            var ruler = testCase.velocityRuler()
+            var detent = findChild(testCase.drawer(), "drawerDetent")
+            tryVerify(function() {
+                return testCase.collectByName(ruler, "velocityGraduation", []).length > 0
+                    && model.axisGraduationsVisible && detent.enabled && detent.visible
+            }, 1000, "the intrinsic ruler paints its live graduation rows (drawn "
+                  + testCase.collectByName(ruler, "velocityGraduation", []).length
+                  + ", published " + model.axisGraduationsVisible + ", enabled "
+                  + detent.enabled + ", visible " + detent.visible + ")")
+            var initial = testCase.collectByName(ruler, "velocityGraduation", []).length
+            mouseClick(detent, detent.width / 2, detent.height / 2, Qt.LeftButton)
+            tryCompare(model, "detentsEnabled", false)
+            verify(!model.axisGraduationsVisible
+                   && testCase.collectByName(ruler, "velocityGraduation", []).length === 0
+                   && testCase.collectByName(ruler, "velocityTick", []).length > 0,
+                   "toggling detents repaints the ruler")
+            mouseClick(detent, detent.width / 2, detent.height / 2, Qt.LeftButton)
+            tryCompare(model, "detentsEnabled", true)
+            verify(model.axisGraduationsVisible
+                   && testCase.collectByName(ruler, "velocityGraduation", []).length === initial,
+                   "toggling detents repaints the ruler and restoring repaints it back")
+        } finally {
+            var marker = testCase.voiceMarkerLines().find(function(item) {
+                return item.parent.model.tick === insertedTick
+            })
+            verify(marker, "the inserted voice change remains drawn for cleanup")
+            var input = testCase.voicePlotInput()
+            var point = marker.mapToItem(input, marker.width / 2, marker.height / 2)
+            mouseClick(input, point.x, point.y, Qt.RightButton)
+            testCase.awaitVoiceModal("voiceChangeMenu", true)
+            var row = testCase.menuRowByAction(findChild(testCase.surface, "voiceMenuPanel"), 3)
+            verify(row, "the inserted marker exposes the production delete row")
+            mouseClick(row, row.width / 2, row.height / 2, Qt.LeftButton)
+            tryVerify(function() { return testCase.voiceMarkerLines().length === before },
+                      1000, "deleting the staged voice change restores the song context")
+        }
+    }
+
+    function test_productionVelocityCoincidentNodePriority() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionVelocity("velocity-coincident-nodes")
+        var grid = testCase.surface.gridModel
+        var roll = testCase.rollInput()
+        var notes = testCase.primaryGridNotes()
+        var lastTick = notes.reduce(function(value, note) {
+            return Math.max(value, note.tick + note.duration)
+        }, 0)
+        var tick = Math.ceil((lastTick + grid.snapTicks) / grid.snapTicks) * grid.snapTicks
+        var pixelsPerTick = grid.beatWidth / grid.ticksPerBeat
+        grid.setCameraHScroll(Math.max(0, tick * pixelsPerTick - roll.width / 3))
+        var firstRow = Math.max(0, Math.ceil(grid.cameraScrollY / grid.rowHeight) + 2)
+        var lastRow = Math.min(127, Math.floor((grid.cameraScrollY + roll.height)
+                                               / grid.rowHeight) - 2)
+        var pitches = []
+        for (var row = firstRow; row <= lastRow && pitches.length < 2; ++row) {
+            var pitch = 127 - row
+            if (!notes.some(function(note) { return note.pitch === pitch }))
+                pitches.push(pitch)
+        }
+        verify(pitches.length === 2, "the staged grid has two unused visible pitch rows")
+        var before = notes.length
+        var x = (tick + Math.max(1, Math.floor(grid.snapTicks / 4))) * pixelsPerTick
+                - grid.cameraScrollX
+        for (var p = 0; p < pitches.length; ++p) {
+            var y = (127 - pitches[p] + 0.5) * grid.rowHeight - grid.cameraScrollY
+            verify(x > 0 && x < roll.width && y > 0 && y < roll.height,
+                   "the tied note is within the mounted roll input")
+            mouseDoubleClickSequence(roll, x, y, Qt.LeftButton)
+            var expected = before + p + 1
+            tryVerify(function() { return testCase.primaryGridNotes().length === expected },
+                      1000, "the mounted roll committed a coincident-velocity note")
+        }
+        var pair = testCase.primaryGridNotes().filter(function(note) {
+            return note.tick === tick && pitches.indexOf(note.pitch) >= 0
+        })
+        verify(pair.length === 2 && pair[0].id !== pair[1].id
+               && pair[0].velocity === pair[1].velocity,
+               "the tied-node fixture retains both real equal-velocity notes")
+        verify(session.handleGridEscape(), "the idle production Escape route clears note selection")
+        tryCompare(testCase.velocityModel(), "selectedCount", 0)
+        var input = testCase.velocityPlotInput()
+        var nodes = testCase.velocityNodes().filter(function(item) {
+            return pair.some(function(note) { return item.parent.model.noteIdText === String(note.id) })
+        })
+        verify(nodes.length === 2 && nodes[0].parent.model.x === nodes[1].parent.model.x
+               && nodes[0].parent.model.y === nodes[1].parent.model.y,
+               "production velocity geometry exposes both coincident nodes")
+        var point = nodes[0].mapToItem(input, nodes[0].width / 2, nodes[0].height / 2)
+        mouseClick(input, point.x, point.y, Qt.LeftButton)
+        tryVerify(function() { return testCase.selectedNoteId() === pair[1].id },
+                  1000, "equal unselected velocity nodes retain later-model-order priority")
+        var selectedEarlier = findChild(testCase.surface, "gridNote_" + pair[0].id)
+        verify(selectedEarlier, "the staged earlier sibling has a rendered roll note")
+        var firstPoint = selectedEarlier.mapToItem(roll, selectedEarlier.width / 2,
+                                                  selectedEarlier.height / 2)
+        mouseClick(roll, firstPoint.x, firstPoint.y, Qt.LeftButton)
+        tryVerify(function() { return testCase.selectedNoteId() === pair[0].id },
+                  1000, "the roll selects the earlier sibling before tie-break")
+        mouseClick(input, point.x, point.y, Qt.LeftButton)
+        tryVerify(function() { return testCase.selectedNoteId() === pair[0].id },
+                  1000, "a selected velocity node wins over its tied sibling")
+    }
+
+    function test_productionVelocityStemGestureCancellation() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionVelocity("velocity-stem-keyboard")
+        var input = testCase.velocityPlotInput()
+        var nodes = testCase.velocityNodes()
+        verify(nodes.length > 2, "the staged song draws selected and outsider stems")
+        var firstId = parseInt(nodes[0].parent.model.noteIdText, 10)
+        var thirdId = parseInt(nodes[2].parent.model.noteIdText, 10)
+        testCase.clickNode(nodes[0])
+        var thirdPoint = nodes[2].mapToItem(input, nodes[2].width / 2, nodes[2].height / 2)
+        mouseClick(input, thirdPoint.x, thirdPoint.y, Qt.LeftButton, Qt.ControlModifier)
+        tryCompare(testCase.velocityModel(), "selectedCount", 2)
+        var selected = bootstrap.velocitySelectedNoteIds()
+        verify(selected.indexOf(String(firstId)) >= 0 && selected.indexOf(String(thirdId)) >= 0,
+               "the earlier and later fixture notes are selected")
+        var first = testCase.velocityNodes()[0]
+        var stem = findChild(first.parent, "velocityNodeStem")
+        var press = stem.mapToItem(input, stem.width * 3 / 4, stem.height / 2)
+        verify(stem.width > first.width && press.x > 0 && press.x < input.width,
+               "production velocity geometry exposes the selected duration stem")
+        var revision = bootstrap.automationDocumentRevision()
+        var notes = JSON.stringify(testCase.primaryGridNotes())
+        mousePress(input, press.x, press.y, Qt.LeftButton)
+        mouseMove(input, press.x, press.y - first.height * 2, -1, Qt.LeftButton)
+        tryCompare(testCase.velocityModel(), "interactionActive", true)
+        compare(bootstrap.velocitySelectedNoteIds(), selected,
+                "the selected velocity-stem drag retains its captured note selection")
+        verify(session.handleGridEscape(), "the production Escape route owns a live stem drag")
+        tryCompare(testCase.velocityModel(), "interactionActive", false)
+        compare(bootstrap.velocitySelectedNoteIds(), selected,
+                "first Escape consumes the drag without clearing its selection")
+        mouseRelease(input, press.x, press.y - first.height * 2, Qt.LeftButton)
+        compare(testCase.velocityModel().interactionActive, false,
+                "releasing an escaped pointer cannot revive the cancelled gesture")
+        compare(bootstrap.velocitySelectedNoteIds(), selected,
+                "first Escape cancels the gesture and restores its selection")
+        compare(JSON.stringify(testCase.primaryGridNotes()), notes,
+                "first Escape leaves the captured notes unchanged")
+        compare(bootstrap.automationDocumentRevision(), revision,
+                "first Escape leaves the document revision unchanged")
+        verify(session.handleGridEscape(), "the idle production Escape route clears selection")
+        tryCompare(testCase.velocityModel(), "selectedCount", 0)
+        compare(bootstrap.velocitySelectedNoteIds(), "",
+                "second Escape clears the remaining selection")
+        nodes = testCase.velocityNodes()
+        var outsiderId = parseInt(nodes[1].parent.model.noteIdText, 10)
+        var outsiderStem = findChild(nodes[1].parent, "velocityNodeStem")
+        var outsiderPoint = outsiderStem.mapToItem(input, outsiderStem.width * 3 / 4,
+                                                   outsiderStem.height / 2)
+        mouseClick(input, outsiderPoint.x, outsiderPoint.y, Qt.LeftButton)
+        tryVerify(function() { return testCase.selectedNoteId() === outsiderId },
+                  1000, "clicking an unselected velocity stem replaces the note selection")
+    }
+
+    function test_productionVelocityOverlapTargetsVisibleNode() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionVelocity("velocity-node-stem-overlap")
+        var grid = testCase.surface.gridModel
+        var roll = testCase.rollInput()
+        var notes = testCase.primaryGridNotes()
+        var lastTick = notes.reduce(function(value, note) {
+            return Math.max(value, note.tick + note.duration)
+        }, 0)
+        var snap = grid.snapTicks
+        var tick = Math.ceil((lastTick + snap) / snap) * snap
+        var pixelsPerTick = grid.beatWidth / grid.ticksPerBeat
+        grid.setCameraHScroll(Math.max(0, tick * pixelsPerTick - roll.width / 3))
+        var firstRow = Math.max(0, Math.ceil(grid.cameraScrollY / grid.rowHeight) + 2)
+        var lastRow = Math.min(127, Math.floor((grid.cameraScrollY + roll.height)
+                                               / grid.rowHeight) - 2)
+        var pitches = []
+        for (var row = firstRow; row <= lastRow && pitches.length < 2; ++row) {
+            var pitch = 127 - row
+            if (!notes.some(function(note) { return note.pitch === pitch }))
+                pitches.push(pitch)
+        }
+        verify(pitches.length === 2, "the mounted roll has two untouched pitch rows")
+        var before = notes.length
+        for (var p = 0; p < pitches.length; ++p) {
+            var noteTick = tick + p * 4 * snap
+            var duration = p === 0 ? 8 * snap : 2 * snap
+            var inset = Math.max(1, Math.floor(snap / 4))
+            var x = (noteTick + inset) * pixelsPerTick - grid.cameraScrollX
+            var endX = (noteTick + duration - inset) * pixelsPerTick - grid.cameraScrollX
+            var y = (127 - pitches[p] + 0.5) * grid.rowHeight - grid.cameraScrollY
+            verify(x > 0 && endX < roll.width && y > 0 && y < roll.height,
+                   "the staged overlapping note is within the roll viewport")
+            mousePress(roll, x, y, Qt.LeftButton)
+            mouseMove(roll, endX, y, -1, Qt.LeftButton)
+            mouseRelease(roll, endX, y, Qt.LeftButton)
+            var expected = before + p + 1
+            tryVerify(function() { return testCase.primaryGridNotes().length === expected },
+                      1000, "the production roll committed a long and a following note")
+        }
+        var pair = testCase.primaryGridNotes().filter(function(note) {
+            return pitches.indexOf(note.pitch) >= 0 && note.tick >= tick
+        }).sort(function(a, b) { return a.tick - b.tick })
+        verify(pair.length === 2 && pair[0].duration === 8 * snap
+               && pair[1].tick === tick + 4 * snap && pair[0].velocity === pair[1].velocity,
+               "both overlapping notes retain their own ticks and matching velocities")
+        var input = testCase.velocityPlotInput()
+        var firstId = pair[0].id
+        var nextId = pair[1].id
+        function projected(id) {
+            return testCase.velocityNodes().find(function(item) {
+                return item.parent.model.noteIdText === String(id)
+            })
+        }
+        function overlappingPoint() {
+            var first = projected(firstId)
+            var next = projected(nextId)
+            var stem = findChild(first.parent, "velocityNodeStem")
+            var point = next.mapToItem(input, next.width / 2, next.height / 2)
+            verify(next.parent.model.x > stem.x && next.parent.model.x < stem.x + stem.width
+                   && Math.abs(next.parent.model.y - first.parent.model.y) < stem.height
+                   && point.x > 0 && point.x < input.width,
+                   "production velocity geometry exposes the following node over the selected stem")
+            return point
+        }
+        testCase.clickNode(projected(firstId))
+        tryVerify(function() { return testCase.selectedNoteId() === firstId },
+                  1000, "the earlier overlapping note is selected")
+        var point = overlappingPoint()
+        var selectedStem = findChild(projected(firstId).parent, "velocityNodeStem")
+        var node = projected(nextId)
+        verify(node.visible && String(node.color).toLowerCase()
+               === String(node.parent.model.fillColor).toLowerCase()
+               && String(selectedStem.color).toLowerCase()
+                  === String(selectedStem.parent.model.stemColor).toLowerCase(),
+               "the following node and earlier selected stem render their published ink")
+        var width = grid.beatWidth
+        mouseWheel(roll, point.x, roll.height / 2, 0, 120, Qt.NoButton, Qt.NoModifier)
+        tryVerify(function() { return grid.beatWidth > width }, 1000,
+                  "the mounted roll zoomed the overlapping notes")
+        overlappingPoint()
+        mouseWheel(roll, point.x, roll.height / 2, 0, -120, Qt.NoButton, Qt.NoModifier)
+        tryVerify(function() { return grid.beatWidth <= width }, 1000,
+                  "the mounted roll restored its original time zoom")
+        point = overlappingPoint()
+        var revision = bootstrap.automationDocumentRevision()
+        mousePress(input, point.x, point.y, Qt.LeftButton)
+        mouseMove(input, point.x, point.y - node.height * 2, -1, Qt.LeftButton)
+        tryCompare(testCase.velocityModel(), "interactionActive", true)
+        compare(testCase.selectedNoteId(), nextId,
+                "beginning an overlap-node drag targets the visible following node")
+        verify(session.handleGridEscape(), "the production Escape route owns the overlap drag")
+        tryCompare(testCase.velocityModel(), "interactionActive", false)
+        mouseRelease(input, point.x, point.y - node.height * 2, Qt.LeftButton)
+        compare(testCase.selectedNoteId(), firstId,
+                "cancelling an overlap-node drag restores the earlier selection")
+        compare(bootstrap.automationDocumentRevision(), revision,
+                "cancelling the overlap-node drag writes no document change")
+        testCase.clickNode(projected(nextId))
+        tryVerify(function() { return testCase.selectedNoteId() === nextId },
+                  1000, "clicking the overlap node replaces the earlier selection")
+        notes = testCase.primaryGridNotes()
+        verify(notes.some(function(note) { return note.id === firstId })
+               && notes.some(function(note) { return note.id === nextId }),
+               "the overlap fixture retains both notes after the cancelled gesture")
     }
 
     function test_productionDrawerBlankBarFocus() {

@@ -546,6 +546,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
             workspace?.drawer.cancelResize()
             return true
         }
+        if workspace?.velocityPage.handleEscape() == true {
+            return true
+        }
         return workspace?.grid.handleEscape() ?? false
     }
 

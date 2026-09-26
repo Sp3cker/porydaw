@@ -4,11 +4,15 @@ Reference revision: 1d2d8a819b851071e8b1ec5767832a17d9fc271e
 Original: src/checks/selectionkey/gesturevelocity.cpp
 Original SHA-256: 99548723bce4d9dad860a17c2fee784155745104e8fb44efe34362fda4004d32
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
+Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml
+Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
+Additional Swift counterpart: src/checks/keyboard/KeybindingRegistryChecks.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run.
+Note: Stage B evidence fresh 2026-09-26: the editorqml-drawer lane functions[] pass record lists 86 passing functions including test_productionVelocityMountedInk/TransientInk/DetentRepaint/CoincidentNodePriority/StemGestureCancellation/OverlapTargetsVisibleNode; the shell suite passes 26/26 including test_kVelocityStemEscapeFromRollFocus; swiftcore-projectsession pass rows include KeymapCheckTest::defaultMatching delete and backspace. MATCHED rows below cite anchors in those pass records; PARTIAL/GAP rows name the still-unproved half.
 
 A001 | SelectionKeyGestureTest::verifyNodePaintsAboveSelectedStem | src/checks/selectionkey/gesturevelocity.cpp:57
 Disposition: GAP
@@ -76,10 +80,8 @@ Original expression:
   QTest::qFail(message, __FILE__, __LINE__)
 
 A002 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:69
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturevelocity.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the stem/node geometry probe depends on native production layout
-and cannot be established by a presenter-level Swift check.
+Disposition: MATCHED
+Mapping: S009
 Source context since previous assertion:
   ;
           return false;
@@ -98,10 +100,8 @@ Original expression:
                "production velocity geometry did not expose the test stems and node")
 
 A003 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:92
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturevelocity.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the zoomed-geometry probe depends on native production layout and
-cannot be established by a presenter-level Swift check.
+Disposition: MATCHED
+Mapping: S009, S010
 Source context since previous assertion:
   ;
 
@@ -130,10 +130,8 @@ Original expression:
                "zoomed velocity geometry did not expose the overlapping stem and node")
 
 A004 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:102
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturevelocity.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the restored-geometry probe depends on native production layout
-and cannot be established by a presenter-level Swift check.
+Disposition: MATCHED
+Mapping: S009, S011
 Source context since previous assertion:
   ;
       if (!verifyNodePaintsAboveSelectedStem(
@@ -149,10 +147,8 @@ Original expression:
                "restored velocity geometry did not expose the overlapping stem and node")
 
 A005 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:117
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturevelocity.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the live overlap-drag targeting observation requires native mouse
-delivery and cannot be established by a presenter-level Swift check.
+Disposition: PARTIAL
+Mapping/reason: The mounted overlap drag selects the visible following node in a passing lane; native userGestureActive delivery and a message-anchored active-interaction predicate are unproved. [S012]
 Source context since previous assertion:
   ;
       view().selectionModel().setNoteSelection({mWorld->notes[0]});
@@ -173,11 +169,8 @@ Original expression:
                    "beginning an overlap-node drag did not target the visible following node")
 
 A006 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:124
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturevelocity.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; cancelling the overlap drag through production VelocityArea
-cancellation requires native delivery and cannot be established by a
-presenter-level Swift check.
+Disposition: PARTIAL
+Mapping/reason: The mounted Escape consumes the overlap drag, restores the earlier selection, and leaves the document revision unchanged in a passing lane; the SMF-bytes equality, undo-depth equality, and a message-anchored inactive-gesture predicate are unproved. [S013][S014][S015]
 Source context since previous assertion:
   ;
       // VelocityArea cancellation restores the selection captured before the
@@ -193,11 +186,8 @@ Original expression:
                "cancelling an overlap-node drag did not restore its pre-press selection")
 
 A007 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:132
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the click-replacement selection below is pure selection state a
-presenter-level Swift check could in principle assert, but none does. Original
-predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S016
 Source context since previous assertion:
   ;
 
@@ -208,11 +198,8 @@ Original expression:
                    "clicking the following overlap node did not replace the earlier stem selection")
 
 A008 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:137
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; overlap-note presence is pure document state a presenter-level
-Swift check could in principle assert, but none does. Original predicate and
-setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S017
 Source context since previous assertion:
   ;
       mouseRelease(Qt::LeftButton, followingPress);
@@ -243,11 +230,8 @@ A010 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selec
 Disposition: RETIRED-REPRESENTATION
 
 A011 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:153
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; tie-fixture note retention is pure document state a
-presenter-level Swift check could in principle assert, but none does. Original
-predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S018
 Source context since previous assertion:
   ;
 Original expression:
@@ -256,10 +240,8 @@ Original expression:
                "node-overlap tie fixture did not retain both coincident-velocity notes")
 
 A012 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:160
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturevelocity.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; tied-node exposure depends on native production geometry and
-cannot be established by a presenter-level Swift check.
+Disposition: MATCHED
+Mapping: S019
 Source context since previous assertion:
   ;
       selectionkey::settle();
@@ -271,11 +253,8 @@ Original expression:
                "production velocity geometry did not expose the tied nodes")
 
 A013 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:171
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the model-order priority selection below is pure selection state
-a presenter-level Swift check could in principle assert, but none does.
-Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S020
 Source context since previous assertion:
   ;
       const QPoint tiedPress = windowPoint(*mVelocityInput, tiedNode);
@@ -292,11 +271,8 @@ Original expression:
                    "equal unselected velocity nodes did not retain later-model-order priority")
 
 A014 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:178
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the selected-tie-break selection below is pure selection state a
-presenter-level Swift check could in principle assert, but none does. Original
-predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S021
 Source context since previous assertion:
   ;
       mouseRelease(Qt::LeftButton, tiedPress);
@@ -309,10 +285,8 @@ Original expression:
                    "selected velocity node did not retain priority over its tied sibling")
 
 A015 | SelectionKeyGestureTest::velocityStemDragGuardsEdits | src/checks/selectionkey/gesturevelocity.cpp:186
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the live keymap binding query has no Swift counterpart. Original
-predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S034, S035
 Source context since previous assertion:
   ;
       mouseRelease(Qt::LeftButton, tiedPress);
@@ -325,10 +299,8 @@ Original expression:
   QVERIFY2(deleteKey.has_value(), "roll.delete has no single-key binding")
 
 A016 | SelectionKeyGestureTest::velocityStemDragGuardsEdits | src/checks/selectionkey/gesturevelocity.cpp:192
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturevelocity.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the stem/node geometry probe depends on native production layout
-and cannot be established by a presenter-level Swift check.
+Disposition: MATCHED
+Mapping: S022
 Source context since previous assertion:
   ;
       if (!stageWorld("velocity-stem", EditorDrawerPage::Velocity, kVelocitySectionHeight))
@@ -341,10 +313,8 @@ Original expression:
                "production velocity geometry did not expose the test stems and node")
 
 A017 | SelectionKeyGestureTest::velocityStemDragGuardsEdits | src/checks/selectionkey/gesturevelocity.cpp:207
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturevelocity.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the captured-selection retention observation requires a live
-native drag and cannot be established by a presenter-level Swift check.
+Disposition: PARTIAL
+Mapping/reason: The mounted stem drag retains its captured note selection in a passing lane; native userGestureActive delivery and a message-anchored active-interaction predicate are unproved. [S023]
 Source context since previous assertion:
   ;
 
@@ -367,11 +337,7 @@ Original expression:
 
 A018 | SelectionKeyGestureTest::velocityStemDragGuardsEdits | src/checks/selectionkey/gesturevelocity.cpp:212
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the document/selection-equality conjuncts below are pure state a
-presenter-level Swift check could in principle assert, but none does. The
-edit-key consumption during the live gesture itself remains a native
-obligation. Original predicate and setup below remain an open obligation.
+Mapping/reason: No exact predicate: the mounted shell journey holds the note summary and document revision frozen under routed edit keys in a passing lane, but SMF-bytes equality and undo-depth equality during a live gesture remain unproved. Near miss: [S029][S030]. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
       QTest::keyClick(window(), Qt::Key_Right);
@@ -385,10 +351,7 @@ Original expression:
 
 A019 | SelectionKeyGestureTest::velocityStemDragGuardsEdits | src/checks/selectionkey/gesturevelocity.cpp:219
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturevelocity.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; first-Escape gesture cancellation through production code
-requires native delivery and cannot be established by a presenter-level Swift
-check.
+Mapping/reason: No exact predicate: the mounted journeys restore the captured selection, notes, and revision on first Escape in passing lanes, but SMF-bytes equality, undo-depth equality, and a message-anchored inactive-gesture predicate remain unproved. Near miss: [S024][S025][S026][S031][S032][S033]. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
       QTest::keyClick(window(), Qt::Key_Escape);
@@ -401,11 +364,8 @@ Original expression:
                "first Escape did not cancel the velocity gesture and restore its selection")
 
 A020 | SelectionKeyGestureTest::velocityStemDragGuardsEdits | src/checks/selectionkey/gesturevelocity.cpp:225
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the cleared-selection state below is pure selection state a
-presenter-level Swift check could in principle assert, but none does. Original
-predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S027
 Source context since previous assertion:
   ;
       QTest::keyClick(window(), Qt::Key_Escape);
@@ -414,11 +374,8 @@ Original expression:
                "second Escape after a velocity gesture did not clear the remaining selection")
 
 A021 | SelectionKeyGestureTest::velocityStemDragGuardsEdits | src/checks/selectionkey/gesturevelocity.cpp:233
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the replacement-selection state below is pure selection state a
-presenter-level Swift check could in principle assert, but none does. Original
-predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S028
 Source context since previous assertion:
   ;
 
@@ -459,3 +416,84 @@ Anchor: message "cancellation leaves the original document unchanged"
 
 S008 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
 Anchor: message "draft and cancellation preserve the full song contents"
+
+S009 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "production velocity geometry exposes the following node over the selected stem"
+
+S010 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the mounted roll zoomed the overlapping notes"
+
+S011 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the mounted roll restored its original time zoom"
+
+S012 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "beginning an overlap-node drag targets the visible following node"
+
+S013 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the production Escape route owns the overlap drag"
+
+S014 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "cancelling an overlap-node drag restores the earlier selection"
+
+S015 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "cancelling the overlap-node drag writes no document change"
+
+S016 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "clicking the overlap node replaces the earlier selection"
+
+S017 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the overlap fixture retains both notes after the cancelled gesture"
+
+S018 | test_productionVelocityCoincidentNodePriority | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the tied-node fixture retains both real equal-velocity notes"
+
+S019 | test_productionVelocityCoincidentNodePriority | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "production velocity geometry exposes both coincident nodes"
+
+S020 | test_productionVelocityCoincidentNodePriority | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "equal unselected velocity nodes retain later-model-order priority"
+
+S021 | test_productionVelocityCoincidentNodePriority | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "a selected velocity node wins over its tied sibling"
+
+S022 | test_productionVelocityStemGestureCancellation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "production velocity geometry exposes the selected duration stem"
+
+S023 | test_productionVelocityStemGestureCancellation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the selected velocity-stem drag retains its captured note selection"
+
+S024 | test_productionVelocityStemGestureCancellation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "first Escape cancels the gesture and restores its selection"
+
+S025 | test_productionVelocityStemGestureCancellation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "first Escape leaves the captured notes unchanged"
+
+S026 | test_productionVelocityStemGestureCancellation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "first Escape leaves the document revision unchanged"
+
+S027 | test_productionVelocityStemGestureCancellation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "second Escape clears the remaining selection"
+
+S028 | test_productionVelocityStemGestureCancellation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "clicking an unselected velocity stem replaces the note selection"
+
+S029 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "routed edit keys cannot mutate a live velocity stem drag"
+
+S030 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "held edit keys leave the document revision frozen"
+
+S031 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the first routed Escape retains the captured note selection"
+
+S032 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Escape and release roll back the velocity stem preview"
+
+S033 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Escape and release commit no document edit"
+
+S034 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: message "delete"
+
+S035 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: message "backspace"
