@@ -671,7 +671,11 @@ ThemedWindow {
         layoutSpaces: root.chromeSpacing
     }
     footer: Rectangle {
-        implicitHeight: captionMetrics.height
+        readonly property int statusTopInset: 3
+        readonly property int statusBottomInset: 2
+        readonly property int statusGripHeight: 13 + 4
+        implicitHeight: Math.max(captionMetrics.height, bodyMetrics.height, statusGripHeight)
+                        + statusTopInset + statusBottomInset
         color: shell.session.palette.windowBackground
         Text {
             objectName: "shellStatusText"
@@ -679,6 +683,8 @@ ThemedWindow {
             anchors.right: polyMeter.visible ? polyMeter.left : parent.right
             anchors.top: parent.top
             anchors.bottom: parent.bottom
+            anchors.topMargin: parent.statusTopInset
+            anchors.bottomMargin: parent.statusBottomInset
             anchors.leftMargin: root.chromeSpacing.two
             anchors.rightMargin: root.chromeSpacing.two
             text: shell.statusText
@@ -693,6 +699,7 @@ ThemedWindow {
             anchors.right: parent.right
             anchors.rightMargin: root.chromeSpacing.two
             anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: (parent.statusTopInset - parent.statusBottomInset) / 2
             spacing: bodyMetrics.advanceWidth(" ") / 2
             visible: presenter.polyMeterVisible
             readonly property var presenter: shell.session.transportBarPresenter()

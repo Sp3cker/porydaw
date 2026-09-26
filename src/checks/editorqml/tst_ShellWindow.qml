@@ -25,6 +25,14 @@ TestCase {
     Component { id: settingsComponent; Settings {} }
     Component { id: shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
     Component { id: intrinsicShellComponent; ShellWindow { visible: true } }
+    FontMetrics {
+        id: footerCaptionMetrics
+        font: shell ? Qt.font(shell.chromeTypography.caption) : Application.font
+    }
+    FontMetrics {
+        id: footerBodyMetrics
+        font: shell ? Qt.font(shell.chromeTypography.body) : Application.font
+    }
     Component {
         id: textProbeComponent
         TextField { text: "native copy text probe"; width: 220; height: 32 }
@@ -1285,6 +1293,28 @@ TestCase {
                 "the CGB meter reports zero of four channels")
         compare(findChild(meter, "shellPolyLostValue").visible, false,
                 "the lost-note readout stays hidden without losses")
+        const footer = shell.footer
+        const status = findChild(shell, "shellStatusText")
+        verify(footer && status, "the loaded shell exposes its status region")
+        const topInset = 3
+        const bottomInset = 2
+        const gripHeight = 13 + 4
+        compare(footer.height,
+                Math.max(footerCaptionMetrics.height, footerBodyMetrics.height, gripHeight)
+                    + topInset + bottomInset,
+                "footer matches the fork's QStatusBar strut plus vertical spacing")
+        compare(status.text, "Song open", "the loaded song publishes the status message")
+        const statusTop = status.mapToItem(footer, 0, 0).y
+        verify(statusTop >= topInset && footer.height - statusTop - status.height >= bottomInset,
+               "status text fits inside the status bar's top and bottom insets")
+        for (const name of ["shellPolyPcmCaption", "shellPolyPcmValue",
+                            "shellPolyCgbCaption", "shellPolyCgbValue"]) {
+            const label = findChild(meter, name)
+            verify(label !== null, name + " is mounted")
+            const top = label.mapToItem(footer, 0, 0).y
+            verify(top >= topInset && top + label.height <= footer.height - bottomInset,
+                   name + " fits between the fork's status-bar insets")
+        }
 
         var transport = session.transportBarPresenter()
         transport.setMasterVolume(86)
