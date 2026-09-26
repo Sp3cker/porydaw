@@ -3,12 +3,44 @@ Assertion correspondence: pitchbend/lifecycle.cpp
 Reference revision: 0b4c9ea649baa7174e53be880163d45b4d951d8d
 Original: src/checks/pitchbend/lifecycle.cpp
 Original SHA-256: 9ec0f5738f80a3e80f130292de8056e326500263b37b5321182207d661cbc51b
-Swift counterpart: none identified
+Swift counterpart: src/checks/rollcheck/pitch_bend.swift
+Additional Swift counterpart: src/checks/editorqml/tst_ShellPitchBend.qml
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run.
+Scope: A001, A003-A005, A009-A015, A033-A035 and A094-A099 are closed by task 40
+against the native pitchBendOwnerLifetimePredicates and
+pitchBendUnterminatedPredicates rows in src/checks/rollcheck/pitch_bend.swift
+(swiftcore-projectsession lane; SessionChecks.swift:75) and the mounted predicates
+in src/checks/editorqml/tst_ShellPitchBend.qml (ShellQmlTests.swift:64-65, lane
+shell-pitch-bend). A016-A032, A036, A038, A040-A066 and A068-A093 stay GAP:
+description/idle/enter/internal-refresh, roll-click and outside-click dismissal,
+cursor, focus return and deactivate dismissal causes belong to later
+pitch-bend/ED12 slices; A002, A006-A008, A037, A039 and A067 keep their earlier
+dispositions.
+Disclosed deviations: the anchored form is a single-scene overlay mounted in the
+timeline window (EditorSurface.qml:942-998) instead of the fork's shared-canvas
+QuickPopupSession, so destroyed-editor rows map to Loader deactivation (findChild
+null) rather than QPointer nullness; the mounted external mutation is a redo of a
+real roll Delete where the fork programs moveNotes to track 1, and the native break
+is moveNotes(byTicks: 1) plus deleteNotes; the shrink is 12 x the resolved base
+font px instead of the fork's raw 160 px; the unterminated fixture appends one
+unpaired note-on to makeMidiFixture instead of the fork's setUp(true).
+Disposition tally: 99 sites: 26 MATCHED, 1 PARTIAL, 72 GAP.
+
+Command: deno task verify --filter swiftcore --verbose (task-40 implementer run)
+Result: the controller reports the new pitch-bend rows PASSED inside the
+swiftcore-projectsession run, and the recorded evidence carries every row of
+pitchBendOwnerLifetimePredicates and pitchBendUnterminatedPredicates
+(build/proof-evidence/swiftcore-projectsession.json, 5254 passes); that run
+aborted on unrelated concurrent checks (task-38a files), so no lane-level PASS is
+claimed here.
+Command: deno task verify:shell --filter shell-pitch-bend --verbose (controller-accepted)
+Result: PASS - ok, 9/9 tests; build/proof-evidence/shell-pitch-bend.json lists
+test_gAnchorsPopupAndShrinkingWindowReclamps,
+test_externalRedoDeletesAnchorAndUnloadsPopup and test_livePreviewSurvivesUndoRedo
+alongside the seven unchanged tests. The ledger agent read the recording and did
+not re-run the lane.
 
 PitchBendEditingTest::popup/pitchGraph/modGraph/drawPitchCurve/drawModCurve
 and PitchBendFixture helpers live in src/checks/pitchbend/fixture.cpp with
@@ -16,8 +48,8 @@ declarations in src/checks/pitchbend/tst_pitchbendediting.h
 (SHA-256 7580a8bae6dab536e3f3a4ceeb170a23d047ee5cf3459bb5e1584e4b2e64b895).
 
 A001 | PitchBendEditingTest::keyGAnchorsPopupToSelectedNoteWithinWindowBounds | src/checks/pitchbend/lifecycle.cpp:63
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - the mounted G journey clicks a visible roll note (S001 proves the real click selected the anchor), focuses the roll and sends G, and S002 realizes the popup item, so the key opened the editor and not a popup gesture. Registered deviation: the Swift popup is a single-scene overlay mounted in the timeline window (EditorSurface.qml:942-998), so realization is findChild("pitchBendPopup") rather than a QuickPopupSession object
 Source context since previous assertion:
   #include "checks/pitchbend/tst_pitchbendediting.h"
 
@@ -88,16 +120,16 @@ A002 | PitchBendEditingTest::keyGAnchorsPopupToSelectedNoteWithinWindowBounds | 
 Disposition: MATCHED
 
 A003 | PitchBendEditingTest::keyGAnchorsPopupToSelectedNoteWithinWindowBounds | src/checks/pitchbend/lifecycle.cpp:66
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S002 - the realized pitchBendPopup item is the mounted form content for the same anchor; the fork's formContent() accessor has no separate Swift predicate because the mount is one Loader-hosted item
 Source context since previous assertion:
       QQuickItem *content = m_fixture.formContent();
 Original expression:
       QVERIFY(content);
 
 A004 | PitchBendEditingTest::keyGAnchorsPopupToSelectedNoteWithinWindowBounds | src/checks/pitchbend/lifecycle.cpp:69
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S003 - the mounted predicate compares the popup's Window.window with the shell window, the Swift form of popupSession()->window() == timelineWindow; the controller ruled this row executable against the single-scene mount rather than retired
 Source context since previous assertion:
       // The shared canvas window hosts the form: the anchored placement policy
       // must keep it inside the viewport and centered on the selected note.
@@ -105,8 +137,8 @@ Original expression:
       QVERIFY(m_fixture.view().quickView()->popupSession()->window() == &m_fixture.timelineWindow());
 
 A005 | PitchBendEditingTest::keyGAnchorsPopupToSelectedNoteWithinWindowBounds | src/checks/pitchbend/lifecycle.cpp:75
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S004 - the popup rect mapped into shell.contentItem intersects that host rect
 Source context since previous assertion:
       const QPointF contentScene = content->mapToScene(QPointF(0, 0));
       const QRect popupRect(contentScene.toPoint(),
@@ -126,8 +158,8 @@ A008 | PitchBendEditingTest::keyGAnchorsPopupToSelectedNoteWithinWindowBounds | 
 Disposition: MATCHED
 
 A009 | PitchBendEditingTest::keyGAnchorsPopupToSelectedNoteWithinWindowBounds | src/checks/pitchbend/lifecycle.cpp:82
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S007 + S008 - the mount holds no QPointer to capture across the resize, so the mounted journey compares the popup object identity across the shrink (S007) and asserts the same editor stays open (S008), which is the lifetime this row guards
 Source context since previous assertion:
       // Restored: resizing the shared canvas window retains the editor and
       // re-clamps the anchored form instead of dismissing it.
@@ -136,8 +168,8 @@ Original expression:
       QVERIFY(editor);
 
 A010 | PitchBendEditingTest::keyGAnchorsPopupToSelectedNoteWithinWindowBounds | src/checks/pitchbend/lifecycle.cpp:85
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S006 - the mounted journey sets shell.height to its height minus 12 * the resolved base font px and asserts the content geometry shrank; registered deviation: a derived 12x base-font multiple instead of the fork's raw 160 px, driven through shell.height rather than the tab
 Source context since previous assertion:
       const int heightBefore = m_fixture.timelineWindow().height();
       m_fixture.tab().resize(m_fixture.tab().width(), heightBefore - 160);
@@ -145,16 +177,16 @@ Original expression:
       QTRY_VERIFY(m_fixture.timelineWindow().height() < heightBefore);
 
 A011 | PitchBendEditingTest::keyGAnchorsPopupToSelectedNoteWithinWindowBounds | src/checks/pitchbend/lifecycle.cpp:86
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S008 - shrinking the window keeps the same editor open
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QTRY_VERIFY(editor && editor->isOpen());
 
 A012 | PitchBendEditingTest::keyGAnchorsPopupToSelectedNoteWithinWindowBounds | src/checks/pitchbend/lifecycle.cpp:89
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S007 - the resized form content is the same realized popup item (findChild returns the identical object after the shrink)
 Source context since previous assertion:
       QCoreApplication::processEvents();
       QQuickItem *resizedContent = m_fixture.formContent();
@@ -162,8 +194,8 @@ Original expression:
       QVERIFY(resizedContent);
 
 A013 | PitchBendEditingTest::keyGAnchorsPopupToSelectedNoteWithinWindowBounds | src/checks/pitchbend/lifecycle.cpp:94
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S009 - the re-clamp predicate asserts the popup lies inside the shrunken host (x/y >= 0 and right/bottom within the host), which entails the intersection this row asserts
 Source context since previous assertion:
       const QPointF resizedScene = resizedContent->mapToScene(QPointF(0, 0));
       const QRect resizedPopup(resizedScene.toPoint(), QSize(qRound(resizedContent->width()),
@@ -173,16 +205,16 @@ Original expression:
       QVERIFY(resizedHost.intersects(resizedPopup));
 
 A014 | PitchBendEditingTest::keyGAnchorsPopupToSelectedNoteWithinWindowBounds | src/checks/pitchbend/lifecycle.cpp:95
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S009 - the popup's top edge stays at or below the shrunken host's top (y >= 0)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(resizedPopup.top() >= resizedHost.top());
 
 A015 | PitchBendEditingTest::keyGAnchorsPopupToSelectedNoteWithinWindowBounds | src/checks/pitchbend/lifecycle.cpp:96
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S009 - the popup's bottom edge stays at or above the shrunken host's bottom (bottom <= host.height); the fork's trailing assertNoteSelection rides S010 (the anchored note remains selected after the shrink), which is no separate A row
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -352,8 +384,8 @@ Original expression:
       QVERIFY(m_fixture.popup() == &editor);
 
 A033 | PitchBendEditingTest::externalNoteMutationDismissesPopup | src/checks/pitchbend/lifecycle.cpp:158
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S014 + S011 - the native external-move block reopens the anchor immediately before the break (S014) and the mounted journey realizes the restored note's editor immediately before the redo (S011); both stage the open editor this row asserts
 Source context since previous assertion:
   }
 
@@ -364,8 +396,8 @@ Original expression:
       QVERIFY(openedEditor);
 
 A034 | PitchBendEditingTest::externalNoteMutationDismissesPopup | src/checks/pitchbend/lifecycle.cpp:161
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S015 + S012 - the native block breaks the editing span with moveNotes(byTicks: 1) and the mounted journey redoes a real roll Delete; both close the editor. Registered deviation: the mounted stimulus is a redo of a Delete instead of the fork's programmatic moveNotes to track 1, because the Swift public mutator set has no per-note track move
 Source context since previous assertion:
       QPointer<songview::PitchBendEditor> editor = openedEditor;
       m_fixture.document().moveNotes({m_fixture.note()}, 1, 0);
@@ -373,8 +405,8 @@ Original expression:
       QTRY_VERIFY(!editor || !editor->isOpen());
 
 A035 | PitchBendEditingTest::externalNoteMutationDismissesPopup | src/checks/pitchbend/lifecycle.cpp:163
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S013 - the mounted journey asserts the closed editor unloads its popup item (findChild === null); registered deviation: Loader deactivation instead of the fork's QPointer nullness after drainDeferredDeletes
 Source context since previous assertion:
       m_fixture.drainDeferredDeletes();
 Original expression:
@@ -933,8 +965,8 @@ Original expression:
       QVERIFY(!m_fixture.rollInput().hasActiveFocus());
 
 A094 | PitchBendEditingTest::unterminatedNoteSpanRejectsEditing | src/checks/pitchbend/lifecycle.cpp:373
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S016 - the Swift fixture appends one unpaired note-on to makeMidiFixture and the executed predicate proves the resulting note is unterminated; registered deviation: the fixture is built by appending to the shared synthetic fixture instead of the fork's setUp(true)
 Source context since previous assertion:
   }
 
@@ -945,32 +977,32 @@ Original expression:
       QVERIFY(m_fixture.setUp(true));
 
 A095 | PitchBendEditingTest::unterminatedNoteSpanRejectsEditing | src/checks/pitchbend/lifecycle.cpp:374
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S016 - the note the journey selects is unterminated (Note.isUnterminated)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.note().unterminated());
 
 A096 | PitchBendEditingTest::unterminatedNoteSpanRejectsEditing | src/checks/pitchbend/lifecycle.cpp:375
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S017 - Swift models the degenerate endpoint as Note.endTick == nil where the fork's document noteEndTick falls back to the note tick; the executed predicate asserts that nil endpoint for the same fixture note (registered deviation recorded here)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.document().noteEndTick(m_fixture.note()), m_fixture.note().tick);
 
 A097 | PitchBendEditingTest::unterminatedNoteSpanRejectsEditing | src/checks/pitchbend/lifecycle.cpp:376
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S017 - the fork's fixture accessor endTick() also degenerates to the note tick; the Swift fixture accessor reads the same Note.endTick whose nil is the executed form of that fallback (registered deviation)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.endTick(), m_fixture.note().tick);
 
 A098 | PitchBendEditingTest::unterminatedNoteSpanRejectsEditing | src/checks/pitchbend/lifecycle.cpp:381
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S018 + S019 - the G route refuses an unterminated note (openSelected returns false) and leaves the editor closed, so there is no popup for the fork's !popup()
 Source context since previous assertion:
       const QByteArray before = m_fixture.smf();
       m_fixture.rollInput().forceActiveFocus(Qt::OtherFocusReason);
@@ -980,8 +1012,8 @@ Original expression:
       QVERIFY(!m_fixture.popup());
 
 A099 | PitchBendEditingTest::unterminatedNoteSpanRejectsEditing | src/checks/pitchbend/lifecycle.cpp:382
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S020 - refusing the unterminated note leaves the song bytes unchanged (coreTimeBytes)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -991,5 +1023,52 @@ Remaining original source (closing sequence and helper bodies):
   }
 
 Swift assertion predicates
-None: no Swift counterpart file carries report.expect*/expectEqual predicates
-for this suite.
+S001 | openViaG | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the real roll click selects the anchor note"
+S002 | openViaG | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the G key realizes the anchored popup"
+S003 | test_gAnchorsPopupAndShrinkingWindowReclamps | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the mounted popup shares the roll's shell window"
+S004 | test_gAnchorsPopupAndShrinkingWindowReclamps | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the selected-note popup intersects its window"
+S005 | test_gAnchorsPopupAndShrinkingWindowReclamps | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the anchored popup stays inside the window"
+S006 | test_gAnchorsPopupAndShrinkingWindowReclamps | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the shell resize propagates to its content geometry"
+S007 | test_gAnchorsPopupAndShrinkingWindowReclamps | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "shrinking the window keeps the same popup realized"
+S008 | test_gAnchorsPopupAndShrinkingWindowReclamps | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "shrinking the window keeps the same editor open"
+S009 | test_gAnchorsPopupAndShrinkingWindowReclamps | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the shrunken window re-clamps the anchored popup inside its bounds"
+S010 | test_gAnchorsPopupAndShrinkingWindowReclamps | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the anchored note remains selected after the window shrinks"
+S011 | test_externalRedoDeletesAnchorAndUnloadsPopup | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the G route realizes the restored note's editor"
+S012 | test_externalRedoDeletesAnchorAndUnloadsPopup | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "redoing the roll deletion closes the editor"
+S013 | test_externalRedoDeletesAnchorAndUnloadsPopup | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "closing the editor unloads the popup item"
+S014 | pitchBendOwnerLifetimePredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the restored anchor note reopens for an external move"
+S015 | pitchBendOwnerLifetimePredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "moving the anchored note closes the editor"
+S016 | pitchBendUnterminatedPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the fixture contains an unterminated note"
+S017 | pitchBendUnterminatedPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the unterminated note has no editable span endpoint"
+S018 | pitchBendUnterminatedPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the G route refuses an unterminated note without opening the editor"
+S019 | pitchBendUnterminatedPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "an unterminated note leaves the editor closed"
+S020 | pitchBendUnterminatedPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "refusing the unterminated note leaves the song bytes unchanged"
+
+The mounted predicates carry no line numbers by design: the reader resolves the
+index's message literal inside the named function (see `deno task proof show
+pitchbend/lifecycle.cpp S001`). The remaining predicates of the three task-40
+mounted journeys and of the two native blocks are indexed in proof.curve.txt
+(S102-S128 and S064-S101); they cover curve.cpp clauses, so they carry no
+lifecycle.cpp site here. Uncited index entries in this file: S005 (the
+inside-window clause of the already-MATCHED pre-shrink rows) and S010 (the fork's
+trailing assertNoteSelection, which is no A row).

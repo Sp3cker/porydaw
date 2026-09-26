@@ -11,30 +11,55 @@ Scope: A001-A057 are closed against the native document predicates in
 src/checks/rollcheck/pitch_bend.swift (registered as checkcatalog.cpp:124,
 swiftcore-projectsession) and the mounted predicates in
 src/checks/editorqml/tst_ShellPitchBend.qml (ShellQmlTests.swift:64-65, lane
-shell-pitch-bend); A058-A123 stay GAP for the deferred ED10 slices. Disclosed
+shell-pitch-bend); A088-A123 stay GAP for the deferred ED10 slices. A058-A087
+are closed by task 40 against the native pitchBendOwnerLifetimePredicates,
+pitchBendExternalPreviewPredicates and pitchBendUnterminatedPredicates rows in
+src/checks/rollcheck/pitch_bend.swift:479-626 and the mounted predicates in
+test_gAnchorsPopupAndShrinkingWindowReclamps,
+test_externalRedoDeletesAnchorAndUnloadsPopup and test_livePreviewSurvivesUndoRedo
+in src/checks/editorqml/tst_ShellPitchBend.qml:486-630. Disclosed
 deviations: the native navigation predicate calls presenter.routeUnclaimedKey
 directly instead of the mounted window key event (mounted coverage S050-S053);
 the native undo rows call document.history.undoDocument() where the mounted lane
 fires the real StandardKey.Undo binding (mounted coverage S046-S049, S057-S060);
-the native check does not wire session.onChange to presenter.documentDidChange, so
-popup liveness through undo is proved on the mounted lane only.
-Disposition tally: 123 sites: 55 MATCHED, 2 PARTIAL, 66 GAP.
+the task-20 native rows do not wire session.onChange to
+presenter.documentDidChange, so popup liveness through undo is proved on the
+mounted lane for those journeys, while the task-40 blocks mirror the two
+DocumentWorkspace.sessionDidChange rules through pitchBendObserveDocument; the
+duplicate-note fixture is two notes inserted together in one addNotes call
+(pitch_bend.swift:485-493) instead of the fork's dedicated setUp(false, true)
+note set; the native external break is moveNotes(byTicks: 1) plus deleteNotes
+(the fork's public mutator set has no per-note track move) and the mounted
+external mutation is a redo of a real roll Delete rather than the fork's
+programmatic move to track 1; destroyed-editor rows map to Loader deactivation
+(findChild null) instead of the fork's QPointer nullness after
+drainDeferredDeletes.
+Disposition tally: 123 sites: 84 MATCHED, 3 PARTIAL, 36 GAP.
 
-Command: deno task verify --filter swiftcore --verbose
-Result: PASS - run_checks PASS; swiftcore-projectsession ok and every new
-PitchBendEditingTest predicate emitted its PASS line. Controller-accepted
-implementer run on this frozen tree; the ledger agent did not re-run the lane.
-Command: deno task verify:shell --filter shell-pitch-bend --verbose
-Result: PASS - ok, 9/9 tests. Controller-accepted implementer run on this frozen
-tree; the ledger agent did not re-run the lane.
+Command: deno task verify --filter swiftcore --verbose (task-40 implementer run)
+Result: the controller reports the new pitch-bend rows PASSED inside the
+swiftcore-projectsession run, and the recorded evidence carries every row of
+pitchBendOwnerLifetimePredicates, pitchBendExternalPreviewPredicates and
+pitchBendUnterminatedPredicates (build/proof-evidence/swiftcore-projectsession.json,
+5254 passes); that run aborted on unrelated concurrent checks (task-38a files),
+so no lane-level PASS is claimed here.
+Command: deno task verify:shell --filter shell-pitch-bend --verbose (controller-accepted)
+Result: PASS - ok, 9/9 tests; build/proof-evidence/shell-pitch-bend.json lists
+test_gAnchorsPopupAndShrinkingWindowReclamps,
+test_externalRedoDeletesAnchorAndUnloadsPopup and
+test_livePreviewSurvivesUndoRedo alongside the seven unchanged tests. The ledger
+agent read the recording; it did not re-run the lane.
 Command: deno task verify:bridge
 Result: PASS - 0 findings. Controller-accepted implementer run; not re-run here.
 
 Verification: the native predicates execute on the swiftcore-projectsession lane
-(SessionChecks.swift:68 passes the suite's DocumentSession) and the mounted
-predicates on the shell-pitch-bend lane; this bookkeeping pass read the recorded
-evidence at build/proof-evidence/swiftcore-projectsession.json and
-build/proof-evidence/shell-pitch-bend.json and did not execute either lane.
+(SessionChecks.swift:75 passes the suite's DocumentSession) and the mounted
+predicates on the shell-pitch-bend lane (ShellQmlTests.swift:64-65); this
+bookkeeping pass read the recorded evidence at
+build/proof-evidence/swiftcore-projectsession.json and
+build/proof-evidence/shell-pitch-bend.json and did not execute either lane. The
+lane-level result for the task-40 native rows is the controller-reported
+implementer run described above, not an observation of this pass.
 Task 32's fix round added the popup-face predicates S061-S063 (popup title, caption
 and readout faces against the published roles; the drag-input body face; and the
 13->26->13 republish round trip), executed by pitchBendReadoutPredicates under
@@ -602,8 +627,8 @@ Original expression:
       QVERIFY(found);
 
 A058 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:210
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S064 - the duplicate pair is staged by one addNotes call (pitch_bend.swift:485-493) and the executed identity predicate proves the duplicate note exists with an independent identity; registered deviation: the fork's dedicated two-note setUp(false, true) fixture is replaced by two notes inserted together into the synthetic session's track
 Source context since previous assertion:
   }
 
@@ -614,8 +639,8 @@ Original expression:
       QVERIFY(m_fixture.setUp(false, true));
 
 A059 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:213
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: PARTIAL
+Mapping/reason: S064 + S065 + S066 + S067 - the duplicate pair's independent identity and shared tick, key and span execute, but no executing predicate asserts the fork's exactly-two-notes count (the Swift fixture inserts the pair into the synthetic fixture's existing track, a registered fixture deviation): unproved: the notes.size() == 2 clause
 Source context since previous assertion:
 
       const std::vector<DocNote> notes = m_fixture.document().notesForTrack(0);
@@ -623,8 +648,8 @@ Original expression:
       QCOMPARE(notes.size(), size_t{2});
 
 A060 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:216
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S068 - the anchor note's identity resolves to the opened editor (scene.note.id == original.id); Swift Note.id is non-optional, so the fork's isAssigned fold is that resolution with S064's distinct-id comparison
 Source context since previous assertion:
       const DocNote selected = notes.front();
       const DocNote sameTickImpostor = notes.back();
@@ -632,40 +657,40 @@ Original expression:
       QVERIFY(selected.noteId.isAssigned());
 
 A061 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:217
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S071 - the impostor's identity still resolves by id after the anchor's deletion (document.note(ids[1]) != nil)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(sameTickImpostor.noteId.isAssigned());
 
 A062 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:218
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S064 - the duplicate retains an identity independent from the anchor note
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(selected.noteId != sameTickImpostor.noteId);
 
 A063 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:219
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S065 - the impostor shares the anchor note's tick
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(sameTickImpostor.tick, selected.tick);
 
 A064 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:220
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S066 - the impostor shares the anchor note's key
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(sameTickImpostor.key, selected.key);
 
 A065 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:227
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - the Edit->Pitch Bend route opens the selected note's editor and keeps it open for this row's journey (the Swift editor object is the presenter, so popup existence rides the route result)
 Source context since previous assertion:
 
       const int index = m_fixture.document().undoStack()->index();
@@ -677,16 +702,16 @@ Original expression:
       QVERIFY(editor);
 
 A066 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:228
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S069 - the open editor's graph spans exactly the selected note (original.endTick == kernel.endTick, the Swift form of editor->endTick() == selectedEnd)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(editor->endTick(), selectedEnd);
 
 A067 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:232
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S070 - deleting the anchored note closes the editor; registered deviation: the native block deletes through document.deleteNotes with the workspace dispatch mirrored by pitchBendObserveDocument, so the close rides documentDidChange
 Source context since previous assertion:
 
       QPointer<songview::PitchBendEditor> guardedEditor = editor;
@@ -695,16 +720,16 @@ Original expression:
       QTRY_VERIFY(!guardedEditor || !guardedEditor->isOpen());
 
 A068 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:234
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S118 - the mounted redo-delete journey asserts the closed editor unloads its popup item (findChild(view, "pitchBendPopup") === null); registered deviation: Loader deactivation instead of the fork's QPointer nullness after drainDeferredDeletes
 Source context since previous assertion:
       m_fixture.drainDeferredDeletes();
 Original expression:
       QVERIFY(guardedEditor.isNull());
 
 A069 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:237
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S071 - the same-tick impostor survives deletion of the anchor while the anchor is gone
 Source context since previous assertion:
 
       DocNote survivingImpostor;
@@ -712,16 +737,16 @@ Original expression:
       QVERIFY(m_fixture.document().findNote(sameTickImpostor.noteId, &survivingImpostor));
 
 A070 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:238
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S072 - the anchored note's span is gone after deletion (document.note(original.id) == nil)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(!m_fixture.document().containsNoteSpan(0, selected, selectedEnd));
 
 A071 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:241
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S074 - undo restores the anchored note's history index
 Source context since previous assertion:
 
       m_fixture.document().undoStack()->undo();
@@ -729,24 +754,24 @@ Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), index);
 
 A072 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:242
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S075 - undo restores the exact prior song bytes (coreTimeBytes); the second predicate carrying that message is the bytes comparison this row makes, while the first is the undoDocument push result
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.smf(), before);
 
 A073 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:243
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S076 - pitchBendSpanAlive re-reads the note by id and asserts track/tick/endTick/pitch survive the undo (the fork asserted containsNoteSpan)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.document().containsNoteSpan(0, selected, selectedEnd));
 
 A074 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:249
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - the live-preview journey opens through pitchBendCheckScene, which asserts the route opens the selected note's editor and keeps it open
 Source context since previous assertion:
   }
 
@@ -757,16 +782,16 @@ Original expression:
       QVERIFY(editor);
 
 A075 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:251
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S081 - the press/drag journey executes on presenter.pitchGraph() and the gesture predicate proves that graph took it; Swift pitchGraph() is a non-optional production accessor, so there is no graph-existence predicate (the A052 precedent)
 Source context since previous assertion:
       QPointer<songview::PitchBendGraph> graph = pitchGraph();
 Original expression:
       QVERIFY(graph);
 
 A076 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:258
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S081 - an unfinished stroke keeps its live gesture
 Source context since previous assertion:
       const QPoint start = canvasPoint(*graph, 0.25, 0.70);
       const QPoint finish = canvasPoint(*graph, 0.75, 0.30);
@@ -778,8 +803,8 @@ Original expression:
       QVERIFY(graph && graph->hasGesture());
 
 A077 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:267
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S082 - an external lane edit pushes exactly one history entry under the open gesture
 Source context since previous assertion:
       const auto preview = graph->curvePoints();
       const QByteArray beforeExternalEdit = m_fixture.smf();
@@ -793,24 +818,24 @@ Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), externalEditIndex + 1);
 
 A078 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:268
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S083 - the external lane edit changes the serialized song (coreTimeBytes)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.smf() != beforeExternalEdit);
 
 A079 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:269
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S084 - the live preview survives the external edit (kernel.points and endValue unchanged)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(graph && sameLaneValues(graph->curvePoints(), preview));
 
 A080 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:273
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S087 - undoing the external edit restores the history index
 Source context since previous assertion:
       // Undoing the real external lane edit restores the exact pre-edit SMF
       // while the pending preview stays live; redo re-applies it the same way.
@@ -819,56 +844,56 @@ Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), externalEditIndex);
 
 A081 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:274
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S088 - undoing the external edit restores the exact prior song bytes
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.smf(), beforeExternalEdit);
 
 A082 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:275
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S090 - the gesture survives undo of the external edit
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(graph && graph->hasGesture());
 
 A083 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:276
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S089 - the live preview survives undo of the external edit
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(graph && sameLaneValues(graph->curvePoints(), preview));
 
 A084 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:278
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S092 - redo reapplies the external edit at the next history index
 Source context since previous assertion:
       m_fixture.document().undoStack()->redo();
 Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), externalEditIndex + 1);
 
 A085 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:279
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S093 - redo reapplies the external lane edit to the serialized song
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.smf() != beforeExternalEdit);
 
 A086 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:280
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S094 - the live preview survives redo of the external edit
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(graph && sameLaneValues(graph->curvePoints(), preview));
 
 A087 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:284
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S096 + S128 - the native Escape close leaves the editor closed and the mounted Escape close unloads the popup item (findChild === null)
 Source context since previous assertion:
       if (editor)
           QTest::keyClick(&m_fixture.timelineWindow(), Qt::Key_Escape);
@@ -1411,6 +1436,143 @@ Anchor: message "pitch drag inputs use the published body font face"
 
 S063 | pitchBendReadoutPredicates | src/checks/rollcheck/pitch_bend.swift
 Anchor: message "resizing the pitch popup republishes the title, caption, readout, and input roles"
+
+S064 | pitchBendOwnerLifetimePredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the duplicate note retains an independent identity"
+S065 | pitchBendOwnerLifetimePredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the impostor shares the anchor note's tick"
+S066 | pitchBendOwnerLifetimePredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the impostor shares the anchor note's key"
+S067 | pitchBendOwnerLifetimePredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the impostor shares the anchor note's editing span"
+S068 | pitchBendOwnerLifetimePredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the editor opens on the original note rather than its impostor"
+S069 | pitchBendOwnerLifetimePredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the open editor's graph spans exactly the selected note"
+S070 | pitchBendOwnerLifetimePredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "deleting the anchored note closes the editor"
+S071 | pitchBendOwnerLifetimePredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the same-tick impostor survives deletion of the anchor"
+S072 | pitchBendOwnerLifetimePredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the anchored note's span is gone after deletion"
+S073 | pitchBendOwnerLifetimePredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "undo restores the anchored note and the exact prior song bytes" #1
+S074 | pitchBendOwnerLifetimePredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "undo restores the anchored note's history index"
+S075 | pitchBendOwnerLifetimePredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "undo restores the anchored note and the exact prior song bytes" #2
+S076 | pitchBendOwnerLifetimePredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "undo restores the anchored note"
+S077 | pitchBendOwnerLifetimePredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "undo leaves the dismissed anchored editor closed"
+S078 | pitchBendOwnerLifetimePredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the restored anchor note reopens for an external move"
+S079 | pitchBendOwnerLifetimePredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "moving the anchored note closes the editor"
+S080 | pitchBendOwnerLifetimePredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "moving the anchor does not rebind the same-tick impostor"
+S081 | pitchBendExternalPreviewPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "an unfinished stroke keeps its live gesture"
+S082 | pitchBendExternalPreviewPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "an external lane edit pushes exactly one history entry under the open gesture"
+S083 | pitchBendExternalPreviewPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the external lane edit changes the serialized song"
+S084 | pitchBendExternalPreviewPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the live preview survives the external edit"
+S085 | pitchBendExternalPreviewPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the gesture survives the external edit"
+S086 | pitchBendExternalPreviewPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "undoing the external edit restores the history entry"
+S087 | pitchBendExternalPreviewPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "undoing the external edit restores the history index"
+S088 | pitchBendExternalPreviewPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "undoing the external edit restores the exact prior song bytes"
+S089 | pitchBendExternalPreviewPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the live preview survives undo of the external edit"
+S090 | pitchBendExternalPreviewPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the gesture survives undo of the external edit"
+S091 | pitchBendExternalPreviewPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "redo reapplies the external edit as one entry"
+S092 | pitchBendExternalPreviewPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "redo reapplies the external edit at the next history index"
+S093 | pitchBendExternalPreviewPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "redo reapplies the external lane edit to the serialized song"
+S094 | pitchBendExternalPreviewPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the live preview survives redo of the external edit"
+S095 | pitchBendExternalPreviewPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the gesture survives redo of the external edit"
+S096 | pitchBendExternalPreviewPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "Escape closes the editor after the external-edit cycle"
+S097 | pitchBendUnterminatedPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the fixture contains an unterminated note"
+S098 | pitchBendUnterminatedPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the unterminated note has no editable span endpoint"
+S099 | pitchBendUnterminatedPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the G route refuses an unterminated note without opening the editor"
+S100 | pitchBendUnterminatedPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "an unterminated note leaves the editor closed"
+S101 | pitchBendUnterminatedPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "refusing the unterminated note leaves the song bytes unchanged"
+S102 | test_gAnchorsPopupAndShrinkingWindowReclamps | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the mounted popup shares the roll's shell window"
+S103 | test_gAnchorsPopupAndShrinkingWindowReclamps | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the selected-note popup intersects its window"
+S104 | test_gAnchorsPopupAndShrinkingWindowReclamps | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the anchored popup stays inside the window"
+S105 | test_gAnchorsPopupAndShrinkingWindowReclamps | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the selected note remains painted under the popup"
+S106 | test_gAnchorsPopupAndShrinkingWindowReclamps | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the anchored popup is horizontally centered on the selected note"
+S107 | test_gAnchorsPopupAndShrinkingWindowReclamps | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the tall roll first places the selected-note popup below its anchor"
+S108 | test_gAnchorsPopupAndShrinkingWindowReclamps | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the shell resize propagates to its content geometry"
+S109 | test_gAnchorsPopupAndShrinkingWindowReclamps | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "shrinking the window keeps the same popup realized"
+S110 | test_gAnchorsPopupAndShrinkingWindowReclamps | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "shrinking the window keeps the same editor open"
+S111 | test_gAnchorsPopupAndShrinkingWindowReclamps | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the shrunken window re-clamps the anchored popup inside its bounds"
+S112 | test_gAnchorsPopupAndShrinkingWindowReclamps | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "shrinking the shell moves the popup above the anchor: "
+S113 | test_gAnchorsPopupAndShrinkingWindowReclamps | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the anchored note remains selected after the window shrinks"
+S114 | test_externalRedoDeletesAnchorAndUnloadsPopup | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the roll Delete removes the anchored note"
+S115 | test_externalRedoDeletesAnchorAndUnloadsPopup | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "undo restores the anchor note in the roll"
+S116 | test_externalRedoDeletesAnchorAndUnloadsPopup | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the G route realizes the restored note's editor"
+S117 | test_externalRedoDeletesAnchorAndUnloadsPopup | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "redoing the roll deletion closes the editor"
+S118 | test_externalRedoDeletesAnchorAndUnloadsPopup | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "closing the editor unloads the popup item"
+S119 | test_externalRedoDeletesAnchorAndUnloadsPopup | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the external redo removes the original anchor note"
+S120 | test_livePreviewSurvivesUndoRedo | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "a committed stroke provides an external history entry"
+S121 | test_livePreviewSurvivesUndoRedo | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the G route remounts the graph for a live preview"
+S122 | test_livePreviewSurvivesUndoRedo | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "undo changes the serialized lane beneath the live stroke"
+S123 | test_livePreviewSurvivesUndoRedo | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "undo keeps the gesturing editor open"
+S124 | test_livePreviewSurvivesUndoRedo | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the live preview survives undo of the external edit"
+S125 | test_livePreviewSurvivesUndoRedo | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "redo reapplies the serialized lane beneath the live stroke"
+S126 | test_livePreviewSurvivesUndoRedo | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "redo keeps the gesturing editor open"
+S127 | test_livePreviewSurvivesUndoRedo | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the live preview survives redo of the external edit"
+S128 | test_livePreviewSurvivesUndoRedo | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "Escape closes the editor after the external-edit cycle"
+
+Executed coverage without an A row: S073 (the undoDocument push result) and
+S077 (undo leaves the dismissed anchored editor closed); no
+duplicateNoteAtSameTickDoesNotAnchorStaleNote row asserts either, and the three
+mounted journey predicates S114-S116 stage the redo-deletion journey whose unload
+predicate S118 is cited above.
 
 Unindexed by design: pitchBendSharedGridPredicates (cppID
 swiftcore/PitchBendEditingTest::sharedGridSnap, message "clock grid selection permits a

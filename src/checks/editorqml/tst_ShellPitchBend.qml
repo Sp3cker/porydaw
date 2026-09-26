@@ -432,4 +432,200 @@ TestCase {
         verify(JSON.parse(grid.noteSummary).some(function(n) { return n.selected }),
                "Escape dismisses the editor without clearing note selection")
     }
+    function openViaG(pinNearTop) {
+        openSong()
+        const view = surface()
+        const grid = view.gridModel
+        const roll = findChild(view, "swiftRollInput")
+        const plot = findChild(view, "timelineQuickRollPlot")
+        verify(roll !== null && plot !== null,
+               "the roll input and plot mount for the G route")
+        if (pinNearTop) {
+            const initialPlotHeight = plot.height
+            shell.height += 12 * grid.baseFontPx
+            tryVerify(function() { return plot.height > initialPlotHeight },
+                      5000, "the tall shell expands the roll before anchor selection")
+        }
+        const note = visibleNote(view, grid, roll, plot)
+        verify(note !== null, "the G route has a visible editable note: " + noteProbe)
+        if (pinNearTop) {
+            const startingFace = findChild(view, "gridNote_" + note.id)
+            const faceY = startingFace.mapToItem(roll, 0, 0).y
+            grid.setCameraVScroll(grid.cameraScrollY + faceY - plot.height * 0.1)
+            tryVerify(function() {
+                const face = findChild(view, "gridNote_" + note.id)
+                const y = face ? face.mapToItem(roll, 0, 0).y : -1
+                return face !== null && face.visible && y >= 0 && y < plot.height * 0.2
+            }, 5000, "the selected anchor note sits near the top of the tall roll")
+            const face = findChild(view, "gridNote_" + note.id)
+            const at = face.mapToItem(roll, face.width / 2, face.height / 2)
+            note.x = at.x
+            note.y = at.y
+        }
+        mouseClick(roll, note.x, note.y, Qt.LeftButton)
+        tryVerify(function() {
+            return JSON.parse(grid.noteSummary).some(function(n) { return n.selected })
+        }, 5000, "the real roll click selects the anchor note")
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true)
+        keyClick(Qt.Key_G)
+        const editor = view.pitchBendPresenter
+        tryCompare(editor, "isOpen", true)
+        tryVerify(function() { return findChild(view, "pitchBendPopup") !== null },
+                  5000, "the G key realizes the anchored popup")
+        return { view: view, grid: grid, roll: roll, plot: plot,
+                 note: note, editor: editor, popup: findChild(view, "pitchBendPopup") }
+    }
+
+    function popupWindowRect(popup) {
+        const at = popup.mapToItem(shell.contentItem, 0, 0)
+        return { x: at.x, y: at.y, right: at.x + popup.width,
+                 bottom: at.y + popup.height }
+    }
+
+    function test_gAnchorsPopupAndShrinkingWindowReclamps() {
+        const opened = openViaG(true)
+        const popup = opened.popup
+        compare(popup.Window.window, shell,
+                "the mounted popup shares the roll's shell window")
+        const host = shell.contentItem
+        const rect = popupWindowRect(popup)
+        verify(rect.right > 0 && rect.bottom > 0 && rect.x < host.width
+               && rect.y < host.height,
+               "the selected-note popup intersects its window")
+        verify(rect.x >= 0 && rect.y >= 0
+               && rect.right <= host.width && rect.bottom <= host.height,
+               "the anchored popup stays inside the window")
+        const face = findChild(opened.view, "gridNote_" + opened.note.id)
+        verify(face !== null, "the selected note remains painted under the popup")
+        const center = face.mapToItem(host, face.width / 2, 0).x
+        verify(Math.abs(rect.x + popup.width / 2 - center)
+               <= popup.width / 2 + opened.grid.baseFontPx,
+               "the anchored popup is horizontally centered on the selected note")
+        const originalHeight = shell.height
+        const shrunkenHeight = originalHeight - 12 * opened.grid.baseFontPx
+        verify(rect.y > opened.view.mapToItem(host, 0, 0).y,
+               "the tall roll first places the selected-note popup below its anchor")
+        const originalHostHeight = host.height
+        shell.height = shrunkenHeight
+        tryCompare(shell, "height", shrunkenHeight)
+        verify(waitForNative(function() {
+            return host.height <= originalHostHeight - 12 * opened.grid.baseFontPx
+        }, 5000), "the shell resize propagates to its content geometry")
+        compare(findChild(opened.view, "pitchBendPopup"), popup,
+                "shrinking the window keeps the same popup realized")
+        verify(opened.editor.isOpen, "shrinking the window keeps the same editor open")
+        tryVerify(function() {
+            const current = popupWindowRect(popup)
+            return current.x >= 0 && current.y >= 0
+                && current.right <= host.width && current.bottom <= host.height
+        }, 5000, "the shrunken window re-clamps the anchored popup inside its bounds")
+        verify(popupWindowRect(popup).y < rect.y,
+               "shrinking the shell moves the popup above the anchor: "
+                   + JSON.stringify({ before: rect, after: popupWindowRect(popup),
+                                      note: opened.note, popup: [popup.width, popup.height],
+                                      drawer: opened.view.drawerPresenter.height,
+                                      view: [opened.view.width, opened.view.height],
+                                      host: [host.width, host.height] }))
+        verify(JSON.parse(opened.grid.noteSummary).some(function(n) { return n.selected }),
+               "the anchored note remains selected after the window shrinks")
+    }
+
+    function test_externalRedoDeletesAnchorAndUnloadsPopup() {
+        openSong()
+        const view = surface()
+        const grid = view.gridModel
+        const roll = findChild(view, "swiftRollInput")
+        const plot = findChild(view, "timelineQuickRollPlot")
+        verify(roll !== null && plot !== null, "the external-edit roll is mounted")
+        const note = visibleNote(view, grid, roll, plot)
+        verify(note !== null, "an external-delete anchor note is visible: " + noteProbe)
+        mouseClick(roll, note.x, note.y, Qt.LeftButton)
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true)
+        keyClick(Qt.Key_Delete)
+        tryVerify(function() {
+            return !JSON.parse(grid.noteSummary).some(function(n) { return n.id === note.id })
+        }, 5000, "the roll Delete removes the anchored note")
+        tryCompare(shell.shellPresenter.session, "canUndo", true)
+        keySequence(StandardKey.Undo)
+        const restoredByUndo = waitForNative(function() {
+            return JSON.parse(grid.noteSummary).some(function(n) { return n.id === note.id })
+        }, 5000)
+        verify(restoredByUndo, "the roll undo restores the anchored note: "
+               + JSON.stringify({ canRedo: shell.shellPresenter.session.canRedo,
+                                  canUndo: shell.shellPresenter.session.canUndo,
+                                  notes: JSON.parse(grid.noteSummary).slice(0, 3),
+                                  selected: note, revision: grid.appliedRevisionText,
+                                  error: shell.shellPresenter.session.lastSaveError }))
+        const restored = visibleNote(view, grid, roll, plot)
+        verify(restored !== null && restored.id === note.id,
+               "undo restores the anchor note in the roll")
+        mouseClick(roll, restored.x, restored.y, Qt.LeftButton)
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true)
+        keyClick(Qt.Key_G)
+        const editor = view.pitchBendPresenter
+        tryCompare(editor, "isOpen", true)
+        tryVerify(function() { return findChild(view, "pitchBendPopup") !== null },
+                  5000, "the G route realizes the restored note's editor")
+        keySequence(StandardKey.Redo)
+        verify(waitForNative(function() { return !editor.isOpen }, 5000),
+               "redoing the roll deletion closes the editor")
+        verify(waitForNative(function() {
+            return findChild(view, "pitchBendPopup") === null
+        }, 5000), "closing the editor unloads the popup item")
+        verify(!JSON.parse(grid.noteSummary).some(function(n) { return n.id === note.id }),
+               "the external redo removes the original anchor note")
+    }
+
+    function test_livePreviewSurvivesUndoRedo() {
+        const opened = openViaG()
+        const graph = findChild(opened.view, "pitchBendGraph")
+        verify(graph !== null, "the G-opened editor exposes the pitch graph")
+        const baseline = opened.grid.appliedRevisionText
+        strokePitchCanvas(graph, 0.10, 0.25, 0.40, 0.75, Qt.NoModifier)
+        verify(waitForNative(function() {
+            return opened.grid.appliedRevisionText !== baseline
+        }, 5000), "a committed stroke provides an external history entry")
+        keyClick(Qt.Key_Escape)
+        tryCompare(opened.editor, "isOpen", false)
+        opened.roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(opened.roll, "activeFocus", true)
+        keyClick(Qt.Key_G)
+        tryCompare(opened.editor, "isOpen", true)
+        tryVerify(function() { return findChild(opened.view, "pitchBendGraph") !== null },
+                  5000, "the G route remounts the graph for a live preview")
+        const liveGraph = findChild(opened.view, "pitchBendGraph")
+        const canvas = liveGraph.canvasRect
+        verify(canvas.width > 0 && canvas.height > 0,
+               "the remounted pitch graph has an interactive canvas")
+        mousePress(liveGraph, canvas.x + canvas.width * 0.25,
+                   canvas.y + canvas.height * 0.70, Qt.LeftButton)
+        mouseMove(liveGraph, canvas.x + canvas.width * 0.75,
+                  canvas.y + canvas.height * 0.30, -1, Qt.LeftButton)
+        const previewCount = liveGraph.curveSegmentCount
+        const edited = opened.grid.appliedRevisionText
+        keySequence(StandardKey.Undo)
+        verify(waitForNative(function() {
+            return opened.grid.appliedRevisionText !== edited
+        }, 5000), "undo changes the serialized lane beneath the live stroke")
+        verify(opened.editor.isOpen, "undo keeps the gesturing editor open")
+        compare(liveGraph.curveSegmentCount, previewCount,
+                "the live preview survives undo of the external edit")
+        const undone = opened.grid.appliedRevisionText
+        keySequence(StandardKey.Redo)
+        verify(waitForNative(function() {
+            return opened.grid.appliedRevisionText !== undone
+        }, 5000), "redo reapplies the serialized lane beneath the live stroke")
+        verify(opened.editor.isOpen, "redo keeps the gesturing editor open")
+        compare(liveGraph.curveSegmentCount, previewCount,
+                "the live preview survives redo of the external edit")
+        mouseRelease(liveGraph, canvas.x + canvas.width * 0.75,
+                     canvas.y + canvas.height * 0.30, Qt.LeftButton)
+        keyClick(Qt.Key_Escape)
+        tryCompare(opened.editor, "isOpen", false)
+        compare(findChild(opened.view, "pitchBendPopup"), null,
+                "Escape closes the editor after the external-edit cycle")
+    }
 }
