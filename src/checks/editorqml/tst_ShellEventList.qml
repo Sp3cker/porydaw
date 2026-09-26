@@ -373,4 +373,123 @@ TestCase {
         shellPresenter.activate("view.event_list")
         tryCompare(presenter, "visible", false)
     }
+
+    function test_tickBoundariesThroughMountedEditor() {
+        settings.setValue("lastProjectDir", "")
+        settings.sync()
+        shell = shellComponent.createObject(null)
+        verify(shell !== null)
+        shell.requestActivate()
+        tryCompare(shell, "active", true, 3000)
+        const session = shell.shellPresenter.session
+        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        verify(waitForNative(function() {
+            return session.songOpen || session.lastSaveError.length > 0
+        }, 30000), "song load settles")
+        verify(session.songOpen, session.lastSaveError)
+        shell.shellPresenter.activate("view.event_list")
+        tryCompare(session.songTabs, "selectedTabShowsEvents", true, 3000)
+        let page = null
+        tryVerify(function() {
+            page = findChild(shell.sceneLoader.item, "eventListPage")
+            return page !== null && page.visible
+        }, 3000, "event list is mounted")
+        const presenter = session.eventListPresenter()
+        verify(presenter.rowCount >= 3, "fixture has editable rows and an EOT sentinel")
+        const table = findChild(page, "eventListTable")
+        verify(table !== null, "the mounted table is available for in-cell editing")
+
+        // The muted EOT label (AA-gated tableSecondaryText) must render on
+        // both stripe parities; deleting one row flips the EOT row's parity.
+        function eotLabel() {
+            const eotRow = presenter.rowCount - 1
+            const cell = table.itemAtCell(Qt.point(1, eotRow))
+            if (!cell)
+                return null
+            for (const child of cell.children) {
+                if (child instanceof Text && child.text === "End of track")
+                    return child
+            }
+            return null
+        }
+        function mountedEotLabel() {
+            table.positionViewAtRow(presenter.rowCount - 1, TableView.Contain)
+            tryVerify(function() { return eotLabel() !== null }, 3000,
+                      "the EOT label cell is rendered")
+            return eotLabel()
+        }
+        compare(mountedEotLabel().color, page.tableSecondaryText,
+                "the EOT label renders in muted secondary text")
+
+        let note = -1
+        for (let row = 0; row < presenter.rowCount - 1; ++row) {
+            if (presenter.rowType(row) === 1) {
+                note = row
+                break
+            }
+        }
+        verify(note >= 0, "fixture has a note-on row")
+        page.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(page, "activeFocus", true, 3000)
+        page.currentColumn = 0
+        presenter.selectRow(note, Qt.NoModifier)
+        compare(presenter.currentRow, note)
+        table.positionViewAtRow(note, TableView.Contain)
+        tryVerify(function() {
+            return table.itemAtCell(Qt.point(0, note)) !== null
+        }, 3000, "the tick cell is rendered before F2")
+        const originalTick = presenter.tickString(note)
+        keyClick(Qt.Key_F2)
+        tryCompare(presenter, "editing", true, 3000, "F2 opens the tick cell")
+        let editor = null
+        tryVerify(function() {
+            editor = findChild(page, "eventListTickEditor")
+            return editor !== null && editor.activeFocus
+        }, 3000, "the tick editor takes text focus")
+        keyClick(Qt.Key_A, Qt.ControlModifier)
+        const noTick = "4294967295"
+        for (let i = 0; i < noTick.length; ++i)
+            keyClick(noTick.charCodeAt(i))
+        keyClick(Qt.Key_Return)
+        verify(presenter.editing, "typed kNoTick keeps the editor open")
+        compare(presenter.tickString(note), originalTick,
+                "typed kNoTick leaves the displayed tick unchanged")
+        keyClick(Qt.Key_Escape)
+        tryCompare(presenter, "editing", false, 3000)
+        tryCompare(page, "activeFocus", true, 3000,
+                   "leaving the tick cell restores page navigation focus")
+        keyClick(Qt.Key_F2)
+        tryCompare(presenter, "editing", true, 3000, "F2 re-opens the tick cell")
+        tryVerify(function() {
+            editor = findChild(page, "eventListTickEditor")
+            return editor !== null && editor.activeFocus
+        }, 3000, "the reopened tick editor takes text focus")
+        keyClick(Qt.Key_A, Qt.ControlModifier)
+        const maxTick = "4294967294"
+        for (let i = 0; i < maxTick.length; ++i)
+            keyClick(maxTick.charCodeAt(i))
+        compare(editor.text, maxTick, "the typed kMaxTick digits replace the cell text")
+        keyClick(Qt.Key_Return)
+        tryCompare(presenter, "editing", false, 3000,
+                   "typed kMaxTick commits and closes the editor")
+        let moved = -1
+        for (let row = 0; row < presenter.rowCount - 1; ++row) {
+            if (presenter.tickString(row) === maxTick) {
+                moved = row
+                break
+            }
+        }
+        verify(moved >= 0, "the committed row republishes at kMaxTick")
+        compare(presenter.rowType(moved), 1,
+                "the kMaxTick row keeps its note-on type")
+
+        tryCompare(page, "activeFocus", true, 3000)
+        const beforeDelete = presenter.rowCount
+        presenter.selectRow(0, Qt.NoModifier)
+        keyClick(Qt.Key_Delete)
+        tryCompare(presenter, "rowCount", beforeDelete - 1, 3000,
+                   "deleting one row flips the EOT row's stripe parity")
+        compare(mountedEotLabel().color, page.tableSecondaryText,
+                "the EOT label stays muted on the flipped stripe parity")
+    }
 }

@@ -7,17 +7,25 @@ Swift counterpart: src/checks/editcheck/tst_songdocument_songraw.swift
 Additional Swift counterpart: src/checks/editcheck/EventChecks.swift
 Additional Swift counterpart: src/checks/eventviews/EventListPlayheadChecks.swift
 Additional Swift counterpart: src/checks/editcheck/EventViewsEditsParity.swift
+Additional Swift counterpart: src/checks/eventviews/EventListPageChecks.swift
+Additional Swift counterpart: src/checks/editorqml/tst_ShellEventList.qml
 Production counterpart: src/swift/core/EventEditing.swift
 Production SHA-256: b57268432916d1edba50c9facc7527915156d719fe210565126f296d3905b6d1
+Event-list production counterpart: src/swift/app/eventlist/EventListEditing.swift
+Event-list production SHA-256: 95cc687cb09221967099ce100e771cf93be071ee9ec8c2a8e6ce385a25150c3e
+Event-list production counterpart: src/swift/app/eventlist/EventListPresenter.swift
+Event-list production SHA-256: 46049a398ded42bccc35a36ffd2ff81d6e06a59bcf31c19cd3b852497ce7b703
+Event-list production counterpart: src/ui/songview/quick/EventListPage.qml
+Event-list production SHA-256: efd21f86ea1ba9bd5b82d1f8358028e0041a5bd0d41f7592fe67b1eddc9b4b1b
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
-Command: deno task verify --filter swiftcore --verbose
-Result: PASS — `deno task verify --filter swiftcore --verbose` (1/6 ok, 10.32s), zero failures; `deno task verify:qml --verbose` (1/1 ok, 33.87s, velocity-lane profiles verified); `deno task proof check` PASS (224 files); focused thermo re-review verdict PASS, zero blocking findings.
+Command: deno task verify --filter swiftcore --verbose; deno task verify:shell --filter shell-event-list --verbose; deno task verify:bridge
+Result: PASS on the frozen task-19 write set (evidence provided by the implementer/controller handoff; this ledger pass re-ran only `deno task proof check`) - `deno task verify --filter swiftcore --verbose`: 12/37 ok, 25 skipped, zero failures, every new eventListCellCommitContract predicate passing; `deno task verify:shell --filter shell-event-list --verbose`: PASS 4/4 including test_tickBoundariesThroughMountedEditor; `deno task verify:bridge`: 0 findings. Insert-copy EOT predicates S241/S242 and the tempo-copy predicate S240 failed before their repairs (implementer RED evidence).
 
 A001 | typeDigits (file-local helper) | src/checks/eventviews/edits.cpp:57
-Disposition: GAP
-Mapping/reason: File-local helper input guard; no Swift predicate.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Representation-only: the file-local typeDigits helper's digit guard is retired harness plumbing for the deleted native key path, with no consumer-visible behavior; the typed boundary digits it fronted are exercised through the mounted editor at S247-S252.
 Source context since previous assertion:
 #include "checks/eventviews/eventview_fixture.h"
 #include "checks/eventviews/tst_eventviews.h"
@@ -80,8 +88,9 @@ Original expression:
 QVERIFY(digit.isDigit())
 
 A002 | EventViewsEditsTest::tickEditQueued | src/checks/eventviews/edits.cpp:102
-Disposition: GAP
-Mapping/reason: Fixture-open or EventWidgets conversion guard; no Swift predicate opens the native rig.
+Disposition: MATCHED
+Mapping: S185
+Mapping/reason: Direct fixture construction plus presenter attach (S185) replaces the retired native rig-open guard; this guard executes in the fixture state the tickEditQueued journey (S188-S193) depends on.
 Source context since previous assertion:
 ;
         QTest::keyClick(&window, Qt::Key(int(Qt::Key_0) + digit.digitValue()));
@@ -133,8 +142,9 @@ Original expression:
 QVERIFY2(opened, qPrintable(opened.error))
 
 A003 | EventViewsEditsTest::tickEditQueued | src/checks/eventviews/edits.cpp:104
-Disposition: GAP
-Mapping/reason: Fixture-open or EventWidgets conversion guard; no Swift predicate opens the native rig.
+Disposition: MATCHED
+Mapping: S186
+Mapping/reason: Presenter attachment publishes the fixture rows in the state the tickEditQueued journey depends on; it stands in for the retired EventWidgets rig conversion.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -143,8 +153,9 @@ Original expression:
 QVERIFY(widgets)
 
 A004 | EventViewsEditsTest::tickEditQueued | src/checks/eventviews/edits.cpp:107
-Disposition: GAP
-Mapping/reason: Lookup, computation, or harness-object guard with no Swift predicate.
+Disposition: MATCHED
+Mapping: S187
+Mapping/reason: The tick-12 NoteOn row lookup executes immediately before the tickEditQueued commits that consume it (S188-S193).
 Source context since previous assertion:
 ;
     const int row =
@@ -154,8 +165,8 @@ Original expression:
 QVERIFY(row >= 0)
 
 A005 | EventViewsEditsTest::tickEditQueued | src/checks/eventviews/edits.cpp:115
-Disposition: GAP
-Mapping/reason: Controller/model commit-result predicate (commitCellEdit/setData return); Swift calls document APIs directly and has no commit-result predicate.
+Disposition: MATCHED
+Mapping: S188
 Source context since previous assertion:
 ;
 
@@ -171,8 +182,8 @@ QVERIFY(widgets.controller->commitCellEdit(row, EventTableModel::ColTick,
                                                QString::number(editedTick)))
 
 A006 | EventViewsEditsTest::tickEditQueued | src/checks/eventviews/edits.cpp:117
-Disposition: GAP
-Mapping/reason: Event-table model observation (row lookup, cell data, tempo-row projection) with no Swift predicate; Swift has no event-table model.
+Disposition: MATCHED
+Mapping: S189
 Source context since previous assertion:
 ;
 
@@ -181,8 +192,8 @@ QTRY_VERIFY(checks::eventviews::rowForTickAndType(*widgets.model, editedTick,
                                                       eventlist::TypeNoteOn) >= 0)
 
 A007 | EventViewsEditsTest::tickEditQueued | src/checks/eventviews/edits.cpp:121
-Disposition: GAP
-Mapping/reason: Lookup, computation, or harness-object guard with no Swift predicate.
+Disposition: MATCHED
+Mapping: S190
 Source context since previous assertion:
 ;
     const int changedRow =
@@ -195,8 +206,8 @@ QCOMPARE(widgets.model
              editedTick)
 
 A008 | EventViewsEditsTest::tickEditQueued | src/checks/eventviews/edits.cpp:125
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the EventTableModel/controller commit path (commitCellEdit/setData) translating the edit.
+Disposition: MATCHED
+Mapping: S191
 Source context since previous assertion:
 ;
 
@@ -204,8 +215,8 @@ Original expression:
 QCOMPARE(opened.fixture->document().undoStack()->index(), beforeIndex + 1)
 
 A009 | EventViewsEditsTest::tickEditQueued | src/checks/eventviews/edits.cpp:126
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the EventTableModel/controller commit path (commitCellEdit/setData) translating the edit.
+Disposition: MATCHED
+Mapping: S192
 Source context since previous assertion:
 ;
 
@@ -214,8 +225,8 @@ QVERIFY(checks::eventviews::trackIsSorted(
         opened.fixture->document().smf().tracks[widgets.model->chunk()]))
 
 A010 | EventViewsEditsTest::tickEditQueued | src/checks/eventviews/edits.cpp:130
-Disposition: GAP
-Mapping/reason: Event-table model observation (row lookup, cell data, tempo-row projection) with no Swift predicate; Swift has no event-table model.
+Disposition: MATCHED
+Mapping: S193
 Source context since previous assertion:
 ;
 
@@ -226,8 +237,8 @@ QTRY_VERIFY(checks::eventviews::rowForTickAndType(*widgets.model, originalTick,
                                                       eventlist::TypeNoteOn) >= 0)
 
 A011 | EventViewsEditsTest::tick64BitExact | src/checks/eventviews/edits.cpp:137
-Disposition: GAP
-Mapping/reason: Fixture-open or EventWidgets conversion guard; no Swift predicate opens the native rig.
+Disposition: PARTIAL
+Mapping/reason: Partial: the shared contract guard (S185-S187) executes once, in the fixture state the first journey depends on; this row's 64-bit-tick function re-opens an independent fixture and no predicate re-establishes the guard for that journey. The 64-bit commits are proved at S194-S199.
 Source context since previous assertion:
 ;
 }
@@ -240,8 +251,8 @@ Original expression:
 QVERIFY2(opened, qPrintable(opened.error))
 
 A012 | EventViewsEditsTest::tick64BitExact | src/checks/eventviews/edits.cpp:139
-Disposition: GAP
-Mapping/reason: Fixture-open or EventWidgets conversion guard; no Swift predicate opens the native rig.
+Disposition: PARTIAL
+Mapping/reason: Partial: the shared contract guard (S185-S187) executes once, in the fixture state the first journey depends on; this row's 64-bit-tick function re-opens an independent fixture and no predicate re-establishes the guard for that journey. The 64-bit commits are proved at S194-S199.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -250,8 +261,8 @@ Original expression:
 QVERIFY(widgets)
 
 A013 | EventViewsEditsTest::tick64BitExact | src/checks/eventviews/edits.cpp:142
-Disposition: GAP
-Mapping/reason: Lookup, computation, or harness-object guard with no Swift predicate.
+Disposition: PARTIAL
+Mapping/reason: Partial: the shared contract guard (S185-S187) executes once, in the fixture state the first journey depends on; this row's 64-bit-tick function re-opens an independent fixture and no predicate re-establishes the guard for that journey. The 64-bit commits are proved at S194-S199.
 Source context since previous assertion:
 ;
     const int row =
@@ -261,8 +272,8 @@ Original expression:
 QVERIFY(row >= 0)
 
 A014 | EventViewsEditsTest::tick64BitExact | src/checks/eventviews/edits.cpp:147
-Disposition: GAP
-Mapping/reason: Controller/model commit-result predicate (commitCellEdit/setData return); Swift calls document APIs directly and has no commit-result predicate.
+Disposition: MATCHED
+Mapping: S194
 Source context since previous assertion:
 ;
 
@@ -275,8 +286,8 @@ QVERIFY(widgets.model->setData(widgets.model->index(row, EventTableModel::ColTic
                                    qulonglong(tick), Qt::EditRole))
 
 A015 | EventViewsEditsTest::tick64BitExact | src/checks/eventviews/edits.cpp:149
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the EventTableModel/controller commit path (commitCellEdit/setData) translating the edit.
+Disposition: MATCHED
+Mapping: S195
 Source context since previous assertion:
 ;
 
@@ -284,8 +295,8 @@ Original expression:
 QTRY_COMPARE(opened.fixture->document().undoStack()->index(), beforeIndex + 1)
 
 A016 | EventViewsEditsTest::tick64BitExact | src/checks/eventviews/edits.cpp:151
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the EventTableModel/controller commit path (commitCellEdit/setData) translating the edit.
+Disposition: MATCHED
+Mapping: S196
 Source context since previous assertion:
 ;
     const SmfTrack &track = opened.fixture->document().smf().tracks[chunk];
@@ -294,8 +305,8 @@ Original expression:
 QVERIFY(!track.events.empty())
 
 A017 | EventViewsEditsTest::tick64BitExact | src/checks/eventviews/edits.cpp:152
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the EventTableModel/controller commit path (commitCellEdit/setData) translating the edit.
+Disposition: MATCHED
+Mapping: S197
 Source context since previous assertion:
 ;
 
@@ -303,8 +314,8 @@ Original expression:
 QCOMPARE(track.events.back().tick, tick)
 
 A018 | EventViewsEditsTest::tick64BitExact | src/checks/eventviews/edits.cpp:153
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the EventTableModel/controller commit path (commitCellEdit/setData) translating the edit.
+Disposition: MATCHED
+Mapping: S198
 Source context since previous assertion:
 ;
 
@@ -312,8 +323,8 @@ Original expression:
 QVERIFY(checks::eventviews::trackIsSorted(track))
 
 A019 | EventViewsEditsTest::tick64BitExact | src/checks/eventviews/edits.cpp:156
-Disposition: GAP
-Mapping/reason: Event-table model observation (row lookup, cell data, tempo-row projection) with no Swift predicate; Swift has no event-table model.
+Disposition: MATCHED
+Mapping: S199
 Source context since previous assertion:
 ;
 
@@ -324,8 +335,8 @@ QTRY_VERIFY(checks::eventviews::rowForTickAndType(*widgets.model, 12, eventlist:
                 0)
 
 A020 | EventViewsEditsTest::tickHighBitExact | src/checks/eventviews/edits.cpp:167
-Disposition: GAP
-Mapping/reason: Fixture-open or EventWidgets conversion guard; no Swift predicate opens the native rig.
+Disposition: PARTIAL
+Mapping/reason: Partial: the shared contract guard (S185-S187) executes once, in the fixture state the first journey depends on; this row's kNoTick/kMaxTick function re-opens an independent fixture and no predicate re-establishes the guard for that journey. The boundary commits are proved at S200-S208.
 Source context since previous assertion:
 ;
 }
@@ -342,8 +353,8 @@ Original expression:
 QVERIFY2(opened, qPrintable(opened.error))
 
 A021 | EventViewsEditsTest::tickHighBitExact | src/checks/eventviews/edits.cpp:169
-Disposition: GAP
-Mapping/reason: Fixture-open or EventWidgets conversion guard; no Swift predicate opens the native rig.
+Disposition: PARTIAL
+Mapping/reason: Partial: the shared contract guard (S185-S187) executes once, in the fixture state the first journey depends on; this row's kNoTick/kMaxTick function re-opens an independent fixture and no predicate re-establishes the guard for that journey. The boundary commits are proved at S200-S208.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -352,8 +363,8 @@ Original expression:
 QVERIFY(widgets)
 
 A022 | EventViewsEditsTest::tickHighBitExact | src/checks/eventviews/edits.cpp:172
-Disposition: GAP
-Mapping/reason: Lookup, computation, or harness-object guard with no Swift predicate.
+Disposition: PARTIAL
+Mapping/reason: Partial: the shared contract guard (S185-S187) executes once, in the fixture state the first journey depends on; this row's kNoTick/kMaxTick function re-opens an independent fixture and no predicate re-establishes the guard for that journey. The boundary commits are proved at S200-S208.
 Source context since previous assertion:
 ;
     const int row =
@@ -363,9 +374,8 @@ Original expression:
 QVERIFY(row >= 0)
 
 A023 | EventViewsEditsTest::tickHighBitExact | src/checks/eventviews/edits.cpp:177
-Disposition: PARTIAL
-Swift: S098 | src/checks/eventviews/EventListPlayheadChecks.swift :: eventListRowsAndEditContract
-Mapping/reason: Related Swift tick-boundary validation S098 in src/checks/eventviews/EventListPlayheadChecks.swift (validatesEdit accepts maxTick and rejects above-maxTick and negative ticks); unproved: the EventTableModel/controller commit path translating the rejection (setData returning false for kNoTick) — Swift has no commitCellEdit and finishEditing closes without mutation.
+Disposition: MATCHED
+Mapping: S200
 Source context since previous assertion:
 ;
 
@@ -378,8 +388,8 @@ QVERIFY(!widgets.model->setData(widgets.model->index(row, EventTableModel::ColTi
                                     QString::number(CoreTimeDefaults::kNoTick), Qt::EditRole))
 
 A024 | EventViewsEditsTest::tickHighBitExact | src/checks/eventviews/edits.cpp:180
-Disposition: GAP
-Mapping/reason: Lookup, computation, or harness-object guard with no Swift predicate.
+Disposition: MATCHED
+Mapping: S201
 Source context since previous assertion:
 ;
     QCoreApplication::processEvents();
@@ -388,8 +398,8 @@ Original expression:
 QCOMPARE(document.undoStack()->index(), beforeIndex)
 
 A025 | EventViewsEditsTest::tickHighBitExact | src/checks/eventviews/edits.cpp:181
-Disposition: GAP
-Mapping/reason: Event-table model observation (row lookup, cell data, tempo-row projection) with no Swift predicate; Swift has no event-table model.
+Disposition: MATCHED
+Mapping: S202
 Source context since previous assertion:
 ;
 
@@ -397,9 +407,8 @@ Original expression:
 QVERIFY(checks::eventviews::rowForTickAndType(*widgets.model, 12, eventlist::TypeNoteOn) >= 0)
 
 A026 | EventViewsEditsTest::tickHighBitExact | src/checks/eventviews/edits.cpp:183
-Disposition: PARTIAL
-Swift: S098 | src/checks/eventviews/EventListPlayheadChecks.swift :: eventListRowsAndEditContract
-Mapping/reason: Related Swift tick-boundary validation S098 in src/checks/eventviews/EventListPlayheadChecks.swift (validatesEdit accepts maxTick and rejects above-maxTick and negative ticks); unproved: the EventTableModel/controller commit path translating the acceptance (setData returning true for kMaxTick) — Swift has no commitCellEdit and finishEditing closes without mutation.
+Disposition: MATCHED
+Mapping: S203
 Source context since previous assertion:
 ;
 
@@ -409,8 +418,8 @@ QVERIFY(widgets.model->setData(widgets.model->index(row, EventTableModel::ColTic
                                    QString::number(CoreTimeDefaults::kMaxTick), Qt::EditRole))
 
 A027 | EventViewsEditsTest::tickHighBitExact | src/checks/eventviews/edits.cpp:185
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift plus tick-boundary validation S098 in src/checks/eventviews/EventListPlayheadChecks.swift (validatesEdit accepts maxTick and rejects above-maxTick and negative ticks); unproved: the EventTableModel/controller commit path (commitCellEdit/setData) translating the edit — Swift has no commitCellEdit and finishEditing closes without mutation.
+Disposition: MATCHED
+Mapping: S204
 Source context since previous assertion:
 ;
 
@@ -418,8 +427,8 @@ Original expression:
 QTRY_COMPARE(document.undoStack()->index(), beforeIndex + 1)
 
 A028 | EventViewsEditsTest::tickHighBitExact | src/checks/eventviews/edits.cpp:187
-Disposition: GAP
-Mapping/reason: Lookup, computation, or harness-object guard with no Swift predicate.
+Disposition: MATCHED
+Mapping: S205
 Source context since previous assertion:
 ;
     const SmfTrack &track = document.smf().tracks[chunk];
@@ -428,9 +437,8 @@ Original expression:
 QVERIFY(!track.events.empty())
 
 A029 | EventViewsEditsTest::tickHighBitExact | src/checks/eventviews/edits.cpp:188
-Disposition: PARTIAL
-Swift: S098 | src/checks/eventviews/EventListPlayheadChecks.swift :: eventListRowsAndEditContract
-Mapping/reason: Related Swift tick-boundary validation S098 in src/checks/eventviews/EventListPlayheadChecks.swift (validatesEdit accepts maxTick and rejects above-maxTick and negative ticks); unproved: the EventTableModel/controller commit path writing the accepted value to the document — Swift has no commitCellEdit and finishEditing closes without mutation.
+Disposition: MATCHED
+Mapping: S206
 Source context since previous assertion:
 ;
 
@@ -438,8 +446,8 @@ Original expression:
 QCOMPARE(track.events.back().tick, CoreTimeDefaults::kMaxTick)
 
 A030 | EventViewsEditsTest::tickHighBitExact | src/checks/eventviews/edits.cpp:189
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the EventTableModel/controller commit path (commitCellEdit/setData) translating the edit.
+Disposition: MATCHED
+Mapping: S207
 Source context since previous assertion:
 ;
 
@@ -447,8 +455,8 @@ Original expression:
 QVERIFY(checks::eventviews::trackIsSorted(track))
 
 A031 | EventViewsEditsTest::tickHighBitExact | src/checks/eventviews/edits.cpp:192
-Disposition: GAP
-Mapping/reason: Event-table model observation (row lookup, cell data, tempo-row projection) with no Swift predicate; Swift has no event-table model.
+Disposition: MATCHED
+Mapping: S208
 Source context since previous assertion:
 ;
 
@@ -459,8 +467,8 @@ QTRY_VERIFY(checks::eventviews::rowForTickAndType(*widgets.model, 12, eventlist:
                 0)
 
 A032 | EventViewsEditsTest::tickHighBitThroughEditor | src/checks/eventviews/edits.cpp:202
-Disposition: GAP
-Mapping/reason: Fixture-open or EventWidgets conversion guard; no Swift predicate opens the native rig.
+Disposition: PARTIAL
+Mapping/reason: Partial: the shared contract guard (S185-S187) executes once, in the fixture state the first journey depends on; this function's native editor-open rig (openTabFixture plus openEventList on the rendered page) has no presenter-level Swift analog, so no predicate re-establishes the guard for its journey. Its typed boundaries are proved through the mounted editor at S245-S252 and at presenter level at S209-S220.
 Source context since previous assertion:
 ;
 }
@@ -476,8 +484,8 @@ Original expression:
 QVERIFY2(opened, qPrintable(opened.error))
 
 A033 | EventViewsEditsTest::tickHighBitThroughEditor | src/checks/eventviews/edits.cpp:204
-Disposition: GAP
-Mapping/reason: Fixture-open or EventWidgets conversion guard; no Swift predicate opens the native rig.
+Disposition: PARTIAL
+Mapping/reason: Partial: the native EventWidgets conversion (openEventList) has no Swift analog; S186 proves the presenter publishes the fixture rows only in the first journey's fixture state, and no predicate re-establishes a rig guard for this editor journey.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -486,8 +494,8 @@ Original expression:
 QVERIFY(widgets)
 
 A034 | EventViewsEditsTest::tickHighBitThroughEditor | src/checks/eventviews/edits.cpp:207
-Disposition: GAP
-Mapping/reason: Lookup, computation, or harness-object guard with no Swift predicate.
+Disposition: PARTIAL
+Mapping/reason: Partial: the tick-12 NoteOn row lookup is proved once (S187) in the first journey's fixture state; the mounted editor lane finds a note-on row but never asserts the tick-12 row this guard names, so the guard is not re-established for this journey.
 Source context since previous assertion:
 ;
     const int row =
@@ -497,8 +505,9 @@ Original expression:
 QVERIFY(row >= 0)
 
 A035 | EventViewsEditsTest::tickHighBitThroughEditor | src/checks/eventviews/edits.cpp:213
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the rendered in-cell editor (open/selectAll) and typed key delivery; presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S245, S246
+Mapping/reason: The mounted shell test opens the tick cell with F2 and finds the focusable eventListTickEditor (test_tickBoundariesThroughMountedEditor; shell-event-list lane, executed).
 Source context since previous assertion:
 ;
     const int chunk = widgets.model->chunk();
@@ -512,8 +521,9 @@ QVERIFY(checks::eventviews::openCellEditor(widgets, row, EventTableModel::ColTic
                                                QStringLiteral("eventListTickEditor"), &editor))
 
 A036 | EventViewsEditsTest::tickHighBitThroughEditor | src/checks/eventviews/edits.cpp:215
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the rendered in-cell editor (open/selectAll) and typed key delivery; presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S244
+Mapping/reason: The sibling mounted test asserts Select All fills the focused eventListTickEditor with the whole cell text (shell-event-list lane, executed).
 Source context since previous assertion:
 ;
 
@@ -521,8 +531,9 @@ Original expression:
 QVERIFY(QMetaObject::invokeMethod(editor, "selectAll"))
 
 A037 | EventViewsEditsTest::tickHighBitThroughEditor | src/checks/eventviews/edits.cpp:219
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the typed kNoTick rejection through the rendered editor (no undo push, bytes unchanged); presenter-level Swift cannot establish this native delivery, and no Swift refusal predicate exists.
+Disposition: MATCHED
+Mapping: S210, S211, S247, S248
+Mapping/reason: The typed kNoTick refusal leaves the presenter edit session open and pushes no undo step (S210, S211); the mounted editor keeps the displayed tick after the typed Return (S247, S248).
 Source context since previous assertion:
 ;
     typeDigits(*widgets.quickWindow, QString::number(CoreTimeDefaults::kNoTick));
@@ -533,8 +544,8 @@ Original expression:
 QCOMPARE(document.undoStack()->index(), beforeIndex)
 
 A038 | EventViewsEditsTest::tickHighBitThroughEditor | src/checks/eventviews/edits.cpp:221
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the typed kNoTick rejection through the rendered editor (no undo push, bytes unchanged); presenter-level Swift cannot establish this native delivery, and no Swift refusal predicate exists.
+Disposition: MATCHED
+Mapping: S212
 Source context since previous assertion:
 ;
 
@@ -543,8 +554,8 @@ Original expression:
 QCOMPARE(document.smf().write(), before)
 
 A039 | EventViewsEditsTest::tickHighBitThroughEditor | src/checks/eventviews/edits.cpp:223
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the rendered in-cell editor (open/selectAll) and typed key delivery; presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S249, S250
 Source context since previous assertion:
 ;
     checks::eventviews::closeCellEditor(widgets);
@@ -554,8 +565,9 @@ QVERIFY(checks::eventviews::openCellEditor(widgets, row, EventTableModel::ColTic
                                                QStringLiteral("eventListTickEditor"), &editor))
 
 A040 | EventViewsEditsTest::tickHighBitThroughEditor | src/checks/eventviews/edits.cpp:225
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the rendered in-cell editor (open/selectAll) and typed key delivery; presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S251
+Mapping/reason: After the re-open and Select All, the typed kMaxTick digits replace the whole cell text (S251), which requires the cell to be fully selected.
 Source context since previous assertion:
 ;
 
@@ -563,8 +575,8 @@ Original expression:
 QVERIFY(QMetaObject::invokeMethod(editor, "selectAll"))
 
 A041 | EventViewsEditsTest::tickHighBitThroughEditor | src/checks/eventviews/edits.cpp:230
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift plus tick-boundary validation S098 in src/checks/eventviews/EventListPlayheadChecks.swift (validatesEdit accepts maxTick and rejects above-maxTick and negative ticks); unproved: the rendered-editor typing path and the EventTableModel/controller commit path — Swift has no commitCellEdit and finishEditing closes without mutation.
+Disposition: MATCHED
+Mapping: S213, S214, S252
 Source context since previous assertion:
 ;
     typeDigits(*widgets.quickWindow, QString::number(CoreTimeDefaults::kMaxTick));
@@ -576,8 +588,8 @@ Original expression:
 QTRY_COMPARE(document.undoStack()->index(), beforeIndex + 1)
 
 A042 | EventViewsEditsTest::tickHighBitThroughEditor | src/checks/eventviews/edits.cpp:232
-Disposition: GAP
-Mapping/reason: Lookup, computation, or harness-object guard with no Swift predicate.
+Disposition: MATCHED
+Mapping: S215
 Source context since previous assertion:
 ;
     const SmfTrack &track = document.smf().tracks[chunk];
@@ -586,9 +598,8 @@ Original expression:
 QVERIFY(!track.events.empty())
 
 A043 | EventViewsEditsTest::tickHighBitThroughEditor | src/checks/eventviews/edits.cpp:233
-Disposition: PARTIAL
-Swift: S098 | src/checks/eventviews/EventListPlayheadChecks.swift :: eventListRowsAndEditContract
-Mapping/reason: Related Swift tick-boundary validation S098 in src/checks/eventviews/EventListPlayheadChecks.swift (validatesEdit accepts maxTick and rejects above-maxTick and negative ticks); unproved: the EventTableModel/controller commit path writing the accepted value to the document — Swift has no commitCellEdit and finishEditing closes without mutation.
+Disposition: MATCHED
+Mapping: S216
 Source context since previous assertion:
 ;
 
@@ -596,8 +607,9 @@ Original expression:
 QCOMPARE(track.events.back().tick, CoreTimeDefaults::kMaxTick)
 
 A044 | EventViewsEditsTest::tickHighBitThroughEditor | src/checks/eventviews/edits.cpp:236
-Disposition: GAP
-Mapping/reason: Lookup, computation, or harness-object guard with no Swift predicate.
+Disposition: MATCHED
+Mapping: S217, S253
+Mapping/reason: The presenter republishes the NoteOn row at kMaxTick (S217), confirmed on the mounted page where the committed row is found by its tick string (S253).
 Source context since previous assertion:
 ;
     const int movedRow = checks::eventviews::rowForTickAndType(
@@ -607,8 +619,8 @@ Original expression:
 QVERIFY(movedRow >= 0)
 
 A045 | EventViewsEditsTest::tickHighBitThroughEditor | src/checks/eventviews/edits.cpp:237
-Disposition: GAP
-Mapping/reason: Tick-boundary (kNoTick/kMaxTick) commit behavior through the event table has no Swift predicate; MidiChecks covers tick-arithmetic oracles only.
+Disposition: MATCHED
+Mapping: S218
 Source context since previous assertion:
 ;
 
@@ -620,8 +632,8 @@ QCOMPARE(widgets.model
              QString::number(CoreTimeDefaults::kMaxTick))
 
 A046 | EventViewsEditsTest::tickHighBitThroughEditor | src/checks/eventviews/edits.cpp:242
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the EventTableModel/controller commit path (commitCellEdit/setData) translating the edit.
+Disposition: MATCHED
+Mapping: S219
 Source context since previous assertion:
 ;
 
@@ -629,8 +641,8 @@ Original expression:
 QVERIFY(checks::eventviews::trackIsSorted(track))
 
 A047 | EventViewsEditsTest::tickHighBitThroughEditor | src/checks/eventviews/edits.cpp:245
-Disposition: GAP
-Mapping/reason: Event-table model observation (row lookup, cell data, tempo-row projection) with no Swift predicate; Swift has no event-table model.
+Disposition: MATCHED
+Mapping: S220
 Source context since previous assertion:
 ;
 
@@ -641,8 +653,8 @@ QTRY_VERIFY(checks::eventviews::rowForTickAndType(*widgets.model, 12, eventlist:
                 0)
 
 A048 | EventViewsEditsTest::channelAndDataConversions | src/checks/eventviews/edits.cpp:252
-Disposition: GAP
-Mapping/reason: Fixture-open or EventWidgets conversion guard; no Swift predicate opens the native rig.
+Disposition: PARTIAL
+Mapping/reason: Partial: the shared contract guard (S185-S187) executes once, in the fixture state the first journey depends on; this row's channel/blob conversion function re-opens an independent fixture and no predicate re-establishes the guard for that journey. The conversions are proved at S221-S233.
 Source context since previous assertion:
 ;
 }
@@ -655,8 +667,8 @@ Original expression:
 QVERIFY2(opened, qPrintable(opened.error))
 
 A049 | EventViewsEditsTest::channelAndDataConversions | src/checks/eventviews/edits.cpp:254
-Disposition: GAP
-Mapping/reason: Fixture-open or EventWidgets conversion guard; no Swift predicate opens the native rig.
+Disposition: PARTIAL
+Mapping/reason: Partial: the shared contract guard (S185-S187) executes once, in the fixture state the first journey depends on; this row's channel/blob conversion function re-opens an independent fixture and no predicate re-establishes the guard for that journey. The conversions are proved at S221-S233.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -665,8 +677,8 @@ Original expression:
 QVERIFY(widgets)
 
 A050 | EventViewsEditsTest::channelAndDataConversions | src/checks/eventviews/edits.cpp:258
-Disposition: GAP
-Mapping/reason: Lookup, computation, or harness-object guard with no Swift predicate.
+Disposition: PARTIAL
+Mapping/reason: Partial: the shared contract guard (S185-S187) executes once, in the fixture state the first journey depends on; this row's channel/blob conversion function re-opens an independent fixture and no predicate re-establishes the guard for that journey. The conversions are proved at S221-S233.
 Source context since previous assertion:
 ;
     SongDocument &document = opened.fixture->document();
@@ -677,8 +689,8 @@ Original expression:
 QVERIFY(row >= 0)
 
 A051 | EventViewsEditsTest::channelAndDataConversions | src/checks/eventviews/edits.cpp:263
-Disposition: GAP
-Mapping/reason: Controller/model commit-result predicate (commitCellEdit/setData return); Swift calls document APIs directly and has no commit-result predicate.
+Disposition: MATCHED
+Mapping: S221
 Source context since previous assertion:
 ;
     const int chunk = widgets.model->chunk();
@@ -695,8 +707,8 @@ Disposition: MATCHED
 Mapping: S099
 
 A053 | EventViewsEditsTest::channelAndDataConversions | src/checks/eventviews/edits.cpp:274
-Disposition: GAP
-Mapping/reason: Lookup, computation, or harness-object guard with no Swift predicate.
+Disposition: MATCHED
+Mapping: S222
 Source context since previous assertion:
 ;
     int eventIndex = -1;
@@ -716,8 +728,8 @@ Disposition: MATCHED
 Mapping: S100
 
 A055 | EventViewsEditsTest::channelAndDataConversions | src/checks/eventviews/edits.cpp:278
-Disposition: GAP
-Mapping/reason: Controller/model commit-result predicate (commitCellEdit/setData return); Swift calls document APIs directly and has no commit-result predicate.
+Disposition: MATCHED
+Mapping: S223
 Source context since previous assertion:
 ;
 
@@ -728,8 +740,8 @@ QVERIFY(
         widgets.controller->commitCellEdit(row, EventTableModel::ColData1, QStringLiteral("100")))
 
 A056 | EventViewsEditsTest::channelAndDataConversions | src/checks/eventviews/edits.cpp:280
-Disposition: GAP
-Mapping/reason: Controller/model commit-result predicate (commitCellEdit/setData return); Swift calls document APIs directly and has no commit-result predicate.
+Disposition: MATCHED
+Mapping: S224
 Source context since previous assertion:
 ;
 
@@ -739,7 +751,7 @@ QVERIFY(
 
 A057 | EventViewsEditsTest::channelAndDataConversions | src/checks/eventviews/edits.cpp:282
 Disposition: MATCHED
-Mapping: S103
+Mapping: S225
 
 A058 | EventViewsEditsTest::channelAndDataConversions | src/checks/eventviews/edits.cpp:283
 Disposition: MATCHED
@@ -750,8 +762,8 @@ Disposition: MATCHED
 Mapping: S105
 
 A060 | EventViewsEditsTest::channelAndDataConversions | src/checks/eventviews/edits.cpp:289
-Disposition: GAP
-Mapping/reason: Lookup, computation, or harness-object guard with no Swift predicate.
+Disposition: MATCHED
+Mapping: S228
 Source context since previous assertion:
 ;
 
@@ -763,8 +775,8 @@ Original expression:
 QVERIFY(blobRow >= 0)
 
 A061 | EventViewsEditsTest::channelAndDataConversions | src/checks/eventviews/edits.cpp:291
-Disposition: GAP
-Mapping/reason: Lookup, computation, or harness-object guard with no Swift predicate.
+Disposition: MATCHED
+Mapping: S229
 Source context since previous assertion:
 ;
     const auto blobEventIndex = widgets.model->rawEventIndexForRow(blobRow);
@@ -773,8 +785,8 @@ Original expression:
 QVERIFY(blobEventIndex.has_value())
 
 A062 | EventViewsEditsTest::channelAndDataConversions | src/checks/eventviews/edits.cpp:292
-Disposition: GAP
-Mapping/reason: Controller/model commit-result predicate (commitCellEdit/setData return); Swift calls document APIs directly and has no commit-result predicate.
+Disposition: MATCHED
+Mapping: S230
 Source context since previous assertion:
 ;
 
@@ -784,15 +796,15 @@ QVERIFY(widgets.controller->commitCellEdit(blobRow, EventTableModel::ColData,
 
 A063 | EventViewsEditsTest::channelAndDataConversions | src/checks/eventviews/edits.cpp:294
 Disposition: MATCHED
-Mapping: S107
+Mapping: S231
 
 A064 | EventViewsEditsTest::channelAndDataConversions | src/checks/eventviews/edits.cpp:295
 Disposition: MATCHED
-Mapping: S108
+Mapping: S232
 
 A065 | EventViewsEditsTest::channelAndDataConversions | src/checks/eventviews/edits.cpp:299
-Disposition: GAP
-Mapping/reason: Event-table model observation (row lookup, cell data, tempo-row projection) with no Swift predicate; Swift has no event-table model.
+Disposition: MATCHED
+Mapping: S233
 Source context since previous assertion:
 ;
 
@@ -1152,8 +1164,8 @@ Original expression:
 QVERIFY(widgets.model->tempoRowForExactTick(0) >= 0)
 
 A112 | EventViewsEditsTest::insertCopy | src/checks/eventviews/edits.cpp:414
-Disposition: GAP
-Mapping/reason: Fixture-open or EventWidgets conversion guard; no Swift predicate opens the native rig.
+Disposition: PARTIAL
+Mapping/reason: Partial: the shared contract guard (S185-S187) executes once, in the fixture state the first journey depends on; this row's insert-copy function re-opens an independent fixture and no predicate re-establishes the guard for that journey. The insert-copy path is proved at S234-S242.
 Source context since previous assertion:
 ;
 }
@@ -1166,8 +1178,8 @@ Original expression:
 QVERIFY2(opened, qPrintable(opened.error))
 
 A113 | EventViewsEditsTest::insertCopy | src/checks/eventviews/edits.cpp:416
-Disposition: GAP
-Mapping/reason: Fixture-open or EventWidgets conversion guard; no Swift predicate opens the native rig.
+Disposition: PARTIAL
+Mapping/reason: Partial: the shared contract guard (S185-S187) executes once, in the fixture state the first journey depends on; this row's insert-copy function re-opens an independent fixture and no predicate re-establishes the guard for that journey. The insert-copy path is proved at S234-S242.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -1176,8 +1188,8 @@ Original expression:
 QVERIFY(widgets)
 
 A114 | EventViewsEditsTest::insertCopy | src/checks/eventviews/edits.cpp:424
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the EventTableModel/controller commit path (commitCellEdit/setData) translating the edit.
+Disposition: MATCHED
+Mapping: S234
 Source context since previous assertion:
 ;
     SongDocument &document = opened.fixture->document();
@@ -1192,8 +1204,8 @@ Original expression:
 QTRY_COMPARE(countMatching(document.smf().tracks[chunk], source), beforeMatches + 1)
 
 A115 | EventViewsEditsTest::insertCopy | src/checks/eventviews/edits.cpp:425
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the EventTableModel/controller commit path (commitCellEdit/setData) translating the edit.
+Disposition: MATCHED
+Mapping: S235
 Source context since previous assertion:
 ;
 
@@ -1201,8 +1213,8 @@ Original expression:
 QCOMPARE(document.undoStack()->index(), beforeIndex + 1)
 
 A116 | EventViewsEditsTest::insertCopy | src/checks/eventviews/edits.cpp:426
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the EventTableModel/controller commit path (commitCellEdit/setData) translating the edit.
+Disposition: MATCHED
+Mapping: S236
 Source context since previous assertion:
 ;
 
@@ -1210,8 +1222,8 @@ Original expression:
 QVERIFY(checks::eventviews::trackIsSorted(document.smf().tracks[chunk]))
 
 A117 | EventViewsEditsTest::insertCopy | src/checks/eventviews/edits.cpp:428
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the EventTableModel/controller commit path (commitCellEdit/setData) translating the edit.
+Disposition: MATCHED
+Mapping: S238
 Source context since previous assertion:
 ;
     document.undoStack()->undo();
@@ -1220,8 +1232,8 @@ Original expression:
 QTRY_COMPARE(countMatching(document.smf().tracks[chunk], source), beforeMatches)
 
 A118 | EventViewsEditsTest::insertCopy | src/checks/eventviews/edits.cpp:434
-Disposition: GAP
-Mapping/reason: Sentinel-row (EOT) insert refusal has no Swift predicate.
+Disposition: MATCHED
+Mapping: S241
 Source context since previous assertion:
 ;
 
@@ -1234,8 +1246,8 @@ Original expression:
 QCOMPARE(document.undoStack()->index(), eotIndex)
 
 A119 | EventViewsEditsTest::insertCopy | src/checks/eventviews/edits.cpp:435
-Disposition: GAP
-Mapping/reason: Sentinel-row (EOT) insert refusal has no Swift predicate.
+Disposition: MATCHED
+Mapping: S242
 Source context since previous assertion:
 ;
 
@@ -1487,8 +1499,8 @@ Original expression:
 QVERIFY(moveDownAction)
 
 A146 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:537
-Disposition: GAP
-Mapping/reason: Lookup, computation, or harness-object guard with no Swift predicate.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Representation-only: cellSceneCenter scene-coordinate lookup in the deleted native Quick page, used to place the row-menu right-click. No Swift ingress in this slice; the live row-menu session rows stay GAP.
 Source context since previous assertion:
 ;
     const QPointF menuCell =
@@ -1517,8 +1529,8 @@ Original expression:
 QTRY_COMPARE(widgets.controller->currentRow(), first)
 
 A149 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:542
-Disposition: GAP
-Mapping/reason: Lookup, computation, or harness-object guard with no Swift predicate.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Representation-only: activeMenuPanel lookup of the QuickMenuHost panel item in the deleted native lane; panel representation with no consumer-visible behavior and no Swift ingress in this slice.
 Source context since previous assertion:
 ;
     QQuickItem *const menuPanel = checks::eventviews::activeMenuPanel(widgets);
@@ -1527,8 +1539,8 @@ Original expression:
 QVERIFY(menuPanel)
 
 A150 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:544
-Disposition: GAP
-Mapping/reason: Lookup, computation, or harness-object guard with no Swift predicate.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Representation-only: quick_popup::menuModel lookup of the panel's QuickMenuModel in the deleted native lane; menu model representation with no Swift ingress in this slice.
 Source context since previous assertion:
 ;
     songview::QuickMenuModel *const menuModel = quick_popup::menuModel(*menuPanel);
@@ -1552,8 +1564,8 @@ Original expression:
 QVERIFY2(moveDownRow >= 0, "the row menu did not project the MoveEventDown action")
 
 A152 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:554
-Disposition: GAP
-Mapping/reason: Test-spy plumbing guard; not a behavioral observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Representation-only: QSignalSpy validity of the harness spy on the projected MoveEventDown action; test-spy plumbing with no consumer-visible behavior.
 Source context since previous assertion:
 ;
     const int undoBeforeMenuMove = undoCount(document);
@@ -1614,8 +1626,8 @@ Disposition: MATCHED
 Mapping: S176
 
 A162 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:571
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes Quick active-focus arbitration (event-list input vs drawer surface); presenter-level Swift cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Representation-only: TimelineQuickView pointer lookup in the deleted native lane; the focus arbitration it fronts has no Swift presenter ingress in this slice.
 Source context since previous assertion:
 ;
 
@@ -1638,8 +1650,8 @@ Original expression:
 QVERIFY(quick->focusEventListInput(Qt::OtherFocusReason))
 
 A164 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:573
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes Quick active-focus arbitration (event-list input vs drawer surface); presenter-level Swift cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Representation-only: checks::async_wait::waitUntil boilerplate around the native event-list focus check; harness wait plumbing, not a behavioral observation.
 Source context since previous assertion:
 ;
 
@@ -1678,8 +1690,8 @@ Disposition: MATCHED
 Mapping: S180
 
 A170 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:591
-Disposition: GAP
-Mapping/reason: Lookup, computation, or harness-object guard with no Swift predicate.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Representation-only: quickView() != nullptr pointer guard in the deleted native lane; the boundary key move it fronts is proved at S181, S182.
 Source context since previous assertion:
 ;
 
@@ -1750,8 +1762,8 @@ Original expression:
 QVERIFY(second >= 0)
 
 A177 | EventViewsEditsTest::deleteMatrix | src/checks/eventviews/edits.cpp:624
-Disposition: GAP
-Mapping/reason: Lookup, computation, or harness-object guard with no Swift predicate.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Representation-only: quickView() != nullptr pointer guard in the deleted native lane; the delete matrix it fronts is deferred to its own brief.
 Source context since previous assertion:
 ;
 
@@ -2564,3 +2576,216 @@ Anchor: message "inserted preset note-on mints a fresh identity"
 
 S184 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift
 Anchor: message "preset insert resolves by its fresh identity"
+
+S185 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A002 event-list presenter attaches to the basic fixture"
+
+S186 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A003 mounted rows expose two events and one EOT sentinel"
+
+S187 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A004 tick-12 NoteOn row exists in the fixture"
+
+S188 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A005 commitCellEdit commits the typed tick 15"
+
+S189 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A006 the NoteOn row republishes at tick 15"
+
+S190 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A007 tick string equals the typed digits"
+
+S191 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A008 typed tick commit pushes one undo step"
+
+S192 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A009 chunk stays tick-sorted after the typed commit"
+
+S193 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A010 undo restores the tick-12 NoteOn row"
+
+S194 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A014 commitCellEdit commits the 64-bit tick"
+
+S195 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A015 64-bit commit pushes one undo step"
+
+S196 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A016 committed chunk keeps its events"
+
+S197 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A017 back event tick is exactly 3000000000"
+
+S198 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A018 chunk stays tick-sorted after the 64-bit commit"
+
+S199 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A019 undo restores the tick-12 NoteOn row"
+
+S200 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A023 typed kNoTick commit is refused"
+
+S201 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A024 refused kNoTick pushes no undo step"
+
+S202 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A025 the tick-12 NoteOn row survives the refusal"
+
+S203 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A026 typed kMaxTick commits"
+
+S204 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A027 kMaxTick commit pushes one undo step"
+
+S205 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A028 committed chunk keeps its events"
+
+S206 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A029 back event tick is exactly kMaxTick"
+
+S207 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A030 chunk stays tick-sorted after the kMaxTick commit"
+
+S208 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A031 undo restores the tick-12 NoteOn row"
+
+S209 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A037 beginEditing opens the tick cell"
+
+S210 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A037 typed kNoTick leaves the edit session open"
+
+S211 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A037 refused kNoTick pushes no undo step"
+
+S212 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A038 typed kNoTick leaves the document bytes unchanged"
+
+S213 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A041 typed kMaxTick commits and closes the editor"
+
+S214 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A041 committed kMaxTick pushes one undo step"
+
+S215 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A042 committed chunk keeps its events"
+
+S216 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A043 back event tick is exactly kMaxTick"
+
+S217 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A044 the NoteOn row republishes at kMaxTick"
+
+S218 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A045 tick string equals the exact kMaxTick digits"
+
+S219 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A046 chunk stays tick-sorted after the kMaxTick commit"
+
+S220 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A047 undo restores the tick-12 NoteOn row"
+
+S221 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A051 commitCellEdit commits the typed channel 5"
+
+S222 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A053 tick-12 NoteOn event survives the channel edit"
+
+S223 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A055 commitCellEdit commits the typed data1 100"
+
+S224 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A056 commitCellEdit commits the typed data2 33"
+
+S225 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A057 the three cell commits push one undo step each"
+
+S226 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A058 typed channel 5 stores the status nibble 4"
+
+S227 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A059 typed data bytes land on the note event"
+
+S228 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A060 tick-0 meta row exists in the fixture"
+
+S229 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A061 meta row exposes its raw event index"
+
+S230 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A062 commitCellEdit commits the quoted blob"
+
+S231 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A063 the blob commit pushes the fourth undo step"
+
+S232 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A064 quoted blob stores the room bytes"
+
+S233 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A065 undo restores channel 0, 60/90 and the marker bytes"
+
+S234 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A114 insert-copy adds one copy of the marker event"
+
+S235 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A115 insert-copy pushes one undo step"
+
+S236 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A116 chunk stays tick-sorted after the insert"
+
+S237 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "insert-copy focuses and selects the inserted row"
+
+S238 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A117 undo restores the marker count"
+
+S239 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "tempo row exists after the tempo edit"
+
+S240 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "tempo insert copies the source µs-per-quarter-note"
+
+S241 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A118 EOT-row insert pushes no undo step"
+
+S242 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A119 EOT-row insert adds no event"
+
+S243 | test_keyboardSelectionStaysOnMountedEventRows | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "F2 opens the focused event cell"
+
+S244 | test_keyboardSelectionStaysOnMountedEventRows | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "Select All stays in the focused cell while editing"
+
+S245 | test_tickBoundariesThroughMountedEditor | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "F2 opens the tick cell"
+
+S246 | test_tickBoundariesThroughMountedEditor | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the tick editor takes text focus"
+
+S247 | test_tickBoundariesThroughMountedEditor | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "typed kNoTick keeps the editor open"
+
+S248 | test_tickBoundariesThroughMountedEditor | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "typed kNoTick leaves the displayed tick unchanged"
+
+S249 | test_tickBoundariesThroughMountedEditor | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "F2 re-opens the tick cell"
+
+S250 | test_tickBoundariesThroughMountedEditor | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the reopened tick editor takes text focus"
+
+S251 | test_tickBoundariesThroughMountedEditor | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the typed kMaxTick digits replace the cell text"
+
+S252 | test_tickBoundariesThroughMountedEditor | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "typed kMaxTick commits and closes the editor"
+
+S253 | test_tickBoundariesThroughMountedEditor | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the committed row republishes at kMaxTick"
+
+S254 | test_tickBoundariesThroughMountedEditor | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the EOT label renders in muted secondary text"
+
+S255 | test_tickBoundariesThroughMountedEditor | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the EOT label stays muted on the flipped stripe parity"

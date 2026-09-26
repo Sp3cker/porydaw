@@ -466,7 +466,7 @@ FocusScope {
             visible: !cell.editing || cell.column === 1
             clip: true
             color: cell.selected ? page.tableSelectedText
-                                 : cell.endRow && cell.row % 2 ? page.tableSecondaryText : page.tableText
+                                 : cell.endRow ? page.tableSecondaryText : page.tableText
             font: cell.cellFont
             text: cell.displayedText
             textFormat: Text.PlainText

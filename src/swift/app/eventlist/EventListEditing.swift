@@ -135,15 +135,33 @@ extension EventListPresenter {
     func dispatchAddEvent() {
         guard let session, !session.isClosed,
               session.document.rawChunks.indices.contains(chunkIndex) else { return }
-        if chunkIndex == 0, model.row(at: currentRow)?.tempo != nil {
+        // The EOT sentinel has no source event: the original refuses the
+        // row-menu insert on it (insertCopyOfRow no-ops without a source).
+        if let row = model.row(at: currentRow), row.isEndOfTrack { return }
+        if chunkIndex == 0, let tempo = model.row(at: currentRow)?.tempo {
             session.document.editTempo(TempoEdit(add: [TempoPoint(
-                tick: session.editCursor, microsecondsPerQuarterNote: 500_000)]))
+                tick: session.editCursor,
+                microsecondsPerQuarterNote: tempo.microsecondsPerQuarterNote)]))
+            selectedRows = []
+            selectionAnchor = -1
+            if let row = model.rows.firstIndex(where: { $0.tempo?.tick == session.editCursor })
+                ?? model.rows.firstIndex(where: { $0.eventIndex != nil
+                                                && $0.tick == session.editCursor }) {
+                focusRow(row: row)
+                selectedRows = [row]
+            }
             return
         }
         var event = model.row(at: currentRow)?.event
             ?? .channel(status: 0xB0, data0: 7, data1: 100)
         event.tick = session.editCursor
         session.document.insertRawEvent(chunk: chunkIndex, event: event)
+        selectedRows = []
+        selectionAnchor = -1
+        if let row = model.rows.firstIndex(where: { $0.event == event }) {
+            focusRow(row: row)
+            selectedRows = [row]
+        }
     }
 
     func dispatchDeleteSelected() {
