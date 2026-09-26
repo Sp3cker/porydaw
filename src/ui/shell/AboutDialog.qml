@@ -18,7 +18,6 @@ Basic.Dialog {
     id: about
     objectName: "shellAboutDialog"
     required property QtObject colors
-    required property font applicationFont
     required property QtObject applicationSession
     required property real baseFontPx
     // Qt exposes no qVersion() binding, so the numeric Qt version from the
@@ -42,15 +41,15 @@ Basic.Dialog {
                         ? about.footer.implicitHeight + about.spacing : 0))
     FontMetrics {
         id: aboutMetrics
-        font: about.applicationFont
+        font: about.font
     }
     contentItem: ColumnLayout {
         id: bodyColumn
         Label {
+            objectName: "shellAboutBody"
             Layout.fillWidth: true
             textFormat: Text.RichText
             wrapMode: Text.WordWrap
-            font: about.applicationFont
             color: about.colors.windowText
             linkColor: about.colors.windowText
             onLinkActivated: link => Qt.openUrlExternally(link)

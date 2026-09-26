@@ -8,15 +8,11 @@ Item {
     objectName: "polyphonyPanel"
     required property var presenter
     required property var colors
-    required property font applicationFont
-    readonly property font boldFont: Qt.font({
-        family: applicationFont.family, pixelSize: applicationFont.pixelSize, weight: Font.Bold
-    })
-    readonly property font headerFont: Qt.font({
-        family: applicationFont.family, pixelSize: applicationFont.pixelSize, weight: Font.DemiBold
-    })
-    readonly property real em: Math.max(1, applicationFont.pixelSize)
-    readonly property real gap: Math.round(em / 2)
+    required property var typography
+    required property var layoutSpaces
+    required property real baseFontPx
+    readonly property real em: baseFontPx
+    readonly property real gap: layoutSpaces.two
     readonly property bool wideLayout: width >= em * 50
     readonly property real margin: Math.round(em * 8 / 12)
     readonly property real contentWidth: width - 2 * margin
@@ -50,7 +46,7 @@ Item {
                 height: panel.headingHeight
                 text: qsTr("Solo overflow (invert audio)")
                 checked: panel.presenter.invertChecked
-                font: panel.applicationFont
+                font: Qt.font(panel.typography.body)
                 palette.windowText: panel.colors.windowText
                 ToolTip.text: qsTr("Mutes normal playback and makes ONLY the sounds lost to the polyphony limit audible.")
                 ToolTip.visible: hovered
@@ -75,7 +71,7 @@ Item {
                         text: qsTr("Channel usage")
                         width: parent.width
                         height: panel.headingHeight
-                        font: panel.boldFont
+                        font: Qt.font(panel.typography.bodyBold)
                         color: panel.colors.windowText
                     }
                     Column {
@@ -89,6 +85,7 @@ Item {
                             channels: panel.presenter.pcm
                             colors: panel.colors
                             em: panel.em
+                            typography: panel.typography
                         }
                         PolyphonyChannelGroup {
                             width: parent.width
@@ -96,14 +93,16 @@ Item {
                             channels: panel.presenter.cgb
                             colors: panel.colors
                             em: panel.em
+                            typography: panel.typography
                         }
                         Text {
+                            objectName: "polyphonyShadowNotice"
                             width: parent.width
                             height: panel.headingHeight
                             visible: panel.presenter.showingShadow
                             text: qsTr("Lost sounds currently playing (solo overflow):")
                             color: panel.colors.secondaryText
-                            font: panel.applicationFont
+                            font: Qt.font(panel.typography.body)
                         }
                         PolyphonyChannelGroup {
                             width: parent.width
@@ -112,6 +111,7 @@ Item {
                             channels: panel.presenter.shadowPcm
                             colors: panel.colors
                             em: panel.em
+                            typography: panel.typography
                         }
                         PolyphonyChannelGroup {
                             width: parent.width
@@ -120,6 +120,7 @@ Item {
                             channels: panel.presenter.shadowCgb
                             colors: panel.colors
                             em: panel.em
+                            typography: panel.typography
                         }
                     }
                 }
@@ -138,7 +139,7 @@ Item {
                                         parent.width - resetButton.width - panel.gap)
                         height: panel.headingHeight
                         text: qsTr("Overflow by track")
-                        font: panel.boldFont
+                        font: Qt.font(panel.typography.bodyBold)
                         color: panel.colors.windowText
                     }
                     Basic.Button {
@@ -147,7 +148,7 @@ Item {
                         anchors.right: parent.right
                         height: panel.headingHeight
                         text: qsTr("Reset")
-                        font: panel.applicationFont
+                        font: Qt.font(panel.typography.body)
                         leftPadding: panel.gap
                         rightPadding: panel.gap
                         topPadding: 0
@@ -179,12 +180,13 @@ Item {
                                 Repeater {
                                     model: [qsTr("Track"), qsTr("Dropped"), qsTr("Cut Off"), qsTr("Tail Cut")]
                                     delegate: Text {
+                                        objectName: "polyphonyTableHeader"
                                         required property string modelData
                                         required property int index
                                         width: index === 0 ? table.trackWidth : (header.width - table.trackWidth) / 3
                                         height: header.height
                                         text: modelData
-                                        font: panel.headerFont
+                                        font: Qt.font(panel.typography.body)
                                         horizontalAlignment: Text.AlignHCenter
                                         verticalAlignment: Text.AlignVCenter
                                         color: panel.colors.windowText
@@ -227,13 +229,14 @@ Item {
                                                 border.color: panel.colors.outline
                                                 border.width: 0.5
                                                 Text {
+                                                    objectName: "polyphonyCounterText"
                                                     anchors.fill: parent
                                                     leftPadding: panel.em / 4
                                                     text: parent.modelData
                                                     elide: Text.ElideRight
+                                                    font: Qt.font(panel.typography.body)
                                                     verticalAlignment: Text.AlignVCenter
                                                     color: counterRow.flash ? panel.colors.polyphonyFlashText : panel.colors.windowText
-                                                    font: panel.applicationFont
                                                 }
                                             }
                                         }
@@ -247,7 +250,7 @@ Item {
                         anchors.centerIn: table
                         visible: panel.presenter.counterCount === 0
                         text: qsTr("No overflow recorded")
-                        font: panel.applicationFont
+                        font: Qt.font(panel.typography.body)
                         color: panel.colors.secondaryText
                     }
                 }
@@ -260,7 +263,7 @@ Item {
                 width: parent.width
                 height: panel.headingHeight
                 text: qsTr("Recent events")
-                font: panel.boldFont
+                font: Qt.font(panel.typography.bodyBold)
                 color: panel.colors.windowText
             }
             Rectangle {
@@ -290,7 +293,7 @@ Item {
                         Text {
                             anchors.fill: parent
                             text: eventRow.text
-                            font: panel.applicationFont
+                            font: Qt.font(panel.typography.body)
                             color: eventRow.kind === 0 ? panel.colors.errorText
                                 : eventRow.kind === 1 ? panel.colors.warningText : panel.colors.secondaryText
                             elide: Text.ElideRight

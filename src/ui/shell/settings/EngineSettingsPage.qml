@@ -6,7 +6,7 @@ Item {
     required property QtObject store
     required property QtObject colors
     required property real unit
-    required property font applicationFont
+    required property var typography
     readonly property real labelWidth: 105 + 84 * (unit - 1)
     readonly property real fieldX: labelWidth
     readonly property real fieldWidth: width - fieldX
@@ -34,8 +34,8 @@ Item {
     Text {
         x: 0; y: 11 * page.unit; width: page.labelWidth; height: 25 + 15 * (page.unit - 1)
         text: qsTr("PCM polyphony:"); color: page.colors.windowText
-        font.family: page.applicationFont.family; font.pixelSize: 12 * page.unit
-        font.weight: Font.Bold; verticalAlignment: Text.AlignVCenter
+        font: Qt.font(page.typography.body)
+        verticalAlignment: Text.AlignVCenter
     }
     SpinBox {
         id: polyphony
@@ -43,8 +43,8 @@ Item {
         x: page.fieldX; y: 11 * page.unit
         width: page.fieldWidth; height: 25 + 15 * (page.unit - 1)
         from: 1; to: page.store.maximumPcmChannels; value: page.store.maxPcmChannels
+        font: Qt.font(page.typography.body)
         editable: true
-        font.weight: Font.Bold
         textFromValue: value => qsTr("%1 channels").arg(value)
         valueFromText: text => parseInt(text, 10)
         onValueModified: page.store.changeMaxPcmChannels(value)
@@ -54,8 +54,8 @@ Item {
     Text {
         x: 0; y: 42 + 27 * (page.unit - 1); width: page.labelWidth; height: 22 + 12 * (page.unit - 1)
         text: qsTr("PCM mixer:"); color: page.colors.windowText
-        font.family: page.applicationFont.family; font.pixelSize: 12 * page.unit
-        font.weight: Font.Bold; verticalAlignment: Text.AlignVCenter
+        verticalAlignment: Text.AlignVCenter
+        font: Qt.font(page.typography.body)
     }
     ComboBox {
         id: mixer
@@ -63,7 +63,7 @@ Item {
         x: page.fieldX; y: 42 + 27 * (page.unit - 1)
         width: page.fieldWidth; height: 22 + 12 * (page.unit - 1)
         model: [qsTr("Ipatix"), qsTr("Sappy")]
-        font.weight: Font.Bold
+        font: Qt.font(page.typography.body)
         currentIndex: page.store.mixer === "sappy" ? 1 : 0
         onActivated: page.store.changeMixer(index === 1 ? "sappy" : "ipatix")
         ToolTip.visible: hovered
@@ -72,8 +72,8 @@ Item {
     Text {
         x: 0; y: 70 + 39 * (page.unit - 1); width: page.labelWidth; height: 22 + 12 * (page.unit - 1)
         text: qsTr("PCM mix rate:"); color: page.colors.windowText
-        font.family: page.applicationFont.family; font.pixelSize: 12 * page.unit
-        font.weight: Font.Bold; verticalAlignment: Text.AlignVCenter
+        font: Qt.font(page.typography.body)
+        verticalAlignment: Text.AlignVCenter
     }
     ComboBox {
         id: rate
@@ -81,7 +81,7 @@ Item {
         x: page.fieldX; y: 70 + 39 * (page.unit - 1)
         width: page.fieldWidth; height: 22 + 12 * (page.unit - 1)
         model: page.rateChoices().map(page.rateName)
-        font.weight: Font.Bold
+        font: Qt.font(page.typography.body)
         currentIndex: page.rateChoices().indexOf(page.store.mixRate)
         onActivated: page.store.changeMixRate(page.rateChoices()[index])
         ToolTip.visible: hovered
@@ -92,7 +92,7 @@ Item {
         objectName: "engine.analog-filter"
         x: 0; y: 98 + 51 * (page.unit - 1); width: page.width; height: 16 + 12 * (page.unit - 1)
         text: qsTr("GBA analog output filter (low-pass)")
-        font.weight: Font.Bold
+        font: Qt.font(page.typography.body)
         checked: page.store.analogFilter
         onClicked: page.store.changeAnalogFilter(checked)
         ToolTip.visible: hovered
@@ -103,7 +103,7 @@ Item {
         x: 0; y: 120 + 63 * (page.unit - 1)
         width: 118 + 99 * (page.unit - 1); height: 18 + 12 * (page.unit - 1)
         text: qsTr("Restore Defaults")
-        font.weight: Font.Bold
+        font: Qt.font(page.typography.body)
         onClicked: {
             page.store.restoreDefaults()
             page.reset()

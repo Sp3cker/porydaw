@@ -8,9 +8,8 @@ Basic.Dialog {
     id: dialog
     objectName: "songConfirmationDialog"
     required property var controller
-    required property font applicationFont
     required property real baseFontPx
-    font: applicationFont
+    required property var layoutSpaces
     parent: Overlay.overlay
     anchors.centerIn: parent
     modal: true
@@ -27,10 +26,10 @@ Basic.Dialog {
             ok.text = controller.confirmation === "register" ? qsTr("Register") : qsTr("Delete")
     }
     contentItem: ColumnLayout {
-        spacing: dialog.baseFontPx
+        spacing: dialog.layoutSpaces.four
         Label {
+            objectName: "songConfirmationPrompt"
             Layout.fillWidth: true
-            font: dialog.applicationFont
             wrapMode: Text.WordWrap
             text: dialog.controller.confirmation === "register"
                 ? qsTr("Register %1 as %2?").arg(dialog.controller.confirmationLabel)
@@ -38,8 +37,8 @@ Basic.Dialog {
                 : qsTr("Delete %1?").arg(dialog.controller.confirmationLabel)
         }
         Label {
+            objectName: "songConfirmationDetail"
             Layout.fillWidth: true
-            font: dialog.applicationFont
             wrapMode: Text.WordWrap
             text: dialog.controller.confirmationDetail
             visible: text.length > 0
@@ -53,7 +52,6 @@ Basic.Dialog {
             checked: true
             text: qsTr("Also delete voicegroup %1 (used only by this song)")
                 .arg(dialog.controller.deletableVoicegroup)
-            font: dialog.applicationFont
         }
     }
 }

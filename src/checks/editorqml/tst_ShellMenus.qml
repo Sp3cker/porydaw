@@ -308,6 +308,13 @@ TestCase {
         compare(aboutDialog.visible, false, "About starts hidden")
         aboutItem.triggered()
         tryVerify(function() { return aboutDialog.visible }, 3000, "About opens the dialog")
+        const body = presenter.session.typographyFonts.body
+        const aboutText = findChild(aboutDialog, "shellAboutBody")
+        verify(aboutText !== null, "the mounted About dialog renders its body")
+        compare(aboutDialog.font.family, body.family, "About resolves the body family")
+        compare(aboutText.font.family, body.family, "About body resolves body family")
+        compare(aboutText.font.pixelSize, body.pixelSize, "About body resolves body size")
+        compare(aboutText.font.weight, body.weight, "About body keeps regular weight")
         aboutDialog.close()
         tryVerify(function() { return !aboutDialog.visible }, 3000, "About closes again")
     }

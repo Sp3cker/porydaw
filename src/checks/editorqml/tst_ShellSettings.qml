@@ -79,11 +79,6 @@ TestCase {
                + child.width + "x" + child.height + "; widget "
                + expected.x + "," + expected.y + " " + expected.w + "x" + expected.h)
     }
-    function useFont(px) {
-        dialog().applicationFont = Qt.font({family: dialog().applicationFont.family,
-                                            pixelSize: px})
-        wait(0)
-    }
     function capture(page, px) {
         var saved = false
         verify(findChild(dialog(), "settingsBody").grabToImage(function(result) {
@@ -104,19 +99,24 @@ TestCase {
         compare(findChild(dialog(), "pcmMixerCombo").count, 2)
         compare(findChild(dialog(), "pcmMixerCombo").textAt(0), "Ipatix")
         compare(findChild(dialog(), "pcmMixerCombo").textAt(1), "Sappy")
-        useFont(12)
+        const body = presenter.session.typographyFonts.body
+        compare(dialog().unit, presenter.session.baseFontPx / 12,
+                "settings layout unit derives from session base")
+        for (const name of ["settingsEngineTab", "pcmMixerCombo", "engine.polyphony",
+                            "engine.mix-rate", "engine.analog-filter",
+                            "engine.restore-defaults"]) {
+            const control = findChild(dialog(), name)
+            compare(control.font.family, body.family, name + " uses body family")
+            compare(control.font.pixelSize, body.pixelSize, name + " uses body size")
+            compare(control.font.weight, body.weight, name + " keeps body weight")
+        }
         const engineRegions = ["tabs", "tab-bar", "button-box", "engine.polyphony",
                                "pcmMixerCombo", "engine.mix-rate", "engine.analog-filter",
                                "engine.restore-defaults"]
         const baseline = reference("macos-dpr1-font12", "engine")
         for (const name of engineRegions)
             checkRegion(baseline, name, findChild(dialog(), name), 6)
-        capture("engine", 12)
-        useFont(16)
-        const larger = reference("macos-dpr2-font16", "engine")
-        for (const name of engineRegions)
-            checkRegion(larger, name, findChild(dialog(), name), 6)
-        capture("engine", 16)
+        capture("engine", presenter.session.baseFontPx)
         compare(findChild(dialog(), "pcmMixerCombo").currentIndex, 1)
         model.changeMixer("ipatix")
         model.changeMaxPcmChannels(7)
@@ -173,7 +173,17 @@ TestCase {
         const model = presenter.settingsStore
         compare(model.songAvailable, true)
         compare(model.songLabel, "mus_route101")
-        useFont(12)
+        const body = app.typographyFonts.body
+        compare(dialog().unit, app.baseFontPx / 12,
+                "song settings geometry follows the session base")
+        for (const name of ["settingsSongTab", "song.voicegroup", "song.volume",
+                            "song.reverb", "song.priority", "song.exact-gate",
+                            "song.extended-clocks", "song.no-compression"]) {
+            const control = findChild(dialog(), name)
+            compare(control.font.family, body.family, name + " uses body family")
+            compare(control.font.pixelSize, body.pixelSize, name + " uses body size")
+            compare(control.font.weight, body.weight, name + " keeps regular weight")
+        }
         const songRegions = ["tabs", "tab-bar", "button-box", "song.voicegroup",
                              "song.volume", "song.reverb", "song.priority",
                              "song.exact-gate", "song.extended-clocks",
@@ -183,16 +193,11 @@ TestCase {
         verify(model.voicegroups.indexOf("fixture_rich") >= 0)
         for (const name of songRegions)
             checkRegion(baseline, name, findChild(dialog(), name), 6)
-        capture("song", 12)
+        capture("song", app.baseFontPx)
         compare(model.voicegroup, "fixture_rich", "song config voicegroup is presented")
         compare(findChild(dialog(), "song.voicegroup").editText, model.voicegroup,
                 "editable selector preserves the current song's voicegroup")
         compare(app.documentDirty, false, "loaded song starts clean")
-        useFont(16)
-        const larger = reference("macos-dpr2-font16", "song")
-        for (const name of songRegions)
-            checkRegion(larger, name, findChild(dialog(), name), 6)
-        capture("song", 16)
         findChild(dialog(), "settingsApply").clicked()
         verify(waitForNative(function() { return !model.isApplying }, 10000))
         compare(app.documentDirty, false, "unchanged Apply does not dirty the song")

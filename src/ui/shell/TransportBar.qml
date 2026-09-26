@@ -14,31 +14,36 @@ Rectangle {
     required property int baseFontPx
     required property bool songAvailable
     onSongAvailableChanged: { if (presenter) presenter.refresh() }
-    required property font toolbarFont
-    required property font clockFont
+    required property var typography
+    required property var layoutSpaces
     readonly property int toolExtent: Math.round(Math.min(baseFontPx, 12) * 2.75)
-    readonly property int inset: Math.max(1, Math.round(baseFontPx / 4))
-    implicitHeight: toolExtent + Math.round(baseFontPx / 2) - 2
+    readonly property int inset: layoutSpaces.one
+    implicitHeight: toolExtent + layoutSpaces.two - 2
     color: colors.chromeBackground
     readonly property int edgeMargin: Math.max(1, Math.round(baseFontPx / 6))
+    readonly property int toolbarSeparatorExtent: 6
+    readonly property real masterCaptionWidth: Math.ceil(captionMetrics.boundingRect(qsTr("Volume")).width)
+                                               + layoutSpaces.two + layoutSpaces.one
+    readonly property real outputCaptionWidth: Math.ceil(captionMetrics.boundingRect(qsTr("Output")).width)
+                                               + layoutSpaces.two + layoutSpaces.one
     readonly property bool outputFits: width >= 2 * edgeMargin + 15 + 7 * toolExtent
         + Math.ceil(clockHintWidth) + 6 * inset
         + transportScaleSlot.Layout.preferredWidth + Math.round(baseFontPx * 2.25) + 2
-        + captionMetrics.advanceWidth(qsTr("Volume")) + 3 * inset + Math.round(baseFontPx / 2)
+        + masterCaptionWidth
         + Math.round(baseFontPx * 6 + 18)
-        + captionMetrics.advanceWidth(qsTr("Output")) + 3 * inset + Math.round(baseFontPx / 2)
+        + outputCaptionWidth
         + Math.round(baseFontPx * 5 / 3) + 2 * Math.round(baseFontPx / 4)
 
     TextMetrics {
         id: clockMetrics
-        font: bar.clockFont
+        font: Qt.font(bar.typography.bodyMono)
         text: "99:59.9 / 99:59.9"
     }
     readonly property real clockHintWidth: clockMetrics.advanceWidth
-    FontMetrics { id: captionMetrics; font: bar.toolbarFont }
+    FontMetrics { id: captionMetrics; font: Qt.font(bar.typography.body) }
     QtObject {
         id: inputAppearance
-        property font font: bar.toolbarFont
+        property font font: Qt.font(bar.typography.body)
         property color background: bar.colors.buttonBackground
         property color text: bar.colors.buttonText
         property color outline: bar.colors.outline
@@ -77,6 +82,7 @@ Rectangle {
         TransportButton {
             objectName: "transport.go-to-start"
             colors: bar.colors; baseFontPx: bar.baseFontPx
+            typography: bar.typography
             label: qsTr("Go to Start"); symbol: ""; iconSource: "qrc:/icons/transport-gotostart.svg"
             actionable: {
                 bar.actionRevision
@@ -89,6 +95,7 @@ Rectangle {
         TransportButton {
             objectName: "transport.play"
             colors: bar.colors; baseFontPx: bar.baseFontPx
+            typography: bar.typography
             label: qsTr("Play"); symbol: "▶"; iconSource: "qrc:/icons/transport-play.svg"
             actionable: {
                 bar.actionRevision
@@ -101,6 +108,7 @@ Rectangle {
         TransportButton {
             objectName: "transport.pause"
             colors: bar.colors; baseFontPx: bar.baseFontPx
+            typography: bar.typography
             label: qsTr("Pause"); symbol: "Ⅱ"; iconSource: "qrc:/icons/transport-pause.svg"
             actionable: {
                 bar.actionRevision
@@ -113,6 +121,7 @@ Rectangle {
         TransportButton {
             objectName: "transport.stop"
             colors: bar.colors; baseFontPx: bar.baseFontPx
+            typography: bar.typography
             label: qsTr("Stop"); symbol: ""; iconSource: "qrc:/icons/transport-stop.svg"
             actionable: {
                 bar.actionRevision
@@ -125,6 +134,7 @@ Rectangle {
         TransportButton {
             objectName: "transport.loop"
             colors: bar.colors; baseFontPx: bar.baseFontPx
+            typography: bar.typography
             label: qsTr("Loop"); symbol: "⟲"; iconSource: "qrc:/icons/transport-loop.svg"
             checked: {
                 bar.actionRevision
@@ -141,6 +151,7 @@ Rectangle {
         TransportButton {
             objectName: "transport.follow-playhead"
             colors: bar.colors; baseFontPx: bar.baseFontPx
+            typography: bar.typography
             label: qsTr("Follow Playhead"); symbol: "▶▶"; iconSource: "qrc:/icons/transport-follow.svg"
             checked: {
                 bar.actionRevision
@@ -157,6 +168,7 @@ Rectangle {
         TransportButton {
             objectName: "transport.resonance"
             colors: bar.colors; baseFontPx: bar.baseFontPx
+            typography: bar.typography
             label: qsTr("Suppress Resonances"); symbol: ""; iconSource: "qrc:/icons/transport-resonance.svg"
             checked: {
                 bar.actionRevision
@@ -180,7 +192,7 @@ Rectangle {
             leftPadding: 3 * bar.inset
             rightPadding: 3 * bar.inset
             verticalAlignment: Text.AlignVCenter
-            font: bar.clockFont
+            font: Qt.font(bar.typography.bodyMono)
             renderType: Text.NativeRendering
             color: bar.colors.windowText
             text: bar.presenter.timeText
@@ -235,7 +247,7 @@ Rectangle {
                 onActivated: index => bar.presenter.setScaleRoot(index)
                 enabled: bar.songAvailable
                 activeFocusOnTab: false
-                font: bar.toolbarFont
+                font: Qt.font(bar.typography.body)
                 Basic.ToolTip.text: qsTr("Scale root note")
                 Accessible.name: qsTr("Scale root note")
                 background: Rectangle {
@@ -256,7 +268,7 @@ Rectangle {
                 onActivated: index => bar.presenter.setScaleType(index)
                 enabled: bar.songAvailable
                 activeFocusOnTab: false
-                font: bar.toolbarFont
+                font: Qt.font(bar.typography.body)
                 Basic.ToolTip.text: qsTr("Scale type")
                 Accessible.name: qsTr("Scale type")
                 background: Rectangle {
@@ -272,6 +284,7 @@ Rectangle {
                 y: 0
                 colors: bar.colors
                 baseFontPx: bar.baseFontPx
+                typography: bar.typography
                 label: qsTr("Highlight")
                 symbol: ""
                 iconSource: "qrc:/icons/flat-music.svg"
@@ -299,7 +312,7 @@ Rectangle {
                 Text {
                     anchors.centerIn: parent
                     text: qsTr("Fold")
-                    font: bar.toolbarFont
+                    font: Qt.font(bar.typography.body)
                     color: !fold.enabled ? bar.colors.disabledText : bar.presenter.scaleFold ? bar.colors.buttonPressedText : bar.colors.buttonText
                 }
                 HoverHandler { id: foldHover }
@@ -319,19 +332,19 @@ Rectangle {
             Layout.preferredWidth: bar.outputFits ? -1 : Layout.minimumWidth
         }
         Rectangle {
-            Layout.preferredWidth: 1
+            Layout.preferredWidth: bar.toolbarSeparatorExtent
             Layout.preferredHeight: bar.toolExtent
             color: bar.colors.separator
         }
         Text {
             objectName: "transportMasterVolumeCaption"
-            Layout.preferredWidth: captionMetrics.advanceWidth(qsTr("Volume"))
-                + 3 * bar.inset + Math.round(bar.baseFontPx / 2)
+            Layout.preferredWidth: bar.masterCaptionWidth
             Layout.preferredHeight: bar.toolExtent
             verticalAlignment: Text.AlignVCenter
-            leftPadding: 2 * bar.inset
-            font: bar.toolbarFont
+            leftPadding: bar.layoutSpaces.two
+            rightPadding: bar.layoutSpaces.one
             enabled: bar.presenter.state !== 0
+            font: Qt.font(bar.typography.body)
             color: enabled ? bar.colors.windowText : bar.colors.disabledText
             text: qsTr("Volume")
         }
@@ -350,20 +363,20 @@ Rectangle {
             onValueCommitted: committed => bar.presenter.setMasterVolume(committed)
         }
         Rectangle {
-            Layout.preferredWidth: 1
+            Layout.preferredWidth: bar.toolbarSeparatorExtent
             Layout.preferredHeight: bar.toolExtent
             color: bar.colors.separator
             visible: bar.outputFits
         }
         Text {
             objectName: "transportOutputVolumeCaption"
-            Layout.preferredWidth: captionMetrics.advanceWidth(qsTr("Output"))
-                + 3 * bar.inset + Math.round(bar.baseFontPx / 2)
+            Layout.preferredWidth: bar.outputCaptionWidth
             Layout.preferredHeight: bar.toolExtent
             verticalAlignment: Text.AlignVCenter
-            leftPadding: 2 * bar.inset
+            leftPadding: bar.layoutSpaces.two
+            rightPadding: bar.layoutSpaces.one
             visible: bar.outputFits
-            font: bar.toolbarFont
+            font: Qt.font(bar.typography.body)
             color: bar.colors.windowText
             text: qsTr("Output")
         }

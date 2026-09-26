@@ -202,6 +202,12 @@ TestCase {
         verify(menu, "the production context menu exists")
         var copyItem = findChild(menu, "shellContextAction_roll.copy")
         verify(copyItem, "Copy is a real context-menu action")
+        const body = shell.shellPresenter.session.typographyFonts.body
+        compare(menu.font.family, body.family, "grid context menu resolves body family")
+        compare(menu.font.pixelSize, body.pixelSize, "grid context menu resolves body size")
+        compare(copyItem.font.weight, body.weight, "context items inherit body weight")
+        compare(copyItem.padding, shell.shellPresenter.session.layoutSpaces.one,
+                "context-item padding follows the One token")
         compare(copyItem.background.color.toString().toUpperCase(), "#D2D0CA",
                 "resting menu item shows the item surface")
         compare(copyItem.foreground.toString().toUpperCase(),

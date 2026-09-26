@@ -40,11 +40,11 @@ TestCase {
         return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
     }
 
-    function openShell() {
-        // Every explicit-open test starts without a stale startup recipe.
+    function openShell(profileFontPx) {
         settings.setValue("lastProjectDir", "")
         settings.sync()
-        shell = shellComponent.createObject(null)
+        shell = shellComponent.createObject(null, profileFontPx === undefined ? {}
+            : { typographyCaptureFont: Qt.font({ pixelSize: profileFontPx }) })
         verify(shell !== null, "production ShellWindow instantiates")
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
@@ -83,6 +83,36 @@ TestCase {
         shell.destroy()
         shell = null
         wait(0)
+    }
+
+    function test_chromeTypographyAndSpacing() {
+        const bar = openShell()
+        const session = shell.shellPresenter.session
+        const body = session.typographyFonts.body
+        const mono = session.typographyFonts.bodyMono
+        const clock = findChild(bar, "transportTimeLabel")
+        const rootCombo = findChild(bar, "transportScaleRoot")
+        const typeCombo = findChild(bar, "transportScaleType")
+        const volume = findChild(bar, "transportMasterVolumeCaption")
+        const output = findChild(bar, "transportOutputVolumeCaption")
+        const input = findChild(bar, "transportMasterVolume")
+        verify(clock && rootCombo && typeCombo && volume && output && input,
+               "mounted transport exposes its text controls")
+        for (const control of [rootCombo, typeCombo, volume, output]) {
+            compare(control.font.family, body.family, "transport text uses the body family")
+            compare(control.font.pixelSize, body.pixelSize, "transport text uses the body size")
+            compare(control.font.weight, body.weight, "transport text keeps body weight")
+        }
+        compare(input.appearance.font.family, body.family, "volume editor binds the body family")
+        compare(input.appearance.font.pixelSize, body.pixelSize, "volume editor binds body size")
+        compare(input.appearance.font.weight, body.weight, "volume editor keeps body weight")
+        compare(clock.font.family, mono.family, "clock uses the bodyMono family")
+        compare(clock.font.pixelSize, mono.pixelSize, "clock uses the bodyMono size")
+        compare(clock.font.weight, mono.weight, "clock uses the bodyMono weight")
+        compare(bar.baseFontPx, session.baseFontPx, "transport geometry follows captured base")
+        compare(bar.inset, session.layoutSpaces.one, "transport inset uses the One token")
+        compare(bar.edgeMargin, Math.max(1, Math.round(session.baseFontPx / 6)),
+                "transport edge derives from captured base")
     }
 
     function test_transportButtonMenuCommandParity() {
@@ -456,9 +486,13 @@ TestCase {
     }
 
     function test_visualReferenceProfiles(data) {
-        var bar = openShell()
+        var bar = openShell(data.fontPx)
         bar = openSong()
-        bar.baseFontPx = data.fontPx
+        const session = shell.shellPresenter.session
+        compare(session.baseFontPx, data.fontPx,
+                "transport profile captures the declared font before mounting")
+        compare(bar.height, bar.toolExtent + session.layoutSpaces.two - 2,
+                "toolbar height follows the base icon and Two token")
         var actionRegions = ["transport.go-to-start", "transport.play", "transport.pause",
                              "transport.stop", "transport.loop", "transport.follow-playhead",
                              "transport.resonance", "transportScaleRoot", "transportScaleType",

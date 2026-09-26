@@ -7,10 +7,9 @@ ThemedWindow {
     objectName: "settingsDialog"
     required property QtObject store
     required property QtObject applicationSession
-    property font applicationFont: Qt.font(applicationSession.typographyFonts.body)
-    readonly property real unit: Math.max(1, baseFont.pixelSize) / 12
+    readonly property real unit: applicationSession.baseFontPx / 12
     property int selectedTab: 0
-    width: 560 // The widget oracle fixes the outer dialog at 560×580.
+    width: 560
     height: 580
     minimumWidth: width
     minimumHeight: height
@@ -20,12 +19,7 @@ ThemedWindow {
     flags: Qt.Dialog
     modality: Qt.WindowModal
     color: colors.windowBackground
-    font: dialog.applicationFont
-    visible: false
-    FontInfo {
-        id: baseFont
-        font: dialog.applicationFont
-    }
+    font: Qt.font(applicationSession.typographyFonts.body)
 
     function showSettings(songFirst) {
         store.open()
@@ -75,7 +69,7 @@ ThemedWindow {
                 height: tabBar.height
                 width: 64 + 42 * (dialog.unit - 1)
                 text: qsTr("Engine")
-                font.weight: Font.Bold
+                font: Qt.font(dialog.applicationSession.typographyFonts.body)
                 palette.active.buttonText: dialog.selectedTab === 0 ? dialog.colors.selectionText : dialog.colors.buttonText
                 palette.inactive.buttonText: dialog.selectedTab === 0 ? dialog.colors.selectionText : dialog.colors.buttonText
                 palette.disabled.buttonText: dialog.colors.disabledText
@@ -93,7 +87,7 @@ ThemedWindow {
                 width: tabBar.width - engineTab.width
                 text: dialog.store.songLabel.length > 0
                       ? qsTr("Song (%1)").arg(dialog.store.songLabel) : qsTr("Song")
-                font.weight: Font.Bold
+                font: Qt.font(dialog.applicationSession.typographyFonts.body)
                 enabled: dialog.store.songAvailable
                 palette.active.buttonText: dialog.selectedTab === 1 ? dialog.colors.selectionText : dialog.colors.buttonText
                 palette.inactive.buttonText: dialog.selectedTab === 1 ? dialog.colors.selectionText : dialog.colors.buttonText
@@ -119,7 +113,7 @@ ThemedWindow {
         sourceComponent: EngineSettingsPage {
             objectName: "settingsEnginePage"
             unit: dialog.unit; store: dialog.store; colors: dialog.colors
-            applicationFont: dialog.applicationFont
+            typography: dialog.applicationSession.typographyFonts
         }
     }
     Loader {
@@ -134,7 +128,7 @@ ThemedWindow {
         sourceComponent: SongSettingsPage {
             objectName: "settingsSongPage"
             unit: dialog.unit; store: dialog.store; colors: dialog.colors
-            applicationFont: dialog.applicationFont
+            typography: dialog.applicationSession.typographyFonts
         }
     }
     Item {
@@ -147,6 +141,7 @@ ThemedWindow {
         Button {
             objectName: "settingsApply"
             x: 0; height: parent.height; text: qsTr("Apply")
+            font: Qt.font(dialog.applicationSession.typographyFonts.body)
             enabled: !dialog.store.isApplying
             onClicked: dialog.commit()
         }
@@ -155,6 +150,7 @@ ThemedWindow {
             objectName: "settingsCancel"
             x: parent.width - implicitWidth - okButton.implicitWidth - 9 * dialog.unit
             height: parent.height; text: qsTr("Cancel")
+            font: Qt.font(dialog.applicationSession.typographyFonts.body)
             onClicked: dialog.close()
         }
         Button {
@@ -162,6 +158,7 @@ ThemedWindow {
             objectName: "settingsOK"
             x: parent.width - implicitWidth
             height: parent.height; text: qsTr("OK")
+            font: Qt.font(dialog.applicationSession.typographyFonts.body)
             enabled: !dialog.store.isApplying
             onClicked: {
                 dialog.commit()

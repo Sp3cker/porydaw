@@ -24,6 +24,7 @@ TestCase {
 
     Component { id: settingsComponent; Settings {} }
     Component { id: shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
+    Component { id: intrinsicShellComponent; ShellWindow { visible: true } }
     Component {
         id: textProbeComponent
         TextField { text: "native copy text probe"; width: 220; height: 32 }
@@ -189,6 +190,42 @@ TestCase {
             }
         }
         return null
+    }
+
+    function test_chromeTypographyAndWindowGeometry() {
+        shell = intrinsicShellComponent.createObject(null)
+        verify(shell !== null, "production window mounts at its natural size")
+        const session = shell.shellPresenter.session
+        const caption = session.typographyFonts.caption
+        const body = session.typographyFonts.body
+        const mono = session.typographyFonts.bodyMono
+        compare(shell.width, session.baseFontPx * 92, "window width follows fontPx(92)")
+        compare(shell.height, session.baseFontPx * 57, "window height follows fontPx(57)")
+        compare(shell.chromeTypography.caption.pixelSize, caption.pixelSize,
+                "shell role map follows captured session")
+        compare(shell.font.pixelSize, body.pixelSize,
+                "window font follows captured body role")
+        const status = findChild(shell, "shellStatusText")
+        const title = findChild(shell, "shellPolyphonyTitle")
+        verify(status && title, "status and debugger heading are mounted")
+        compare(status.font.family, caption.family, "status uses the caption family")
+        compare(status.font.pixelSize, caption.pixelSize, "status uses the caption size")
+        compare(status.font.weight, caption.weight, "status uses caption weight")
+        compare(title.font.family, body.family, "debugger heading inherits body family")
+        compare(title.font.pixelSize, body.pixelSize, "debugger heading inherits body size")
+        compare(title.font.weight, body.weight, "debugger heading inherits body weight")
+        for (const name of ["shellPolyPcmValue", "shellPolyCgbValue"]) {
+            const value = findChild(shell, name)
+            compare(value.font.family, mono.family, name + " uses the bodyMono family")
+            compare(value.font.pixelSize, mono.pixelSize, name + " uses the bodyMono size")
+            compare(value.font.weight, mono.weight, name + " uses bodyMono weight")
+        }
+        const lost = findChild(shell, "shellPolyLostValue")
+        compare(lost.font.family, body.family, "lost notes inherit the body family")
+        compare(lost.font.pixelSize, body.pixelSize, "lost notes inherit body size")
+        const dock = findChild(shell, "shellPolyphonyDock")
+        compare(dock.width, Math.min(session.baseFontPx * 32, shell.width * 0.48),
+                "debugger width is bounded by the session base")
     }
 
     function test_aKeymapNativeSettingsSeeds() {

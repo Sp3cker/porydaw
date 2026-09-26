@@ -317,6 +317,17 @@ TestCase {
                "registration plan reaches the confirmation")
         verify(controller().confirmationDetail.indexOf("song_table.inc") >= 0,
                "the dialog names the missing registration file")
+        const confirmation = findChild(shell, "songConfirmationDialog")
+        const bodyFont = session.typographyFonts.body
+        verify(confirmation !== null, "song confirmation mounts after Register")
+        for (const name of ["songConfirmationPrompt", "songConfirmationDetail"]) {
+            const label = findChild(confirmation, name)
+            compare(label.font.family, bodyFont.family, name + " inherits body family")
+            compare(label.font.pixelSize, bodyFont.pixelSize, name + " inherits body size")
+            compare(label.font.weight, bodyFont.weight, name + " inherits regular weight")
+        }
+        compare(confirmation.contentItem.spacing, session.layoutSpaces.four,
+                "confirmation content uses the Four spacing token")
         controller().cancelConfirmation()
         compare(controller().confirmation, "", "Cancel leaves the staged project unchanged")
         tryCompare(findChild(shell, "songConfirmationLoader"), "status", Loader.Null, 3000)
@@ -340,6 +351,12 @@ TestCase {
         const voicegroupOption = findChild(shell, "songDeleteVoicegroup")
         verify(voicegroupOption !== null && voicegroupOption.visible && voicegroupOption.checked,
                "the real delete dialog defaults to including the unused voicegroup")
+        compare(voicegroupOption.font.family, bodyFont.family,
+                "delete voicegroup option inherits the body family")
+        compare(voicegroupOption.font.pixelSize, bodyFont.pixelSize,
+                "delete voicegroup option inherits the body size")
+        compare(voicegroupOption.font.weight, bodyFont.weight,
+                "delete voicegroup option keeps regular body weight")
         clickConfirmation()
         verify(waitForNative(function() { return !controller().busy && presenter().rowCount === 9 }, 30000),
                "confirmed deletion removes the song from the refreshed listing")

@@ -11,6 +11,7 @@ Rectangle {
     // A tinted SVG replaces the text symbol when set.
     property url iconSource: ""
     required property int baseFontPx
+    required property var typography
     property bool checked: false
     property bool actionable: true
     signal activated()
@@ -35,8 +36,7 @@ Rectangle {
         anchors.centerIn: parent
         visible: control.iconSource.toString().length === 0
         text: control.symbol
-        font.pixelSize: Math.min(Math.round(control.baseFontPx * 1.4),
-                                 Math.round(control.width / (Math.max(1, control.symbol.length) * 0.65)))
+        font: Qt.font(control.typography.body)
         color: control.foreground
         renderType: Text.NativeRendering
     }

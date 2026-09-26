@@ -18,12 +18,16 @@ ThemedWindow {
     property bool establishApplicationIdentity: false
     property int actionRevision: 0
     readonly property int bodyFontPx: shell.session.bodyFontPx
-    width: bodyFontPx * 72
-    height: bodyFontPx * 48
+    property int chromeBaseFontPx: shell.session.baseFontPx
+    property var chromeTypography: shell.session.typographyFonts
+    property var chromeSpacing: shell.session.layoutSpaces
+    property font typographyCaptureFont: Application.font
+    width: root.chromeBaseFontPx * 92
+    height: root.chromeBaseFontPx * 57
     title: shell.windowTitle
     visible: true
     color: shell.session.palette.windowBackground
-    font: Qt.font(shell.session.typographyFonts.body)
+    font: Qt.font(root.chromeTypography.body)
 
     ShellPresenter {
         id: shell
@@ -32,7 +36,7 @@ ThemedWindow {
 
     FontInfo {
         id: baseFontInfo
-        font: Application.font
+        font: root.typographyCaptureFont
     }
     FontLoader {
         source: "qrc:/fonts/AtkinsonHyperlegibleNext-Regular.ttf"
@@ -47,6 +51,10 @@ ThemedWindow {
     FontMetrics {
         id: bodyMetrics
         font: root.font
+    }
+    FontMetrics {
+        id: captionMetrics
+        font: Qt.font(root.chromeTypography.caption)
     }
 
     // Executable startup establishes QGuiApplication's native settings identity.
@@ -105,7 +113,16 @@ ThemedWindow {
         }
     }
     Component.onCompleted: {
+        const naturalWidth = root.width === root.chromeBaseFontPx * 92
+        const naturalHeight = root.height === root.chromeBaseFontPx * 57
         shell.session.configureTypography(baseFontInfo.pixelSize)
+        root.chromeBaseFontPx = shell.session.baseFontPx
+        root.chromeTypography = shell.session.typographyFonts
+        root.chromeSpacing = shell.session.layoutSpaces
+        if (naturalWidth)
+            root.width = root.chromeBaseFontPx * 92
+        if (naturalHeight)
+            root.height = root.chromeBaseFontPx * 57
         if (establishApplicationIdentity) {
             Qt.application.name = "porydaw"
             Qt.application.organization = "sp3cker"
@@ -500,7 +517,6 @@ ThemedWindow {
         id: aboutDialog
         colors: root.colors
         applicationSession: shell.session
-        applicationFont: Qt.font(shell.session.typographyFonts.body)
         baseFontPx: shell.session.baseFontPx
     }
 
@@ -564,7 +580,7 @@ ThemedWindow {
                 anchors.centerIn: parent
                 visible: !shell.session.songOpen && shell.sceneActive
                 text: qsTr("Open a project and song to play with the Swift core.")
-                font: root.font
+                font: Qt.font(root.chromeTypography.body)
                 color: shell.session.palette.windowText
                 horizontalAlignment: Text.AlignHCenter
             }
@@ -577,7 +593,7 @@ ThemedWindow {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         anchors.right: parent.right
-        width: Math.min(root.bodyFontPx * 32, parent.width * 0.48)
+        width: Math.min(root.chromeBaseFontPx * 32, parent.width * 0.48)
         z: 2
         Rectangle {
             anchors.fill: parent
@@ -587,21 +603,23 @@ ThemedWindow {
         Row {
             id: polyTitle
             width: parent.width
-            height: Math.ceil(bodyMetrics.height * 1.8)
+            height: Math.max(bodyMetrics.height, transportBar.toolExtent)
+                    + 2 * root.chromeSpacing.half + 2
             Text {
+                objectName: "shellPolyphonyTitle"
                 width: parent.width - polyClose.width
                 height: parent.height
-                leftPadding: root.bodyFontPx / 2
+                leftPadding: root.chromeSpacing.two
                 text: qsTr("Polyphony Debugger")
+                font: Qt.font(root.chromeTypography.body)
                 color: root.colors.windowText
-                font: Qt.font({family: root.font.family,
-                               pixelSize: root.font.pixelSize, weight: Font.Bold})
                 verticalAlignment: Text.AlignVCenter
             }
             Button {
                 id: polyClose
                 objectName: "shellPolyphonyClose"
                 height: parent.height
+                font: Qt.font(root.chromeTypography.body)
                 text: qsTr("×")
                 onClicked: shell.activate("view.polyphony_debugger")
             }
@@ -614,7 +632,9 @@ ThemedWindow {
             anchors.right: parent.right
             presenter: shell.session.polyphony
             colors: root.colors
-            applicationFont: Qt.font(shell.session.typographyFonts.body)
+            typography: root.chromeTypography
+            layoutSpaces: root.chromeSpacing
+            baseFontPx: root.chromeBaseFontPx
         }
         Timer {
             running: polyDock.visible && shell.session.songOpen
@@ -630,8 +650,8 @@ ThemedWindow {
         active: shell.session.songDockController().confirmation.length > 0
         sourceComponent: SongConfirmDialog {
             controller: shell.session.songDockController()
-            applicationFont: Qt.font(shell.session.typographyFonts.body)
-            baseFontPx: shell.session.baseFontPx
+            baseFontPx: root.chromeBaseFontPx
+            layoutSpaces: root.chromeSpacing
         }
         onLoaded: {
             if (status === Loader.Ready)
@@ -642,31 +662,28 @@ ThemedWindow {
         id: transportBar
         width: root.width
         songAvailable: shell.session.songOpen
-        baseFontPx: shell.session.baseFontPx
+        baseFontPx: root.chromeBaseFontPx
         presenter: shell.session.transportBarPresenter()
         shell: root.shellPresenter
         actionRevision: root.actionRevision
         colors: root.colors
-        toolbarFont: Qt.font({ family: root.font.family, pixelSize: baseFontPx,
-                               hintingPreference: Font.PreferNoHinting,
-                               features: { "tnum": 1 } })
-        clockFont: Qt.font({ family: monoFont.name, pixelSize: baseFontPx + 2,
-                             hintingPreference: Font.PreferNoHinting,
-                             features: { "tnum": 1 } })
+        typography: root.chromeTypography
+        layoutSpaces: root.chromeSpacing
     }
     footer: Rectangle {
-        implicitHeight: Math.ceil(bodyMetrics.height * 1.5)
+        implicitHeight: captionMetrics.height
         color: shell.session.palette.windowBackground
         Text {
+            objectName: "shellStatusText"
             anchors.left: parent.left
             anchors.right: polyMeter.visible ? polyMeter.left : parent.right
             anchors.top: parent.top
             anchors.bottom: parent.bottom
-            anchors.leftMargin: bodyMetrics.height / 2
-            anchors.rightMargin: bodyMetrics.height / 2
+            anchors.leftMargin: root.chromeSpacing.two
+            anchors.rightMargin: root.chromeSpacing.two
             text: shell.statusText
-            font: root.font
-            color: shell.session.palette.windowText
+            font: Qt.font(root.chromeTypography.caption)
+            color: root.colors.windowText
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
         }
@@ -674,7 +691,7 @@ ThemedWindow {
             id: polyMeter
             objectName: "shellPolyMeter"
             anchors.right: parent.right
-            anchors.rightMargin: bodyMetrics.height / 2
+            anchors.rightMargin: root.chromeSpacing.two
             anchors.verticalCenter: parent.verticalCenter
             spacing: bodyMetrics.advanceWidth(" ") / 2
             visible: presenter.polyMeterVisible
@@ -682,7 +699,7 @@ ThemedWindow {
             Text {
                 objectName: "shellPolyPcmCaption"
                 text: qsTr("PCM")
-                font: root.font
+                font: Qt.font(root.chromeTypography.body)
                 color: root.colors.windowText
             }
             Rectangle {
@@ -696,7 +713,7 @@ ThemedWindow {
                     anchors.leftMargin: polyMeter.spacing
                     anchors.rightMargin: polyMeter.spacing
                     text: polyMeter.presenter.pcmText
-                    font: root.font
+                    font: Qt.font(root.chromeTypography.bodyMono)
                     color: root.colors.polyphonyValueText
                     horizontalAlignment: Text.AlignRight
                     verticalAlignment: Text.AlignVCenter
@@ -704,14 +721,14 @@ ThemedWindow {
             }
             Text {
                 text: "·"
-                font: root.font
                 color: root.colors.windowText
+                font: Qt.font(root.chromeTypography.body)
             }
             Text {
                 objectName: "shellPolyCgbCaption"
                 text: qsTr("CGB")
-                font: root.font
                 color: root.colors.windowText
+                font: Qt.font(root.chromeTypography.body)
             }
             Rectangle {
                 implicitWidth: cgbValue.implicitWidth + polyMeter.spacing * 2
@@ -724,7 +741,7 @@ ThemedWindow {
                     anchors.leftMargin: polyMeter.spacing
                     anchors.rightMargin: polyMeter.spacing
                     text: polyMeter.presenter.cgbText
-                    font: root.font
+                    font: Qt.font(root.chromeTypography.bodyMono)
                     color: root.colors.polyphonyValueText
                     horizontalAlignment: Text.AlignRight
                     verticalAlignment: Text.AlignVCenter
@@ -733,8 +750,8 @@ ThemedWindow {
             Text {
                 visible: polyMeter.presenter.lostVisible
                 text: "·"
-                font: root.font
                 color: root.colors.windowText
+                font: Qt.font(root.chromeTypography.body)
             }
             Rectangle {
                 visible: polyMeter.presenter.lostVisible
@@ -748,8 +765,8 @@ ThemedWindow {
                     anchors.leftMargin: polyMeter.spacing
                     anchors.rightMargin: polyMeter.spacing
                     text: polyMeter.presenter.lostText
-                    font: root.font
                     color: root.colors.polyphonyValueText
+                    font: Qt.font(root.chromeTypography.body)
                     horizontalAlignment: Text.AlignRight
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -757,7 +774,7 @@ ThemedWindow {
             Text {
                 visible: polyMeter.presenter.lostVisible
                 text: qsTr("notes lost")
-                font: root.font
+                font: Qt.font(root.chromeTypography.body)
                 color: root.colors.windowText
             }
         }
@@ -768,7 +785,7 @@ ThemedWindow {
         objectName: "shellGridContextMenu"
         parent: Overlay.overlay
         popupType: Popup.Item
-        font: root.font
+        font: Qt.font(root.chromeTypography.body)
         palette.window: root.colors.menuBackground
         palette.dark: root.colors.outline
         onAboutToShow: ++root.actionRevision
@@ -784,7 +801,7 @@ ThemedWindow {
                     : down ? root.colors.buttonPressedText : root.colors.windowText
                 Accessible.description: shortcutText
                 hoverEnabled: true
-                padding: root.bodyFontPx / 4
+                padding: root.chromeSpacing.one
                 contentItem: Item {
                     implicitWidth: caption.implicitWidth + (hint.visible
                         ? hint.implicitWidth + bodyMetrics.averageCharacterWidth * 2 : 0)

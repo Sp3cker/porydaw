@@ -5,13 +5,18 @@ Deleted in: S6 flip cutover (feature/swift-project-store, base 2d1c92d0)
 Retirement: historical deletion record only; the deleted C++ source above is recoverable from the Reference revision and Original SHA-256, never from HEAD. The dispositions and S citations below were established while the file was live and were not re-verified in this cutover; no execution or parity claim is made by this record.
 Original: src/checks/visual/chrome.cpp
 Original SHA-256: 4d56d2d67f8f8c009ea37b7f36e0fb997930c3a110a7e1e3d06bf546a514d1f5
-Swift counterpart: src/checks/editorqml/tst_ShellPolyphony.qml (polyphony rows only; not yet executed)
+Swift counterpart: src/checks/editorqml/tst_ShellPolyphony.qml (polyphony rows only)
+Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml (shell chrome typography and window geometry)
+Additional Swift counterpart: src/checks/editorqml/tst_ShellTransport.qml (toolbar typography and geometry tokens)
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-This file: 24 assertion sites: 3 GAP, 4 PARTIAL, 17 RETIRED-REPRESENTATION. A020/A021/A023/A024 now have a mounted Swift/QML responsive-layout predicate and profile captures, pending orchestrator execution. A001 covers a shared screenshot helper and A018 the loaded-shell composite; both remain GAP because this polyphony suite does not cover their other captured surfaces. A019/A022 retire the nullable C++ MidiTimeline::build pointer checks, while A007 remains GAP pending song-name validation correspondence.
+This file: 24 assertion sites: 3 GAP, 4 PARTIAL, 17 RETIRED-REPRESENTATION. A020/A021/A023/A024 have a mounted Swift/QML responsive-layout predicate and profile captures (S001), executed once per DPR/font profile at the base that profile captures, with nine named regions per state compared against the frozen baseline within px/2 to px*2 tolerances. A001 covers a shared screenshot helper and A018 the loaded-shell composite; both remain GAP because this polyphony suite does not cover their other captured surfaces. A019/A022 retire the nullable C++ MidiTimeline::build pointer checks, while A007 remains GAP pending song-name validation correspondence.
+
+Task 30 note (shell chrome typography and geometry): the mounted predicates indexed below as S002-S008 carry the shell-chrome role and geometry facts these captures depend on but no A site of this ledger asserts: the panel em follows the published session base, the channel-cell width follows fontPx(46/12), the window mounts at fontPx(92) by fontPx(57), and the transport inset and toolbar height follow the One and Two layout tokens. They prove no A site here and are indexed as the surface current predicate set. This bookkeeping pass re-ran only deno task proof check; no lane was re-run and no parser result is a semantic-parity claim.
 
 Command: deno task verify --filter visual --verbose
-Result: pending integrated run.
+Result: pending integrated run; the native chrome lane still builds and runs in no target.
+Verification: build/proof-evidence/shell-polyphony.json records the shell-polyphony lane executing test_visualProfiles once per profile child (macos-dpr1-font12, macos-dpr1-font16, macos-dpr2-font12, macos-dpr2-font16), test_mountedTypographyAndCellGeometry and test_viewActionAndEventNavigation (S001-S003, S008); build/proof-evidence/shellwindow.json (S004, S005) and build/proof-evidence/shell-transport.json (S006, S007) record the remaining functions. Execution is recorded; the lane PASS wording in the mappings below is the recorded implementer run, not re-observed by this bookkeeping pass.
 
 
 No _data rows: each scenario runs once per theme method. Polyphony scenarios run a narrow->wide resize sequence guarded by QTRY layout predicates with clearFocus between grabs so no caret lands in the image. shellLoaded is a strict sequence: env root, async project open, song open, tab ready, select row through the production panel API, uiTick, Quick frame wait, composite, compare. showSettled re-applies the requested size after the native first-show placement.
@@ -209,7 +214,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A020 | VisualChromeTest::polyphonyPanelVanilla | src/checks/visual/chrome.cpp:676
 Disposition: PARTIAL
-Mapping/reason: tst_ShellPolyphony.qml test_visualProfiles captured the production PolyphonyPanel with an isolated Swift fixture and compared narrow vanilla geometry and responsive state against the frozen widget baseline across four DPR/font profiles; deno task verify:shell --filter shell-polyphony --verbose passed.
+Mapping/reason: Partial: tst_ShellPolyphony.qml test_visualProfiles mounts the production PolyphonyPanel with an isolated fixture at the frozen narrow profile (baseline image 380x760, the size this site resizes to before the grab) and compares pane.wideLayout against that profile captured responsive state (S001, narrow-vanilla resolves false) across the four DPR/font profiles; the same loop confirms the profile child captured its declared base before mounting polyphony (S008) and asserts the panel em against the published session base (S002). Unproved: the native pixel comparison of polyphony/narrow-vanilla that this scenario also drives has no converted-window pixel owner, and the pane base is the Swift session base rather than the Qt widget body font. Executed evidence: build/proof-evidence/shell-polyphony.json. [S001][S002][S008]
 Source context since previous assertion:
 
       PolyphonyPanel panel;
@@ -229,7 +234,7 @@ Original expression:
 
 A021 | VisualChromeTest::polyphonyPanelVanilla | src/checks/visual/chrome.cpp:681
 Disposition: PARTIAL
-Mapping/reason: tst_ShellPolyphony.qml test_visualProfiles captured the production PolyphonyPanel with an isolated Swift fixture and compared wide vanilla geometry and responsive state against the frozen widget baseline across four DPR/font profiles; deno task verify:shell --filter shell-polyphony --verbose passed.
+Mapping/reason: Partial: tst_ShellPolyphony.qml test_visualProfiles mounts the production PolyphonyPanel with an isolated fixture at the frozen wide profile (baseline image 900x600, the size this site resizes to before the second grab) and compares pane.wideLayout against that profile captured responsive state (S001, wide-vanilla resolves true) across the four DPR/font profiles; the same loop confirms the profile child captured its declared base before mounting polyphony (S008) and asserts the panel em against the published session base (S002). Unproved: the native pixel comparison of polyphony/wide-vanilla that this scenario also drives has no converted-window pixel owner, and the pane base is the Swift session base rather than the Qt widget body font. Executed evidence: build/proof-evidence/shell-polyphony.json. [S001][S002][S008]
 Source context since previous assertion:
 
       compareShown(QStringLiteral("polyphony/narrow-vanilla"), panel, polyphonyRegions(panel));
@@ -244,7 +249,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A023 | VisualChromeTest::polyphonyPanelDark | src/checks/visual/chrome.cpp:704
 Disposition: PARTIAL
-Mapping/reason: tst_ShellPolyphony.qml test_visualProfiles captured the production PolyphonyPanel with an isolated Swift fixture and compared narrow dark geometry and responsive state against the frozen widget baseline across four DPR/font profiles; deno task verify:shell --filter shell-polyphony --verbose passed.
+Mapping/reason: Partial: tst_ShellPolyphony.qml test_visualProfiles mounts the production PolyphonyPanel with an isolated fixture at the frozen narrow profile (baseline image 380x760, the size this site resizes to before the grab) after restoreAppearance applies the dark-neutral-high appearance the state names, and compares pane.wideLayout against that profile captured responsive state (S001, narrow-darkneutralhigh resolves false) across the four DPR/font profiles; the same loop confirms the profile child captured its declared base before mounting polyphony (S008) and asserts the panel em against the published session base (S002). Unproved: the native pixel comparison of polyphony/narrow-darkneutralhigh that this scenario also drives has no converted-window pixel owner, and the pane base is the Swift session base rather than the Qt widget body font. Executed evidence: build/proof-evidence/shell-polyphony.json. [S001][S002][S008]
 Source context since previous assertion:
 
       PolyphonyPanel panel;
@@ -264,7 +269,7 @@ Original expression:
 
 A024 | VisualChromeTest::polyphonyPanelDark | src/checks/visual/chrome.cpp:710
 Disposition: PARTIAL
-Mapping/reason: tst_ShellPolyphony.qml test_visualProfiles captured the production PolyphonyPanel with an isolated Swift fixture and compared wide dark geometry and responsive state against the frozen widget baseline across four DPR/font profiles; deno task verify:shell --filter shell-polyphony --verbose passed.
+Mapping/reason: Partial: tst_ShellPolyphony.qml test_visualProfiles mounts the production PolyphonyPanel with an isolated fixture at the frozen wide profile (baseline image 900x600, the size this site resizes to before the second grab) after restoreAppearance applies the dark-neutral-high appearance the state names, and compares pane.wideLayout against that profile captured responsive state (S001, wide-darkneutralhigh resolves true) across the four DPR/font profiles; the same loop confirms the profile child captured its declared base before mounting polyphony (S008) and asserts the panel em against the published session base (S002). Unproved: the native pixel comparison of polyphony/wide-darkneutralhigh that this scenario also drives has no converted-window pixel owner, and the pane base is the Swift session base rather than the Qt widget body font. Executed evidence: build/proof-evidence/shell-polyphony.json. [S001][S002][S008]
 Source context since previous assertion:
 
       compareShown(QStringLiteral("polyphony/narrow-darkneutralhigh"), panel,
@@ -295,4 +300,26 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-No Swift counterpart identified; no S-items.
+S001 | test_visualProfiles | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "the widget's responsive breakpoint matches the frozen profile"
+
+S002 | test_visualProfiles | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "panel em follows the published base instead of body"
+
+S003 | test_mountedTypographyAndCellGeometry | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "channel cell width follows fontPx(46/12)"
+
+S004 | test_chromeTypographyAndWindowGeometry | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "window width follows fontPx(92)"
+
+S005 | test_chromeTypographyAndWindowGeometry | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "window height follows fontPx(57)"
+
+S006 | test_chromeTypographyAndSpacing | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "transport inset uses the One token"
+
+S007 | test_visualReferenceProfiles | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "toolbar height follows the base icon and Two token"
+
+S008 | test_visualProfiles | src/checks/editorqml/tst_ShellPolyphony.qml
+Anchor: message "profile child captures its base before mounting polyphony"

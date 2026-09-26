@@ -18,6 +18,16 @@ TestCase {
     ShellQmlBootstrap { id: bootstrap }
     PolyphonyShellProbe { id: probe }
     Component { id: shellComponent; ShellWindow { width: 960; height: 820; visible: true } }
+    Component {
+        id: profileShellComponent
+        ShellWindow {
+            width: 960
+            height: 820
+            visible: true
+            typographyCaptureFont: Qt.font({ pixelSize: probe.profileName.indexOf("font16") >= 0
+                                                       ? 16 : 12 })
+        }
+    }
     Component { id: referenceComponent; PolyphonyPanel {} }
 
     function waitForNative(predicate, timeoutMs) {
@@ -28,7 +38,7 @@ TestCase {
         Qt.application.name = bootstrap.settingsApplicationName
         Qt.application.organization = "sp3cker"
         Qt.application.domain = ""
-        shell = shellComponent.createObject(null)
+        shell = (probe.profileName.length > 0 ? profileShellComponent : shellComponent).createObject(null)
         verify(shell, "the production shell mounts")
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
@@ -64,6 +74,42 @@ TestCase {
 
     function panel() { return findChild(shell, "polyphonyPanel") }
     function dock() { return findChild(shell, "shellPolyphonyDock") }
+
+    function test_mountedTypographyAndCellGeometry() {
+        const presenter = createShell()
+        presenter.activate("view.polyphony_debugger")
+        const session = presenter.session
+        const pane = panel()
+        const body = session.typographyFonts.body
+        const bold = session.typographyFonts.bodyBold
+        const caption = session.typographyFonts.caption
+        compare(pane.em, session.baseFontPx, "panel em follows the session base")
+        compare(pane.gap, session.layoutSpaces.two, "panel gap follows the Two token")
+        for (const name of ["polyphonyUsageHeading", "polyphonyOverflowHeading",
+                            "polyphonyLogHeading"]) {
+            const heading = findChild(pane, name)
+            compare(heading.font.family, bold.family, name + " uses bodyBold family")
+            compare(heading.font.pixelSize, bold.pixelSize, name + " uses bodyBold size")
+            compare(heading.font.weight, bold.weight, name + " uses bodyBold weight")
+        }
+        for (const name of ["polyphonyInvert", "polyphonyReset", "polyphonyShadowNotice",
+                            "polyphonyTableHeader", "polyphonyEmpty",
+                            "polyphonyGroupCaption"]) {
+            const text = findChild(pane, name)
+            verify(text !== null, name + " mounts in the polyphony panel")
+            compare(text.font.family, body.family, name + " uses the body family")
+            compare(text.font.pixelSize, body.pixelSize, name + " uses the body size")
+            compare(text.font.weight, body.weight, name + " keeps regular body weight")
+        }
+        const cell = findChild(pane, "polyphonyChannelCell")
+        verify(cell !== null, "mounted channel group has a rendered cell")
+        compare(cell.width, Math.round(session.baseFontPx * 46 / 12),
+                "channel cell width follows fontPx(46/12)")
+        const label = cell.children[0]
+        compare(label.font.family, caption.family, "channel cell label uses caption family")
+        compare(label.font.pixelSize, caption.pixelSize, "channel cell label uses caption size")
+        compare(label.font.weight, caption.weight, "channel cell label keeps caption weight")
+    }
 
     function test_viewActionAndEventNavigation() {
         var presenter = createShell()
@@ -107,9 +153,10 @@ TestCase {
         verify(session.songOpen, "the mounted panel has a live document")
 
         var fixture = probe.fixturePresenter()
-        referencePane = referenceComponent.createObject(testCase, {
-            presenter: fixture, colors: session.palette, applicationFont: shell.font,
-            width: 380, height: 600
+        referencePane = referenceComponent.createObject(shell.contentItem, {
+            presenter: fixture, colors: session.palette,
+            typography: session.typographyFonts, layoutSpaces: session.layoutSpaces,
+            baseFontPx: session.baseFontPx, width: 380, height: 600
         })
         verify(referencePane, "the production pane accepts the isolated diagnostic fixture")
         var row = findChild(referencePane, "polyphonyEventRow_2")
@@ -121,6 +168,15 @@ TestCase {
         verify(location.y >= 0 && location.y + row.height <= referencePane.height,
                "the positioned event row receives actual pointer input")
         var live = findChild(referencePane, "polyphonyEventRow_0")
+        const body = session.typographyFonts.body
+        const eventText = row.children[0]
+        const counterText = findChild(referencePane, "polyphonyCounterText")
+        verify(counterText !== null, "overflow counter text mounts in the fixture")
+        for (const text of [eventText, counterText]) {
+            compare(text.font.family, body.family, "polyphony data row uses the body family")
+            compare(text.font.pixelSize, body.pixelSize, "polyphony data row uses the body size")
+            compare(text.font.weight, body.weight, "polyphony data row keeps regular body weight")
+        }
         compare(probe.lastJumpTick(), -1, "no event has requested a navigation")
         mouseClick(live, live.width / 2, live.height / 2)
         compare(probe.lastJumpTick(), -1,
@@ -159,11 +215,14 @@ TestCase {
             skip("profile captures run in dedicated DPR children")
         var px = profile.indexOf("font16") >= 0 ? 16 : 12
         var presenter = createShell()
-        shell.font.pixelSize = px
+        compare(presenter.session.baseFontPx, px,
+                "profile child captures its base before mounting polyphony")
         var fixture = probe.fixturePresenter()
-        referencePane = referenceComponent.createObject(testCase, {
+        referencePane = referenceComponent.createObject(shell.contentItem, {
             presenter: fixture, colors: presenter.session.palette,
-            applicationFont: shell.font, width: 380, height: 600
+            typography: presenter.session.typographyFonts,
+            layoutSpaces: presenter.session.layoutSpaces,
+            baseFontPx: presenter.session.baseFontPx, width: 380, height: 600
         })
         var pane = referencePane
         verify(pane, "the production polyphony pane mounts with the isolated fixture")
@@ -189,7 +248,8 @@ TestCase {
                     verify(waitForPolish(usageGroups[group].children[1]),
                            "channel flow relayout settles at the profile width")
             }
-            compare(pane.applicationFont.pixelSize, px, "the requested font reaches the production pane")
+            compare(pane.em, presenter.session.baseFontPx,
+                    "panel em follows the published base instead of body")
             compare(pane.Screen.devicePixelRatio, baseline.image.dpr,
                     "the profile child renders at the widget baseline DPR")
             compare(Math.round(pane.width), baseline.image.width, "the pane matches widget width")

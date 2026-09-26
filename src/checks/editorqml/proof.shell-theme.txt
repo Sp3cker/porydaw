@@ -2,9 +2,11 @@ Assertion correspondence: editorqml/tst_Theme.qml
 
 Reference revision: 03a190a0bf1bba3a007f31bf74eb01ed362b92ce
 Original: src/checks/editorqml/tst_Theme.qml
-Original SHA-256: c99a86a08b0e926ebc93d63e14f6b3e4d3d6f9f6407c9c158611eb619eb37db9
+Original SHA-256: d2b1335f260c9bd7a4ed3686687e1e63ed213a94a01f8a8766280a09d1723489
 Swift counterpart: src/checks/themecolor/ThemeColorChecks.swift
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
+
+Task 30 note (shell chrome typography and geometry): the Original SHA-256 above was re-pinned to the final src/checks/editorqml/tst_Theme.qml after task 30 added the mounted context-menu typography and padding assertions to test_menuChromeFollowsTheme (menu font family and size equal to the published body role, context-item weight inherited, context-item padding equal to layoutSpaces.one); the Reference revision above records the deleted C++ crosswalk revision and does not contain this QML counterpart, so this hash pins the counterpart file itself, as elsewhere in this corpus. The new predicates add observations to the chrome crosswalk bullet below and are indexed as S001-S004; this ledger still has no assertion sites. This bookkeeping pass re-ran only deno task proof check; no lane was re-run and no parser result is a semantic-parity claim.
 
 No assertion sites.
 
@@ -30,6 +32,7 @@ Command: deno task verify:shell --filter shell-theme --verbose
 Result: PASS shell-theme (1/2 ok, 1 skipped); Finished testing of Theme.
 Command: deno task verify:shell --filter shellwindow --verbose
 Result: PASS shellwindow (1/2 ok, 1 skipped); Finished testing of ShellWindow.
+Task 30 execution evidence: build/proof-evidence/shell-theme.json and build/proof-evidence/shellwindow.json record test_menuChromeFollowsTheme and test_chromeTypographyAndWindowGeometry executing on the frozen tree; the PASS results above are the earlier recorded runs and were not re-observed by this bookkeeping pass.
 
 Execution and ownership
 The entry runs offscreen with a private native Settings domain per run
@@ -65,7 +68,10 @@ Source-to-new-observation mapping (source predicate remains authoritative):
   and switches the theme, observing the item surface, the item-hover
   surface, the disabled ink and cross-theme propagation. Chrome proof
   A007 (hover fill), A012-A014 (value pins via swiftcore); color menu-alias
-  sites A006-A010.
+  sites A006-A010. Task 30 adds the mounted menu typography and padding
+  observations to that same reading: menu.font family and pixelSize equal the
+  published body role, the context item keeps the body weight, and the
+  context-item padding equals layoutSpaces.one (S001-S004, tst_Theme.qml:206-210).
 * tst_themelayout_settings.cpp:159-193 dialog commit direction.
   The dark/80 persistence row of test_themePersistence plus
   themeCommitPreviewRevertChecks in swiftcore observe the committed values;
@@ -78,3 +84,17 @@ sample-editor legibility rows (PARTIAL in the color proof); the eleven-widget
 grab sweep (PARTIAL in the chrome proof); native macOS MenuBar rendering,
 which is platform-owned and unthemed by the Swift shell; audio, songs and
 drawer behavior, which this song-less lane never stages.
+
+Swift assertion predicates
+
+S001 | test_menuChromeFollowsTheme | src/checks/editorqml/tst_Theme.qml
+Anchor: message "grid context menu resolves body family"
+
+S002 | test_menuChromeFollowsTheme | src/checks/editorqml/tst_Theme.qml
+Anchor: message "grid context menu resolves body size"
+
+S003 | test_menuChromeFollowsTheme | src/checks/editorqml/tst_Theme.qml
+Anchor: message "context items inherit body weight"
+
+S004 | test_menuChromeFollowsTheme | src/checks/editorqml/tst_Theme.qml
+Anchor: message "context-item padding follows the One token"
