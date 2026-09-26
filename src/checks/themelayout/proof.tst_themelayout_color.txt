@@ -19,6 +19,24 @@ theme.primary/theme.accent, and test_themePersistence still observes the seeded
 mode and contrast, the applied surfaces and the canonical write-back.
 Dispositions, cited message literals and the pinned original hash are unchanged.
 
+Task 42 note (fork scale tint): GridPalette.scaleHighlight is now the fork tint
+"#33B595FC" (src/swift/app/timeline/GridPalette.swift:253) and GridScene.rebuildStatic
+paints that one tint over every scale-member row, so themeAssertComplete
+(ThemeColorChecks.swift:229-251) can no longer route scaleHighlight through its generic
+"<what>: <name> is fully opaque (<value>)" branch: the field is translucent by design and
+carries the message "<what>: scaleHighlight retains the fork tint". The two completeTheme
+sites were re-evaluated individually - A023 (tst_themelayout_color.cpp:140
+QVERIFY(completeTheme(theme))) and A031 (:180 QVERIFY(completeTheme(adjusted))) - and now
+cite S013 beside S004/S005; no row of this ledger ever cited the old flat-opacity instance
+for this field, so nothing was re-pointed. The gridContrast delta rows were re-anchored in
+the same pass: A032 through A037 now cite their message anchors S014 through S019 beside
+the existing S005/S009, and A038 moves from MATCHED to PARTIAL because its counterpart
+S020 sits in the luminance branch that no shipped preset reaches (the executed lane shows
+the darkens branch for all three presets). The pinned original hash, the S001-S012
+entries and every previously cited message literal are unchanged; this pass only adds
+citations and the single A038 disposition change above.
+
+
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS swiftcore (1/24 ok); SwiftCoreTest::themeColor PASS, 0 failed.
 Direct slot run: build/porydaw_checks --swiftcore <scratch> build/mid2agb --qt themeColor
@@ -28,6 +46,10 @@ Result: PASS shell-theme (1/2 ok, 1 skipped); Finished testing of Theme.
 Command: deno task verify:shell --filter shellwindow --verbose
 Result: PASS shellwindow (1/2 ok, 1 skipped); Finished testing of ShellWindow.
 Task 36 execution evidence: the task-36 lane runs refreshed build/proof-evidence/swiftcore-themecolor.json, shell-theme.json and shellwindow.json, which list the cited predicates executing; the task-36 implementer reported swiftcore 12/12 and the full shell lane 26/26 green. The PASS results above are the earlier recorded runs and were not re-observed by this bookkeeping pass.
+Task 42 execution evidence: build/proof-evidence/swiftcore-themecolor.json carries the three
+message rows mode=<preset>: scaleHighlight retains the fork tint, so S013 classifies as
+executed under deno task proof check --executed; that lane write was not re-observed by
+this bookkeeping pass.
 
 Native ownership: runThemeLayoutThemeCheck (defined in
 src/checks/themelayout/themelayoutcheck.cpp) launches the themecheck lane;
@@ -125,7 +147,8 @@ Mapping: S001
 
 A023 | ThemeLayoutTest::themeCompleteness | src/checks/themelayout/tst_themelayout_color.cpp:140
 Disposition: MATCHED
-Mapping: S004
+Mapping: S004, S013
+Mapping/reason: S004 still matches completeTheme (themeAssertComplete mirrors the fork's per-role completeness loop) and S013 (ThemeColorChecks.swift:240-243) pins the one clause task 42 moved out of that loop's generic fully-opaque branch: channels a == 51 && r == 181 && g == 149 && b == 252 for scaleHighlight, one row per preset.
 
 A024 | ThemeLayoutTest::themeCompleteness | src/checks/themelayout/tst_themelayout_color.cpp:142
 Disposition: MATCHED
@@ -157,35 +180,43 @@ Mapping: S003
 
 A031 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:180
 Disposition: MATCHED
-Mapping: S005
+Mapping: S005, S013
+Mapping/reason: The same completeTheme clause for the contrast-adjusted palette (themeGridContrastChecks calls themeAssertComplete at ThemeColorChecks.swift:553 for contrast 0/50/100 per preset), so the adjusted palette carries the S013 scaleHighlight pin as well.
 
 A032 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:185
 Disposition: MATCHED
-Mapping: S005, S009
+Mapping: S005, S009, S014
+Mapping/reason: S014 (ThemeColorChecks.swift:549-550) pins the default-contrast palette's gridLine to the preset's grid value, the Swift counterpart of the original's adjustedGrid == originalGrid return for themes::defaultGridLineContrast.
 
 A033 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:191
 Disposition: MATCHED
-Mapping: S005, S009
+Mapping: S005, S009, S015
+Mapping/reason: S015 (ThemeColorChecks.swift:558-560) requires themeRefContrast(softened.gridLine, row.roll) < themeRefContrast(base.gridLine, row.roll), the same grid-line-versus-roll contrast drop the original asserts for contrast 0.
 
 A034 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:193
 Disposition: MATCHED
-Mapping: S005, S009
+Mapping: S005, S009, S016
+Mapping/reason: S016 (ThemeColorChecks.swift:561-563) requires themeRefContrast(strengthened.gridLine, row.roll) > themeRefContrast(base.gridLine, row.roll), the contrast-100 counterpart of the original's adjustedContrast > originalContrast.
 
 A035 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:195
 Disposition: MATCHED
-Mapping: S005, S009
+Mapping: S005, S009, S017
+Mapping/reason: S017 (ThemeColorChecks.swift:564-565) requires the contrast-0 grid alpha below the default grid alpha, the same adjustedGrid.alpha() < originalGrid.alpha() clause.
 
 A036 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:197
 Disposition: MATCHED
-Mapping: S005, S009
+Mapping: S005, S009, S018
+Mapping/reason: S018 (ThemeColorChecks.swift:566-567) requires the contrast-100 grid alpha above the default grid alpha, the same adjustedGrid.alpha() > originalGrid.alpha() clause.
 
 A037 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:203
 Disposition: MATCHED
-Mapping: S005
+Mapping: S005, S019
+Mapping/reason: S019 (ThemeColorChecks.swift:572-574) takes the base-luminance-not-above-roll branch and requires the contrast-100 grid luminance below the default, the original's adjustedLuminance < originalLuminance branch.
 
 A038 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:205
-Disposition: MATCHED
-Mapping: S005
+Disposition: PARTIAL
+Mapping: S005, S020
+Mapping/reason: S020 (ThemeColorChecks.swift:576-578) is the original's else branch - contrast-100 grid luminance above the default when the default sits above the roll surface - but no shipped preset reaches it: the executing themecolor lane carries only the darkens row for vanilla, dark-neutral-high and immaterial, so this clause has a counterpart predicate and no executed observation of its own.
 
 A039 | ThemeLayoutTest::laneAndWaveformLegibility | src/checks/themelayout/tst_themelayout_color.cpp:245
 Disposition: PARTIAL
@@ -320,3 +351,35 @@ Anchor: message "vanilla" #1
 
 S012 | test_bThemeRepairThroughProductionShell | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "vanilla" #1
+
+S013 | themeAssertComplete | src/checks/themecolor/ThemeColorChecks.swift
+Anchor: message "\(what): scaleHighlight retains the fork tint"
+  ThemeColorChecks.swift:240-243 report.expect(channels.a == 51 && channels.r == 181 && channels.g == 149 && channels.b == 252) for the scaleHighlight field of every applied palette - one row per preset (mode=vanilla, dark-neutral-high, immaterial) and per adjusted contrast via themeGridContrastChecks.
+
+S014 | themeGridContrastChecks | src/checks/themecolor/ThemeColorChecks.swift
+Anchor: message "\(tag): default contrast is the identity"
+  ThemeColorChecks.swift:549-550 report.expectEqual(expected: row.grid, actual: base.gridLine) with base = the contrast-50 palette - one row per preset.
+
+S015 | themeGridContrastChecks | src/checks/themecolor/ThemeColorChecks.swift
+Anchor: message "\(tag): contrast 0 loses grid contrast"
+  ThemeColorChecks.swift:558-560 report.expect(themeRefContrast(softened.gridLine, row.roll) < themeRefContrast(base.gridLine, row.roll)) with softened = the contrast-0 palette - one row per preset.
+
+S016 | themeGridContrastChecks | src/checks/themecolor/ThemeColorChecks.swift
+Anchor: message "\(tag): contrast 100 gains grid contrast"
+  ThemeColorChecks.swift:561-563 report.expect(themeRefContrast(strengthened.gridLine, row.roll) > themeRefContrast(base.gridLine, row.roll)) with strengthened = the contrast-100 palette - one row per preset.
+
+S017 | themeGridContrastChecks | src/checks/themecolor/ThemeColorChecks.swift
+Anchor: message "\(tag): contrast 0 lowers grid alpha"
+  ThemeColorChecks.swift:564-565 report.expect(themeRefChannels(softened.gridLine).a < themeRefChannels(base.gridLine).a) - one row per preset.
+
+S018 | themeGridContrastChecks | src/checks/themecolor/ThemeColorChecks.swift
+Anchor: message "\(tag): contrast 100 raises grid alpha"
+  ThemeColorChecks.swift:566-567 report.expect(themeRefChannels(strengthened.gridLine).a > themeRefChannels(base.gridLine).a) - one row per preset.
+
+S019 | themeGridContrastChecks | src/checks/themecolor/ThemeColorChecks.swift
+Anchor: message "\(tag): contrast 100 darkens away from the surface"
+  ThemeColorChecks.swift:571-574 in the baseLuminance <= rollLuminance branch: report.expect(themeRefLuminance(strengthened.gridLine) < themeRefLuminance(base.gridLine)) - one row per preset.
+
+S020 | themeGridContrastChecks | src/checks/themecolor/ThemeColorChecks.swift
+Anchor: message "\(tag): contrast 100 lightens away from the surface"
+  ThemeColorChecks.swift:575-578 in the baseLuminance > rollLuminance branch: report.expect(themeRefLuminance(strengthened.gridLine) > themeRefLuminance(base.gridLine)) - one row per preset.

@@ -91,6 +91,27 @@ func runScaleEditingChecks(_ report: CheckReport, session: DocumentSession) {
     } else {
         report.fail(boundaryID, "could not insert the top-pitch fixture note")
     }
+    if let noteID = try? document.addNotes([
+        NewNote(track: track, tick: tBase, pitch: 127, duration: duration, velocity: 100)
+    ]).first {
+        session.setScale(root: 0)
+        session.setScale(type: .major)
+        session.setScale(fold: true)
+        session.setSelectedNotes([noteID])
+        let beforeCommand = document.history.currentIdentity
+        grid.performCommand(command: EditCommand.transposeUp.rawValue)
+        report.expect(document.history.currentIdentity == beforeCommand, cppID: boundaryID,
+                      message: "folded out-of-range Up records no edit")
+        report.expect(document.note(noteID)?.pitch == 127, cppID: boundaryID,
+                      message: "folded out-of-range Up keeps the top scale pitch in place")
+        session.setScale(fold: false)
+        guard restoreDocument() else {
+            report.fail(boundaryID, "folded boundary probe could not restore the entry document")
+            return
+        }
+    } else {
+        report.fail(boundaryID, "could not insert the folded top-pitch fixture note")
+    }
     runFoldScaleIntegrationChecks(report, session: session, grid: grid,
                                   base: tBase, duration: duration)
 }
@@ -123,6 +144,8 @@ private func runFoldScaleIntegrationChecks(
         session.setSelectedNotes(originalSelection)
         report.expect(bytes != nil && (try? document.state.file.encoded()) == bytes,
                       cppID: id, message: "scale editing leaves the fixture MIDI unchanged")
+        report.expect(bytes != nil && (try? document.state.file.encoded()) == bytes,
+                      cppID: id, message: "fold edits restore the fixture MIDI bytes")
     }
 
     session.setScale(root: 0)
@@ -137,11 +160,20 @@ private func runFoldScaleIntegrationChecks(
                   && session.scaleProjection.highlight
                   && document.history.currentIdentity == identity,
                   cppID: id, message: "root and Highlight change the live tab without editing MIDI")
+    session.setScale(fold: true)
+    session.setScale(fold: false)
+    if document.engineTracks.usedTrackCount > 1 {
+        let other = track == 0 ? 1 : 0
+        session.selectPrimaryTrack(other)
+        session.selectPrimaryTrack(track)
+    }
+    report.expect(document.history.currentIdentity == identity, cppID: id,
+                  message: "scale view changes push no history entry")
 
     guard let ids = try? document.addNotes([
         NewNote(track: track, tick: base, pitch: 60, duration: duration, velocity: 100),
         NewNote(track: track, tick: base + duration * 2, pitch: 61,
-                duration: duration, velocity: 100),
+                duration: duration * 24, velocity: 100),
         NewNote(track: track, tick: base + duration * 4, pitch: 60,
                 duration: duration, velocity: 100),
     ]), ids.count == 3 else {
@@ -208,6 +240,11 @@ private func runFoldScaleIntegrationChecks(
     report.expect(session.scaleProjection.fold && session.scaleProjection.highlight == priorHighlight,
                   cppID: id, message: "track selection keeps per-tab Fold and Highlight settings")
     session.selectPrimaryTrack(track)
+    session.setScale(highlight: false)
+    session.selectPrimaryTrack(alternate)
+    report.expect(session.scaleProjection.fold && !session.scaleProjection.highlight,
+                  cppID: id, message: "selected-track change preserves Fold and leaves Highlight off")
+    session.selectPrimaryTrack(track)
     session.setSelectedNotes(ids)
     grid.performCommand(command: EditCommand.transposeUp.rawValue)
     report.expect(document.note(ids[0])?.pitch == 62
@@ -220,6 +257,10 @@ private func runFoldScaleIntegrationChecks(
         report.fail(id, "could not undo the folded degree nudge")
         return
     }
+    report.expect(document.note(ids[0])?.pitch == 60
+                  && document.note(ids[1])?.pitch == 61
+                  && document.note(ids[2])?.pitch == 60,
+                  cppID: id, message: "one undo restores a folded nudge pass")
     session.setSelectedNotes([ids[0]])
     grid.performCommand(command: EditCommand.transposeUpOctave.rawValue)
     report.expect(document.note(ids[0])?.pitch == 72, cppID: id,
@@ -232,4 +273,97 @@ private func runFoldScaleIntegrationChecks(
     grid.performCommand(command: EditCommand.transposeUp.rawValue)
     report.expect(document.note(ids[1])?.pitch == 62, cppID: id,
                   message: "occupied off-scale exception nudges to the next scale degree")
+    guard document.history.undoDocument() else {
+        report.fail(id, "could not undo the off-scale degree nudge")
+        return
+    }
+    checkFoldPointerAndLifecycle(report, session: session, grid: grid,
+                                 track: track, base: base, duration: duration,
+                                 exception: ids[1])
+}
+
+@MainActor
+private func checkFoldPointerAndLifecycle(
+    _ report: CheckReport, session: DocumentSession, grid: PianoGrid,
+    track: Int, base: Tick, duration: Tick, exception: NoteID
+) {
+    let id = "swiftcore/PianoRoll::scaleFoldSessionIntegration"
+    let document = session.document
+    let occupied = Set(document.notes(in: track).map(\.pitch))
+    guard let pitch = (1..<128).first(where: {
+        $0 % 12 == 1 && !occupied.contains(UInt8($0))
+    }), let added = try? document.addNotes([
+        NewNote(track: track, tick: base + duration * 10, pitch: UInt8(pitch),
+                duration: duration, velocity: 100)
+    ]).first else {
+        report.fail(id, "could not add an unoccupied off-scale note")
+        return
+    }
+    let rowCount = session.camera.projection.visibleRowCount
+    report.expect(session.scaleProjection.fold
+                  && session.camera.projection.row(forPitch: pitch) != PitchProjection.hiddenRow,
+                  cppID: id, message: "fold-on edits expose the newly occupied pitch")
+    report.expect(rowCount == occupied.count + 1, cppID: id,
+                  message: "fold occupancy appears after add")
+    document.deleteNotes([added])
+    report.expect(session.camera.projection.visibleRowCount == occupied.count,
+                  cppID: id, message: "fold layout shrinks after delete")
+    guard document.history.undoDocument() else {
+        report.fail(id, "could not undo the folded note deletion")
+        return
+    }
+    guard document.history.undoDocument(), document.history.redoDocument() else {
+        report.fail(id, "could not redo the folded note addition")
+        return
+    }
+    report.expect(session.camera.projection.visibleRowCount == rowCount, cppID: id,
+                  message: "fold layout restores after redo")
+    guard document.history.undoDocument() else {
+        report.fail(id, "could not restore the folded occupancy fixture")
+        return
+    }
+    grid.refreshFromSession()
+    grid.configureViewport(width: 800, height: 400, fontPx: 13, dpr: 1)
+    guard let exceptionNote = document.note(exception),
+          let box = grid.projectedNoteBox(
+            tick: Int(exceptionNote.tick),
+            end: Int(exceptionNote.tick + exceptionNote.duration),
+            pitch: Int(exceptionNote.pitch)),
+          let rowTop = session.camera.projection.rowTop(
+            session.camera.projection.row(forPitch: Int(exceptionNote.pitch)),
+            keyHeight: session.camera.snapshot.keyHeight,
+            scrollY: session.camera.snapshot.scrollY, dpr: 1)
+    else {
+        report.fail(id, "could not project the off-scale exception row")
+        return
+    }
+    let y = rowTop + session.camera.snapshot.keyHeight / 2
+    let before = document.history.currentIdentity
+    let emptyX = box.x + box.w + grid.dragDistance * 2
+    grid.beginPointer(x: emptyX, y: y, modifiers: 0)
+    report.expect(!grid.interactionActive
+                  && document.history.currentIdentity == before,
+                  cppID: id, message: "fold refuses a draw into an off-scale exception row")
+    var auditionPitch: Int?
+    let previousAudition = grid.onAudition
+    grid.onAudition = { _, pitch, _ in auditionPitch = pitch }
+    grid.beginKeyboardPointer(y: y)
+    grid.endKeyboardPointer()
+    grid.onAudition = previousAudition
+    report.expect(auditionPitch == Int(exceptionNote.pitch), cppID: id,
+                  message: "fold exception-row piano key auditions its pitch")
+    session.setSelectedNotes([exception])
+    let x = box.x + box.w / 2
+    let delta = max(grid.dragDistance * 2,
+                    Double(duration * 12) * session.camera.snapshot.pixelsPerTick)
+    grid.beginPointer(x: x, y: box.y + box.h / 2, modifiers: 0)
+    grid.updatePointer(x: x + delta, y: box.y + box.h / 2)
+    grid.endPointer(x: x + delta, y: box.y + box.h / 2)
+    report.expect(document.note(exception).map {
+        $0.pitch == exceptionNote.pitch && $0.tick != exceptionNote.tick
+    } == true, cppID: id, message: "fold horizontal move keeps the exception pitch")
+    guard document.history.undoDocument() else {
+        report.fail(id, "could not undo the folded horizontal move")
+        return
+    }
 }

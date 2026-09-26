@@ -3,16 +3,19 @@ Assertion correspondence: rollcheck/scale_editing.cpp
 Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
 Original: src/checks/rollcheck/scale_editing.cpp
 Original SHA-256: cbe3d727ae2a6731de8863136f0bfc86e412d5ebbe1bf645aa0138153b3f9b2f
-Swift counterpart: src/checks/rollcheck/scale_editing.swift (runScaleEditingChecks, runFoldScaleIntegrationChecks)
+Swift counterpart: src/checks/rollcheck/scale_editing.swift (runScaleEditingChecks, runFoldScaleIntegrationChecks, checkFoldPointerAndLifecycle)
+Additional Swift counterpart: src/checks/editorqml/tst_ShellGridInput.qml (mounted fold/octave/chromatic key delivery, test_mountedFoldKeyboardNudges)
+Additional Swift counterpart: src/checks/rollqml/tst_SwiftRollSelection.qml (mounted fold drag law, test_foldDragExceptionCommitsAfterRelease)
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
 Command: deno task verify --filter swiftcore
 Result: verify: 1/31 ok (35.15s, 30 skipped); run_checks: PASS (all harnesses in 35.15s).
+Note: Task 42 evidence supplied to this ledger pass (not re-run here): swiftcore roll lanes and verify:qml-roll swiftroll-window are green with the new scale/fold predicates, verify:shell shell-grid-input is green, and the controller corrected tst_ShellTransport.qml:503/534 to fold.Accessible.checked so shell-transport passes.
 
 A001 | PianoRollTest::scaleFoldKeyboardNudges | src/checks/rollcheck/scale_editing.cpp:71
-Disposition: PARTIAL
-Mapping/reason: Executed S001-S003 in scale_editing.swift verify chromatic Up, Fold-degree Up and exact octave Shift+Up through production PianoGrid commands. Original QML keyboard-event delivery is untested.
+Disposition: MATCHED
+Mapping/reason: S001, S002 and S003 pin the three data rows' landing pitches through the production PianoGrid command path (chromatic Up C60->C#61, folded Up C60->D62, folded Shift+Up C60->C72); the original roll key delivery is now executed by S031, S032 and S033 (test_mountedFoldKeyboardNudges clicks the transport Fold control, focuses the roll and sends the real key strokes), so the pitch and event-delivery conjuncts are both proved.
 Source context since previous assertion:
   #include "checks/rollcheck/tst_pianoroll.h"
 
@@ -88,8 +91,8 @@ Original expression:
   QFAIL(qPrintable(failure))
 
 A002 | PianoRollTest::scaleFoldKeyboardNudges | src/checks/rollcheck/scale_editing.cpp:80
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S022 pins a folded Up pass as exactly one undoable command restored by a single undoDocument(); this row's folded Up runs that same production grid command.
 Source context since previous assertion:
   ;
       while (doc.undoStack()->index() > undo)
@@ -104,16 +107,16 @@ Original expression:
   QFAIL("gesture pass pushed an unexpected number of undo commands")
 
 A003 | PianoRollTest::scaleFoldKeyboardNudges | src/checks/rollcheck/scale_editing.cpp:81
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S011 asserts the fold editing fixture's serialized MIDI is byte-identical to its entry bytes once every probe has unwound, covering the pass's net-zero document effect.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A004 | PianoRollTest::scaleFoldMultiNoteMapping | src/checks/rollcheck/scale_editing.cpp:118
-Disposition: PARTIAL
-Mapping/reason: Executed S002 in scale_editing.swift transposes selected C60/C-sharp61/C60 to D62/E64/D62 as one batch via production PianoGrid; original key event delivery remains untested.
+Disposition: MATCHED
+Mapping/reason: S002 maps the selected C60/C#61/C60 batch to D62/E64/D62 through the production grid command (distinct degrees for distinct sources); S031 pins that a real roll Up key press reaches that same command.
 Source context since previous assertion:
   ;
   }
@@ -156,8 +159,8 @@ Original expression:
   QFAIL("Fold Up did not map selected notes to distinct degrees")
 
 A005 | PianoRollTest::scaleFoldMultiNoteMapping | src/checks/rollcheck/scale_editing.cpp:128
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S022 pins a folded Up pass as exactly one undoable command restored by a single undoDocument(); this row's folded Up runs that same production grid command.
 Source context since previous assertion:
   ;
           while (doc.undoStack()->index() > cmd0)
@@ -173,16 +176,16 @@ Original expression:
   QFAIL("gesture pass pushed an unexpected number of undo commands")
 
 A006 | PianoRollTest::scaleFoldMultiNoteMapping | src/checks/rollcheck/scale_editing.cpp:129
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S011 asserts the fold editing fixture's serialized MIDI is byte-identical to its entry bytes once every probe has unwound, covering the pass's net-zero document effect.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A007 | PianoRollTest::scaleFoldRepeatedPitchMapping | src/checks/rollcheck/scale_editing.cpp:167
-Disposition: PARTIAL
-Mapping/reason: Executed S002 checks two distinct selected C60 notes share D62 after the same batch edit. The original keyboard input event and text selection path were not reproduced.
+Disposition: MATCHED
+Mapping/reason: S002 also sends the repeated source pitch pair to the shared D62 destination; S031 pins the mounted Up delivery to the same grid command.
 Source context since previous assertion:
   ;
   }
@@ -226,8 +229,8 @@ Original expression:
   QFAIL("Repeated Fold source pitch did not share the destination")
 
 A008 | PianoRollTest::scaleFoldRepeatedPitchMapping | src/checks/rollcheck/scale_editing.cpp:177
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S022 pins a folded Up pass as exactly one undoable command restored by a single undoDocument(); this row's folded Up runs that same production grid command.
 Source context since previous assertion:
   ;
           while (doc.undoStack()->index() > cmd0)
@@ -243,16 +246,16 @@ Original expression:
   QFAIL("gesture pass pushed an unexpected number of undo commands")
 
 A009 | PianoRollTest::scaleFoldRepeatedPitchMapping | src/checks/rollcheck/scale_editing.cpp:178
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S011 asserts the fold editing fixture's serialized MIDI is byte-identical to its entry bytes once every probe has unwound, covering the pass's net-zero document effect.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A010 | PianoRollTest::scaleFoldExceptionNudge | src/checks/rollcheck/scale_editing.cpp:213
-Disposition: PARTIAL
-Mapping/reason: Executed S004 verifies production grid command moves occupied off-scale C-sharp61 to next C-Major degree D62; original keyboard input delivery remains untested.
+Disposition: MATCHED
+Mapping/reason: S004 nudges the occupied off-scale C#61 to the next C-major degree D62 through the production grid command; S034 pins the same exception law through the mounted roll Up key press after Fold is enabled from the transport control.
 Source context since previous assertion:
   ;
   }
@@ -293,8 +296,8 @@ Original expression:
   QFAIL("Fold Up did not move an off-scale exception to the next degree")
 
 A011 | PianoRollTest::scaleFoldExceptionNudge | src/checks/rollcheck/scale_editing.cpp:223
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S022 pins a folded Up pass as exactly one undoable command restored by a single undoDocument(); this row's folded Up runs that same production grid command.
 Source context since previous assertion:
   ;
           while (doc.undoStack()->index() > cmd0)
@@ -310,16 +313,16 @@ Original expression:
   QFAIL("gesture pass pushed an unexpected number of undo commands")
 
 A012 | PianoRollTest::scaleFoldExceptionNudge | src/checks/rollcheck/scale_editing.cpp:224
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S011 asserts the fold editing fixture's serialized MIDI is byte-identical to its entry bytes once every probe has unwound, covering the pass's net-zero document effect.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A013 | PianoRollTest::scaleFoldExceptionDraw | src/checks/rollcheck/scale_editing.cpp:278
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S028 begins a draw gesture on the off-scale exception row's projectable lane and asserts the grid refuses it (no interaction became active, no history entry) - the refusal this test observes as an unchanged note count.
 Source context since previous assertion:
   ;
   }
@@ -379,8 +382,8 @@ Original expression:
   QFAIL("Fold accepted a draw into an off-scale exception row")
 
 A014 | PianoRollTest::scaleFoldExceptionDraw | src/checks/rollcheck/scale_editing.cpp:288
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S028 also asserts the refused draw left the document history identity untouched, so the refused pass pushed no undo commands.
 Source context since previous assertion:
   ;
           while (doc.undoStack()->index() > cmd0)
@@ -396,16 +399,16 @@ Original expression:
   QFAIL("gesture pass pushed an unexpected number of undo commands")
 
 A015 | PianoRollTest::scaleFoldExceptionDraw | src/checks/rollcheck/scale_editing.cpp:289
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S011 asserts the fold editing fixture's serialized MIDI is byte-identical to its entry bytes once every probe has unwound, covering the pass's net-zero document effect.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A016 | PianoRollTest::scaleFoldExceptionAudition | src/checks/rollcheck/scale_editing.cpp:351
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_editing.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: MATCHED
+Mapping/reason: S029 presses the off-scale exception row's piano key and asserts the audition carries the row's true pitch (61) - the ungated audition this test observes.
 Source context since previous assertion:
   ;
   }
@@ -473,8 +476,8 @@ Original expression:
   QFAIL("Fold exception-row piano key did not audition pitch 61")
 
 A017 | PianoRollTest::scaleFoldExceptionAudition | src/checks/rollcheck/scale_editing.cpp:363
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: PARTIAL
+Mapping/reason: Related predicate S029 (fold exception-row piano key auditions its pitch) executes the audition observation and S013 asserts a view/selection-only pass leaves document history unchanged; unproved: no predicate counts the audition pass's undo commands (the swiftcore audition probe unwinds its fixture note by identity without a history assertion).
 Source context since previous assertion:
   ;
           checks::events::sendMouse(*rollGutter, QEvent::MouseButtonRelease,
@@ -492,16 +495,16 @@ Original expression:
   QFAIL("gesture pass pushed an unexpected number of undo commands")
 
 A018 | PianoRollTest::scaleFoldExceptionAudition | src/checks/rollcheck/scale_editing.cpp:364
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S011 asserts the fold editing fixture's serialized MIDI is byte-identical to its entry bytes once every probe has unwound, covering the pass's net-zero document effect.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A019 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:425
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_editing.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: fixture-precondition branch: the native drag searched the selected track for a free off-scale source pitch and its next scale destination before pressing; the Swift fixtures pin source and destination by construction (the mounted lane draws 62 then 61, the swiftcore lane picks an unoccupied C-sharp-class pitch), so the search guard has no counterpart assertion.
 Source context since previous assertion:
   ;
   }
@@ -568,8 +571,8 @@ Original expression:
   QFAIL("Fold drag could not pick a free off-scale pitch")
 
 A020 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:437
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S025 asserts the Fold occupancy grows by exactly one row when an unoccupied off-scale pitch is added; S036 asserts the mounted drag fixture's Fold projection gained the occupied off-scale row.
 Source context since previous assertion:
   ;
           // Occupied-only Fold needs a visible scale row for the pointer
@@ -587,8 +590,8 @@ Original expression:
   QFAIL("Fold drag did not gain the occupied off-scale row")
 
 A021 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:462
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S037 asserts the mounted press on the off-scale note grabs it (selection) while the Fold row count is unchanged.
 Source context since previous assertion:
   ;
           view.ensureTickVisible(tBase);
@@ -619,8 +622,8 @@ Original expression:
   QFAIL("Fold drag press did not grab the off-scale note")
 
 A022 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:464
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S037's row-count assertion runs immediately after the press, so the press did not rebuild the Fold layout.
 Source context since previous assertion:
   ;
           if (proj.visibleRowCount() != rowsWithNote)
@@ -628,8 +631,8 @@ Original expression:
   QFAIL("Fold rebuilt its layout during a pointer drag")
 
 A023 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:467
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S014 asserts for all 128 pitches that a pitch has a visible Fold row exactly when the selected track occupies it, so the drag's occupied destination row cannot be hidden.
 Source context since previous assertion:
   ;
           const int rDst = proj.rowForPitch(dst);
@@ -638,8 +641,8 @@ Original expression:
   QFAIL("Fold drag target row is hidden")
 
 A024 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:472
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S037 keeps the same row-count assertion through the mid-drag pointer move (the verify follows the MouseMove to the destination row).
 Source context since previous assertion:
   ;
           const QPoint target(x, foldCenterY(dst));
@@ -650,8 +653,8 @@ Original expression:
   QFAIL("Fold rebuilt its layout mid-drag")
 
 A025 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:479
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S038 asserts the mounted release commits the off-scale note to its scale degree (pitch 62).
 Source context since previous assertion:
   ;
           checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, target, Qt::LeftButton,
@@ -664,8 +667,8 @@ Original expression:
   QFAIL("Fold drag did not commit the note to its scale degree")
 
 A026 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:481
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S039 asserts the Fold rows collapse back to the pre-drag count after the commit.
 Source context since previous assertion:
   ;
           if (proj.visibleRowCount() != rowsBeforeSource)
@@ -673,8 +676,8 @@ Original expression:
   QFAIL("Fold did not rebuild its occupied rows after the drag commit")
 
 A027 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:491
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: PARTIAL
+Mapping/reason: Related predicate S022 pins a folded edit pass as exactly one undoable command restored by one undo, and S011 asserts the fixture returns to its entry bytes; unproved: the pointer-drag pass's own undo-command count - the swiftcore drag commit is unwound by a single guard undoDocument() with no counted predicate.
 Source context since previous assertion:
   ;
           while (doc.undoStack()->index() > cmd0)
@@ -690,16 +693,16 @@ Original expression:
   QFAIL("gesture pass pushed an unexpected number of undo commands")
 
 A028 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:492
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S011 asserts serialized MIDI equal to the entry bytes after the fold editing fixture (which performs a pointer-drag commit and unwinds it) completes.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A029 | PianoRollTest::scaleFoldHorizontalException | src/checks/rollcheck/scale_editing.cpp:523
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S009 asserts the direct horizontal move keeps the exception pitch and only changes its tick; S030 pins the same law for the production pointer drag with Fold on.
 Source context since previous assertion:
   ;
   }
@@ -736,8 +739,8 @@ Original expression:
   QFAIL("Fold horizontal move changed the exception pitch")
 
 A030 | PianoRollTest::scaleFoldHorizontalException | src/checks/rollcheck/scale_editing.cpp:534
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: PARTIAL
+Mapping/reason: Related predicate S022 pins a folded edit pass as exactly one undoable command (S011 restores the fixture bytes); unproved: the horizontal move pass's own undo-command count is not asserted.
 Source context since previous assertion:
   ;
           }
@@ -754,16 +757,16 @@ Original expression:
   QFAIL("gesture pass pushed an unexpected number of undo commands")
 
 A031 | PianoRollTest::scaleFoldHorizontalException | src/checks/rollcheck/scale_editing.cpp:535
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S011 asserts the fold editing fixture's serialized MIDI is byte-identical to its entry bytes once every probe has unwound, covering the pass's net-zero document effect.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A032 | PianoRollTest::scaleFoldOutOfRange | src/checks/rollcheck/scale_editing.cpp:569
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S007 asserts the out-of-range folded Up records no edit (document history identity unchanged), so no undo command was pushed.
 Source context since previous assertion:
   ;
   }
@@ -803,8 +806,8 @@ Original expression:
   QFAIL("Fold out-of-range nudge pushed an undo command")
 
 A033 | PianoRollTest::scaleFoldOutOfRange | src/checks/rollcheck/scale_editing.cpp:572
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S008 asserts the folded out-of-range Up leaves the top scale pitch (B127) in place.
 Source context since previous assertion:
   ;
           DocNote still;
@@ -813,8 +816,8 @@ Original expression:
   QFAIL("Fold out-of-range nudge moved the top pitch")
 
 A034 | PianoRollTest::scaleFoldOutOfRange | src/checks/rollcheck/scale_editing.cpp:582
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S007 asserts the out-of-range folded Up records no edit (document history identity unchanged), so the pass pushed no undo commands.
 Source context since previous assertion:
   ;
           while (doc.undoStack()->index() > cmd0)
@@ -830,8 +833,8 @@ Original expression:
   QFAIL("gesture pass pushed an unexpected number of undo commands")
 
 A035 | PianoRollTest::scaleFoldOutOfRange | src/checks/rollcheck/scale_editing.cpp:583
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: MATCHED
+Mapping/reason: S011 asserts the fold editing fixture's serialized MIDI is byte-identical to its entry bytes once every probe has unwound, covering the pass's net-zero document effect.
 Source context since previous assertion:
   ;
 Original expression:
@@ -854,3 +857,108 @@ Anchor: message "folded Shift+Up moves an exact octave"
 
 S004 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
 Anchor: message "occupied off-scale exception nudges to the next scale degree"
+
+S005 | runScaleEditingChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "out-of-range Up recorded no edit"
+
+S006 | runScaleEditingChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "out-of-range Up kept top B127 in place"
+
+S007 | runScaleEditingChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "folded out-of-range Up records no edit"
+
+S008 | runScaleEditingChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "folded out-of-range Up keeps the top scale pitch in place"
+
+S009 | runScaleEditingChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "horizontal movement retained the off-scale exception pitch"
+
+S010 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "scale editing leaves the fixture MIDI unchanged"
+
+S011 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "fold edits restore the fixture MIDI bytes"
+
+S012 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "root and Highlight change the live tab without editing MIDI"
+
+S013 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "scale view changes push no history entry"
+
+S014 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "Fold shows only selected-track occupied pitches, including C-sharp"
+
+S015 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "Fold excludes another track's C-sharp octave"
+
+S016 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "Fold reclamps the live vertical scrollbar range"
+
+S017 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "changing Fold root keeps occupied rows, scroll, and history"
+
+S018 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "scale type changes classification without changing Fold rows"
+
+S019 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "Fold follows the selected track, not all song tracks"
+
+S020 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "track selection keeps per-tab Fold and Highlight settings"
+
+S021 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "selected-track change preserves Fold and leaves Highlight off"
+
+S022 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "one undo restores a folded nudge pass"
+
+S023 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "Fold updates occupancy after editing notes"
+
+S024 | checkFoldPointerAndLifecycle | src/checks/rollcheck/scale_editing.swift
+Anchor: message "fold-on edits expose the newly occupied pitch"
+
+S025 | checkFoldPointerAndLifecycle | src/checks/rollcheck/scale_editing.swift
+Anchor: message "fold occupancy appears after add"
+
+S026 | checkFoldPointerAndLifecycle | src/checks/rollcheck/scale_editing.swift
+Anchor: message "fold layout shrinks after delete"
+
+S027 | checkFoldPointerAndLifecycle | src/checks/rollcheck/scale_editing.swift
+Anchor: message "fold layout restores after redo"
+
+S028 | checkFoldPointerAndLifecycle | src/checks/rollcheck/scale_editing.swift
+Anchor: message "fold refuses a draw into an off-scale exception row"
+
+S029 | checkFoldPointerAndLifecycle | src/checks/rollcheck/scale_editing.swift
+Anchor: message "fold exception-row piano key auditions its pitch"
+
+S030 | checkFoldPointerAndLifecycle | src/checks/rollcheck/scale_editing.swift
+Anchor: message "fold horizontal move keeps the exception pitch"
+
+S031 | ShellGridInput::test_mountedFoldKeyboardNudges | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "mounted Up moves the selection one fold degree"
+
+S032 | ShellGridInput::test_mountedFoldKeyboardNudges | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "mounted Shift+Up moves the selection an octave in fold"
+
+S033 | ShellGridInput::test_mountedFoldKeyboardNudges | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "mounted chromatic Up moves the selection a semitone with fold off"
+
+S034 | ShellGridInput::test_mountedFoldKeyboardNudges | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "mounted fold Up moves an off-scale exception to the next degree"
+
+S035 | ShellGridInput::test_mountedFoldKeyboardNudges | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "mounted folded boundary Up pushes no edit"
+
+S036 | SwiftRollSelection::test_foldDragExceptionCommitsAfterRelease | src/checks/rollqml/tst_SwiftRollSelection.qml
+Anchor: message "fold gains the occupied off-scale row"
+
+S037 | SwiftRollSelection::test_foldDragExceptionCommitsAfterRelease | src/checks/rollqml/tst_SwiftRollSelection.qml
+Anchor: message "fold drag grabs the off-scale note without rebuilding rows"
+
+S038 | SwiftRollSelection::test_foldDragExceptionCommitsAfterRelease | src/checks/rollqml/tst_SwiftRollSelection.qml
+Anchor: message "fold drag commits the note to its scale degree"
+
+S039 | SwiftRollSelection::test_foldDragExceptionCommitsAfterRelease | src/checks/rollqml/tst_SwiftRollSelection.qml
+Anchor: message "fold collapses the off-scale row after the drag commit"

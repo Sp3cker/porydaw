@@ -3,12 +3,15 @@ Assertion correspondence: rollcheck/scale_projection.cpp
 Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
 Original: src/checks/rollcheck/scale_projection.cpp
 Original SHA-256: 4dc0fed604392d4a02f9a9f67f8b95fedf68363320ffba60658062c3f437c36d
-Swift counterpart: src/checks/rollcheck/static/geometry.swift
+Swift counterpart: src/checks/rollcheck/static/geometry.swift (checkScaleProjectionInvariants, checkLiveFoldProjection, checkScaleHighlightRasterDocumentGuards)
+Additional Swift counterpart: src/checks/rollqml/tst_SwiftRollPlots.qml (mounted Highlight tint probe, test_scaleHighlightRaster)
+Additional Swift counterpart: src/checks/rollcheck/scale_editing.swift (Fold/Highlight flag composition, runFoldScaleIntegrationChecks)
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
 Command: deno task verify --filter swiftcore --qt projectSession
 Result: green post-refactor controller run; SwiftCoreTest::projectSession 3 passed, 0 failed.
+Note: Task 42 evidence supplied to this ledger pass (not re-run here): the implementer reported the swiftcore projectSession lane green with the production-fold rows and verify:qml-roll swiftroll-window green with the raster probe; the controller's shell-transport fix (tst_ShellTransport.qml:503/534 fold.Accessible.checked) passed. This ledger pass ran only `deno task proof check`.
 
 A001 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:46
 Disposition: MATCHED
@@ -23,8 +26,8 @@ Disposition: MATCHED
 Mapping: S003
 
 A004 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:74
-Disposition: PARTIAL
-Mapping/reason: Executed related S004 in geometry.swift counts explicitly constructed selected-track PitchProjection rows, but cannot observe production Fold binding; that condition remains unproved. Feature not yet ported: Swift roll scale projection UI (no production Fold binding exists).
+Disposition: MATCHED
+Mapping/reason: S018 counts the live session's Fold rows against the selected track's distinct occupied pitches with production Fold enabled, so the law is observed on the production binding rather than a constructed projection.
 Source context since previous assertion:
   ;
           view.setScaleRoot(0);
@@ -51,8 +54,8 @@ Disposition: MATCHED
 Mapping: S005
 
 A006 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:86
-Disposition: PARTIAL
-Mapping/reason: Executed related S006 in geometry.swift compares constructed projection visibility with selected-track occupancy, but production Fold binding remains unproved. Feature not yet ported: Swift roll scale projection UI (no production Fold binding exists).
+Disposition: MATCHED
+Mapping/reason: S019 compares the live Fold projection's per-pitch visibility with the selected-track occupancy for all 128 pitches.
 Source context since previous assertion:
   ;
                   break;
@@ -73,8 +76,8 @@ Disposition: MATCHED
 Mapping: S008
 
 A009 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:120
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: fixture-precondition branch: the native occupancy probe searched for a free C-sharp-class octave pair before inserting; the Swift probe runs the same search but reports a fixture failure rather than asserting, so the guard has no counterpart assertion.
 Source context since previous assertion:
   ;
                   break;
@@ -99,8 +102,8 @@ Original expression:
   QFAIL("no free C#-class octave pair for the Fold occupancy exception")
 
 A010 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:125
-Disposition: PARTIAL
-Mapping/reason: Executed related S009 in geometry.swift reconstructs PitchProjection after isolated note insertion, but cannot observe a Fold-bound view update; that condition remains unproved. Feature not yet ported: Swift roll scale projection UI (no Fold-bound production view exists).
+Disposition: MATCHED
+Mapping/reason: S020 adds the unoccupied off-scale note and asserts the live Fold projection exposes its row.
 Source context since previous assertion:
   ;
           } else {
@@ -111,8 +114,8 @@ Original expression:
   QFAIL("Fold did not expose an occupied off-scale pitch")
 
 A011 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:127
-Disposition: PARTIAL
-Mapping/reason: Executed related S010 in geometry.swift keeps an unused octave hidden in a reconstructed projection, but the original Fold-bound view observation remains unproved. Feature not yet ported: Swift roll scale projection UI (no Fold-bound production view exists).
+Disposition: MATCHED
+Mapping/reason: S021 asserts the added note's unused off-scale octave stays hidden in the live Fold projection.
 Source context since previous assertion:
   ;
               if (proj.rowForPitch(exceptBase + 12) != projHidden)
@@ -120,8 +123,8 @@ Original expression:
   QFAIL("Fold exposed an unoccupied off-scale octave")
 
 A012 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:138
-Disposition: PARTIAL
-Mapping/reason: Executed related S011 in geometry.swift hides an unused C-sharp-class pitch in a reconstructed projection; the C-sharp-class membership sub-condition is now covered by the Swift PorydawCore ScaleID membership predicates (src/checks/editcheck/ScaleChecks.swift membershipAndNeighbors rows under cppID scalecheck/ScaleCheckTest::membershipAndNeighbors), while the Fold-bound view observation remains unproved. Feature not yet ported: Swift roll scale projection UI.
+Disposition: MATCHED
+Mapping/reason: S022 asserts every unused off-scale pitch stays hidden in the live Fold projection.
 Source context since previous assertion:
   ;
               int freePitch = -1;
@@ -146,8 +149,8 @@ Disposition: MATCHED
 Mapping: S013
 
 A015 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:171
-Disposition: PARTIAL
-Mapping/reason: Executed related S014 in geometry.swift restores cloned document identity after undo, but the original Fold-bound view's undo sequence remains unproved. Feature not yet ported: Swift roll scale projection UI (no Fold-bound production view has an undo sequence).
+Disposition: MATCHED
+Mapping/reason: S014 undoes the occupancy probe's insertion and asserts the document history identity is restored.
 Source context since previous assertion:
   ;
           }
@@ -161,16 +164,16 @@ Original expression:
   QCOMPARE(doc.undoStack()->index(), undo)
 
 A016 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:172
-Disposition: PARTIAL
-Mapping/reason: Executed related S015 in geometry.swift restores cloned MIDI bytes after undo, but the original Fold-bound view's undo sequence remains unproved. Feature not yet ported: Swift roll scale projection UI (no Fold-bound production view has an undo sequence).
+Disposition: MATCHED
+Mapping/reason: S015 asserts the same probe restores serialized MIDI after the undo.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A017 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:235
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S025 and S026 execute the mounted raster observations (the scale row carries the fork composite, the accidental row is untouched); unproved: the probe's fixture precondition - the mounted lane derives its probe rows from camera geometry instead of searching for an octave whose C, C-sharp and D are unused, so no predicate asserts this guard.
 Source context since previous assertion:
   ;
   }
@@ -239,8 +242,8 @@ Original expression:
   QFAIL("no empty octave for the Highlight pixel probe")
 
 A018 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:261
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: MATCHED
+Mapping/reason: S025 compares the highlighted scale row against the alpha=51/255 fork composite of that row's own un-highlighted pixels.
 Source context since previous assertion:
   ;
           } else {
@@ -272,8 +275,8 @@ Original expression:
   QFAIL("Highlight did not tint the scale row")
 
 A019 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:271
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: MATCHED
+Mapping/reason: S025 builds the expectation as the #b595fc blend (channels 0xb5/0x95/0xfc) at alpha 51/255, and S024 asserts the palette alpha itself is 51/255.
 Source context since previous assertion:
   ;
               const auto blendedChannel = [](int background, int source) {
@@ -289,8 +292,8 @@ Original expression:
   QFAIL("Highlight tint is not #b595fc at 20% opacity")
 
 A020 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:274
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: MATCHED
+Mapping/reason: S026 asserts the accidental (non-scale) row's pixels are unchanged by Highlight.
 Source context since previous assertion:
   ;
               }
@@ -299,8 +302,8 @@ Original expression:
   QFAIL("Highlight tinted a non-scale row")
 
 A021 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:276
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: MATCHED
+Mapping/reason: S027 asserts the keyboard column's pixels are unchanged by Highlight.
 Source context since previous assertion:
   ;
               if (hlKbd != offKbd)
@@ -308,8 +311,8 @@ Original expression:
   QFAIL("Highlight repainted the keyboard column")
 
 A022 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:278
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: MATCHED
+Mapping/reason: S028 asserts two distinct scale degrees (the C root row and the D row) receive the identical composite, so no degree is emphasized.
 Source context since previous assertion:
   ;
               if (hlRoot != hlScale)
@@ -317,8 +320,8 @@ Original expression:
   QFAIL("Highlight emphasized the root degree differently")
 
 A023 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:289
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: MATCHED
+Mapping/reason: S029 asserts the former accidental row carries the composite after the root moves and the other probe row loses it.
 Source context since previous assertion:
   ;
 
@@ -335,8 +338,8 @@ Original expression:
   QFAIL("changing the scale root did not update Highlight lanes")
 
 A024 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:299
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: MATCHED
+Mapping/reason: S030 asserts changing the scale type moves which row carries the composite.
 Source context since previous assertion:
   ;
               }
@@ -352,8 +355,8 @@ Original expression:
   QFAIL("changing the scale type did not update Highlight lanes")
 
 A025 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:313
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S019 asserts the production Fold projection's per-pitch visibility equals occupancy, so an occupied pitch's row is visible; unproved: the tint probe's own folded fixture - the mounted lane never asserts the occupied Fold row exists before probing its pixel.
 Source context since previous assertion:
   ;
               }
@@ -373,8 +376,8 @@ Original expression:
   QFAIL("Fold hid the occupied scale row for the Highlight tint probe")
 
 A026 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:323
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S031 requires the folded row's center to be a projectable pixel of the passing tint lane; unproved: no predicate asserts the scrolled Fold row lies inside the roll viewport (the original guard).
 Source context since previous assertion:
   ;
               } else {
@@ -391,8 +394,8 @@ Original expression:
                             "probe")
 
 A027 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:330
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: MATCHED
+Mapping/reason: S033 asserts Fold and Highlight are both set on the live projection, so enabling Highlight does not clear Fold.
 Source context since previous assertion:
   ;
                   } else {
@@ -404,8 +407,8 @@ Original expression:
   QFAIL("enabling Highlight disabled Fold")
 
 A028 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:334
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: MATCHED
+Mapping/reason: S031 asserts the tint lands on a visible occupied Fold row at the fork composite.
 Source context since previous assertion:
   ;
                       const QImage foldHighlightPm = check.captureQuickFramebuffer();
@@ -415,8 +418,8 @@ Original expression:
   QFAIL("Highlight did not tint a visible occupied Fold scale row")
 
 A029 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:341
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: MATCHED
+Mapping/reason: S031 compares the Fold row's pixels against the alpha=51/255 fork composite, and S024 asserts the palette alpha is 51/255.
 Source context since previous assertion:
   ;
                       const QRgb expectedFoldTint = qRgb(blendedChannel(qRed(foldOff), 0xb5),
@@ -429,8 +432,8 @@ Original expression:
   QFAIL("Highlight tint on a Fold row is not #b595fc at 20% opacity")
 
 A030 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:370
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: MATCHED
+Mapping/reason: S032 asserts the painted note face's pixels are unchanged by Highlight.
 Source context since previous assertion:
   ;
                       }
@@ -465,8 +468,8 @@ Original expression:
   QFAIL("Highlight changed the painted note face")
 
 A031 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:378
-Disposition: PARTIAL
-Mapping/reason: Executed related S016 in geometry.swift restores cloned document identity after undo, but the original Highlight sequence and renderer remain unproved. Feature not yet ported: Swift roll scale projection UI (no Highlight production view or renderer exists).
+Disposition: MATCHED
+Mapping/reason: S023 asserts the Highlight view passes leave document history and bytes unchanged; S016 asserts the highlight probe's note insertion is undone and history restored.
 Source context since previous assertion:
   ;
               while (doc.undoStack()->index() > cmd0)
@@ -480,8 +483,8 @@ Original expression:
   QCOMPARE(doc.undoStack()->index(), undo)
 
 A032 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:379
-Disposition: PARTIAL
-Mapping/reason: Executed related S017 in geometry.swift restores cloned MIDI bytes after undo, but the original Highlight sequence and renderer remain unproved. Feature not yet ported: Swift roll scale projection UI (no Highlight production view or renderer exists).
+Disposition: MATCHED
+Mapping/reason: S023 covers the view passes' bytes; S017 asserts the probe restores serialized MIDI after the undo.
 Source context since previous assertion:
   ;
 Original expression:
@@ -532,14 +535,62 @@ Anchor: message "A013 equal-distance nearest pitch chooses lower pitch"
 S013 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift
 Anchor: message "A014 folded scroll remains inside its projected height"
 
-S014 | checkDocumentUndoProbe | src/checks/rollcheck/static/geometry.swift
-Anchor: function
+S014 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A015 undo restores the pre-probe document history"
 
-S015 | checkDocumentUndoProbe | src/checks/rollcheck/static/geometry.swift
-Anchor: function
+S015 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A016 undo restores serialized MIDI"
 
-S016 | checkDocumentUndoProbe | src/checks/rollcheck/static/geometry.swift
-Anchor: function
+S016 | checkScaleHighlightRasterDocumentGuards | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A031 highlight note probe restores document history"
 
-S017 | checkDocumentUndoProbe | src/checks/rollcheck/static/geometry.swift
-Anchor: function
+S017 | checkScaleHighlightRasterDocumentGuards | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A032 highlight note probe restores serialized MIDI"
+
+S018 | checkLiveFoldProjection | src/checks/rollcheck/static/geometry.swift
+Anchor: message "production fold row count equals selected-track occupancy"
+
+S019 | checkLiveFoldProjection | src/checks/rollcheck/static/geometry.swift
+Anchor: message "production fold visibility exactly matches occupancy"
+
+S020 | checkLiveFoldProjection | src/checks/rollcheck/static/geometry.swift
+Anchor: message "production fold exposes an occupied off-scale pitch after add"
+
+S021 | checkLiveFoldProjection | src/checks/rollcheck/static/geometry.swift
+Anchor: message "production fold keeps the unused off-scale octave hidden"
+
+S022 | checkLiveFoldProjection | src/checks/rollcheck/static/geometry.swift
+Anchor: message "production fold hides every unused off-scale pitch"
+
+S023 | checkScaleHighlightRasterDocumentGuards | src/checks/rollcheck/static/geometry.swift
+Anchor: message "highlight view passes leave history and bytes unchanged"
+
+S024 | SwiftRollPlots::test_scaleHighlightRaster | src/checks/rollqml/tst_SwiftRollPlots.qml
+Anchor: message "Highlight retains the fork's translucent tint"
+
+S025 | SwiftRollPlots::test_scaleHighlightRaster | src/checks/rollqml/tst_SwiftRollPlots.qml
+Anchor: message "Highlight tints the scale row at the fork composite"
+
+S026 | SwiftRollPlots::test_scaleHighlightRaster | src/checks/rollqml/tst_SwiftRollPlots.qml
+Anchor: message "Highlight leaves the non-scale row untouched"
+
+S027 | SwiftRollPlots::test_scaleHighlightRaster | src/checks/rollqml/tst_SwiftRollPlots.qml
+Anchor: message "Highlight leaves the keyboard column untouched"
+
+S028 | SwiftRollPlots::test_scaleHighlightRaster | src/checks/rollqml/tst_SwiftRollPlots.qml
+Anchor: message "Highlight tints every scale degree identically"
+
+S029 | SwiftRollPlots::test_scaleHighlightRaster | src/checks/rollqml/tst_SwiftRollPlots.qml
+Anchor: message "changing the scale root moves the Highlight lane"
+
+S030 | SwiftRollPlots::test_scaleHighlightRaster | src/checks/rollqml/tst_SwiftRollPlots.qml
+Anchor: message "changing the scale type moves the Highlight lane"
+
+S031 | SwiftRollPlots::test_scaleHighlightRaster | src/checks/rollqml/tst_SwiftRollPlots.qml
+Anchor: message "Highlight tints a visible occupied Fold row"
+
+S032 | SwiftRollPlots::test_scaleHighlightRaster | src/checks/rollqml/tst_SwiftRollPlots.qml
+Anchor: message "Highlight leaves the painted note face unchanged"
+
+S033 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "track selection keeps per-tab Fold and Highlight settings"

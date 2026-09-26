@@ -281,4 +281,135 @@ TestCase {
         }
         verify(observed, "a visible published note reached its delegate")
     }
+    function tintedChannel(source, background) {
+        return Math.floor((source * 51 + background * 204 + 127) / 255)
+    }
+
+    function expectedTint(image, x, y) {
+        return {
+            r: tintedChannel(0xb5, image.red(x, y)),
+            g: tintedChannel(0x95, image.green(x, y)),
+            b: tintedChannel(0xfc, image.blue(x, y))
+        }
+    }
+
+    function pixelMatches(image, x, y, color) {
+        return Math.abs(image.red(x, y) - color.r) <= 2
+            && Math.abs(image.green(x, y) - color.g) <= 2
+            && Math.abs(image.blue(x, y) - color.b) <= 2
+    }
+
+    function test_scaleHighlightRaster() {
+        var s = surface()
+        var grid = s.gridModel
+        var transport = session.transportBarPresenter()
+        var plot = rollInput()
+        var gutter = findChild(s, "timelineQuickRollGutter")
+        var fill = findChild(s, "timelineQuickPianoNoteFills")
+        tryVerify(function() { return grid.renderedNoteCount > 0 }, 5000,
+                  "the scale raster has occupied pitches")
+        transport.setScaleFold(false)
+        transport.setScaleRoot(0)
+        transport.setScaleType(0)
+        transport.setScaleHighlight(false)
+        waitForRendering(plot)
+        var notes = JSON.parse(grid.noteSummary)
+        var reference = null
+        for (var i = 0; i < notes.length; ++i) {
+            var item = findChild(fill, "gridNote_" + notes[i].id)
+            if ([0, 2, 4, 5, 7, 9, 11].indexOf(notes[i].pitch % 12) >= 0
+                    && item && item.y > 0 && item.y < plot.height - item.height) {
+                reference = item
+                break
+            }
+        }
+        verify(reference !== null, "a visible note anchors the note-face probe")
+        var dpr = grid.devicePixelRatio
+        var h = grid.rowHeight * dpr
+        var middlePitch = 127 - Math.floor((grid.cameraScrollY + plot.height / 2)
+                                           / grid.rowHeight)
+        var cPitch = Math.round(middlePitch / 12) * 12
+        var y = Math.round(((127 - cPitch + 0.5) * grid.rowHeight
+                            - grid.cameraScrollY) * dpr) - h
+        verify(y > 4 * h && y < plot.height * dpr - 2 * h,
+               "visible scale rows surround the plot center")
+        var x = Math.round(plot.width * dpr * 0.82)
+        var before = grabImage(plot)
+        var gutterBefore = grabImage(gutter)
+        var noteBefore = grabImage(reference)
+        var natural = expectedTint(before, x, y)
+        var second = expectedTint(before, x, Math.round(y - 2 * h))
+        var accidental = expectedTint(before, x, Math.round(y - h))
+        verify(Math.abs(Qt.color(grid.palette.scaleHighlight).a - 51 / 255) < 0.001,
+               "Highlight retains the fork's translucent tint")
+        transport.setScaleHighlight(true)
+        waitForRendering(plot)
+        var highlighted = grabImage(plot)
+        verify(pixelMatches(highlighted, x, y, natural),
+               "Highlight tints the scale row at the fork composite")
+        verify(pixelMatches(highlighted, x, Math.round(y - h),
+                            {r: before.red(x, Math.round(y - h)),
+                             g: before.green(x, Math.round(y - h)),
+                             b: before.blue(x, Math.round(y - h))}),
+               "Highlight leaves the non-scale row untouched")
+        var gutterAfter = grabImage(gutter)
+        var gutterX = Math.round(gutter.width * dpr / 2)
+        verify(pixelMatches(gutterAfter, gutterX, y,
+                            {r: gutterBefore.red(gutterX, y),
+                             g: gutterBefore.green(gutterX, y),
+                             b: gutterBefore.blue(gutterX, y)}),
+               "Highlight leaves the keyboard column untouched")
+        verify(pixelMatches(highlighted, x, Math.round(y - 2 * h), second),
+               "Highlight tints every scale degree identically")
+        var noteAfter = grabImage(reference)
+        var noteX = Math.round(reference.width * dpr / 2)
+        var noteY = Math.round(reference.height * dpr / 2)
+        verify(pixelMatches(noteAfter, noteX, noteY,
+                            {r: noteBefore.red(noteX, noteY),
+                             g: noteBefore.green(noteX, noteY),
+                             b: noteBefore.blue(noteX, noteY)}),
+               "Highlight leaves the painted note face unchanged")
+        transport.setScaleRoot(1)
+        waitForRendering(plot)
+        var rooted = grabImage(plot)
+        verify(pixelMatches(rooted, x, Math.round(y - 2 * h),
+                            {r: before.red(x, Math.round(y - 2 * h)),
+                             g: before.green(x, Math.round(y - 2 * h)),
+                             b: before.blue(x, Math.round(y - 2 * h))})
+               && pixelMatches(rooted, x, Math.round(y - h), accidental),
+               "changing the scale root moves the Highlight lane")
+        transport.setScaleRoot(0)
+        transport.setScaleType(1)
+        waitForRendering(plot)
+        var minor = grabImage(plot)
+        verify(pixelMatches(minor, x, Math.round(y - 4 * h),
+                            {r: before.red(x, Math.round(y - 4 * h)),
+                             g: before.green(x, Math.round(y - 4 * h)),
+                             b: before.blue(x, Math.round(y - 4 * h))}),
+               "changing the scale type moves the Highlight lane")
+        transport.setScaleType(0)
+        transport.setScaleHighlight(false)
+        transport.setScaleFold(true)
+        waitForRendering(plot)
+        var foldedNote = findChild(fill, reference.objectName)
+        verify(foldedNote !== null, "the reference note is still rendered in Fold")
+        var foldedNotes = JSON.parse(grid.noteSummary)
+        var foldedPitches = []
+        for (var j = 0; j < foldedNotes.length; ++j) {
+            if (foldedPitches.indexOf(foldedNotes[j].pitch) < 0)
+                foldedPitches.push(foldedNotes[j].pitch)
+        }
+        foldedPitches.sort(function(a, b) { return b - a })
+        var cRow = foldedPitches.indexOf(60)
+        verify(cRow >= 0, "the Fold fixture contains a C note")
+        var foldedY = Math.round((cRow + 0.5) * h - grid.cameraScrollY * dpr)
+        var foldedBefore = grabImage(plot)
+        transport.setScaleHighlight(true)
+        waitForRendering(plot)
+        var folded = grabImage(plot)
+        verify(pixelMatches(folded, x, foldedY, expectedTint(foldedBefore, x, foldedY)),
+               "Highlight tints a visible occupied Fold row")
+        transport.setScaleFold(false)
+        transport.setScaleHighlight(false)
+    }
 }

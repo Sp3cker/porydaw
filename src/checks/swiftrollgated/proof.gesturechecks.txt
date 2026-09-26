@@ -19,7 +19,7 @@ GAP means no equivalent Swift assertion is established;
 NATIVE means the site observes native window/rendering/harness state that a
 presenter-level Swift check cannot establish. Unsure between PARTIAL and GAP
 is recorded as GAP. Bookkeeping must not overclaim.
-Pointer editing, bands, cancellation, track follow, command routing and Space priority across the swiftrollgated / swiftbandkeys / swiftqtml / selectionkey modes. Modes are harness routing only: the shell-grid-input lane (ShellQmlTests.swift entry shell-grid-input) runs every slot unconditionally against the production Swift shell (ShellWindow + SongTabs + EditorSurface + PianoGrid), so 90 of 96 sites are MATCHED to the named shell predicates S049-S061 below. 6 stay NATIVE (native framebuffer pixel diff, QQuickView replacement across reload, QPointer deletion after teardown, QSignalSpy machinery), each with a reason naming the missing counterpart. No QWidget layer exists in the Swift app. QAction delivery is replaced by QML window Shortcuts and the SongTabs routeEditorKey path; pointer identity is never claimed.
+Pointer editing, bands, cancellation, track follow, command routing and Space priority across the swiftrollgated / swiftbandkeys / swiftqtml / selectionkey modes. Modes are harness routing only: the shell-grid-input lane (ShellQmlTests.swift entry shell-grid-input) runs every slot unconditionally against the production Swift shell (ShellWindow + SongTabs + EditorSurface + PianoGrid), so 90 of 96 sites (87 MATCHED, 3 PARTIAL) rest on the named shell predicates S049-S061 below and 6 are RETIRED-REPRESENTATION rows (native framebuffer pixel diff, QQuickView replacement across reload, QPointer deletion after teardown, QSignalSpy machinery, plus the frame-grab and view-teardown scaffolding guards), each with a reason naming the missing counterpart. No QWidget layer exists in the Swift app. QAction delivery is replaced by QML window Shortcuts and the SongTabs routeEditorKey path; pointer identity is never claimed.
 
 Verification
 Command: deno task verify:shell --filter shell-grid-input --verbose
@@ -29,7 +29,7 @@ Result: PASS — ShellWindow still passes (0.81 s test); no regression.
 The legacy swiftrollgated harnesses are not registered in this checkout; their C++ sources are reference inventories only, never current execution evidence.
 
 Execution and ownership
-test_drawMoveNeighborTrim, test_resizeMinimum, test_undoRedoRerenders, test_rightDragCommit, test_escapeCancel, test_ungrabCancel, test_trackFollowReload, test_focusedRouting and test_bareSpace in src/checks/editorqml/tst_ShellGridInput.qml (entry shell-grid-input in src/checks/editorqml/ShellQmlTests.swift, probe src/checks/editorqml/GridInputClipProbe.swift, registered in ShellQmlLane.run and src/checks/CMakeLists.txt :: shell_qml_lane) drive real pointer/key input into the production grid inside ShellWindow; see indexed S049-S061 below. Headless Swift predicates S001-S048 (runEditorGridCameraChecks) remain related coverage for selection/projection invariants.
+test_drawMoveNeighborTrim, test_resizeMinimum, test_undoRedoRerenders, test_rightDragCommit, test_escapeCancel, test_ungrabCancel, test_trackFollowReload, test_focusedRouting, test_bareSpace, test_rightGutterDeclinesPress, test_middleGutterDeclinesPress and test_extraPlotButtonDeclinesPress in src/checks/editorqml/tst_ShellGridInput.qml (entry shell-grid-input in src/checks/editorqml/ShellQmlTests.swift, probe src/checks/editorqml/GridInputClipProbe.swift, registered in ShellQmlLane.run and src/checks/CMakeLists.txt :: shell_qml_lane) drive real pointer/key input into the production grid inside ShellWindow; see indexed S049-S061 below. Headless Swift predicates S001-S048 (runEditorGridCameraChecks) remain related coverage for selection/projection invariants.
 
 Fixture, sequence and row constraints
 Each test opens openRoute101 (mus_route101 from the staged decomp project, S049) and resolves the selected tab page swiftRollOverlay, its gridModel, swiftRollInput and timelineQuickRollPlot. Draw/resize stage notes on a computed free lane (lengths 12/18/4 snaps, snapTicks > 0) with the same tick*pixelsPerTick-scrollX / (127-pitch+0.5)*rowHeight-scrollY mapping as the C++ fixture. Band tests require a fully visible staged note whose note rect +/-3 px fits the roll. Idle-Escape expands per-note over every published field (id, tick, duration, pitch, track, velocity, selected). Track-follow asserts in-place reload (same window, replaced grid, replacement grid publishing notes); clipboard-adjacent cursor tests guard on snapTicks > 0.
@@ -42,6 +42,17 @@ representations - one mounted ShellWindow across in-place reload is the accepted
 design and the reload itself stays MATCHED by S058. This pass re-ran only
 `deno task proof check`; the implementer handoff evidence for shell-open-failure and
 shellwindow belongs to the 51b surface checks, not to this ledger.
+
+Task 51a ledger pass (no lane re-run): A011 (native framebuffer pixel diff over the
+grabbed Quick window) retires as a native-render representation; its face-follow
+observable stays MATCHED by S051. The shell-grid-input lane gained three mounted
+decline predicates in the same pass (test_rightGutterDeclinesPress,
+test_middleGutterDeclinesPress, test_extraPlotButtonDeclinesPress at
+tst_ShellGridInput.qml:758-789, proving the swiftbandkeys press-decline clauses
+tst_swiftbandkeys.cpp:555-561 @ fe1ff4df). The implementer recorded
+deno task verify:shell --filter shell-grid-input --verbose -> PASS, 1/26 ok and
+25 skipped with build ok; the 11/11 slot record above predates those additions, and
+no C++ site indexed here depends on the added predicates.
 
 Original assertion inventory
 
@@ -447,8 +458,8 @@ Original expression:
     QVERIFY(!frame.isNull());
 
 A011 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:342
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollgated/gesturechecks.cpp) no longer builds or runs. Previous native note: Native framebuffer pixel diff (pixelAt/colorsNear) cannot run offscreen; the face-follow observable is MATCHED by S051 (gridNote_ face exists, visible, tracks the moved tick). No QWidget layer exists in the Swift app.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Native framebuffer pixel diff (grabWindow plus a scene-pixel probe of the Quick window, gesturechecks.cpp:337-342 @ 2e8e0879); the face-follow observable is MATCHED by S051.
 Source context since previous assertion:
     const QColor expected(rendered->property("fillColor").toString());
     const QColor actual = gridcheck::pixelAt(

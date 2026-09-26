@@ -314,4 +314,61 @@ TestCase {
         }
         verify(probed, "a fully visible wide note takes the cursor probe")
     }
+    function test_foldDragExceptionCommitsAfterRelease() {
+        var g = grid()
+        var roll = rollInput()
+        var surf = surface()
+        publishedNoteCount(g)
+        g.setScaleFold(true)
+        var initialRows = g.visibleRowCount
+        g.setScaleFold(false)
+        g.setCameraVScroll((127 - 61 + 0.5) * g.rowHeight - roll.height / 2)
+        var originalIds = gridNotes(g).map(function(note) { return note.id })
+        function draw(pitch, x) {
+            var y = (127 - pitch + 0.5) * g.rowHeight - g.cameraScrollY
+            verify(y > g.rowHeight && y < roll.height - g.rowHeight,
+                   "the requested pitch row is in the visible plot")
+            var endX = x + Math.max(2 * g.drawThreshold,
+                                    2 * g.snapTicks * g.beatWidth / g.ticksPerBeat)
+            mousePress(roll, x, y, Qt.LeftButton)
+            mouseMove(roll, endX, y, -1, Qt.LeftButton)
+            mouseRelease(roll, endX, y, Qt.LeftButton)
+            var created = null
+            tryVerify(function() {
+                created = gridNotes(g).find(function(note) {
+                    return note.pitch === pitch && originalIds.indexOf(note.id) < 0
+                })
+                return created !== undefined
+            }, 3000)
+            originalIds.push(created.id)
+            return created
+        }
+        draw(62, Math.round(roll.width * 0.65))
+        g.setScaleFold(true)
+        var rowsWithDestination = g.visibleRowCount
+        g.setScaleFold(false)
+        g.setCameraVScroll((127 - 61 + 0.5) * g.rowHeight - roll.height / 2)
+        var exception = draw(61, Math.round(roll.width * 0.75))
+        g.setScaleFold(true)
+        tryCompare(g, "visibleRowCount", rowsWithDestination + 1)
+        verify(g.visibleRowCount >= initialRows + 2,
+               "fold gains the occupied off-scale row")
+        var note = noteItem(surf, exception.id)
+        verify(note !== null && note.width > 0, "the folded exception renders")
+        var center = note.mapToItem(roll, note.width / 2, note.height / 2)
+        var stableRows = g.visibleRowCount
+        mousePress(roll, center.x, center.y, Qt.LeftButton)
+        mouseMove(roll, center.x, center.y - g.rowHeight, -1, Qt.LeftButton)
+        wait(0)
+        verify(g.visibleRowCount === stableRows && noteById(g, exception.id).pitch === 61
+               && g.statusText.indexOf("Moving") !== -1,
+               "fold drag grabs the off-scale note without rebuilding rows")
+        mouseRelease(roll, center.x, center.y - g.rowHeight, Qt.LeftButton)
+        tryVerify(function() {
+            return noteById(g, exception.id).pitch === 62
+        }, 3000, "fold drag commits the note to its scale degree")
+        tryCompare(g, "visibleRowCount", stableRows - 1, 3000,
+                   "fold collapses the off-scale row after the drag commit")
+        g.setScaleFold(false)
+    }
 }

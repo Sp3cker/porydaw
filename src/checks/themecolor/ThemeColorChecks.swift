@@ -234,12 +234,16 @@ private func themeAssertComplete(_ report: CheckReport, _ palette: GridPalette,
     }
     report.expect(!fields.isEmpty, cppID: cppID, message: "\(what): palette exposes color fields")
     for (name, value) in fields {
-        let opaque = themeRefChannels(value).a == 255
+        let channels = themeRefChannels(value)
         let wellFormed = (value.count == 7 || value.count == 9) && value.hasPrefix("#")
         report.expect(wellFormed, cppID: cppID, message: "\(what): \(name) is a hex color")
-        if !themeTranslucentFields.contains(name) {
-            report.expect(opaque, cppID: cppID,
-                           message: "\(what): \(name) is fully opaque (\(value))")
+        if name == "scaleHighlight" {
+            report.expect(channels.a == 51 && channels.r == 181
+                          && channels.g == 149 && channels.b == 252,
+                          cppID: cppID, message: "\(what): scaleHighlight retains the fork tint")
+        } else if !themeTranslucentFields.contains(name) {
+            report.expect(channels.a == 255, cppID: cppID,
+                          message: "\(what): \(name) is fully opaque (\(value))")
         }
     }
 }

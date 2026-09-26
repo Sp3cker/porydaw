@@ -7,6 +7,7 @@ func runGeometryChecks(_ report: CheckReport, session: DocumentSession) {
     checkDefaultBindKeepsGeometry(report)
     checkTicksPerBeatKeepsGeometry(report)
     checkScaleProjectionInvariants(report, session: session)
+    checkLiveFoldProjection(report, session: session)
     checkScaleHighlightRasterDocumentGuards(report, session: session)
 }
 
@@ -162,6 +163,14 @@ private func checkScaleHighlightRasterDocumentGuards(
         report.fail(id, "A031-A032 no unused pitch for highlight probe")
         return
     }
+    let previous = session.scaleProjection.highlight
+    let history = session.document.history.currentIdentity
+    let bytes = try? session.document.state.file.encoded()
+    session.setScale(highlight: !previous)
+    session.setScale(highlight: previous)
+    report.expect(session.document.history.currentIdentity == history
+                  && bytes != nil && (try? session.document.state.file.encoded()) == bytes,
+                  cppID: id, message: "highlight view passes leave history and bytes unchanged")
     checkDocumentUndoProbe(
         report, session: session, id: id,
         messages: UndoProbeMessages(
@@ -176,6 +185,51 @@ private func checkScaleHighlightRasterDocumentGuards(
                     pitch: UInt8(freePitch), duration: 1, velocity: 100)
         }
     )
+}
+
+@MainActor
+private func checkLiveFoldProjection(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRollTest::scaleProjectionInvariants"
+    let document = session.document
+    let track = session.selectedTrack ?? 0
+    let oldFold = session.scaleProjection.fold
+    let before = document.history.currentIdentity
+    let occupied = Set(document.notes(in: track).map(\.pitch))
+    session.setScale(fold: true)
+    let projection = session.camera.projection
+    report.expect(projection.visibleRowCount == occupied.count, cppID: id,
+                  message: "production fold row count equals selected-track occupancy")
+    report.expect((0..<128).allSatisfy {
+        (projection.row(forPitch: $0) != PitchProjection.hiddenRow)
+            == occupied.contains(UInt8($0))
+    }, cppID: id, message: "production fold visibility exactly matches occupancy")
+    guard let base = stride(from: 1, through: 115, by: 12).first(where: {
+        !occupied.contains(UInt8($0)) && !occupied.contains(UInt8($0 + 12))
+    }), let added = try? document.addNotes([
+        NewNote(track: track,
+                tick: session.timeline.lengthTicks + Tick(document.ticksPerBeat * 8),
+                pitch: UInt8(base), duration: Tick(document.ticksPerBeat), velocity: 100)
+    ]).first else {
+        report.fail(id, "could not add the live folded off-scale note")
+        session.setScale(fold: oldFold)
+        return
+    }
+    let live = session.camera.projection
+    report.expect(document.note(added) != nil
+                  && live.row(forPitch: base) != PitchProjection.hiddenRow, cppID: id,
+                  message: "production fold exposes an occupied off-scale pitch after add")
+    report.expect(live.row(forPitch: base + 12) == PitchProjection.hiddenRow, cppID: id,
+                  message: "production fold keeps the unused off-scale octave hidden")
+    report.expect((0..<128).allSatisfy { key in
+        key % 12 != 1 || occupied.contains(UInt8(key)) || key == base
+            || live.row(forPitch: key) == PitchProjection.hiddenRow
+    }, cppID: id, message: "production fold hides every unused off-scale pitch")
+    if !document.history.undoDocument() {
+        report.fail(id, "could not undo the live folded note")
+    }
+    session.setScale(fold: oldFold)
+    report.expect(document.history.currentIdentity == before, cppID: id,
+                  message: "production fold insertion restores document history")
 }
 
 private struct UndoProbeMessages {

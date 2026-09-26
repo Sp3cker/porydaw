@@ -21,6 +21,15 @@ TestCase {
     GatedVisualsProbe { id: probe }
 
     Component { id: shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
+    Component {
+        id: smallFontShellComponent
+        ShellWindow {
+            width: 960
+            height: 640
+            visible: true
+            typographyCaptureFont: Qt.font({ pixelSize: 4 })
+        }
+    }
 
 
     function waitForNative(predicate, timeoutMs) {
@@ -590,5 +599,89 @@ TestCase {
                                 small.rect.y + Math.floor(small.rect.h / 2))]
         verify(Helpers.colorsNear(smallFace, smallExpectedFace),
                 "the small frame preserves the note face")
+    }
+
+    function test_dpr2SmallFontThinning() {
+        if (Screen.devicePixelRatio !== 2) {
+            skip("the physical border-thinning capture requires dpr2")
+            return
+        }
+        shell = smallFontShellComponent.createObject(null)
+        verify(shell !== null, "the production ShellWindow loads for dpr2")
+        shell.requestActivate()
+        tryCompare(shell, "active", true, 3000)
+        var session = shell.shellPresenter.session
+        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        verify(waitForNative(function() { return session.songOpen }, 30000),
+               "Route 101 loads for the dpr2 note capture")
+        var surface = selectedSurface()
+        verify(surface !== null, "the dpr2 roll is mounted")
+        var grid = surface.gridModel
+        var plot = findChild(surface, "timelineQuickRollPlot")
+        var fills = findChild(surface, "timelineQuickPianoNoteFills")
+        verify(plot !== null && fills !== null, "the dpr2 plot and note fills are mounted")
+        verify(waitForNative(function() { return grid.renderedNoteCount > 0 }, 5000),
+               "the dpr2 roll publishes notes")
+        grid.performCommand(4)
+        verify(waitForNative(function() {
+            var notes = publishedNotes(grid)
+            return notes && notes.some(function(note) { return note.selected })
+        }, 5000), "the dpr2 roll publishes a selected note")
+        var dpr = Screen.devicePixelRatio
+        verify(waitForNative(function() { return grid.baseFontPx === 4.0 }, 5000),
+               "the dpr2 small-font viewport is published")
+        var originalRowHeight = grid.rowHeight
+        grid.handleWheel(0, -1600, 0, 0, Qt.ControlModifier, 0,
+                         false, plot.width / 2, plot.height / 2)
+        verify(waitForNative(function() { return grid.rowHeight < originalRowHeight }, 5000),
+               "the dpr2 small-font roll zooms into the thinning height")
+        var anchor = publishedNotes(grid).find(function(note) { return note.selected })
+        var targetScroll = Math.max(0, Math.min(
+                    grid.cameraMaxVScroll,
+                    (127 - anchor.pitch + 0.5) * grid.rowHeight - plot.height / 2))
+        grid.setCameraVScroll(targetScroll)
+        verify(waitForNative(function() {
+            return Math.abs(grid.cameraScrollY - targetScroll) < 0.01
+        }, 5000), "the dpr2 selected note row is centered")
+        verify(waitForNative(function() { return grid.renderedNoteCount > 0 }, 5000),
+               "the dpr2 small-font plot still publishes notes")
+        verify(waitForRendering(plot, 3000), "the dpr2 note plot has rendered")
+        var notes = publishedNotes(grid)
+        var ringRequest = Math.max(1, Math.round(grid.baseFontPx * (1.0 / 8.0) * dpr))
+        var borderRequest = Math.max(1, Math.round(dpr))
+        var small = null
+        var bestArea = Infinity
+        for (var n = 0; n < notes.length; ++n) {
+            if (!notes[n].selected)
+                continue
+            var item = noteItem(fills, notes[n].id)
+            if (!item || !item.visible)
+                continue
+            var topLeft = item.mapToItem(plot, 0, 0)
+            if (topLeft.x < 1 || topLeft.y < 1
+                    || topLeft.x + item.width > plot.width - 1
+                    || topLeft.y + item.height > plot.height - 1)
+                continue
+            var width = Math.round(item.width * dpr)
+            var height = Math.round(item.height * dpr)
+            var ring = Helpers.fittedFrameThickness(width, height, ringRequest, 0)
+            var border = Helpers.fittedFrameThickness(width, height, borderRequest, ring)
+            if (ring > 0 && border > 0 && width * height < bestArea) {
+                small = { note: notes[n], ring: ring, border: border }
+                bestArea = width * height
+            }
+        }
+        verify(small !== null && borderRequest > 1,
+               "the dpr2 small-font viewport exposes a selected note whose border request exceeds one pixel")
+        verify(small.border >= 1 && small.border < Math.max(1, Math.round(dpr)),
+               "the dpr2 selected note thins its physical border without vanishing")
+        verify(small.border < borderRequest,
+               "the small note exercises physical border thinning")
+        var capture = null
+        verify(plot.grabToImage(function(result) { capture = result }),
+               "the dpr2 plot accepts a physical-pixel capture")
+        tryVerify(function() { return capture !== null }, 3000)
+        verify(capture.saveToFile(bootstrap.projectRoot + "/notevisuals-dpr2-small-font.png"),
+               "the dpr2 selected note frame is saved")
     }
 }

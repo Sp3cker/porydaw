@@ -29,7 +29,8 @@ Result: PASS — 11/11 ok (controller-recorded post-change run); the shell note-
 executed the framebuffer border/ring/thinning probes cited as S013 and, from the task-45 refreeze,
 the three note-face mode raster functions indexed as S076-S083
 (build/proof-evidence/shell-note-visuals.json lists ShellNoteVisuals::test_noteRasterParity,
-test_velocityColorRaster, test_noteNameRaster and test_velocityValueRaster).
+test_velocityColorRaster, test_noteNameRaster and test_velocityValueRaster, and the task-51a dpr2
+child adds ShellNoteVisuals::test_dpr2SmallFontThinning, which no A row here cites).
 Command: deno task verify:qml-roll --verbose
 Result: PASS — 1/1 ok (controller-recorded post-change run); no note_rendering site depends on it.
 
@@ -458,17 +459,17 @@ Mapping/reason: S026 walks velocities 1...126 requiring each fill to equal the i
 A031 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:333
 Disposition: MATCHED
 Mapping: S076, S020, S035
-Mapping/reason: The mounted production shell renders the ghost region byte-identically across the mode flip (tst_ShellNoteVisuals.qml:242); the live-grid ghost fill stays byte-identical (note_rendering.swift:1031) and the synthetic ghost face keeps its identity mix in both modes (414).
+Mapping/reason: The mounted production shell renders the ghost region byte-identically across the mode flip (tst_ShellNoteVisuals.qml:251); the live-grid ghost fill stays byte-identical (note_rendering.swift:1031) and the synthetic ghost face keeps its identity mix in both modes (414).
 
 A032 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:338
 Disposition: MATCHED
 Mapping: S077
-Mapping/reason: The mounted production shell samples the probed note interior and requires it to equal the velocity color for that note's published velocity (tst_ShellNoteVisuals.qml:248).
+Mapping/reason: The mounted production shell samples the probed note interior and requires it to equal the velocity color for that note's published velocity (tst_ShellNoteVisuals.qml:257).
 
 A033 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:343
 Disposition: MATCHED
 Mapping: S078, S037, S038
-Mapping/reason: The mounted shell restores the exact identity interior pixels after the toggle-off (tst_ShellNoteVisuals.qml:257); the Swift grid republishes the identity fill for the full and minimum velocities (note_rendering.swift:423, 432).
+Mapping/reason: The mounted shell restores the exact identity interior pixels after the toggle-off (tst_ShellNoteVisuals.qml:266); the Swift grid republishes the identity fill for the full and minimum velocities (note_rendering.swift:423, 432).
 
 A034 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:347
 Disposition: MATCHED
@@ -491,7 +492,7 @@ Original expression:
 A036 | PianoRollTest::noteNameRaster | src/checks/rollcheck/note_rendering.cpp:414
 Disposition: MATCHED
 Mapping: S079, S021, S046
-Mapping/reason: The mounted shell keeps the ghost region pixel-identical across the note-name toggle (tst_ShellNoteVisuals.qml:320); the live-grid predicate asserts no ghost label (note_rendering.swift:1072) and the pure builder rejects a ghost face (550).
+Mapping/reason: The mounted shell keeps the ghost region pixel-identical across the note-name toggle (tst_ShellNoteVisuals.qml:329); the live-grid predicate asserts no ghost label (note_rendering.swift:1072) and the pure builder rejects a ghost face (550).
 
 A037 | PianoRollTest::noteNameRaster | src/checks/rollcheck/note_rendering.cpp:458
 Disposition: GAP
@@ -561,7 +562,7 @@ Mapping/reason: A distant wide note keeps its label (note_rendering.swift:611), 
 A041 | PianoRollTest::noteNameRaster | src/checks/rollcheck/note_rendering.cpp:487
 Disposition: MATCHED
 Mapping: S080, S041, S074
-Mapping/reason: The mounted shell counts label-ink pixels with >= 2.5 contrast against the sampled fill (tst_ShellNoteVisuals.qml:344); the Swift ink choice clears the 4.5 floor on that fill (note_rendering.swift:506) and S074 holds the floor over every identity-ramp fill (ThemeColorChecks.swift:670).
+Mapping/reason: The mounted shell counts label-ink pixels with >= 2.5 contrast against the sampled fill (tst_ShellNoteVisuals.qml:353); the Swift ink choice clears the 4.5 floor on that fill (note_rendering.swift:506) and S074 holds the floor over every identity-ramp fill (ThemeColorChecks.swift:670).
 
 A042 | PianoRollTest::noteNameRaster | src/checks/rollcheck/note_rendering.cpp:506
 Disposition: MATCHED
@@ -729,12 +730,12 @@ Original expression:
 A051 | PianoRollTest::velocityValueRaster | src/checks/rollcheck/note_rendering.cpp:673
 Disposition: MATCHED
 Mapping: S058, S081
-Mapping/reason: During the Control drag the model publishes the preview velocity as a value record on the note full box with centered alignment (note_rendering.swift:729); the mounted shell shows value ink inside the note box (tst_ShellNoteVisuals.qml:392).
+Mapping/reason: During the Control drag the model publishes the preview velocity as a value record on the note full box with centered alignment (note_rendering.swift:729); the mounted shell shows value ink inside the note box (tst_ShellNoteVisuals.qml:401).
 
 A052 | PianoRollTest::velocityValueRaster | src/checks/rollcheck/note_rendering.cpp:695
 Disposition: MATCHED
 Mapping: S082
-Mapping/reason: The mounted probe requires every pixel outside the note box expanded by its own height to stay byte-identical between the idle and drag frames (tst_ShellNoteVisuals.qml:405).
+Mapping/reason: The mounted probe requires every pixel outside the note box expanded by its own height to stay byte-identical between the idle and drag frames (tst_ShellNoteVisuals.qml:414).
 
 A053 | PianoRollTest::velocityValueRaster | src/checks/rollcheck/note_rendering.cpp:704
 Disposition: MATCHED
@@ -744,7 +745,7 @@ Mapping/reason: The check undo teardown restores document state and history iden
 A054 | PianoRollTest::velocityValueRaster | src/checks/rollcheck/note_rendering.cpp:705
 Disposition: MATCHED
 Mapping: S057, S083
-Mapping/reason: The undo teardown restores document state and history identity (note_rendering.swift:665); the mounted shell undoes its velocity commitment back to the original note (tst_ShellNoteVisuals.qml:419).
+Mapping/reason: The undo teardown restores document state and history identity (note_rendering.swift:665); the mounted shell undoes its velocity commitment back to the original note (tst_ShellNoteVisuals.qml:428).
 
 
 Remaining original source (closing sequence and helper bodies):
@@ -1070,32 +1071,32 @@ Anchor: message "\(tag): legible keyboard ink is preserved on both ramps"
 
 S076 | test_velocityColorRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
 Anchor: message "velocity-color mode changes no ghost note pixel"
-  tst_ShellNoteVisuals.qml:240-242 verify(regionIdentical(baseline, colored, ghost.rect), "velocity-color mode changes no ghost note pixel") after shell.shellPresenter.activate("view.velocity_colors") on the mounted production shell.
+  tst_ShellNoteVisuals.qml:249-251 verify(regionIdentical(baseline, colored, ghost.rect), "velocity-color mode changes no ghost note pixel") after shell.shellPresenter.activate("view.velocity_colors") on the mounted production shell.
 
 S077 | test_velocityColorRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
 Anchor: message "velocity-mode note interior matches velocityNoteColor"
-  tst_ShellNoteVisuals.qml:244-248 the probed note's centre pixel must be Helpers.colorsNear probe.velocityFace(note.note.velocity, palette.noteVelocityZero) in the colored frame.
+  tst_ShellNoteVisuals.qml:253-257 the probed note's centre pixel must be Helpers.colorsNear probe.velocityFace(note.note.velocity, palette.noteVelocityZero) in the colored frame.
 
 S078 | test_velocityColorRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
 Anchor: message "disabling velocity-color mode restores the identity fill pixels"
-  tst_ShellNoteVisuals.qml:254-257 the second "view.velocity_colors" activation must leave the probed interior pixel equal to the frame captured before the mode flip.
+  tst_ShellNoteVisuals.qml:263-266 the second "view.velocity_colors" activation must leave the probed interior pixel equal to the frame captured before the mode flip.
 
 S079 | test_noteNameRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
 Anchor: message "note-name mode changes no ghost note pixel"
-  tst_ShellNoteVisuals.qml:318-320 verify(regionIdentical(baseline, named, ghost.rect), "note-name mode changes no ghost note pixel") across the "view.note_names" toggle.
+  tst_ShellNoteVisuals.qml:327-329 verify(regionIdentical(baseline, named, ghost.rect), "note-name mode changes no ghost note pixel") across the "view.note_names" toggle.
 
 S080 | test_noteNameRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
 Anchor: message "wide-note label ink contrasts with its fill"
-  tst_ShellNoteVisuals.qml:330-344 inkPixels counts changed pixels inside wide note rects whose contrast against probe.noteFace(track, velocity, palette.noteVelocityZero) is >= 2.5; verify(inkPixels > 0).
+  tst_ShellNoteVisuals.qml:339-353 inkPixels counts changed pixels inside wide note rects whose contrast against probe.noteFace(track, velocity, palette.noteVelocityZero) is >= 2.5; verify(inkPixels > 0).
 
 S081 | test_velocityValueRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
 Anchor: message "velocity drag renders value ink inside the note box"
-  tst_ShellNoteVisuals.qml:378-392 during the Control drag, inkPixels counts pixels inside the probed note's middle half that changed from the idle frame with contrast >= 2.5 against the idle fill pixel; verify(inkPixels > 2).
+  tst_ShellNoteVisuals.qml:387-401 during the Control drag, inkPixels counts pixels inside the probed note's middle half that changed from the idle frame with contrast >= 2.5 against the idle fill pixel; verify(inkPixels > 2).
 
 S082 | test_velocityValueRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
 Anchor: message "velocity drag changes no pixel outside the note box clip at "
-  tst_ShellNoteVisuals.qml:400-405 for every pixel in the plot region expanded by the note box height, outside the box itself, verify(Helpers.colorsNear(rgb(idle, x, y), rgb(dragged, x, y), 0)) must hold during the drag.
+  tst_ShellNoteVisuals.qml:409-414 for every pixel in the plot region expanded by the note box height, outside the box itself, verify(Helpers.colorsNear(rgb(idle, x, y), rgb(dragged, x, y), 0)) must hold during the drag.
 
 S083 | test_velocityValueRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
 Anchor: message "undo restores the original note document"
-  tst_ShellNoteVisuals.qml:415-419 after mouseRelease and Undo, the published note summary returns to its pre-drag length and the probed note keeps its original velocity.
+  tst_ShellNoteVisuals.qml:424-428 after mouseRelease and Undo, the published note summary returns to its pre-drag length and the probed note keeps its original velocity.

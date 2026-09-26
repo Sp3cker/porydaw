@@ -134,4 +134,67 @@ internal func editorSelectionCommandChecks(_ report: CheckReport, suite: Documen
     report.expectEqual(expected: beforeGestureCommand, actual: document.revision, cppID: id,
                        what: "direct activation cannot bypass pointer gesture arbitration")
     grid.inputCancelled(reason: GridCancelReason.pointerUngrabbed.rawValue)
+    checkPerTabScaleState(report, suite: suite, service: service)
+}
+
+@MainActor
+private func checkPerTabScaleState(_ report: CheckReport, suite: DocumentSession,
+                                   service: ProjectService) {
+    let id = "swiftcore/ApplicationSession::tabsScale"
+    func makeSession() -> DocumentSession {
+        let document = SongDocument(
+            file: makeMidiFixture(), config: suite.document.state.config,
+            source: suite.document.source, trackBudget: suite.document.trackBudget)
+        return DocumentSession(document: document, service: service,
+                               lease: suite.bankLease, slots: suite.bankSlots,
+                               dirty: false, loadName: suite.bankLoadName, sampleRate: 48_000)
+    }
+    let first = makeSession()
+    let second = makeSession()
+    func isDefault(_ session: DocumentSession) -> Bool {
+        let scale = session.scaleProjection
+        return scale.root == 0 && scale.scale == .major && !scale.highlight && !scale.fold
+    }
+    report.expect(isDefault(first) && isDefault(second), cppID: id,
+                  message: "a fresh tab defaults to C major with Highlight and Fold off")
+    let firstHistory = first.document.history.currentIdentity
+    let secondHistory = second.document.history.currentIdentity
+    first.setScale(root: 9)
+    first.setScale(type: .dorian)
+    first.setScale(highlight: true)
+    first.setScale(fold: true)
+    report.expect(isDefault(second) && first.scaleProjection.root == 9
+                  && first.scaleProjection.scale == .dorian && first.scaleProjection.highlight
+                  && first.scaleProjection.fold, cppID: id,
+                  message: "unselected tab retains defaults after scale edits")
+    second.setScale(root: 4)
+    second.setScale(type: .naturalMinor)
+    second.setScale(highlight: false)
+    second.setScale(fold: false)
+    report.expect(first.scaleProjection.root == 9 && first.scaleProjection.fold
+                  && second.scaleProjection.root == 4 && second.scaleProjection.scale == .naturalMinor
+                  && first.document.history.currentIdentity == firstHistory
+                  && second.document.history.currentIdentity == secondHistory,
+                  cppID: id, message: "scale state stays with its tab")
+    guard let additional = first.document.addTrack(voice: 0) else {
+        report.fail(id, "could not add a track for tab-scale retention")
+        return
+    }
+    first.selectPrimaryTrack(additional)
+    first.selectPrimaryTrack(0)
+    report.expect(first.scaleProjection.root == 9 && first.scaleProjection.scale == .dorian
+                  && first.scaleProjection.highlight && first.scaleProjection.fold,
+                  cppID: id, message: "track selection preserves per-tab scale state")
+    first.document.deleteTrack(additional)
+    report.expect(first.scaleProjection.root == 9 && first.scaleProjection.scale == .dorian
+                  && first.scaleProjection.highlight && first.scaleProjection.fold,
+                  cppID: id, message: "deleting a track preserves the tab's scale state")
+    guard first.document.history.undoDocument() else {
+        report.fail(id, "could not undo the tab's deleted track")
+        return
+    }
+    report.expect(first.document.engineTracks.usedTrackCount > additional
+                  && first.scaleProjection.root == 9 && first.scaleProjection.scale == .dorian
+                  && first.scaleProjection.highlight && first.scaleProjection.fold,
+                  cppID: id, message: "undo restores scale state across a deleted track")
 }

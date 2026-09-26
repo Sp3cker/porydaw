@@ -118,6 +118,8 @@ public final class PianoGrid {
     @QtTracked public var noteSummary = "[]"
     @QtTracked public var lastCancelReason = -1
     @QtTracked public var pencilMode = false
+    @QtTracked public var scaleFold = false
+    @QtTracked public var visibleRowCount = 128
     @QtTracked public var tripletGrid = false
     @QtTracked public var gridSelectionMenuId = -1
     public var gridMenuRows: QListModel<GridSubdivisionMenuItem> = QListModel()
@@ -292,6 +294,9 @@ public final class PianoGrid {
         stopAudition()
         session.selectPrimaryTrack(index)
         refreshFromSession()
+    }
+    public func setScaleFold(fold: Bool) {
+        session.setScale(fold: fold)
     }
 
     /// Mirrors ApplicationSession's velocity-color mode on this tab: every
@@ -1250,6 +1255,9 @@ public final class PianoGrid {
         if beatWidth != snapshot.pixelsPerBeat { beatWidth = snapshot.pixelsPerBeat }
         if rowHeight != snapshot.keyHeight { rowHeight = snapshot.keyHeight }
         if cameraScrollX != snapshot.scrollX { cameraScrollX = snapshot.scrollX }
+        if scaleFold != session.scaleProjection.fold { scaleFold = session.scaleProjection.fold }
+        let rowCount = session.camera.projection.visibleRowCount
+        if visibleRowCount != rowCount { visibleRowCount = rowCount }
         if cameraScrollY != snapshot.scrollY { cameraScrollY = snapshot.scrollY }
         if cameraMaxVScroll != snapshot.maxVScroll { cameraMaxVScroll = snapshot.maxVScroll }
         if cameraMinHScroll != snapshot.minHScroll { cameraMinHScroll = snapshot.minHScroll }

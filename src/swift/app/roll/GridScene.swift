@@ -394,15 +394,15 @@ public final class GridScene {
                     row, keyHeight: snapshot.keyHeight,
                     scrollY: snapshot.scrollY, dpr: m.dpr)
             else { continue }
-            if input.scale.highlight && input.scale.contains(key) {
-                rows.append(SceneRect(
-                    x: 0, y: top, width: gridW, height: bottom - top,
-                    fillColor: GridScene.isBlackKey(key)
-                        ? p.accidentalScaleHighlight : p.scaleHighlight))
-            } else if GridScene.isBlackKey(key) {
+            if GridScene.isBlackKey(key) {
                 rows.append(SceneRect(
                     x: 0, y: top, width: gridW, height: bottom - top,
                     fillColor: p.accidentalLane))
+            }
+            if input.scale.highlight && input.scale.contains(key) {
+                rows.append(SceneRect(
+                    x: 0, y: top, width: gridW, height: bottom - top,
+                    fillColor: p.scaleHighlight))
             }
             rows.append(
                 SceneRect(

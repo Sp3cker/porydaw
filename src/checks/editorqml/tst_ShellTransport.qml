@@ -500,8 +500,15 @@ TestCase {
         bar = openSong()
         compare(root.currentIndex, 0, "new tab opens with C root")
         compare(type.currentIndex, 0, "new tab opens with Major scale")
+        verify(!highlight.checked && !fold.Accessible.checked,
+               "new tab opens with Highlight and Fold off")
         mouseClick(highlight, highlight.width / 2, highlight.height / 2)
         compare(bar.presenter.scaleHighlight, true, "Highlight toggle edits the selected tab")
+        mouseClick(highlight, highlight.width / 2, highlight.height / 2)
+        var toggledOff = !bar.presenter.scaleHighlight
+        mouseClick(highlight, highlight.width / 2, highlight.height / 2)
+        verify(toggledOff && bar.presenter.scaleHighlight,
+               "Highlight toggles off and on from the transport control")
         mouseClick(fold, fold.width / 2, fold.height / 2)
         compare(bar.presenter.scaleFold, true, "Fold toggle edits the selected tab")
         bar.presenter.setScaleRoot(9)
@@ -524,6 +531,7 @@ TestCase {
         tryCompare(type, "currentIndex", 2, 3000,
                    "mounted scale selector follows the restored tab")
         compare(highlight.checked, true, "mounted Highlight control follows the restored tab")
+        compare(fold.Accessible.checked, true, "the first tab keeps its scale state after second-tab edits")
         compare(bar.presenter.scaleFold, true, "first tab restores Fold")
     }
 

@@ -730,4 +730,148 @@ TestCase {
         verify(waitForNative(function() { return !playhead.playing }, 5000),
               "second Space stops transport")
     }
+
+    function declinedPointerPress(item, x, y, button, grid, surface) {
+        var cursor = grid.editCursorTick
+        var notes = grid.noteSummary
+        var activeNote = grid.activeNoteId
+        var revision = grid.appliedRevisionText
+        var menuKind = grid.gridMenuKind
+        var rulerMenuOpen = surface.rulerMenu.isOpen
+        var contextMenu = findChild(shell, "shellGridContextMenu")
+        verify(contextMenu !== null && !contextMenu.visible,
+               "the shell context menu starts closed")
+        mousePress(item, x, y, button)
+        wait(0)
+        var unchanged = grid.editCursorTick === cursor && grid.noteSummary === notes
+            && grid.activeNoteId === activeNote && grid.appliedRevisionText === revision
+            && grid.gridMenuKind === menuKind && surface.rulerMenu.isOpen === rulerMenuOpen
+            && !contextMenu.visible
+        mouseRelease(item, x, y, button)
+        wait(0)
+        return unchanged && grid.editCursorTick === cursor && grid.noteSummary === notes
+            && grid.activeNoteId === activeNote && grid.appliedRevisionText === revision
+            && grid.gridMenuKind === menuKind && surface.rulerMenu.isOpen === rulerMenuOpen
+            && !contextMenu.visible
+    }
+
+    function test_rightGutterDeclinesPress() {
+        openRoute101()
+        var surface = selectedSurface()
+        var gutter = findChild(surface, "timelineQuickRollGutter")
+        verify(gutter && gutter.visible && gutter.width > 0 && gutter.height > 0,
+               "the keyboard gutter is mounted")
+        verify(declinedPointerPress(gutter, gutter.width / 2, gutter.height / 2,
+                                    Qt.RightButton, surface.gridModel, surface),
+               "a right-button press on the keyboard gutter changes nothing")
+    }
+
+    function test_middleGutterDeclinesPress() {
+        openRoute101()
+        var surface = selectedSurface()
+        var gutter = findChild(surface, "timelineQuickRollGutter")
+        verify(gutter && gutter.visible && gutter.width > 0 && gutter.height > 0,
+               "the keyboard gutter is mounted")
+        verify(declinedPointerPress(gutter, gutter.width / 2, gutter.height / 2,
+                                    Qt.MiddleButton, surface.gridModel, surface),
+               "a middle-button press on the keyboard gutter changes nothing")
+    }
+
+    function test_extraPlotButtonDeclinesPress() {
+        openRoute101()
+        var surface = selectedSurface()
+        var roll = rollInput(surface)
+        verify(roll && roll.visible && roll.width > 0 && roll.height > 0,
+               "the roll pointer surface is mounted")
+        verify(declinedPointerPress(roll, roll.width / 2, roll.height / 2,
+                                    Qt.XButton1, surface.gridModel, surface),
+               "an extra-button plot press changes nothing")
+    }
+
+    function test_mountedFoldKeyboardNudges() {
+        var session = openRoute101()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var roll = rollInput(surface)
+        var fold = findChild(shell, "transportScaleFold")
+        verify(fold !== null, "the mounted transport has a Fold control")
+        var target = firstBandedNote(grid, surface, roll)
+        verify(target !== null, "a visible note is available for the fold keys")
+        var item = findChild(surface, "gridNote_" + target.id)
+        var center = item.mapToItem(roll, item.width / 2, item.height / 2)
+        mouseClick(roll, center.x, center.y, Qt.LeftButton)
+        tryVerify(function() { return noteById(grid, target.id).selected }, 3000)
+        var startingPitch = target.pitch
+        var nextPitch = startingPitch + 1
+        var major = [0, 2, 4, 5, 7, 9, 11]
+        while (major.indexOf(nextPitch % 12) < 0)
+            ++nextPitch
+        mouseClick(fold, fold.width / 2, fold.height / 2)
+        tryCompare(grid, "scaleFold", true)
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true, 3000)
+        keyClick(Qt.Key_Up)
+        tryVerify(function() { return noteById(grid, target.id).pitch === nextPitch }, 3000,
+                  "mounted Up moves the selection one fold degree")
+        keyClick(Qt.Key_Up, Qt.ShiftModifier)
+        tryVerify(function() { return noteById(grid, target.id).pitch === nextPitch + 12 }, 3000,
+                  "mounted Shift+Up moves the selection an octave in fold")
+        mouseClick(fold, fold.width / 2, fold.height / 2)
+        tryCompare(grid, "scaleFold", false)
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        keyClick(Qt.Key_Up)
+        tryVerify(function() { return noteById(grid, target.id).pitch === nextPitch + 13 }, 3000,
+                  "mounted chromatic Up moves the selection a semitone with fold off")
+        grid.setCameraVScroll((127 - 61 + 0.5) * grid.rowHeight - roll.height / 2)
+        var lane = freeLane(grid, surface, 3)
+        verify(lane !== null, "an untouched lane receives the exception note")
+        var position = pointFor(grid, lane.tick, 61)
+        verify(position.y > 1 && position.y < roll.height - 1,
+               "the off-scale exception row is visible")
+        var beforeIds = gridNotes(grid).map(function(note) { return note.id })
+        mousePress(roll, position.x, position.y, Qt.LeftButton)
+        var endX = position.x + Math.max(2 * grid.drawThreshold,
+                                       2 * grid.snapTicks * grid.beatWidth / grid.ticksPerBeat)
+        mouseMove(roll, endX, position.y, -1, Qt.LeftButton)
+        mouseRelease(roll, endX, position.y, Qt.LeftButton)
+        var exception = null
+        tryVerify(function() {
+            exception = gridNotes(grid).find(function(note) {
+                return note.pitch === 61 && beforeIds.indexOf(note.id) < 0
+            })
+            return exception !== undefined
+        }, 3000)
+        item = findChild(surface, "gridNote_" + exception.id)
+        verify(item !== null, "the off-scale exception note renders")
+        center = item.mapToItem(roll, item.width / 2, item.height / 2)
+        mouseClick(roll, center.x, center.y, Qt.LeftButton)
+        tryVerify(function() { return noteById(grid, exception.id).selected }, 3000)
+        mouseClick(fold, fold.width / 2, fold.height / 2)
+        tryCompare(grid, "scaleFold", true)
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        keyClick(Qt.Key_Up)
+        tryVerify(function() { return noteById(grid, exception.id).pitch === 62 }, 3000,
+                  "mounted fold Up moves an off-scale exception to the next degree")
+        for (var octave = 0; octave < 5; ++octave) {
+            keyClick(Qt.Key_Up, Qt.ShiftModifier)
+            var octavePitch = 62 + 12 * (octave + 1)
+            tryVerify(function() {
+                return noteById(grid, exception.id).pitch === octavePitch
+            }, 3000)
+        }
+        var finalDegrees = [124, 125, 127]
+        for (var degree = 0; degree < finalDegrees.length; ++degree) {
+            keyClick(Qt.Key_Up)
+            var expectedPitch = finalDegrees[degree]
+            tryVerify(function() {
+                return noteById(grid, exception.id).pitch === expectedPitch
+            }, 3000)
+        }
+        var boundaryRevision = grid.appliedRevisionText
+        keyClick(Qt.Key_Up)
+        verify(noteById(grid, exception.id).pitch === 127
+               && grid.appliedRevisionText === boundaryRevision,
+               "mounted folded boundary Up pushes no edit")
+    }
+
 }

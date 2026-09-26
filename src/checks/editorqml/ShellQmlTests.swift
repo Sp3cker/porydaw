@@ -167,6 +167,43 @@ enum ShellQmlLane {
         var argv: [UnsafeMutablePointer<Int8>?] = arguments.map { strdup($0) }
         defer { argv.forEach { free($0) } }
         let status = app.runQtQuickTests(Int32(arguments.count), &argv)
+        if status == 0, entry.name == "shell-note-visuals",
+           ProcessInfo.processInfo.environment["PORYDAW_NOTE_VISUAL_DPR2"] == nil {
+            let child = Process()
+            child.executableURL = URL(fileURLWithPath: CommandLine.arguments[0])
+            child.arguments = [entry.name, scratch, "--qt", "ShellNoteVisuals::test_dpr2SmallFontThinning"]
+            var environment = ProcessInfo.processInfo.environment
+            environment["PORYDAW_NOTE_VISUAL_DPR2"] = "1"
+            environment["QT_SCALE_FACTOR"] = "2"
+            environment["QT_QPA_PLATFORM"] = "offscreen"
+            child.environment = environment
+            let output = Pipe()
+            child.standardOutput = output
+            child.standardError = output
+            do {
+                try child.run()
+            } catch {
+                return fail("note visuals dpr2: child failed to start: \(error)")
+            }
+            let log = String(decoding: output.fileHandleForReading.readDataToEndOfFile(),
+                             as: UTF8.self)
+            child.waitUntilExit()
+            print("note visuals dpr2: \(log)")
+            guard child.terminationStatus == 0 else {
+                return fail("note visuals dpr2: capture failed (\(child.terminationStatus))")
+            }
+            let capture = URL(fileURLWithPath: scratch)
+                .appendingPathComponent("notevisuals-dpr2-small-font.png")
+            let artifact = FileManager.default.temporaryDirectory
+                .appendingPathComponent("porydaw-notevisuals-\(UUID().uuidString).png")
+            do {
+                try FileManager.default.copyItem(at: capture, to: artifact)
+            } catch {
+                return fail("note visuals dpr2: missing frame: \(error)")
+            }
+            print("note visuals dpr2 artifact: \(artifact.path)")
+            return 0
+        }
         guard status == 0, entry.name == "shell-polyphony",
               ProcessInfo.processInfo.environment["PORYDAW_POLYPHONY_PROFILE"] == nil
         else { return status }

@@ -21,10 +21,51 @@ Shared SHA-256: 79d2a5010d685bd2a2ec6547db1c7430319c5006b18827f97fed1d49239ac306
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 WorkspaceTabsTest::scaleRouting drives the transport scale widgets across two tabs: per-tab root/id/highlight/fold state, widget reflection on selection, track-switch persistence, and delete/undo scale retention.
-tabs_scale.cpp contributes 54 sites: 6 MATCHED, 0 PARTIAL, 38 GAP, 10 RETIRED-REPRESENTATION. The paired
+tabs_scale.cpp contributes 54 sites: 38 MATCHED, 4 PARTIAL, 2 GAP, 10 RETIRED-REPRESENTATION.
 
-Command: deno task verify:shell --verbose; deno task verify --filter swiftcore
-Result: verify:shell 16/16 ok (18.79s); swiftcore 1/31 ok (35.15s, 30 skipped); both PASS.
+Task 42 note (scale selector mounted; A010-A054 re-reconciled individually): the earlier
+"feature not yet ported: scale selector" reason that A012-A054 carried is retired. The
+selector is mounted at src/ui/shell/TransportBar.qml:231-313
+(transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold bound to
+TransportBarPresenter.scaleRoot/scaleType/scaleHighlight/scaleFold), the per-tab law lives
+on each DocumentSession's scale projection, and the executed predicates are
+tst_ShellTransport.qml:491-536 test_scaleControlsFollowSelectedTab (S186 plus message
+anchors through S201, shell-transport lane), session_editor_semantics.swift:141-200
+checkPerTabScaleState (S202 through S207, swiftcore-projectsession lane), and
+scale_editing.swift:240-246 runFoldScaleIntegrationChecks (S187, S208, S209, same lane).
+Mapping rule applied row by row: MATCHED cites an executing message-anchored predicate
+whose assertion would fail if the site's clause were negated for the same state variable
+and direction; a different fixture value is acceptable only where the reason records it
+(A018 reads firstRoot 9 against S204's 9 and S196's 9; A025 reads secondRoot 2 against
+S204's root 4). A021 and A023 stay GAP because no executing predicate reads Fold after a
+Highlight/root/type-only edit. A027, A033, A050 and A054 are recorded PARTIAL rather than
+MATCHED, each reason naming the conjunct that no executed predicate observes. The tally
+line above is reconciled to this file's actual dispositions; its earlier 6 MATCHED /
+0 PARTIAL / 38 GAP / 10 RETIRED line predated task 42.
+Counterpart-hash check at this revision: session_fixtures.swift still hashes to the recorded
+bad9687a1301619c8bee2268a96a52ac104fe34ebe1eccd6b05a38ffb11ac741, while session_support.swift
+now hashes to e1c905ca3181cb561a357abd6d9d70a63a397cd2ac7ae4cdc1d722e38909bd39 and the
+recorded 79d2a5010d685bd2a2ec6547db1c7430319c5006b18827f97fed1d49239ac306 is that helper as of
+2597f7e6^. The pin is left as recorded (historical, and shared with the other workspace
+ledgers) and the drift is reported here instead of being silently re-pinned; the rows
+mapped above were read from the final sources at this revision.
+
+Command: deno task verify:shell --filter shell-transport --verbose
+Result: PASS after the controller corrected tst_ShellTransport.qml:503/534 to
+  fold.Accessible.checked (the implementer's run before that correction reported 18 passed,
+  1 failed at line 534 - fold.checked undefined versus true); the ledger agent did not
+  re-run the filter.
+Command: deno task verify --filter swiftcore-projectsession --verbose --qt projectSession -silent
+Result: PASS 4/4, 0 failures (8.36s) - implementer-run on this frozen revision; not re-observed
+  by this bookkeeping pass.
+Command: deno task verify:qml-roll --verbose
+Result: PASS swiftroll-window (23.84s) - implementer-run on this frozen revision; not
+  re-observed by this bookkeeping pass.
+Task 42 execution evidence: build/proof-evidence/shell-transport.json lists
+  test_scaleControlsFollowSelectedTab among its executed functions, and
+  build/proof-evidence/swiftcore-projectsession.json carries the message rows for S202
+  through S209, so every predicate cited above classifies as executed under
+  deno task proof check --executed.
 
 No native execution remains: the QtTest suites declared in
 src/checks/workspace/tst_workspacesessions.h (WorkspaceTabsTest::scaleRouting)
@@ -63,23 +104,27 @@ Disposition: RETIRED-REPRESENTATION
 
 A010 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:47
 Disposition: MATCHED
-Mapping: S186
+Mapping: S186, S188, S202
+Mapping/reason: S188 (tst_ShellTransport.qml:501 compare(root.currentIndex, 0)) reads the mounted root selector on the freshly opened tab, and S202 (session_editor_semantics.swift:153-159 isDefault(first) && isDefault(second)) requires root 0 on a fresh session; the same clause as first->view().scaleRoot() == 0 for a fresh tab.
 
 A011 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:48
 Disposition: MATCHED
-Mapping: S186
+Mapping: S186, S189, S202
+Mapping/reason: S189 (tst_ShellTransport.qml:502 compare(type.currentIndex, 0)) reads the mounted type selector, and S202 requires scale == .major on a fresh session, the fork's ScaleId::major default.
 
 A012 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:49
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S190, S202
+Mapping/reason: S202 requires !highlight on the freshly built session and S190 (tst_ShellTransport.qml:503-504 verify(!highlight.checked && !fold.Accessible.checked)) reads the mounted Highlight control unchecked on the freshly opened tab.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!first->view().scaleHighlight())
 
 A013 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:50
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S190, S202
+Mapping/reason: The Fold conjunct of the same pair: S202 requires !fold on the fresh session and S190 reads !fold.Accessible.checked on the freshly opened tab.
 Source context since previous assertion:
   ;
 Original expression:
@@ -87,35 +132,40 @@ Original expression:
 
 A014 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:51
 Disposition: MATCHED
-Mapping: S186
+Mapping: S186, S194, S202
+Mapping/reason: S202 requires isDefault(second), which includes root 0, and S194 (tst_ShellTransport.qml:520-522) observes bar.presenter.scaleRoot === 0 once the second song's tab is selected.
 
 A015 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:52
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S202
+Mapping/reason: isDefault(second) requires second.scale == .major on the fresh second session; the mounted sibling S194 reads only the root, so the scale-id conjunct rests on the swiftcore predicate.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(second->view().scaleId(), porydaw_scale::ScaleId::major)
 
 A016 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:53
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S202
+Mapping/reason: isDefault(second) requires !second.highlight on the fresh second session, the same clause as !second->view().scaleHighlight().
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!second->view().scaleHighlight())
 
 A017 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:54
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S195, S202
+Mapping/reason: S202 requires !second.fold; S195 (tst_ShellTransport.qml:523 compare(bar.presenter.scaleFold, false)) additionally pins the second tab's Fold still off after the first tab's Fold was enabled, the independence clause this and the later switch-back rows assert.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!second->view().scaleFold())
 
 A018 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:64
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S196, S204
+Mapping/reason: S204 (session_editor_semantics.swift:166-169) requires first.scaleProjection.root == 9 immediately after that session's own root/type/Highlight/Fold writes - the same read direction and the same value as firstRoot = 9 here; S196 (tst_ShellTransport.qml:525-527) re-observes 9 through the mounted presenter after the tab switch.
 Source context since previous assertion:
   ;
 
@@ -131,16 +181,18 @@ Original expression:
   QCOMPARE(first->view().scaleRoot(), firstRoot)
 
 A019 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:65
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S196, S204
+Mapping/reason: S204 requires first.scaleProjection.scale == .dorian after setScale(type: .dorian) (ScaleID rawValue 2), the write this site's selectData(*scale, dorian) performs; S196 requires the mounted type index 2.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(first->view().scaleId(), firstScale)
 
 A020 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:66
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S191, S204
+Mapping/reason: S191 (tst_ShellTransport.qml:505-506) clicks the mounted Highlight control and requires bar.presenter.scaleHighlight, the same control-click then read as highlight->click() plus scaleHighlight() here; S204 also requires first.highlight after the write.
 Source context since previous assertion:
   ;
 Original expression:
@@ -148,15 +200,16 @@ Original expression:
 
 A021 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:67
 Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Behavior gap, not proof: no executing predicate reads Fold after a Highlight/root/type-only edit. S191 and S192 compare only scaleHighlight and S204 sets Fold itself before asserting, so the first tab's Fold-still-off clause has no equivalent assertion; the missing conjunct belongs after first.setScale(highlight: true) in session_editor_semantics.swift:161-165 or after the mounted Highlight clicks at tst_ShellTransport.qml:505-511.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!first->view().scaleFold())
 
 A022 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:69
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S192
+Mapping/reason: S192 (tst_ShellTransport.qml:507-511) records toggledOff = !bar.presenter.scaleHighlight on the second mounted click and then verifies the third click restored it, the same Highlight toggle-off observation as the second highlight->click() here.
 Source context since previous assertion:
   ;
       highlight->click();
@@ -165,7 +218,7 @@ Original expression:
 
 A023 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:70
 Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Behavior gap, not proof: the same missing conjunct as A021 - S192 asserts only the Highlight toggle conjunct and no executing predicate reads Fold after the Highlight toggle cycle.
 Source context since previous assertion:
   ;
 Original expression:
@@ -175,8 +228,9 @@ A024 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:92
 Disposition: RETIRED-REPRESENTATION
 
 A025 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:95
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S204, S205
+Mapping/reason: S205 (session_editor_semantics.swift:174-178) requires second.scaleProjection.root == 4 after the second session's own root/type writes while S204 keeps first.root == 9; this site reads the same selected-tab-reports-its-own-root relation for secondRoot = 2 (the fixture value differs, the relation and read path do not).
 Source context since previous assertion:
   ;
       view.selectTrack(originalTrack);
@@ -185,48 +239,54 @@ Original expression:
   QCOMPARE(view.scaleRoot(), secondRoot)
 
 A026 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:96
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S205
+Mapping/reason: S205 requires second.scaleProjection.scale == .naturalMinor after setScale(type:), the same clause for secondScale = minor_pentatonic.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(view.scaleId(), secondScale)
 
 A027 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:97
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: PARTIAL
+Mapping: S205, S208
+Mapping/reason: S208 (scale_editing.swift:245-246) requires Fold set and Highlight off after a primary-track change made while Highlight was off, covering this clause's track-selection trigger, and S205 requires the second session's root and scale after its writes. Unproved: no executing predicate reads Highlight after the second tab's root/type edits or after its Fold click, so the Highlight-still-off clause has no equivalent assertion for those triggers.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!view.scaleHighlight())
 
 A028 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:98
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S193, S208
+Mapping/reason: S193 (tst_ShellTransport.qml:512-513) clicks the mounted Fold control and requires the selected tab's Fold set; S208 requires Fold preserved across a primary-track change, the selection this site performs before fold->click().
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(view.scaleFold())
 
 A029 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:99
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S190, S200
+Mapping/reason: The mounted Highlight control's checked state follows the selected tab's Highlight - S190 asserts it unchecked while Highlight is off and S200 (tst_ShellTransport.qml:533) asserts it checked while Highlight is on; this site reads the same control with the second tab's Highlight off.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!highlight->isChecked())
 
 A030 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:100
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S190, S201
+Mapping/reason: The mounted Fold control follows the selected tab's Fold - S190 asserts it unchecked while Fold is off and S201 (tst_ShellTransport.qml:534 fold.Accessible.checked) asserts it checked while Fold is on; this site reads it for the second tab whose Fold the test enabled.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(fold->isChecked())
 
 A031 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:102
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S191, S208
+Mapping/reason: S191 pins the Highlight control click setting the selected tab's Highlight and S208 pins a Highlight assignment leaving Fold set (fold && !highlight), so the Highlight-on-while-Fold-stays-on combination is entailed; the original's Fold was enabled by its own earlier click.
 Source context since previous assertion:
   ;
       highlight->click();
@@ -234,8 +294,9 @@ Original expression:
   QVERIFY(view.scaleHighlight() && view.scaleFold())
 
 A032 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:104
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S192, S208
+Mapping/reason: S192 pins the Highlight toggle-off and S208 pins exactly this combination (Fold on, Highlight off) after a view-only Highlight change.
 Source context since previous assertion:
   ;
       highlight->click();
@@ -243,8 +304,9 @@ Original expression:
   QVERIFY(!view.scaleHighlight() && view.scaleFold())
 
 A033 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:107
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: PARTIAL
+Mapping: S197, S208
+Mapping/reason: The Highlight conjunct is entailed - the mounted flow clicks Fold after Highlight was enabled and S197 (tst_ShellTransport.qml:528) requires the restored first tab's Highlight still set, with S208 pinning Highlight/Fold independence. Unproved: no executing predicate observes a Fold toggle turning Fold off (S193 asserts only the on transition), so the Fold-off conjunct has no equivalent assertion.
 Source context since previous assertion:
   ;
       highlight->click();
@@ -253,8 +315,9 @@ Original expression:
   QVERIFY(view.scaleHighlight() && !view.scaleFold())
 
 A034 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:109
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S193, S197
+Mapping/reason: S193 asserts the Fold click sets the selected tab's Fold and S197 requires Highlight still on after that same click in the mounted flow, entailing both conjuncts.
 Source context since previous assertion:
   ;
       fold->click();
@@ -263,27 +326,32 @@ Original expression:
 
 A035 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:112
 Disposition: MATCHED
-Mapping: S186
+Mapping: S186, S198
+Mapping/reason: After switching back to the first tab, S198 (tst_ShellTransport.qml:529-530) requires root.currentIndex == 9 - the same control, event and value (firstRoot = 9) as root->currentData() here.
 
 A036 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:113
 Disposition: MATCHED
-Mapping: S186
+Mapping: S186, S199
+Mapping/reason: S199 (tst_ShellTransport.qml:531-532) requires type.currentIndex == 2 on the restored first tab - the same control and the same ScaleID rawValue (dorian = 2) as firstScale.
 
 A037 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:114
 Disposition: MATCHED
-Mapping: S186
+Mapping: S186, S200
+Mapping/reason: S200 requires highlight.checked on the restored first tab whose Highlight the flow enabled through the same control.
 
 A038 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:115
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S190
+Mapping/reason: S190 asserts the mounted Fold control unchecked while the selected tab's Fold is off; this site reads the same control after switching back to a first tab whose Fold was never enabled.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!fold->isChecked())
 
 A039 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:117
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S194, S198
+Mapping/reason: S198 pins the mounted root selector committing to the selected tab's root across a tab switch and S194 pins the second tab's own root (0) through the presenter; this site reads the same selector after switching to the second tab (secondRoot = 2).
 Source context since previous assertion:
   ;
       workspace->selectSongTab(second);
@@ -291,32 +359,36 @@ Original expression:
   QCOMPARE(root->currentData().toInt(), secondRoot)
 
 A040 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:118
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S199
+Mapping/reason: S199 pins the mounted type selector following the selected tab's type across a tab switch (index 2 on restore); this site reads the same selector for the second tab (secondScale = minor_pentatonic).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(scale->currentData().toInt(), static_cast<int>(secondScale))
 
 A041 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:119
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S200
+Mapping/reason: S200 requires the Highlight control checked while the selected tab's Highlight is on; this site reads it for the second tab whose Highlight the flow enabled.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(highlight->isChecked())
 
 A042 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:120
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S201
+Mapping/reason: S201 requires the Fold control checked (fold.Accessible.checked) while the selected tab's Fold is on; this site reads it for the second tab whose Fold the test enabled.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(fold->isChecked())
 
 A043 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:123
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S187, S205
+Mapping/reason: S187 (scale_editing.swift:240-241) requires Fold and Highlight preserved across a primary-track change (fold && highlight == priorHighlight) and S205 requires the per-tab projection preserved; this site reads the same state after view.selectTrack(otherTrack).
 Source context since previous assertion:
   ;
 
@@ -325,8 +397,9 @@ Original expression:
   QVERIFY(view.scaleHighlight() && view.scaleFold())
 
 A044 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:125
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S187, S205
+Mapping/reason: The same preservation law read after switching back to the original track.
 Source context since previous assertion:
   ;
       view.selectTrack(originalTrack);
@@ -334,8 +407,9 @@ Original expression:
   QVERIFY(view.scaleHighlight() && view.scaleFold())
 
 A045 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:130
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S205, S208
+Mapping/reason: S205 pins Highlight and Fold preserved across a primary-track change when both are set and S208 pins Fold preserved with Highlight off, so the both-off values this site reads after two track switches follow from the same independent-preservation law (view.setScaleHighlight(false) and view.setScaleFold(false) are the writes it follows).
 Source context since previous assertion:
   ;
       view.setScaleHighlight(false);
@@ -346,8 +420,9 @@ Original expression:
   QVERIFY(!view.scaleHighlight() && !view.scaleFold())
 
 A046 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:133
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S205, S208
+Mapping/reason: S208 pins Fold preserved while Highlight is off across a track change and S205 pins both preserved when both are set; the mixed combination read here (Highlight on, Fold off) follows from that independent-preservation law.
 Source context since previous assertion:
   ;
       view.setScaleHighlight(true);
@@ -356,8 +431,9 @@ Original expression:
   QVERIFY(view.scaleHighlight() && !view.scaleFold())
 
 A047 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:138
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S205, S206
+Mapping/reason: S206 (session_editor_semantics.swift:188-191) requires the tab's root/scale/Highlight/Fold preserved after document.deleteTrack(additional) and S205 requires them preserved across track selection; this site reads Highlight and Fold after selectTrack(0) and deleteTrack(0).
 Source context since previous assertion:
   ;
       view.selectTrack(originalTrack);
@@ -368,8 +444,9 @@ Original expression:
   QVERIFY(view.scaleHighlight() && view.scaleFold())
 
 A048 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:146
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S206
+Mapping/reason: The same delete-preservation clause read after the remapped track selection.
 Source context since previous assertion:
   ;
       workspace->requestUndo();
@@ -383,8 +460,9 @@ Original expression:
   QVERIFY(view.scaleHighlight() && view.scaleFold())
 
 A049 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:148
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S207
+Mapping/reason: S207 (session_editor_semantics.swift:192-199) requires the tab's Highlight and Fold preserved after the deleted track is undone and the used-track count restored, the clause this site reads after requestUndo().
 Source context since previous assertion:
   ;
       workspace->requestUndo();
@@ -392,8 +470,9 @@ Original expression:
   QVERIFY(view.scaleHighlight() && view.scaleFold())
 
 A050 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:151
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: PARTIAL
+Mapping: S204, S209
+Mapping/reason: S204 requires both sessions' history identities unchanged after their scale writes and S209 (scale_editing.swift:170-171) requires no history entry from Fold toggles and track switches, so the view-only part of this clause is pinned. Unproved: no executing predicate reads a document's dirty flag after the fixture's track delete/undo sequence, which is what !second->document().isDirty() asserts.
 Source context since previous assertion:
   ;
       if (addedTrack)
@@ -402,8 +481,9 @@ Original expression:
   QVERIFY(!second->document().isDirty())
 
 A051 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:153
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S196
+Mapping/reason: S196 requires bar.presenter.scaleRoot == 9 on the restored first tab - the same value (firstRoot = 9) this site reads from the first tab's view.
 Source context since previous assertion:
   ;
       workspace->selectSongTab(first);
@@ -411,24 +491,27 @@ Original expression:
   QCOMPARE(first->view().scaleRoot(), firstRoot)
 
 A052 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:154
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S196
+Mapping/reason: S196's bar.presenter.scaleType == 2 conjunct is the restored first tab's ScaleID rawValue for firstScale (dorian).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(first->view().scaleId(), firstScale)
 
 A053 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:155
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S197
+Mapping/reason: S197 (tst_ShellTransport.qml:528) requires bar.presenter.scaleHighlight on the restored first tab, the clause this site reads from the view.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(first->view().scaleHighlight())
 
 A054 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:156
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: PARTIAL
+Mapping: S195, S205
+Mapping/reason: S195 pins Fold tab independence for the first tab enabled and the second tab off, and S205 requires the first session's Fold preserved after the second session's writes. Unproved: the mirrored instance this site reads (the first tab's Fold left off after the second tab's Fold was enabled) has no equivalent assertion.
 Source context since previous assertion:
   ;
 Original expression:
@@ -997,3 +1080,91 @@ Anchor: function
 
 S187 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
 Anchor: message "track selection keeps per-tab Fold and Highlight settings"
+
+S188 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "new tab opens with C root"
+  tst_ShellTransport.qml:501 compare(root.currentIndex, 0, "new tab opens with C root") on the mounted root selector after openSong.
+
+S189 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "new tab opens with Major scale"
+  tst_ShellTransport.qml:502 compare(type.currentIndex, 0, "new tab opens with Major scale") on the mounted type selector.
+
+S190 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "new tab opens with Highlight and Fold off"
+  tst_ShellTransport.qml:503-504 verify(!highlight.checked && !fold.Accessible.checked, "new tab opens with Highlight and Fold off") on the mounted controls.
+
+S191 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "Highlight toggle edits the selected tab"
+  tst_ShellTransport.qml:505-506 mouseClick on transportScaleHighlight then compare(bar.presenter.scaleHighlight, true, "Highlight toggle edits the selected tab").
+
+S192 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "Highlight toggles off and on from the transport control"
+  tst_ShellTransport.qml:507-511 second and third Highlight clicks; toggledOff = !bar.presenter.scaleHighlight, then verify(toggledOff && bar.presenter.scaleHighlight, "Highlight toggles off and on from the transport control").
+
+S193 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "Fold toggle edits the selected tab"
+  tst_ShellTransport.qml:512-513 mouseClick on transportScaleFold then compare(bar.presenter.scaleFold, true, "Fold toggle edits the selected tab").
+
+S194 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "second tab restores independent default scale"
+  tst_ShellTransport.qml:520-522 waitForNative until session.songTabs.tabCount === 2 && bar.presenter.scaleRoot === 0, message "second tab restores independent default scale".
+
+S195 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "second tab does not inherit Fold"
+  tst_ShellTransport.qml:523 compare(bar.presenter.scaleFold, false, "second tab does not inherit Fold") after the second song opens while the first tab's Fold is enabled.
+
+S196 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "first tab restores its root and type"
+  tst_ShellTransport.qml:525-527 after the first song reopens, waitForNative until bar.presenter.scaleRoot === 9 && bar.presenter.scaleType === 2.
+
+S197 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "first tab restores Highlight"
+  tst_ShellTransport.qml:528 compare(bar.presenter.scaleHighlight, true, "first tab restores Highlight").
+
+S198 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "mounted root selector follows the restored tab"
+  tst_ShellTransport.qml:529-530 tryCompare(root, "currentIndex", 9, 3000, "mounted root selector follows the restored tab").
+
+S199 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "mounted scale selector follows the restored tab"
+  tst_ShellTransport.qml:531-532 tryCompare(type, "currentIndex", 2, 3000, "mounted scale selector follows the restored tab").
+
+S200 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "mounted Highlight control follows the restored tab"
+  tst_ShellTransport.qml:533 compare(highlight.checked, true, "mounted Highlight control follows the restored tab").
+
+S201 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "the first tab keeps its scale state after second-tab edits"
+  tst_ShellTransport.qml:534 compare(fold.Accessible.checked, true, "the first tab keeps its scale state after second-tab edits").
+
+S202 | checkPerTabScaleState | src/checks/workspace/session_editor_semantics.swift
+Anchor: message "a fresh tab defaults to C major with Highlight and Fold off"
+  session_editor_semantics.swift:153-159 isDefault(session) = root == 0 && scale == .major && !highlight && !fold, then report.expect(isDefault(first) && isDefault(second), cppID: "swiftcore/ApplicationSession::tabsScale") over two freshly built DocumentSessions.
+
+S203 | checkPerTabScaleState | src/checks/workspace/session_editor_semantics.swift
+Anchor: message "unselected tab retains defaults after scale edits"
+  session_editor_semantics.swift:160-169 first.setScale(root: 9) / setScale(type: .dorian) / setScale(highlight: true) / setScale(fold: true), then report.expect(isDefault(second) && first.scaleProjection.root == 9 && first.scaleProjection.scale == .dorian && first.scaleProjection.highlight && first.scaleProjection.fold).
+
+S204 | checkPerTabScaleState | src/checks/workspace/session_editor_semantics.swift
+Anchor: message "scale state stays with its tab"
+  session_editor_semantics.swift:170-178 second.setScale(root: 4) / setScale(type: .naturalMinor) / setScale(highlight: false) / setScale(fold: false), then report.expect(first.root == 9 && first.fold && second.root == 4 && second.scale == .naturalMinor && first.document.history.currentIdentity == firstHistory && second.document.history.currentIdentity == secondHistory).
+
+S205 | checkPerTabScaleState | src/checks/workspace/session_editor_semantics.swift
+Anchor: message "track selection preserves per-tab scale state"
+  session_editor_semantics.swift:179-187 first.document.addTrack(voice: 0), first.selectPrimaryTrack(additional), first.selectPrimaryTrack(0), then report.expect(first.root == 9 && first.scale == .dorian && first.highlight && first.fold).
+
+S206 | checkPerTabScaleState | src/checks/workspace/session_editor_semantics.swift
+Anchor: message "deleting a track preserves the tab's scale state"
+  session_editor_semantics.swift:188-191 first.document.deleteTrack(additional), then report.expect(first.root == 9 && first.scale == .dorian && first.highlight && first.fold).
+
+S207 | checkPerTabScaleState | src/checks/workspace/session_editor_semantics.swift
+Anchor: message "undo restores scale state across a deleted track"
+  session_editor_semantics.swift:192-199 first.document.history.undoDocument(), then report.expect(first.document.engineTracks.usedTrackCount > additional && first.root == 9 && first.scale == .dorian && first.highlight && first.fold).
+
+S208 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "selected-track change preserves Fold and leaves Highlight off"
+  scale_editing.swift:242-246 session.setScale(highlight: false); session.selectPrimaryTrack(alternate); report.expect(session.scaleProjection.fold && !session.scaleProjection.highlight).
+
+S209 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "scale view changes push no history entry"
+  scale_editing.swift:163-171 session.setScale(fold: true) / setScale(fold: false) plus a primary-track round trip when a second engine track exists, then report.expect(document.history.currentIdentity == identity).
