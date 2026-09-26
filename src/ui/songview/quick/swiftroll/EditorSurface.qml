@@ -16,6 +16,19 @@ Item {
     readonly property var headersModel: applicationSession.trackHeadersPresenter()
     readonly property var drawerPresenter: applicationSession.drawerPresenter()
     readonly property var pitchBendPresenter: applicationSession.pitchBendPresenter()
+    readonly property var eventListPresenter: applicationSession.eventListPresenter()
+    readonly property bool showEvents: applicationSession.showsEvents
+    onShowEventsChanged: {
+        if (!root.showEvents)
+            eventPage.active = false
+        if (root.eventListPresenter)
+            root.eventListPresenter.setVisible(root.showEvents)
+        eventListHost.visible = root.showEvents
+        if (root.showEvents)
+            eventPage.active = true
+        else
+            rollInput.forceActiveFocus(Qt.OtherFocusReason)
+    }
     readonly property var hintService: applicationSession.mouseHintsPresenter()
     readonly property bool hintWindowActive: visible && Window.window !== null
                                             && Window.window.visible && Window.window.active
@@ -110,6 +123,11 @@ Item {
         // while the surface is still being hidden.
         if (!visible && root.applicationSession)
             root.applicationSession.cancelGridInput(root.cancelReasonHidden)
+        if (visible && root.showEvents && eventPage.item)
+            Qt.callLater(function() {
+                if (root.visible && root.showEvents && eventPage.item)
+                    eventPage.item.forceActiveFocus(Qt.OtherFocusReason)
+            })
     }
 
     Connections {
@@ -313,10 +331,10 @@ Item {
                 }
             }
 
-
             Item {
                 id: rollGutterSide
                 objectName: "timelineQuickRollGutter"
+                visible: !root.showEvents
                 y: root.gridModel.rulerHeight
                 width: root.gridModel.keyboardWidth
                 height: Math.max(parent.height - y, 0)
@@ -361,6 +379,7 @@ Item {
             Item {
                 id: rollPlot
                 objectName: "timelineQuickRollPlot"
+                visible: !root.showEvents
                 x: root.gridModel.keyboardWidth
                 y: root.gridModel.rulerHeight
                 width: Math.max(parent.width - x, 0)
@@ -501,10 +520,43 @@ Item {
             // so adding the ruler does not displace these overlays.
             Item {
                 id: rollContentBand
+                objectName: "rollContentBand"
+                visible: !root.showEvents
                 y: root.gridModel.rulerHeight
                 width: parent.width
                 height: Math.max(parent.height - y, 0)
                 z: 3
+            }
+        }
+
+        Item {
+            id: eventListHost
+            x: root.headersModel.trackHeaderWidth
+            y: root.gridModel.rulerHeight
+            width: Math.max(parent.width - x, 0)
+            height: Math.max(parent.height - y, 0)
+            z: 4
+            visible: false
+
+            Loader {
+                id: eventPage
+                anchors.fill: parent
+                active: false
+                onLoaded: {
+                    if (root.eventListPresenter)
+                        root.eventListPresenter.setVisible(root.showEvents)
+                    if (root.showEvents && root.visible)
+                        Qt.callLater(function() {
+                            if (root.showEvents && eventPage.item)
+                                eventPage.item.forceActiveFocus(Qt.OtherFocusReason)
+                        })
+                }
+                sourceComponent: Component {
+                    EventListPage {
+                        objectName: "eventListPage"
+                        presenter: root.eventListPresenter
+                    }
+                }
             }
         }
     }
@@ -558,6 +610,7 @@ Item {
         handleColor: root.headersModel.appearance.scrollbarHandle
         handleHoverColor: root.headersModel.appearance.scrollbarHandleHover
         visibleWhenNotScrollable: true
+        externalVisible: !root.showEvents
         thumbObjectName: "timelineRollScrollThumb"
 
         onValueRequested: (value) => root.gridModel.setCameraVScroll(value)
@@ -855,6 +908,7 @@ Item {
         hoverGuideColor: root.gridModel.palette.secondaryText
         editGuideColor: root.gridModel.palette.editCursor
         playheadColor: root.gridModel.palette.playhead
+        rollBodyVisible: !root.showEvents
         rollPlotRect: Qt.rect(rollStack.x + rollPlot.x, rollPlot.y,
                               rollPlot.width, rollPlot.height)
         drawerRect: Qt.rect(editorDrawer.x, editorDrawer.y,
@@ -891,6 +945,10 @@ Item {
 
     Component.onCompleted: {
         hintService.setWindowActive(hintWindowActive)
+        if (root.eventListPresenter)
+            root.eventListPresenter.setVisible(root.showEvents)
+        eventListHost.visible = root.showEvents
+        eventPage.active = root.showEvents
         configureViewport()
     }
     Component.onDestruction: hintService.setWindowActive(false)

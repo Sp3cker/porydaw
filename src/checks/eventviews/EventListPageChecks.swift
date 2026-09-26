@@ -118,6 +118,34 @@ internal func runEventListPageChecks(_ report: CheckReport, session suite: Docum
     eventListAppearanceParity(report, suite: suite, service: service)
     eventListSummaryParity(report, suite: suite, service: service)
     eventListCellCommitContract(report, suite: suite, service: service)
+    eventListChunkLabelParity(report, suite: suite, service: service)
+}
+
+@MainActor
+private func eventListChunkLabelParity(_ report: CheckReport, suite: DocumentSession,
+                                      service: ProjectService) {
+    let file = MidiFile(division: 24, chunks: [
+        MidiChunk(events: [.meta(tick: 0, type: 0x58, data: [4, 2, 24, 8])], endTick: 24),
+        MidiChunk(events: [.channel(tick: 0, status: 0x90, data0: 60, data1: 90),
+                           .channel(tick: 12, status: 0x80, data0: 60)], endTick: 24),
+        MidiChunk(events: [.channel(tick: 0, status: 0x91, data0: 64, data1: 90),
+                           .channel(tick: 12, status: 0x81, data0: 64)], endTick: 24),
+    ])
+    let document = SongDocument(file: file, config: suite.document.state.config,
+                                source: suite.document.source,
+                                trackBudget: suite.document.trackBudget)
+    let session = DocumentSession(document: document, service: service,
+                                  lease: suite.bankLease, slots: suite.bankSlots,
+                                  dirty: false, loadName: suite.bankLoadName,
+                                  sampleRate: 48_000)
+    let presenter = EventListPresenter()
+    presenter.attach(session: session)
+    report.expectEqual(expected: "Chunk 0 (tempo/meta)", actual: presenter.chunkLabels[0],
+                       cppID: pageID, what: "unmapped conductor chunk names tempo/meta")
+    report.expectEqual(expected: "Chunk 1 — Track 1", actual: presenter.chunkLabels[1],
+                       cppID: pageID, what: "first engine track names its raw chunk")
+    report.expectEqual(expected: "Chunk 2 — Track 2", actual: presenter.chunkLabels[2],
+                       cppID: pageID, what: "second engine track names its raw chunk")
 }
 
 @MainActor

@@ -309,6 +309,79 @@ TestCase {
         tryCompare(presenter, "visible", true, 3000)
         const page = findChild(tab, "eventListPage")
         verify(page !== null, "existing event-list page is rendered")
+        const surface = findChild(tab, "swiftRollOverlay")
+        verify(surface !== null, "editor stays mounted beneath the event list")
+        const band = findChild(surface, "swiftRollBand")
+        const drawer = findChild(surface, "editorDrawer")
+        const ruler = findChild(surface, "timelineQuickRuler")
+        const controls = findChild(surface, "timelineRulerControls")
+        const headers = findChild(surface, "timelineQuickTrackHeaders")
+        const horizontal = findChild(surface, "timelineHorizontalScrollBar")
+        const status = findChild(surface, "mouseHintStatus")
+        const rollGutter = findChild(surface, "timelineQuickRollGutter")
+        const rollPlot = findChild(surface, "timelineQuickRollPlot")
+        const rollInput = findChild(surface, "swiftRollInput")
+        const rollContent = findChild(surface, "rollContentBand")
+        const vertical = findChild(surface, "timelineRollScrollBar")
+        verify(band && drawer && ruler && controls && headers && horizontal && status
+               && rollGutter && rollPlot && rollInput && rollContent && vertical,
+               "editor bands remain addressable when the list replaces the roll")
+        verify(waitForNative(function() {
+            const location = page.mapToItem(surface, 0, 0)
+            return location.x === surface.headersModel.trackHeaderWidth
+                && location.y === surface.gridModel.rulerHeight
+                && page.width === surface.width - surface.headersModel.trackHeaderWidth
+                && page.height === drawer.y - surface.gridModel.rulerHeight
+        }, 3000), "event list occupies only the roll band up to the drawer")
+        verify(waitForNative(function() {
+            return ruler.visible && controls.visible && headers.visible
+                && drawer.visible && horizontal.visible && status.visible
+        }, 3000), "ruler with Grid controls, headers, drawer, scrollbar and status remain visible")
+        verify(waitForNative(function() {
+            return !rollGutter.visible && !rollPlot.visible && !rollInput.visible
+                && !rollContent.visible && !vertical.externalVisible
+        }, 3000), "roll keyboard, plot/input/content and vertical scrollbar hide behind the list")
+        const chunk = findChild(page, "eventListChunk")
+        verify(waitForNative(function() {
+            return chunk && chunk.label === "Chunk 1 — Track 1"
+                && presenter.chunkLabels[0] === "Chunk 0 (tempo/meta)"
+                && presenter.chunkLabels[2] === "Chunk 2 — Track 2"
+        }, 3000), "mus_route101 combo and chunk choices use fork track and conductor labels")
+        verify(waitForNative(function() { return page.activeFocus }, 3000),
+               "showing the list transfers focus to its keyboard input")
+        const rollClip = findChild(surface, "sharedPlayheadRollClip")
+        const rollBody = rollClip ? findChild(rollClip, "sharedPlayheadBody") : null
+        const editRollGuide = findChild(surface, "sharedPlayheadEditRollGuide")
+        const hoverRollGuide = findChild(surface, "sharedPlayheadHoverRollGuide")
+        verify(rollClip && rollBody && editRollGuide && hoverRollGuide,
+               "ruler triangle and roll playhead/guide segments remain addressable")
+        verify(waitForNative(function() {
+            return !rollBody.visible && !editRollGuide.available
+                && !hoverRollGuide.available && rollClip.available
+        }, 3000), "list hides roll playhead body and guides without hiding the ruler triangle")
+        const division = findChild(surface, "timelineRulerDivisionControl")
+        const feel = findChild(surface, "timelineRulerFeelControl")
+        verify(division && feel && division.visible && feel.visible && division.enabled
+               && feel.enabled, "Grid division and feel controls stay interactive with the list")
+        mouseClick(division)
+        verify(waitForNative(function() { return surface.gridModel.gridMenuKind === 1 }, 3000),
+               "Grid division opens its ruler menu above the mounted event list")
+        surface.gridModel.dismissGridMenu()
+        const velocityToggle = findChild(drawer, "drawerToggle_velocity")
+        verify(velocityToggle && velocityToggle.visible && velocityToggle.enabled,
+               "velocity drawer toggle remains available with the list")
+        const velocityWasVisible = surface.drawerPresenter.velocitySection.visible
+        mouseClick(velocityToggle)
+        verify(waitForNative(function() {
+            return surface.drawerPresenter.velocitySection.visible !== velocityWasVisible
+        }, 3000), "velocity drawer can expand or collapse while the list is shown")
+        verify(waitForNative(function() {
+            return page.height === drawer.y - surface.gridModel.rulerHeight
+        }, 3000), "event list follows the drawer's changed top edge")
+        mouseClick(velocityToggle)
+        verify(waitForNative(function() {
+            return surface.drawerPresenter.velocitySection.visible === velocityWasVisible
+        }, 3000), "velocity drawer returns to its original state")
         tryVerify(function() {
             const item = findChild(shell, "shellAction_view.event_list")
             return item !== null && item.checked && item.enabled
@@ -370,8 +443,21 @@ TestCase {
         tryCompare(presenter, "editing", false)
         compare(presenter.cellDisplay(restored, 3), String(changedPitch),
                 "cell edit changed the document-backed table value")
+        const cameraX = surface.gridModel.cameraScrollX
+        const cameraY = surface.gridModel.cameraScrollY
         shellPresenter.activate("view.event_list")
         tryCompare(presenter, "visible", false)
+        verify(waitForNative(function() {
+            return rollGutter.visible && rollPlot.visible && rollInput.visible
+                && rollContent.visible && vertical.externalVisible
+                && rollBody.visible && editRollGuide.available && hoverRollGuide.available
+        }, 3000), "hiding the list restores the entire roll and its playhead guides")
+        verify(waitForNative(function() { return rollInput.activeFocus }, 3000),
+               "hiding the list returns keyboard focus to the roll input")
+        compare(surface.gridModel.cameraScrollX, cameraX,
+                "showing the event list does not move the horizontal camera")
+        compare(surface.gridModel.cameraScrollY, cameraY,
+                "showing the event list does not move the vertical camera")
     }
 
     function test_tickBoundariesThroughMountedEditor() {

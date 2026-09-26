@@ -21,7 +21,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A004 | EventViewsChromeTest::visibilityAndTrackSelection | src/checks/eventviews/chrome.cpp:69
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: a native track selection echoed its chunk through the controller (chunkForTrack). The Swift page is now mounted (EditorSurface eventListPage; shell event-list lane), but no executing predicate selects a track and reads the presenter's chunk anchor.
 Source context since previous assertion:
 ;
 
@@ -33,7 +33,7 @@ QTRY_COMPARE(widgets.controller->chunk(),
 
 A005 | EventViewsChromeTest::rowMirrorPlusEot | src/checks/eventviews/chrome.cpp:85
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native rig-open guard (openRigFixture). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
 Source context since previous assertion:
 ;
 }
@@ -56,7 +56,7 @@ QVERIFY2(opened, qPrintable(opened.error))
 
 A006 | EventViewsChromeTest::rowMirrorPlusEot | src/checks/eventviews/chrome.cpp:87
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native event-list open guard (openEventList). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -66,7 +66,7 @@ QVERIFY(widgets)
 
 A007 | EventViewsChromeTest::rowMirrorPlusEot | src/checks/eventviews/chrome.cpp:90
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: guard on the controller's chunk for the fixture. The Swift page is now mounted, but no predicate guards the presenter's chunk anchor for this fixture.
 Source context since previous assertion:
 ;
 
@@ -85,7 +85,7 @@ Mapping: S002
 
 A010 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:104
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native rig-open guard (openRigFixture). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
 Source context since previous assertion:
 ;
 }
@@ -99,7 +99,7 @@ QVERIFY2(opened, qPrintable(opened.error))
 
 A011 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:106
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native event-list open guard (openEventList). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -109,7 +109,7 @@ QVERIFY(widgets)
 
 A012 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:116
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the rendered cell's Qt::FontRole family matched the table mono face. The Swift page is now mounted, but no predicate asserts the event-list cell font role.
 Source context since previous assertion:
 ;
 
@@ -127,7 +127,7 @@ QCOMPARE(QFontInfo(cell).family(), expectedInfo.family())
 
 A013 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:117
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the rendered cell's letter-spacing type was absolute. The Swift page is now mounted, but no predicate asserts the event-list cell font role.
 Source context since previous assertion:
 ;
 
@@ -136,7 +136,7 @@ QCOMPARE(cell.letterSpacingType(), QFont::AbsoluteSpacing)
 
 A014 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:118
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the rendered cell's letter spacing was -0.5. The Swift page is now mounted, but no predicate asserts the event-list cell font role.
 Source context since previous assertion:
 ;
 
@@ -188,7 +188,7 @@ QCOMPARE(editorFont.letterSpacing(), -0.5)
 
 A019 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:138
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native rig-open guard (openRigFixture). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
 Source context since previous assertion:
 ;
     checks::eventviews::closeCellEditor(widgets);
@@ -205,7 +205,7 @@ QVERIFY2(opened, qPrintable(opened.error))
 
 A020 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:140
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native event-list open guard (openEventList). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -218,7 +218,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A022 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:145
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: guard on the controller's persisted column widths (at least two entries). The Swift page is now mounted and the presenter publishes columnWidths, but no predicate reads them.
 Source context since previous assertion:
 ;
     const QList<double> initial = widgets.controller->columnWidths();
@@ -260,7 +260,7 @@ QCOMPARE(widgets.controller->columnWidths().size(), initial.size())
 
 A025 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:170
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native rig-open guard (openRigFixture). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
 Source context since previous assertion:
 ;
 }
@@ -277,7 +277,7 @@ QVERIFY2(opened, qPrintable(opened.error))
 
 A026 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:172
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native event-list open guard (openEventList). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -290,7 +290,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A028 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:178
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: selectRow(0) echoed through controller.currentRow(). The shell lane asserts presenter.currentRow after a mounted selectRow (tst_ShellEventList.qml:409), but not under this drawer-focus sequence, so the echo here stays unasserted.
 Source context since previous assertion:
 ;
     widgets.controller->selectRow(0, Qt::NoModifier);
@@ -351,7 +351,7 @@ QVERIFY(drawer->hasActiveFocus())
 
 A034 | EventViewsChromeTest::scrollbarWheelClamps | src/checks/eventviews/chrome.cpp:196
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native rig-open guard (openRigFixture). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
 Source context since previous assertion:
 ;
 }
@@ -367,7 +367,7 @@ QVERIFY2(opened, qPrintable(opened.error))
 
 A035 | EventViewsChromeTest::scrollbarWheelClamps | src/checks/eventviews/chrome.cpp:198
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native event-list open guard (openEventList). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -419,7 +419,7 @@ QTRY_COMPARE(table->property("contentY").toReal(), 0.0)
 
 A041 | EventViewsChromeTest::filterMatrix | src/checks/eventviews/chrome.cpp:244
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native rig-open guard (openRigFixture). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
 Source context since previous assertion:
 ;
 }
@@ -456,7 +456,7 @@ QVERIFY2(opened, qPrintable(opened.error))
 
 A042 | EventViewsChromeTest::filterMatrix | src/checks/eventviews/chrome.cpp:246
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native event-list open guard (openEventList). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -505,7 +505,7 @@ QCOMPARE(widgets.model->rowCount(), expectedEvents + 1)
 
 A045 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:275
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native rig-open guard (openRigFixture). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
 Source context since previous assertion:
 ;
 }
@@ -519,7 +519,7 @@ QVERIFY2(opened, qPrintable(opened.error))
 
 A046 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:277
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native event-list open guard (openEventList). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -529,7 +529,7 @@ QVERIFY(widgets)
 
 A047 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:280
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the view state recorded eventList true once the native page had opened. The shell-tabs lane asserts the tab flag for a fresh tab and across a reload (tst_ShellTabs.qml:1357,1438), but no predicate reads the flag immediately after the mounted page becomes visible.
 Source context since previous assertion:
 ;
 
@@ -540,7 +540,7 @@ QVERIFY(state.eventList)
 
 A048 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:283
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: applying a view state with eventList false left the native list hidden. The shell lane toggles visibility through the View menu action, not by applying a seeded view state, so this apply path stays unasserted.
 Source context since previous assertion:
 ;
     state.eventList = false;
@@ -551,7 +551,7 @@ QVERIFY(!opened.fixture->view().eventListVisible())
 
 A049 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:286
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the round-tripped view state read eventList false. The shell-tabs lane compares the reloaded flag (tst_ShellTabs.qml:1438), but no predicate round-trips a view state with the list hidden.
 Source context since previous assertion:
 ;
 
@@ -562,7 +562,7 @@ QVERIFY(!state.eventList)
 
 A050 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:289
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: applying a view state with eventList true showed the native list. No predicate applies a seeded view state to the mounted page.
 Source context since previous assertion:
 ;
     state.eventList = true;
@@ -573,7 +573,7 @@ QVERIFY(opened.fixture->view().eventListVisible())
 
 A051 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:299
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native rig-open guard (openRigFixture). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
 Source context since previous assertion:
 ;
 }
@@ -591,7 +591,7 @@ QVERIFY2(opened, qPrintable(opened.error))
 
 A052 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:301
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native event-list open guard (openEventList). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -630,7 +630,7 @@ QVERIFY(model)
 
 A057 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:318
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the rendered filter menu exposed seven category rows. The Swift page is now mounted, but no predicate asserts the filter menu's row count.
 Source context since previous assertion:
 ;
     const int rows = model->rowCount();
@@ -833,7 +833,7 @@ QTRY_VERIFY(controller.menuOpen())
 
 A075 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:391
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the rendered Data-column cell centre for row 0 resolved to a scene point. No predicate asserts the mounted table's cell geometry; the shell lane asserts the seven-column table and its row sync only.
 Source context since previous assertion:
 ;
     const QPointF tablePoint =
@@ -890,7 +890,7 @@ QCOMPARE(controller.filterMask(), maskBeforeCancel)
 
 A081 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:405
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native rig-open guard (openRigFixture). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
 Source context since previous assertion:
 ;
 }
@@ -906,7 +906,7 @@ QVERIFY2(opened, qPrintable(opened.error))
 
 A082 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:407
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native event-list open guard (openEventList). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -916,7 +916,7 @@ QVERIFY(widgets)
 
 A083 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:414
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the rendered model exposed the tick-60 control-change row. No predicate resolves a published row by tick and type on the mounted page.
 Source context since previous assertion:
 ;
     QQuickWindow &window = *widgets.quickWindow;
@@ -931,7 +931,7 @@ QVERIFY(row >= 0)
 
 A084 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:417
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the rendered tick-60 Data cell resolved to a scene point. No predicate asserts the mounted cell geometry.
 Source context since previous assertion:
 ;
     const QPointF cell =
@@ -966,7 +966,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A088 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:427
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the row menu's insert row resolved to a scene point. No predicate asserts the mounted menu's row geometry.
 Source context since previous assertion:
 ;
 
@@ -1213,7 +1213,7 @@ QTRY_VERIFY(!controller.menuOpen())
 
 A113 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:492
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native rig-open guard (openRigFixture). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
 Source context since previous assertion:
 ;
 }
@@ -1231,7 +1231,7 @@ QVERIFY2(opened, qPrintable(opened.error))
 
 A114 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:494
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: native event-list open guard (openEventList). The Swift page is now mounted and its shell lane opens the song through the production session, but this setup guard has no predicate of its own.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -1241,7 +1241,7 @@ QVERIFY(widgets)
 
 A115 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:500
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the rendered model exposed the tick-60 control-change row. No predicate resolves a published row by tick and type on the mounted page.
 Source context since previous assertion:
 ;
     QQuickWindow &window = *widgets.quickWindow;
@@ -1255,7 +1255,7 @@ QVERIFY(sourceRow >= 0)
 
 A116 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:503
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the rendered tick-60 Data cell resolved to a scene point. No predicate asserts the mounted cell geometry.
 Source context since previous assertion:
 ;
     const QPointF source = checks::eventviews::cellSceneCenter(widgets, sourceRow,
@@ -1286,7 +1286,7 @@ QTRY_COMPARE(controller.currentRow(), sourceRow)
 
 A119 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:509
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: harness guard on the popup session's outside-right signal spy. The mounted page's popup session is exercised by the shell lane, but no predicate asserts this spy's validity.
 Source context since previous assertion:
 ;
     QSignalSpy retargeted(widgets.popupSession, &songview::QuickPopupSession::outsideRightPressed);
@@ -1320,7 +1320,7 @@ QVERIFY(frame)
 
 A123 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:530
 Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: a rendered row whose Data cell lay outside the popup frame resolved. No predicate asserts the mounted cell and frame geometry.
 Source context since previous assertion:
 ;
     QPointF target;

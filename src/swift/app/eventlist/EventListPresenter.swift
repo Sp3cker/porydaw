@@ -376,9 +376,13 @@ public final class EventListPresenter {
             publishRows()
             return
         }
-        let chunks = session.document.rawChunks
-        chunkLabels = chunks.indices.map { index in
-            index == 0 ? "0: Tempo / metadata" : "\(index): MIDI chunk"
+        let document = session.document
+        let chunks = document.rawChunks
+        chunkLabels = chunks.indices.map { chunk in
+            if let engineTrack = firstEngineTrack(for: chunk, in: document) {
+                return "Chunk \(chunk) — Track \(engineTrack + 1)"
+            }
+            return "Chunk \(chunk) (tempo/meta)"
         }
         guard chunks.indices.contains(chunkIndex) else {
             model.setSource(nil)

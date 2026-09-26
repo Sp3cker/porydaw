@@ -28,6 +28,7 @@ Item {
 
     required property QtObject presenter
     required property color playheadColor
+    required property bool rollBodyVisible
     required property QtObject guides
     required property color hoverGuideColor
     required property color editGuideColor
@@ -73,6 +74,8 @@ Item {
         // Body/core pixels retain the original strict segment clip.
         Item {
             id: bodyClip
+            objectName: "sharedPlayheadBody"
+            visible: !segment.rulerSegment || root.rollBodyVisible
             x: segment.triangleOverhang
             y: 0
             width: Math.max(segment.clipRect.width, 0)
@@ -360,7 +363,7 @@ Item {
         clipRect: root.rollPlotRect
         guide: root.guides.edit
         guideColor: root.editGuideColor
-        available: true
+        available: root.rollBodyVisible
     }
 
     GuideSegment {
@@ -398,7 +401,7 @@ Item {
         clipRect: root.rollPlotRect
         guide: root.guides.hover
         guideColor: root.hoverGuideColor
-        available: true
+        available: root.rollBodyVisible
     }
 
     GuideSegment {

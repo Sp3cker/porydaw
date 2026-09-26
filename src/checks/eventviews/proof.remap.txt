@@ -339,7 +339,7 @@ QVERIFY(widgets)
 
 A046 | EventViewsRemapTest::metadataChunkTransition | src/checks/eventviews/remap.cpp:159
 Disposition: GAP
-Mapping/reason: Event-table model observation (controller chunk selection into the rendered list) with no Swift owner; feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed). The presenter anchor half is proved by S047-S052; the rendered selection path is not.
+Mapping/reason: Event-table model observation (controller chunk selection into the rendered list) with no executing predicate: the page is now mounted (EditorSurface eventListPage; shell event-list lane), but no predicate drives a chunk selection through the rendered combo. The presenter anchor half is proved by S047-S052; the rendered selection path is not.
 Source context since previous assertion:
 g());
         const int targetDivision = checks::support::alternateGridMenuId(initial.gridSelection)
@@ -348,7 +348,7 @@ QVERIFY(checks::eventviews::selectChunk(*widgets.controller, metadataChunk))
 
 A047 | EventViewsRemapTest::metadataChunkTransition | src/checks/eventviews/remap.cpp:160
 Disposition: GAP
-Mapping/reason: Event-table model observation (rendered model chunk echo) with no Swift owner; feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed). The presenter anchor half is proved by S047-S052; the rendered model echo is not.
+Mapping/reason: Event-table model observation (rendered model chunk echo) with no executing predicate: the page is now mounted, but no predicate reads the published chunk echo after a chunk selection. The presenter anchor half is proved by S047-S052; the rendered model echo is not.
 Source context since previous assertion:
 ivisio
 Original expression:
@@ -377,7 +377,7 @@ Mapping: S044
 
 A051 | EventViewsRemapTest::metadataChunkTransition | src/checks/eventviews/remap.cpp:182
 Disposition: GAP
-Mapping/reason: Event-table model observation (rendered row lookup for the promoted program event) with no Swift owner; feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed). The promotion itself is MATCHED (A049-A050); the rendered row projection is not.
+Mapping/reason: Event-table model observation (rendered row lookup for the promoted program event) with no executing predicate: the page is now mounted, but no predicate resolves a published row by tick and type. The promotion itself is MATCHED (A049-A050); the rendered row projection is not.
 Source context since previous assertion:
 ->prop
 Original expression:
@@ -412,7 +412,7 @@ QVERIFY(widgets)
 
 A056 | EventViewsRemapTest::tempoProjectionRows | src/checks/eventviews/remap.cpp:196
 Disposition: GAP
-Mapping/reason: Event-table model observation (rendered tempo-row projection at tick zero) with no Swift owner; feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed).
+Mapping/reason: Event-table model observation (rendered tempo-row projection at tick zero) with no executing predicate: the page is now mounted, but no predicate asserts the projected tempo-row index for this fixture; the tempo-row predicates in EventListPageChecks.swift cover other fixtures.
 Source context since previous assertion:
 ssion-
 Original expression:
@@ -420,7 +420,7 @@ QCOMPARE(widgets.model->tempoRowForExactTick(0), 0)
 
 A057 | EventViewsRemapTest::tempoProjectionRows | src/checks/eventviews/remap.cpp:198
 Disposition: GAP
-Mapping/reason: Event-table model observation (rendered tempo-row projection after track switch) with no Swift owner; feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed).
+Mapping/reason: Event-table model observation (rendered tempo-row projection after track switch) with no executing predicate: the page is now mounted, but no predicate re-reads the projected tempo row after a selection change.
 Source context since previous assertion:
 );
         QVERIFY(!divisionReopened.session->isO
