@@ -651,13 +651,13 @@ S013 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semant
 Anchor: message "lane-scoped transpose consumes without falling through to notes"
 
 S014 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift
-Anchor: message "lane transpose does not mutate a simultaneous note selection"
+Anchor: message "lane transpose does not mutate notes after the time selection clears note focus"
 
 S015 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "range Delete removes only points in the selected interval"
 
 S016 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift
-Anchor: message "time selection deletion leaves simultaneously selected notes intact"
+Anchor: message "time selection deletion leaves notes outside the selected lane intact"
 
 S017 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "empty selected range deletion never falls through to notes"
@@ -669,7 +669,7 @@ S019 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semant
 Anchor: message "canonical clear-selection command clears the automation range"
 
 S020 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift
-Anchor: message "note selection becomes the target after range clear"
+Anchor: message "reselecting the note makes it the target after range clear"
 
 S021 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "shared note deletion remains reachable after range clear"

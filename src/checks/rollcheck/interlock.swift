@@ -87,9 +87,7 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
     func containsAB() -> Bool {
         session.selectedNotes.contains(seeded[0]) && session.selectedNotes.contains(seeded[1])
     }
-    var timeSelection: AutomationTimeSelection?
-    grid.timeSelectionSource = { timeSelection }
-    grid.onClearTimeSelection = { timeSelection = nil }
+    session.clearTimeSelection()
     var committedTicks: [Tick] = []
     grid.onCommitCursor = { committedTicks.append($0) }
     func clearSelection() {
@@ -97,9 +95,9 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
     }
 
     clearSelection()
-    timeSelection = AutomationTimeSelection(
+    session.applyTimeSelection(AutomationTimeSelection(
         range: TimeRange(startTick: Tick(aTick), endTick: Tick(aTick + duration)),
-        scope: .tracks([grid.trackIndex]))
+        scope: .tracks([grid.trackIndex])))
     do {
         let before = snapshot()
         grid.beginPointer(x: ax, y: ay, modifiers: 0)
@@ -108,7 +106,7 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
         grid.updateRightPointer(x: bandX, y: bandY)
         grid.endRightPointer(x: bandX, y: bandY)
         report.expect(session.selectedNoteOrder.isEmpty && !grid.interactionActive
-                      && timeSelection == nil,
+                      && session.timeSelection == nil,
                       cppID: id, message: "A003 blocked right click clears notes and time selection")
         grid.endPointer(x: bandX, y: bandY)
         report.expect(unchanged(before), cppID: id,
@@ -116,9 +114,9 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
     }
 
     clearSelection()
-    timeSelection = AutomationTimeSelection(
+    session.applyTimeSelection(AutomationTimeSelection(
         range: TimeRange(startTick: Tick(aTick), endTick: Tick(aTick + duration)),
-        scope: .tracks([grid.trackIndex]))
+        scope: .tracks([grid.trackIndex])))
     do {
         let before = snapshot()
         grid.beginRightPointer(x: 1, y: 0)
@@ -127,7 +125,7 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
         grid.updatePointer(x: beyondBX, y: by + 4)
         grid.endRightPointer(x: beyondBX, y: by + 4)
         report.expect(session.selectedNoteOrder.isEmpty && !grid.interactionActive
-                      && timeSelection == nil,
+                      && session.timeSelection == nil,
                       cppID: id, message: "A005 demoted right Band clears notes and time selection")
         grid.endPointer(x: beyondBX, y: by + 4)
         report.expect(unchanged(before), cppID: id,

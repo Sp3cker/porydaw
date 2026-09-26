@@ -601,8 +601,7 @@ TestCase {
         verify(waitForNative(function() {
             return findChild(surface, "quickMenuPanelRoot") === null
         }, 3000), "the dismissed menu panel leaves the visible scene")
-        surface.rulerMenu.beginSweep(0, 0)
-        surface.rulerMenu.endSweep(0)
+        grid.setEditCursorTick(0)
         verify(Math.abs(grid.editCursorTick) < 0.5,
                "resetting the stopped edit cursor keeps the next Play near the song start")
         compare(play.actionable, true, "loaded song can start playback")
@@ -675,8 +674,8 @@ TestCase {
         var selectedClock = clock.text
         var selectedTick = session.playheadPresenter().tick
         var oldTargetX = firstRuler.width * 0.85
-        firstSurface.rulerMenu.beginSweep(oldTargetX, 0)
-        firstSurface.rulerMenu.endSweep(oldTargetX)
+        firstSurface.rulerMenu.beginSweep(oldTargetX, 0, 0)
+        firstSurface.rulerMenu.endSweep(oldTargetX, 0)
         verify(firstSurface.gridModel.editCursorTick !== firstCursor,
                "the background tab actually commits its own ruler cursor")
         verify(Math.abs(session.playheadPresenter().tick - selectedTick) < 0.001,
@@ -701,8 +700,8 @@ TestCase {
         var cursorX = grid.beatWidth - grid.cameraScrollX
         verify(cursorX > 0 && cursorX < ruler.width,
                "one beat of the fixture is visible on the mounted ruler")
-        surface.rulerMenu.beginSweep(cursorX, 0)
-        surface.rulerMenu.endSweep(cursorX)
+        surface.rulerMenu.beginSweep(cursorX, 0, 0)
+        surface.rulerMenu.endSweep(cursorX, 0)
         var cursor = surface.gridModel.editCursorTick
         verify(cursor > 0, "the stopped edit cursor is away from the origin")
         verify(waitForNative(function() { return play.actionable && play.enabled }, 3000),
@@ -754,13 +753,13 @@ TestCase {
         var first = rollSurface()
         var ruler = findChild(first, "timelineRulerInput")
         var cursor = first.gridModel.editCursorTick
-        first.rulerMenu.beginSweep(ruler.width * 0.4, 0)
+        first.rulerMenu.beginSweep(ruler.width * 0.4, 0, 0)
         session.cancelGridInput(0)
-        first.rulerMenu.endSweep(ruler.width * 0.4)
+        first.rulerMenu.endSweep(ruler.width * 0.4, 0)
         compare(first.gridModel.editCursorTick, cursor,
                 "a late ruler release after input cancellation cannot commit its seek")
-        first.rulerMenu.beginSweep(ruler.width * 0.4, 0)
-        first.rulerMenu.endSweep(ruler.width * 0.4)
+        first.rulerMenu.beginSweep(ruler.width * 0.4, 0, 0)
+        first.rulerMenu.endSweep(ruler.width * 0.4, 0)
         verify(first.gridModel.editCursorTick !== cursor,
                "an uncancelled sweep still commits its ruler cursor")
         var firstId = session.songTabs.selectedId
@@ -790,9 +789,9 @@ TestCase {
         compare(secondTrack.soloChecked, false,
                 "hidden solo publication cannot change the selected tab")
         var selectedTick = session.playheadPresenter().tick
-        first.rulerMenu.beginSweep(ruler.width * 0.8, 0)
+        first.rulerMenu.beginSweep(ruler.width * 0.8, 0, 0)
         firstTab.cancelGridInput(0)
-        first.rulerMenu.endSweep(ruler.width * 0.8)
+        first.rulerMenu.endSweep(ruler.width * 0.8, 0)
         verify(Math.abs(session.playheadPresenter().tick - selectedTick) < 0.001,
                "a late background ruler release cannot seek selected audio")
         session.songTabs.selectTab(firstId)

@@ -338,12 +338,16 @@ public final class ApplicationSession: QmlInstantiableStatus {
         songTabs.publishTimeSigFlags()
     }
 
-    public func openTimeSigMenu(contentX: Double) {
-        guard let workspace, contentX.isFinite else { return }
+    public func captureTimeSigMenuPress(contentX: Double, pointerY: Double) {
+        guard let workspace else { return }
+        workspace.rulerMenu.captureRulerPress(contentX: contentX, pointerY: pointerY)
+    }
+
+    public func openTimeSigMenu() {
+        guard let workspace else { return }
         workspace.rulerMenu.cancelInsertTimePrompt()
-        let chip = timeSigChipTick(contentX: contentX)
         cancelTimeSigPrompt()
-        workspace.rulerMenu.openRuler(contentX: contentX, chipTick: chip)
+        workspace.rulerMenu.openRulerAtRelease()
         timeSigMenuOpen = workspace.rulerMenu.isOpen
         songTabs.publishTimeSigFlags()
     }
@@ -355,19 +359,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
     }
 
     public func timeSigChipTick(contentX: Double) -> Double {
-        guard let workspace, contentX.isFinite else { return -1 }
-        let session = workspace.session
-        let tolerance = max(4, workspace.grid.baseFontPx * 0.5)
-        for signature in session.document.timeSignatures.reversed() {
-            let x = session.camera.contentX(tick: Double(signature.tick))
-            let labelWidth = Double("\(signature.numerator)/\(1 << min(signature.denominatorPower, 6))".count)
-                * workspace.grid.baseFontPx * 0.6
-            if abs(x - contentX) <= tolerance
-                || (contentX >= x && contentX <= x + tolerance + labelWidth) {
-                return Double(signature.tick)
-            }
-        }
-        return -1
+        guard let workspace, let tick = workspace.rulerMenu.signatureTick(at: contentX)
+        else { return -1 }
+        return Double(tick)
     }
 
     private func invalidateTimeSigPrompt(session: DocumentSession, revision: UInt64) {
@@ -528,7 +522,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
         }
         return EditKeyArbiter.decide(command: command, surface: EditSurfaceState(
             pointerGestureActive: eventList.pointerDown,
-            timeSelectionActive: workspace.automationPage.selection?.isActive == true,
+            timeSelectionActive: workspace.session.timeSelection?.isActive == true,
             noteSelectionEmpty: workspace.session.selectedNotes.isEmpty,
             origin: .eventList, autoRepeat: autoRepeat,
             commandAvailable: available)).rawValue
@@ -1058,15 +1052,11 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 guard let self, let workspace else { return }
                 self.seekToTick(tick, in: workspace)
             }
-            workspace.grid.onClearTimeSelection = { [weak workspace] in
-                workspace?.automationPage.clearTimeSelection()
-            }
             // New tabs receive the current View menu display modes: the grid
             // defaults both off, and each setter no-ops (without rebuilding)
             // when the mode is already off.
             workspace.grid.setVelocityColorMode(enabled: velocityColorMode)
             workspace.grid.setNoteNameMode(enabled: noteNameMode)
-            workspace.grid.timeSelectionSource = { [weak workspace] in workspace?.automationPage.selection }
             workspace.grid.refreshTimeSelectionHighlight()
             workspace.automationPage.onCommandAvailabilityChanged = { [weak self, weak workspace] in
                 workspace?.grid.refreshTimeSelectionHighlight()
@@ -1365,7 +1355,7 @@ public struct EditorCommandRouter {
         self.automation = automation
     }
 
-    private var timeSelectionActive: Bool { automation.selection?.isActive == true }
+    private var timeSelectionActive: Bool { session.timeSelection?.isActive == true }
     private var pointerGestureActive: Bool {
         grid.interactionActive || automation.pointerGestureActive
     }

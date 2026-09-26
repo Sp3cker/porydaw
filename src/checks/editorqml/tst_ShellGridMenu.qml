@@ -650,6 +650,37 @@ TestCase {
         return { startX: startX, endX: endX, midX: (startX + endX) / 2 }
     }
 
+    function test_rulerRightPressCapturesAndReleaseOpensAtReleasePosition() {
+        openSong()
+        var ruler = control("timelineRulerInput")
+        var grid = surface().gridModel
+        var pressX = ruler.width * 0.3
+        var releaseX = ruler.width * 0.42
+        var y = ruler.height * 0.75
+        var priorCursor = grid.editCursorTick
+        verify(rulerMenuGone())
+        mousePress(ruler, pressX, y, Qt.RightButton)
+        compare(timeSigHost.timeSigMenuOpen, false,
+                "ruler right press captures without opening a context menu")
+        compare(grid.editCursorTick, priorCursor,
+                "ruler right press does not seek before release")
+        mouseMove(ruler, releaseX, y, -1, Qt.RightButton)
+        compare(timeSigHost.timeSigMenuOpen, false,
+                "moving the pressed pointer does not open the context menu")
+        mouseRelease(ruler, releaseX, y, Qt.RightButton)
+        tryVerify(rulerMenuShown, 3000,
+                  "ruler right release opens the captured-tick menu")
+        var menu = rulerPanel()
+        var releasePoint = ruler.mapToItem(surface(), releaseX, y)
+        compare(menu.menuOrigin.x, Math.round(Math.max(0, Math.min(releasePoint.x,
+                                                            menu.width - menu.menuWidth))),
+                "ruler menu is positioned at the release rather than press coordinate")
+        verify(Math.abs(rulerTickX(grid.editCursorTick) - pressX) <= rulerCellPixels(),
+               "release commits the captured press tick, not the release tick")
+        keyClick(Qt.Key_Escape)
+        tryVerify(rulerMenuGone, 3000)
+    }
+
     function test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel() {
         var session = openSong()
         var ruler = control("timelineRulerInput")
@@ -741,8 +772,10 @@ TestCase {
 
         var selectionStart = startTick - Math.max(1, grid.snapTicks)
         mousePress(ruler, rulerTickX(selectionStart), y, Qt.LeftButton)
-        mouseMove(ruler, rulerTickX(startTick), y, -1, Qt.LeftButton)
-        mouseRelease(ruler, rulerTickX(startTick), y, Qt.LeftButton)
+        mouseMove(ruler, rulerTickX(startTick), Math.max(0, y - grid.dragDistance),
+                  -1, Qt.LeftButton)
+        mouseRelease(ruler, rulerTickX(startTick), Math.max(0, y - grid.dragDistance),
+                     Qt.LeftButton)
         menu = openRulerMenu(rulerTickX((selectionStart + startTick) / 2), y)
         var loopSelectionIndex = rulerRowIndex(menu, 5)
         verify(loopSelectionIndex >= 0 && menu.rowItem(loopSelectionIndex).itemData.enabled)

@@ -57,7 +57,7 @@ Mapping: S006
 
 A006 | PianoRollTest::keyboardDuplicateNotes | src/checks/rollcheck/note_commands.cpp:150
 Disposition: GAP
-Mapping/reason: PianoGrid has no time-selection state (the automation page owns time selection separately), so no Swift predicate observes that note duplication left the roll time selection inactive.
+Mapping/reason: GAP: after the 38a cutover the session owns the time selection (PianoGrid.timeSelectionSource/onClearTimeSelection were deleted) and checkKeyboardDuplicateNotes still commits no time selection, but no Swift predicate asserts that note duplication left the roll time selection inactive; S009 belongs to the sibling duplicate-precedence case, which commits a range instead of leaving none.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -450,7 +450,7 @@ S008 | checkKeyboardDuplicatePrefersTimeSelection | src/checks/rollcheck/note_co
 Anchor: message "active time range owns duplicate and advances the cursor"
 
 S009 | checkKeyboardDuplicatePrefersTimeSelection | src/checks/rollcheck/note_commands.swift
-Anchor: message "time-range duplication leaves the note selection on its source"
+Anchor: message "committing the time range clears the competing note selection"
 
 S010 | checkKeyboardSplitNotesGrid | src/checks/rollcheck/note_commands.swift
 Anchor: message "the split seed spans three grid cells"

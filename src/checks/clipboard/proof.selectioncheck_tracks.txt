@@ -4,6 +4,7 @@ Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
 Original: src/checks/clipboard/selectioncheck_tracks.cpp
 Original SHA-256: c0fa3450cb285e33ceb356561d3055af065b6fc341901fea52f96135ae14f7dd
 Swift counterpart: src/checks/editcheck/SelectionChecks.swift
+Additional Swift counterpart: src/checks/automation/presentation/painting.swift (track-scope lane coverage, S051-S052)
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
@@ -11,9 +12,10 @@ Command: deno task verify --filter swiftcore --verbose
 Result: PASS: build ok; "ok: swiftcore (10.20s)"; "verify: 1/6 ok (5 skipped)";
 Provenance: observed verification reported for this round-2 re-pin; this
 proof-only reconciliation did not rebuild or re-run any suite. LSP diagnostics
-were clean on all touched files. The Swift SHA-256 above is the final
-checked-in counterpart source; no native run and no differential comparison
-against the C++ original is claimed.
+were clean on all touched files. No Swift SHA-256 line is kept: the tool
+rejects Swift SHA-256 lines, so the counterpart is pinned by the message anchors
+below; no native run and no differential comparison against the C++ original is
+claimed.
 Command: deno task verify:shell --filter shell-clipboard --verbose
 Result: PASS: "ok: shell-clipboard (1.15s)"; "verify: 1/11 ok"; "run_checks: PASS".
 Command: deno task verify --filter=swiftcore --qt projectSession
@@ -25,14 +27,36 @@ fallback predicates S024-S025); this proof-only reconciliation did not rebuild
 or re-run any suite.
 
 
-Swift-side fixture and sequence: clipboardTrackSelectionChecks provisions six
-engine tracks (document.addTrack(voice: 0) until usedTrackCount reaches 6),
-drives session.selectedTrack and session.adjustTrackScope(track:action:), and
-records SessionChangeDomains publication through session.onChange; the note
-handoff case inserts a note on track 1 with document.addNotes and selects it.
-The PARTIAL precondition: the Swift session carries no time-selection state, so
-the sites that cite an executing predicate under S006-S013 are proved for the
-scope gesture only, not for the native active time selection.
+Command: deno task verify --filter swiftcore-projectsession --verbose (task-38a frozen sources)
+Result: PASS — 1/37 ok; the implementer-recorded run for this round, whose
+per-predicate rows are the fresh build/proof-evidence/swiftcore-projectsession.json
+entries indexed as S026-S056.
+Command: deno task verify --filter swiftcore --verbose (task-38a frozen sources)
+Result: PASS — 12/37 ok (25 filtered skips), implementer-recorded for this round.
+Provenance: the two blocks above are the implementer-reported lane results for the
+task-38a round on the frozen sources; this proof-only reconciliation ran no lane,
+rebuilt nothing and re-ran no suite. The blocks above them record earlier rounds and
+only the anchors and dispositions that this round re-verified. No native run and no
+differential comparison against the C++ original is claimed.
+
+Swift-side fixture and sequence: the landed session owns the time selection
+state. clipboardTrackSelectionChecks provisions six engine tracks
+(document.addTrack(voice: 0) until usedTrackCount reaches 6), drives
+session.selectedTrack and session.adjustTrackScope(track:action:), and records
+SessionChangeDomains publication through session.onChange; its note-handoff
+case inserts a note on track 1 with document.addNotes and selects it.
+clipboardUnifiedModelChecks provisions three engine tracks and drives one
+continuous sequence under a session-owned active track-scoped range
+(AutomationTimeSelection(range: 12..<36, scope: .tracks([0, 1]))): plain on
+another track, plain on the primary, toggle away from the primary, range onto
+a third track, a note selection, and a structural moveTrack remap, recording
+session.onSelectionTransition payloads. clipboardUnifiedTimeSelectionChecks
+builds fresh sessions and drives the sanitize, clear, commit, coverage and
+remap sequences, and clipboardLaneSelectionChecks projects lane-scope coverage
+through AutomationRowStack rows. The former PARTIAL precondition is closed:
+DocumentSession.timeSelection now holds the sanitized selection, so the sites
+that cite S026-S036 run the scope gesture with the active time selection in
+place.
 
 A001 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:40
 Disposition: MATCHED
@@ -55,8 +79,8 @@ Disposition: MATCHED
 Mapping: S005
 
 A006 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:53
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: the primary handoff is asserted, removing track 1 from scope {1, 3} leaves expectEqual(3, session.selectedTrack); S006. Unproved: the native scenario ran with an active 30..60 time selection and DocumentSession holds no time-selection state, so preservation of that selection and the previousTrackTime payload (A010-A015) have no predicate.
+Disposition: MATCHED
+Mapping: S006, S030
 Source context since previous assertion:
       notifications.clear();
       model.setTimeSelection(trackRange(30, 60));
@@ -66,16 +90,16 @@ Original expression:
   QCOMPARE(model.primaryTrack(), 3);
 
 A007 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:54
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: the surviving scope expectEqual(Set([3]), session.selectedTracks) is asserted; S007. Unproved: the active time-selection precondition of the native scenario (see A006).
+Disposition: MATCHED
+Mapping: S007, S032
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(model.storedTrackScope(), trackBit(3));
 
 A008 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:55
-Disposition: GAP
-Mapping/reason: GAP: no equivalent Swift predicate. DocumentSession has no time-selection state, so the time-selection assertions of this family (active() after the scope handoff, and the previousTrackTime/trackTime transition payloads) have no counterpart. Family anchor for A010-A015, A018, A020-A021 and A024-A025. Unproved: an active time selection across track-scope gestures.
+Disposition: MATCHED
+Mapping: S026, S031
 Source context since previous assertion:
   ;
 Original expression:
@@ -83,7 +107,7 @@ Original expression:
 
 A009 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:56
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: the handoff publishes exactly one selection change; S008. Unproved: the combined kPrimaryTrack | kTrackScope mask is not separately observable in the Swift domain model, and the active time-selection precondition (see A006) is not modelled.
+Mapping/reason: PARTIAL: the handoff publishes exactly one session selection change (S008), and the same handoff now runs with a session-owned active track-scope range (S026, S031). Unproved: the fork's combined PrimaryTrack|TrackScope change mask, which the Swift session does not model (it publishes SessionChangeDomains), and a transition count in the active-selection fixture.
 Source context since previous assertion:
   ;
 Original expression:
@@ -91,7 +115,7 @@ Original expression:
 
 A010 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:58
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for the handoff transition payload; see the GAP family notes in the preamble.
+Mapping/reason: GAP: the landed handoff-transition predicate asserts only the previous and current track scope (S032); no executing Swift predicate observes the track-time payload's tick endpoints, which the fork reports in previousTrackTime/trackTime. Unproved: the handoff payload endpoints (family anchor for A010-A011 and A013-A014). The endpoint payload is asserted only for the time-selection commit sequence, whose sites belong to the core selection ledger.
 Source context since previous assertion:
       const auto &handoff = notifications.transitions.back();
 Original expression:
@@ -99,15 +123,15 @@ Original expression:
 
 A011 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:59
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes on A010.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(handoff.previousTrackTime.endTick, uint64_t{60});
 
 A012 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:60
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: MATCHED
+Mapping: S032
 Source context since previous assertion:
   ;
 Original expression:
@@ -115,7 +139,7 @@ Original expression:
 
 A013 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:61
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes on A010.
 Source context since previous assertion:
   ;
 Original expression:
@@ -123,23 +147,23 @@ Original expression:
 
 A014 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:62
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes on A010.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(handoff.trackTime.endTick, uint64_t{60});
 
 A015 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:63
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: MATCHED
+Mapping: S032
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(handoff.trackTime.trackScope, trackBit(3));
 
 A016 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:68
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: the plain gesture keeps its primary (expectEqual(3, session.selectedTrack)) and collapses the {3, 4} scope to {3}; S009. Unproved: the active time selection that the native plain gesture preserved has no Swift counterpart (see A006).
+Disposition: MATCHED
+Mapping: S009, S028
 Source context since previous assertion:
       model.applyTrackScopeAdjustment(4, usedTracks, EditorSelectionModel::TrackScopeAction::Toggle);
       notifications.clear();
@@ -148,16 +172,16 @@ Original expression:
   QCOMPARE(model.primaryTrack(), 3);
 
 A017 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:69
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: expectEqual(Set([3]), session.selectedTracks) after the .plain collapse; S010. Unproved: the active time-selection precondition (see A006).
+Disposition: MATCHED
+Mapping: S010, S029
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(model.storedTrackScope(), trackBit(3));
 
 A018 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:70
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: MATCHED
+Mapping: S026, S028
 Source context since previous assertion:
   ;
 Original expression:
@@ -165,7 +189,7 @@ Original expression:
 
 A019 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:71
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: the collapse publishes exactly one selection change; S011. Unproved: the kTrackScope-only mask and the time-selection precondition (see A006).
+Mapping/reason: PARTIAL: the collapse publishes exactly one session selection change (S011), now also observed with an active selection (S029). Unproved: the fork's TrackScope-only change mask and a transition count in the active-selection fixture.
 Source context since previous assertion:
   ;
 Original expression:
@@ -173,23 +197,23 @@ Original expression:
 
 A020 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:73
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: GAP: no executing Swift predicate observes the plain-on-primary transition payload; the landed payload predicate covers the toggle handoff only (S032). Unproved: the collapse transition's previous and current track-scope fields (family anchor for A020-A021).
 Source context since previous assertion:
       const auto &collapsed = notifications.transitions.back();
 Original expression:
   QCOMPARE(collapsed.previousTrackTime.trackScope, trackBit(3) | trackBit(4));
 
 A021 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:74
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the collapse's resulting scope is asserted for the session (S010) and, with an active selection, for the authoritative time selection (S029). Unproved: the collapse transition payload's current track-scope field.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(collapsed.trackTime.trackScope, trackBit(3));
 
 A022 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:78
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: the .range gesture expands inclusively to expectEqual(Set([3, 4, 5]), session.selectedTracks); S012. Unproved: the active time-selection precondition (see A006).
+Disposition: MATCHED
+Mapping: S012, S033
 Source context since previous assertion:
       notifications.clear();
       model.applyTrackScopeAdjustment(5, usedTracks, EditorSelectionModel::TrackScopeAction::Range);
@@ -198,7 +222,7 @@ Original expression:
 
 A023 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:79
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: the range publishes exactly one selection change; S013. Unproved: the active time-selection precondition (see A006).
+Mapping/reason: PARTIAL: the range publishes exactly one session selection change (S013), now also observed with an active selection (S033, S034). Unproved: the TrackScope-only change mask and a transition count in the active-selection fixture.
 Source context since previous assertion:
   ;
 Original expression:
@@ -206,15 +230,15 @@ Original expression:
 
 A024 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:81
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: GAP: no executing Swift predicate observes the range transition's previous track-time scope; the landed range predicates assert the resulting scope values (S033, S034), not the payload. Unproved: the range transition's previous and current track-scope payload fields (family anchor for A024-A025).
 Source context since previous assertion:
       const auto &ranged = notifications.transitions.back();
 Original expression:
   QCOMPARE(ranged.previousTrackTime.trackScope, trackBit(3));
 
 A025 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:82
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the inclusive range scope is asserted on the session scope ({0, 1, 2}, S033) and on the authoritative time selection (S034). Unproved: the range transition payload's current track-time scope field.
 Source context since previous assertion:
   ;
 Original expression:
@@ -237,8 +261,8 @@ Disposition: MATCHED
 Mapping: S017
 
 A030 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:107
-Disposition: GAP
-Mapping/reason: GAP: no equivalent Swift predicate. The plain-action clearing of the time selection belongs to the unified track-scope/time-selection model, which is not ported; the Swift .plain adjustment only collapses selectedTracks (S009) and never touches a selection the model does not hold. Family anchor for A030-A037. Unproved: plain-action time-selection clearing and its transition payload.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the plain-on-another-track primary move is entailed but not asserted: the following plain-on-primary time-preserving branch (S029) can only hold if the earlier plain-elsewhere had already made the clicked track primary. Unproved: a predicate reading selectedTrack after a plain-on-another-track gesture.
 Source context since previous assertion:
       EditorSelectionModel plainTransition;
       NotificationLog plainNotifications;
@@ -253,15 +277,15 @@ Original expression:
 
 A031 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:108
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: GAP: no executing Swift predicate observes the plain-on-another-track result or its transition: the landed predicate for that gesture asserts only the time-selection clearing (S027), and the fixture's following time commit overwrites the scope it wrote. Unproved: the plain-elsewhere stored scope, its change mask and its previous/current track-time payload fields (family anchor for A031 and A033-A036).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(plainTransition.storedTrackScope(), trackBit(3));
 
 A032 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:109
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: MATCHED
+Mapping: S027
 Source context since previous assertion:
   ;
 Original expression:
@@ -269,7 +293,7 @@ Original expression:
 
 A033 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:110
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes on A031.
 Source context since previous assertion:
   ;
 Original expression:
@@ -277,7 +301,7 @@ Original expression:
 
 A034 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:112
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes on A031.
 Source context since previous assertion:
       const auto &plain = plainNotifications.transitions.back();
 Original expression:
@@ -285,7 +309,7 @@ Original expression:
 
 A035 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:113
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes on A031.
 Source context since previous assertion:
   ;
 Original expression:
@@ -293,23 +317,23 @@ Original expression:
 
 A036 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:114
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes on A031.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(plain.previousTrackTime.trackScope, trackBit(1));
 
 A037 | SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary | src/checks/clipboard/selectioncheck_tracks.cpp:115
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the cleared track-time payload is asserted for the clear-time path (S050, clearing time publishes an inactive transition payload). Unproved: the payload produced by the plain-elsewhere gesture itself, and the fork's trackScope-zero field (the Swift payload exposes active, not the scope field).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(plain.trackTime.trackScope, uint32_t{0});
 
 A038 | SelectionCheckTest::coverageQueriesAndLaneScopeSanitization | src/checks/clipboard/selectioncheck_tracks.cpp:125
-Disposition: GAP
-Mapping/reason: GAP: no equivalent Swift predicate. The coverage queries (timeSelectionCoversTrack/Lane/Tempo, resolvedTrackScope) and the lane-list sanitization (duplicates, negatives, track 16 dropped) are not ported: the Swift AutomationTimeSelection covers projection rows recorded in the laneselection ledger, not this model. Family anchor for A038-A057. Unproved: track/lane/tempo coverage queries and lane-list sanitization.
+Disposition: MATCHED
+Mapping: S043
 Source context since previous assertion:
   ;
   }
@@ -325,64 +349,64 @@ Original expression:
   QVERIFY(model.timeSelectionCoversTrack(0, usedTracks));
 
 A039 | SelectionCheckTest::coverageQueriesAndLaneScopeSanitization | src/checks/clipboard/selectioncheck_tracks.cpp:126
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: MATCHED
+Mapping: S040
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(model.timeSelectionCoversTrack(2, usedTracks));
 
 A040 | SelectionCheckTest::coverageQueriesAndLaneScopeSanitization | src/checks/clipboard/selectioncheck_tracks.cpp:127
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: MATCHED
+Mapping: S037
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!model.timeSelectionCoversTrack(1, usedTracks));
 
 A041 | SelectionCheckTest::coverageQueriesAndLaneScopeSanitization | src/checks/clipboard/selectioncheck_tracks.cpp:128
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: MATCHED
+Mapping: S041
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(model.resolvedTrackScope(usedTracks), usedTracks);
 
 A042 | SelectionCheckTest::coverageQueriesAndLaneScopeSanitization | src/checks/clipboard/selectioncheck_tracks.cpp:129
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: MATCHED
+Mapping: S051
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(model.timeSelectionCoversLane(0, 7, usedTracks));
 
 A043 | SelectionCheckTest::coverageQueriesAndLaneScopeSanitization | src/checks/clipboard/selectioncheck_tracks.cpp:130
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for pitch-bend lane coverage under track scope; see the GAP family notes in the preamble.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the track-scope lane-coverage law is executed for a supported control-change lane (S051). Unproved: a predicate exercising a pitch-bend lane parameter under a track-scope selection; no executing predicate covers DOC_CC_BEND.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(model.timeSelectionCoversLane(2, DOC_CC_BEND, usedTracks));
 
 A044 | SelectionCheckTest::coverageQueriesAndLaneScopeSanitization | src/checks/clipboard/selectioncheck_tracks.cpp:131
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: MATCHED
+Mapping: S052
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!model.timeSelectionCoversLane(1, 7, usedTracks));
 
 A045 | SelectionCheckTest::coverageQueriesAndLaneScopeSanitization | src/checks/clipboard/selectioncheck_tracks.cpp:132
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for tempo coverage requiring the full used set; see the GAP family notes in the preamble.
+Disposition: MATCHED
+Mapping: S039
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(model.timeSelectionCoversTempo(usedTracks));
 
 A046 | SelectionCheckTest::coverageQueriesAndLaneScopeSanitization | src/checks/clipboard/selectioncheck_tracks.cpp:133
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: MATCHED
+Mapping: S042
 Source context since previous assertion:
   ;
 Original expression:
@@ -390,15 +414,15 @@ Original expression:
 
 A047 | SelectionCheckTest::coverageQueriesAndLaneScopeSanitization | src/checks/clipboard/selectioncheck_tracks.cpp:134
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: GAP: no executing Swift predicate covers the empty used-track mask; the session query resolves against the document's used tracks, which is never empty, so the fork's used != 0 guard is not exercised by any fixture. Unproved: tempo coverage with an empty used-track set.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!model.timeSelectionCoversTempo(0));
 
 A048 | SelectionCheckTest::coverageQueriesAndLaneScopeSanitization | src/checks/clipboard/selectioncheck_tracks.cpp:143
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for lane-list sanitization (duplicates, negatives, and track 16 dropped); see the GAP family notes in the preamble.
+Disposition: MATCHED
+Mapping: S049
 Source context since previous assertion:
       EditorSelectionModel::TimeSelection lanes;
       lanes.startTick = 300;
@@ -411,56 +435,56 @@ Original expression:
   QVERIFY(model.timeSelection().active());
 
 A049 | SelectionCheckTest::coverageQueriesAndLaneScopeSanitization | src/checks/clipboard/selectioncheck_tracks.cpp:144
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the out-of-range-lane drop is executed (S044 drops a lane list whose tracks are all out of range) and the surviving lane list is asserted only for an already-valid list (S055). Unproved: the exact list left after one sanitize over a valid lane plus duplicates and out-of-range entries; Swift stores lanes in a Set, so duplicate entries are unrepresentable.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY((model.timeSelection().lanes == std::vector<std::pair<int, uint8_t>>{{2, 7}}));
 
 A050 | SelectionCheckTest::coverageQueriesAndLaneScopeSanitization | src/checks/clipboard/selectioncheck_tracks.cpp:145
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the tempo flag's coverage consequence is executed for a lanes-scope selection (S045, coversTempo returns the flag). Unproved: a predicate reading timeSelection.tempo itself after a lane-list sanitize.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(model.timeSelection().tempo);
 
 A051 | SelectionCheckTest::coverageQueriesAndLaneScopeSanitization | src/checks/clipboard/selectioncheck_tracks.cpp:146
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for lane scope excluding track coverage; see the GAP family notes in the preamble.
+Disposition: MATCHED
+Mapping: S046
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!model.timeSelectionCoversTrack(2, usedTracks));
 
 A052 | SelectionCheckTest::coverageQueriesAndLaneScopeSanitization | src/checks/clipboard/selectioncheck_tracks.cpp:147
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: MATCHED
+Mapping: S054
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(model.timeSelectionCoversLane(2, 7, usedTracks));
 
 A053 | SelectionCheckTest::coverageQueriesAndLaneScopeSanitization | src/checks/clipboard/selectioncheck_tracks.cpp:148
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: MATCHED
+Mapping: S045
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(model.timeSelectionCoversTempo(usedTracks));
 
 A054 | SelectionCheckTest::coverageQueriesAndLaneScopeSanitization | src/checks/clipboard/selectioncheck_tracks.cpp:149
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: MATCHED
+Mapping: S053
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!model.timeSelectionCoversLane(2, 8, usedTracks));
 
 A055 | SelectionCheckTest::coverageQueriesAndLaneScopeSanitization | src/checks/clipboard/selectioncheck_tracks.cpp:154
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for the empty lane-scope deactivation; see the GAP family notes in the preamble.
+Disposition: MATCHED
+Mapping: S044
 Source context since previous assertion:
       lanes.lanes.clear();
       lanes.tempo = false;
@@ -469,24 +493,24 @@ Original expression:
   QVERIFY(!model.timeSelection().active());
 
 A056 | SelectionCheckTest::coverageQueriesAndLaneScopeSanitization | src/checks/clipboard/selectioncheck_tracks.cpp:155
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the dropped-selection predicate (S044) makes the lane list empty by construction (timeSelection becomes nil). Unproved: a predicate reading the lane list of an inactive lane-scope selection.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(model.timeSelection().lanes.empty());
 
 A057 | SelectionCheckTest::coverageQueriesAndLaneScopeSanitization | src/checks/clipboard/selectioncheck_tracks.cpp:156
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the dropped-selection predicate (S044) makes the tempo flag false by construction. Unproved: a predicate reading the tempo flag of an inactive lane-scope selection.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!model.timeSelection().tempo);
 
 A058 | SelectionCheckTest::outOfRangeTrackMasksAreIgnored | src/checks/clipboard/selectioncheck_tracks.cpp:170
-Disposition: GAP
-Mapping/reason: GAP: no equivalent Swift predicate. The 16-bit setTrackScope/trackBit domain has no public Swift API (DocumentSession.adjustTrackScope guards on (0..<usedTrackCount).contains(track), a different predicate that accepts no raw mask). This is a coverage gap, not a retired mechanism: do not reclassify RETIRED-REPRESENTATION without ingress evidence that the raw-mask API is gone. Family anchor for A058-A059 and A062-A064. Unproved: raw out-of-range mask sanitization and its no-notify.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: uint32 scope-mask bits; the fork's public setTrackScope(TrackMask) masks bits outside the 16-track domain (bit 20 is dropped) and Swift stores Set<Int>, writing scope only through per-track gestures, so no ingress can express an out-of-range mask bit.
 Source context since previous assertion:
   ;
   }
@@ -506,8 +530,8 @@ Original expression:
   QCOMPARE(model.storedTrackScope(), trackBit(15));
 
 A059 | SelectionCheckTest::outOfRangeTrackMasksAreIgnored | src/checks/clipboard/selectioncheck_tracks.cpp:171
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for no-notify on equivalent out-of-range scope; see the GAP family notes in the preamble.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: uint32 scope-mask bits; the no-notify of an out-of-range masked write is a property of the fork's raw-mask ingress, which the Swift Set<Int> gesture API does not expose.
 Source context since previous assertion:
   ;
 Original expression:
@@ -522,32 +546,32 @@ Disposition: MATCHED
 Mapping: S019
 
 A062 | SelectionCheckTest::outOfRangeTrackMasksAreIgnored | src/checks/clipboard/selectioncheck_tracks.cpp:176
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for the trackBit(32) helper returning zero; see the GAP family notes in the preamble.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: uint32 scope-mask bits; the trackBit helper shifts a 32-bit mask and returns zero for a width at or above the word size, which has no counterpart where track scope is a Set<Int>.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(trackBit(32), uint32_t{0});
 
 A063 | SelectionCheckTest::outOfRangeTrackMasksAreIgnored | src/checks/clipboard/selectioncheck_tracks.cpp:178
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: uint32 scope-mask bits; the zero-mask write that keeps the forced primary bit is a raw-mask ingress the Swift Set<Int> gesture API cannot express.
 Source context since previous assertion:
       model.setTrackScope(trackBit(32));
 Original expression:
   QCOMPARE(model.storedTrackScope(), trackBit(15));
 
 A064 | SelectionCheckTest::outOfRangeTrackMasksAreIgnored | src/checks/clipboard/selectioncheck_tracks.cpp:179
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: uint32 scope-mask bits; the no-notify of an equivalent raw-mask write has no counterpart in the per-track gesture API.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(notifications.transitions.empty());
 
 A065 | SelectionCheckTest::resetForSongSwapNotifiesExactState | src/checks/clipboard/selectioncheck_tracks.cpp:192
-Disposition: GAP
-Mapping/reason: GAP: no equivalent Swift predicate. resetForSongSwap (primary 14, scope trackBit(14), cleared note and time selection, exact transition) is not ported; replacing a song in the app is a different owner and no predicate asserts this reset contract. Family anchor for A065-A079. Unproved: song-swap reset state and notification.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: per-tab DocumentSession; no in-place song rebind — the fork's resetForSongSwap clamps firstUsedTrack into 0..15 and sets primary, scope, notes and time on one live model, while a song swap in Swift constructs a new tab session (DocumentSession.open) whose primary is unset until the first selection, so the reset's state contract has no ingress (family anchor for A065-A079 except A068 and A074).
 Source context since previous assertion:
   ;
   }
@@ -566,56 +590,56 @@ Original expression:
   QCOMPARE(model.primaryTrack(), 14);
 
 A066 | SelectionCheckTest::resetForSongSwapNotifiesExactState | src/checks/clipboard/selectioncheck_tracks.cpp:193
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: per-tab DocumentSession; no in-place song rebind (see A065) — the scope={primary} reset has no counterpart: a fresh session's selectedTracks stays empty until a selection.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(model.storedTrackScope(), trackBit(14));
 
 A067 | SelectionCheckTest::resetForSongSwapNotifiesExactState | src/checks/clipboard/selectioncheck_tracks.cpp:194
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: per-tab DocumentSession; no in-place song rebind (see A065) — there is no live note selection for the swap to clear.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(model.noteSelection().empty());
 
 A068 | SelectionCheckTest::resetForSongSwapNotifiesExactState | src/checks/clipboard/selectioncheck_tracks.cpp:195
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: MATCHED
+Mapping: S056
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!model.timeSelection().active());
 
 A069 | SelectionCheckTest::resetForSongSwapNotifiesExactState | src/checks/clipboard/selectioncheck_tracks.cpp:196
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: per-tab DocumentSession; no in-place song rebind (see A065) — a song swap publishes no reset transition, so its change mask has no counterpart.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(hasTransition(notifications, 0, kPrimaryTrack | kTrackScope | kNoteSelection));
 
 A070 | SelectionCheckTest::resetForSongSwapNotifiesExactState | src/checks/clipboard/selectioncheck_tracks.cpp:197
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: per-tab DocumentSession; no in-place song rebind (see A065) — the reset transition's previous track-time scope has no counterpart.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(notifications.transitions.back().previousTrackTime.trackScope, uint32_t{0});
 
 A071 | SelectionCheckTest::resetForSongSwapNotifiesExactState | src/checks/clipboard/selectioncheck_tracks.cpp:198
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: per-tab DocumentSession; no in-place song rebind (see A065) — the reset transition's current track-time scope has no counterpart.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(notifications.transitions.back().trackTime.trackScope, uint32_t{0});
 
 A072 | SelectionCheckTest::resetForSongSwapNotifiesExactState | src/checks/clipboard/selectioncheck_tracks.cpp:201
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for equivalent song-swap suppression; see the GAP family notes in the preamble.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: per-tab DocumentSession; no in-place song rebind (see A065) — with per-tab construction there is no repeated reset whose suppression could be observed.
 Source context since previous assertion:
       const size_t beforeEquivalent = notifications.transitions.size();
       model.resetForSongSwap(14);
@@ -623,8 +647,8 @@ Original expression:
   QCOMPARE(notifications.transitions.size(), beforeEquivalent);
 
 A073 | SelectionCheckTest::resetForSongSwapNotifiesExactState | src/checks/clipboard/selectioncheck_tracks.cpp:209
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for song-swap reset clearing a time selection; see the GAP family notes in the preamble.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: per-tab DocumentSession; no in-place song rebind (see A065) — the reset primary of a model carrying an active time selection has no counterpart.
 Source context since previous assertion:
       EditorSelectionModel timeModel;
       NotificationLog timeNotifications;
@@ -636,48 +660,48 @@ Original expression:
   QCOMPARE(timeModel.primaryTrack(), 6);
 
 A074 | SelectionCheckTest::resetForSongSwapNotifiesExactState | src/checks/clipboard/selectioncheck_tracks.cpp:210
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: a fresh per-tab session has no time selection at all (S056), which excludes the reset's inactive state. Unproved: the clearing event itself — the fork clears a selection that was active before the swap, while a new session never held one.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!timeModel.timeSelection().active());
 
 A075 | SelectionCheckTest::resetForSongSwapNotifiesExactState | src/checks/clipboard/selectioncheck_tracks.cpp:211
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: per-tab DocumentSession; no in-place song rebind (see A065) — the reset's PrimaryTrack|TrackScope|TimeSelection mask has no counterpart.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(hasTransition(timeNotifications, 0, kPrimaryTrack | kTrackScope | kTimeSelection));
 
 A076 | SelectionCheckTest::resetForSongSwapNotifiesExactState | src/checks/clipboard/selectioncheck_tracks.cpp:213
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: per-tab DocumentSession; no in-place song rebind (see A065) — the reset transition's previous track-time start tick has no counterpart.
 Source context since previous assertion:
       const auto &transition = timeNotifications.transitions.back();
 Original expression:
   QCOMPARE(transition.previousTrackTime.startTick, uint64_t{1});
 
 A077 | SelectionCheckTest::resetForSongSwapNotifiesExactState | src/checks/clipboard/selectioncheck_tracks.cpp:214
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: per-tab DocumentSession; no in-place song rebind (see A065) — the reset transition's previous track-time end tick has no counterpart.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(transition.previousTrackTime.endTick, uint64_t{2});
 
 A078 | SelectionCheckTest::resetForSongSwapNotifiesExactState | src/checks/clipboard/selectioncheck_tracks.cpp:215
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: per-tab DocumentSession; no in-place song rebind (see A065) — the reset transition's previous track scope has no counterpart.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(transition.previousTrackTime.trackScope, trackBit(0));
 
 A079 | SelectionCheckTest::resetForSongSwapNotifiesExactState | src/checks/clipboard/selectioncheck_tracks.cpp:216
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: per-tab DocumentSession; no in-place song rebind (see A065) — the reset transition's current track-time scope has no counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -734,7 +758,7 @@ Original expression:
 
 A084 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:238
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: GAP: the landed remap predicates assert the mapped primary and scope values and the coalesced publication (S020-S025), but no executing Swift predicate observes the remap transition payload's track-time fields (previous/current startTick, endTick, trackScope). Unproved: the remap transition payload (family anchor for A084-A085, A091-A092, A097-A100 and A104-A105).
 Source context since previous assertion:
   ;
 Original expression:
@@ -742,15 +766,15 @@ Original expression:
 
 A085 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:239
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes on A084.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(notifications.transitions.back().trackTime.trackScope, uint32_t{0});
 
 A086 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:256
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for remap of lane selections with duplicate collapse; see the GAP family notes in the preamble.
+Disposition: MATCHED
+Mapping: S020
 Source context since previous assertion:
       EditorSelectionModel laneModel;
       NotificationLog laneNotifications;
@@ -771,8 +795,8 @@ Original expression:
   QCOMPARE(laneModel.primaryTrack(), 4);
 
 A087 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:257
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: MATCHED
+Mapping: S021
 Source context since previous assertion:
   ;
 Original expression:
@@ -780,7 +804,7 @@ Original expression:
 
 A088 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:258
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: GAP: no executing Swift predicate observes a remapped surviving lane list, a surviving tempo flag or the lane remap's change mask; the landed lane-remap predicate covers only a lane whose track was deleted, which drops the whole selection (S047). Unproved: lane-pair remapping with duplicate collapse and tempo co-motion (family anchor for A088-A090).
 Source context since previous assertion:
   ;
 Original expression:
@@ -789,7 +813,7 @@ Original expression:
 
 A089 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:260
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes on A088.
 Source context since previous assertion:
   ;
 Original expression:
@@ -797,7 +821,7 @@ Original expression:
 
 A090 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:261
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes on A088.
 Source context since previous assertion:
   ;
 Original expression:
@@ -805,7 +829,7 @@ Original expression:
 
 A091 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:262
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes on A084.
 Source context since previous assertion:
   ;
 Original expression:
@@ -813,7 +837,7 @@ Original expression:
 
 A092 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:263
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes on A084.
 Source context since previous assertion:
   ;
 Original expression:
@@ -848,8 +872,8 @@ Original expression:
   QCOMPARE(deletedTrack.storedTrackScope(), trackBit(0));
 
 A095 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:280
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: MATCHED
+Mapping: S048
 Source context since previous assertion:
   ;
 Original expression:
@@ -857,7 +881,7 @@ Original expression:
 
 A096 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:281
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: GAP: no executing Swift predicate observes a remap change mask; the Swift session publishes SessionChangeDomains, not the fork's SelectionChange bits, and the remap predicates assert the resulting selection state only (S048). Unproved: the remap masks PrimaryTrack|TrackScope|TimeSelection (A096) and TimeSelection (A103).
 Source context since previous assertion:
   ;
 Original expression:
@@ -865,7 +889,7 @@ Original expression:
 
 A097 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:283
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes on A084.
 Source context since previous assertion:
       const auto &deletedTrackTransition = deletedNotifications.transitions.back();
 Original expression:
@@ -873,7 +897,7 @@ Original expression:
 
 A098 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:284
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes on A084.
 Source context since previous assertion:
   ;
 Original expression:
@@ -881,7 +905,7 @@ Original expression:
 
 A099 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:285
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes on A084.
 Source context since previous assertion:
   ;
 Original expression:
@@ -889,15 +913,15 @@ Original expression:
 
 A100 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:286
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes on A084.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(deletedTrackTransition.trackTime.trackScope, uint32_t{0});
 
 A101 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:299
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for remap dropping a deleted lane to an inactive selection; see the GAP family notes in the preamble.
+Disposition: MATCHED
+Mapping: S047
 Source context since previous assertion:
       EditorSelectionModel deletedLane;
       NotificationLog deletedLaneNotifications;
@@ -914,8 +938,8 @@ Original expression:
   QVERIFY(!deletedLane.timeSelection().active());
 
 A102 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:300
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the dropped lane selection (S047) makes the lane list empty by construction (timeSelection becomes nil). Unproved: a predicate reading the lane list of the dropped selection.
 Source context since previous assertion:
   ;
 Original expression:
@@ -923,7 +947,7 @@ Original expression:
 
 A103 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:301
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes on A096.
 Source context since previous assertion:
   ;
 Original expression:
@@ -931,7 +955,7 @@ Original expression:
 
 A104 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:302
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes on A084.
 Source context since previous assertion:
   ;
 Original expression:
@@ -939,7 +963,7 @@ Original expression:
 
 A105 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:303
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes on A084.
 Source context since previous assertion:
   ;
 Original expression:
@@ -952,89 +976,196 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 The S entries below are the exact predicates of
-src/checks/editcheck/SelectionChecks.swift :: clipboardTrackSelectionChecks that
-execute under the cited cppIDs via runClipboardSelectionChecks
-(runProjectSessionSuite, swiftcore suite 10). Each entry names its Swift
-function, its source line and its expression, and the A sites that cite it; a
-predicate closes only the A sites that cite it. S006-S013 carry the explicit
-unproved condition of the PARTIAL sites.
-cppID values in that function: gestures = clipboard/SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary;
-bounds = clipboard/SelectionCheckTest::outOfRangeTrackMasksAreIgnored.
+src/checks/editcheck/SelectionChecks.swift that execute under the cited cppIDs
+via runClipboardSelectionChecks (runProjectSessionSuite, swiftcore suite 10).
+Each entry names its Swift file, function and message anchor, and the A sites
+that cite it; a predicate closes only the A sites that cite it, and each anchor
+resolves to its live source location. S026-S036 are
+the session-owned time-selection predicates (function
+clipboardUnifiedModelChecks: the plain, toggle, range, note-selection and
+remap co-motion laws with their transition payload); S037-S050 and S053-S056
+are the coverage, sanitize, clear and remap predicates (functions
+clipboardUnifiedTimeSelectionChecks and clipboardLaneSelectionChecks);
+S051-S052 are the track-scope lane-coverage predicates of
+src/checks/automation/presentation/painting.swift. S035 and S036 execute under
+the gestures cppID but close no site in this ledger: the note/time exclusivity
+and the stored Tracks-scope remap co-motion are asserted for sites that other
+ledgers index.
+cppID values: gestures = clipboard/SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary;
+bounds = clipboard/SelectionCheckTest::outOfRangeTrackMasksAreIgnored;
+sanitize = clipboard/SelectionCheckTest::noteSelectionSanitizesAndExcludesTime;
+clear = clipboard/SelectionCheckTest::clearOperationsPreserveTheOtherSelection;
+commit = clipboard/SelectionCheckTest::timeSelectionAndScopeCommitAtomically;
+coverage = clipboard/SelectionCheckTest::coverageQueriesAndLaneScopeSanitization;
+remap = clipboard/SelectionCheckTest::remapPreservesMeaningfulSelection.
 
 S001 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A001 primary track transition chooses track one"
 
 S002 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
-Anchor: message "A001 primary track transition chooses track one"
+Anchor: message "A002 primary transition selects its track scope"
 
 S003 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
-Anchor: message "A002 primary transition selects its track scope"
+Anchor: message "A003 one primary transition publication"
 
 S004 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A004 toggle adds the secondary track"
 
 S005 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
-Anchor: message "A004 toggle adds the secondary track"
+Anchor: message "A005 toggle publishes once"
 
 S006 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A006 removing primary hands off to the surviving track"
 
 S007 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
-Anchor: message "A006 removing primary hands off to the surviving track"
+Anchor: message "A007 removing primary preserves surviving scope"
 
 S008 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
-Anchor: message "A007 removing primary preserves surviving scope"
+Anchor: message "A009 primary handoff publishes atomically"
 
 S009 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A016 plain gesture keeps its primary"
 
 S010 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
-Anchor: message "A016 plain gesture keeps its primary"
+Anchor: message "A017 plain gesture collapses multi-track scope"
 
 S011 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
-Anchor: message "A017 plain gesture collapses multi-track scope"
+Anchor: message "A019 collapsed scope publishes once"
 
 S012 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A022 range expands inclusively from primary to target"
 
 S013 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
-Anchor: message "A022 range expands inclusively from primary to target"
+Anchor: message "A023 range publishes once"
 
 S014 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A026 note handoff chooses the surviving primary"
 
 S015 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
-Anchor: message "A026 note handoff chooses the surviving primary"
-
-S016 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A027 note handoff keeps surviving scope"
 
-S017 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+S016 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A028 changing the selected note's primary clears it"
+
+S017 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A029 note and track transition publish together"
 
 S018 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A060 out-of-range track cannot join the scope"
 
 S019 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
-Anchor: message "A060 out-of-range track cannot join the scope"
+Anchor: message "A061 ignored out-of-range action publishes nothing"
 
 S020 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A080 primary follows track 1 to track 4"
 
 S021 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
-Anchor: message "A080 primary follows track 1 to track 4"
-
-S022 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A081 scope follows tracks 0 and 1 to tracks 2 and 4"
 
-S023 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+S022 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A082 selected note identity survives structural track moves"
+
+S023 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A083 remap and selected scope publish one coalesced change"
 
 S024 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A093 deleting every track above the fallback clamps the primary to track zero"
 
 S025 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
-Anchor: message "A093 deleting every track above the fallback clamps the primary to track zero"
+Anchor: message "A094 deleting every track above the fallback leaves the scope on track zero"
+
+S026 | clipboardUnifiedModelChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "a track-scoped range is owned by the document session"
+
+S027 | clipboardUnifiedModelChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "plain on another track clears the time selection"
+
+S028 | clipboardUnifiedModelChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "plain on the primary track preserves the time interval"
+
+S029 | clipboardUnifiedModelChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "plain on the primary track narrows the selected scope"
+
+S030 | clipboardUnifiedModelChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "toggle hands primary to the surviving track"
+
+S031 | clipboardUnifiedModelChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "toggle preserves the time interval on the surviving scope"
+
+S032 | clipboardUnifiedModelChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "the transition reports the previous and current track-time scope"
+
+S033 | clipboardUnifiedModelChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "range expands inclusively from primary to target"
+
+S034 | clipboardUnifiedModelChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "range changes the authoritative time-selection scope"
+
+S035 | clipboardUnifiedModelChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "a note selection clears the active time selection"
+
+S036 | clipboardUnifiedModelChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "remap moves the stored scope with the selected track"
+
+S037 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "coverage resolves only against used tracks"
+
+S038 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "track scope preserves an unused valid track bit"
+
+S039 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "a scope covering every used track covers global Tempo"
+
+S040 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "a newly added track inherits its stored selection bit"
+
+S041 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "a newly used track appears in the resolved scope transition"
+
+S042 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "partial used-track coverage excludes global Tempo"
+
+S043 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "a track-scoped selection covers its used track"
+
+S044 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "an active lane selection without lanes or tempo is dropped"
+
+S045 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "a tempo-only lane selection survives sanitization"
+
+S046 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "a lane selection does not cover an entire track"
+
+S047 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "lane scopes remap and sanitize away a deleted track"
+
+S048 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "a deleted primary clears the track-scoped time selection"
+
+S049 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A009 committed time selection is active"
+
+S050 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "clearing time publishes an inactive transition payload"
+
+S051 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
+Anchor: message "a track-scoped selection covers the selected track's lanes"
+
+S052 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
+Anchor: message "a track-scoped selection leaves another track's lanes alone"
+
+S053 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A020-A021 unselected supported controller stays uncovered"
+
+S054 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "valid control-change lane remains covered"
+
+S055 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A011 empty note guard retains sanitized lane coverage"
+
+S056 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "a fresh document session starts without another tab's time selection"
 
 Shared helpers
 None: the fixture above is local to the counterpart function and carries no

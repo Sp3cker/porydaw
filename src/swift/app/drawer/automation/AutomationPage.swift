@@ -88,7 +88,7 @@ public final class AutomationPage: EditorDrawerPage {
     /// The explicit ghost pins that still carry events.
     @QtIgnored public internal(set) var ghostParameters: [AutomationParameter] = []
     @QtIgnored public internal(set) var ghostLabels: [String] = []
-    @QtIgnored public internal(set) var selection: AutomationTimeSelection?
+    @QtIgnored public var selection: AutomationTimeSelection? { session?.timeSelection }
     @QtIgnored public var onCommandAvailabilityChanged: (() -> Void)?
     @QtIgnored public var onLaneRangeChanged: ((AutomationParameter, Int) -> Void)?
     @QtIgnored public var pointerGestureActive: Bool {
@@ -318,6 +318,7 @@ public final class AutomationPage: EditorDrawerPage {
     @QtIgnored public var laneClipAvailable: Bool { laneClipPoints(activeParameter) != nil }
 
     @QtIgnored weak var session: DocumentSession?
+    private var selectionTransitionToken: UUID?
     @QtIgnored var gesture: AutomationGesture?
     @QtIgnored var frozen: AutomationFrozenFacts?
     /// The camera the live gesture froze with its facts. `EditorCamera` is a
@@ -373,7 +374,15 @@ public final class AutomationPage: EditorDrawerPage {
     /// attaches the page, so no publication precedes the session it reads.
     @QtIgnored
     public func attach(session: DocumentSession, palette: GridPalette) {
+        if let selectionTransitionToken, let previousSession = self.session {
+            previousSession.removeSelectionTransitionObserver(selectionTransitionToken)
+        }
         self.session = session
+        selectionTransitionToken = session.addSelectionTransitionObserver { [weak self] _ in
+            guard let self else { return }
+            self.rebuildContent(selectionOnly: true)
+            self.onCommandAvailabilityChanged?()
+        }
         self.palette = palette
         contextTick = session.editCursor
         lastPresentation = nil
@@ -385,10 +394,13 @@ public final class AutomationPage: EditorDrawerPage {
     @QtIgnored
     public func detach() {
         cancelSectionInteraction()
+        if let selectionTransitionToken, let session {
+            session.removeSelectionTransitionObserver(selectionTransitionToken)
+        }
+        selectionTransitionToken = nil
         session = nil
         projection = nil
         rows = []
-        selection = nil
         selectedParameters = []
         ghostPins = []
         ghostParameters = []
@@ -549,13 +561,8 @@ public final class AutomationPage: EditorDrawerPage {
         return true
     }
 
-    /// The explicit time selection. Setting it clears nothing else, and a
-    /// parameter switch never discards it.
     public func applyTimeSelection(_ selection: AutomationTimeSelection?) {
-        guard self.selection != selection else { return }
-        self.selection = selection
-        rebuildContent(selectionOnly: true)
-        onCommandAvailabilityChanged?()
+        session?.applyTimeSelection(selection)
     }
 
     public func clearTimeSelection() { applyTimeSelection(nil) }

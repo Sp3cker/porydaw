@@ -70,7 +70,6 @@ public final class PianoGrid {
     /// Receives roll auditions as (track, pitch, velocity), including band entrants.
     @QtIgnored public var onAudition: ((Int, Int, Int) -> Void)?
     @QtIgnored public var onCommitCursor: ((Tick) -> Void)?
-    @QtIgnored public var onClearTimeSelection: (() -> Void)?
     private var didApplyInitialHome = false
     private var contentEndTick = GridMetrics.songLengthTicks
     private var staticSceneDirty = true
@@ -311,8 +310,6 @@ public final class PianoGrid {
         noteNameMode = enabled
         refreshNotes()
     }
-
-    @QtIgnored public var timeSelectionSource: (() -> AutomationTimeSelection?)?
 
     @QtIgnored
     public func refreshTimeSelectionHighlight() {
@@ -729,10 +726,10 @@ public final class PianoGrid {
                 if case .band = rightGesture {
                     stopAudition()
                 } else {
-                    if let selection = timeSelectionSource?(), selection.isActive,
-                       case let .tracks(scope) = selection.scope, scope.contains(trackIndex),
+                    if let selection = session.timeSelection, selection.isActive,
+                       session.timeSelectionCoversTrack(trackIndex),
                        selection.contains(Tick(max(0, Int(session.camera.tickAtContentX(x))))) {
-                        onClearTimeSelection?()
+                        session.clearTimeSelection()
                     }
                     let tick = session.grid.snapTick(state.pressTick, camera: session.camera)
                     session.editCursor = Tick(tick)
@@ -833,7 +830,7 @@ public final class PianoGrid {
                 contextMenuRequested(x: x, y: y)
             } else {
                 session.clearSelectedNotes()
-                onClearTimeSelection?()
+                session.clearTimeSelection()
             }
         }
         self.rightGesture = nil
@@ -1128,7 +1125,7 @@ public final class PianoGrid {
             velocityColorMode: velocityColorMode, noteNameMode: noteNameMode,
             noteNameAdvance: { self.typography?.noteNameAdvance(pitch: $0) ?? 0 },
             noteNameOccupiedHeight: typography?.noteNameOccupiedHeight ?? 0,
-            timeSelection: timeSelectionSource?(),
+            timeSelection: session.timeSelection,
             usedTrackCount: session.document.engineTracks.usedTrackCount,
             selectedTrack: trackIndex, geometryStable: !interactionActive)
     }

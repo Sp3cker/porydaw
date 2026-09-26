@@ -355,7 +355,9 @@ public final class DocumentWorkspace {
         if !change.domains.intersection(fullPageDomains).isEmpty {
             velocityPage.refreshFromDocument()
             voiceChangesPage.refreshFromDocument()
-            automationPage.refreshFromDocument()
+            if documentChanged || change.domains.contains(.bank) {
+                automationPage.refreshFromDocument()
+            }
         } else if change.domains.contains(.cursor) {
             velocityPage.refreshEditCursor()
             voiceChangesPage.refreshEditCursor()

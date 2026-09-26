@@ -85,13 +85,13 @@ internal func editorSelectionCommandChecks(_ report: CheckReport, suite: Documen
                        cppID: id, what: "lane-scoped transpose consumes without falling through to notes")
     router.perform(.transposeUp)
     report.expectEqual(expected: revision, actual: document.revision, cppID: id,
-                       what: "lane transpose does not mutate a simultaneous note selection")
+                       what: "lane transpose does not mutate notes after the time selection clears note focus")
     router.perform(.delete)
     report.expectEqual(expected: [Tick(72)], actual: document.lanePoints(
         track: 0, lane: .controller(TimeDefaults.ccPan)).map(\.tick),
         cppID: id, what: "range Delete removes only points in the selected interval")
     report.expect(document.note(selectedNote.id) != nil, cppID: id,
-                  message: "time selection deletion leaves simultaneously selected notes intact")
+                  message: "time selection deletion leaves notes outside the selected lane intact")
     let afterDelete = document.revision
     router.perform(.delete)
     report.expectEqual(expected: afterDelete, actual: document.revision, cppID: id,
@@ -101,9 +101,10 @@ internal func editorSelectionCommandChecks(_ report: CheckReport, suite: Documen
     router.perform(.clearTimeSelection)
     report.expect(page.selection == nil, cppID: id,
                   message: "canonical clear-selection command clears the automation range")
+    session.addSelectedNote(selectedNote.id)
     report.expectEqual(expected: EditKeyDecision.execute.rawValue,
                        actual: router.route(.delete, autoRepeat: false).rawValue,
-                       cppID: id, what: "note selection becomes the target after range clear")
+                       cppID: id, what: "reselecting the note makes it the target after range clear")
     router.perform(.delete)
     report.expect(document.note(selectedNote.id) == nil, cppID: id,
                   message: "shared note deletion remains reachable after range clear")

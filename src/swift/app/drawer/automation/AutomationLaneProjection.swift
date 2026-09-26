@@ -238,7 +238,7 @@ public struct AutomationTimeSelection: Equatable, Sendable {
     public func covers(_ parameter: AutomationParameter, usedTracks: Set<Int>) -> Bool {
         guard isActive else { return false }
         switch scope {
-        case .lanes: return lanes.contains(parameter)
+        case .lanes: return parameter.isTempo ? tempo : lanes.contains(parameter)
         case let .tracks(trackScope):
             guard let track = parameter.track else { return false }
             return trackScope.contains(track) && usedTracks.contains(track)

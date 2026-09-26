@@ -63,7 +63,10 @@ public final class RulerMenuPresenter {
     private var capturedSelection: AutomationTimeSelection?
     private var capturedTick: Tick = 0
     private var capturedCursor: Tick = 0
+    private var rulerPress: (raw: Double, chip: Tick?)?
     private var sweepAnchor: Tick?
+    private var sweepPressX = 0.0
+    private var sweepPressY = 0.0
     private var sweepWasRange = false
     private var sweepMultiTrack = false
     private var pendingInsert: (tick: Tick, revision: UInt64, beatTicks: UInt32, beatsPerBar: UInt32)?
@@ -76,24 +79,28 @@ public final class RulerMenuPresenter {
         self.automation = automation
     }
 
-    /// The raw press position determines selection containment before snapping;
-    /// a press on an existing range does not move the cursor or clear it.
-    public func openRuler(contentX: Double, chipTick: Double = -1) {
-        guard contentX.isFinite else { return }
+    public func captureRulerPress(contentX: Double, pointerY: Double) {
+        guard contentX.isFinite, pointerY.isFinite else { return }
         let raw = session.camera.tickAtContentX(contentX)
         guard raw.isFinite else { return }
-        let chip = chipTick.isFinite && chipTick >= 0 && chipTick < Double(TimeDefaults.noTick)
-            ? Tick(chipTick) : nil
-        let insideTick = chip.map { Double($0) } ?? raw
-        let inside = automation.selection?.contains(TimeDefaults.tick(from: max(0, insideTick))) == true
-        let tick = chip ?? snapped(raw)
+        close()
+        let chip = signatureTick(at: contentX)
+        rulerPress = (raw, chip)
+    }
+
+    public func openRulerAtRelease() {
+        guard let press = rulerPress else { return }
+        rulerPress = nil
+        let insideTick = press.chip.map { Double($0) } ?? press.raw
+        let inside = session.timeSelection?.contains(TimeDefaults.tick(from: max(0, insideTick))) == true
+        let tick = press.chip ?? snapped(press.raw)
         if !inside {
-            automation.clearTimeSelection()
+            session.clearTimeSelection()
             session.editCursor = tick
             onSeek?(tick)
         }
         capturedTick = tick
-        capturedSelection = automation.selection
+        capturedSelection = session.timeSelection
         capturedCursor = session.editCursor
         capturedRevision = session.document.revision
         let loop = session.timeline
@@ -130,7 +137,7 @@ public final class RulerMenuPresenter {
         guard contentX.isFinite else { return }
         let raw = session.camera.tickAtContentX(contentX)
         guard raw.isFinite,
-              let selection = automation.selection, selection.isActive,
+              let selection = session.timeSelection, selection.isActive,
               selection.contains(TimeDefaults.tick(from: max(0, raw)))
         else { return }
         capturedTick = snapped(raw)
@@ -179,7 +186,7 @@ public final class RulerMenuPresenter {
         else { return false }
         let valid = session.document.revision == capturedRevision
             && session.editCursor == capturedCursor
-            && automation.selection == capturedSelection
+            && session.timeSelection == capturedSelection
         close()
         guard valid else { return false }
         if action == .paste && !canPaste { return false }
@@ -261,39 +268,42 @@ public final class RulerMenuPresenter {
             scope: TimeScope(wholeSong: true))
     }
 
-    public func beginSweep(contentX: Double, modifiers: Int = 0) {
-        guard contentX.isFinite else { return }
+    public func beginSweep(contentX: Double, pointerY: Double, modifiers: Int = 0) {
+        guard contentX.isFinite, pointerY.isFinite else { return }
         close()
+        rulerPress = nil
         let raw = session.camera.tickAtContentX(contentX)
         guard raw.isFinite else { return }
         sweepAnchor = snapped(raw)
+        sweepPressX = contentX
+        sweepPressY = pointerY
         sweepWasRange = false
         sweepMultiTrack = modifiers & Self.controlModifier != 0
     }
 
-    public func updateSweep(contentX: Double) {
-        guard let sweepAnchor, contentX.isFinite else { return }
+    public func updateSweep(contentX: Double, pointerY: Double = 0) {
+        guard let sweepAnchor, contentX.isFinite, pointerY.isFinite else { return }
+        guard sweepWasRange || abs(contentX - sweepPressX) + abs(pointerY - sweepPressY)
+            >= grid.dragDistance else { return }
+        sweepWasRange = true
         let raw = session.camera.tickAtContentX(contentX)
         guard raw.isFinite else { return }
         let tick = snapped(raw)
         guard tick != sweepAnchor else {
-            if sweepWasRange { automation.clearTimeSelection() }
+            session.clearTimeSelection()
             return
         }
-        sweepWasRange = true
         let start = min(sweepAnchor, tick)
         let end = max(sweepAnchor, tick)
-        automation.applyTimeSelection(AutomationTimeSelection(
+        session.applyTimeSelection(AutomationTimeSelection(
             range: TimeRange(startTick: start, endTick: end),
             scope: .tracks(sweepTrackScope(start: start, end: end))))
     }
 
-    public func endSweep(contentX: Double) {
-        updateSweep(contentX: contentX)
+    public func endSweep(contentX: Double, pointerY: Double = 0) {
+        updateSweep(contentX: contentX, pointerY: pointerY)
         if sweepWasRange {
-            if automation.selection?.isActive != true {
-                automation.clearTimeSelection()
-            }
+            if session.timeSelection?.isActive != true { session.clearTimeSelection() }
         } else if let sweepAnchor {
             session.editCursor = sweepAnchor
             onSeek?(sweepAnchor)
@@ -305,6 +315,7 @@ public final class RulerMenuPresenter {
 
     public func cancelSweep() {
         sweepAnchor = nil
+        rulerPress = nil
         sweepWasRange = false
         sweepMultiTrack = false
     }
@@ -321,6 +332,21 @@ public final class RulerMenuPresenter {
             }
         }
         return mask
+    }
+
+    func signatureTick(at contentX: Double) -> Tick? {
+        guard contentX.isFinite else { return nil }
+        let tolerance = max(4, grid.baseFontPx * 0.5)
+        for signature in session.document.timeSignatures.reversed() {
+            let x = session.camera.contentX(tick: Double(signature.tick))
+            let labelWidth = Double("\(signature.numerator)/\(1 << min(signature.denominatorPower, 6))".count)
+                * grid.baseFontPx * 0.6
+            if abs(x - contentX) <= tolerance
+                || (contentX >= x && contentX <= x + tolerance + labelWidth) {
+                return signature.tick
+            }
+        }
+        return nil
     }
 
     private func snapped(_ raw: Double) -> Tick {

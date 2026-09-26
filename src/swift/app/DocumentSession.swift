@@ -37,6 +37,24 @@ public struct SessionChange: Sendable {
     }
 }
 
+public struct TrackTimeSelection: Equatable, Sendable {
+    public let startTick: Tick
+    public let endTick: Tick
+    public let trackScope: Set<Int>
+    public var active: Bool { endTick > startTick }
+
+    public init(startTick: Tick = 0, endTick: Tick = 0, trackScope: Set<Int> = []) {
+        self.startTick = startTick
+        self.endTick = endTick
+        self.trackScope = trackScope
+    }
+}
+
+public struct SelectionTransition: Equatable, Sendable {
+    public let previousTrackTime: TrackTimeSelection
+    public let trackTime: TrackTimeSelection
+}
+
 // MARK: - Document session
 
 /// One document plus its confirmed bank history,
@@ -65,11 +83,18 @@ public final class DocumentSession {
     public private(set) var selectedNoteOrder: [NoteID] = []
     public private(set) var selectedNotes: Set<NoteID> = []
     public private(set) var selectedTracks: Set<Int> = []
+    public private(set) var timeSelection: AutomationTimeSelection?
     public enum TrackScopeAction { case plain, toggle, range }
+    private var changingPrimaryInternally = false
     public var selectedTrack: Int? {
         didSet {
-            if selectedTrack != oldValue {
+            guard selectedTrack != oldValue else { return }
+            withStateChanges {
                 selectedTracks = selectedTrack.map { [$0] } ?? []
+                if !changingPrimaryInternally {
+                    clearSelectedNotes()
+                    clearTimeSelection()
+                }
                 if scaleProjection.fold { refreshScaleProjection() }
                 publishChange([.selection])
             }
@@ -102,11 +127,22 @@ public final class DocumentSession {
     /// reconciliation, timeline rebuild, and playback publication.
     public var onChange: ((SessionChange) -> Void)?
     public var onPlayback: ((PlaybackTimeline) -> Void)?
+    private var selectionTransitionObservers: [UUID: (SelectionTransition) -> Void] = [:]
     /// Presentation-only camera publication. The document workspace is the sole subscriber.
     public var onCameraChange: ((EditorCamera.Snapshot) -> Void)?
     /// Camera publication with the field-level delta used by the workspace
     /// to choose projection-only drawer updates.
     public var onCameraChangeDetailed: ((EditorCamera.Snapshot, EditorCamera.Change) -> Void)?
+
+    public func addSelectionTransitionObserver(_ observer: @escaping (SelectionTransition) -> Void) -> UUID {
+        let token = UUID()
+        selectionTransitionObservers[token] = observer
+        return token
+    }
+
+    public func removeSelectionTransitionObserver(_ token: UUID) {
+        selectionTransitionObservers.removeValue(forKey: token)
+    }
 
     /// Borrowed from ApplicationSession, which owns the project service.
     private unowned let service: ProjectService
@@ -121,6 +157,7 @@ public final class DocumentSession {
     private var stateChangeDepth = 0
     private var pendingDomains: SessionChangeDomains = []
     private var pendingTrackRemap: TrackRemap?
+    private var publishedTrackTime = TrackTimeSelection()
 
     public init(document: SongDocument, service: ProjectService,
                 lease: NativeBankLease, slots: [BankSlotView], dirty: Bool,
@@ -158,10 +195,70 @@ public final class DocumentSession {
     public func setSelectedNotes(_ ids: [NoteID]) {
         var membership = Set<NoteID>()
         let order = ids.filter { $0.isAssigned && membership.insert($0).inserted }
-        guard order != selectedNoteOrder else { return }
-        selectedNoteOrder = order
-        selectedNotes = membership
-        publishChange([.selection])
+        guard order != selectedNoteOrder || (!order.isEmpty && timeSelection?.isActive == true) else { return }
+        withStateChanges {
+            if !order.isEmpty { clearTimeSelection() }
+            guard order != selectedNoteOrder else { return }
+            selectedNoteOrder = order
+            selectedNotes = membership
+            publishChange([.selection])
+        }
+    }
+
+    public func applyTimeSelection(_ selection: AutomationTimeSelection?) {
+        var sanitized = selection?.isActive == true ? selection : nil
+        var nextScope: Set<Int>?
+        if var active = sanitized {
+            switch active.scope {
+            case .lanes:
+                active.lanes = Set(active.lanes.filter {
+                    guard let track = $0.track else { return false }
+                    return (0..<16).contains(track)
+                })
+                sanitized = active.lanes.isEmpty && !active.tempo ? nil : active
+            case let .tracks(scope):
+                let stored = Set(scope.filter { (0..<16).contains($0) })
+                    .union(selectedTrack.map { [$0] } ?? [])
+                nextScope = Set(stored.filter { (0..<document.engineTracks.usedTrackCount).contains($0) })
+                active.scope = .tracks(stored)
+                sanitized = active
+            }
+        }
+        guard timeSelection != sanitized || nextScope.map({ selectedTracks != $0 }) == true else { return }
+        withStateChanges {
+            if let nextScope, selectedTracks != nextScope {
+                selectedTracks = nextScope
+                publishChange([.selection])
+            }
+            timeSelection = sanitized
+            if sanitized != nil { clearSelectedNotes() }
+            publishChange([.selection])
+        }
+    }
+
+    public func clearTimeSelection() { applyTimeSelection(nil) }
+
+    public func timeSelectionCoversTrack(_ track: Int) -> Bool {
+        guard (0..<document.engineTracks.usedTrackCount).contains(track),
+              let selection = timeSelection, selection.isActive,
+              case let .tracks(scope) = selection.scope else { return false }
+        return scope.contains(track)
+    }
+
+    public func timeSelectionCoversTempo() -> Bool {
+        let usedTracks = Set(0..<document.engineTracks.usedTrackCount)
+        guard let selection = timeSelection, selection.isActive else { return false }
+        if case let .tracks(scope) = selection.scope {
+            return !usedTracks.isEmpty && scope.intersection(usedTracks) == usedTracks
+        }
+        return selection.tempo
+    }
+
+    private var trackTimeSelection: TrackTimeSelection {
+        guard let selection = timeSelection, selection.isActive,
+              case .tracks = selection.scope else { return TrackTimeSelection() }
+        return TrackTimeSelection(startTick: selection.range.startTick,
+                                  endTick: selection.range.endTick, trackScope: selectedTracks)
     }
 
     public func selectPrimaryTrack(_ track: Int) {
@@ -175,8 +272,10 @@ public final class DocumentSession {
         var primary = selectedTrack ?? track
         var scope = selectedTracks
         var clearNotes = false
+        var clearTime = false
         switch action {
         case .plain:
+            clearTime = primary != track
             primary = track
             scope = [track]
             clearNotes = true
@@ -192,20 +291,32 @@ public final class DocumentSession {
             scope = Set(min(primary, track)...max(primary, track))
         }
         withStateChanges {
+            changingPrimaryInternally = true
             selectedTrack = primary
+            changingPrimaryInternally = false
             if selectedTracks != scope {
                 selectedTracks = scope
                 publishChange([.selection])
             }
+            if var selection = timeSelection, case .tracks = selection.scope,
+               selection.scope != .tracks(scope) {
+                selection.scope = .tracks(scope)
+                timeSelection = selection
+                publishChange([.selection])
+            }
             if clearNotes { clearSelectedNotes() }
+            if clearTime { clearTimeSelection() }
         }
     }
 
     public func addSelectedNote(_ id: NoteID) {
         guard id.isAssigned, !selectedNotes.contains(id) else { return }
-        selectedNoteOrder.append(id)
-        selectedNotes.insert(id)
-        publishChange([.selection])
+        withStateChanges {
+            clearTimeSelection()
+            selectedNoteOrder.append(id)
+            selectedNotes.insert(id)
+            publishChange([.selection])
+        }
     }
 
     public func removeSelectedNote(_ id: NoteID) {
@@ -487,6 +598,7 @@ public final class DocumentSession {
     public func close() async -> Bool {
         guard !bankPersistenceInFlight, !document.history.bankTransitionInFlight else { return false }
         onChange = nil
+        selectionTransitionObservers.removeAll()
         onPlayback = nil
         onCameraChange = nil
         onCameraChangeDetailed = nil
@@ -541,6 +653,7 @@ public final class DocumentSession {
             }
             return
         }
+        if domains.contains(.selection) { emitSelectionTransition() }
         onChange?(SessionChange(revision: document.revision,
                                 trackRemap: trackRemap,
                                 domains: domains))
@@ -552,9 +665,20 @@ public final class DocumentSession {
         let trackRemap = pendingTrackRemap
         pendingDomains = []
         pendingTrackRemap = nil
+        if domains.contains(.selection) { emitSelectionTransition() }
         onChange?(SessionChange(revision: document.revision,
                                 trackRemap: trackRemap,
                                 domains: domains))
+    }
+
+    private func emitSelectionTransition() {
+        let previous = publishedTrackTime
+        let next = trackTimeSelection
+        publishedTrackTime = next
+        let transition = SelectionTransition(previousTrackTime: previous, trackTime: next)
+        for observer in Array(selectionTransitionObservers.values) {
+            observer(transition)
+        }
     }
 
     /// A batch may contain successive structural document mutations. Compose
@@ -588,6 +712,7 @@ public final class DocumentSession {
             let priorScope = selectedTracks
             let priorPrimary = selectedTrack
             let priorNotes = selectedNoteOrder
+            let priorTimeSelection = timeSelection
             let survivingSelection = selectedNoteOrder.filter { document.note($0) != nil }
             if survivingSelection.count != selectedNoteOrder.count {
                 selectedNoteOrder = survivingSelection
@@ -606,27 +731,55 @@ public final class DocumentSession {
                         ? remap.engineTrackMap[track] : nil
                 })
             }
-            if let remap = change.trackRemap, let track = selectedTrack {
-                if track < remap.engineTrackMap.count, let mapped = remap.engineTrackMap[track] {
-                    selectedTrack = mapped
-                } else {
-                    selectedTrack = nil
-                }
-            }
-            if let track = selectedTrack,
-               !(0..<document.engineTracks.usedTrackCount).contains(track) {
-                selectedTrack = nil
-            }
             if let remap = change.trackRemap {
-                if selectedTrack == nil, let priorPrimary,
-                   document.engineTracks.usedTrackCount > 0 {
-                    selectedTrack = min(priorPrimary, document.engineTracks.usedTrackCount - 1)
+                let mappedPrimary = priorPrimary.flatMap { track -> Int? in
+                    guard remap.engineTrackMap.indices.contains(track) else { return nil }
+                    return remap.engineTrackMap[track]
                 }
+                let primaryDeleted = priorPrimary != nil && mappedPrimary == nil
+                let nextPrimary = mappedPrimary ?? priorPrimary.map {
+                    min($0, max(0, document.engineTracks.usedTrackCount - 1))
+                }
+                changingPrimaryInternally = true
+                selectedTrack = nextPrimary
+                changingPrimaryInternally = false
                 selectedTracks = Set(priorScope.compactMap { track in
                     remap.engineTrackMap.indices.contains(track)
                         ? remap.engineTrackMap[track] : nil
                 })
                 if let selectedTrack { selectedTracks.insert(selectedTrack) }
+                if var selection = timeSelection {
+                    switch selection.scope {
+                    case let .tracks(stored):
+                        if primaryDeleted {
+                            timeSelection = nil
+                        } else {
+                            var mapped = Set(stored.compactMap { track -> Int? in
+                                if remap.engineTrackMap.indices.contains(track) {
+                                    return remap.engineTrackMap[track]
+                                }
+                                return (0..<16).contains(track) ? track : nil
+                            })
+                            if let selectedTrack { mapped.insert(selectedTrack) }
+                            selection.scope = .tracks(mapped)
+                            timeSelection = selection
+                            selectedTracks = Set(mapped.filter {
+                                (0..<document.engineTracks.usedTrackCount).contains($0)
+                            })
+                        }
+                    case .lanes:
+                        selection.lanes = Set(selection.lanes.compactMap { parameter -> AutomationParameter? in
+                            guard let track = parameter.track,
+                                  remap.engineTrackMap.indices.contains(track),
+                                  let destination = remap.engineTrackMap[track] else { return nil }
+                            if case let .controlChange(_, controller) = parameter {
+                                return .controlChange(track: destination, controller: controller)
+                            }
+                            return .pitchBend(track: destination)
+                        })
+                        timeSelection = selection.lanes.isEmpty && !selection.tempo ? nil : selection
+                    }
+                }
             }
             if scaleProjection.fold { refreshScaleProjection() }
             timeline = PlaybackTimeline.build(state: document.state, sampleRate: sampleRate)
@@ -638,7 +791,7 @@ public final class DocumentSession {
             onPlayback?(timeline)
             var domains: SessionChangeDomains = [.document, .dirty, .history]
             if selectedNoteOrder != priorNotes || selectedTrack != priorPrimary
-                || selectedTracks != priorScope {
+                || selectedTracks != priorScope || timeSelection != priorTimeSelection {
                 domains.insert(.selection)
             }
             publishChange(domains, trackRemap: change.trackRemap)

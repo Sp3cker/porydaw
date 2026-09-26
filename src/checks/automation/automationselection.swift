@@ -193,7 +193,7 @@ func drawerAutomationBandIsolatesTempoAndCc(_ report: CheckReport, suite: Docume
     _ = page.pointerMove(x: fixture.x(120), y: 60, buttons: AutomationQtButton.right)
     _ = page.pointerRelease(x: fixture.x(120), y: 60, button: AutomationQtButton.right)
     report.expect(page.selection?.tempo == true
-                      && page.selection?.lanes == Set([AutomationParameter.tempo]),
+                      && page.selection?.lanes.isEmpty == true,
                   cppID: id, message: "a band on Tempo selects Tempo alone")
     report.expect(page.selection?.scope == .lanes, cppID: id,
                   message: "the band publishes a lane-scoped range")

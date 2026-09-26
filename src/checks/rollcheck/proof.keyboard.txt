@@ -656,7 +656,7 @@ Original expression:
 
 A064 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:522
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — host key delivery: sendKeyStroke Ctrl+D duplicating a time range and advancing the time selection plus edit cursor. Swift models no time-range duplication, time selection, or edit cursor; only the native host path establishes this site.
+Mapping/reason: GAP — native host key delivery (sendKeyStroke Ctrl+D) into the roll input: the retired C++ lane owns this observation. The command-router arm is asserted at S008 (src/checks/rollcheck/note_commands.swift: the active time range owns the duplicate, advances one span and moves the cursor), but no Swift predicate delivers Ctrl+D through the mounted surface, and the exact undo-index +1 stays unproved (S008 asserts a changed history identity).
 Source context since previous assertion:
       view.selectionModel().setTimeSelection({d.tick + snapCell,
                                               d.tick + 2 * snapCell,
@@ -695,7 +695,7 @@ Original expression:
 
 A066 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:536
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — host key delivery: repeated sendKeyStroke Ctrl+D duplicating the newest copy. Swift models no time-range duplication; only the native host path establishes this site.
+Mapping/reason: GAP — native host key delivery (repeated sendKeyStroke Ctrl+D): the retired C++ lane owns this observation, and no Swift predicate repeats the time-range duplicate; S008 covers one duplicate through the command router (the session owns the time selection, PianoGrid holds none of its own).
 Source context since previous assertion:
       sendKeyStroke(roll, Qt::Key_D, Qt::ControlModifier, false);
       const Tick secondStart = firstEnd;
@@ -1097,7 +1097,7 @@ Mapping: S055
 
 A104 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:835
 Disposition: GAP
-Mapping/reason: GAP — no time selection in PianoGrid: the active-time-selection block refusing Shift+Right/Shift+Left is unmodelled (no Swift scenario sets a time selection).
+Mapping/reason: GAP — the active-time-selection block refusing Shift+Right/Shift+Left is unmodelled: the session owns the time selection since task 38a, but no Swift predicate drives a shift-nudge while a range is active.
 Source context since previous assertion:
       view.selectionModel().setNoteSelection({noteA.noteId, noteB.noteId});
       view.selectionModel().setTimeSelection(

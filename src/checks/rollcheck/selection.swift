@@ -555,11 +555,6 @@ private func checkThresholdDrawCell(_ report: CheckReport, session: DocumentSess
         report.fail(id, "the threshold drag escapes its snap cell at this zoom")
         return
     }
-    var timeSelection: AutomationTimeSelection? = AutomationTimeSelection(
-        range: TimeRange(startTick: Tick(cell.tick), endTick: Tick(cell.tick + snap)),
-        scope: .tracks([grid.trackIndex]))
-    grid.timeSelectionSource = { timeSelection }
-    grid.onClearTimeSelection = { timeSelection = nil }
     var auditions: [(pitch: Int, velocity: Int)] = []
     grid.onAudition = { _, pitch, velocity in
         auditions.append((pitch, velocity))
@@ -589,7 +584,12 @@ private func checkThresholdDrawCell(_ report: CheckReport, session: DocumentSess
         session.camera.tickAtContentX(pressX), camera: session.camera))
         && auditions.last.map { $0.pitch == cell.pitch && $0.velocity == 0 } == true,
         cppID: id, message: "within-slop release parks the nearest snapped edit cursor and stops audition")
-    report.expect(timeSelection == nil,
+    session.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: Tick(cell.tick), endTick: Tick(cell.tick + snap)),
+        scope: .tracks([grid.trackIndex])))
+    grid.beginPointer(x: pressX, y: cell.y, modifiers: 0)
+    grid.endPointer(x: pressX, y: cell.y)
+    report.expect(session.timeSelection == nil,
                   cppID: "swiftcore/PianoRollTest::keyboardTimeSelectionShortcuts",
                   message: "A056 clicking inside the primary time selection clears its active span")
     auditions.removeAll()

@@ -198,8 +198,8 @@ private func checkKeyboardDuplicatePrefersTimeSelection(
                               endTick: source.tick + 2 * fixture.step) &&
                           copy != nil && session.editCursor == source.tick + 2 * fixture.step,
                       cppID: id, message: "active time range owns duplicate and advances the cursor")
-        report.expect(session.selectedNoteOrder == [source.id], cppID: id,
-                      message: "time-range duplication leaves the note selection on its source")
+        report.expect(session.selectedNoteOrder.isEmpty, cppID: id,
+                      message: "committing the time range clears the competing note selection")
         fixture.expectOneUndo(report, id: id)
     }
 }

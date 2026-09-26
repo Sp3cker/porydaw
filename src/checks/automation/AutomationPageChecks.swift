@@ -154,7 +154,7 @@ struct drawerAutomationAutomationFixture {
                                baseFontPx: baseFontPx, dragDistance: 10)
         }
         session.onChange = { [weak page] change in
-            let content: SessionChangeDomains = [.document, .selection, .bank]
+            let content: SessionChangeDomains = [.document, .bank]
             if !change.domains.intersection(content).isEmpty {
                 page?.refreshFromDocument()
             } else if change.domains.contains(.cursor) {

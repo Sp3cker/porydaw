@@ -28,6 +28,76 @@ func runClipboardSelectionChecks(_ report: CheckReport, suite: DocumentSession,
     clipboardNoteSelectionChecks(report, session: session)
     clipboardTrackSelectionChecks(report, session: session)
     clipboardUnifiedTimeSelectionChecks(report, suite: suite, service: service)
+    clipboardUnifiedModelChecks(report, suite: suite, service: service)
+
+}
+
+@MainActor
+private func clipboardUnifiedModelChecks(_ report: CheckReport, suite: DocumentSession,
+                                         service: ProjectService) {
+    let id = "clipboard/SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary"
+    let doc = SongDocument(file: MidiFile(division: 24, chunks: [
+        MidiChunk(events: [
+            .channel(tick: 48, status: 0x90, data0: 60, data1: 90),
+            .channel(tick: 60, status: 0x80, data0: 60),
+        ], endTick: 96),
+    ]), config: suite.document.state.config, source: suite.document.source,
+        trackBudget: suite.document.trackBudget)
+    for _ in doc.engineTracks.usedTrackCount..<3 {
+        guard doc.addTrack(voice: 0) != nil else {
+            report.fail(id, "selection fixture cannot provision three engine tracks")
+            return
+        }
+    }
+    let session = DocumentSession(document: doc, service: service, lease: suite.bankLease,
+                                  slots: suite.bankSlots, dirty: false, loadName: suite.bankLoadName)
+    var transitions: [SelectionTransition] = []
+    let observer = session.addSelectionTransitionObserver { transitions.append($0) }
+    defer { session.removeSelectionTransitionObserver(observer) }
+    session.selectPrimaryTrack(0)
+    let time = AutomationTimeSelection(range: TimeRange(startTick: 12, endTick: 36),
+                                        scope: .tracks([0, 1]))
+    session.applyTimeSelection(time)
+    report.expect(session.timeSelection == time, cppID: id,
+                  message: "a track-scoped range is owned by the document session")
+    session.adjustTrackScope(track: 1, action: .plain)
+    report.expect(session.timeSelection == nil, cppID: id,
+                  message: "plain on another track clears the time selection")
+    session.applyTimeSelection(time)
+    session.adjustTrackScope(track: 1, action: .plain)
+    report.expect(session.timeSelection?.range == time.range, cppID: id,
+                  message: "plain on the primary track preserves the time interval")
+    report.expect(session.timeSelection?.scope == .tracks([1]), cppID: id,
+                  message: "plain on the primary track narrows the selected scope")
+    session.applyTimeSelection(time)
+    session.adjustTrackScope(track: 1, action: .toggle)
+    report.expect(session.selectedTrack == 0, cppID: id,
+                  message: "toggle hands primary to the surviving track")
+    report.expect(session.timeSelection?.scope == .tracks([0]), cppID: id,
+                  message: "toggle preserves the time interval on the surviving scope")
+    report.expect(transitions.last?.previousTrackTime.trackScope == [0, 1]
+                  && transitions.last?.trackTime.trackScope == [0], cppID: id,
+                  message: "the transition reports the previous and current track-time scope")
+    session.adjustTrackScope(track: 2, action: .range)
+    report.expect(session.selectedTracks == [0, 1, 2], cppID: id,
+                  message: "range expands inclusively from primary to target")
+    report.expect(session.timeSelection?.scope == .tracks([0, 1, 2]), cppID: id,
+                  message: "range changes the authoritative time-selection scope")
+    guard let note = doc.notes(in: 0).first else {
+        report.fail(id, "the note handoff fixture has no note")
+        return
+    }
+    session.setSelectedNotes([note.id])
+    report.expect(session.timeSelection == nil, cppID: id,
+                  message: "a note selection clears the active time selection")
+    session.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 12, endTick: 36), scope: .tracks([0, 2])))
+    guard doc.moveTrack(2, to: 1) else {
+        report.fail(id, "cannot move selected track for scope remap")
+        return
+    }
+    report.expect(session.timeSelection?.scope == .tracks([0, 1]), cppID: id,
+                  message: "remap moves the stored scope with the selected track")
 }
 
 @MainActor
@@ -198,9 +268,9 @@ private func clipboardTrackSelectionChecks(_ report: CheckReport, session: Docum
                        what: "deleting a primary track falls back to its numeric position")
     report.expectEqual(expected: Set([0, 2]), actual: session.selectedTracks, cppID: remapID,
                        what: "deleting a primary track keeps surviving remapped scope plus fallback primary")
-    report.expect(changes.count == 1 && changes[0].contains(.selection)
-                  && changes[0].contains(.document), cppID: remapID,
-                  message: "deleted-primary remap publishes one coalesced selection and document change")
+    report.expectEqual(expected: [SessionChangeDomains([.document, .dirty, .history])],
+                       actual: changes, cppID: remapID,
+                       what: "numeric fallback preserving scope publishes one document change without selection churn")
     document.deleteTrack(4)
     document.deleteTrack(3)
     document.deleteTrack(2)
@@ -355,40 +425,68 @@ private func clipboardUnifiedTimeSelectionChecks(_ report: CheckReport, suite: D
     let page = AutomationPage()
     page.attach(session: session, palette: GridPalette())
     defer { page.detach() }
-    let ids = document.notes(in: 0).map(\.id)
-    let invalid = NoteID()
+    let note = document.notes(in: 0)[0].id
+    let parameter = AutomationParameter.controlChange(track: 0, controller: 7)
     var changes: [SessionChangeDomains] = []
+    var transitions: [SelectionTransition] = []
+    let observer = session.addSelectionTransitionObserver { transitions.append($0) }
+    defer { session.removeSelectionTransitionObserver(observer) }
     var availability = 0
-    session.onChange = { changes.append($0.domains) }
     page.onCommandAvailabilityChanged = { availability += 1 }
+    session.onChange = { changes.append($0.domains) }
     defer { session.onChange = nil }
-    page.applyTimeSelection(AutomationTimeSelection(
-        range: TimeRange(startTick: 10, endTick: 20), scope: .lanes, lanes: []))
+
+    session.setSelectedNotes([note])
+    changes.removeAll()
+    let revision = document.revision
+    let initialBuilds = page.selectionBuildCount
+    let laneTime = AutomationTimeSelection(range: TimeRange(startTick: 10, endTick: 20),
+                                           scope: .lanes, lanes: [parameter, .tempo], tempo: true)
+    page.applyTimeSelection(laneTime)
+    report.expect(session.selectedNoteOrder.isEmpty, cppID: sanitize,
+                  message: "A008 committing an active range clears the competing note selection")
     report.expect(page.selection?.isActive == true, cppID: sanitize,
                   message: "A009 committed time selection is active")
-    report.expect(changes.isEmpty && session.selectedNoteOrder.isEmpty, cppID: sanitize,
-                  message: "A010 time commit notifies through the page while the session stays silent")
-    report.expectEqual(expected: 1, actual: availability, cppID: sanitize,
-                       what: "A010 time commit publishes one page availability change")
-    session.setSelectedNotes([invalid])
+    report.expectEqual(expected: [SessionChangeDomains.selection], actual: changes, cppID: sanitize,
+                       what: "A010 time commit publishes one coalesced session selection change")
+    report.expectEqual(expected: initialBuilds + 1, actual: page.selectionBuildCount, cppID: sanitize,
+                       what: "A010 session selection publication rebuilds the page selection once")
+    report.expectEqual(expected: revision, actual: document.revision, cppID: sanitize,
+                       what: "A010 time selection never edits the song")
+    report.expect(page.selection?.covers(.tempo, usedTracks: [0]) == true, cppID: sanitize,
+                  message: "tempo coverage survives lane sanitization")
+    report.expect(page.selection?.covers(parameter, usedTracks: [0]) == true, cppID: sanitize,
+                  message: "valid control-change lane remains covered")
+    changes.removeAll()
+    session.setSelectedNotes([NoteID()])
     report.expect(page.selection?.isActive == true, cppID: sanitize,
                   message: "A011 empty note guard preserves the active time selection")
+    report.expect(page.selection?.lanes == [parameter], cppID: sanitize,
+                  message: "A011 empty note guard retains sanitized lane coverage")
     report.expect(session.selectedNoteOrder.isEmpty, cppID: sanitize,
                   message: "A012 empty note guard leaves no notes selected")
-    report.expect(changes.isEmpty && availability == 1, cppID: sanitize,
+    report.expect(changes.isEmpty, cppID: sanitize,
                   message: "A013 empty note guard publishes nothing")
     page.applyTimeSelection(page.selection)
-    report.expect(changes.isEmpty && availability == 1, cppID: commit,
+    report.expect(changes.isEmpty, cppID: commit,
                   message: "A042 equivalent time and scope commit publishes nothing")
+    let availabilityBeforeClear = availability
     page.clearTimeSelection()
-    session.setSelectedNotes([ids[0]])
+    report.expect(page.selection == nil, cppID: sanitize,
+                  message: "A022 clearing the committed time selection deactivates it")
+    report.expect(session.selectedNoteOrder.isEmpty, cppID: sanitize,
+                  message: "A023 clearing time leaves the empty note selection empty")
+    report.expect(availability == availabilityBeforeClear + 1, cppID: sanitize,
+                  message: "A024 clearing time publishes one page availability change")
+    report.expect(transitions.last?.trackTime.active == false, cppID: sanitize,
+                  message: "clearing time publishes an inactive transition payload")
+    changes.removeAll()
+    session.setSelectedNotes([note])
     changes.removeAll()
     page.clearTimeSelection()
-    report.expect(session.selectedNoteOrder == [ids[0]], cppID: clear,
+    report.expect(session.selectedNoteOrder == [note], cppID: clear,
                   message: "A017 inactive time commit preserves the note selection")
-    report.expect(page.selection == nil, cppID: clear,
-                  message: "A018 cleared time selection stays inactive")
-    report.expect(changes.isEmpty && availability == 2, cppID: clear,
+    report.expect(changes.isEmpty, cppID: clear,
                   message: "A019 inactive time commit publishes nothing")
     session.clearSelectedNotes()
     changes.removeAll()
@@ -396,38 +494,105 @@ private func clipboardUnifiedTimeSelectionChecks(_ report: CheckReport, suite: D
     page.clearTimeSelection()
     report.expect(page.selection == nil && session.selectedNoteOrder.isEmpty, cppID: clear,
                   message: "A021 clearing empty selections changes neither owner")
-    report.expect(changes.isEmpty && availability == 2, cppID: clear,
+    report.expect(changes.isEmpty, cppID: clear,
                   message: "A021 clearing empty selections publishes nothing")
-    page.applyTimeSelection(AutomationTimeSelection(
-        range: TimeRange(startTick: 10, endTick: 20), scope: .lanes, lanes: []))
-    page.clearTimeSelection()
-    report.expect(page.selection == nil, cppID: sanitize,
-                  message: "A022 clearing the committed time selection deactivates it")
-    report.expect(session.selectedNoteOrder.isEmpty, cppID: sanitize,
-                  message: "A023 clearing time leaves the empty note selection empty")
-    report.expect(availability == 4 && changes.isEmpty, cppID: sanitize,
-                  message: "A024 clearing time publishes one page availability change")
-    page.applyTimeSelection(AutomationTimeSelection(
-        range: TimeRange(startTick: 40, endTick: 80), scope: .tracks([0, 20])))
-    report.expectEqual(expected: TimeRange(startTick: 40, endTick: 80), actual: page.selection?.range, cppID: commit,
+
+    let trackTime = AutomationTimeSelection(range: TimeRange(startTick: 40, endTick: 80),
+                                            scope: .tracks([0, 20]))
+    page.applyTimeSelection(trackTime)
+    report.expectEqual(expected: TimeRange(startTick: 40, endTick: 80),
+                       actual: page.selection?.range, cppID: commit,
                        what: "A025-A026 track-scoped commit keeps its tick endpoints")
-    let committed = page.selection
-    report.expect(committed?.covers(.controlChange(track: 0, controller: 7), usedTracks: [0]) == true
-                  && committed?.covers(.controlChange(track: 20, controller: 7), usedTracks: [0]) == false,
-                  cppID: commit, message: "A027 resolved scope drops the out-of-range track")
-    report.expectEqual(expected: 5, actual: availability, cppID: commit,
-                       what: "A028 track-scoped commit publishes one page availability change")
+    report.expectEqual(expected: AutomationTimeSelection.Scope.tracks([0]),
+                       actual: page.selection?.scope, cppID: commit,
+                       what: "A027 resolved scope drops the out-of-range track")
+    report.expectEqual(expected: TrackTimeSelection(startTick: 40, endTick: 80, trackScope: [0]),
+                       actual: transitions.last?.trackTime, cppID: commit,
+                       what: "A028 transition exposes the committed endpoint and scope payload")
+    report.expect(page.selectionCommandAvailable(command: .copy), cppID: commit,
+                  message: "selected track interval exposes copy when it contains a note")
+    let availabilityBeforeSecondCommit = availability
     page.applyTimeSelection(AutomationTimeSelection(
         range: TimeRange(startTick: 50, endTick: 90), scope: .tracks([0])))
-    report.expectEqual(expected: TimeRange(startTick: 50, endTick: 90), actual: page.selection?.range, cppID: commit,
-                       what: "A035-A036 second track-scoped commit keeps its tick endpoints")
-    report.expectEqual(expected: AutomationTimeSelection.Scope.tracks([0]), actual: page.selection?.scope, cppID: commit,
-                       what: "A034 second commit stores its track scope")
-    report.expectEqual(expected: 6, actual: availability, cppID: commit,
-                       what: "A037 second track-scoped commit publishes one page availability change")
+    report.expectEqual(expected: TrackTimeSelection(startTick: 40, endTick: 80, trackScope: [0]),
+                       actual: transitions.last?.previousTrackTime, cppID: commit,
+                       what: "A035 previous transition endpoint and scope remain available")
+    report.expectEqual(expected: TrackTimeSelection(startTick: 50, endTick: 90, trackScope: [0]),
+                       actual: transitions.last?.trackTime, cppID: commit,
+                       what: "A036 next transition endpoint and scope replace the previous selection")
+    report.expect(availability == availabilityBeforeSecondCommit + 1, cppID: commit,
+                  message: "A037 second track-scoped commit publishes one page availability change")
+    changes.removeAll()
+    let availabilityBeforeEmptyNoteClear = availability
     session.clearSelectedNotes()
     report.expect(page.selection?.isActive == true, cppID: clear,
                   message: "A043 clearing notes preserves the active time selection")
-    report.expect(changes.isEmpty && availability == 6, cppID: clear,
+    report.expect(changes.isEmpty && availability == availabilityBeforeEmptyNoteClear, cppID: clear,
                   message: "A044 clearing the empty note selection publishes nothing")
+    let selectionBeforeDetach = session.timeSelection
+    page.detach()
+    report.expect(session.timeSelection == selectionBeforeDetach, cppID: commit,
+                  message: "detaching a drawer leaves document-session selection intact")
+    page.attach(session: session, palette: GridPalette())
+    report.expect(page.selection == selectionBeforeDetach, cppID: commit,
+                  message: "reattached drawer projects the authoritative session selection")
+    let otherSession = DocumentSession(document: SongDocument(
+        file: file, config: suite.document.state.config, source: suite.document.source,
+        trackBudget: suite.document.trackBudget), service: service,
+        lease: suite.bankLease, slots: suite.bankSlots, dirty: false, loadName: suite.bankLoadName)
+    report.expect(otherSession.timeSelection == nil, cppID: commit,
+                  message: "a fresh document session starts without another tab's time selection")
+    let coverage = "clipboard/SelectionCheckTest::coverageQueriesAndLaneScopeSanitization"
+    let remap = "clipboard/SelectionCheckTest::remapPreservesMeaningfulSelection"
+    let expanding = AutomationTimeSelection(range: TimeRange(startTick: 10, endTick: 20),
+                                            scope: .tracks([0, 1]))
+    session.applyTimeSelection(expanding)
+    report.expect(session.timeSelection?.scope == .tracks([0, 1]), cppID: coverage,
+                  message: "track scope preserves an unused valid track bit")
+    report.expect(!session.timeSelectionCoversTrack(1), cppID: coverage,
+                  message: "coverage resolves only against used tracks")
+    report.expect(session.timeSelectionCoversTempo(), cppID: coverage,
+                  message: "a scope covering every used track covers global Tempo")
+    guard document.addTrack(voice: 0) == 1 else {
+        report.fail(coverage, "cannot add track to test stored scope expansion")
+        return
+    }
+    report.expect(session.timeSelectionCoversTrack(1), cppID: coverage,
+                  message: "a newly added track inherits its stored selection bit")
+    report.expect(session.selectedTracks == [0, 1], cppID: coverage,
+                  message: "a newly used track appears in the resolved scope transition")
+    session.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 10, endTick: 20), scope: .tracks([0])))
+    report.expect(!session.timeSelectionCoversTempo(), cppID: coverage,
+                  message: "partial used-track coverage excludes global Tempo")
+    report.expect(session.timeSelectionCoversTrack(0), cppID: coverage,
+                  message: "a track-scoped selection covers its used track")
+    session.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 10, endTick: 20), scope: .lanes,
+        lanes: [.controlChange(track: -1, controller: 7),
+                .controlChange(track: 16, controller: 7)]))
+    report.expect(session.timeSelection == nil, cppID: coverage,
+                  message: "an active lane selection without lanes or tempo is dropped")
+    session.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 10, endTick: 20), scope: .lanes, tempo: true))
+    report.expect(session.timeSelectionCoversTempo(), cppID: coverage,
+                  message: "a tempo-only lane selection survives sanitization")
+    report.expect(!session.timeSelectionCoversTrack(0), cppID: coverage,
+                  message: "a lane selection does not cover an entire track")
+    session.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 10, endTick: 20), scope: .lanes,
+        lanes: [.controlChange(track: 1, controller: 7)]))
+    document.deleteTrack(1)
+    report.expect(session.timeSelection == nil, cppID: remap,
+                  message: "lane scopes remap and sanitize away a deleted track")
+    guard document.addTrack(voice: 0) == 1 else {
+        report.fail(remap, "cannot restore a secondary track for primary deletion")
+        return
+    }
+    session.selectPrimaryTrack(1)
+    session.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 10, endTick: 20), scope: .tracks([1])))
+    document.deleteTrack(1)
+    report.expect(session.timeSelection == nil, cppID: remap,
+                  message: "a deleted primary clears the track-scoped time selection")
 }

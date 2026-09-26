@@ -758,7 +758,7 @@ private func checkProjectionEconomy(_ report: CheckReport, session: DocumentSess
     let priorSelection = session.selectedNoteOrder
     let grid = PianoGrid(session: session)
     defer {
-        grid.timeSelectionSource = nil
+        session.clearTimeSelection()
         grid.clearKeyboardHover()
         session.clearSelectedNotes()
         session.setSelectedNotes(priorSelection)
@@ -829,11 +829,9 @@ private func checkProjectionEconomy(_ report: CheckReport, session: DocumentSess
     let summaryPlain = grid.noteSummary
     let startTick = Tick(max(0, Int(note.tick) - 2))
     let endTick = Tick(Int(note.tick) + Int(note.duration) + 2)
-    grid.timeSelectionSource = {
-        AutomationTimeSelection(
-            range: TimeRange(startTick: startTick, endTick: endTick),
-            scope: .tracks([grid.trackIndex]))
-    }
+    session.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: startTick, endTick: endTick),
+        scope: .tracks([grid.trackIndex])))
     grid.refreshCamera()
     report.expect(fillSnapshot() == fillsPlain
                       && grid.scene.boxesProjected == 0 && grid.scene.fillWrites == 0,
@@ -846,7 +844,7 @@ private func checkProjectionEconomy(_ report: CheckReport, session: DocumentSess
                            thickness: ring, color: grid.palette.selectionRing),
                   cppID: id,
                   message: "a highlight-only refresh still rings the time-covered note")
-    grid.timeSelectionSource = nil
+    session.clearTimeSelection()
     grid.noteSummaryRebuilds = 0
     let summaryBeforeScroll = grid.noteSummary
     let scrolledX = session.camera.snapshot.scrollX
@@ -913,7 +911,7 @@ private func checkRulerSweepSingleTrackScope(_ report: CheckReport, session: Doc
     automation.clearTimeSelection()
     let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
     defer { menu.cancelSweep(); menu.close() }
-    menu.beginSweep(contentX: session.camera.contentX(tick: Double(anchor)))
+    menu.beginSweep(contentX: session.camera.contentX(tick: Double(anchor)), pointerY: 0)
     menu.updateSweep(contentX: session.camera.contentX(tick: Double(farTick)))
     guard let swept = automation.selection, swept.isActive else {
         report.fail(id, "a plain ruler sweep published no time selection")

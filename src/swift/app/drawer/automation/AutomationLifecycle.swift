@@ -129,7 +129,7 @@ extension AutomationPage {
 
     func shiftSelection(by delta: Int64) {
         guard let moved = shiftedAutomationSelection(selection, by: delta) else { return }
-        selection = moved
+        applyTimeSelection(moved)
     }
 
     /// Applies the plain context result in the same publication order as the

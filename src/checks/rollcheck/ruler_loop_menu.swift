@@ -15,6 +15,89 @@ func runRulerLoopMenuChecks(_ report: CheckReport, session: DocumentSession) {
     checkRulerInsertTimePrompt(report, session: session)
     checkRulerSweepScopeTapAndChip(report, session: session)
     checkRulerSeekEmission(report, session: session)
+    checkRulerDeferredTiming(report, session: session)
+}
+
+@MainActor
+private func checkRulerDeferredTiming(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::timelineRulerScope"
+    let palette = GridPalette()
+    let grid = PianoGrid(session: session, palette: palette)
+    grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 1)
+    let automation = AutomationPage(baseFontPx: grid.baseFontPx)
+    automation.attach(session: session, palette: palette)
+    let priorTrack = session.selectedTrack
+    if priorTrack == nil { session.selectPrimaryTrack(0) }
+    let priorCursor = session.editCursor
+    defer {
+        automation.detach()
+        session.clearTimeSelection()
+        session.editCursor = priorCursor
+        session.selectedTrack = priorTrack
+    }
+    let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
+    let start = session.camera.contentX(tick: 24)
+    let end = session.camera.contentX(tick: 72)
+    let cursor = session.editCursor
+    menu.captureRulerPress(contentX: end, pointerY: 0)
+    report.expect(!menu.isOpen, cppID: id,
+                  message: "the ruler right press does not open the menu")
+    report.expect(session.editCursor == cursor, cppID: id,
+                  message: "the ruler right press leaves the cursor untouched until release")
+    menu.openRulerAtRelease()
+    report.expect(menu.isOpen, cppID: id,
+                  message: "the ruler menu opens on right release")
+    report.expect(menu.targetTick() == Double(Tick(grid.snapTickDown(72))), cppID: id,
+                  message: "ruler release uses the captured press tick for the menu target")
+    menu.close()
+    let band = AutomationTimeSelection(range: TimeRange(startTick: 24, endTick: 72),
+                                       scope: .tracks([session.selectedTrack ?? 0]))
+    session.applyTimeSelection(band)
+    session.editCursor = 0
+    menu.captureRulerPress(contentX: start + (end - start) / 2, pointerY: 0)
+    report.expect(session.timeSelection == band, cppID: id,
+                  message: "a right press inside the interval keeps the selection")
+    report.expect(session.editCursor == 0, cppID: id,
+                  message: "a right press inside the interval keeps the cursor")
+    menu.openRulerAtRelease()
+    report.expect(session.timeSelection == band, cppID: id,
+                  message: "right release inside the interval preserves the selection")
+    report.expect(session.editCursor == 0, cppID: id,
+                  message: "right release inside the interval does not seek")
+    menu.close()
+    menu.captureRulerPress(contentX: end, pointerY: 0)
+    report.expect(session.timeSelection == band, cppID: id,
+                  message: "a right press outside keeps the band until release")
+    menu.openRulerAtRelease()
+    report.expect(session.timeSelection == nil, cppID: id,
+                  message: "a press outside clears the selection on release")
+    report.expect(session.editCursor == Tick(grid.snapTickDown(72)), cppID: id,
+                  message: "a press outside commits the cursor on release")
+    menu.close()
+    menu.beginSweep(contentX: start, pointerY: 0)
+    menu.updateSweep(contentX: start + grid.dragDistance / 2, pointerY: 0)
+    report.expect(session.timeSelection == nil, cppID: id,
+                  message: "the ruler sweep stays unarmed below the drag distance")
+    menu.updateSweep(contentX: end, pointerY: 0)
+    report.expect(session.timeSelection?.isActive == true, cppID: id,
+                  message: "the ruler sweep arms at the drag distance")
+    menu.endSweep(contentX: end, pointerY: 0)
+    session.clearTimeSelection()
+    menu.beginSweep(contentX: start, pointerY: 0)
+    menu.endSweep(contentX: start + grid.dragDistance / 2, pointerY: 0)
+    report.expect(session.editCursor == Tick(grid.snapTickDown(24)), cppID: id,
+                  message: "a below-slop ruler release commits the snapped anchor")
+    session.applyTimeSelection(band)
+    menu.beginSweep(contentX: end, pointerY: 20)
+    menu.endSweep(contentX: end + grid.dragDistance / 2, pointerY: 20)
+    report.expect(session.timeSelection == band, cppID: id,
+                  message: "a below-slop ruler tap preserves the prior time-selection band")
+}
+
+@MainActor
+private func openRulerMenu(_ menu: RulerMenuPresenter, at contentX: Double) {
+    menu.captureRulerPress(contentX: contentX, pointerY: 0)
+    menu.openRulerAtRelease()
 }
 
 @MainActor
@@ -166,7 +249,7 @@ private func checkRenderedRulerMenuCommands(_ report: CheckReport, session: Docu
     let end: Tick = session.timeline.loopEndTick == 96 ? 120 : 96
     let atStart = session.camera.contentX(tick: Double(start))
     let atEnd = session.camera.contentX(tick: Double(end))
-    menu.openRuler(contentX: atStart)
+    openRulerMenu(menu, at: atStart)
     report.expect(menu.isOpen && menu.rows.count > 0
                   && (0..<menu.rows.count).contains(where: { menu.rows[$0].actionId == 2 && menu.rows[$0].enabled }),
                   cppID: id, message: "the ruler opens a typed, enabled Set Loop Start row")
@@ -175,7 +258,7 @@ private func checkRenderedRulerMenuCommands(_ report: CheckReport, session: Docu
     report.expect(!menu.isOpen && writtenStart == Tick(grid.snapTickDown(Double(start))),
                   cppID: id, message: "the clicked start row closes and writes the loop marker")
 
-    menu.openRuler(contentX: atEnd)
+    openRulerMenu(menu, at: atEnd)
     _ = menu.activate(actionId: 3)
     let writtenEnd = session.timeline.loopEndTick
     report.expect(writtenEnd == Tick(grid.snapTickDown(Double(end))), cppID: id,
@@ -212,7 +295,7 @@ private func checkRenderedRulerMenuCommands(_ report: CheckReport, session: Docu
             && $0.width <= 1 / grid.devicePixelRatio
     }, cppID: id, message: "both loop edge lines use full-opacity selection ink and device-pixel width")
 
-    menu.openRuler(contentX: atEnd)
+    openRulerMenu(menu, at: atEnd)
     report.expect((0..<menu.rows.count).contains(where: { menu.rows[$0].actionId == 4 && menu.rows[$0].enabled }),
                   cppID: id, message: "Remove Loop becomes enabled when a marker exists")
     _ = menu.activate(actionId: 4)
@@ -240,10 +323,10 @@ private func checkRenderedRulerMenuCommands(_ report: CheckReport, session: Docu
     _ = session.document.history.undoDocument()
     _ = session.document.history.undoDocument()
 
-    menu.beginSweep(contentX: atStart)
+    menu.beginSweep(contentX: atStart, pointerY: 0)
     menu.updateSweep(contentX: atEnd)
     menu.endSweep(contentX: atEnd)
-    menu.openRuler(contentX: session.camera.contentX(tick: Double((start + end) / 2)))
+    openRulerMenu(menu, at: session.camera.contentX(tick: Double((start + end) / 2)))
     report.expect((0..<menu.rows.count).contains(where: { menu.rows[$0].actionId == 5 && menu.rows[$0].enabled })
                   && !(0..<menu.rows.count).contains(where: { menu.rows[$0].actionId == 2 }), cppID: id,
                   message: "a swept range replaces positional rows with selection rows")
@@ -280,7 +363,7 @@ private func checkRulerInsertTimePrompt(_ report: CheckReport, session: Document
     let segment = axis.segmentAt(0)
     let barTicks = Tick(segment.beatTicks) * Tick(segment.beatsPerBar)
     session.editCursor = 0
-    menu.openRuler(contentX: session.camera.contentX(tick: 0))
+    openRulerMenu(menu, at: session.camera.contentX(tick: 0))
     _ = menu.activate(actionId: 1)
     report.expect(menu.insertTimePromptOpen && !menu.isOpen
                   && menu.insertTimePromptMaximumBeats == Int(segment.beatsPerBar - 1)
@@ -297,7 +380,7 @@ private func checkRulerInsertTimePrompt(_ report: CheckReport, session: Document
     _ = session.document.history.undoDocument()
     report.expect(coreTimeBytes(session.document) == before, cppID: id,
                   message: "one undo restores the song before prompted insertion")
-    menu.openRuler(contentX: session.camera.contentX(tick: 0))
+    openRulerMenu(menu, at: session.camera.contentX(tick: 0))
     _ = menu.activate(actionId: 1)
     menu.cancelInsertTimePrompt()
     report.expect(!menu.insertTimePromptOpen && coreTimeBytes(session.document) == before,
@@ -360,7 +443,7 @@ private func checkRulerSweepScope(_ report: CheckReport, fixture: RulerCheckFixt
     let session = fixture.session
     let menu = fixture.menu
     let automation = fixture.automation
-    menu.beginSweep(contentX: fixture.atAnchor)
+    menu.beginSweep(contentX: fixture.atAnchor, pointerY: 0)
     menu.updateSweep(contentX: fixture.atFar)
     guard let swept = automation.selection, swept.isActive else {
         report.fail(id, "a plain ruler sweep published no time selection")
@@ -389,7 +472,7 @@ private func checkRulerSweepScope(_ report: CheckReport, fixture: RulerCheckFixt
         return nil
     }
     automation.clearTimeSelection()
-    menu.beginSweep(contentX: fixture.atAnchor, modifiers: 0x0400_0000)
+    menu.beginSweep(contentX: fixture.atAnchor, pointerY: 0, modifiers: 0x0400_0000)
     menu.updateSweep(contentX: fixture.atFar)
     guard let modified = automation.selection, modified.isActive else {
         report.fail(id, "a modified ruler sweep published no time selection")
@@ -437,7 +520,7 @@ private func checkRulerTapAndCancel(
     }
     session.editCursor = fixture.anchor
     let atOutside = session.camera.contentX(tick: Double(outside))
-    menu.beginSweep(contentX: atOutside)
+    menu.beginSweep(contentX: atOutside, pointerY: 0)
     menu.endSweep(contentX: atOutside)
     session.onChange = priorTapChange
     report.expect(automation.selection == AutomationTimeSelection(
@@ -449,7 +532,7 @@ private func checkRulerTapAndCancel(
     report.expect(tapPublications.contains(where: { $0.contains(.cursor) }), cppID: id,
                   message: "A035: the tap commit publishes the cursor through the session observer")
 
-    menu.beginSweep(contentX: fixture.atAnchor)
+    menu.beginSweep(contentX: fixture.atAnchor, pointerY: 0)
     menu.updateSweep(contentX: fixture.atFar)
     guard let live = automation.selection, live.isActive else {
         report.fail(id, "the cancellation fixture published no time selection")
@@ -479,7 +562,7 @@ private func checkRulerPressPolicy(
         range: TimeRange(startTick: fixture.anchor, endTick: endTick),
         scope: .tracks([fixture.primary])))
     session.editCursor = fixture.anchor
-    menu.openRuler(contentX: session.camera.contentX(tick: Double(endTick - 1)))
+    openRulerMenu(menu, at: session.camera.contentX(tick: Double(endTick - 1)))
     report.expect(menu.isOpen && menu.menuKind == 1
                   && automation.selection?.range.startTick == fixture.anchor
                   && automation.selection?.range.endTick == endTick
@@ -498,7 +581,7 @@ private func checkRulerPressPolicy(
         endPublications.append(change.domains)
         priorEndChange?(change)
     }
-    menu.openRuler(contentX: session.camera.contentX(tick: Double(endTick) + 0.5))
+    openRulerMenu(menu, at: session.camera.contentX(tick: Double(endTick) + 0.5))
     session.onChange = priorEndChange
     report.expect(menu.isOpen && menu.menuKind == 1
                   && automation.selection?.isActive != true
@@ -523,8 +606,7 @@ private func checkRulerChip(
     let preSigBytes = coreTimeBytes(session.document)
     session.document.setTimeSignature(tick: chipOff, numerator: 7, denominatorPower: 2)
     fixture.automation.clearTimeSelection()
-    menu.openRuler(contentX: session.camera.contentX(tick: Double(chipOff)),
-                   chipTick: Double(chipOff))
+    openRulerMenu(menu, at: session.camera.contentX(tick: Double(chipOff)))
     report.expect(session.editCursor == chipOff && menu.isOpen && menu.menuKind == 1,
                   cppID: id,
                   message: "A059: an off-grid chip press commits the chip's exact event tick")
@@ -535,8 +617,7 @@ private func checkRulerChip(
 
     session.document.setTimeSignature(tick: endTick, numerator: 5, denominatorPower: 2)
     session.editCursor = fixture.anchor
-    menu.openRuler(contentX: session.camera.contentX(tick: Double(endTick)),
-                   chipTick: Double(endTick))
+    openRulerMenu(menu, at: session.camera.contentX(tick: Double(endTick)))
     report.expect(session.editCursor == endTick && menu.isOpen && menu.menuKind == 1
                   && (0..<menu.rows.count).contains(where: {
                       menu.rows[$0].actionId == 10 && menu.rows[$0].enabled
@@ -581,7 +662,7 @@ private func checkRulerSeekEmission(_ report: CheckReport, session: DocumentSess
         steps += 1
     }
     session.editCursor = anchor
-    menu.beginSweep(contentX: session.camera.contentX(tick: Double(outside)))
+    menu.beginSweep(contentX: session.camera.contentX(tick: Double(outside)), pointerY: 0)
     menu.endSweep(contentX: session.camera.contentX(tick: Double(outside)))
     report.expect(emitted == [outside], cppID: id,
                   message: "a ruler tap emits one seek for the exact snapped anchor")
@@ -589,21 +670,22 @@ private func checkRulerSeekEmission(_ report: CheckReport, session: DocumentSess
     let end = outside
     automation.applyTimeSelection(AutomationTimeSelection(
         range: TimeRange(startTick: start, endTick: end), scope: .tracks([primary])))
-    menu.openRuler(contentX: session.camera.contentX(tick: Double(end) + 0.5))
+    openRulerMenu(menu, at: session.camera.contentX(tick: Double(end) + 0.5))
     report.expect(emitted == [outside, end]
                   && session.editCursor == end, cppID: id,
                   message: "an outside press emits one seek for the exact snapped end tick")
     let chipOff = end + 1
+    session.document.setTimeSignature(tick: chipOff, numerator: 7, denominatorPower: 2)
     automation.clearTimeSelection()
-    menu.openRuler(contentX: session.camera.contentX(tick: Double(chipOff)),
-                   chipTick: Double(chipOff))
+    openRulerMenu(menu, at: session.camera.contentX(tick: Double(chipOff)))
     report.expect(emitted == [outside, end, chipOff], cppID: id,
                   message: "a chip press emits one seek for the exact chip tick")
     menu.close()
+    session.document.deleteTimeSignature(at: chipOff)
     automation.applyTimeSelection(AutomationTimeSelection(
         range: TimeRange(startTick: start, endTick: end), scope: .tracks([primary])))
-    menu.openRuler(contentX: session.camera.contentX(tick: Double(end - 1)))
-    menu.beginSweep(contentX: atAnchor)
+    openRulerMenu(menu, at: session.camera.contentX(tick: Double(end - 1)))
+    menu.beginSweep(contentX: atAnchor, pointerY: 0)
     menu.updateSweep(contentX: atFar)
     menu.endSweep(contentX: atFar)
     menu.cancelSweep()

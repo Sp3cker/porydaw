@@ -488,10 +488,9 @@ private func checkTimeSelectionHighlights(_ report: CheckReport, session: Docume
             return
         }
         let ring = 3.0 / grid.devicePixelRatio
-        var current: AutomationTimeSelection? = AutomationTimeSelection(
+        session.applyTimeSelection(AutomationTimeSelection(
             range: TimeRange(startTick: seed.tick, endTick: seed.tick + seed.duration),
-            scope: .tracks([seed.track, other]))
-        grid.timeSelectionSource = { current }
+            scope: .tracks([seed.track, other])))
         grid.refreshTimeSelectionHighlight()
         report.expect(hasFrame(grid.scene.pianoNoteBordersAndSelection, box: plainBox, inset: 0,
                                thickness: ring, color: grid.palette.selectionRing)
@@ -513,9 +512,9 @@ private func checkTimeSelectionHighlights(_ report: CheckReport, session: Docume
                 && renderingNear(rect.height, session.camera.snapshot.rollHeight)
         } && overlay.filter { $0.fillColor == grid.palette.selectionEdge }.count >= 2,
         cppID: id, message: "the covered selected track publishes its range band and edges")
-        current = AutomationTimeSelection(
+        session.applyTimeSelection(AutomationTimeSelection(
             range: TimeRange(startTick: seed.tick, endTick: seed.tick + seed.duration),
-            scope: .lanes)
+            scope: .lanes, tempo: true))
         grid.refreshTimeSelectionHighlight()
         report.expect(!hasFrame(grid.scene.pianoNoteBordersAndSelection, box: plainBox, inset: 0,
                                 thickness: ring, color: grid.palette.selectionRing)
@@ -523,7 +522,7 @@ private func checkTimeSelectionHighlights(_ report: CheckReport, session: Docume
                                        inset: 0, thickness: ring,
                                        color: grid.palette.selectionRing),
                       cppID: id, message: "lane-scoped ranges ring no roll notes")
-        current = nil
+        session.clearTimeSelection()
         grid.refreshTimeSelectionHighlight()
         report.expect(!hasFrame(grid.scene.pianoNoteBordersAndSelection, box: plainBox, inset: 0,
                                 thickness: ring, color: grid.palette.selectionRing)

@@ -292,11 +292,10 @@ Item {
                         onPressed: (mouse) => {
                             rulerMoves.flush()
                             if (mouse.button === Qt.LeftButton) {
-                                root.rulerMenu.beginSweep(mouse.x, mouse.modifiers)
+                                root.rulerMenu.beginSweep(mouse.x, mouse.y, mouse.modifiers)
                             } else if (mouse.button === Qt.RightButton) {
-                                root.timeSigMenuPosition = mapToItem(root, mouse.x, mouse.y)
                                 root.timeMenuFocus = false
-                                root.timeSigHost.openTimeSigMenu(mouse.x)
+                                root.timeSigHost.captureTimeSigMenuPress(mouse.x, mouse.y)
                             }
                         }
                         onPositionChanged: (mouse) => {
@@ -306,8 +305,12 @@ Item {
                         }
                         onReleased: (mouse) => {
                             rulerMoves.flush()
-                            if (mouse.button === Qt.LeftButton)
-                                root.rulerMenu.endSweep(mouse.x)
+                            if (mouse.button === Qt.LeftButton) {
+                                root.rulerMenu.endSweep(mouse.x, mouse.y)
+                            } else if (mouse.button === Qt.RightButton) {
+                                root.timeSigMenuPosition = mapToItem(root, mouse.x, mouse.y)
+                                root.timeSigHost.openTimeSigMenu()
+                            }
                         }
                         onCanceled: {
                             rulerMoves.flush()
@@ -316,7 +319,7 @@ Item {
                         MoveCoalescer {
                             id: rulerMoves
                             dispatch: (x, y, buttons, modifiers) => {
-                                root.rulerMenu.updateSweep(x)
+                                root.rulerMenu.updateSweep(x, y)
                             }
                         }
                     }
@@ -426,7 +429,7 @@ Item {
                             else if (mouse.button === Qt.RightButton) {
                                 rightSweepActive = (mouse.modifiers & Qt.ShiftModifier) !== 0
                                 if (rightSweepActive) {
-                                    root.rulerMenu.beginSweep(mouse.x, mouse.modifiers)
+                                    root.rulerMenu.beginSweep(mouse.x, mouse.y, mouse.modifiers)
                                 } else {
                                     root.timeSelectionMenuPosition = mapToItem(root, mouse.x, mouse.y)
                                     root.rulerMenu.openTimeSelection(mouse.x)
@@ -455,7 +458,7 @@ Item {
                                 root.gridModel.endPan()
                             else if (mouse.button === Qt.RightButton) {
                                 if (rightSweepActive)
-                                    root.rulerMenu.endSweep(mouse.x)
+                                    root.rulerMenu.endSweep(mouse.x, mouse.y)
                                 else if (!timeMenuPressHandled)
                                     root.gridModel.endRightPointer(mouse.x, mouse.y)
                                 rightSweepActive = false
@@ -485,7 +488,7 @@ Item {
                                     root.gridModel.updatePan(x, y)
                                 else if (buttons & Qt.RightButton) {
                                     if (rollInput.rightSweepActive)
-                                        root.rulerMenu.updateSweep(x)
+                                        root.rulerMenu.updateSweep(x, y)
                                     else if (!rollInput.timeMenuPressHandled)
                                         root.gridModel.updateRightPointer(x, y)
                                 }

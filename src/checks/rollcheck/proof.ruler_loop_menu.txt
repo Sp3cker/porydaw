@@ -25,6 +25,21 @@ Result: PASS — 11/11 ShellGridMenu rows (Totals line: 9 test_ functions plus i
 cleanupTestCase); controller run of `deno task verify:shell --filter shell-grid-menu` —
 shell-grid-menu PASS. It executed the mounted cases that source S026-S065. The swiftcore projectSession run also executes
 the split checkRulerChip predicates S014 (off-grid chip) and S025 (snap-aligned chip).
+Command: deno task verify --filter swiftcore --verbose (task-38a frozen sources)
+Result: PASS — 12/37 ok, 25 filtered skips (implementer-recorded run for this round);
+the deferred-open and timing predicates, S083 (the fix round's below-slop tap
+that preserves the prior time-selection band) included, are recorded in
+build/proof-evidence/swiftcore-projectsession.json under cppID
+swiftcore/PianoRoll::timelineRulerScope and the presenter-policy predicates under
+swiftcore/PianoRoll::rulerLoopMenuInsertTimeAndStaleNoOp.
+Command: deno task verify:shell --filter shell-grid-menu --verbose (task-38a frozen sources)
+Result: PASS — 1/26 ok (implementer-recorded for this round);
+build/proof-evidence/shell-grid-menu.json lists
+test_rulerRightPressCapturesAndReleaseOpensAtReleasePosition, the source of S079-S082.
+Provenance: both blocks above are the implementer-reported lane results for the
+task-38a round on the frozen sources; this proof-only reconciliation ran no lane,
+rebuilt nothing and re-ran no mounted test.
+
 Counts: MATCHED 40, PARTIAL 13, GAP 60, NATIVE 0.
 
 A001 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:119
@@ -1038,11 +1053,11 @@ QVERIFY2(doc.findNote(check.track(), insertStart, uint8_t(seed->cell.key), &sele
 
 A098 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:522
 Disposition: MATCHED
-Mapping: S061
+Mapping: S061, S067
 
 A099 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:523
 Disposition: PARTIAL
-Mapping/reason: S015 (checkRulerSweepScopeTapAndChip, executed) asserts the inside press leaves the time selection active over the exact anchor/end range and the edit cursor unchanged. Unproved: the native/QML press delivery into the ruler input.
+Mapping/reason: PARTIAL: the inside press keeps the selection and the edit cursor — S015 (checkRulerPressPolicy: the menu opens as the in-selection menu over the exact anchor/end range with the edit cursor unchanged), S068 (the press alone leaves the cursor untouched until release), S069-S072 (the same policy split by press and release for the selection and the cursor), S061 (the mounted inside press opens the in-selection menu, so the selection survived the real delivery). Unproved: the mounted delivery does not assert the unchanged edit cursor for an inside press.
 Source context since previous assertion:
 ;
 
@@ -1127,7 +1142,7 @@ Mapping/reason: S065 (tst_ShellGridMenu.qml test_rulerSelectionInsertTimeRowsShi
 
 A110 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:559
 Disposition: PARTIAL
-Mapping/reason: S016 (checkRulerSweepScopeTapAndChip, executed) presses exactly at the interval end and asserts the ruler menu opens as the cursor menu. Unproved: the rendered session/panel and the native/QML press delivery.
+Mapping/reason: PARTIAL: the exact-end press opens the menu — S016 (checkRulerPressPolicy: the boundary press opens the cursor menu), S066/S067 (the right press alone does not open; the release does), S080/S081 (the mounted release opens the captured-tick menu positioned at the release). Unproved: the mounted press at the exact selection-end boundary itself and the rendered menu panel.
 Source context since previous assertion:
 ;
 
@@ -1143,7 +1158,7 @@ QVERIFY2(atEnd.session, qUtf8Printable(atEnd.diagnostic))
 
 A111 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:560
 Disposition: PARTIAL
-Mapping/reason: S016 (checkRulerSweepScopeTapAndChip, executed) asserts the exact-end press leaves no active time selection. Unproved: the rendered session/panel and the native/QML press delivery.
+Mapping/reason: PARTIAL: the exact-end press clears the selection — S074 (the deferred release outside the interval clears the selection at the exact band end), S073 (the band survives the press until release), S016 (the boundary press leaves no active selection). Unproved: the mounted delivery of the boundary press and the rendered menu panel.
 Source context since previous assertion:
 ;
 
@@ -1153,7 +1168,7 @@ QVERIFY2(!view.selectionModel().timeSelection().active(),
 
 A112 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:562
 Disposition: PARTIAL
-Mapping/reason: S016/S017 (checkRulerSweepScopeTapAndChip, executed) assert the exact-end press commits the snapped end tick as the edit cursor and publishes it through the session observer; the mounted shell-transport test adds the real ruler right-click delivery and its presentation (S020 committed cursor, S021 paused playhead target, S022 stopped guard, S023 paused clock beat). Unproved: the exact selection-end boundary press (the mounted press is the plain cursor path, not the half-open end) and the live audio pipeline behind the shared playhead.
+Mapping/reason: PARTIAL: the exact-end press commits the snapped end tick — S075 (the deferred outside release commits the snapped anchor tick), S079/S082 (mounted: no seek before the release; the release commits the captured press tick), S016/S017 (the presenter policy and the committed-cursor publication). Unproved: the mounted boundary press itself and the live audio pipeline behind the shared playhead.
 Source context since previous assertion:
 ;
 
@@ -1191,6 +1206,21 @@ S026-S065 are predicates of the mounted shell-grid-menu test
 rulerMenuRow_ items, click them, and observe the menu, rendered loop markers and signature labels,
 cursor, focus and document revision. None of them reproduces the exact selection-end boundary
 press or renders the native widget menu.
+
+S066-S078 are the task-38a deferred-open and timing predicates of
+checkRulerDeferredTiming (src/checks/rollcheck/ruler_loop_menu.swift, executed
+under swiftcore/PianoRoll::timelineRulerScope): S066/S067 the right-press
+capture split from the release-time open, S068-S072 the inside-press policy at
+press and release, S073-S075 the exact-band-end press that clears the
+selection and commits the snapped anchor, and S076-S078 plus S083 the
+sweep-arming and below-slop left-gesture laws (S083 is the fix round's
+below-slop tap that preserves the prior time-selection band). S076-S078 and
+S083 pin no site in this ledger (no
+ruler_loop_menu.cpp function drives a left-drag sweep); they record the
+task-38a timing laws whose counterpart sites belong to the keyboard ledger's
+timelineRulerScope function, which proof.keyboard.txt indexes. S079-S082 are
+the mounted deferred-open predicates of tst_ShellGridMenu.qml
+test_rulerRightPressCapturesAndReleaseOpensAtReleasePosition.
 
 S001 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
 Anchor: message "A004: both markers begin absent"
@@ -1387,6 +1417,60 @@ Anchor: message "the in-selection Insert Time row shifts the rendered notes"
 S065 | test_rulerSelectionInsertTimeRowsShiftNotesAndUndo | src/checks/editorqml/tst_ShellGridMenu.qml
 Anchor: message "one undo restores the rendered notes before the ruler insertion"
 
+S066 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "the ruler right press does not open the menu"
+
+S067 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "the ruler menu opens on right release"
+
+S068 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "the ruler right press leaves the cursor untouched until release"
+
+S069 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "a right press inside the interval keeps the selection"
+
+S070 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "a right press inside the interval keeps the cursor"
+
+S071 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "right release inside the interval preserves the selection"
+
+S072 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "right release inside the interval does not seek"
+
+S073 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "a right press outside keeps the band until release"
+
+S074 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "a press outside clears the selection on release"
+
+S075 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "a press outside commits the cursor on release"
+
+S076 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "the ruler sweep stays unarmed below the drag distance"
+
+S077 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "the ruler sweep arms at the drag distance"
+
+S078 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "a below-slop ruler release commits the snapped anchor"
+
+S079 | test_rulerRightPressCapturesAndReleaseOpensAtReleasePosition | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "ruler right press does not seek before release"
+
+S080 | test_rulerRightPressCapturesAndReleaseOpensAtReleasePosition | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "ruler right release opens the captured-tick menu"
+
+S081 | test_rulerRightPressCapturesAndReleaseOpensAtReleasePosition | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "ruler menu is positioned at the release rather than press coordinate"
+
+S082 | test_rulerRightPressCapturesAndReleaseOpensAtReleasePosition | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "release commits the captured press tick, not the release tick"
+
+S083 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "a below-slop ruler tap preserves the prior time-selection band"
+
 Remaining original source (closing sequence and helper bodies):
 ;
     QTest::keyClick(atEnd.session->window(), Qt::Key_Escape);
@@ -1394,8 +1478,14 @@ Remaining original source (closing sequence and helper bodies):
 }
 
 Counterpart executable predicate index
-The counterpart predicates for this suite are the S001-S065 indexed above: S001-S013 cover the
-document and menu-model rows, S014-S017 and S025 the presenter sweep, chip and press policy,
-S018-S019 the ruler seek emission, S020-S024 the mounted ruler press, transport presentation and
-menu-mount observations, and S026-S065 the mounted rendered-panel rows, clicks and dismissals.
-None of them reproduces the exact selection-end boundary press or renders the native widget menu.
+The counterpart predicates for this suite are the S001-S083 indexed above:
+S001-S013 cover the document and menu-model rows, S014-S017 and S025 the
+presenter sweep, chip and press policy, S018-S019 the ruler seek emission,
+S020-S024 the mounted ruler press, transport presentation and menu-mount
+observations, S026-S065 the mounted rendered-panel rows, clicks and
+dismissals, S066-S078 and S083 the deferred-open, exact-band-end, sweep-timing
+and below-slop-tap predicates the task-38a ledger added, and S079-S082 the
+mounted deferred-open
+press/release/capture predicates. None of them reproduces the exact
+selection-end boundary press through the mounted QML input or renders the
+native widget menu.
