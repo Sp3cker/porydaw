@@ -295,6 +295,8 @@ TestCase {
     }
 
     function initTestCase() {
+        if (bootstrap.profileActive)
+            session.configureTypography(bootstrap.profileFontPx)
         verify(bootstrap.start("mus_route101"), "the staged route101 project starts opening")
         var waited = 0
         while (waited < 30000 && !session.songOpen && testCase.openFailure.length === 0) {
@@ -6335,12 +6337,6 @@ TestCase {
         testCase.showSection(testCase.voiceChangesKind)
         tryVerify(function() { return testCase.voiceMarkerLines().length > 0 }, 2000,
                   "the profile composition drew the voice change markers")
-        // The profile's font is pushed through the production composition: the
-        // grid's base font is the font-relative geometry base the roll, the
-        // drawer chrome and both pages measure from.
-        testCase.surface.gridModel.baseFontPx = bootstrap.profileFontPx
-        testCase.surface.configureViewport()
-        wait(0)
         verify(bootstrap.attachProductionSection(testCase.automationKind),
                "the profile composition attaches the production Automation page")
         testCase.showSection(testCase.automationKind)

@@ -6,6 +6,9 @@ Item {
     objectName: "swiftRollOverlay"
     clip: true
     required property QtObject applicationSession
+    readonly property int baseFontPx: applicationSession.timeSigHost
+                                      ? applicationSession.timeSigHost.baseFontPx
+                                      : applicationSession.baseFontPx
     property font applicationFont: Application.font
     property var shellRouter: null
     signal contextMenuAt(real x, real y)
@@ -115,14 +118,9 @@ Item {
         id: applicationFontMetrics
         font: root.applicationFont
     }
-    FontInfo {
-        id: applicationFontInfo
-        font: root.applicationFont
-    }
     onApplicationFontChanged: {
         if (root.eventListPresenter)
-            root.eventListPresenter.configureTypography(
-                Math.max(1, Math.round(applicationFontInfo.pixelSize)))
+            root.eventListPresenter.configureTypography(root.baseFontPx)
     }
 
 
@@ -508,7 +506,7 @@ Item {
                 onLoaded: {
                     if (root.eventListPresenter) {
                         root.eventListPresenter.configureTypography(
-                            Math.max(1, Math.round(applicationFontInfo.pixelSize)))
+                            root.baseFontPx)
                         root.eventListPresenter.setVisible(root.showEvents)
                     }
                     if (root.showEvents && root.visible)
@@ -738,7 +736,7 @@ Item {
                         hoverBackground: root.gridModel.palette.hoverChipFill,
                         hoverText: root.gridModel.palette.hoverChipText,
                         disabledText: root.gridModel.palette.disabledText,
-                        font: Application.font
+                        font: root.applicationFont
                     })
                     rowHeight: Math.round(root.gridModel.baseFontPx * 1.8)
                     textX: Math.round(root.gridModel.baseFontPx * 0.9)
@@ -831,7 +829,7 @@ Item {
                         hoverBackground: root.gridModel.palette.hoverChipFill,
                         hoverText: root.gridModel.palette.hoverChipText,
                         disabledText: root.gridModel.palette.disabledText,
-                        font: Application.font
+                        font: root.applicationFont
                     })
                     rowHeight: Math.round(root.gridModel.baseFontPx * 1.8)
                     separatorHeight: 1
@@ -933,15 +931,13 @@ Item {
                     }
                     Component.onCompleted: {
                         root.pitchBendPresenter.configure(
-                            Math.max(root.applicationFont.pixelSize,
-                                     root.gridModel.baseFontPx),
+                            root.baseFontPx,
                             applicationFontMetrics.lineSpacing,
                             root.gridModel.devicePixelRatio)
                         pitchBendPopup.focusInitialGraph()
                     }
                     onFallbackFontChanged: root.pitchBendPresenter.configure(
-                        Math.max(root.applicationFont.pixelSize,
-                                 root.gridModel.baseFontPx),
+                        root.baseFontPx,
                         applicationFontMetrics.lineSpacing,
                         root.gridModel.devicePixelRatio)
                 }
@@ -1028,19 +1024,19 @@ Item {
         var dpr = Screen.devicePixelRatio > 0 ? Screen.devicePixelRatio : 1.0
         root.gridModel.configureViewport(Math.max(rollPlot.width, 1.0),
                                          Math.max(rollPlot.height, 1.0),
-                                         root.gridModel.baseFontPx, dpr)
+                                         root.baseFontPx, dpr)
         root.headersModel.configureViewport(trackHeaders.width, trackHeaders.height,
-                                            root.gridModel.baseFontPx, dpr)
+                                            root.baseFontPx, dpr)
         // Drawer plots share the roll viewport, not the scrollbar strips;
         // the container still spans the full surface behind that chrome.
         root.drawerPresenter.configureLayout(Math.max(0, root.width - root.scrollbarBreadth),
                                              Math.max(0, root.height - hintStatus.height
                                                       - root.scrollbarBreadth - otherEventsBand.height),
                                              root.timelineSplitX,
-                                             root.gridModel.baseFontPx,
+                                             root.baseFontPx,
                                              applicationFontMetrics.lineSpacing)
         root.otherEventsPresenter.configureViewport(
-            Math.max(0, rollPlot.width), root.gridModel.baseFontPx,
+            Math.max(0, rollPlot.width), root.baseFontPx,
             applicationFontMetrics.lineSpacing)
     }
 

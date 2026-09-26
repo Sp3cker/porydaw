@@ -400,7 +400,7 @@ func drawerVelocityLifecycleCancellation(_ report: CheckReport, session: Documen
     let workspace = DocumentWorkspace(
         session: bankFixture.session, audio: audio, playhead: playhead,
         playheadGuides: guides, eventList: eventList, palette: GridPalette(),
-        callbacks: DocumentWorkspace.Callbacks(
+        typography: Typography(baseFontPx: 13), callbacks: DocumentWorkspace.Callbacks(
             changeTrackVoiceRequested: { _ in },
             gridCommandAvailabilityChanged: {}, sessionStateChanged: {},
             publicationFailed: { _ in }, timeSignaturePromptInvalidated: { _, _ in }))

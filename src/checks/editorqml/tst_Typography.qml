@@ -106,6 +106,26 @@ TestCase {
         compare(shell.font.weight, Font.Normal, "the base font keeps Normal weight")
         compare(shell.font.features["tnum"], 1, "the base font enables tabular figures")
         verify(shell.bodyFontPx >= 1, "the threaded body size is never degenerate")
+        var session = shell.shellPresenter.session
+        var body = session.typographyFonts.body
+        compare(shell.font.family, body.family,
+                "the shell font resolves to the session body family")
+        compare(shell.font.pixelSize, session.bodyFontPx,
+                "the shell font resolves to the session body pixel size")
+        compare(session.layoutSpaces.zero, 0,
+                "the published Zero token preserves zero spacing")
+        compare(session.layoutSpaces.two, Math.max(1, Math.round(session.baseFontPx / 2)),
+                "the published Two token rounds half of the captured base")
+        compare(session.layoutSpaces.eight, session.baseFontPx * 2,
+                "the published Eight token doubles the captured base")
+        var settings = findChild(shell, "shellSettingsDialog")
+        var about = findChild(shell, "shellAboutDialog")
+        verify(settings !== null && about !== null,
+               "the two shell dialog roots are instantiated")
+        compare(settings.font.family, body.family,
+                "the separate Settings window resolves the session body family")
+        compare(about.font.family, body.family,
+                "the About popup resolves the session body family")
         compare(shell.width, shell.bodyFontPx * 72,
                 "window width threads the body size into geometry")
         compare(shell.height, shell.bodyFontPx * 48,
@@ -122,6 +142,8 @@ TestCase {
         openOneSongShell()
         var surface = selectedSurface()
         verify(surface && surface.visible, "the selected production EditorSurface is visible")
+        compare(surface.gridModel.baseFontPx, shell.shellPresenter.session.baseFontPx,
+                "the mounted editor grid uses the captured session base rather than the body")
         var headers = findChild(surface, "timelineTrackHeaderRows")
         verify(headers && headers.count > 0, "the original track header delegates are mounted")
         normalTitleCheck.font = Qt.font(surface.headersModel.normalTitleFont)

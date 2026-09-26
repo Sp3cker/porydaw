@@ -54,7 +54,7 @@ public final class DocumentWorkspace {
                 playhead: SharedPlayheadPresenter,
                 playheadGuides: PlayheadGuidesPresenter,
                 eventList: EventListPresenter, palette: GridPalette,
-                callbacks: Callbacks) {
+                typography: Typography, callbacks: Callbacks) {
         self.session = session
         appliedSongConfig = session.document.state.config
         self.audio = audio
@@ -67,11 +67,11 @@ public final class DocumentWorkspace {
         // presents that instance: the window's single theme push then reaches
         // every page of every tab, hidden ones included, and the strip reads the
         // same object.
-        let grid = PianoGrid(session: session, palette: palette)
+        let grid = PianoGrid(session: session, palette: palette, typography: typography)
         self.grid = grid
         let otherEventsBand = OtherEventsBandPresenter()
         otherEventsBand.configure(session: session, palette: grid.palette,
-                                  baseFontPx: grid.baseFontPx, appFontLineSpacing: 0,
+                                  baseFontPx: Double(typography.baseFontPx), appFontLineSpacing: 0,
                                   plotWidth: session.camera.snapshot.viewportWidth)
         self.otherEventsBand = otherEventsBand
         let pitchBend = PitchBendPresenter(session: session, grid: grid, palette: grid.palette)
@@ -79,16 +79,16 @@ public final class DocumentWorkspace {
         grid.onPitchBendRequested = { [weak pitchBend] in
             pitchBend?.openSelected() ?? false
         }
-        let headers = TrackHeadersPresenter(baseFontPx: grid.baseFontPx)
+        let headers = TrackHeadersPresenter(baseFontPx: Double(typography.baseFontPx))
         headers.attach(session: session, palette: grid.palette)
         self.trackHeaders = headers
-        let velocityPage = VelocityPage(baseFontPx: grid.baseFontPx)
+        let velocityPage = VelocityPage(baseFontPx: Double(typography.baseFontPx))
         velocityPage.attach(session: session, palette: grid.palette)
         self.velocityPage = velocityPage
-        let voiceChangesPage = VoiceChangesPage(baseFontPx: grid.baseFontPx)
+        let voiceChangesPage = VoiceChangesPage(baseFontPx: Double(typography.baseFontPx))
         voiceChangesPage.attach(session: session, palette: grid.palette)
         self.voiceChangesPage = voiceChangesPage
-        let automationPage = AutomationPage(baseFontPx: grid.baseFontPx)
+        let automationPage = AutomationPage(baseFontPx: Double(typography.baseFontPx))
         automationPage.attach(session: session, palette: grid.palette)
         self.automationPage = automationPage
         rulerMenu = RulerMenuPresenter(session: session, grid: grid, automation: automationPage)

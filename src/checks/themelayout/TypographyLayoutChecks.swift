@@ -37,6 +37,85 @@ func runTypographyLayoutChecks(_ report: CheckReport) {
     typographyLayoutCheckFaceContracts(report)
     typographyLayoutCheckTabularFeatures(report)
     typographyLayoutCheckFittedMaximality(report)
+    typographyLayoutCheckRoles(report)
+    typographyLayoutCheckCapture(report)
+}
+
+@MainActor
+private func typographyLayoutCheckRoles(_ report: CheckReport) {
+    for (base, body) in [(13, 15), (26, 29)] {
+        let typography = Typography(baseFontPx: base)
+        report.expectEqual(expected: base, actual: typography.baseFontPx,
+                           cppID: typographyLayoutFaceID,
+                           what: "the captured typography base at \(base)")
+        report.expectEqual(expected: body, actual: typography.bodyFontPx,
+                           cppID: typographyLayoutFaceID,
+                           what: "the rounded body size at \(base)")
+        for (name, spec, family, px, weight, spacing) in [
+            ("body", typography.body, gridBodyFamily, body, 400, 0.0),
+            ("bodyBold", typography.bodyBold, gridBodyFamily, body, 600, 0.0),
+            ("bodyMono", typography.bodyMono, gridMonoFamily, body, 400, 0.0),
+            ("tableMono", typography.tableMono, gridMonoFamily, body, 400, Double(base) * (-1.0 / 26.0)),
+            ("caption", typography.caption, gridBodyFamily, base, 400, 0.0),
+            ("captionBold", typography.captionBold, gridBodyFamily, base, 600, 0.0),
+            ("noteName", typography.noteName, gridBodyFamily, base, 400, 0.0),
+        ] {
+            report.expect(spec.family == family && spec.pixelSize == px
+                          && spec.weight == weight && abs(spec.letterSpacing - spacing) < 1e-9,
+                          cppID: typographyLayoutFaceID,
+                          message: "\(name) at base \(base) preserves its family, size, weight and spacing")
+            report.expect(spec.map["hintingPreference"] as? Int == fontPreferNoHinting
+                          && spec.features["tnum"] as? Int == 1,
+                          cppID: typographyLayoutFeaturesID,
+                          message: "\(name) at base \(base) publishes no hinting and tabular figures")
+        }
+        let available = NativeFontMetrics(typography.caption).extents.height
+        let fitted = typography.fitted(typography.body, availableHeight: available)
+        report.expect(fitted?.pixelSize == base && fitted?.family == gridBodyFamily,
+                      cppID: typographyLayoutFittedID,
+                      message: "the body font fits down to caption height at base \(base)")
+        report.expect(typography.fitted(typography.body, availableHeight: 0) == nil,
+                      cppID: typographyLayoutFittedID,
+                      message: "zero available height rejects the body font at base \(base)")
+        let tokens: [(LayoutSpace, Int)] = base == 13
+            ? [(.zero, 0), (.half, 2), (.one, 3), (.two, 7),
+               (.three, 10), (.four, 13), (.six, 20), (.eight, 26)]
+            : [(.zero, 0), (.half, 3), (.one, 7), (.two, 13),
+               (.three, 20), (.four, 26), (.six, 39), (.eight, 52)]
+        for (token, expected) in tokens {
+            report.expectEqual(expected: expected, actual: typography.space(token),
+                               cppID: typographyLayoutScaleID,
+                               what: "\(token) space resolves from the captured base \(base)")
+        }
+        report.expectEqual(expected: base == 13 ? 56 : 113,
+                           actual: typography.fontPx(13.0 / 3.0), cppID: typographyLayoutScaleID,
+                           what: "fontPx derives keyboard width from the captured base \(base)")
+        report.expectEqual(expected: Double(base) * 0.125,
+                           actual: typography.fontPxF(0.125), cppID: typographyLayoutScaleID,
+                           what: "fontPxF preserves the fractional product at base \(base)")
+    }
+    report.expectEqual(expected: 1, actual: Typography(baseFontPx: 0).baseFontPx,
+                       cppID: typographyLayoutBaseID,
+                       what: "captured typography clamps a nonpositive base")
+}
+
+@MainActor
+private func typographyLayoutCheckCapture(_ report: CheckReport) {
+    let session = ApplicationSession()
+    session.configureTypography(baseFontPx: 26)
+    report.expect(session.baseFontPx == 26 && session.bodyFontPx == 29,
+                  cppID: typographyLayoutBaseID,
+                  message: "the first session capture publishes a 26-pixel base and 29-pixel body")
+    report.expect(session.layoutSpaces["two"] as? Int == 13,
+                  cppID: typographyLayoutScaleID,
+                  message: "the session publishes Two spacing at the captured 26-pixel base")
+    session.configureTypography(baseFontPx: 13)
+    report.expect(session.baseFontPx == 26 && session.bodyFontPx == 29,
+                  cppID: typographyLayoutBaseID,
+                  message: "a later different base cannot replace the first session capture")
+    report.expect(session.layoutSpaces["half"] as? Int == 3,
+                  cppID: typographyLayoutScaleID,
+                  message: "the first session capture keeps Half spacing after a second call")
 }
 
 @MainActor

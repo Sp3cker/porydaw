@@ -10,6 +10,7 @@ add_library(PorydawApp STATIC
     NativeAudio.swift
     audio/PolyphonyPanelPresenter.swift
     ApplicationSession.swift
+    typography/Typography.swift
     transport/TransportBarPresenter.swift
     SongTabsController.swift
     eventlist/EventListSelection.swift

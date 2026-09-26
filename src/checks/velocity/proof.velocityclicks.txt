@@ -15,7 +15,10 @@ Command: deno task verify --filter swiftcore; deno task verify:qml
 Result: swiftcore harness PASS (1/14 ok, 13 sibling harnesses skipped by the filter),
 re-run after the clicks strengthening and again after an unrelated paint-file edit, so
 it is current for the cited predicates with VelocityClickSelectionChecks.swift frozen at
-aa19a567b5814cab; editorqml-drawer PASS (1/1 ok). Controller-provided integrated
+32d27d1758ea0293 (re-pinned by task 29, which added the required
+`typography: Typography(baseFontPx: 13)` argument to the DocumentWorkspace
+construction inside drawerVelocityLifecycleCancellation; the cited predicate
+bodies are unchanged); editorqml-drawer PASS (1/1 ok). Controller-provided integrated
 evidence, reused as final; no harness was rerun for this ledger. The SHA-256 values
 above pin the sources these predicates were read from.
 

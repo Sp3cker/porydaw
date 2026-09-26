@@ -10,6 +10,7 @@ Basic.Dialog {
     required property var controller
     required property font applicationFont
     required property real baseFontPx
+    font: applicationFont
     parent: Overlay.overlay
     anchors.centerIn: parent
     modal: true

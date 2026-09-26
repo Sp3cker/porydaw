@@ -5,7 +5,11 @@ Original: src/checks/automation/automationtaptempo.cpp
 Original SHA-256: 0b180392f9c46d3eb011e0ba238a1fddeb96d0f2833b3fd84aff06f5fb52077d
 Swift counterpart: src/checks/automation/automationtaptempo.swift
 QML lane counterpart: src/checks/editorqml/tst_EditorDrawer.qml :: test_productionAutomationTapTempoThroughInput
-QML SHA-256: ba79ea1a7375d60e6733806d73388a4d6dd0740317a4b2dd30b330cb53033036
+QML SHA-256: a5a52e38f5e121df8e3e8c6ad4d633e6b4ab97105e24908e7d4cf75818e129d9
+Task 29 note: this hash was re-pinned after the shared drawer lane's profile
+bootstrap moved to session.configureTypography(profileFontPx);
+test_productionAutomationTapTempoThroughInput and the predicates cited below are
+unchanged.
 
 
 

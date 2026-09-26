@@ -13,16 +13,26 @@ Command: deno task verify --filter editor-layout-18 --verbose
 Result: swiftcore PASS on the current worktree with the Swift counterpart below
 (20.87s, 1/24 harness selected, 23 skipped); the native editor-layout lanes
 still execute until Main deletes them.
+Task 29 (typography authority) added S006-S009 (session-capture conflict,
+captured-base space tokens, nonpositive clamp, first-capture publication), cited
+by A004 and A006-A009; A002/A003 keep GAP with refreshed reasons naming the new
+capture and clamp behavior. The new predicates passed in the task-29 swiftcore
+run recorded in build/proof-evidence/swiftcore-projectsession.json
+(implementer-run under the shared build lock; PASS controller-observed). This
+bookkeeping pass re-ran only `deno task proof check` and
+`deno task proof check --executed`; no lane was re-run and no parser result is a
+semantic-parity claim.
 
 A001 | ThemeLayoutScaleTest::initializationIsProcessScoped | src/checks/themelayout/tst_themelayout_scale.cpp:57
 Disposition: RETIRED-REPRESENTATION
 
 A002 | ThemeLayoutScaleTest::initializationIsProcessScoped | src/checks/themelayout/tst_themelayout_scale.cpp:59
 Disposition: GAP
-Mapping/reason: feature not yet ported: process-scoped layout::initialize
-(ui/layout.h); Swift layout is a pure function of the lane base, so there is no
-initialize call to succeed and the call-success mechanism has no counterpart.
-Side-effect-free re-resolution is covered for A009 by S004/S005.
+Mapping/reason: the call-success clause has no counterpart:
+ApplicationSession.configureTypography now owns the one-time capture but returns
+Void, so the boolean this row asserts is unobservable; the captured state it
+guards executes at S009. Side-effect-free re-resolution is covered for A009 by
+S004/S005.
 Source context since previous assertion:
   ;
       const QString styleSheet = application->styleSheet();
@@ -31,24 +41,20 @@ Original expression:
 
 A003 | ThemeLayoutScaleTest::initializationIsProcessScoped | src/checks/themelayout/tst_themelayout_scale.cpp:60
 Disposition: GAP
-Mapping/reason: feature not yet ported: process-scoped layout::initialize
-rejection of size 0; Swift has an owned-but-different degenerate-base fallback
-to the seed 13.0 instead, pinned by proof.tst_themelayout_font.txt S004/S005
-(TypographyLayoutChecks.swift).
+Mapping/reason: the rejection clause has no counterpart: Swift owns a different
+nonpositive-base behavior instead of refusing the call -- Typography clamps a
+zero base to 1 (S008), GridMetrics and EditorDrawerMetrics fall back to the seed
+13.0 (pinned by proof.tst_themelayout_font.txt S004/S005), and a later zero call
+is ignored once the session captured a base (S006). Unproved: a rejected
+initialize result, which no Swift API returns.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!layout::initialize(*application, 0));
 
 A004 | ThemeLayoutScaleTest::initializationIsProcessScoped | src/checks/themelayout/tst_themelayout_scale.cpp:61
-Disposition: GAP
-Mapping/reason: feature not yet ported: process-scoped layout::initialize
-second-call conflict rejection; Swift has no process-global base to conflict
-with because each surface carries its own base.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!layout::initialize(*application, m_baseFontPx + 1));
+Disposition: MATCHED
+Mapping: S006
 
 A005 | ThemeLayoutScaleTest::initializationIsProcessScoped | src/checks/themelayout/tst_themelayout_scale.cpp:62
 Disposition: GAP
@@ -64,15 +70,19 @@ Original expression:
 
 A006 | ThemeLayoutScaleTest::layoutScale | src/checks/themelayout/tst_themelayout_scale.cpp:106
 Disposition: MATCHED
+Mapping: S001
 
 A007 | ThemeLayoutScaleTest::layoutScale | src/checks/themelayout/tst_themelayout_scale.cpp:109
 Disposition: MATCHED
+Mapping: S003
 
 A008 | ThemeLayoutScaleTest::layoutScale | src/checks/themelayout/tst_themelayout_scale.cpp:113
 Disposition: MATCHED
+Mapping: S007
 
 A009 | ThemeLayoutScaleTest::layoutScale | src/checks/themelayout/tst_themelayout_scale.cpp:117
 Disposition: MATCHED
+Mapping: S004, S005
 
 Remaining original source (closing sequence and helper bodies):
           return;
@@ -95,3 +105,15 @@ Anchor: message "drawer metrics keep the unit hairline at base \(Int(base))"
 
 S005 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift
 Anchor: message "grid metrics keep the unit device pixel at base \(Int(base))"
+
+S006 | typographyLayoutCheckCapture | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "a later different base cannot replace the first session capture"
+
+S007 | typographyLayoutCheckRoles | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "\(token) space resolves from the captured base \(base)"
+
+S008 | typographyLayoutCheckRoles | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "captured typography clamps a nonpositive base"
+
+S009 | typographyLayoutCheckCapture | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "the first session capture publishes a 26-pixel base and 29-pixel body"

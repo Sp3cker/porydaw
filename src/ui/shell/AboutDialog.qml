@@ -19,6 +19,7 @@ Basic.Dialog {
     objectName: "shellAboutDialog"
     required property QtObject colors
     required property font applicationFont
+    required property QtObject applicationSession
     required property real baseFontPx
     // Qt exposes no qVersion() binding, so the numeric Qt version from the
     // old "Running on Qt" line cannot be rendered; the host application
@@ -30,6 +31,7 @@ Basic.Dialog {
     modal: true
     focus: true
     standardButtons: Dialog.Close
+    font: Qt.font(applicationSession.typographyFonts.body)
     width: Math.min(parent.width - 4 * baseFontPx,
                     aboutMetrics.averageCharacterWidth * 68 + 4 * baseFontPx)
     height: Math.min(parent.height - 4 * baseFontPx,

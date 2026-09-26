@@ -8,7 +8,11 @@ Swift counterpart: src/checks/drawerpresentation/voice_picker.swift
 Swift counterpart: src/checks/drawerpresentation/voice_interaction.swift
 Swift counterpart: src/checks/drawerpresentation/voice_lifecycle.swift
 Converted-window counterpart: src/checks/editorqml/tst_EditorDrawer.qml
-QML SHA-256: ba79ea1a7375d60e6733806d73388a4d6dd0740317a4b2dd30b330cb53033036
+QML SHA-256: a5a52e38f5e121df8e3e8c6ad4d633e6b4ab97105e24908e7d4cf75818e129d9
+Task 29 note: this hash was re-pinned after the shared converted-window lane's
+profile bootstrap moved to session.configureTypography(profileFontPx) in
+initTestCase and dropped the direct gridModel.baseFontPx/configureViewport push;
+the voice predicates cited below and their messages are unchanged.
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 

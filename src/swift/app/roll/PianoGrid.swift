@@ -168,12 +168,20 @@ public final class PianoGrid {
     /// - Parameter palette: The palette the roll draws with. The application
     ///   passes the session's one instance so every tab shares it, and a
     ///   standalone grid — checks, fixtures — keeps a palette of its own.
-    public init(session: DocumentSession, palette: GridPalette? = nil) {
+    public init(session: DocumentSession, palette: GridPalette? = nil,
+                typography: Typography? = nil) {
         self.session = session
         // Set before the first bake below: the roll's static layer reads the
         // palette, so a later assignment would leave that layer with defaults.
         self.palette = palette ?? GridPalette()
         commands = NoteCommands(session: session)
+        if let typography {
+            let base = Double(typography.baseFontPx)
+            baseFontPx = base
+            metrics = GridMetrics(baseFontPx: base, dpr: 1, width: 0, height: 0)
+            keyboardWidth = metrics.keyboardWidth
+            trackHeaderWidth = fontPx(base, 17.5)
+        }
         // The existing Set Velocity row asks its owner for the prompt instead of
         // committing a value; the owner is the document-bound page the
         // application session installs after this presenter exists.

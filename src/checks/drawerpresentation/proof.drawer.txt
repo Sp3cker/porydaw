@@ -9,7 +9,13 @@ Swift counterpart: src/checks/drawerpresentation/drawer_state.swift
 Swift counterpart: src/checks/drawerpresentation/EditorDrawerChecks.swift
 Additional Swift counterpart: src/checks/drawerpresentation/other_events_band.swift
 QML counterpart: src/checks/editorqml/tst_EditorDrawer.qml
-QML SHA-256: fa9dda3207620129d309453dfc31da7912d87401a962c87a7148ced7d648cd83
+QML SHA-256: a5a52e38f5e121df8e3e8c6ad4d633e6b4ab97105e24908e7d4cf75818e129d9
+Task 29 note: this hash was re-pinned after the shared drawer lane's profile
+bootstrap moved to session.configureTypography(profileFontPx) and dropped the
+direct gridModel.baseFontPx/configureViewport push, so the grid reads the
+captured session base; the predicate bodies and messages cited below are
+unchanged and the base each cited geometry predicate derives from is still the
+profile font pixel size.
 
 
 

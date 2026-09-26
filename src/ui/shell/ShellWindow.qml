@@ -17,15 +17,13 @@ ThemedWindow {
     colors: shell.session.palette
     property bool establishApplicationIdentity: false
     property int actionRevision: 0
-    readonly property int bodyFontPx: Math.max(1, Math.round(baseFontInfo.pixelSize * 1.125))
+    readonly property int bodyFontPx: shell.session.bodyFontPx
     width: bodyFontPx * 72
     height: bodyFontPx * 48
     title: shell.windowTitle
     visible: true
     color: shell.session.palette.windowBackground
-    font: Qt.font({ family: regularFont.name || baseFontInfo.family,
-                    pixelSize: bodyFontPx, hintingPreference: Font.PreferNoHinting,
-                    features: { "tnum": 1 } })
+    font: Qt.font(shell.session.typographyFonts.body)
 
     ShellPresenter {
         id: shell
@@ -37,7 +35,6 @@ ThemedWindow {
         font: Application.font
     }
     FontLoader {
-        id: regularFont
         source: "qrc:/fonts/AtkinsonHyperlegibleNext-Regular.ttf"
     }
     FontLoader {
@@ -108,6 +105,7 @@ ThemedWindow {
         }
     }
     Component.onCompleted: {
+        shell.session.configureTypography(baseFontInfo.pixelSize)
         if (establishApplicationIdentity) {
             Qt.application.name = "porydaw"
             Qt.application.organization = "sp3cker"
@@ -496,13 +494,14 @@ ThemedWindow {
         transientParent: root
         store: shell.settingsStore
         colors: root.colors
-        applicationFont: Application.font
+        applicationSession: shell.session
     }
     AboutDialog {
         id: aboutDialog
         colors: root.colors
-        applicationFont: root.font
-        baseFontPx: root.bodyFontPx
+        applicationSession: shell.session
+        applicationFont: Qt.font(shell.session.typographyFonts.body)
+        baseFontPx: shell.session.baseFontPx
     }
 
     SplitView {
@@ -523,8 +522,8 @@ ThemedWindow {
             applicationSession: shell.session
             songsRatio: dockSettings.songsRatio
             colors: shell.session.palette
-            applicationFont: Application.font
-            baseFontPx: baseFontInfo.pixelSize
+            applicationFont: Qt.font(shell.session.typographyFonts.body)
+            baseFontPx: shell.session.baseFontPx
             onSongsRatioChanged: {
                 if (songsRatio !== dockSettings.songsRatio)
                     dockSettings.songsRatio = songsRatio
@@ -549,7 +548,7 @@ ThemedWindow {
             sourceComponent: SongTabs {
                 objectName: "shellSongTabs"
                 controller: shell.session.songTabs
-                applicationFont: root.font
+                applicationFont: Qt.font(shell.session.typographyFonts.body)
                 shellRouter: shell
                 onContextMenuAt: (x, y) => {
                     root.actionRevision++
@@ -617,7 +616,7 @@ ThemedWindow {
             anchors.right: parent.right
             presenter: shell.session.polyphony
             colors: root.colors
-            applicationFont: root.font
+            applicationFont: Qt.font(shell.session.typographyFonts.body)
         }
         Timer {
             running: polyDock.visible && shell.session.songOpen
@@ -633,8 +632,8 @@ ThemedWindow {
         active: shell.session.songDockController().confirmation.length > 0
         sourceComponent: SongConfirmDialog {
             controller: shell.session.songDockController()
-            applicationFont: root.font
-            baseFontPx: root.bodyFontPx
+            applicationFont: Qt.font(shell.session.typographyFonts.body)
+            baseFontPx: shell.session.baseFontPx
         }
         onLoaded: {
             if (status === Loader.Ready)
@@ -645,7 +644,7 @@ ThemedWindow {
         id: transportBar
         width: root.width
         songAvailable: shell.session.songOpen
-        baseFontPx: Math.max(1, Math.round(baseFontInfo.pixelSize))
+        baseFontPx: shell.session.baseFontPx
         presenter: shell.session.transportBarPresenter()
         shell: root.shellPresenter
         actionRevision: root.actionRevision

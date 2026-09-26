@@ -6,7 +6,8 @@ ThemedWindow {
     id: dialog
     objectName: "settingsDialog"
     required property QtObject store
-    property font applicationFont: Qt.application.font
+    required property QtObject applicationSession
+    property font applicationFont: Qt.font(applicationSession.typographyFonts.body)
     readonly property real unit: Math.max(1, baseFont.pixelSize) / 12
     property int selectedTab: 0
     width: 560 // The widget oracle fixes the outer dialog at 560×580.
@@ -19,7 +20,7 @@ ThemedWindow {
     flags: Qt.Dialog
     modality: Qt.WindowModal
     color: colors.windowBackground
-    font: applicationFont
+    font: dialog.applicationFont
     visible: false
     FontInfo {
         id: baseFont

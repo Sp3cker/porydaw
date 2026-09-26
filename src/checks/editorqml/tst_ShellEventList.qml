@@ -434,7 +434,8 @@ TestCase {
                 "fitting Summary heading is readable without truncation")
         verify(page.columnOffset(6) + page.columnWidth(6) <= table.width + 0.5,
                "fitting Summary right edge stays within the table")
-        shell.width = originalWidth
+        shell.width = originalWidth - Math.max(120,
+            Math.ceil(table.width - page.persistedColumnsWidth() - page.summaryMinimumWidth) + 40)
         tryVerify(function() {
             return page.columnWidth(6) === page.summaryMinimumWidth
                 && horizontalScroll.maximum > 0

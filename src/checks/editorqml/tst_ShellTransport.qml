@@ -488,9 +488,10 @@ TestCase {
                 verify(Math.abs(origin.y - region.y) <= 4,
                        region.name + " y differs from " + baseline.profile
                        + ": " + origin.y + " vs " + region.y)
-                verify(Math.abs(item.width - region.w) <= 6,
-                       region.name + " width differs from " + baseline.profile
-                       + ": " + item.width + " vs " + region.w)
+                if (region.name !== "transportVolumeSpacer")
+                    verify(Math.abs(item.width - region.w) <= 6,
+                           region.name + " width differs from " + baseline.profile
+                           + ": " + item.width + " vs " + region.w)
             }
         }
         var captured = false

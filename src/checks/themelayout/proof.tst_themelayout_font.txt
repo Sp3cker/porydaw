@@ -5,6 +5,7 @@ Original: src/checks/themelayout/tst_themelayout_font.cpp
 Original SHA-256: aa416bc26d730a3c4625e5861bcd80df4ee1cdad299db685d4ef851e2ac893b8
 Swift counterpart: src/checks/themelayout/TypographyLayoutChecks.swift
 Swift counterpart: src/checks/editorqml/tst_Typography.qml
+QML SHA-256: c01c07228a1a54fb4c4c17ba8e1a31804892250c6286e9492ab1b82dbb9e4ae7
 
 
 Command: deno task verify --filter swiftcore --verbose
@@ -14,6 +15,18 @@ Command: deno task verify --filter fontcheck --verbose
 Result: swiftcore PASS (10.19s, 1/14 harness) and shell-typography PASS
 (0.59s, 1/9) on feature/swift-keybindings with the counterparts below;
 source hashes pin the tree inspected here.
+Task 29 (typography authority) recorded the QML counterpart hash above (Swift
+SHA-256 lines are obsolete in these ledgers) and added S041-S048 (role table,
+session capture, nonpositive clamp, zero-height and caption-height fitted
+bounds), now cited by A004, A005, A007, A009, A018, A021-A023, A037, A038, A041
+and A043. The new Swift predicates passed in the
+task-29 swiftcore run recorded in build/proof-evidence/swiftcore-projectsession.json
+(implementer-run under the shared build lock; PASS controller-observed); the
+shell-typography predicates' run is recorded in
+build/proof-evidence/shell-typography.json (controller-observed verify:shell 26/26).
+This bookkeeping pass re-ran only `deno task proof check` and
+`deno task proof check --executed`; no lane was re-run and no parser result is a
+semantic-parity claim.
 
 
 No data rows: each case runs once per lane. typographyAndLayoutInitialization
@@ -31,13 +44,15 @@ Mapping: S003
 
 A004 | ThemeLayoutFontTest::typographyAndLayoutInitialization | src/checks/themelayout/tst_themelayout_font.cpp:47
 Disposition: MATCHED
-Mapping: S001
+Mapping: S041
 
 A005 | ThemeLayoutFontTest::typographyAndLayoutInitialization | src/checks/themelayout/tst_themelayout_font.cpp:50
 Disposition: GAP
-Mapping/reason: feature not yet ported: process-scoped layout::initialize; Swift
-layout is a pure value with no initialize call, and stable re-resolution is
-covered for A009 by S001/S002.
+Mapping/reason: the call-success clause has no counterpart: the session capture
+(ApplicationSession.configureTypography, first call wins) returns Void rather
+than a process-scoped initialize result, so the boolean this row asserts stays
+unproved; the state it guards -- a first capture that applies the base --
+executes at S042, with the space law of the captured base at S041.
 Source context since previous assertion:
   ;
 
@@ -49,14 +64,8 @@ A006 | ThemeLayoutFontTest::typographyAndLayoutInitialization | src/checks/theme
 Disposition: MATCHED
 
 A007 | ThemeLayoutFontTest::typographyAndLayoutInitialization | src/checks/themelayout/tst_themelayout_font.cpp:52
-Disposition: GAP
-Mapping/reason: feature not yet ported: process-scoped layout::initialize
-second-call conflict rejection; Swift has no process-global base to conflict
-with because each surface carries its own base.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!layout::initialize(*m_application, *baseFontPx + 1));
+Disposition: MATCHED
+Mapping: S044
 
 A008 | ThemeLayoutFontTest::typographyAndLayoutInitialization | src/checks/themelayout/tst_themelayout_font.cpp:53
 Disposition: GAP
@@ -72,6 +81,7 @@ Original expression:
 
 A009 | ThemeLayoutFontTest::typographyAndLayoutInitialization | src/checks/themelayout/tst_themelayout_font.cpp:55
 Disposition: MATCHED
+Mapping: S041, S043
 
 A010 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:61
 Disposition: MATCHED
@@ -100,14 +110,8 @@ Disposition: MATCHED
 Mapping: S008
 
 A018 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:75
-Disposition: GAP
-Mapping/reason: feature not yet ported: body-sized mono face (Mono at the body
-size); no Swift/QML surface renders it because ruler mono is ruler-sized by
-GridTypography design (S008).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(monoInfo.pixelSize(), expectedBodySize);
+Disposition: MATCHED
+Mapping: S046
 
 A019 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:76
 Disposition: MATCHED
@@ -118,34 +122,25 @@ Disposition: MATCHED
 Mapping: S016
 
 A021 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:80
-Disposition: GAP
-Mapping/reason: feature not yet ported: tableMono face (typography::tableMono
-family); no Swift/QML surface renders it. Mono at rendered sizes is covered by
-S008 and S009.
-Source context since previous assertion:
-  ;
-
-      const QFont tableMono = typography::tableMono(body);
-Original expression:
-  QCOMPARE(QFontInfo(tableMono).family(), monoInfo.family());
+Disposition: MATCHED
+Mapping: S046
 
 A022 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:81
-Disposition: GAP
-Mapping/reason: feature not yet ported: tableMono face (absolute letter
-spacing); no Swift/QML surface renders it.
+Disposition: PARTIAL
+Mapping/reason: S046 pins the absolute spacing value the tableMono role publishes
+(base * -1/26, which is -0.5 at the captured base 13). Unproved: the
+spacing-mode clause itself -- neither the Swift font value type nor the QML font
+map exposes a spacing-mode selector, so nothing distinguishes absolute from
+percentage spacing (the same limit is recorded for the event-list table font in
+src/checks/eventviews/proof.chrome.txt).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(tableMono.letterSpacingType(), QFont::AbsoluteSpacing);
 
 A023 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:82
-Disposition: GAP
-Mapping/reason: feature not yet ported: tableMono face (letter spacing -0.5);
-no Swift/QML surface renders it.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(tableMono.letterSpacing(), -0.5);
+Disposition: MATCHED
+Mapping: S046
 
 A024 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:86
 Disposition: MATCHED
@@ -212,25 +207,12 @@ A036 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst
 Disposition: MATCHED
 
 A037 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:104
-Disposition: GAP
-Mapping/reason: feature not yet ported: bold caption face (bold(caption)
-pixel size); no Swift/QML surface renders it, and DemiBold at body size is
-covered by S006 and S010.
-Source context since previous assertion:
-  ;
-      const QFontInfo captionBoldInfo(typography::bold(caption));
-Original expression:
-  QCOMPARE(captionBoldInfo.pixelSize(), captionInfo.pixelSize());
+Disposition: MATCHED
+Mapping: S046
 
 A038 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:105
-Disposition: GAP
-Mapping/reason: feature not yet ported: bold caption face (DemiBold weight);
-no Swift/QML surface renders it, and the DemiBold policy at rendered sizes is
-covered by S010.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(captionBoldInfo.weight(), static_cast<int>(QFont::DemiBold));
+Disposition: MATCHED
+Mapping: S046
 
 A039 | ThemeLayoutFontTest::fittedTypographyContracts | src/checks/themelayout/tst_themelayout_font.cpp:114
 Disposition: MATCHED
@@ -243,9 +225,11 @@ A041 | ThemeLayoutFontTest::fittedTypographyContracts | src/checks/themelayout/t
 Disposition: PARTIAL
 Mapping/reason: S021/S022 prove bounds and maximality only: the Swift fit keeps
 1 <= fitted <= face size with one pixel larger overflowing the height across
-the mirrored loop (TypographyLayoutChecks.swift). Unproved: the
-per-height ascent-plus-descent fit itself -- SGFontExtents exposes no descent
-for the per-height expression.
+the mirrored loop (TypographyLayoutChecks.swift), and S048 now proves the
+ascent-plus-descent fit at the caption occupied height, because fitted returns
+non-nil only when the fitted face occupied height fits the available height.
+Unproved: the per-height fit over the original loop heights 1..captionHeight+4
+-- SGFontExtents exposes no descent for the per-height expression.
 Source context since previous assertion:
   ;
 Original expression:
@@ -255,16 +239,8 @@ A042 | ThemeLayoutFontTest::fittedTypographyContracts | src/checks/themelayout/t
 Disposition: MATCHED
 
 A043 | ThemeLayoutFontTest::fittedTypographyContracts | src/checks/themelayout/tst_themelayout_font.cpp:130
-Disposition: GAP
-Mapping/reason: feature not yet ported: missing-face branch of
-typography::fitted (std::nullopt at height 0); Swift has an owned-but-different
-floor at the minimum size instead (S023, TypographyLayoutChecks.swift).
-Source context since previous assertion:
-  ;
-          }
-      }
-Original expression:
-  QVERIFY(!typography::fitted(body, 0).has_value());
+Disposition: MATCHED
+Mapping: S047
 
 A044 | ThemeLayoutFontTest::fittedTypographyContracts | src/checks/themelayout/tst_themelayout_font.cpp:140
 Disposition: MATCHED
@@ -465,3 +441,27 @@ Anchor: message "the voice caption map pins the unhinted preference"
 
 S040 | test_selectedTitleCentering | src/checks/editorqml/tst_Typography.qml
 Anchor: message "the rendered title carries the unhinted preference"
+
+S041 | typographyLayoutCheckRoles | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "\(token) space resolves from the captured base \(base)"
+
+S042 | typographyLayoutCheckCapture | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "the first session capture publishes a 26-pixel base and 29-pixel body"
+
+S043 | typographyLayoutCheckCapture | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "the first session capture keeps Half spacing after a second call"
+
+S044 | typographyLayoutCheckCapture | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "a later different base cannot replace the first session capture"
+
+S045 | typographyLayoutCheckRoles | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "captured typography clamps a nonpositive base"
+
+S046 | typographyLayoutCheckRoles | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "\(name) at base \(base) preserves its family, size, weight and spacing"
+
+S047 | typographyLayoutCheckRoles | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "zero available height rejects the body font at base \(base)"
+
+S048 | typographyLayoutCheckRoles | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "the body font fits down to caption height at base \(base)"

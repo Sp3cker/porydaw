@@ -39,6 +39,12 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// The one palette for the whole surface. The host pushes the window theme
     /// into it once; the strip and every page read their roles from it.
     @QtTracked public var palette: GridPalette
+    public private(set) var typography = Typography(baseFontPx: 13)
+    public var typographyFonts: [String: QVariantSettable] = [:]
+    public var layoutSpaces: [String: QVariantSettable] = [:]
+    @QtTracked public var baseFontPx = 0
+    @QtTracked public var bodyFontPx = 0
+    private var hasCapturedTypography = false
     /// View menu display modes (app-wide): velocity-hue note fills and
     /// pitch-name labels on roll notes. Runtime state only — QSettings
     /// persistence lives in the shell layer. The setters below push each mode
@@ -107,6 +113,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
     public required init() {
         let palette = GridPalette()
         self.palette = palette
+        baseFontPx = typography.baseFontPx
+        bodyFontPx = typography.bodyFontPx
+        typographyFonts = Self.fontMaps(for: typography)
+        layoutSpaces = Self.spaceMap(for: typography)
         songTabs = SongTabsController(palette: palette)
         emptyDrawerPresenter = EditorDrawerPresenter()
         emptyOtherEventsBand = OtherEventsBandPresenter()
@@ -208,6 +218,41 @@ public final class ApplicationSession: QmlInstantiableStatus {
             self?.transportAvailabilityChanged()
         }
         songDock.attach(session: self)
+    }
+
+    private static func fontMaps(for typography: Typography) -> [String: QVariantSettable] {
+        [
+            "body": typography.body.map,
+            "bodyBold": typography.bodyBold.map,
+            "bodyMono": typography.bodyMono.map,
+            "tableMono": typography.tableMono.map,
+            "caption": typography.caption.map,
+            "captionBold": typography.captionBold.map,
+            "noteName": typography.noteName.map,
+        ]
+    }
+
+    private static func spaceMap(for typography: Typography) -> [String: QVariantSettable] {
+        [
+            "zero": typography.space(.zero),
+            "half": typography.space(.half),
+            "one": typography.space(.one),
+            "two": typography.space(.two),
+            "three": typography.space(.three),
+            "four": typography.space(.four),
+            "six": typography.space(.six),
+            "eight": typography.space(.eight),
+        ]
+    }
+
+    public func configureTypography(baseFontPx: Int) {
+        guard !hasCapturedTypography else { return }
+        hasCapturedTypography = true
+        typography = Typography(baseFontPx: baseFontPx)
+        self.baseFontPx = typography.baseFontPx
+        bodyFontPx = typography.bodyFontPx
+        typographyFonts = Self.fontMaps(for: typography)
+        layoutSpaces = Self.spaceMap(for: typography)
     }
 
     public func componentComplete() {}
@@ -971,7 +1016,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
             let workspace = DocumentWorkspace(
                 session: session, audio: audio, playhead: playhead,
                 playheadGuides: playheadGuides, eventList: eventList, palette: palette,
-                callbacks: makeCallbacks(for: session))
+                typography: typography, callbacks: makeCallbacks(for: session))
             if let tab {
                 // The first viewport normally homes the roll to the song's
                 // pitches. Complete that one-time initialization before
@@ -980,7 +1025,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 if tab.camera.rollHeight > 0 {
                     workspace.grid.configureViewport(
                         width: tab.camera.viewportWidth, height: tab.camera.rollHeight,
-                        fontPx: tab.baseFontPx, dpr: tab.devicePixelRatio)
+                        fontPx: Double(typography.baseFontPx), dpr: tab.devicePixelRatio)
                 }
                 session.mutateCamera { camera in
                     camera.restore(pixelsPerBeat: tab.camera.pixelsPerBeat,
