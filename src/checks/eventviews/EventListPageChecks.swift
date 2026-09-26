@@ -737,18 +737,37 @@ internal func eventListTempoContract(_ report: CheckReport, suite: DocumentSessi
         return
     }
     let before = document.history.undoIndex
-    report.expect(presenter.beginEditing(row: marker, column: 1)
-                  && presenter.finishEditing(text: "9", commit: true)
-                  && document.history.undoIndex == before + 1
-                  && presenter.model.rows.contains(where: { $0.tempo?.tick == 48 })
-                  && !document.rawChunks[0].events.contains(where: { $0.tick == 48 })
-                  && document.rawChunks[0].events.contains(where: { $0.tick == 0 }),
+    let beganMarkerEdit = presenter.beginEditing(row: marker, column: 1)
+    let committedMarkerEdit = beganMarkerEdit && presenter.finishEditing(text: "9", commit: true)
+    report.expect(committedMarkerEdit, cppID: id,
+                  message: "marker-to-tempo type commit is accepted")
+    report.expect(document.history.undoIndex == before + 1, cppID: id,
+                  message: "marker-to-tempo commit pushes one undo step")
+    report.expect(presenter.model.rows.contains(where: { $0.tempo?.tick == 48 }),
+                  cppID: id, message: "marker-to-tempo commit projects a tempo row at tick 48")
+    report.expect(!document.rawChunks[0].events.contains(where: { $0.tick == 48 }),
+                  cppID: id, message: "marker-to-tempo commit removes the tick-48 raw event")
+    report.expect(!presenter.model.rows.contains(where: {
+        $0.tick == 48 && $0.event?.isMeta == true
+    }), cppID: id, message: "marker-to-tempo commit removes the tick-48 meta row")
+    report.expect(document.rawChunks[0].events.contains(where: { $0.tick == 0 }),
                   cppID: id, message: "marker-to-tempo commit is one step preserving tick-zero metas")
-    report.expect(document.history.undoDocument()
-                  && document.rawChunks[0].events.contains(where: { $0.tick == 48 })
-                  && document.history.redoDocument()
-                  && presenter.model.rows.contains(where: { $0.tempo?.tick == 48 }),
-                  cppID: id, message: "marker-to-tempo undo and redo round trip")
+    let markerUndo = document.history.undoDocument()
+    report.expect(markerUndo, cppID: id, message: "marker-to-tempo undo succeeds")
+    report.expect(document.rawChunks[0].events.contains(where: { $0.tick == 48 }),
+                  cppID: id, message: "marker-to-tempo undo restores the raw tick-48 event")
+    report.expect(presenter.model.rows.contains(where: {
+        $0.tick == 48 && $0.event?.isMeta == true
+    }), cppID: id, message: "marker-to-tempo undo restores the tick-48 meta row")
+    report.expect(!presenter.model.rows.contains(where: { $0.tempo?.tick == 48 }),
+                  cppID: id, message: "marker-to-tempo undo removes the tick-48 tempo row")
+    let markerRedo = document.history.redoDocument()
+    report.expect(markerRedo, cppID: id, message: "marker-to-tempo undo and redo round trip")
+    report.expect(presenter.model.rows.contains(where: { $0.tempo?.tick == 48 }),
+                  cppID: id, message: "marker-to-tempo redo restores the tick-48 tempo row")
+    report.expect(!presenter.model.rows.contains(where: {
+        $0.tick == 48 && $0.event?.isMeta == true
+    }), cppID: id, message: "marker-to-tempo redo removes the tick-48 meta row")
     guard let tempo = presenter.model.rows.firstIndex(where: { $0.tempo?.tick == 48 }) else {
         report.expect(false, cppID: id, message: "the converted tempo row is editable")
         return
@@ -778,15 +797,34 @@ internal func eventListTempoContract(_ report: CheckReport, suite: DocumentSessi
         return
     }
     let beforeRaw = document.history.undoIndex
-    report.expect(presenter.beginEditing(row: moved, column: 1)
-                  && presenter.finishEditing(text: "10", commit: true)
-                  && document.state.tempo.allSatisfy { $0.tick != 60 }
-                  && document.rawChunks[0].events.contains(where: { $0.tick == 60 && $0.isMeta })
-                  && document.history.undoIndex == beforeRaw + 1
-                  && document.history.undoDocument()
-                  && document.state.tempo.contains(where: { $0.tick == 60 })
-                  && document.history.redoDocument(),
-                  cppID: id, message: "tempo-to-meta commit is one reversible undo step")
+    let beganRawEdit = presenter.beginEditing(row: moved, column: 1)
+    let committedRawEdit = beganRawEdit && presenter.finishEditing(text: "10", commit: true)
+    report.expect(committedRawEdit, cppID: id,
+                  message: "tempo-to-meta type commit is accepted")
+    report.expect(document.history.undoIndex == beforeRaw + 1, cppID: id,
+                  message: "tempo-to-meta commit is one reversible undo step")
+    report.expect(!document.state.tempo.contains(where: { $0.tick == 60 }),
+                  cppID: id, message: "tempo-to-meta commit removes the tick-60 tempo point")
+    report.expect(!presenter.model.rows.contains(where: { $0.tempo?.tick == 60 }),
+                  cppID: id, message: "tempo-to-meta commit removes the tick-60 tempo row")
+    report.expect(document.rawChunks[0].events.contains(where: { $0.tick == 60 && $0.isMeta }),
+                  cppID: id, message: "tempo-to-meta commit restores the tick-60 meta row")
+    let rawUndo = document.history.undoDocument()
+    report.expect(rawUndo, cppID: id, message: "tempo-to-meta undo succeeds")
+    report.expect(document.state.tempo.contains(where: { $0.tick == 60 }),
+                  cppID: id, message: "tempo-to-meta undo restores the tick-60 tempo point")
+    report.expect(presenter.model.rows.contains(where: { $0.tempo?.tick == 60 }),
+                  cppID: id, message: "tempo-to-meta undo restores the tick-60 tempo row")
+    report.expect(!presenter.model.rows.contains(where: {
+        $0.tick == 60 && $0.event?.isMeta == true
+    }), cppID: id, message: "tempo-to-meta undo removes the tick-60 meta row")
+    let rawRedo = document.history.redoDocument()
+    report.expect(rawRedo, cppID: id, message: "tempo-to-meta redo succeeds")
+    report.expect(presenter.model.rows.contains(where: {
+        $0.tick == 60 && $0.event?.isMeta == true
+    }), cppID: id, message: "tempo-to-meta redo restores the tick-60 meta row")
+    report.expect(!presenter.model.rows.contains(where: { $0.tempo?.tick == 60 }),
+                  cppID: id, message: "tempo-to-meta redo removes the tick-60 tempo row")
 }
 
 @MainActor
@@ -819,18 +857,23 @@ internal func eventListDeleteMatrix(_ report: CheckReport, suite: DocumentSessio
     presenter.selectRow(row: second, modifiers: 0x0400_0000)
     let before = document.history.undoIndex
     presenter.deleteSelected()
-    report.expect(document.history.undoIndex == before + 1
-                  && !document.rawChunks[0].events.contains(where: { $0.tick == 12 || $0.tick == 24 })
-                  && presenter.selectedRows.isEmpty && presenter.currentRow == -1,
-                  cppID: id, message: "multi delete clears selection and cursor in one step")
+    report.expect(document.history.undoIndex == before + 1,
+                  cppID: id, message: "multi delete is one undo step")
+    report.expect(!document.rawChunks[0].events.contains(where: { $0.tick == 12 || $0.tick == 24 }),
+                  cppID: id, message: "multi delete removes both raw events")
+    report.expect(presenter.selectedRows.isEmpty, cppID: id,
+                  message: "multi delete clears selection and cursor in one step")
+    report.expect(presenter.currentRow == -1, cppID: id,
+                  message: "multi delete clears the current row")
     guard let single = presenter.model.rows.firstIndex(where: { $0.tick == 36 }) else {
         report.expect(false, cppID: id, message: "the single deletion target survives")
         return
     }
     presenter.selectRow(row: single, modifiers: 0)
     presenter.deleteSelected()
-    report.expect(!document.rawChunks[0].events.contains(where: { $0.tick == 36 })
-                  && (0..<presenter.rowCount).contains(presenter.currentRow),
+    report.expect(!document.rawChunks[0].events.contains(where: { $0.tick == 36 }),
+                  cppID: id, message: "single delete removes the selected raw event")
+    report.expect((0..<presenter.rowCount).contains(presenter.currentRow),
                   cppID: id, message: "single delete keeps the cursor on a valid row")
     presenter.selectRow(row: presenter.rowCount - 1, modifiers: 0)
     let beforeEOT = document.history.undoIndex

@@ -23,8 +23,11 @@ Event-list production counterpart: src/swift/app/eventlist/EventListSelection.sw
 Event-list production SHA-256: c7537b0f54685556b14e78246bdc11aeb310eeeefcfde0960287b117bfaaa084
 Note: the event-list production hash lines were re-pinned for the frozen task-28 write set; task-28's event-list rows and Swift predicate index live in src/checks/eventviews/proof.chrome.txt.
 Task 33 note: EventListPresenter.swift and EventListPage.qml are re-pinned again for the session-role typography re-source (EventListAppearance reads session.typography; the toolbar binds page.controlFont; the QML application-font/monospace fallbacks are gone), and the mounted QML counterpart src/checks/editorqml/tst_ShellEventList.qml is pinned at the hash below. The rows and citations below are unchanged: no A row in this ledger asserts a font face or size.
-QML SHA-256: ba7051df35f95f8877b9eb8fe2c3d3e97fa3a4d4abcd0b2a837b09695b2f6fa6
+QML SHA-256: 65284aec4d8ed5c05ccd978340b24d8d56cec5bdc30fe19ae49c84184c6a3d29
 Task 39 note (ledger pass, no lane re-run): the fork row menu, the move-destination law, the delete cursor law and the reveal seam landed; EventListPageChecks.swift gained eventListTempoContract, eventListDeleteMatrix and eventListRowMenuContract and tst_ShellEventList.qml gained test_rowMenuActionAndVoiceReveal, test_dragReordersOnlySameTickRows and test_drawerFocusCommitsAndOwnsDelete. This pass indexed the new predicates as S256-S280 and re-pinned the event-list production and QML hashes above (EventListMenus.swift and EventListSelection.swift are now pinned too). Row changes: A125/A128/A134/A137 (real drag delivery, cursor follow, refused cross-tick drop), A147/A151/A153/A155 (row-menu session, canonical command routing, single reorder), A163/A165 (Alt+Down focus route and the registry binding), A178/A179 (Control-click selection) and A194/A195/A198/A199/A200 (drawer focus loss) are MATCHED. A073/A077/A078/A079/A084/A085/A089/A090/A092/A097/A098/A103/A104/A108/A109/A110 (presenter tempo projections), A180/A181/A182/A183/A185/A186 (delete matrix) and A189/A191/A193/A197 (drawer) are PARTIAL: their clause lives inside a compound presenter predicate that is not shared across sites, so each needs a per-clause predicate. Fixture guards, the pinned-note and before-run-start drag deliveries, the menu dismissal, the clicked-row echo, the projected tick-zero tempo row and the message-less focus/editing asserts stay GAP with the missing observable named in the reason. No row outside the four task-39 families changed.
+Task 39b note (checks-only predicate split; ledger pass, no lane re-run): the frozen write set EventListPageChecks.swift (sha256 32527015a2682b46bb63dbb68cf52b56070ace3dd35a1da4dedc0c3bf1232cef) and tst_ShellEventList.qml (sha256 65284aec4d8ed5c05ccd978340b24d8d56cec5bdc30fe19ae49c84184c6a3d29) replaced each compound presenter predicate behind the task-39 PARTIAL rows with one message-anchored predicate per clause; the QML SHA-256 line above is re-pinned to that mounted counterpart. This pass indexed the new clause predicates as S281-S293 and S295-S297, re-anchored S280 to its moved literal ("the mounted fixture exposes its tick-zero control target"), and cited S259/S260 for their narrowed selection-only and cursor-only clauses. Promoted to MATCHED on their own executing clause predicate: A073/A077/A078/A084/A085/A089/A090/A092/A097/A103/A104/A108/A109 (tempo contract), A191 (Select All replaces the focused editor contents) and A197 (drawer retains active focus after the tick commit). Still PARTIAL: A182 (cleared selection), A183 (cleared current row) and A186 (valid cursor) keep the unproved key-delivered Delete ingress - the mounted Delete key presses in test_keyboardSelectionStaysOnMountedEventRows and test_tickBoundariesThroughMountedEditor assert removed rows only, never the cleared selection, cleared current row or clamped cursor; A189 keeps the unproved native tick-12 NoteOn target lookup (the mounted predicate locates a tick-zero program row instead); A193 keeps the forced-focus caveat (toggle.forceActiveFocus(Qt.MouseFocusReason) precedes the activeFocus assert). No GAP row changed and no row outside this file changed.
+Command: deno task proof check; deno task proof check --executed
+Result: This 39b ledger pass ran no lane, no build, no formatter and no project check: it ran `deno task proof check` and `deno task proof check --executed` only. Execution provenance is implementer-reported and reused from build/proof-evidence: shell-event-list.json lists test_drawerFocusCommitsAndOwnsDelete, test_rowMenuActionAndVoiceReveal, test_dragReordersOnlySameTickRows, test_keyboardSelectionStaysOnMountedEventRows and test_tickBoundariesThroughMountedEditor in its function list, so S243-S255 and S265-S280 classify executed; swiftcore-projectsession.json records every affected EventList clause as passing under cppId swiftcore/EventList::tempoContract ("marker-to-tempo type commit is accepted", "marker-to-tempo commit projects a tempo row at tick 48", "marker-to-tempo commit removes the tick-48 meta row", "marker-to-tempo undo restores the tick-48 meta row", "marker-to-tempo undo removes the tick-48 tempo row", "marker-to-tempo redo restores the tick-48 tempo row", "marker-to-tempo redo removes the tick-48 meta row", "tempo-to-meta type commit is accepted", "tempo-to-meta commit removes the tick-60 tempo row", "tempo-to-meta undo restores the tick-60 tempo row", "tempo-to-meta undo removes the tick-60 meta row", "tempo-to-meta redo restores the tick-60 meta row", "tempo-to-meta redo removes the tick-60 tempo row"), under swiftcore/EventList::deleteMatrix ("multi delete clears selection and cursor in one step", "multi delete clears the current row", "single delete keeps the cursor on a valid row") and under swiftcore/EventList::rowMenuContract, so S256-S264 and S281-S294 classify executed. Unknown: the evidence files record passes and function names only, so the implementer's report that the swiftcore-projectsession lane failed as a whole on unrelated concurrent task-38a predicates while every EventList predicate passed is not itself recorded there; shell-event-list is reported as a fresh PASS. No semantic parity is claimed from parser success.
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
@@ -894,8 +897,9 @@ Original expression:
 QVERIFY(rawRow >= 0)
 
 A073 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:346
-Disposition: PARTIAL
-Mapping/reason: Related Swift predicate S256 (marker-to-tempo commit is one step preserving tick-zero metas) accepts the same presenter type commit; unproved at row granularity: the accepted-commit clause needs its own predicate.
+Disposition: MATCHED
+Mapping: S281
+Mapping/reason: The presenter predicate accepts the marker cell's tempo type commit (beginEditing plus finishEditing(text: "9", commit: true) returned true), the native setData-accepted clause (S281).
 Source context since previous assertion:
 ;
 
@@ -921,8 +925,9 @@ Disposition: MATCHED
 Mapping: S119
 
 A077 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:351
-Disposition: PARTIAL
-Mapping/reason: Related Swift predicate S256 asserts the projected tempo row at the converted tick inside its commit contract; unproved at row granularity: no predicate is anchored to that projection alone.
+Disposition: MATCHED
+Mapping: S282
+Mapping/reason: The presenter predicate asserts the commit projects a tempo row at the converted tick 48, the native tempoRowForExactTick(conversionTick) clause (S282).
 Source context since previous assertion:
 ;
 
@@ -930,8 +935,9 @@ Original expression:
 QCOMPARE(widgets.model->tempoRowForExactTick(conversionTick) >= 0, true)
 
 A078 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:352
-Disposition: PARTIAL
-Mapping/reason: Related Swift predicate S256 asserts that no raw event remains at the converted tick; unproved at row granularity: the absent projected meta row needs its own predicate.
+Disposition: MATCHED
+Mapping: S283
+Mapping/reason: The presenter predicate asserts no meta row remains at the converted tick 48 after the commit, the native rowForTickAndType(conversionTick, TypeMeta) < 0 clause (S283).
 Source context since previous assertion:
 ;
 
@@ -970,8 +976,9 @@ Disposition: MATCHED
 Mapping: S127
 
 A084 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:362
-Disposition: PARTIAL
-Mapping/reason: Related Swift predicate S257 asserts the raw marker event returns at the converted tick when the conversion is undone; unproved at row granularity: the restored projected meta row needs its own predicate.
+Disposition: MATCHED
+Mapping: S284
+Mapping/reason: The presenter predicate asserts the undo restores the tick-48 meta row, the native rowForTickAndType(conversionTick, TypeMeta) >= 0 after-undo clause (S284).
 Source context since previous assertion:
 ;
 
@@ -980,8 +987,9 @@ QVERIFY(checks::eventviews::rowForTickAndType(*widgets.model, conversionTick,
                                                   eventlist::TypeMeta) >= 0)
 
 A085 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:364
-Disposition: PARTIAL
-Mapping/reason: Related Swift predicate S257 undoes the conversion; unproved at row granularity: the absent projected tempo row after the undo needs its own predicate.
+Disposition: MATCHED
+Mapping: S285
+Mapping/reason: The presenter predicate asserts the undo removes the tick-48 tempo row, the native tempoRowForExactTick(conversionTick) == -1 after-undo clause (S285).
 Source context since previous assertion:
 ;
 
@@ -1001,8 +1009,9 @@ Disposition: MATCHED
 Mapping: S133
 
 A089 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:371
-Disposition: PARTIAL
-Mapping/reason: Related Swift predicate S257 redoes the conversion and asserts the projected tempo row at the converted tick; unproved at row granularity: no predicate is anchored to that projection alone.
+Disposition: MATCHED
+Mapping: S286
+Mapping/reason: The presenter predicate asserts the redo restores the tick-48 tempo row, the native tempoRowForExactTick(conversionTick) >= 0 after-redo clause (S286).
 Source context since previous assertion:
 ;
 
@@ -1010,8 +1019,9 @@ Original expression:
 QCOMPARE(widgets.model->tempoRowForExactTick(conversionTick) >= 0, true)
 
 A090 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:372
-Disposition: PARTIAL
-Mapping/reason: Related Swift predicate S257 redoes the conversion and asserts no raw marker event at the converted tick; unproved at row granularity: the absent projected meta row needs its own predicate.
+Disposition: MATCHED
+Mapping: S287
+Mapping/reason: The presenter predicate asserts the redo removes the tick-48 meta row, the native rowForTickAndType(conversionTick, TypeMeta) < 0 after-redo clause (S287).
 Source context since previous assertion:
 ;
 
@@ -1032,8 +1042,9 @@ Original expression:
 QVERIFY(tempoRow >= 0)
 
 A092 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:378
-Disposition: PARTIAL
-Mapping/reason: Related Swift predicate S258 accepts the same presenter reverse type commit; unproved at row granularity: the accepted tempo-to-meta commit clause needs its own predicate.
+Disposition: MATCHED
+Mapping: S288
+Mapping/reason: The presenter predicate accepts the tempo row's meta type commit (beginEditing plus finishEditing(text: "10", commit: true) returned true), the native setData-accepted clause (S288).
 Source context since previous assertion:
 ;
 
@@ -1065,8 +1076,9 @@ Original expression:
 QVERIFY(rawRow >= 0)
 
 A097 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:386
-Disposition: PARTIAL
-Mapping/reason: Related Swift predicate S258 removes the tempo point and restores the raw marker event; unproved at row granularity: the absent projected tempo row needs its own predicate.
+Disposition: MATCHED
+Mapping: S289
+Mapping/reason: The presenter predicate asserts the reverse commit removes the tick-60 tempo row, the native tempoRowForExactTick(conversionTick) == -1 clause (S289).
 Source context since previous assertion:
 ;
 
@@ -1104,8 +1116,9 @@ Disposition: MATCHED
 Mapping: S146
 
 A103 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:395
-Disposition: PARTIAL
-Mapping/reason: Related Swift predicate S258 restores the tempo point when its commit is undone; unproved at row granularity: the restored projected tempo row at the native conversion tick needs its own predicate.
+Disposition: MATCHED
+Mapping: S290
+Mapping/reason: The presenter predicate asserts the undo restores the tick-60 tempo row, the native tempoRowForExactTick(conversionTick) >= 0 after-undo clause (S290).
 Source context since previous assertion:
 ;
 
@@ -1113,8 +1126,9 @@ Original expression:
 QCOMPARE(widgets.model->tempoRowForExactTick(conversionTick) >= 0, true)
 
 A104 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:396
-Disposition: PARTIAL
-Mapping/reason: Related Swift predicate S258 restores the tempo point when its commit is undone; unproved at row granularity: the absent projected meta row after that undo needs its own predicate.
+Disposition: MATCHED
+Mapping: S291
+Mapping/reason: The presenter predicate asserts the undo removes the tick-60 meta row, the native rowForTickAndType(conversionTick, TypeMeta) < 0 after-undo clause (S291).
 Source context since previous assertion:
 ;
 
@@ -1135,8 +1149,9 @@ Disposition: MATCHED
 Mapping: S152
 
 A108 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:404
-Disposition: PARTIAL
-Mapping/reason: Related Swift predicate S258 redoes the reverse commit; unproved at row granularity: the restored projected meta row after the redo needs its own predicate.
+Disposition: MATCHED
+Mapping: S292
+Mapping/reason: The presenter predicate asserts the redo restores the tick-60 meta row, the native rowForTickAndType(conversionTick, TypeMeta) >= 0 after-redo clause (S292).
 Source context since previous assertion:
 ;
 
@@ -1145,8 +1160,9 @@ QVERIFY(checks::eventviews::rowForTickAndType(*widgets.model, conversionTick,
                                                   eventlist::TypeMeta) >= 0)
 
 A109 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:406
-Disposition: PARTIAL
-Mapping/reason: Related Swift predicate S258 records the reverse commit state before its undo leg; unproved at row granularity: the absent projected tempo row after the redo needs its own predicate.
+Disposition: MATCHED
+Mapping: S293
+Mapping/reason: The presenter predicate asserts the redo removes the tick-60 tempo row, the native tempoRowForExactTick(conversionTick) == -1 after-redo clause (S293).
 Source context since previous assertion:
 ;
 
@@ -1828,7 +1844,7 @@ QCOMPARE(countMatching(document.smf().tracks[chunk], secondEvent), 0)
 
 A182 | EventViewsEditsTest::deleteMatrix | src/checks/eventviews/edits.cpp:634
 Disposition: PARTIAL
-Mapping/reason: Related Swift predicate S259 asserts the cleared selection after a presenter multi-delete; unproved: the key-delivered Delete ingress is not mounted, and the cleared-selection clause needs its own predicate.
+Mapping/reason: Related Swift predicate S259 now asserts only the cleared selection after a presenter multi-delete, which is this row's clause; still unproved: the native key-delivered Delete ingress, because the mounted Delete key presses in test_keyboardSelectionStaysOnMountedEventRows and test_tickBoundariesThroughMountedEditor assert removed rows only and never the cleared selection.
 Source context since previous assertion:
 ;
 
@@ -1837,7 +1853,7 @@ QTRY_VERIFY(widgets.controller->selectedRows().isEmpty())
 
 A183 | EventViewsEditsTest::deleteMatrix | src/checks/eventviews/edits.cpp:635
 Disposition: PARTIAL
-Mapping/reason: Related Swift predicate S259 asserts the cleared cursor after a presenter multi-delete; unproved: the key-delivered Delete ingress is not mounted, and the cleared-cursor clause needs its own predicate.
+Mapping/reason: Related Swift predicate S294 now asserts only the cleared current row after a presenter multi-delete, which is this row's clause; still unproved: the native key-delivered Delete ingress, because the mounted Delete key presses in test_keyboardSelectionStaysOnMountedEventRows and test_tickBoundariesThroughMountedEditor assert removed rows only and never the cleared current row.
 Source context since previous assertion:
 ;
 
@@ -1872,7 +1888,7 @@ QTRY_COMPARE(countMatching(document.smf().tracks[chunk], firstEvent), 0)
 
 A186 | EventViewsEditsTest::deleteMatrix | src/checks/eventviews/edits.cpp:647
 Disposition: PARTIAL
-Mapping/reason: Related Swift predicate S260 keeps a valid cursor after the single presenter delete; unproved: the key-delivered Delete ingress is not mounted, and the valid-cursor clause needs its own predicate.
+Mapping/reason: Related Swift predicate S260 now asserts only the valid cursor after the single presenter delete, which is this row's clause; still unproved: the native key-delivered Delete ingress, because the mounted single-row Delete key press in test_tickBoundariesThroughMountedEditor asserts the removed row and the EOT stripe parity only.
 Source context since previous assertion:
 ;
     const int currentRow = widgets.controller->currentRow();
@@ -1909,7 +1925,7 @@ QVERIFY(widgets)
 
 A189 | EventViewsEditsTest::drawerClickAfterEditOwnsDelete | src/checks/eventviews/edits.cpp:661
 Disposition: PARTIAL
-Mapping/reason: Related Swift predicate S280 resolves the mounted journey's own tick-zero control row; unproved: the native tick-12 NoteOn target lookup is not re-established.
+Mapping/reason: Related Swift predicate S280 now anchors the split message "the mounted fixture exposes its tick-zero control target", which resolves the mounted journey's own tick-zero program row; still unproved: the native tick-12 NoteOn target lookup rowForTickAndType(12, TypeNoteOn) is not re-established.
 Source context since previous assertion:
 ;
     const int row =
@@ -1922,8 +1938,9 @@ A190 | EventViewsEditsTest::drawerClickAfterEditOwnsDelete | src/checks/eventvie
 Disposition: RETIRED-REPRESENTATION
 
 A191 | EventViewsEditsTest::drawerClickAfterEditOwnsDelete | src/checks/eventviews/edits.cpp:666
-Disposition: PARTIAL
-Mapping/reason: Related Swift predicate S273 asserts the pending typed tick text; unproved at row granularity: the selectAll replacement clause needs its own predicate.
+Disposition: MATCHED
+Mapping: S295
+Mapping/reason: The mounted predicate asserts Select All leaves the whole tick text selected (editor.selectedText == editor.text) after a real Ctrl+A key delivery, the native selectAll invocation clause (S295).
 Source context since previous assertion:
 ;
 
@@ -1946,7 +1963,7 @@ QVERIFY(drawer)
 
 A193 | EventViewsEditsTest::drawerClickAfterEditOwnsDelete | src/checks/eventviews/edits.cpp:673
 Disposition: PARTIAL
-Mapping/reason: Related Swift predicate S274 asserts the drawer's focusable velocity toggle; unproved at row granularity: the drawer's focus acquisition is asserted only by a message-less tryCompare and needs an anchored predicate.
+Mapping/reason: Related Swift predicate S296 now anchors the drawer toggle's active focus (tryCompare on activeFocus, message "the focused velocity drawer control owns active focus"); still unproved: the drawer's own focus acquisition, because the test calls toggle.forceActiveFocus(Qt.MouseFocusReason) before that assert.
 Source context since previous assertion:
 ;
 
@@ -1985,8 +2002,9 @@ Original expression:
 QVERIFY(!widgets.controller->isEditing())
 
 A197 | EventViewsEditsTest::drawerClickAfterEditOwnsDelete | src/checks/eventviews/edits.cpp:679
-Disposition: PARTIAL
-Mapping/reason: Related Swift predicate S275 names the focus not being reclaimed but asserts only the republished commit row; unproved at row granularity: the drawer's active focus after the commit needs an anchored predicate.
+Disposition: MATCHED
+Mapping: S297
+Mapping/reason: The mounted predicate asserts the drawer toggle keeps active focus after the focus-loss tick commit, the native drawer->hasActiveFocus() clause (S297).
 Source context since previous assertion:
 ;
 
@@ -2882,4 +2900,55 @@ S279 | test_drawerFocusCommitsAndOwnsDelete | src/checks/editorqml/tst_ShellEven
 Anchor: message "one undo restores the edit; drawer Delete pushed no step"
 
 S280 | test_drawerFocusCommitsAndOwnsDelete | src/checks/editorqml/tst_ShellEventList.qml
-Anchor: message "the fixture exposes a tick-zero control to edit"
+Anchor: message "the mounted fixture exposes its tick-zero control target"
+
+S281 | eventListTempoContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "marker-to-tempo type commit is accepted"
+
+S282 | eventListTempoContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "marker-to-tempo commit projects a tempo row at tick 48"
+
+S283 | eventListTempoContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "marker-to-tempo commit removes the tick-48 meta row"
+
+S284 | eventListTempoContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "marker-to-tempo undo restores the tick-48 meta row"
+
+S285 | eventListTempoContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "marker-to-tempo undo removes the tick-48 tempo row"
+
+S286 | eventListTempoContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "marker-to-tempo redo restores the tick-48 tempo row"
+
+S287 | eventListTempoContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "marker-to-tempo redo removes the tick-48 meta row"
+
+S288 | eventListTempoContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "tempo-to-meta type commit is accepted"
+
+S289 | eventListTempoContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "tempo-to-meta commit removes the tick-60 tempo row"
+
+S290 | eventListTempoContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "tempo-to-meta undo restores the tick-60 tempo row"
+
+S291 | eventListTempoContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "tempo-to-meta undo removes the tick-60 meta row"
+
+S292 | eventListTempoContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "tempo-to-meta redo restores the tick-60 meta row"
+
+S293 | eventListTempoContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "tempo-to-meta redo removes the tick-60 tempo row"
+
+S294 | eventListDeleteMatrix | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "multi delete clears the current row"
+
+S295 | test_drawerFocusCommitsAndOwnsDelete | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "Select All replaces the focused tick editor contents"
+
+S296 | test_drawerFocusCommitsAndOwnsDelete | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the focused velocity drawer control owns active focus"
+
+S297 | test_drawerFocusCommitsAndOwnsDelete | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "drawer retains active focus after the tick commit"

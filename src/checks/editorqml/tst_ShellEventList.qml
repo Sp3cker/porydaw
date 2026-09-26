@@ -917,7 +917,7 @@ TestCase {
                 break
             }
         }
-        verify(sourceRow >= 0, "the fixture exposes a tick-zero control to edit")
+        verify(sourceRow >= 0, "the mounted fixture exposes its tick-zero control target")
         const moved = presenter.cellDisplay(sourceRow, 6)
 
         page.forceActiveFocus(Qt.OtherFocusReason)
@@ -929,6 +929,8 @@ TestCase {
         const editor = findChild(page, "eventListTickEditor")
         verify(editor && editor.activeFocus, "F2 focuses the mounted tick editor")
         keyClick(Qt.Key_A, Qt.ControlModifier)
+        compare(editor.selectedText, editor.text,
+                "Select All replaces the focused tick editor contents")
         keyClick(Qt.Key_6)
         keyClick(Qt.Key_0)
         compare(editor.text, "60", "the edited tick is pending on focus loss")
@@ -939,7 +941,8 @@ TestCase {
         verify(toggle && toggle.visible, "the drawer has a focusable velocity toggle")
         mouseClick(toggle, toggle.width / 2, toggle.height / 2)
         toggle.forceActiveFocus(Qt.MouseFocusReason)
-        tryCompare(toggle, "activeFocus", true, 3000)
+        tryCompare(toggle, "activeFocus", true, 3000,
+                   "the focused velocity drawer control owns active focus")
         tryCompare(presenter, "editing", false, 3000)
         let committed = false
         for (let row = 0; row < presenter.rowCount - 1; ++row) {
@@ -948,6 +951,8 @@ TestCase {
                 committed = true
         }
         verify(committed, "focus leaving the cell commits its tick without reclaiming focus")
+        compare(toggle.activeFocus, true,
+                "drawer retains active focus after the tick commit")
         const beforeDelete = presenter.rowCount
         keyClick(Qt.Key_Delete)
         compare(presenter.rowCount, beforeDelete,
