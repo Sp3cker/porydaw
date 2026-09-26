@@ -60,4 +60,73 @@ func runTimelineScrollbarChecks(_ report: CheckReport) {
                                                  angleX: 120, angleY: 0,
                                                  wheelScrollLines: 3) == -3,
                   cppID: id, message: "wheel favors pixel then axis angle and retains natural sign")
+
+    let wheelID = "scrollbar/TimelineScrollbar::wheelDipMatrix"
+    var tripleCamera = EditorCamera(ticksPerBeat: 24, lengthTicks: 480,
+                                    viewportWidth: 200, rollHeight: 120, limits: limits)
+    _ = tripleCamera.setHScroll(200)
+    let tripleBefore = tripleCamera.snapshot
+    for _ in 0..<3 {
+        let dips = TimelineScrollbar.wheelDips(
+            horizontal: true, pixelX: 0, pixelY: -10,
+            angleX: 0, angleY: 0, wheelScrollLines: 3)
+        _ = tripleCamera.scrollByPx(dips)
+    }
+    let tripleAfter = tripleCamera.snapshot
+    report.expect(abs(tripleAfter.scrollX - tripleBefore.scrollX - 30) < 0.01
+                  && tripleAfter.scrollY == tripleBefore.scrollY,
+                  cppID: wheelID, message: "three pixel wheels move one-to-one in display pixels")
+
+    var verticalTripleCamera = EditorCamera(ticksPerBeat: 24, lengthTicks: 480,
+                                            viewportWidth: 200, rollHeight: 120, limits: limits)
+    _ = verticalTripleCamera.setVScroll(300)
+    let verticalTripleBefore = verticalTripleCamera.snapshot
+    for _ in 0..<3 {
+        let dips = TimelineScrollbar.wheelDips(
+            horizontal: false, pixelX: 0, pixelY: -10,
+            angleX: 0, angleY: 0, wheelScrollLines: 3)
+        _ = verticalTripleCamera.scrollRollBy(dips)
+    }
+    let verticalTripleAfter = verticalTripleCamera.snapshot
+    report.expect(abs(verticalTripleAfter.scrollY - verticalTripleBefore.scrollY - 30) < 0.01
+                  && verticalTripleAfter.scrollX == verticalTripleBefore.scrollX,
+                  cppID: wheelID, message: "three vertical pixel wheels move one-to-one in display pixels")
+
+    let cases: [(Bool, Double, Double, Double, Double, Double, String)] = [
+        (true, 0, -10, 0, 0, 10, "natural sign rides the delivered pixel delta"),
+        (true, 0, -10, 0, 120, 10, "pixel delta outranks the opposing angle delta"),
+        (true, 0, 0, 0, 120, -3, "one angle notch uses wheel-scroll-lines"),
+        (true, 0, 0, 0, 50, -3.0 * 50 / 120, "fractional angle notch scales the line step"),
+        (true, 10, 0, 0, 0, -10, "horizontal pixel delta owns its track"),
+        (true, 0, 0, 120, 0, -3, "horizontal angle delta owns its track"),
+        (true, 20, -10, 0, 0, -20, "diagonal pixel wheel favors the track's own axis"),
+        (true, 8, 0, 0, 0, -8, "touchpad horizontal pixels follow the wheel law"),
+        (false, 0, -6, 0, 0, 6, "touchpad vertical pixels follow the wheel law"),
+        (false, 0, -10, 0, 0, 10, "vertical natural sign rides the delivered pixel delta"),
+        (false, 0, -10, 0, 120, 10, "vertical pixel delta outranks the opposing angle delta"),
+        (false, 0, 0, 0, 50, -3.0 * 50 / 120,
+         "vertical fractional angle notch scales the line step"),
+    ]
+    for entry in cases {
+        let (horizontalAxis, pixelX, pixelY, angleX, angleY, expected, message) = entry
+        var wheelCamera = EditorCamera(ticksPerBeat: 24, lengthTicks: 480,
+                                       viewportWidth: 200, rollHeight: 120, limits: limits)
+        _ = wheelCamera.setHScroll(200)
+        _ = wheelCamera.setVScroll(300)
+        let before = wheelCamera.snapshot
+        let dips = TimelineScrollbar.wheelDips(
+            horizontal: horizontalAxis, pixelX: pixelX, pixelY: pixelY,
+            angleX: angleX, angleY: angleY, wheelScrollLines: 3)
+        if horizontalAxis {
+            _ = wheelCamera.scrollByPx(dips)
+        } else {
+            _ = wheelCamera.scrollRollBy(dips)
+        }
+        let after = wheelCamera.snapshot
+        let actual = horizontalAxis ? after.scrollX - before.scrollX : after.scrollY - before.scrollY
+        report.expect(abs(actual - expected) < 0.01
+                      && (horizontalAxis ? after.scrollY == before.scrollY
+                                         : after.scrollX == before.scrollX),
+                      cppID: wheelID, message: message)
+    }
 }
