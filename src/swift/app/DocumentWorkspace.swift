@@ -207,10 +207,6 @@ public final class DocumentWorkspace {
         voiceChangesPage.cancelSectionInteraction()
         drawer.inputCancelled(reason: reason)
         otherEventsBand.inputCancelled()
-        if reason == GridCancelReason.windowDeactivated.rawValue
-            || reason == GridCancelReason.hidden.rawValue {
-            pitchBend.settleAndClose()
-        }
     }
 
     /// Stops every session callback before the host tears the scene down.
