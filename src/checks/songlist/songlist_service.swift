@@ -16,6 +16,7 @@ import PorydawPlayback
 @MainActor
 internal func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: String) {
     runSongRegistrationChecks(report, fixtureRoot: fixtureRoot)
+    runSongDebugLayoutChecks(report, fixtureRoot: fixtureRoot)
     runSongDeletionChecks(report, fixtureRoot: fixtureRoot)
     runSongRegionRegistrationChecks(report, fixtureRoot: fixtureRoot)
     let id = "swiftcore/SongList::serviceFeed"
