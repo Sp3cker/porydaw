@@ -67,22 +67,37 @@ internal func runSongDeletionChecks(_ report: CheckReport, fixtureRoot: String) 
     runDeletionBankChecks(report, fixtureRoot: fixtureRoot)
 }
 
+private func deletionOperationSucceeded<Value>(_ result: Result<Value, Error>) -> Bool {
+    if case .success = result { return true }
+    return false
+}
+
 @MainActor
 private func runDeletionAllocationChecks(_ report: CheckReport, fixtureRoot: String) {
     let id = "swiftcore/SongDeletion::allocation"
     do {
         let fixture = try deletionFixture(fixtureRoot, name: "allocation")
         let original = deletionBaselineImages
+        let probe = SongRegistration.plan(root: fixture.root, label: "mus_new_probe",
+                                          constant: "MUS_NEW_PROBE", player: "MUSIC_PLAYER_BGM")
+        report.expectEqual(expected: true, actual: probe.songId != 0, cppID: id,
+                           what: "A006 fresh song planning never selects protected song ID zero")
+        report.expectEqual(expected: 2, actual: probe.songId, cppID: id,
+                           what: "A007 fresh song planning appends at the existing two-entry table count")
         let zeroPlan = SongRegistration.removalPlan(root: fixture.root, label: "mus_zero", constant: "MUS_ZERO")
         report.expectEqual(expected: 0, actual: zeroPlan.tableIndex, cppID: id,
-                           what: "A008 fallback deletion plan identifies protected song ID zero")
-        do {
+                           what: "Fallback deletion plan identifies protected song ID zero")
+        let fallbackRemoval = Result {
             try SongRegistration.unregister(root: fixture.root, label: "mus_zero", constant: "MUS_ZERO")
-            report.fail(id, "Unregister unexpectedly accepted the protected fallback song.")
-        } catch {
+        }
+        report.expectEqual(expected: false, actual: deletionOperationSucceeded(fallbackRemoval), cppID: id,
+                           what: "A008 unregister refuses the protected fallback song")
+        if case .failure(let error) = fallbackRemoval {
             report.expectEqual(expected: "mus_zero is the first song_table.inc entry (song ID 0), the engine's fallback song — it cannot be deleted.",
                                actual: error.localizedDescription, cppID: id,
                                what: "A009 fallback refusal retains the registration diagnostic")
+        } else {
+            report.fail(id, "Unregister unexpectedly accepted the protected fallback song.")
         }
         report.expectEqual(expected: original, actual: try deletionImages(fixture), cppID: id,
                            what: "A010 fallback refusal preserves all seven original project file images")
@@ -97,6 +112,10 @@ private func runDeletionAllocationChecks(_ report: CheckReport, fixtureRoot: Str
         report.expectEqual(expected: Data("mus_zero.mid: -R50 -G_test_vg -V100\nmus_original.mid: -R50 -G_test_vg -V100\n".utf8),
                            actual: try fixture.read("sound/songs/midi/midi.cfg"), cppID: id,
                            what: "A017 removing stray MIDI flags restores complete original cfg bytes")
+        report.expectEqual(expected: false,
+                           actual: String(decoding: try fixture.read("sound/songs/midi/midi.cfg"), as: UTF8.self)
+                               .contains("mus_stray.mid"), cppID: id,
+                           what: "A019 removing stray flags leaves no stray MIDI label in the cfg bytes")
 
         try seedDeletionSong(fixture, label: "mus_del_a")
         let firstId = try SongRegistration.register(root: fixture.root, label: "mus_del_a",
@@ -123,13 +142,28 @@ private func runDeletionAllocationChecks(_ report: CheckReport, fixtureRoot: Str
                            actual: String(decoding: try fixture.read("sound/song_table.inc"), as: UTF8.self)
                                .components(separatedBy: "\tsong mus_zero,").count - 1,
                            cppID: id, what: "A029 middle removal increases the fallback slot count from one to two")
+        let deletedConstant = Data("MUS_DEL_A".utf8)
+        let absentFromOtherImages = try deletionFiles.dropFirst().allSatisfy {
+            try fixture.read($0).range(of: deletedConstant) == nil
+        }
+        report.expectEqual(expected: true, actual: absentFromOtherImages, cppID: id,
+                           what: "A032 middle deletion removes A constant from every other project snapshot file")
+        let survivingStatus = SongRegistration.status(root: fixture.root, label: "mus_del_b",
+                                                      constant: "MUS_DEL_B")
+        report.expectEqual(expected: [] as [String], actual: survivingStatus.missingFiles, cppID: id,
+                           what: "A033 middle deletion leaves B registered in every applicable project file")
         let replacement = SongRegistration.plan(root: fixture.root, label: "mus_del_c",
                                                 constant: "MUS_DEL_C", player: "MUSIC_PLAYER_BGM")
         report.expectEqual(expected: 2, actual: replacement.songId, cppID: id,
                            what: "A030 next registration reuses precisely the vacated middle ID")
         try seedDeletionSong(fixture, label: "mus_del_c")
-        let reused = try SongRegistration.register(root: fixture.root, label: "mus_del_c",
-                                                   constant: "MUS_DEL_C", player: "MUSIC_PLAYER_BGM")
+        let registeredReplacement = Result {
+            try SongRegistration.register(root: fixture.root, label: "mus_del_c",
+                                          constant: "MUS_DEL_C", player: "MUSIC_PLAYER_BGM")
+        }
+        report.expectEqual(expected: true, actual: deletionOperationSucceeded(registeredReplacement), cppID: id,
+                           what: "A040 replacement C registration completes without an operation error")
+        let reused = try registeredReplacement.get()
         report.expectEqual(expected: 2, actual: reused, cppID: id,
                            what: "A041 registered replacement retains the freed ID")
         report.expectEqual(expected: Data("#define MUS_ZERO 0\n#define MUS_ORIGINAL 1\n#define MUS_DEL_C 2\n#define MUS_DEL_B 3\n#define MUS_NONE 0xFFFF\n".utf8),
@@ -138,10 +172,23 @@ private func runDeletionAllocationChecks(_ report: CheckReport, fixtureRoot: Str
         report.expectEqual(expected: Data("MUS_ZERO = 00 00\nMUS_ORIGINAL = 01 00\nMUS_DEL_C = 02 00\nMUS_DEL_B = 03 00\n".utf8),
                            actual: try fixture.read("charmap.txt"), cppID: id,
                            what: "A045 reused charmap definition precedes the surviving B definition")
-        for label in ["mus_del_c", "mus_del_b"] {
-            try SongRegistration.unregister(root: fixture.root, label: label, constant: label.uppercased())
-            try SongRegistration.removeFlags(root: fixture.root, label: label)
+        let removedReplacement = Result {
+            try SongRegistration.unregister(root: fixture.root, label: "mus_del_c", constant: "MUS_DEL_C")
         }
+        report.expectEqual(expected: true, actual: deletionOperationSucceeded(removedReplacement), cppID: id,
+                           what: "A046 replacement C unregister completes without an operation error")
+        try removedReplacement.get()
+        try SongRegistration.removeFlags(root: fixture.root, label: "mus_del_c")
+        report.expectEqual(expected: Data("mus_zero.mid: -R50 -G_test_vg -V100\nmus_original.mid: -R50 -G_test_vg -V100\nmus_del_b.mid: -R50 -G_test_vg -V100\n".utf8),
+                           actual: try fixture.read("sound/songs/midi/midi.cfg"), cppID: id,
+                           what: "A047 removing replacement C flags preserves original and surviving B cfg bytes")
+        let removedSurvivor = Result {
+            try SongRegistration.unregister(root: fixture.root, label: "mus_del_b", constant: "MUS_DEL_B")
+        }
+        report.expectEqual(expected: true, actual: deletionOperationSucceeded(removedSurvivor), cppID: id,
+                           what: "A049 surviving B unregister completes without an operation error")
+        try removedSurvivor.get()
+        try SongRegistration.removeFlags(root: fixture.root, label: "mus_del_b")
         report.expectEqual(expected: Data("mus_zero.mid: -R50 -G_test_vg -V100\nmus_original.mid: -R50 -G_test_vg -V100\n".utf8),
                            actual: try fixture.read("sound/songs/midi/midi.cfg"), cppID: id,
                            what: "A050 removing B flags restores the complete original cfg bytes")
@@ -271,7 +318,14 @@ private func runDeletionBankChecks(_ report: CheckReport, fixtureRoot: String) {
                 report.expectEqual(expected: "onboardcheckvg", actual: candidate.deletableVoicegroupName,
                                    cppID: id, what: "A066 unused bank query returns the exact per-file bank name")
                 let targetHub = Data(".include \"sound/voicegroups/test_vg.inc\"\n".utf8)
-                try runBlocking { try await service.deleteSong(label: "mus_vg_user", voicegroupName: "onboardcheckvg") }
+                let removedUnusedBank = Result {
+                    try runBlocking {
+                        try await service.deleteSong(label: "mus_vg_user", voicegroupName: "onboardcheckvg")
+                    }
+                }
+                report.expectEqual(expected: true, actual: deletionOperationSucceeded(removedUnusedBank), cppID: id,
+                                   what: "A067 checked deletion accepts the requested unreferenced bank")
+                try removedUnusedBank.get()
                 report.expectEqual(expected: false, actual: fixture.exists("sound/voicegroups/onboardcheckvg.inc"),
                                    cppID: id, what: "A068 accepted unused-bank deletion removes only its bank file")
                 report.expectEqual(expected: targetHub, actual: try fixture.read("sound/voice_groups.inc"),
