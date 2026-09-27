@@ -185,6 +185,36 @@ TestCase {
         return pair
     }
 
+    function drawnNoteContent(grid) {
+        return JSON.parse(grid.noteSummary).map(function(note) {
+            return [note.track, note.tick, note.pitch, note.duration, note.velocity, note.ghost]
+        }).sort(function(a, b) { return JSON.stringify(a).localeCompare(JSON.stringify(b)) })
+    }
+
+    function paintedTimeRange(surface, roll) {
+        var overlay = findChild(surface, "timelineQuickPianoOverlay")
+        if (!overlay)
+            return null
+        var fill = String(surface.gridModel.palette.selectionFill).toLowerCase()
+        for (var item of overlay.children) {
+            if (item.visible && item.color && String(item.color).toLowerCase() === fill
+                    && item.width > 0 && item.height >= roll.height) {
+                var point = item.mapToItem(roll, 0, 0)
+                return { start: point.x, end: point.x + item.width }
+            }
+        }
+        return null
+    }
+
+    function mountedNotePoint(surface, roll, id) {
+        var item = findChild(surface, "gridNote_" + id)
+        if (!item || !item.visible || item.width <= 0 || item.height <= 0)
+            return null
+        var point = item.mapToItem(roll, item.width / 2, item.height / 2)
+        return point.x >= 0 && point.x <= roll.width && point.y >= 0
+               && point.y <= roll.height ? point : null
+    }
+
     function windowShortcut(name) {
         var delegates = shell.contentItem.children
         for (var i = 0; i < delegates.length; ++i) {
@@ -1548,6 +1578,253 @@ TestCase {
         }, 3000, "repeating Ctrl+D duplicates the newest copy")
         compare(grid.noteSummary, notesBefore,
                 "lane-flavored Ctrl+D leaves unrelated notes byte-identical")
+    }
+
+    function test_jPlayingSelectedRangeInsertAndDeleteThroughWindow() {
+        var firstId = openTwoSongShell()
+        var tabs = shell.shellPresenter.session.songTabs
+        var activeId = tabs.selectedId
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var roll = findChild(surface, "swiftRollInput")
+        var menu = surface.rulerMenu
+        var insert = findChild(shell, "shellAction_edit.insert_time")
+        var remove = findChild(shell, "shellAction_edit.delete_time")
+        verify(roll && insert && remove, "the mounted roll and both time actions are visible")
+        var editMenu = findChild(shell, "shellEditMenu")
+        var timeMenu = findChild(shell, "shellTimeMenu")
+        editMenu.open()
+        timeMenu.open()
+        tryCompare(insert, "enabled", true, 3000,
+                   "the mounted Insert Time action is enabled before a range is selected")
+        timeMenu.close()
+        editMenu.close()
+        var before = JSON.parse(grid.noteSummary)
+        var siblingButton = findChild(shell.sceneLoader.item, "songTabSelect_" + firstId)
+        var activeButton = findChild(shell.sceneLoader.item, "songTabSelect_" + activeId)
+        mouseClick(siblingButton, siblingButton.width / 3, siblingButton.height / 2)
+        tryCompare(tabs, "selectedId", firstId)
+        var siblingNotes = selectedSurface().gridModel.noteSummary
+        mouseClick(activeButton, activeButton.width / 3, activeButton.height / 2)
+        tryCompare(tabs, "selectedId", activeId)
+        var beforeContent = drawnNoteContent(grid)
+        var step = grid.snapTicks
+        var scale = grid.beatWidth / grid.ticksPerBeat
+        var span = Math.max(step, Math.round(roll.width * 0.15 / (step * scale)) * step)
+        var later = before.find(function(note) {
+            var x = note.tick * scale - grid.cameraScrollX
+            return !note.ghost && note.tick >= 2 * span && x > 2 * span * scale
+                   && x < roll.width - span * scale - 5
+        })
+        verify(later, "a drawn note after the selected seam is available")
+        var beforeNotePoint = mountedNotePoint(surface, roll, later.id)
+        verify(beforeNotePoint !== null,
+               "the selected seam note has a visible mounted fill before playback")
+        var start = later.tick - span
+        var end = later.tick
+        var startX = start * scale - grid.cameraScrollX + 2
+        var endX = end * scale - grid.cameraScrollX + 2
+        var row = roll.height / 2
+        mousePress(roll, startX, row, Qt.RightButton, Qt.ShiftModifier)
+        mouseMove(roll, endX, row, -1, Qt.RightButton, Qt.ShiftModifier)
+        mouseRelease(roll, endX, row, Qt.RightButton, Qt.ShiftModifier)
+        var selection = paintedTimeRange(surface, roll)
+        verify(selection !== null, "the roll paints an active scoped range before playback")
+        verify(Math.abs(selection.start - (start * scale - grid.cameraScrollX)) < 2,
+               "the painted scoped range begins at the swept start before playback")
+        verify(Math.abs(selection.end - (end * scale - grid.cameraScrollX)) < 2,
+               "the painted scoped range ends at the swept seam before playback")
+        var otherHeader = findChild(surface, "timelineHeaderActivity_1")
+        verify(otherHeader && otherHeader.parent.overlayColor.a === 0,
+               "the unselected track header stays outside the scoped range before playback")
+        editMenu.open()
+        timeMenu.open()
+        tryCompare(insert, "enabled", true, 3000,
+                   "the real scoped roll selection enables Insert Time")
+        tryCompare(remove, "enabled", true, 3000,
+                   "the real scoped roll selection enables Delete Time")
+        timeMenu.close()
+        editMenu.close()
+        var revision = grid.appliedRevisionText
+        grid.setEditCursorTick(0)
+        var play = findChild(shell, "transport.play")
+        var stop = findChild(shell, "transport.stop")
+        var playhead = shell.shellPresenter.session.playheadPresenter()
+        verify(play && stop, "the mounted transport can play and stop")
+        mouseClick(play, play.width / 2, play.height / 2)
+        tryCompare(playhead, "playing", true, 3000,
+                   "the real mounted transport enters Play")
+        compare(grid.editCursorTick, 0,
+                "the mounted edit cursor stays before the selected range when Play starts")
+        selection = paintedTimeRange(surface, roll)
+        verify(selection !== null, "the roll paints an active scoped range during playback")
+        verify(Math.abs(selection.start - (start * scale - grid.cameraScrollX)) < 2,
+               "the painted scoped range keeps its start during playback")
+        verify(Math.abs(selection.end - (end * scale - grid.cameraScrollX)) < 2,
+               "the painted scoped range keeps its end during playback")
+        verify(otherHeader.parent.overlayColor.a === 0,
+               "the unselected track header stays outside the scoped range during playback")
+        verify(playhead.tick < start, "the playhead is before the selected insertion seam")
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        keyClick(Qt.Key_I, Qt.ControlModifier | Qt.ShiftModifier)
+        tryVerify(function() {
+            return JSON.parse(grid.noteSummary).some(function(note) {
+                return note.id === later.id && note.tick === later.tick + span
+                    && note.pitch === later.pitch
+            })
+        }, 3000, "the playing window shortcut shifts the drawn seam note without repitching")
+        var afterNotePoint = mountedNotePoint(surface, roll, later.id)
+        verify(afterNotePoint !== null
+               && Math.abs(afterNotePoint.x - beforeNotePoint.x - span * scale) < 2,
+               "the mounted seam note fill moves right by the selected interval")
+        selection = paintedTimeRange(surface, roll)
+        verify(selection !== null, "the roll retains its painted active range after insertion")
+        verify(Math.abs(selection.start - (start * scale - grid.cameraScrollX)) < 2,
+               "the painted scoped range retains its start after insertion")
+        verify(Math.abs(selection.end - (end * scale - grid.cameraScrollX)) < 2,
+               "the painted scoped range retains its end after insertion")
+        verify(otherHeader.parent.overlayColor.a === 0,
+               "the unselected track header stays outside the scoped range after insertion")
+        compare(menu.insertTimePromptOpen, false,
+                "the playing selected-range shortcut never opens the insertion prompt")
+        compare(findChild(surface, "insertTimePrompt"), null,
+                "the playing selected-range shortcut never mounts the insertion form")
+        compare(grid.editCursorTick, start,
+                "the playing selected-range edit cursor parks at the selected start")
+        verify(grid.appliedRevisionText !== revision,
+               "the playing selected-range shortcut commits the song revision")
+        mouseClick(stop, stop.width / 2, stop.height / 2)
+        tryCompare(playhead, "playing", false, 3000,
+                   "the transport stops before the selected edit is undone")
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        keySequence(StandardKey.Undo)
+        verify(waitForNative(function() {
+            return JSON.stringify(drawnNoteContent(grid))
+                === JSON.stringify(beforeContent)
+        }, 5000), "one window Undo restores every drawn scoped insertion note")
+        tryCompare(remove, "enabled", true, 3000,
+                   "undo leaves the scoped selection ready for Delete Time")
+        editMenu.open()
+        timeMenu.open()
+        mouseClick(remove, remove.width / 2, remove.height / 2)
+        tryVerify(function() {
+            return JSON.parse(grid.noteSummary).some(function(note) {
+                return note.id === later.id && note.tick === later.tick - span
+            })
+        }, 3000, "the real Time menu ripples the later drawn note left by the selected width")
+        afterNotePoint = mountedNotePoint(surface, roll, later.id)
+        verify(afterNotePoint !== null
+               && Math.abs(afterNotePoint.x - beforeNotePoint.x + span * scale) < 2,
+               "the mounted later note fill moves left by the scoped deletion width")
+        compare(menu.insertTimePromptOpen, false,
+                "the scoped Time menu deletion never opens Insert Time")
+        compare(grid.editCursorTick, start,
+                "the scoped menu deletion parks the edit cursor at its start")
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        keySequence(StandardKey.Undo)
+        verify(waitForNative(function() {
+            return JSON.stringify(drawnNoteContent(grid))
+                === JSON.stringify(beforeContent)
+        }, 5000), "one window Undo restores every drawn scoped deletion note")
+        mouseClick(siblingButton, siblingButton.width / 3, siblingButton.height / 2)
+        tryCompare(tabs, "selectedId", firstId)
+        compare(selectedSurface().gridModel.noteSummary, siblingNotes,
+                "both real range commands leave the inactive tab's visible notes untouched")
+    }
+
+    function test_jWholeSongRangeDeletesBothTracksThroughWindow() {
+        var firstId = openTwoSongShell()
+        var tabs = shell.shellPresenter.session.songTabs
+        var activeId = tabs.selectedId
+        var siblingButton = findChild(shell.sceneLoader.item, "songTabSelect_" + firstId)
+        var activeButton = findChild(shell.sceneLoader.item, "songTabSelect_" + activeId)
+        mouseClick(siblingButton, siblingButton.width / 3, siblingButton.height / 2)
+        tryCompare(tabs, "selectedId", firstId)
+        var siblingNotes = selectedSurface().gridModel.noteSummary
+        mouseClick(activeButton, activeButton.width / 3, activeButton.height / 2)
+        tryCompare(tabs, "selectedId", activeId)
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var roll = findChild(surface, "swiftRollInput")
+        var before = JSON.parse(grid.noteSummary)
+        var beforeContent = drawnNoteContent(grid)
+        var step = grid.snapTicks
+        var scale = grid.beatWidth / grid.ticksPerBeat
+        var visibleEnd = Math.floor((roll.width + grid.cameraScrollX - 8) / (step * scale)) * step
+        var endTick = Math.min(Math.floor(96 / step) * step, visibleEnd)
+        verify(endTick > step, "a nonzero all-track range fits the visible roll")
+        var otherInside = before.find(function(note) { return note.ghost && note.tick < endTick })
+        var otherLater = before.find(function(note) { return note.ghost && note.tick >= endTick })
+        verify(otherInside && otherLater, "both inside and later drawn notes exist on the other track")
+        var firstInside = before.find(function(note) { return !note.ghost && note.tick < endTick })
+        verify(firstInside, "the whole-song sweep identifies its first inside note")
+        var secondInside = before.find(function(note) {
+            return !note.ghost && note.tick < endTick && note.id !== firstInside.id
+        })
+        verify(firstInside && secondInside,
+               "the whole-song sweep contains two designated first-track notes")
+        verify(mountedNotePoint(surface, roll, firstInside.id) !== null,
+               "the first designated inside note is painted before whole-song deletion")
+        verify(mountedNotePoint(surface, roll, secondInside.id) !== null,
+               "the second designated inside note is painted before whole-song deletion")
+        verify(mountedNotePoint(surface, roll, otherInside.id) !== null,
+               "the other track's inside note is painted before whole-song deletion")
+        var otherLaterPoint = mountedNotePoint(surface, roll, otherLater.id)
+        verify(otherLaterPoint !== null,
+               "the other track's later note is painted before whole-song deletion")
+        var endX = endTick * scale - grid.cameraScrollX + 2
+        var row = roll.height / 2
+        mousePress(roll, 2, row, Qt.RightButton, Qt.ShiftModifier | Qt.ControlModifier)
+        mouseMove(roll, endX, row, -1, Qt.RightButton,
+                  Qt.ShiftModifier | Qt.ControlModifier)
+        mouseRelease(roll, endX, row, Qt.RightButton,
+                     Qt.ShiftModifier | Qt.ControlModifier)
+        var deleteTime = findChild(shell, "shellAction_edit.delete_time")
+        tryCompare(deleteTime, "enabled", true, 3000,
+                   "the whole-song multi-track roll sweep enables Delete Time")
+        var editMenu = findChild(shell, "shellEditMenu")
+        var timeMenu = findChild(shell, "shellTimeMenu")
+        editMenu.open()
+        timeMenu.open()
+        mouseClick(deleteTime, deleteTime.width / 2, deleteTime.height / 2)
+        tryVerify(function() {
+            return !JSON.parse(grid.noteSummary).some(function(note) {
+                return note.id === firstInside.id
+            }) && findChild(surface, "gridNote_" + firstInside.id) === null
+        }, 3000, "the whole-song Time menu removes the first designated painted note")
+        tryVerify(function() {
+            return !JSON.parse(grid.noteSummary).some(function(note) {
+                return note.id === secondInside.id
+            }) && findChild(surface, "gridNote_" + secondInside.id) === null
+        }, 3000, "the whole-song Time menu removes the second designated painted note")
+        tryVerify(function() {
+            return !JSON.parse(grid.noteSummary).some(function(note) {
+                return note.id === otherInside.id
+            }) && findChild(surface, "gridNote_" + otherInside.id) === null
+        }, 3000, "the whole-song Time menu removes the other track's inside painted note")
+        tryVerify(function() {
+            return JSON.parse(grid.noteSummary).some(function(note) {
+                return note.id === otherLater.id && note.tick === otherLater.tick - endTick
+            })
+        }, 3000, "the whole-song Time menu ripples the other track's later note exactly left")
+        var otherAfterPoint = mountedNotePoint(surface, roll, otherLater.id)
+        verify(otherAfterPoint !== null
+               && Math.abs(otherAfterPoint.x - otherLaterPoint.x + endTick * scale) < 2,
+               "the mounted other-track later fill moves left by the whole selection")
+        compare(grid.editCursorTick, 0, "the whole-song Time menu leaves the cursor at zero")
+        compare(surface.rulerMenu.insertTimePromptOpen, false,
+                "the whole-song deletion bypasses the insertion prompt")
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        keySequence(StandardKey.Undo)
+        verify(waitForNative(function() {
+            return JSON.stringify(drawnNoteContent(grid))
+                === JSON.stringify(beforeContent)
+        }, 5000), "one window Undo restores the whole-song range's drawn notes; before="
+           + JSON.stringify(beforeContent) + "; after=" + JSON.stringify(drawnNoteContent(grid)))
+        mouseClick(siblingButton, siblingButton.width / 3, siblingButton.height / 2)
+        tryCompare(tabs, "selectedId", firstId)
+        compare(selectedSurface().gridModel.noteSummary, siblingNotes,
+                "the whole-song Time menu leaves the inactive tab's notes untouched")
     }
 
     function test_kVelocityStemEscapeFromRollFocus() {

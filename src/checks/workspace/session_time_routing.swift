@@ -1,5 +1,6 @@
 import Foundation
 import PorydawApp
+import PorydawAppCommands
 import PorydawCore
 import PorydawCoreCheckNative
 import PorydawPlayback
@@ -49,11 +50,19 @@ internal func runTimeRoutingChecks(report: CheckReport, suite: DocumentSession,
           let seam = document.notes(in: 0).first(where: { $0.tick == 48 }),
           let later = document.notes(in: 0).first(where: { $0.tick == 96 }),
           let otherInside = document.notes(in: 1).first(where: { $0.tick == 24 }),
-          let otherLater = document.notes(in: 1).first(where: { $0.tick == 120 }),
+          let otherLater = document.notes(in: 1).first(where: { $0.tick == 120 })
+    else {
+        report.fail(insertID, "two-track time routing fixture did not encode or project notes")
+        return
+    }
+    guard let excludedLaterID = try? document.addNotes([
+        NewNote(track: 1, tick: 72, pitch: 74, duration: 8, velocity: 80),
+    ]).first,
+          let excludedLater = document.note(excludedLaterID),
           let original = try? document.state.file.encoded(),
           let inactiveBytes = try? suite.document.state.file.encoded()
     else {
-        report.fail(insertID, "two-track time routing fixture did not encode or project notes")
+        report.fail(deleteID, "the excluded-track later note did not seed or encode")
         return
     }
     let originalIndex = document.history.undoIndex
@@ -191,27 +200,64 @@ internal func runTimeRoutingChecks(report: CheckReport, suite: DocumentSession,
     let scopedRange = TimeRange(startTick: 48, endTick: 72)
     page.applyTimeSelection(AutomationTimeSelection(range: scopedRange, scope: .tracks([0])))
     session.editCursor = 0
-    page.refreshPlayhead(tick: 96, playing: true)
-    report.expectEqual(expected: Tick(96), actual: page.contextTick, cppID: selectionID,
+    page.refreshPlayhead(tick: 24, playing: true)
+    report.expectEqual(expected: Tick(24), actual: page.contextTick, cppID: selectionID,
                        what: "advancing playback context stays away from the selected insertion seam")
+    report.expectEqual(expected: Tick(0), actual: session.editCursor, cppID: selectionID,
+                       what: "playing insertion begins with its edit cursor before the range")
     let scopedRevision = document.revision
+    let scopedIndex = document.history.undoIndex
     report.expect(router.isAvailable(.insertTime), cppID: selectionID,
                   message: "selected track admits routed Insert Time")
     router.perform(.insertTime)
+    report.expect(!ruler.insertTimePromptOpen, cppID: selectionID,
+                  message: "playing selected insertion bypasses the ruler prompt")
     report.expect(document.note(seam.id)?.tick == 72 &&
                   document.note(later.id)?.tick == 120 &&
                   document.note(otherLater.id)?.tick == 120 &&
                   document.note(otherInside.id)?.tick == 24,
                   cppID: selectionID, message: "routed insertion anchors on selection instead of cursor and shifts only its track")
+    report.expect(document.note(seam.id) != nil, cppID: selectionID,
+                  message: "playing insertion retains the seam note identity")
+    report.expect(document.note(otherInside.id) != nil, cppID: selectionID,
+                  message: "playing insertion retains the excluded track's note identity")
+    report.expectEqual(expected: Tick(72), actual: document.note(seam.id)?.tick,
+                       cppID: selectionID, what: "playing insertion shifts the seam note by the interval width")
+    report.expectEqual(expected: seam.pitch, actual: document.note(seam.id)?.pitch,
+                       cppID: selectionID, what: "playing insertion preserves the seam note pitch")
+    report.expectEqual(expected: otherLater.tick, actual: document.note(otherLater.id)?.tick,
+                       cppID: selectionID, what: "playing insertion leaves the excluded later note at its tick")
+    report.expectEqual(expected: otherInside.tick, actual: document.note(otherInside.id)?.tick,
+                       cppID: selectionID, what: "playing insertion leaves the excluded inside note at its tick")
+    report.expectEqual(expected: excludedLater.tick, actual: document.note(excludedLaterID)?.tick,
+                       cppID: selectionID, what: "playing insertion leaves the excluded seam note in place")
+    report.expect(page.selection?.isActive == true, cppID: selectionID,
+                  message: "playing insertion retains an active time range")
     report.expect(page.selection?.range == scopedRange && session.editCursor == 48,
                   cppID: selectionID, message: "routed insertion retains selected span and parks cursor at its start")
+    report.expectEqual(expected: scopedRange.startTick, actual: page.selection?.range.startTick,
+                       cppID: selectionID, what: "playing insertion retains the range start")
+    report.expectEqual(expected: scopedRange.endTick, actual: page.selection?.range.endTick,
+                       cppID: selectionID, what: "playing insertion retains the range end")
+    report.expect(page.selection?.scope == .tracks([0]), cppID: selectionID,
+                  message: "playing insertion retains only the chosen track scope")
+    report.expectEqual(expected: scopedRange.startTick, actual: session.editCursor,
+                       cppID: selectionID, what: "playing insertion parks the edit cursor at the selected start")
+    report.expectEqual(expected: Tick(24), actual: page.contextTick, cppID: selectionID,
+                       what: "playing insertion does not retarget the playhead")
     expectSingleRevisionEntry(revision: scopedRevision,
                               revisionWhat: "routed insertion advances one revision",
                               undoWhat: "routed insertion records one undo entry", cppID: selectionID)
+    report.expectEqual(expected: scopedIndex + 1, actual: document.history.undoIndex,
+                       cppID: selectionID, what: "playing insertion adds exactly one history step")
+    page.refreshPlayhead(tick: 0, playing: false)
     expectUndoRestoresBytes(cppID: selectionID,
                             message: "one undo restores exact routed insertion bytes")
+    report.expect((try? document.state.file.encoded()) == original, cppID: selectionID,
+                  message: "stopped insertion undo restores the exact original MIDI bytes")
+    report.expectEqual(expected: scopedIndex, actual: document.history.undoIndex,
+                       cppID: selectionID, what: "stopped insertion undo returns to its original history position")
     page.clearTimeSelection()
-    page.refreshPlayhead(tick: 0, playing: false)
 
     let zeroBytes = try? document.state.file.encoded()
     let zeroRevision = document.revision
@@ -230,9 +276,12 @@ internal func runTimeRoutingChecks(report: CheckReport, suite: DocumentSession,
     page.applyTimeSelection(AutomationTimeSelection(range: deleteRange, scope: .tracks([0])))
     session.editCursor = 96
     let scopedDeleteRevision = document.revision
+    let scopedDeleteIndex = document.history.undoIndex
     report.expect(router.isAvailable(.deleteTime), cppID: deleteID,
                   message: "selected track admits routed Delete Time")
     router.perform(.deleteTime)
+    report.expect(!ruler.insertTimePromptOpen, cppID: deleteID,
+                  message: "scoped Delete Time never opens the insertion prompt")
     report.expect(document.note(inside.id) == nil &&
                   document.note(seam.id)?.tick == 24 &&
                   document.note(later.id)?.tick == 72 &&
@@ -240,31 +289,197 @@ internal func runTimeRoutingChecks(report: CheckReport, suite: DocumentSession,
                   document.note(otherInside.id)?.tick == 24 &&
                   document.note(otherLater.id)?.tick == 120,
                   cppID: deleteID, message: "scoped removal deletes in-range notes and ripples only the chosen track")
+    report.expect(document.note(inside.id) == nil, cppID: deleteID,
+                  message: "scoped deletion removes its inside note")
+    report.expect(document.note(later.id) != nil, cppID: deleteID,
+                  message: "scoped deletion retains the later note identity")
+    report.expect(document.note(source.id) != nil, cppID: deleteID,
+                  message: "scoped deletion retains the earlier note identity")
+    report.expect(document.note(otherInside.id) != nil, cppID: deleteID,
+                  message: "scoped deletion retains the excluded track's note identity")
+    report.expectEqual(expected: Tick(24), actual: document.note(seam.id)?.tick,
+                       cppID: deleteID, what: "scoped deletion moves the seam note left one interval")
+    report.expectEqual(expected: Tick(72), actual: document.note(later.id)?.tick,
+                       cppID: deleteID, what: "scoped deletion ripples the later note left one interval")
+    report.expectEqual(expected: source.tick, actual: document.note(source.id)?.tick,
+                       cppID: deleteID, what: "scoped deletion preserves its earlier note")
+    report.expectEqual(expected: otherInside.tick, actual: document.note(otherInside.id)?.tick,
+                       cppID: deleteID, what: "scoped deletion preserves the excluded inside note")
+    report.expectEqual(expected: otherLater.tick, actual: document.note(otherLater.id)?.tick,
+                       cppID: deleteID, what: "scoped deletion preserves the excluded later note")
+    report.expectEqual(expected: excludedLater.tick, actual: document.note(excludedLaterID)?.tick,
+                       cppID: deleteID, what: "scoped deletion leaves the excluded later seam note in place")
     report.expect(page.selection == nil && session.editCursor == 24,
                   cppID: deleteID, message: "routed removal clears selection and parks cursor at seam")
+    report.expect(page.selection == nil, cppID: deleteID,
+                  message: "scoped deletion clears the active time range")
+    report.expectEqual(expected: deleteRange.startTick, actual: session.editCursor,
+                       cppID: deleteID, what: "scoped deletion parks the edit cursor at the range start")
     expectSingleRevisionEntry(revision: scopedDeleteRevision,
                               revisionWhat: "scoped removal advances one revision",
                               undoWhat: "scoped removal records one undo entry", cppID: deleteID)
+    report.expectEqual(expected: scopedDeleteIndex + 1, actual: document.history.undoIndex,
+                       cppID: deleteID, what: "scoped deletion records exactly one history step")
     expectUndoRestoresBytes(cppID: deleteID,
                             message: "one undo restores exact scoped removal bytes")
+    report.expect((try? document.state.file.encoded()) == original, cppID: deleteID,
+                  message: "scoped deletion undo restores the exact original MIDI bytes")
+    report.expectEqual(expected: scopedDeleteIndex, actual: document.history.undoIndex,
+                       cppID: deleteID, what: "scoped deletion undo restores the original history position")
 
     let allTracks = Set(0..<document.engineTracks.usedTrackCount)
-    page.applyTimeSelection(AutomationTimeSelection(
-        range: TimeRange(startTick: 0, endTick: 48), scope: .tracks(allTracks)))
+    let wholeDeleteRange = TimeRange(startTick: 0, endTick: 48)
+    page.applyTimeSelection(AutomationTimeSelection(range: wholeDeleteRange, scope: .tracks(allTracks)))
+    report.expect(page.selection?.isActive == true, cppID: deleteID,
+                  message: "whole-song deletion begins with an active range")
     session.editCursor = 96
+    report.expectEqual(expected: Tick(0), actual: page.selection?.range.startTick,
+                       cppID: deleteID, what: "whole-song deletion selection starts at zero")
+    report.expect(page.selection?.scope == .tracks(allTracks), cppID: deleteID,
+                  message: "whole-song deletion selects every used track")
+    report.expect(page.selection?.coversTempo(usedTracks: allTracks) == true, cppID: deleteID,
+                  message: "whole-song deletion selection covers the tempo scope")
     let wholeDeleteRevision = document.revision
+    let wholeDeleteIndex = document.history.undoIndex
+    report.expect(router.isAvailable(.deleteTime), cppID: deleteID,
+                  message: "whole-song selection enables routed Delete Time")
     router.perform(.deleteTime)
+    report.expect(!ruler.insertTimePromptOpen, cppID: deleteID,
+                  message: "whole-song Delete Time never opens the insertion prompt")
     report.expect(document.note(source.id) == nil && document.note(inside.id) == nil &&
                   document.note(otherInside.id) == nil &&
                   document.note(seam.id)?.tick == 0 &&
                   document.note(later.id)?.tick == 48 &&
                   document.note(otherLater.id)?.tick == 72,
                   cppID: deleteID, message: "all-track removal deletes across tracks and ripples later notes")
+    report.expect(document.note(source.id) == nil, cppID: deleteID,
+                  message: "whole-song deletion removes the first selected-track note")
+    report.expect(document.note(inside.id) == nil, cppID: deleteID,
+                  message: "whole-song deletion removes the second selected-track note")
+    report.expect(document.note(otherInside.id) == nil, cppID: deleteID,
+                  message: "whole-song deletion removes the other track's inside note")
+    report.expect(document.note(excludedLaterID) != nil, cppID: deleteID,
+                  message: "whole-song deletion retains the other track's later note identity")
+    report.expectEqual(expected: Tick(24), actual: document.note(excludedLaterID)?.tick,
+                       cppID: deleteID, what: "whole-song deletion shifts the other track's later note to tick 24")
+    report.expectEqual(expected: Tick(72), actual: document.note(otherLater.id)?.tick,
+                       cppID: deleteID, what: "whole-song deletion moves the other track's later note to tick 72")
     report.expect(page.selection == nil && session.editCursor == 0,
                   cppID: deleteID, message: "whole selection removal clears range and parks cursor at zero")
+    report.expect(page.selection == nil, cppID: deleteID,
+                  message: "whole-song deletion clears the active time range")
+    report.expectEqual(expected: Tick(0), actual: session.editCursor,
+                       cppID: deleteID, what: "whole-song deletion leaves the edit cursor at zero")
     expectSingleRevisionEntry(revision: wholeDeleteRevision,
                               revisionWhat: "whole selection removal advances one revision",
                               undoWhat: "whole selection removal records one undo entry", cppID: deleteID)
+    report.expectEqual(expected: wholeDeleteIndex + 1, actual: document.history.undoIndex,
+                       cppID: deleteID, what: "whole-song deletion records exactly one history step")
     expectUndoRestoresBytes(cppID: deleteID,
                             message: "one undo restores exact all-track removal bytes")
+    report.expect((try? document.state.file.encoded()) == original, cppID: deleteID,
+                  message: "whole-song deletion undo restores the exact original MIDI bytes")
+    report.expectEqual(expected: wholeDeleteIndex, actual: document.history.undoIndex,
+                       cppID: deleteID, what: "whole-song deletion undo restores the original history position")
+    checkLiveTabTimeIsolation(report: report, sourcePath: suite.document.source.midiPath)
+}
+
+@MainActor
+private func checkLiveTabTimeIsolation(report: CheckReport, sourcePath: String) {
+    let insertID = "mainwindowrouting/MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback"
+    let deleteID = "mainwindowrouting/MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections"
+    let projectRoot = URL(fileURLWithPath: sourcePath).deletingLastPathComponent()
+        .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().path
+    let app = ApplicationSession()
+    defer {
+        app.hostClosing()
+        app.acknowledgeGridDetached()
+    }
+    func until(_ predicate: () -> Bool) -> Bool {
+        let deadline = Date().addingTimeInterval(25)
+        while !predicate() && Date() < deadline {
+            _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+        }
+        return predicate()
+    }
+    app.openProjectAndSong(path: projectRoot, label: "mus_session_test")
+    guard until({ app.songOpen || !app.lastSaveError.isEmpty }),
+          let active = app.selectedDocument else {
+        report.fail(insertID, "active time-routing tab failed to open: \(app.lastSaveError)")
+        return
+    }
+    let activeID = app.songTabs.selectedId
+    app.openSong(label: "mus_session_test2")
+    guard until({ app.songTabs.tabCount == 2 && app.songTabs.selectedId != activeID
+                  || !app.lastSaveError.isEmpty }),
+          let inactive = app.selectedDocument,
+          let inactiveBytes = try? inactive.document.state.file.encoded() else {
+        report.fail(insertID, "inactive time-routing tab failed to open: \(app.lastSaveError)")
+        return
+    }
+    app.songTabs.selectTab(tabId: activeID)
+    guard app.selectedDocument === active,
+          let insideID = try? active.document.addNotes([
+              NewNote(track: 0, tick: 24, pitch: 79, duration: 8, velocity: 80),
+          ]).first,
+          let seam = active.document.notes(in: 0).first(where: { $0.tick == 48 }),
+          let original = try? active.document.state.file.encoded() else {
+        report.fail(insertID, "live active tab could not seed the time-routing range")
+        return
+    }
+    active.selectedTrack = 0
+    let page = app.automationPage()
+    func inactiveIsUnchanged() -> Bool {
+        app.songTabs.selectedId == activeID && app.selectedDocument === active
+            && (try? inactive.document.state.file.encoded()) == inactiveBytes
+    }
+
+    page.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 48, endTick: 72), scope: .tracks([0])))
+    active.editCursor = 0
+    app.play()
+    report.expect(app.playheadPresenter().playing, cppID: insertID,
+                  message: "live selected tab plays before scoped insertion")
+    let insertRevision = active.document.revision
+    app.performGridCommand(command: EditCommand.insertTime.rawValue)
+    report.expect(active.document.revision == insertRevision + 1
+                  && active.document.note(seam.id)?.tick == 72, cppID: insertID,
+                  message: "live selected tab applies the scoped insertion to its own note")
+    report.expect(inactiveIsUnchanged(), cppID: insertID,
+                  message: "playing insertion leaves the sibling document byte-exact")
+    app.stop()
+    _ = active.document.history.undoDocument()
+    report.expect((try? active.document.state.file.encoded()) == original, cppID: insertID,
+                  message: "live selected-tab insertion undo restores its active MIDI bytes")
+    report.expect(inactiveIsUnchanged(), cppID: insertID,
+                  message: "stopped insertion undo leaves the sibling bytes untouched")
+
+    page.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 24, endTick: 48), scope: .tracks([0])))
+    let scopedRevision = active.document.revision
+    app.performGridCommand(command: EditCommand.deleteTime.rawValue)
+    report.expect(active.document.revision == scopedRevision + 1
+                  && active.document.note(insideID) == nil, cppID: deleteID,
+                  message: "live selected tab removes its scoped inside note")
+    report.expect(inactiveIsUnchanged(), cppID: deleteID,
+                  message: "scoped deletion preserves the inactive document bytes")
+    _ = active.document.history.undoDocument()
+    report.expect((try? active.document.state.file.encoded()) == original, cppID: deleteID,
+                  message: "live selected-tab scoped undo restores its active MIDI bytes")
+
+    let allTracks = Set(0..<active.document.engineTracks.usedTrackCount)
+    page.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 0, endTick: 48), scope: .tracks(allTracks)))
+    let wholeRevision = active.document.revision
+    app.performGridCommand(command: EditCommand.deleteTime.rawValue)
+    report.expect(active.document.revision == wholeRevision + 1
+                  && active.document.note(insideID) == nil, cppID: deleteID,
+                  message: "live selected tab removes its whole-range inside note")
+    report.expect(inactiveIsUnchanged(), cppID: deleteID,
+                  message: "whole-song deletion leaves the inactive song byte-exact")
+    _ = active.document.history.undoDocument()
+    report.expect((try? active.document.state.file.encoded()) == original, cppID: deleteID,
+                  message: "live selected-tab whole undo restores its active MIDI bytes")
+    report.expect(inactiveIsUnchanged(), cppID: deleteID,
+                  message: "whole-song deletion undo preserves the inactive song bytes")
 }
