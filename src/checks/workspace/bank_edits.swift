@@ -289,6 +289,10 @@ internal func bankMissingBasisAndApplied(report: CheckReport, fixtureRoot: Strin
         }
         let originalPath = session.bankLease.sourcePath
         let originalSection = session.bankLease.sectionLabel
+        let slotsBefore = session.bankSlots
+        let loadNameBefore = session.bankLoadName
+        let leaseBefore = session.bankLease
+        let revisionBefore = session.bankLease.publicationRevision
         let historyCount = session.document.history.undoCount
         let historyIndex = session.document.history.undoIndex
         let undoBefore = session.document.history.canUndo
@@ -311,8 +315,13 @@ internal func bankMissingBasisAndApplied(report: CheckReport, fixtureRoot: Strin
                       && session.document.history.canUndo == undoBefore
                       && session.document.history.canRedo == redoBefore,
                       cppID: id, message: "missing-basis conflict records no history action")
-        report.expect(session.bankSlots.first?.voice == original && session.bankDirty == dirtyBefore,
-                      cppID: id, message: "missing-basis conflict leaves literal original voice and dirty state unchanged")
+        report.expect(session.bankSlots == slotsBefore && session.bankDirty == dirtyBefore
+                      && session.bankLoadName == loadNameBefore
+                      && session.bankLease.sourcePath == originalPath
+                      && session.bankLease.sectionLabel == originalSection
+                      && session.bankLease === leaseBefore
+                      && session.bankLease.publicationRevision == revisionBefore,
+                      cppID: id, message: "A091: missing-basis conflict leaves the complete published bank view and revision unchanged")
 
         let appliedOutcome: Result<AppliedBankEdit, Error> = Result {
             try runBlocking {
@@ -336,6 +345,20 @@ internal func bankMissingBasisAndApplied(report: CheckReport, fixtureRoot: Strin
                       cppID: id, message: "A054: applied view contains an occupied slot zero")
         report.expect(applied.slots.indices.contains(0) && applied.slots[0].voice == edited,
                       cppID: id, message: "A055: applied view contains the complete edited literal voice")
+        report.expect(session.bankSlots == applied.slots && session.bankDirty == applied.dirty
+                      && session.bankLoadName == applied.loadName
+                      && session.bankLease.sourcePath == applied.lease.sourcePath
+                      && session.bankLease.sectionLabel == applied.lease.sectionLabel
+                      && session.bankLease === applied.lease
+                      && session.bankLease.publicationRevision == applied.lease.publicationRevision
+                      && applied.lease.publicationRevision > revisionBefore,
+                      cppID: id, message: "matching edit returns the complete freshly adopted document bank view")
+        report.expect(session.bankSlots.indices.contains(0)
+                      && session.bankSlots[0] == BankSlotView(kind: BankSlotKind.editable, voice: edited),
+                      cppID: id, message: "matching edit publishes the independent complete edited slot literal")
+        report.expect(session.bankLease.sourcePath == originalPath
+                      && session.bankLease.sectionLabel == originalSection,
+                      cppID: id, message: "A098: matching edit retains the original published bank source and section")
         report.expect(applied.materializationToken == nil, cppID: id,
                       message: "A056: matching occupied-slot edit has no blank materialization")
         report.expect(session.bankSlots.first?.voice == edited

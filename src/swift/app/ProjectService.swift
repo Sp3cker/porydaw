@@ -168,7 +168,8 @@ public final class NativeBankLease: Sendable {
     public let sourcePath: String
     public let sectionLabel: String
     internal let publicationOwner: UUID
-    internal let publicationRevision: UInt64
+    /// Monotonically increasing revision of this published project bank view.
+    public let publicationRevision: UInt64
 
     fileprivate init(handle: ProjectBankLease) {
         self.handle = handle

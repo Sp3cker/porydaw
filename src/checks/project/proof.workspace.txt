@@ -12,6 +12,8 @@ Swift counterpart: src/checks/workspace/session_io.swift
 Swift/QML counterpart: src/checks/editorqml/tst_ShellOpenFailure.qml
 Task-139 SHA-256: src/checks/workspace/session_io.swift 8b430d23f7c5076503cf7162a68e0ac79937814be7284dcf200a6bd142437b86
 Task-139 SHA-256: src/checks/editorqml/tst_ShellOpenFailure.qml 75a3f26c5465f0b9bcb9ef07e4137097b1e2237d0a3d17f62d0f72de744711f1
+Task-152 SHA-256: src/checks/workspace/bank_edits.swift a868e24ab5f0323d67eb11937b2fe07243fed6f6f1e391f9c816d28f060de519
+Task-152 SHA-256: src/swift/app/ProjectService.swift 8b91d6a9ff0a6ea46cfeabec68fb0f94f160013aabf403d19d772efa1f7456ef
 
 
 Task-139 project command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-projectsession --verbose
@@ -1253,8 +1255,8 @@ Original expression:
   QVERIFY(bound->song == *route101)
 
 A084 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:586
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in bank_edits.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Disposition: NATIVE-SETUP
+Mapping/reason: The C++ harness openReady fixture guard is native setup; Swift scenario setup does not independently assert this harness precondition.
 Source context since previous assertion:
   ;
       }
@@ -1277,8 +1279,8 @@ Original expression:
   QVERIFY2(openReady(error), qPrintable(error))
 
 A085 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:588
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in bank_edits.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Disposition: NATIVE-SETUP
+Mapping/reason: The C++ test opens the workspace through its native openReady fixture guard; this Swift scenario does not prove that harness setup predicate.
 Source context since previous assertion:
   ;
       const std::optional<SongName> route101 = SongName::create(QStringLiteral("mus_route101"));
@@ -1287,8 +1289,8 @@ Original expression:
   QVERIFY(route101)
 
 A086 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:594
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in bank_edits.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Disposition: NATIVE-SETUP
+Mapping/reason: The C++ route101 SongName construction is a native harness setup guard; the Swift bank scenario does not test that C++ fixture prerequisite.
 Source context since previous assertion:
   ;
       if (!route101)
@@ -1302,8 +1304,8 @@ Original expression:
                qPrintable(error))
 
 A087 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:596
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in bank_edits.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: The exact three-entry publication-deque count/sequence is native event-log representation, not a Swift bank-state assertion; the user-visible edit outcomes are covered by S014–S021.
 Source context since previous assertion:
   ;
 
@@ -1311,8 +1313,8 @@ Original expression:
   QCOMPARE(static_cast<int>(m_log.size()), mark + 3)
 
 A088 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:598
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in bank_edits.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Disposition: NATIVE-SETUP
+Mapping/reason: The exact event-count wait is a native workspace harness guard; Swift bank checks do not assert its ProjectWorkspace publication precondition.
 Source context since previous assertion:
   ;
       const auto *const viewEvent = std::get_if<ProjectEvent>(&m_log[mark + 1]);
@@ -1321,8 +1323,8 @@ Original expression:
   QVERIFY(viewEvent)
 
 A089 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:602
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in bank_edits.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Disposition: NATIVE-SETUP
+Mapping/reason: The C++ view-event presence guard validates a native publication-log setup step; no Swift assertion establishes this event-log precondition.
 Source context since previous assertion:
   ;
       if (!viewEvent)
@@ -1333,8 +1335,8 @@ Original expression:
   QVERIFY(view)
 
 A090 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:606
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in bank_edits.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Disposition: NATIVE-SETUP
+Mapping/reason: The C++ LoadedBankView extraction and filled-slot guard are native harness setup; they establish inputs for later assertions, not an independently ported Swift behavior.
 Source context since previous assertion:
   ;
       if (!view)
@@ -1345,8 +1347,8 @@ Original expression:
   QVERIFY(filled >= 0)
 
 A091 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:619
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in bank_edits.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Disposition: MATCHED
+Mapping: S013 (bankMissingBasisAndApplied asserts that the missing-basis conflict preserves the complete bank view, lease identity, and publication revision; cppID is ProjectIoMutationsTest::editConflictVsApplied).
 Source context since previous assertion:
   ;
       if (filled < 0)
@@ -1375,8 +1377,8 @@ Original expression:
                    qPrintable(error))
 
 A092 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:635
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in bank_edits.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: The Qt publication-deque event-variant lookup is retired representation; the consumer-visible missing-basis conflict and unchanged published bank state are asserted by S013.
 Source context since previous assertion:
   ;
           break;
@@ -1392,8 +1394,8 @@ Original expression:
               qPrintable(error))
 
 A093 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:638
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in bank_edits.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: Exact publication-deque event cardinality is native event-log representation; the applied document/receipt behavior and edited slot value are asserted independently by S014–S021.
 Source context since previous assertion:
   ;
 
@@ -1401,8 +1403,8 @@ Original expression:
   QCOMPARE(static_cast<int>(m_log.size()), mark + 2)
 
 A094 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:641
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in bank_edits.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: A non-null pointer into the C++ event deque has no Swift counterpart; the applied bank result, complete adopted view, and edited slot behavior are asserted by S014–S021.
 Source context since previous assertion:
   ;
           const auto *const appliedView = std::get_if<ProjectEvent>(&m_log[mark]);
@@ -1412,8 +1414,8 @@ Original expression:
   QVERIFY(appliedView)
 
 A095 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:642
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in bank_edits.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: A non-null pointer into the C++ event deque has no Swift counterpart; the Swift value receipt and its complete adopted bank view are checked by S014–S021.
 Source context since previous assertion:
   ;
 
@@ -1421,8 +1423,8 @@ Original expression:
   QVERIFY(receipt)
 
 A096 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:644
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in bank_edits.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: The Qt LoadedBankView variant check in the publication deque is native representation; independent consumer behavior is checked by the returned and adopted Swift bank values S014–S021.
 Source context since previous assertion:
   ;
           if (appliedView)
@@ -1431,8 +1433,8 @@ Original expression:
   QVERIFY(std::holds_alternative<LoadedBankView>(*appliedView))
 
 A097 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:647
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in bank_edits.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: The Qt VoicegroupEditApplied event-variant guard is retired event-log representation; Swift receipt adoption and complete changed bank state are proven by S014–S021.
 Source context since previous assertion:
   ;
           if (receipt) {
@@ -1442,8 +1444,8 @@ Original expression:
   QVERIFY(applied)
 
 A098 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:649
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in bank_edits.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Disposition: MATCHED
+Mapping: S022 (bankMissingBasisAndApplied asserts that a matching applied edit retains the originally published source path and section; cppID is ProjectIoMutationsTest::editConflictVsApplied).
 Source context since previous assertion:
   ;
               if (applied)
@@ -1453,7 +1455,7 @@ Original expression:
 
 A099 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:656
 Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in bank_edits.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Mapping/reason: No Swift predicate exercises a ghost VoicegroupId ingress or receipt identity comparison under that ingress; the fork and this brief forbid adding ghost-ID ingress, so this assertion remains unproved.
 Source context since previous assertion:
   ;
           }
@@ -1468,7 +1470,7 @@ Original expression:
 
 A100 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:661
 Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in bank_edits.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Mapping/reason: Swift does not create or submit the C++ ghost VoicegroupId or assert its ingress; the fork and this brief forbid ghost-ID ingress, leaving this setup and subsequent failure path unproved.
 Source context since previous assertion:
   ;
           if (!ghost)
@@ -1543,3 +1545,37 @@ Anchor: message "A014 failed replacement retains the prior project root"
 
 S012 | checkFailedProjectSwitch (lines 103-104: report.expectEqual(expected: true, actual: app.projectOpen, cppID: id, what: "A015 failed replacement leaves the prior project open")) | src/checks/workspace/session_io.swift
 Anchor: message "A015 failed replacement leaves the prior project open"
+
+S013 | bankMissingBasisAndApplied (line 324: report.expect(session.bankSlots == slotsBefore && session.bankDirty == dirtyBefore && session.bankLoadName == loadNameBefore && session.bankLease.sourcePath == originalPath && session.bankLease.sectionLabel == originalSection && session.bankLease === leaseBefore && session.bankLease.publicationRevision == revisionBefore, cppID: id, message: "A091: missing-basis conflict leaves the complete published bank view and revision unchanged")) | src/checks/workspace/bank_edits.swift
+Anchor: message "A091: missing-basis conflict leaves the complete published bank view and revision unchanged"
+
+S014 | bankMissingBasisAndApplied (line 333: report.expect(returnedReceipt?.dirty == true, cppID: id, message: "A051: matching edit returns a bank-dirty applied receipt")) | src/checks/workspace/bank_edits.swift
+Anchor: message "A051: matching edit returns a bank-dirty applied receipt"
+
+S015 | bankMissingBasisAndApplied (line 340: report.expect(applied.slots.indices.contains(0) && applied.slots[0].kind == BankSlotKind.editable, cppID: id, message: "A052: matching edit returns an editable applied slot view")) | src/checks/workspace/bank_edits.swift
+Anchor: message "A052: matching edit returns an editable applied slot view"
+
+S016 | bankMissingBasisAndApplied (line 343: report.expect(applied.lease.sourcePath == originalPath && applied.lease.sectionLabel == originalSection, cppID: id, message: "A053: applied view retains the bank identity captured at initial load")) | src/checks/workspace/bank_edits.swift
+Anchor: message "A053: applied view retains the bank identity captured at initial load"
+
+S017 | bankMissingBasisAndApplied (line 345: report.expect(applied.slots.indices.contains(0) && applied.slots[0].voice != nil, cppID: id, message: "A054: applied view contains an occupied slot zero")) | src/checks/workspace/bank_edits.swift
+Anchor: message "A054: applied view contains an occupied slot zero"
+
+S018 | bankMissingBasisAndApplied (line 347: report.expect(applied.slots.indices.contains(0) && applied.slots[0].voice == edited, cppID: id, message: "A055: applied view contains the complete edited literal voice")) | src/checks/workspace/bank_edits.swift
+Anchor: message "A055: applied view contains the complete edited literal voice"
+
+S019 | bankMissingBasisAndApplied (line 363: report.expect(applied.materializationToken == nil, cppID: id, message: "A056: matching occupied-slot edit has no blank materialization")) | src/checks/workspace/bank_edits.swift
+Anchor: message "A056: matching occupied-slot edit has no blank materialization"
+
+S020 | bankMissingBasisAndApplied (line 355: report.expect(session.bankSlots == applied.slots && session.bankDirty == applied.dirty && session.bankLoadName == applied.loadName && session.bankLease.sourcePath == applied.lease.sourcePath && session.bankLease.sectionLabel == applied.lease.sectionLabel && session.bankLease === applied.lease && session.bankLease.publicationRevision == applied.lease.publicationRevision && applied.lease.publicationRevision > revisionBefore, cppID: id, message: "matching edit returns the complete freshly adopted document bank view")) | src/checks/workspace/bank_edits.swift
+Anchor: message "matching edit returns the complete freshly adopted document bank view"
+
+S021 | bankMissingBasisAndApplied (line 358: report.expect(session.bankSlots.indices.contains(0) && session.bankSlots[0] == BankSlotView(kind: BankSlotKind.editable, voice: edited), cppID: id, message: "matching edit publishes the independent complete edited slot literal")) | src/checks/workspace/bank_edits.swift
+Anchor: message "matching edit publishes the independent complete edited slot literal"
+
+S022 | bankMissingBasisAndApplied (line 361: report.expect(session.bankLease.sourcePath == originalPath && session.bankLease.sectionLabel == originalSection, cppID: id, message: "A098: matching edit retains the original published bank source and section")) | src/checks/workspace/bank_edits.swift
+Anchor: message "A098: matching edit retains the original published bank source and section"
+
+Task-152 command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-bankhistory --verbose
+Task-152 result: PASS — build: ok (21.89s); ok: swiftcore-bankhistory (2.11s); verify: 1/36 ok (35 skipped); run_checks: PASS (implementer-reported in agent://Task152 for the hashes above; not rerun by ledger writer).
+Task-152 executed-proof result: `deno task proof check --executed` exited 1 for unrelated themelayout S020, voicegroup sourceediting S092, and voicegroup A081 without executed predicate (implementer-reported in agent://Task152; this is not a successful executed-proof result).

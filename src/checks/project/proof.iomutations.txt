@@ -1326,42 +1326,42 @@ S015 | bankConflicts | src/checks/workspace/bank_edits.swift
 Anchor: message "initial conflict leaves canRedo unchanged"
 S016 | bankMissingBasisAndApplied | src/checks/workspace/bank_edits.swift
 Anchor: message "A048: missing-basis bank edit returns a typed project failure"
-Line: 304
+Line: 308
 Predicate: report.expect(conflict != nil, cppID: id, message: "A048: missing-basis bank edit returns a typed project failure")
 
 S017 | bankMissingBasisAndApplied | src/checks/workspace/bank_edits.swift
 Anchor: message "A049: missing-basis bank edit yields the bank conflict variant"
-Line: 306
+Line: 310
 Predicate: report.expect(conflict == .bankConflict, cppID: id, message: "A049: missing-basis bank edit yields the bank conflict variant")
 
 S018 | bankMissingBasisAndApplied | src/checks/workspace/bank_edits.swift
 Anchor: message "A051: matching edit returns a bank-dirty applied receipt"
-Line: 323
+Line: 332
 Predicate: report.expect(returnedReceipt?.dirty == true, cppID: id, message: "A051: matching edit returns a bank-dirty applied receipt")
 
 S019 | bankMissingBasisAndApplied | src/checks/workspace/bank_edits.swift
 Anchor: message "A052: matching edit returns an editable applied slot view"
-Line: 329
+Line: 338
 Predicate: report.expect(applied.slots.indices.contains(0) && applied.slots[0].kind == BankSlotKind.editable, cppID: id, message: "A052: matching edit returns an editable applied slot view")
 
 S020 | bankMissingBasisAndApplied | src/checks/workspace/bank_edits.swift
 Anchor: message "A053: applied view retains the bank identity captured at initial load"
-Line: 332
+Line: 341
 Predicate: report.expect(applied.lease.sourcePath == originalPath && applied.lease.sectionLabel == originalSection, cppID: id, message: "A053: applied view retains the bank identity captured at initial load")
 
 S021 | bankMissingBasisAndApplied | src/checks/workspace/bank_edits.swift
 Anchor: message "A054: applied view contains an occupied slot zero"
-Line: 335
+Line: 344
 Predicate: report.expect(applied.slots.indices.contains(0) && applied.slots[0].voice != nil, cppID: id, message: "A054: applied view contains an occupied slot zero")
 
 S022 | bankMissingBasisAndApplied | src/checks/workspace/bank_edits.swift
 Anchor: message "A055: applied view contains the complete edited literal voice"
-Line: 337
+Line: 346
 Predicate: report.expect(applied.slots.indices.contains(0) && applied.slots[0].voice == edited, cppID: id, message: "A055: applied view contains the complete edited literal voice")
 
 S023 | bankMissingBasisAndApplied | src/checks/workspace/bank_edits.swift
 Anchor: message "A056: matching occupied-slot edit has no blank materialization"
-Line: 339
+Line: 362
 Predicate: report.expect(applied.materializationToken == nil, cppID: id, message: "A056: matching occupied-slot edit has no blank materialization")
 
 S024 | sessionLegacySidecarPersistence | src/checks/workspace/session_save.swift
