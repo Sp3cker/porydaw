@@ -99,7 +99,7 @@ TestCase {
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production ShellWindow loads")
         shell.requestActivate()
-        tryCompare(shell, "active", true, 3000)
+        tryCompare(shell, "active", true, 3000, "the two-song shell window becomes active")
         if (beforeOpen)
             beforeOpen()
         var session = shell.shellPresenter.session
@@ -145,6 +145,15 @@ TestCase {
         var tabs = shell.shellPresenter.session.songTabs
         var page = findChild(pages, "songTab_" + tabs.selectedId)
         return page ? findChild(page, "swiftRollOverlay") : null
+    }
+    function focusBelongsTo(page) {
+        var focused = shell.activeFocusItem
+        while (focused) {
+            if (focused === page)
+                return true
+            focused = focused.parent
+        }
+        return false
     }
 
     function selectDrawnVelocityNote(surface) {
@@ -597,12 +606,27 @@ TestCase {
         var firstButton = findChild(shell.sceneLoader.item, "songTabSelect_" + firstId)
         var secondButton = findChild(shell.sceneLoader.item, "songTabSelect_" + secondId)
         verify(firstButton && secondButton, "the two original tab controls are drawn")
+        var readyFirst = findChild(shell.sceneLoader.item, "songTab_" + firstId)
+        var readySecond = findChild(shell.sceneLoader.item, "songTab_" + secondId)
+        verify(readyFirst && readySecond && readyFirst !== readySecond,
+               "both real songs have distinct ready pages")
+        var startingRoll = findChild(readySecond, "swiftRollInput")
+        verify(startingRoll, "the newly opened song exposes its real roll input")
+        mouseClick(startingRoll, startingRoll.width - 2, startingRoll.height - 2)
+        tryCompare(startingRoll, "activeFocus", true, 3000,
+                   "entering the new song gives its roll keyboard ownership")
         mouseClick(firstButton, firstButton.width / 3, firstButton.height / 2)
         tryCompare(tabs, "selectedId", firstId, 3000,
                    "a real first-tab click retargets the selected workspace")
+        tryVerify(function() { return focusBelongsTo(readyFirst) }, 3000,
+                  "switching from a focused roll targets the first ready editor")
         mouseClick(secondButton, secondButton.width / 3, secondButton.height / 2)
         tryCompare(tabs, "selectedId", secondId, 3000,
                    "a real second-tab click restores Littleroot's workspace")
+        tryVerify(function() { return focusBelongsTo(readySecond) }, 3000,
+                  "switching back targets the second ready editor")
+        compare(readyFirst.visible, false, "the unselected ready page does not receive input")
+        compare(readySecond.visible, true, "the selected ready page is displayed")
 
         verify(shell.shellPresenter.actionSequences("roll.copy").length > 0,
                "native Copy is registered as a window shortcut")
@@ -616,6 +640,11 @@ TestCase {
         var firstTrack = headers.itemAt(surface.gridModel.trackIndex)
         verify(firstTrack && !firstTrack.isAddTrack, "the selected track header is available")
         compare(firstTrack.soloChecked, false)
+        var inactiveSummary = findChild(readyFirst, "swiftRollOverlay").gridModel.noteSummary
+        var inactiveMix = findChild(findChild(readyFirst, "swiftRollOverlay"),
+                                    "timelineTrackHeaderRows").itemAt(surface.gridModel.trackIndex)
+        verify(inactiveMix, "the inactive track header remains mounted")
+        var inactiveSoloBefore = inactiveMix.soloChecked
         var roll = findChild(surface, "swiftRollInput")
         verify(roll && roll.visible, "the real roll owns raw editor keys")
         selectDrawnVelocityNote(surface)
@@ -637,9 +666,15 @@ TestCase {
         compare(menuSolo.enabled, true, "Solo is enabled for the selected track")
         editMenu.close()
         compare(shell.shellPresenter.actionEnabled("roll.copy"), true)
+        var noteSummaryBeforeCopy = surface.gridModel.noteSummary
         var beforeCopy = JSON.parse(surface.gridModel.noteSummary)
         var copied = beforeCopy.filter(function(note) { return note.selected })
         compare(copied.length, 1, "the real node click selected one note")
+        var drawerToggle = findChild(surface, "drawerToggle_velocity")
+        verify(drawerToggle && drawerToggle.visible, "the mounted drawer has a real chrome toggle")
+        shell.shellPresenter.activate("view.velocity_drawer")
+        tryCompare(surface.drawerPresenter.section(bootstrap.velocitySectionKind()),
+                   "visible", false, 3000, "Copy runs with every drawer section hidden")
         compare(session.documentDirty, false, "Copy starts from a clean song")
         roll.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(roll, "activeFocus", true, 3000,
@@ -652,31 +687,57 @@ TestCase {
         compare(clip[1], 1, "the copied track contains one selected note")
         compare(clip[2], copied[0].pitch, "the copied note retains its original key")
         compare(session.documentDirty, false, "the native window Copy never edits the song")
+        compare(surface.gridModel.noteSummary, noteSummaryBeforeCopy,
+                "Copy preserves the active song's selected note bytes")
+        compare(findChild(readyFirst, "swiftRollOverlay").gridModel.noteSummary, inactiveSummary,
+                "Copy never changes the inactive ready song")
+        compare(firstTrack.soloChecked, false, "Copy never changes the selected track mix")
+        var ruler = findChild(surface, "timelineRulerInput")
+        verify(ruler && ruler.width > 80, "the mounted ruler receives time-range input")
+        mousePress(ruler, ruler.width * 0.25, ruler.height / 2, Qt.LeftButton)
+        mouseMove(ruler, ruler.width * 0.65, ruler.height / 2, -1, Qt.LeftButton)
+        mouseRelease(ruler, ruler.width * 0.65, ruler.height / 2, Qt.LeftButton)
+        tryVerify(function() { return paintedTimeRange(surface, roll) !== null }, 3000,
+                  "ruler input paints the selected time range")
+        var copyCountBeforeRange = copyActivatedSpy.count
+        keySequence(StandardKey.Copy)
+        compare(copyActivatedSpy.count, copyCountBeforeRange + 1,
+                "time-range Copy activates the same window shortcut once")
+        compare(session.documentDirty, false, "time-range Copy never dirties the active song")
+        compare(findChild(readyFirst, "swiftRollOverlay").gridModel.noteSummary, inactiveSummary,
+                "time-range Copy leaves the inactive song untouched")
 
         roll.forceActiveFocus(Qt.OtherFocusReason)
         keyClick(Qt.Key_Escape)
         tryCompare(session.velocityPage(), "selectedCount", 0, 3000,
                    "the native text probe starts with no musical selection")
-        var textProbe = textProbeComponent.createObject(shell.contentItem, { x: 20, y: 20 })
-        verify(textProbe, "the local text field is a child of the real window")
-        textProbe.selectAll()
-        textProbe.forceActiveFocus(Qt.OtherFocusReason)
-        tryCompare(textProbe, "activeFocus", true, 3000)
+        var search = findChild(shell, "songListSearch")
+        verify(search, "the production song-list search is mounted")
+        search.text = "copy probe"
+        search.selectAll()
+        search.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(search, "activeFocus", true, 3000)
+        compare(search.selectedText, "copy probe", "the production editor selects the complete text")
         verify(bootstrap.clearClipboardProbe(), "the old song clip is cleared")
+        compare(search.activeFocus, true,
+                "the production song search owns text Copy instead of the window")
+        var copyCountBeforeText = copyActivatedSpy.count
         keySequence(StandardKey.Copy)
-        textProbe.text = ""
-        textProbe.paste()
-        compare(textProbe.text, "native copy text probe",
-                "focused text Copy replaces the cleared clipboard with text")
+        search.clear()
+        keySequence(StandardKey.Paste)
+        compare(search.text, "copy probe",
+                "native text Copy and Paste restore the exact production search text")
+        compare(copyActivatedSpy.count, copyCountBeforeText,
+                "text Copy never activates the window Copy shortcut")
 
-        var shortcutTarget = shortcutTargetComponent.createObject(shell.contentItem,
-                                                                  { x: 260, y: 20 })
-        verify(shortcutTarget, "a non-text window child receives Solo")
-        shortcutTarget.forceActiveFocus(Qt.OtherFocusReason)
-        tryCompare(shortcutTarget, "activeFocus", true, 3000)
+        drawerToggle.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(drawerToggle, "activeFocus", true, 3000,
+                   "production drawer chrome retains intentional non-text focus")
         keyClick(Qt.Key_S)
         tryCompare(firstTrack, "soloChecked", true, 3000)
         compare(soloActivatedSpy.count, 1, "first non-text S activates Solo once")
+        compare(inactiveMix.soloChecked, inactiveSoloBefore,
+                "chrome Solo leaves the inactive song mix untouched")
         keyClick(Qt.Key_S)
         tryCompare(firstTrack, "soloChecked", false, 3000)
         compare(soloActivatedSpy.count, 2, "second non-text S activates Solo twice total")
@@ -688,13 +749,21 @@ TestCase {
         keyClick(Qt.Key_S)
         tryCompare(firstTrack, "soloChecked", false, 3000)
         compare(soloActivatedSpy.count, 4, "second roll S activates Solo four times total")
-        textProbe.forceActiveFocus(Qt.OtherFocusReason)
-        tryCompare(textProbe, "activeFocus", true, 3000)
+        compare(inactiveMix.soloChecked, inactiveSoloBefore,
+                "roll Solo leaves the inactive song mix untouched")
+        search.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(search, "activeFocus", true, 3000)
         keyClick(Qt.Key_S)
         compare(firstTrack.soloChecked, false, "text-field S never changes Solo")
         compare(soloActivatedSpy.count, 4, "text-field S never activates Solo")
-        textProbe.destroy()
-        shortcutTarget.destroy()
+        shell.shellPresenter.activate("view.velocity_drawer")
+        tryCompare(surface.drawerPresenter.section(bootstrap.velocitySectionKind()),
+                   "visible", true, 3000, "the velocity page returns for the numeric prompt")
+        var notePoint = mountedNotePoint(surface, roll, copied[0].id)
+        verify(notePoint, "the original copied note remains drawn after the time-range Copy")
+        mouseClick(roll, notePoint.x, notePoint.y)
+        tryVerify(function() { return paintedTimeRange(surface, roll) === null }, 3000,
+                  "entering the roll note replaces the ruler time-range selection")
         selectDrawnVelocityNote(surface)
 
         session.performGridCommand(bootstrap.setVelocityCommand())
@@ -809,6 +878,7 @@ TestCase {
         var secondId = tabs.selectedId
         var source = selectedSurface()
         verify(source && source.gridModel, "the source tab has a grid")
+        compare(source.visible, true, "the selected ready source page accepts roll input")
         selectDrawnVelocityNote(source)
         var sourceSummary = source.gridModel.noteSummary
         var selected = JSON.parse(sourceSummary).filter(function(note) { return note.selected })
@@ -819,19 +889,38 @@ TestCase {
         keySequence(StandardKey.Copy)
         compare(JSON.parse(bootstrap.copiedClipSummary())[2], selected[0].pitch,
                 "Copy places the selected source note on the host clipboard")
+        var search = findChild(shell, "songListSearch")
+        verify(search, "the production chrome search is available beside both tabs")
+        search.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(search, "activeFocus", true, 3000,
+                   "intentional chrome focus precedes the real tab switch")
 
         var firstButton = findChild(shell.sceneLoader.item, "songTabSelect_" + firstId)
         verify(firstButton, "the destination tab control exists")
         mouseClick(firstButton, firstButton.width / 3, firstButton.height / 2)
         tryCompare(tabs, "selectedId", firstId, 3000)
+        compare(search.activeFocus, true,
+                "switching ready tabs preserves the intentional chrome text focus")
         var destination = selectedSurface()
         verify(destination && destination.gridModel, "the destination tab has a grid")
+        tryCompare(findChild(shell.sceneLoader.item, "songTab_" + secondId),
+                   "visible", false, 3000,
+                   "the inactive ready source page stops receiving input")
+        tryCompare(findChild(shell.sceneLoader.item, "songTab_" + firstId),
+                   "visible", true, 3000,
+                   "the destination ready page replaces the source")
+        compare(search.activeFocus, true,
+                "the destination stays unfocused until the user enters its editor")
         var destinationBefore = JSON.parse(destination.gridModel.noteSummary)
         var destinationIDs = destinationBefore.map(function(note) { return note.id })
         var destinationTrack = destination.gridModel.trackIndex
         var destinationRoll = findChild(destination, "swiftRollInput")
-        destinationRoll.forceActiveFocus(Qt.OtherFocusReason)
+        mouseClick(destinationRoll, destinationRoll.width - 2, destinationRoll.height - 2)
         tryCompare(destinationRoll, "activeFocus", true, 3000)
+        tryVerify(function() { return focusBelongsTo(findChild(shell.sceneLoader.item,
+                                                      "songTab_" + firstId)) }, 3000,
+                  "pointer entry transfers chrome focus to the selected ready editor")
+        compare(sourceRoll.activeFocus, false, "tab input cannot remain with the inactive source")
         keySequence(StandardKey.Paste)
         verify(waitForNative(function() {
             var notes = JSON.parse(destination.gridModel.noteSummary)

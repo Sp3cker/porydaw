@@ -47,21 +47,43 @@ internal func runEditRoutingChecks(report: CheckReport, fixtureRoot: String) {
     session.selectedTrack = firstTrack
 
     let copyID = "mainwindowrouting/MainWindowRoutingInputTest::copyActionRoutesCompleteClipAndTimeSelection"
+    let sourceTicksPerBeat = UInt32(document.state.file.division)
+    let copyIndex = document.history.undoIndex
+    let copyRevision = document.revision
+    let inactiveIndex = inactive.document.history.undoIndex
+    let inactiveRevision = inactive.document.revision
     session.addSelectedNote(note.id)
     report.expect(router.isAvailable(.copy), cppID: copyID,
                   message: "copy routes the complete clip and time selection")
     router.perform(.copy)
+    report.expect(document.history.undoIndex == copyIndex &&
+                  document.revision == copyRevision &&
+                  (try? document.state.file.encoded()) == original &&
+                  inactive.document.history.undoIndex == inactiveIndex &&
+                  inactive.document.revision == inactiveRevision &&
+                  (try? inactive.document.state.file.encoded()) == inactiveOriginal,
+                  cppID: copyID, message: "selected note Copy leaves both songs and histories untouched")
     let noteClip = clipboard.read()
-    let noteClipMatches: Bool
-    if let noteClip, let track = noteClip.clip.tracks.first,
-       let copied = track.notes.first {
-        noteClipMatches = noteClip.ticksPerBeat == document.state.file.division &&
-            noteClip.clip.span == 0 && noteClip.clip.tracks.count == 1 &&
-            track.track == firstTrack && track.notes.count == 1 &&
-            copied.key == note.pitch && copied.velocity == note.velocity
-    } else {
-        noteClipMatches = false
-    }
+    report.expect(noteClip != nil, cppID: copyID,
+                  message: "selected note Copy writes a readable clip")
+    report.expect(noteClip?.ticksPerBeat == sourceTicksPerBeat, cppID: copyID,
+                  message: "selected note Copy retains the source ticks per beat")
+    report.expect(noteClip?.clip.span == 0, cppID: copyID,
+                  message: "selected note Copy has zero clip span")
+    report.expect(noteClip?.clip.tracks.count == 1, cppID: copyID,
+                  message: "selected note Copy has exactly one track")
+    report.expect(noteClip?.clip.tracks.first?.notes.count == 1, cppID: copyID,
+                  message: "selected note Copy has exactly one note")
+    report.expect(noteClip?.clip.tracks.first?.notes.first?.key == note.pitch, cppID: copyID,
+                  message: "selected note Copy preserves its key")
+    report.expect(noteClip?.clip.tracks.first?.notes.first?.velocity == note.velocity,
+                  cppID: copyID, message: "selected note Copy preserves its velocity")
+    let noteClipMatches = noteClip?.ticksPerBeat == sourceTicksPerBeat &&
+        noteClip?.clip.span == 0 && noteClip?.clip.tracks.count == 1 &&
+        noteClip?.clip.tracks.first?.track == firstTrack &&
+        noteClip?.clip.tracks.first?.notes.count == 1 &&
+        noteClip?.clip.tracks.first?.notes.first?.key == note.pitch &&
+        noteClip?.clip.tracks.first?.notes.first?.velocity == note.velocity
     report.expect(noteClipMatches, cppID: copyID,
                   message: "note copy publishes the entire selected note payload")
     session.clearSelectedNotes()
@@ -70,32 +92,45 @@ internal func runEditRoutingChecks(report: CheckReport, fixtureRoot: String) {
         range: TimeRange(startTick: note.tick, endTick: note.tick + span),
         scope: .tracks([firstTrack])))
     router.perform(.copy)
+    report.expect(document.history.undoIndex == copyIndex &&
+                  document.revision == copyRevision &&
+                  (try? document.state.file.encoded()) == original &&
+                  inactive.document.history.undoIndex == inactiveIndex &&
+                  inactive.document.revision == inactiveRevision &&
+                  (try? inactive.document.state.file.encoded()) == inactiveOriginal,
+                  cppID: copyID, message: "both Copy paths leave both songs and histories untouched")
     let rangeClip = clipboard.read()
-    let rangeClipMatches: Bool
-    if let rangeClip {
-        let selectedTrackCopy = rangeClip.clip.tracks.first(where: { $0.track == firstTrack })
-        let copiedRangeNote = selectedTrackCopy?.notes.first(where: {
-            $0.relTick == 0 && $0.key == note.pitch && $0.velocity == note.velocity
-        })
-        rangeClipMatches = rangeClip.ticksPerBeat == document.state.file.division &&
-            rangeClip.clip.span == span && copiedRangeNote != nil
-    } else {
-        rangeClipMatches = false
-    }
+    report.expect(rangeClip != nil, cppID: copyID,
+                  message: "selected time-range Copy writes a readable clip")
+    report.expect(rangeClip?.ticksPerBeat == sourceTicksPerBeat, cppID: copyID,
+                  message: "selected time-range Copy retains the source ticks per beat")
+    report.expect(rangeClip?.clip.span == span, cppID: copyID,
+                  message: "selected time-range Copy preserves its exact span")
+    let selectedTrackCopy = rangeClip?.clip.tracks.first(where: { $0.track == firstTrack })
+    let copiedRangeNote = selectedTrackCopy?.notes.first(where: {
+        $0.relTick == 0 && $0.key == note.pitch && $0.velocity == note.velocity
+    })
+    let rangeClipMatches = rangeClip?.ticksPerBeat == sourceTicksPerBeat &&
+        rangeClip?.clip.span == span && copiedRangeNote != nil
     report.expect(rangeClipMatches, cppID: copyID,
                   message: "a time selection supersedes note copy and preserves its exact span")
     page.clearTimeSelection()
 
     let soloID = "mainwindowrouting/MainWindowRoutingInputTest::soloActionUsesSingleWindowOwnerAndRespectsTextFocus"
     let beforeSolo = session.soloedTracks
+    let inactiveSolo = inactive.soloedTracks
     report.expect(router.isAvailable(.soloTracks), cppID: soloID,
                   message: "solo keeps one enabled editor route for the selected track")
     router.perform(.soloTracks)
     report.expect(session.soloedTracks != beforeSolo && session.soloedTracks.contains(firstTrack),
                   cppID: soloID, message: "the selected track becomes solo through the editor route")
+    report.expect(inactive.soloedTracks == inactiveSolo, cppID: soloID,
+                  message: "the first Solo leaves the inactive song mix unchanged")
     router.perform(.soloTracks)
     report.expect(session.soloedTracks == beforeSolo, cppID: soloID,
                   message: "a second solo command restores the previous mix")
+    report.expect(inactive.soloedTracks == inactiveSolo, cppID: soloID,
+                  message: "the second Solo leaves the inactive song mix unchanged")
 
     let insertID = "mainwindowrouting/MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes"
     let playbackID = "mainwindowrouting/MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback"
