@@ -24,8 +24,10 @@ rebuild; user grid rework 7e292570. Wave 139–146 landed: 139 (e7e5cca9), 140 +
 (5c3594ce), 152 (036e58d1), 153 (96cc9169), 154 (8f040917); editing-literal evidence fix
 (0b12f4e7). Gate on 0b12f4e7: verify 36/36, verify:shell 75/75, verify:qml 1/1,
 verify:qml-roll 1/1, verify:bridge 0 findings, `proof check --executed` 0 errors (0 not
-executed). Next: wave 155–162 (§18). Census: proof files 155 → 65; open GAP+PARTIAL rows
-3703 → 1243 (971 GAP + 272 PARTIAL); strict-mapping debt 485 → 293.
+executed). Wave 155–162 landed except 158 (in flight): 155 (3b268b98), 156 (4625fb42),
+157 (57932bdc), 159 (bd2a11a9), 160 (db8e2fb3), 161 (d34169dd), 162 (07f1308d). Next:
+wave 163–170 (§19). Census: proof files 155 → 63; open GAP+PARTIAL rows 3703 → ~1173
+(wave-163 planning: 63 ledgers, strict-mapping debt 293).
 Known residues: QtBridge queues property notifications, so same-GUI-pass geometry clauses
 (host A095) stay PARTIAL; lanes use the null audio backend, so physical-output conjuncts
 stay PARTIAL.
@@ -2665,4 +2667,121 @@ and the computed write-set intersections; no application suite was run.
 - Savecore A016–A026 catalog-outage policy; P3 WAV export; P4 sample studio; transport
   A009/A010/A013; physical audio output; ImageIO decoding; strict-mapping debt outside
   Task146's exception: all unchanged.
+
+## 19. Wave 163–170 — Review159 fix, renewed mapping exception and identity closure
+
+### Selection and bounded briefs
+
+Planning baseline: `deno task proof list` reports **63 ledgers** with Task 158 in
+flight (its ledger and QML file stay out of every write set). Strict-mapping debt is
+**293 sites**; a programmatic join (debt A-id → cited S-ids → anchor kind → emitted
+literals → evidence rows) classified every site as one of three shapes:
+**func-only** (the cited S-site carries `Anchor: function` while its function emits a
+distinctive executed literal — a pure anchor upgrade), **dangling** (the Mapping cites
+S-ids that do not exist in the ledger's index), and **no-mapping** (MATCHED rows with
+no Mapping line at all — per-row re-derivation). `proof check --executed` is clean
+(0 not executed) after 0b12f4e7. The user renewed task-146's bounded mapping
+exception: convert only sites whose existing literal predicates already execute.
+
+| Task | Surface / brief | Sites | Group | Route / seat |
+|---|---|---:|---|---|
+| 163 | [Reload drops a stale primary track instead of installing it](task-163-brief.md) | 1 fix + regression | A | SDD-track / sdd-implementer — Review159 production defect on the mounted reload surface |
+| 164 | [Message-anchor the voicegroup bank and source-editing debt](task-164-brief.md) | 56 | A | SDD-track / sdd-implementer — anchor upgrades on verified executed literals |
+| 165 | [Message-anchor the import, gesture-contract, remap and presentation debt](task-165-brief.md) | 25 | A | SDD-track / sdd-implementer — anchor upgrades, 8 sites left with reasons |
+| 166 | [Repair windowtier_keyboard's dangling S citations](task-166-brief.md) | 20 | B | SDD-track / sdd-implementer — add the missing site entries the preamble credits |
+| 167 | [Re-audit project identity A001–A019 and close the ledger whole](task-167-brief.md) | 19 PARTIAL → MATCHED | A | SDD-track / sdd-implementer — executed predicates exist; whole-ledger deletion |
+| 168 | [Restore missing mappings in mainwindowrouting_native](task-168-brief.md) | 26 | B | SDD-track / sdd-implementer — per-row re-derivation pilot |
+| 169 | [Restore missing mappings in windowtier_lifetime](task-169-brief.md) | 22 | B | SDD-track / sdd-implementer — same shape as 168 |
+| 170 | [Restore missing mappings in nativewindowing](task-170-brief.md) | 39 | B | SDD-track / sdd-implementer — largest no-mapping cluster, track-header literals |
+| **Total** | | **182 debt + 19 rows + 1 fix** | | |
+
+Expected strict-debt movement: 293 − (56 + 25 + 20 + 26 + 22 + 39) = 105 remaining
+when every selected site converts; uncovered sites stay debt with written reasons, so
+the honest floor is higher. Identity (167) is the wave's whole-ledger closure: its 19
+PARTIAL rows are the ledger's only open rows and their predicates already execute
+under `projectidentitycheck`.
+
+### Unselected debt, with evidence
+
+- `swiftrollgated/clipboardchecks` (27): debt sites cite S054 (`pastedAt`, a QML
+  helper in `ShellClipboardSupport.qml`) whose function body emits no literals; the
+  proving predicates live in other functions, so conversion is S-site re-definition,
+  not a literal swap — outside this renewal's "existing literal per cited site" rule.
+- `midi/tst_midiexport` (23): `ExportChecks.swift` emits no `message:`/`what:`
+  literals; its evidence rows are QTest-style function names. No existing literals to
+  anchor.
+- `host/tst_hostadapter` (15): Task 158 is live-editing this ledger.
+- `samplecheck/analysis` (14): P4 sample studio exclusion.
+- Tails left with reasons inside selected ledgers: contract A028–A030, remap
+  A016/A029, themelayout_settings A035–A044 (QML-cited), selection A032/A060,
+  selftest_transport A014/A018, tabs_transport (7, no-mapping but small — rides a
+  future surface task).
+
+### Remaining GAP/PARTIAL census (rejection evidence unchanged)
+
+Scouts re-confirmed the wave-155 rejections: workspace A030–A083, ioflow A039–A065,
+iomutations A073–A097 are protocol deferrals with no event bus to assert against;
+retained duplicates executing session predicates; nativewindowing A055–A078 need
+rendered stimulus current inputs do not produce and A047 has no theme dialog;
+mainwindowrouting input GAPs are fixture guards, lifecycle close/reopen residues are
+project-store-snapshot blocked, and the foreign-window cluster has no proven Cocoa
+second-window lane; hostintegration A162 is fixture-setup proof and A174–A185 need a
+real window close/teardown contract; rollcheck presentation A018–A024 need a mounted
+polyphony-reveal consumer that does not exist (new feature scope, not proof closure);
+rollcheck remap PARTIALs are blocked by the single-selection-per-session fixture
+limit. Project identity was the one honest whole-ledger closure and is selected (167).
+
+### Conflict matrix and dispatch groups
+
+All eight complete write sets are pairwise disjoint, including conditional repairs:
+163 owns `ApplicationSession+Tabs.swift` + `tst_ShellTabsReload.qml`; 164–170 each own
+distinct proof ledgers (164/165 own disjoint ledger sets); 167 deletes
+`proof.identity.txt`. Lane sharing is read-only. Under the standing protocol, ledger
+files in a write set mean anchor ownership: implementers verify and hand the anchor
+inventory to the ledger writer, who applies it in the same commit as the task's
+evidence.
+
+| | 163 | 164 | 165 | 166 | 167 | 168 | 169 | 170 |
+|---|---|---|---|---|---|---|---|---|
+| each | — | — | — | — | — | — | — | — |
+
+| Group | Tasks | Note |
+|---|---|---|
+| A | 163, 164, 165, 167 | Direct work: production fix, verified-literal upgrades, executed-evidence closure. Dispatch immediately. |
+| B | 166, 168, 169, 170 | Re-derivation quartet (dangling citations and missing mappings); same methodology, one reviewer recommended. Also parallel-safe — grouping is for coherence, not sequencing. |
+
+### Shared constraints and verification ownership
+
+The §16–§18 contracts continue. The mapping exception is bounded exactly as renewed:
+only sites whose cited (or preamble-credited) predicates emit distinctive literals
+that resolve in live sources and appear in executed evidence convert; dispositions
+never change in 164–166/168–170; every task records an exact before/after
+`(ledger, A-id)` strict inventory; uncovered sites keep debt with written reasons.
+Task 167 upgrades dispositions only where executed evidence exists and deletes its
+ledger whole. 163 is a production behavior fix: fail-closed staging, real input, real
+prompt controls, independent expected literals.
+
+Writers run their brief's focused lanes under the lock/175-second alarm; no
+project-wide builds, tests, formatters or linters mid-flight; mounted lanes need the
+macOS Qt desktop. After accepted sources settle, the controller owns the project-wide
+gate once (§16's locked `verify --verbose`, `verify:shell --verbose`,
+`proof check --executed`) and reads `proof check --strict-mappings` as the exact debt
+inventory. Planning validation for this docs-only commit checked brief
+links/headings, the programmatic debt join, lane registrations
+(`vgbankcheck`, `projectstore-editing`, `swiftcore-midiimport`,
+`swiftcore-projectsession`, `shell-tabs-reload`, `shellwindow`, `shell-tabs`,
+`projectidentitycheck`), literal/evidence spot checks, and pairwise write-set
+disjointness; no application suite was run.
+
+### Deferred and excluded
+
+- Review159's neighbors stay as designed: only the unfiltered primary at
+  `ApplicationSession+Tabs.swift:177` changes; no new API, no persisted-recipe
+  migration (a stale saved selection simply drops to nil on restore).
+- clipboardchecks, midiexport, hostadapter, samplecheck and the small tails above
+  stay debt with their evidence; tabs_transport rides a future surface task.
+- All standing exclusions remain: savecore A016–A026, P3 WAV export, P4 sample
+  studio, transport A009/A010/A013, physical audio output, ImageIO decoding, the
+  pending-reload input gate, and no new strict-mapping scope beyond the renewed
+  clusters named here.
 
