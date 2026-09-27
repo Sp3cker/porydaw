@@ -11,44 +11,33 @@ Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted n
 
 
 
-Command: deno task verify --filter swiftcore
-Result: PASS - swiftcore harness 1/14 ok (13 sibling harnesses skipped by the filter). Provided by
-the controller handoff for this tree; not re-run by the ledger writer.
-Command: deno task verify:qml
-Result: PASS - editorqml-drawer 1/1 ok. Provided by the controller handoff for this tree; not
-re-run by the ledger writer.
+Command: deno task verify --filter swiftcore-projectsession --verbose; deno task verify:shell --filter shell-drawer-parity --verbose; deno task verify:qml
+Result: PASS - swiftcore-projectsession, shell-drawer-parity and editorqml-drawer lanes ok for this
+tree; not re-run by the ledger writer.
 
 A001 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:36
 Disposition: MATCHED
 Mapping: S115
 
 A002 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:37
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: the square pair's PSG-context availability is asserted as page.detentsAvailable && page.detentsEnabled (S107) and the wave page presents the same enabled detent control (S116); the noise row resolves its own page context (S115) but no predicate reads its availability, so the three-row site stays partly unproved.
-Original expression:
-  QTRY_VERIFY(m_area->isPsgContext())
+Disposition: MATCHED
+Mapping: S145
 
 A003 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:38
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: the intrinsic ruler is asserted for the square pair (S030) and for the wave page together with its enabled detent control (S116); the noise row's axis mode is not asserted in this flow, so the site stays partly unproved.
-Original expression:
-  QTRY_VERIFY(m_area->axis().mode() == VelocityAxis::Mode::Intrinsic)
+Disposition: MATCHED
+Mapping: S146
 
 A004 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:40
 Disposition: RETIRED-REPRESENTATION
 Mapping/reason: S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S030
 
 A005 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:42
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: the square pair's enabled detent control is asserted through the merged preference (S107) and the wave page's through S116; the legacy chrome's separate detentChecked widget state has no Swift predicate and the noise row is not asserted.
-Original expression:
-  QTRY_VERIFY(drawer->chrome().detentEnabled() && drawer->chrome().detentChecked())
+Disposition: MATCHED
+Mapping: S147
 
 A006 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:43
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: page.detentsEnabled, the documented VelocityArea::useDetents analogue, is asserted for the square pair (S107) and for the wave page (S116), and the per-family disable step is asserted by the toggle anchor (S117); the noise row's enabled read and the enable step itself are not asserted.
-Original expression:
-  QTRY_VERIFY(m_area->useDetents())
+Disposition: MATCHED
+Mapping: S148
 
 A007 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:47
 Disposition: MATCHED
@@ -97,22 +86,16 @@ Disposition: MATCHED
 Mapping: S033, S046, S052
 
 A018 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:80
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S034 asserts an unselected note previews nothing mid-preview for the square pair; the noise row and the wave page row (whose flow now executes, S126 clearing the preview only after the release) have no mid-preview absence predicate, so the site stays partly unproved.
-Original expression:
-  QVERIFY(!m_tab->view().previewVelocity(m_loudStacked.noteId).has_value())
+Disposition: MATCHED
+Mapping: S149
 
 A019 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:81
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S035 asserts the locked square drag stages no revision and S047 the locked noise drag; the wave page row's flow now executes (S121/S122 publish nothing while held) but no predicate reads the wave document revision, so its instance stays unproved.
-Original expression:
-  QCOMPARE(m_tab->document().revision(), revisionBefore)
+Disposition: MATCHED
+Mapping: S150
 
 A020 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:82
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: no executed predicate reads the undo depth during the drag; the deferral is corroborated by unchanged revision (S035/S047) and by the zero publication counts of the per-program flow for every family (S121/S122), so the depth comparison itself stays unproved.
-Original expression:
-  QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
+Disposition: MATCHED
+Mapping: S151
 
 A021 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:83
 Disposition: MATCHED
@@ -123,22 +106,16 @@ Disposition: MATCHED
 Mapping: S122
 
 A023 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:85
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S036 asserts the document keeps the quiet origin 33 during the locked square preview; the noise row's and the wave row's mid-preview document values are not asserted.
-Original expression:
-  QCOMPARE(documentVelocity(m_quietStacked.noteId), int(kQuietOrigin))
+Disposition: MATCHED
+Mapping: S152
 
 A024 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:86
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S037 asserts the document keeps the later origin 87 during the locked square preview; the noise row's and the wave row's mid-preview document values are not asserted.
-Original expression:
-  QCOMPARE(documentVelocity(m_later.noteId), int(kLaterOrigin))
+Disposition: MATCHED
+Mapping: S153
 
 A025 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:87
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S042 asserts the unselected note's post-release value equals its fixture velocity for the square pair (S050 for the noise pair) and the per-program flow keeps the third note at its captured value in every family's released projection (S120); an unselected note's mid-preview document value is still not asserted.
-Original expression:
-  QCOMPARE(documentVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
+Disposition: MATCHED
+Mapping: S154
 
 A026 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:88
 Disposition: MATCHED
@@ -153,10 +130,8 @@ Disposition: MATCHED
 Mapping: S119
 
 A029 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:91
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: the drag selection is asserted after the release by S043 for the square row and by the per-program flow's release check for every family (S126), not mid-drag; the noise and wave mid-drag instances stay unproved.
-Original expression:
-  QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
+Disposition: MATCHED
+Mapping: S155
 
 A030 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:95
 Disposition: MATCHED
@@ -167,10 +142,8 @@ Disposition: MATCHED
 Mapping: S124
 
 A032 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:97
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S038 asserts exactly one committed revision for the square row and S048 for the noise row; no predicate reads the wave document revision, so its instance stays unproved.
-Original expression:
-  QCOMPARE(m_tab->document().revision(), revisionBefore + 1)
+Disposition: MATCHED
+Mapping: S156
 
 A033 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:98
 Disposition: MATCHED
@@ -189,22 +162,16 @@ Disposition: MATCHED
 Mapping: S126
 
 A037 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:102
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S040 asserts the release commits the snapped quiet level 44 in the document for the square row and S049 for the noise row; the wave row's snap is pinned at the policy layer (S051) and in the per-program flow (S118 staged, S120 released) but no predicate reads the wave document value, so that instance stays unproved.
-Original expression:
-  QCOMPARE(documentVelocity(m_quietStacked.noteId), expectedQuiet)
+Disposition: MATCHED
+Mapping: S157
 
 A038 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:103
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S041 asserts the release commits the snapped later level 92 in the document for the square row and S050 for the noise row; the wave row's snap is pinned at the policy layer (S052) and in the per-program flow (S118 staged, S120 released) but no predicate reads the wave document value, so that instance stays unproved.
-Original expression:
-  QCOMPARE(documentVelocity(m_later.noteId), expectedLater)
+Disposition: MATCHED
+Mapping: S158
 
 A039 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:104
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S042 asserts the unselected note's committed value is unchanged for the square row and S120 keeps the third note at its captured value in every family's released projection; no document-layer read covers the noise and wave rows' unselected note, so the site stays partly unproved.
-Original expression:
-  QCOMPARE(documentVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
+Disposition: MATCHED
+Mapping: S159
 
 A040 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:105
 Disposition: MATCHED
@@ -227,32 +194,24 @@ Disposition: MATCHED
 Mapping: S115
 
 A045 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:135
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: the square pair's PSG-context availability is asserted as page.detentsAvailable && page.detentsEnabled (S107) and the wave page presents the same enabled detent control (S116); the noise row's availability is not asserted, so the site stays partly unproved.
-Original expression:
-  QTRY_VERIFY(m_area->isPsgContext())
+Disposition: MATCHED
+Mapping: S160
 
 A046 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:136
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: the intrinsic ruler is asserted for the square pair in the sibling late-unlock flow (S030) and for the wave page (S116); no predicate in this relative flow asserts a page axis mode, the rows resolving only their own map (S115), so the site stays partly unproved.
-Original expression:
-  QTRY_VERIFY(m_area->axis().mode() == VelocityAxis::Mode::Intrinsic)
+Disposition: MATCHED
+Mapping: S161
 
 A047 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:138
 Disposition: RETIRED-REPRESENTATION
 Mapping/reason: S056, S057, S058, S059, S060, S061, S062, S063, S064, S065, S066, S067
 
 A048 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:140
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: the square pair's enabled detent control is asserted through the merged preference (S107) and the wave page's through S116; the legacy chrome's separate detentChecked widget state has no Swift predicate and the noise row is not asserted.
-Original expression:
-  QTRY_VERIFY(drawer->chrome().detentEnabled() && drawer->chrome().detentChecked())
+Disposition: MATCHED
+Mapping: S162
 
 A049 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:141
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: page.detentsEnabled, the documented VelocityArea::useDetents analogue, is asserted for the square pair (S107) and for the wave page (S116), and the per-family disable step by the toggle anchor (S117); the noise row's enabled read and the enable step itself are not asserted.
-Original expression:
-  QTRY_VERIFY(m_area->useDetents())
+Disposition: MATCHED
+Mapping: S163
 
 A050 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:145
 Disposition: MATCHED
@@ -307,10 +266,8 @@ Disposition: MATCHED
 Mapping: S127
 
 A062 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:189
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S058 asserts an unselected note previews nothing for the square flow and S114 for the outside note of this same value pin; the noise row and the wave page row assert only post-release emptiness (S135), so a mid-preview absence stays unproved for them.
-Original expression:
-  QVERIFY(!m_tab->view().previewVelocity(m_loudStacked.noteId).has_value())
+Disposition: MATCHED
+Mapping: S164
 
 A063 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:190
 Disposition: PARTIAL
@@ -1125,3 +1082,63 @@ Anchor: message "one release grows the undo depth by exactly one" #3
 
 S144 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
 Anchor: message "the per-program ramp release clears preview and retains selection"
+
+S145 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "each locked PSG family offers detents in its resolved page context"
+
+S146 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "each locked PSG family presents its intrinsic axis"
+
+S147 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "each locked PSG family enables and checks the detent preference"
+
+S148 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "each locked PSG family reads back its enabled detent policy"
+
+S149 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "each locked PSG family leaves the outside note without a preview"
+
+S150 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "each locked PSG family holds its document revision"
+
+S151 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "each locked PSG family holds its exact undo depth"
+
+S152 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "each locked PSG family keeps quiet origin 33 in the held document"
+
+S153 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "each locked PSG family keeps later origin 87 in the held document"
+
+S154 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "each locked PSG family keeps outside origin 32 in the held document"
+
+S155 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "each locked PSG family holds its captured note selection"
+
+S156 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "each locked PSG family commits exactly one released revision"
+
+S157 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "each locked PSG family commits its literal quiet detent"
+
+S158 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "each locked PSG family commits its literal later detent"
+
+S159 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "each locked PSG family preserves outside document velocity 32 on release"
+
+S160 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "each raw PSG family offers detents in its resolved page context"
+
+S161 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "each raw PSG family retains its intrinsic displayed axis"
+
+S162 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "each raw PSG family enables and checks the detent preference"
+
+S163 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "each raw PSG family reads back its enabled detent policy"
+
+S164 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "each raw PSG family leaves the outside note without a preview"

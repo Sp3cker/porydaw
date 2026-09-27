@@ -110,6 +110,20 @@ TestCase {
     function voiceModel() { return session().voiceChangesPage() }
     function automationPageItem() { return findChild(selectedSurface(), "automationPage") }
     function voicePageItem() { return findChild(selectedSurface(), "voiceChangesPage") }
+    function velocityPageItem() { return findChild(selectedSurface(), "velocityPage") }
+    function velocityPlotInput() {
+        var page = velocityPageItem()
+        return page ? findChild(page, "velocityPlotInput") : null
+    }
+    function velocityHandleFor(noteId) {
+        var fills = collectByName(velocityPageItem(), "velocityNodeFill", [])
+        for (var i = 0; i < fills.length; ++i) {
+            var handle = fills[i].parent.model
+            if (handle && handle.noteIdText === String(noteId))
+                return handle
+        }
+        return null
+    }
     function automationPlotInput() {
         var page = automationPageItem()
         return page ? findChild(page, "automationPlotInput") : null
@@ -464,5 +478,141 @@ TestCase {
         compare(revision(), before, "grip keys never edit the song")
         compare(JSON.stringify(JSON.parse(gridModel().noteSummary)), notes,
                 "grip keys never touch the selection")
+    }
+    function test_eVelocityLateUnlock() {
+        dragMountedVelocity(false)
+    }
+
+    function test_fVelocityEarlyUnlock() {
+        dragMountedVelocity(true)
+    }
+
+    function dragMountedVelocity(unlockAtPress) {
+        openDrawerShell("velocity")
+        var model = session().velocityPage()
+        var input = velocityPlotInput()
+        var detent = findChild(selectedSurface(), "drawerDetent")
+        verify(model && input && detent && input.visible,
+               "the real velocity page, input delegate and detent control are mounted")
+        var grid = gridModel()
+        grid.setTrack(0)
+        var voiceInput = voicePlotInput()
+        var voicePage = voiceModel()
+        verify(voiceInput && voiceInput.visible && voicePage,
+               "the mounted voice-change delegate can stage a square program before the drag")
+        grid.setCameraHScroll(0)
+        var insertionX = grid.beatWidth * 2.5
+        verify(insertionX > 0 && insertionX < voiceInput.width,
+               "the program-change column is visible before the chosen notes")
+        mouseDoubleClickSequence(voiceInput, insertionX, voiceInput.height / 2, Qt.LeftButton)
+        tryCompare(voicePage, "pickerOpen", true)
+        var search = findChild(selectedSurface(), "voicePickerSearch")
+        verify(waitForNative(function() { return search && search.activeFocus }, 3000),
+               "the actual voice picker focuses its search field")
+        keyClick(Qt.Key_0)
+        keyClick(Qt.Key_0)
+        keyClick(Qt.Key_4)
+        tryCompare(voicePage, "pickerHasMatch", true)
+        keyClick(Qt.Key_Return)
+        tryCompare(voicePage, "pickerOpen", false)
+        var originalNotes = JSON.parse(grid.noteSummary).filter(function(note) {
+            return note.track === 0 && !note.ghost
+        })
+        verify(originalNotes.length >= 6 && originalNotes[3].velocity === 98
+               && originalNotes[4].velocity === 104 && originalNotes[5].velocity === 110,
+               "the three staged notes after the square change are literal 98/104/110")
+        var notes = [originalNotes[3], originalNotes[5], originalNotes[4]]
+        var roll = rollInput()
+        grid.setCameraVScroll((127 - (notes[0].pitch + notes[1].pitch) / 2 + 0.5)
+                              * grid.rowHeight - roll.height / 2)
+        for (var i = 0; i < 2; ++i) {
+            var position = gridPointFor(notes[i].tick + notes[i].duration / 2,
+                                        notes[i].pitch)
+            verify(position.x > 0 && position.x < roll.width
+                   && position.y > 0 && position.y < roll.height,
+                   "each staged drag note maps into the mounted roll")
+            mouseClick(roll, position.x, position.y, Qt.LeftButton,
+                       i === 0 ? Qt.NoModifier : Qt.ControlModifier)
+        }
+        verify(waitForNative(function() {
+            return model.selectedCount === 2 && model.detentsAvailable
+                && detent.visible && detent.enabled
+        }, 5000), "the selected square notes enable the rendered detent control: "
+           + JSON.stringify({ selectedCount: model.selectedCount, available: model.detentsAvailable,
+                              visible: detent.visible, enabled: detent.enabled, slot: model.contextSlot,
+                              selected: JSON.parse(grid.noteSummary).filter(function(note) {
+                                  return note.selected
+                              }).map(function(note) { return [note.id, note.velocity] }) }))
+        compare(model.axisMode, 1, "the mounted square context publishes its intrinsic axis")
+        compare(detent.Accessible.checked, model.detentsEnabled,
+                "the rendered detent control reflects the enabled page preference")
+        mouseClick(detent, detent.width / 2, detent.height / 2)
+        tryCompare(model, "detentsEnabled", false)
+        tryCompare(detent.Accessible, "checked", false, 3000,
+                   "the rendered detent control unchecks on click")
+        mouseClick(detent, detent.width / 2, detent.height / 2)
+        tryCompare(model, "detentsEnabled", true)
+        tryCompare(detent.Accessible, "checked", true, 3000,
+                   "the rendered detent control checks on click")
+        var first = velocityHandleFor(notes[0].id)
+        var later = velocityHandleFor(notes[1].id)
+        var outside = velocityHandleFor(notes[2].id)
+        verify(first && later && outside && first.selected && later.selected
+               && !outside.selected, "the drawn velocity handles retain the exact drag selection")
+        var pressX = first.x
+        var pressY = first.y
+        var endY = unlockAtPress
+            ? Math.round(pressY - (pressY - later.y) * 7 / 8)
+            : later.y
+        verify(pressX > 0 && pressX < input.width
+               && pressY > 0 && pressY < input.height
+               && endY > 0 && endY < input.height,
+               "published handle and intrinsic axis geometry keep the drag inside the plot")
+        var before = revision()
+        var original = grid.noteSummary
+        var pressModifier = unlockAtPress ? Qt.ControlModifier : Qt.NoModifier
+        var moveModifier = unlockAtPress ? Qt.NoModifier : Qt.ControlModifier
+        mousePress(input, pressX, pressY, Qt.LeftButton, pressModifier)
+        mouseMove(input, pressX, endY, -1, Qt.LeftButton, moveModifier)
+        var quietValue = unlockAtPress ? 105 : 108
+        var laterValue = unlockAtPress ? 117 : 116
+        verify(waitForNative(function() {
+            var quiet = velocityHandleFor(notes[0].id)
+            var companion = velocityHandleFor(notes[1].id)
+            return quiet && companion && quiet.preview && companion.preview
+                && quiet.value === quietValue && companion.value === laterValue
+        }, 3000), (unlockAtPress
+            ? "an unlocked press retains the raw seven-step delta after modifier release"
+            : "a late modifier preserves the snapped levels captured at press")
+            + ": " + JSON.stringify({
+                first: velocityHandleFor(notes[0].id)
+                    ? [velocityHandleFor(notes[0].id).preview, velocityHandleFor(notes[0].id).value]
+                    : null,
+                later: velocityHandleFor(notes[1].id)
+                    ? [velocityHandleFor(notes[1].id).preview, velocityHandleFor(notes[1].id).value]
+                    : null,
+                active: model.interactionActive, pressed: [pressX, pressY], target: endY,
+                selection: model.selectedCount, axis: model.axisMode
+            }))
+        compare(velocityHandleFor(notes[2].id).preview, false,
+                "the outside drawn handle has no held velocity preview")
+        compare(revision(), before, "the mounted drag holds the document revision")
+        compare(grid.noteSummary, original,
+                "the mounted preview leaves the published roll note summary unchanged")
+        mouseRelease(input, pressX, endY, Qt.LeftButton, moveModifier)
+        verify(waitForNative(function() {
+            var current = JSON.parse(grid.noteSummary)
+            return current.some(function(note) {
+                return note.id === notes[0].id && note.velocity === quietValue && note.selected
+            }) && current.some(function(note) {
+                return note.id === notes[1].id && note.velocity === laterValue && note.selected
+            })
+        }, 5000), "the mounted release commits exact selected velocities once")
+        verify(revision() !== before, "the mounted release advances the document revision")
+        var committed = JSON.parse(grid.noteSummary)
+        compare(committed.find(function(note) { return note.id === notes[2].id }).velocity,
+                104, "the outside roll note keeps its literal velocity on release")
+        compare(velocityHandleFor(notes[0].id).preview, false,
+                "the mounted release retires its drawn preview")
     }
 }

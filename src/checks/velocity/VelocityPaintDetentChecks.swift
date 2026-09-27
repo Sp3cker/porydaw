@@ -278,6 +278,10 @@ func drawerVelocityProgramFlowChecks(_ report: CheckReport, session: DocumentSes
             report.expect(page.contextSlot == Int(program) && page.axisModel.map == VelocityMap(voiceKind: kind),
                           cppID: drawerVelocityLateUnlockID,
                           message: "the selected program resolves its own intrinsic page context")
+            report.expect(page.detentsAvailable, cppID: drawerVelocityLateUnlockID,
+                          message: "each locked PSG family offers detents in its resolved page context")
+            report.expectEqual(expected: VelocityAxisModel.Mode.intrinsic.rawValue, actual: page.axisMode,
+                               cppID: drawerVelocityLateUnlockID, what: "each locked PSG family presents its intrinsic axis")
             if program == 6 {
                 report.expect(page.detentsAvailable && page.detentsEnabled
                                   && page.axisMode == VelocityAxisModel.Mode.intrinsic.rawValue,
@@ -289,13 +293,23 @@ func drawerVelocityProgramFlowChecks(_ report: CheckReport, session: DocumentSes
                           cppID: drawerVelocityLateUnlockID,
                           message: "detents toggle between intrinsic and continuous for every program family")
             page.setUseDetents(enabled: true)
+            report.expect(page.detentsAvailable && page.detentsEnabled,
+                          cppID: drawerVelocityLateUnlockID,
+                          message: "each locked PSG family enables and checks the detent preference")
+            report.expect(page.detentsEnabled, cppID: drawerVelocityLateUnlockID,
+                          message: "each locked PSG family reads back its enabled detent policy")
             guard let first = fixture.handle(notes[0]) else {
                 report.fail(drawerVelocityLateUnlockID, "the selected program published no first handle")
                 continue
             }
             let publications = drawerVelocityPublicationCounter(session: fixture.session)
+            let baseline = DocumentSnapshot(document)
             let depth = document.history.undoCount
+            let selection = [notes[0].id, notes[1].id]
             let before = notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) }
+            let storedBefore = notes.map { Int(document.note($0.id)?.velocity ?? 0) }
+            report.expectEqual(expected: [33, 87, 32], actual: storedBefore,
+                               cppID: drawerVelocityLateUnlockID, what: "each locked PSG fixture stores the literal origins before press")
             _ = page.pointerPress(x: first.x, y: first.y, surface: 1, button: 1, modifiers: 0)
             let nextLevel = program == 6 ? 2 : 5
             let nextY = page.axisModel.levelToY(nextLevel)
@@ -304,11 +318,33 @@ func drawerVelocityProgramFlowChecks(_ report: CheckReport, session: DocumentSes
                                actual: [notes[0], notes[1]].map { Int(page.frozenPreview[$0.id] ?? 0) },
                                cppID: drawerVelocityLateUnlockID,
                                what: "a late unlock keeps the gesture snapped to the level bands")
+            report.expect(page.frozenPreview[notes[2].id] == nil, cppID: drawerVelocityLateUnlockID,
+                          message: "each locked PSG family leaves the outside note without a preview")
+            report.expectEqual(expected: baseline.revision, actual: document.revision,
+                               cppID: drawerVelocityLateUnlockID, what: "each locked PSG family holds its document revision")
+            report.expectEqual(expected: depth, actual: document.history.undoCount,
+                               cppID: drawerVelocityLateUnlockID, what: "each locked PSG family holds its exact undo depth")
+            report.expectEqual(expected: 33, actual: Int(document.note(notes[0].id)?.velocity ?? 0),
+                               cppID: drawerVelocityLateUnlockID, what: "each locked PSG family keeps quiet origin 33 in the held document")
+            report.expectEqual(expected: 87, actual: Int(document.note(notes[1].id)?.velocity ?? 0),
+                               cppID: drawerVelocityLateUnlockID, what: "each locked PSG family keeps later origin 87 in the held document")
+            report.expectEqual(expected: 32, actual: Int(document.note(notes[2].id)?.velocity ?? 0),
+                               cppID: drawerVelocityLateUnlockID, what: "each locked PSG family keeps outside origin 32 in the held document")
+            report.expectEqual(expected: selection, actual: fixture.session.selectedNoteOrder,
+                               cppID: drawerVelocityLateUnlockID, what: "each locked PSG family holds its captured note selection")
             report.expectEqual(expected: before, actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
                                cppID: drawerVelocityLateUnlockID, what: "a drag preview holds the timeline projection at the captured velocities")
             report.expectEqual(expected: 0, actual: publications.document, cppID: drawerVelocityLateUnlockID, what: "a held drag publishes no document change")
             report.expectEqual(expected: 0, actual: publications.dirty, cppID: drawerVelocityLateUnlockID, what: "a held drag publishes no dirty change")
             _ = page.pointerRelease(x: first.x, y: nextY, button: 1)
+            report.expectEqual(expected: baseline.revision + 1, actual: document.revision,
+                               cppID: drawerVelocityLateUnlockID, what: "each locked PSG family commits exactly one released revision")
+            report.expectEqual(expected: expectedSnap[0], actual: Int(document.note(notes[0].id)?.velocity ?? 0),
+                               cppID: drawerVelocityLateUnlockID, what: "each locked PSG family commits its literal quiet detent")
+            report.expectEqual(expected: expectedSnap[1], actual: Int(document.note(notes[1].id)?.velocity ?? 0),
+                               cppID: drawerVelocityLateUnlockID, what: "each locked PSG family commits its literal later detent")
+            report.expectEqual(expected: 32, actual: Int(document.note(notes[2].id)?.velocity ?? 0),
+                               cppID: drawerVelocityLateUnlockID, what: "each locked PSG family preserves outside document velocity 32 on release")
             report.expectEqual(expected: expectedSnap + [before[2]],
                                actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
                                cppID: drawerVelocityLateUnlockID,
@@ -329,24 +365,62 @@ func drawerVelocityProgramFlowChecks(_ report: CheckReport, session: DocumentSes
             drawerVelocityPaintSetOrigins(document, page, notes[0], 33, notes[1], 87)
             fixture.session.setSelectedNotes([notes[0].id, notes[1].id])
             page.refreshFromDocument()
+            report.expect(page.detentsAvailable, cppID: drawerVelocityUnlockedRelativeID,
+                          message: "each raw PSG family offers detents in its resolved page context")
+            report.expectEqual(expected: VelocityAxisModel.Mode.intrinsic.rawValue, actual: page.axisMode,
+                               cppID: drawerVelocityUnlockedRelativeID, what: "each raw PSG family retains its intrinsic displayed axis")
+            page.setUseDetents(enabled: false)
+            page.setUseDetents(enabled: true)
+            report.expect(page.detentsAvailable && page.detentsEnabled,
+                          cppID: drawerVelocityUnlockedRelativeID,
+                          message: "each raw PSG family enables and checks the detent preference")
+            report.expect(page.detentsEnabled, cppID: drawerVelocityUnlockedRelativeID,
+                          message: "each raw PSG family reads back its enabled detent policy")
             guard let first = fixture.handle(notes[0]) else {
                 report.fail(drawerVelocityUnlockedRelativeID, "the selected program published no first handle")
                 continue
             }
             let targetY = page.axisModel.velocityToY(page.axisModel.yToVelocity(first.y) + 7)
             let publications = drawerVelocityPublicationCounter(session: fixture.session)
+            let baseline = DocumentSnapshot(document)
             let depth = document.history.undoCount
+            let selection = [notes[0].id, notes[1].id]
             let before = notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) }
+            let storedBefore = notes.map { Int(document.note($0.id)?.velocity ?? 0) }
+            report.expectEqual(expected: [33, 87, 32], actual: storedBefore,
+                               cppID: drawerVelocityUnlockedRelativeID, what: "each raw PSG fixture stores the literal origins before press")
             _ = page.pointerPress(x: first.x, y: first.y, surface: 1, button: 1, modifiers: unlock)
             _ = page.pointerMove(x: first.x, y: targetY, buttons: 1)
             report.expectEqual(expected: [40, 94], actual: [notes[0], notes[1]].map { Int(page.frozenPreview[$0.id] ?? 0) },
                                cppID: drawerVelocityUnlockedRelativeID,
                                what: "an unlocked press keeps per-note offsets under a raw delta")
+            report.expect(page.frozenPreview[notes[2].id] == nil, cppID: drawerVelocityUnlockedRelativeID,
+                          message: "each raw PSG family leaves the outside note without a preview")
+            report.expectEqual(expected: baseline.revision, actual: document.revision,
+                               cppID: drawerVelocityUnlockedRelativeID, what: "each raw PSG family holds its document revision")
+            report.expectEqual(expected: depth, actual: document.history.undoCount,
+                               cppID: drawerVelocityUnlockedRelativeID, what: "each raw PSG family holds its exact undo depth")
+            report.expectEqual(expected: 33, actual: Int(document.note(notes[0].id)?.velocity ?? 0),
+                               cppID: drawerVelocityUnlockedRelativeID, what: "each raw PSG family keeps quiet origin 33 in the held document")
+            report.expectEqual(expected: 87, actual: Int(document.note(notes[1].id)?.velocity ?? 0),
+                               cppID: drawerVelocityUnlockedRelativeID, what: "each raw PSG family keeps later origin 87 in the held document")
+            report.expectEqual(expected: 32, actual: Int(document.note(notes[2].id)?.velocity ?? 0),
+                               cppID: drawerVelocityUnlockedRelativeID, what: "each raw PSG family keeps outside origin 32 in the held document")
+            report.expectEqual(expected: selection, actual: fixture.session.selectedNoteOrder,
+                               cppID: drawerVelocityUnlockedRelativeID, what: "each raw PSG family holds its captured note selection")
             report.expectEqual(expected: before, actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
                                cppID: drawerVelocityUnlockedRelativeID, what: "a drag preview holds the timeline projection at the captured velocities")
             report.expectEqual(expected: 0, actual: publications.document, cppID: drawerVelocityUnlockedRelativeID, what: "a held drag publishes no document change")
             report.expectEqual(expected: 0, actual: publications.dirty, cppID: drawerVelocityUnlockedRelativeID, what: "a held drag publishes no dirty change")
             _ = page.pointerRelease(x: first.x, y: targetY, button: 1)
+            report.expectEqual(expected: baseline.revision + 1, actual: document.revision,
+                               cppID: drawerVelocityUnlockedRelativeID, what: "each raw PSG family commits exactly one released revision")
+            report.expectEqual(expected: 40, actual: Int(document.note(notes[0].id)?.velocity ?? 0),
+                               cppID: drawerVelocityUnlockedRelativeID, what: "each raw PSG family commits literal quiet velocity 40")
+            report.expectEqual(expected: 94, actual: Int(document.note(notes[1].id)?.velocity ?? 0),
+                               cppID: drawerVelocityUnlockedRelativeID, what: "each raw PSG family commits literal later velocity 94")
+            report.expectEqual(expected: 32, actual: Int(document.note(notes[2].id)?.velocity ?? 0),
+                               cppID: drawerVelocityUnlockedRelativeID, what: "each raw PSG family preserves outside document velocity 32 on release")
             report.expectEqual(expected: [40, 94, before[2]], actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
                                cppID: drawerVelocityUnlockedRelativeID,
                                what: "a released drag republishes the staged velocities into the timeline projection")
