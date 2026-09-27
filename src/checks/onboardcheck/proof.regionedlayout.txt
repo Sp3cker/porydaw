@@ -2,18 +2,18 @@ Assertion correspondence: onboardcheck/regionedlayout.cpp
 
 Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Deleted in: S6 flip cutover (feature/swift-project-store, base 2d1c92d0)
-Retirement: historical deletion record only; the deleted C++ source above is recoverable from the Reference revision and Original SHA-256, never from HEAD. The dispositions and S citations below were established while the file was live and were not re-verified in this cutover; no execution or parity claim is made by this record.
+Retirement: historical deletion record only; the original source is recoverable from the Reference revision and Original SHA-256, never from HEAD. Task 128 reconciles the current Swift predicates below; open GAP rows remain unproved.
 Original: src/checks/onboardcheck/regionedlayout.cpp
 Original SHA-256: a59d94a22f58702307844009f0f4f90f7179be69a1b51acafec4ff6e31344219
-Swift counterpart: none identified
+Swift counterpart: src/checks/songlist/SongRegionRegistrationChecks.swift (SHA-256: 350c302db6abbe6847b52624aeaa31d7bbe9844bef6417c141d33040e367973b)
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Site tally: 82 sites (82 GAP).
+Site tally: 82 sites (46 MATCHED, 0 PARTIAL, 36 GAP).
 
 
 
-Command: deno task verify --filter onboardcheck --verbose
-Result: pending integrated run.
+Command: deno task verify --filter swiftcore-projectsession --verbose; deno task verify:shell --filter shell-songs --verbose.
+Result: swiftcore-projectsession PASS after final review fix: build ok (2.26s); lane ok (8.21s); verify 1/36 ok, 35 skipped; run_checks PASS. shell-songs PASS previously on the unchanged shell route: build ok (0.08s); lane ok (7.73s); verify 1/75 ok, 74 skipped; run_checks PASS.
 
 OnboardingTest::import* methods, none in this file).
 
@@ -154,8 +154,8 @@ Original expression:
                    qPrintable(error));
 
 A006 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:98
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S001 checks the markerless plan independently returns ID nine.
 Source context since previous assertion:
 
 
@@ -167,8 +167,8 @@ Original expression:
                    9);
 
 A007 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:107
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S002 checks the SE registration returns ID three.
 Source context since previous assertion:
 
           return;
@@ -183,8 +183,8 @@ Original expression:
                    qPrintable(error));
 
 A008 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:111
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S002 checks SE registration returns slot ID three.
 Source context since previous assertion:
 
 
@@ -192,8 +192,8 @@ Original expression:
   QCOMPARE(id, 3);
 
 A009 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:113
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S002 checks the returned ID is three.
 Source context since previous assertion:
 
           const QByteArray table = readFile(root + QStringLiteral("/sound/song_table.inc"), error);
@@ -212,8 +212,8 @@ Original expression:
                                  song("dummy_song_header", "MUSIC_PLAYER_BGM")));
 
 A011 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:119
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S003 compares the complete numeric SE table image, including player number and surrounding rows.
 Source context since previous assertion:
 
           QByteArray expectedHeader = fixtureBytes[1];
@@ -225,8 +225,8 @@ Original expression:
                    expectedHeader);
 
 A012 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:121
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S004 compares the independently authored complete numeric SE header image.
 Source context since previous assertion:
 
 
@@ -244,8 +244,8 @@ Original expression:
   QVERIFY2(error.isEmpty(), qPrintable(error));
 
 A014 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:124
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S005 checks SE_VALCHECK belongs to the SE debug list.
 Source context since previous assertion:
 
 
@@ -253,8 +253,8 @@ Original expression:
   QVERIFY(debug.indexOf("X(SE_VALCHECK)") > debug.indexOf("#define SOUND_LIST_SE"));
 
 A015 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:127
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S006 checks numeric music registration returns ID seven.
 Source context since previous assertion:
 
           return;
@@ -267,8 +267,8 @@ Original expression:
                qPrintable(error));
 
 A016 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:131
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S006 checks numeric music registration returns ID seven.
 Source context since previous assertion:
 
 
@@ -276,8 +276,8 @@ Original expression:
   QCOMPARE(id, 7);
 
 A017 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:133
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S007 compares the complete numeric header with END_MUS at seven and shifted phoneme IDs.
 Source context since previous assertion:
 
       const QString headerPath = root + QStringLiteral("/include/constants/songs.h");
@@ -287,7 +287,7 @@ Original expression:
 
 A018 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:134
 Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Mapping/reason: no Swift predicate asserts the post-read error guard.
 Source context since previous assertion:
 
 
@@ -316,8 +316,8 @@ Original expression:
   QVERIFY(readFile(headerPath, error).contains(define("END_MUS", "6")));
 
 A021 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:140
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S009 compares the complete post-removal header with END_MUS at six.
 Source context since previous assertion:
 
 
@@ -343,8 +343,8 @@ Original expression:
   QCOMPARE(readFile(fixturePaths[0], error), expectedTable);
 
 A023 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:151
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S008 compares the complete table after removal, including the fallback slot and phoneme rows.
 Source context since previous assertion:
 
 
@@ -361,8 +361,8 @@ Original expression:
   QCOMPARE(readFile(fixturePaths[1], error), expectedHeader);
 
 A025 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:153
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S009 checks the exact post-removal header including marker and phoneme positions.
 Source context since previous assertion:
 
 
@@ -379,8 +379,8 @@ Original expression:
   QCOMPARE(readFile(fixturePaths[2], error), expectedCharmap);
 
 A027 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:155
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S010 compares the independently expected charmap after removal.
 Source context since previous assertion:
 
 
@@ -397,8 +397,8 @@ Original expression:
   QCOMPARE(readFile(fixturePaths[3], error), fixtureBytes[3]);
 
 A029 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:157
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S011 compares the complete original numeric debug image after removal.
 Source context since previous assertion:
 
 
@@ -415,8 +415,8 @@ Original expression:
   QCOMPARE(readFile(fixturePaths[4], error), fixtureBytes[4]);
 
 A031 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:159
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S012 compares the original linker bytes after removal.
 Source context since previous assertion:
 
 
@@ -437,8 +437,8 @@ Original expression:
                    7);
 
 A033 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:181
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S013 plans the next registration at the vacated ID seven.
 Source context since previous assertion:
 
       }
@@ -485,8 +485,8 @@ Original expression:
                qPrintable(error));
 
 A036 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:189
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S014 checks symbolic music registration returns ID seven.
 Source context since previous assertion:
 
 
@@ -494,8 +494,8 @@ Original expression:
   QCOMPARE(id, 7);
 
 A037 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:191
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S014 verifies the allocated symbolic music ID is seven.
 Source context since previous assertion:
 
       QByteArray header = readFile(root + QStringLiteral("/include/constants/songs.h"), error);
@@ -513,8 +513,8 @@ Original expression:
   QVERIFY(header.contains(define("END_MUS", "MUS_OLDCHECK")));
 
 A039 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:193
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S015 compares the complete header with END_MUS referring to MUS_OLDCHECK.
 Source context since previous assertion:
 
 
@@ -523,8 +523,8 @@ Original expression:
           readFile(root + QStringLiteral("/charmap.txt"), error).contains("MUS_OLDCHECK = 07 00"));
 
 A040 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:195
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S016 compares the charmap with MUS_OLDCHECK encoded at 07 00.
 Source context since previous assertion:
 
 
@@ -543,8 +543,8 @@ Original expression:
                   .complete());
 
 A042 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:200
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S017 observes the symbolic music registration has no missing files.
 Source context since previous assertion:
 
       if (operation == QStringLiteral("insert")) {
@@ -556,8 +556,8 @@ Original expression:
                    qPrintable(error));
 
 A043 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:204
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S018 checks symbolic SE registration returns ID three.
 Source context since previous assertion:
 
 
@@ -565,8 +565,8 @@ Original expression:
   QCOMPARE(id, 3);
 
 A044 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:205
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S018 verifies the symbolic SE allocation is ID three.
 Source context since previous assertion:
 
 
@@ -574,8 +574,8 @@ Original expression:
   QVERIFY(readFile(root + QStringLiteral("/src/debug.c"), error).contains("X(SE_OLDCHECK)"));
 
 A045 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:206
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S019 checks SE_OLDCHECK is in the SE debug list.
 Source context since previous assertion:
 
 
@@ -597,8 +597,8 @@ Original expression:
                qPrintable(error));
 
 A047 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:219
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S034 checks repeated symbolic SE registration returns ID three.
 Source context since previous assertion:
 
       if (operation == QStringLiteral("stranded")) {
@@ -686,8 +686,8 @@ Original expression:
   QVERIFY2(writeFile(debugPath, debugBeforeMigration, error), qPrintable(error));
 
 A055 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:238
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S020 verifies the staged straggler is not in songs.h before migration.
 Source context since previous assertion:
 
 
@@ -697,8 +697,8 @@ Original expression:
                        .inSongsH);
 
 A056 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:241
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S021 checks stranded-song registration returns music slot eight.
 Source context since previous assertion:
 
 
@@ -709,8 +709,8 @@ Original expression:
                    qPrintable(error));
 
 A057 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:245
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S021 checks migration registration returns music slot eight.
 Source context since previous assertion:
 
 
@@ -718,8 +718,8 @@ Original expression:
   QCOMPARE(id, 8);
 
 A058 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:246
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S022 compares migration output against the independently literal stranded debug image.
 Source context since previous assertion:
 
 
@@ -728,7 +728,7 @@ Original expression:
 
 A059 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:247
 Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Mapping/reason: no Swift predicate asserts the post-read error guard.
 Source context since previous assertion:
 
 
@@ -736,8 +736,8 @@ Original expression:
   QVERIFY2(error.isEmpty(), qPrintable(error));
 
 A060 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:248
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S023 confirms the migrated song registration has no missing files.
 Source context since previous assertion:
 
 
@@ -748,7 +748,7 @@ Original expression:
 
 A061 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:251
 Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Mapping/reason: no Swift predicate directly asserts successful unregistration.
 Source context since previous assertion:
 
 
@@ -758,8 +758,8 @@ Original expression:
                    qPrintable(error));
 
 A062 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:254
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S024 compares the post-removal header with END_MUS restored to MUS_OLDCHECK.
 Source context since previous assertion:
 
 
@@ -768,7 +768,7 @@ Original expression:
 
 A063 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:255
 Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Mapping/reason: no Swift predicate asserts the post-read error guard.
 Source context since previous assertion:
 
 
@@ -776,8 +776,8 @@ Original expression:
   QVERIFY2(error.isEmpty(), qPrintable(error));
 
 A064 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:256
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S025 plans the refill at freed ID eight.
 Source context since previous assertion:
 
 
@@ -789,8 +789,8 @@ Original expression:
                    8);
 
 A065 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:261
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S026 checks refill registration returns ID eight.
 Source context since previous assertion:
 
 
@@ -801,8 +801,8 @@ Original expression:
                    qPrintable(error));
 
 A066 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:265
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S026 checks refill registration returns ID eight.
 Source context since previous assertion:
 
 
@@ -810,8 +810,8 @@ Original expression:
   QCOMPARE(id, 8);
 
 A067 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:266
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S027 compares the complete refill header and confirms marker adjacency.
 Source context since previous assertion:
 
 
@@ -821,7 +821,7 @@ Original expression:
 
 A068 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:268
 Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Mapping/reason: no Swift predicate asserts the post-read error guard.
 Source context since previous assertion:
 
 
@@ -829,8 +829,8 @@ Original expression:
   QVERIFY2(error.isEmpty(), qPrintable(error));
 
 A069 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:271
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S035 checks reuse-source registration returns ID eight.
 Source context since previous assertion:
 
           return;
@@ -843,8 +843,8 @@ Original expression:
                qPrintable(error));
 
 A070 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:275
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S035 checks reuse-source registration returns ID eight.
 Source context since previous assertion:
 
 
@@ -853,7 +853,7 @@ Original expression:
 
 A071 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:276
 Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Mapping/reason: no Swift predicate directly asserts successful unregistration.
 Source context since previous assertion:
 
 
@@ -863,8 +863,8 @@ Original expression:
                qPrintable(error));
 
 A072 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:279
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S028 plans the refill at vacated ID eight after source removal.
 Source context since previous assertion:
 
 
@@ -876,8 +876,8 @@ Original expression:
                8);
 
 A073 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:284
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S029 checks refill registration returns ID eight.
 Source context since previous assertion:
 
 
@@ -888,8 +888,8 @@ Original expression:
                qPrintable(error));
 
 A074 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:288
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S029 checks refill registration returns ID eight.
 Source context since previous assertion:
 
 
@@ -897,8 +897,8 @@ Original expression:
   QCOMPARE(id, 8);
 
 A075 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:289
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S030 checks se_extra registration returns ID four.
 Source context since previous assertion:
 
 
@@ -909,8 +909,8 @@ Original expression:
                qPrintable(error));
 
 A076 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:293
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S030 checks se_extra registration returns ID four.
 Source context since previous assertion:
 
 
@@ -918,8 +918,8 @@ Original expression:
   QCOMPARE(id, 4);
 
 A077 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:294
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S031 checks overflowing SE registration returns music ID nine.
 Source context since previous assertion:
 
 
@@ -929,8 +929,8 @@ Original expression:
                qPrintable(error));
 
 A078 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:297
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S031 checks overflowing SE registration returns music ID nine.
 Source context since previous assertion:
 
 
@@ -939,7 +939,7 @@ Original expression:
 
 A079 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:299
 Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Mapping/reason: no Swift predicate asserts the post-read error guard.
 Source context since previous assertion:
 
       const QByteArray debug = readFile(root + QStringLiteral("/src/debug.c"), error);
@@ -948,8 +948,8 @@ Original expression:
   QVERIFY2(error.isEmpty(), qPrintable(error));
 
 A080 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:300
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S032 verifies SE_OVER appears in BGM before SOUND_LIST_SE.
 Source context since previous assertion:
 
 
@@ -958,7 +958,7 @@ Original expression:
 
 A081 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:302
 Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Mapping/reason: no Swift predicate asserts the post-read error guard.
 Source context since previous assertion:
 
       header = readFile(root + QStringLiteral("/include/constants/songs.h"), error);
@@ -967,8 +967,8 @@ Original expression:
   QVERIFY2(error.isEmpty(), qPrintable(error));
 
 A082 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:303
-Disposition: GAP
-Mapping/reason: feature not yet ported: regioned song-table layout checks.
+Disposition: MATCHED
+Mapping: Swift S033 compares the complete overflow header with END_MUS set to SE_OVER.
 Source context since previous assertion:
 
 
@@ -981,7 +981,216 @@ Remaining original source (closing sequence and helper bodies):
 
 
 Swift assertion predicates
-None. No Swift counterpart exists and no report.expect* call covers this file, so there are no S entries.
 
-Shared helper:
-None. No Swift fixture file carries expects for this file.
+S001 | runNumericRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 78
+cppID: swiftcore/SongRegion::numeric
+Predicate: SongRegistration.plan(root: markerless.root, label: "mus_markerless", constant: "MUS_MARKERLESS", player: "MUSIC_PLAYER_BGM").songId == 9
+Anchor: message "A006 markerless music planning appends at ID nine"
+
+S002 | runNumericRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 87
+cppID: swiftcore/SongRegion::numeric
+Predicate: SongRegistration.register(root: se.root, label: "se_valcheck", constant: "SE_VALCHECK", player: "MUSIC_PLAYER_SE1") == 3
+Anchor: message "A008 numeric SE registration fills ID three"
+
+S003 | runNumericRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 90
+cppID: swiftcore/SongRegion::numeric
+Predicate: try se.read("sound/song_table.inc") == Data(RegionImages.numericSeTable.utf8)
+Anchor: message "A010 numeric SE table preserves player number and all surrounding rows"
+
+S004 | runNumericRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 93
+cppID: swiftcore/SongRegion::numeric
+Predicate: try se.read("include/constants/songs.h") == Data(RegionImages.numericSeHeader.utf8)
+Anchor: message "A011 numeric SE header inserts the ID before START_MUS"
+
+S005 | runNumericRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 99
+cppID: swiftcore/SongRegion::numeric
+Predicate: try se.debugEntry("SE_VALCHECK", inSe: true) == true
+Anchor: message "A014 numeric SE debug entry belongs in SOUND_LIST_SE"
+
+S006 | runNumericRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 105
+cppID: swiftcore/SongRegion::numeric
+Predicate: SongRegistration.register(root: music.root, label: "mus_valcheck", constant: "MUS_VALCHECK", player: "MUSIC_PLAYER_BGM") == 7
+Anchor: message "A016 numeric music insertion allocates ID seven"
+
+S007 | runNumericRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 111
+cppID: swiftcore/SongRegion::numeric
+Predicate: try music.read("include/constants/songs.h") == Data(RegionImages.numericMusicHeader.utf8)
+Anchor: message "A017 numeric END_MUS advances to seven while phoneme IDs shift"
+
+S008 | runNumericRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 122
+cppID: swiftcore/SongRegion::numeric
+Predicate: try music.read("sound/song_table.inc") == Data(RegionImages.numericRemovedTable.utf8)
+Anchor: message "A022 removal restores the fallback table slot before phonemes"
+
+S009 | runNumericRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 125
+cppID: swiftcore/SongRegion::numeric
+Predicate: try music.read("include/constants/songs.h") == Data(RegionImages.numericRemovedHeader.utf8)
+Anchor: message "A024 numeric END_MUS returns to six without undoing shifted phonemes"
+
+S010 | runNumericRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 128
+cppID: swiftcore/SongRegion::numeric
+Predicate: try music.read("charmap.txt") == Data(RegionImages.numericRemovedCharmap.utf8)
+Anchor: message "A026 removal retains the independently expected phoneme charmap"
+
+S011 | runNumericRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 131
+cppID: swiftcore/SongRegion::numeric
+Predicate: try music.read("src/debug.c") == Data(RegionImages.numericDebug.utf8)
+Anchor: message "A028 removal returns the complete original debug image"
+
+S012 | runNumericRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 134
+cppID: swiftcore/SongRegion::numeric
+Predicate: try music.read("ld_script.ld") == music.linker
+Anchor: message "A030 removal keeps the complete original linker image"
+
+S013 | runNumericRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 136
+cppID: swiftcore/SongRegion::numeric
+Predicate: SongRegistration.plan(root: music.root, label: "mus_reuse", constant: "MUS_REUSE", player: "MUSIC_PLAYER_BGM").songId == 7
+Anchor: message "A032 next music registration reuses the removed ID seven"
+
+S014 | runAliasRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 164
+cppID: swiftcore/SongRegion::alias
+Predicate: SongRegistration.register(root: fixture.root, label: "mus_oldcheck", constant: "MUS_OLDCHECK", player: "MUSIC_PLAYER_BGM") == 7
+Anchor: message "A036 symbolic music registration allocates ID seven"
+
+S015 | runAliasRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 170
+cppID: swiftcore/SongRegion::alias
+Predicate: try fixture.read("include/constants/songs.h") == Data(RegionImages.aliasMusicHeader.utf8)
+Anchor: message "A038 symbolic END_MUS refers to MUS_OLDCHECK"
+
+S016 | runAliasRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 173
+cppID: swiftcore/SongRegion::alias
+Predicate: try fixture.read("charmap.txt") == Data(RegionImages.aliasMusicCharmap.utf8)
+Anchor: message "A039 MUS_OLDCHECK charmap entry encodes 07 00"
+
+S017 | runAliasRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 180
+cppID: swiftcore/SongRegion::alias
+Predicate: SongRegistration.status(root: fixture.root, label: "mus_oldcheck", constant: "MUS_OLDCHECK").missingFiles == []
+Anchor: message "A041 symbolic music registration is complete"
+
+S018 | runAliasRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 183
+cppID: swiftcore/SongRegion::alias
+Predicate: SongRegistration.register(root: fixture.root, label: "se_oldcheck", constant: "SE_OLDCHECK", player: "MUSIC_PLAYER_SE1") == 3
+Anchor: message "A043 symbolic SE registration fills ID three"
+
+S019 | runAliasRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 195
+cppID: swiftcore/SongRegion::alias
+Predicate: try fixture.debugEntry("SE_OLDCHECK", inSe: true) == true
+Anchor: message "A044 symbolic SE debug entry lands after SOUND_LIST_SE"
+
+S020 | runStrandedRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 265
+cppID: swiftcore/SongRegion::stranded
+Predicate: SongRegistration.status(root: fixture.root, label: "mus_straggler", constant: "MUS_STRAGGLER").inSongsH == false
+Anchor: message "A055 straggler outside END_MUS is not registered before migration"
+
+S021 | runStrandedRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 267
+cppID: swiftcore/SongRegion::stranded
+Predicate: SongRegistration.register(root: fixture.root, label: "mus_straggler", constant: "MUS_STRAGGLER", player: "MUSIC_PLAYER_BGM") == 8
+Anchor: message "A057 stranded song migrates into music slot eight"
+
+S022 | runStrandedRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 279
+cppID: swiftcore/SongRegion::stranded
+Predicate: try fixture.read("src/debug.c") == Data(RegionJourneyImages.strandedDebug.utf8)
+Anchor: message "A058 migration preserves the original stranded debug image byte-for-byte"
+
+S023 | runStrandedRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 284
+cppID: swiftcore/SongRegion::stranded
+Predicate: SongRegistration.status(root: fixture.root, label: "mus_straggler", constant: "MUS_STRAGGLER").missingFiles == []
+Anchor: message "A060 migrated straggler registration is complete"
+
+S024 | runStrandedRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 293
+cppID: swiftcore/SongRegion::stranded
+Predicate: try fixture.read("include/constants/songs.h") == Data(RegionJourneyImages.vacatedHeader.utf8)
+Anchor: message "A062 removing migrated song restores END_MUS to MUS_OLDCHECK"
+
+S025 | runStrandedRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 304
+cppID: swiftcore/SongRegion::stranded
+Predicate: SongRegistration.plan(root: fixture.root, label: "mus_refill", constant: "MUS_REFILL", player: "MUSIC_PLAYER_BGM").songId == 8
+Anchor: message "A064 refill plan reuses vacated ID eight"
+
+S026 | runStrandedRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 307
+cppID: swiftcore/SongRegion::stranded
+Predicate: SongRegistration.register(root: fixture.root, label: "mus_refill", constant: "MUS_REFILL", player: "MUSIC_PLAYER_BGM") == 8
+Anchor: message "A066 refill registration occupies ID eight"
+
+S027 | runStrandedRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 313
+cppID: swiftcore/SongRegion::stranded
+Predicate: try fixture.read("include/constants/songs.h") == Data(RegionJourneyImages.refillHeader.utf8)
+Anchor: message "A067 migrated refill sits adjacent to symbolic END_MUS"
+
+S028 | runOverflowRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 373
+cppID: swiftcore/SongRegion::overflow
+Predicate: SongRegistration.plan(root: fixture.root, label: "mus_refill", constant: "MUS_REFILL", player: "MUSIC_PLAYER_BGM").songId == 8
+Anchor: message "A072 refill plan selects vacated ID eight"
+
+S029 | runOverflowRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 376
+cppID: swiftcore/SongRegion::overflow
+Predicate: SongRegistration.register(root: fixture.root, label: "mus_refill", constant: "MUS_REFILL", player: "MUSIC_PLAYER_BGM") == 8
+Anchor: message "A074 refill registration reuses ID eight"
+
+S030 | runOverflowRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 392
+cppID: swiftcore/SongRegion::overflow
+Predicate: SongRegistration.register(root: fixture.root, label: "se_extra", constant: "SE_EXTRA", player: "MUSIC_PLAYER_SE1") == 4
+Anchor: message "A076 remaining SE slot receives ID four"
+
+S031 | runOverflowRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 408
+cppID: swiftcore/SongRegion::overflow
+Predicate: SongRegistration.register(root: fixture.root, label: "se_over", constant: "SE_OVER", player: "MUSIC_PLAYER_SE1") == 9
+Anchor: message "A078 overflowing SE allocates music ID nine"
+
+S032 | runOverflowRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 420
+cppID: swiftcore/SongRegion::overflow
+Predicate: try fixture.debugEntry("SE_OVER", inSe: false) == true
+Anchor: message "A080 SE overflow appears before SOUND_LIST_SE in BGM"
+
+S033 | runOverflowRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 414
+cppID: swiftcore/SongRegion::overflow
+Predicate: try fixture.read("include/constants/songs.h") == Data(RegionJourneyImages.overflowHeader.utf8)
+Anchor: message "A082 SE overflow repoints END_MUS to SE_OVER at ID nine"
+
+S034 | runAliasRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 197
+cppID: swiftcore/SongRegion::alias
+Predicate: SongRegistration.register(root: fixture.root, label: "se_oldcheck", constant: "SE_OLDCHECK", player: "MUSIC_PLAYER_SE1") == 3
+Anchor: message "A046 re-registering symbolic SE keeps the original ID"
+
+S035 | runOverflowRegionChecks | src/checks/songlist/SongRegionRegistrationChecks.swift
+Source line: 336
+cppID: swiftcore/SongRegion::overflow
+Predicate: SongRegistration.register(root: fixture.root, label: "mus_reuse_source", constant: "MUS_REUSE_SOURCE", player: "MUSIC_PLAYER_BGM") == 8
+Anchor: message "A070 reuse-source music registration occupies ID eight"
+
+Shared helpers: fixture staging and debugEntry support the checks; neither is cited as a behavior predicate.
+Execution path: SongRegionRegistrationChecks.swift is registered in src/checks/CMakeLists.txt, runSongListServiceChecks is called from the projectSession suite in src/checks/workspace/SessionChecks.swift, and it invokes runSongRegionRegistrationChecks. Each S entry records its scenario cppID. The swiftcore-projectsession and shell-songs results above are reused from Task 128's settled verification report.
