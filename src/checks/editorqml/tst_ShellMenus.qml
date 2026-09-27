@@ -19,6 +19,7 @@ TestCase {
     ShellQmlBootstrap { id: bootstrap }
 
     Component { id: shellComponent; ShellWindow { width: 1100; height: 720; visible: true } }
+    Component { id: soloTextProbe; TextInput { text: "focused edit" } }
 
 
     function closeShell() {
@@ -608,6 +609,79 @@ TestCase {
         }, 5000), "the second Undo restores the loop start independently")
     }
 
+    function test_explicitSoloEditMenuStaysAvailableWithTextFocus() {
+        openShell()
+        openSong()
+        var presenter = shell.shellPresenter
+        verify(waitForNative(function() { return editorPage() !== null }, 10000),
+               "the selected song tab mounts")
+        var surface = findChild(editorPage(), "swiftRollOverlay")
+        var soloItem = findChild(shell, "shellAction_roll.solo_tracks")
+        verify(surface && soloItem, "the selected editor mounts the Edit Solo action")
+        var headers = null
+        tryVerify(function() {
+            headers = findChild(surface, "timelineTrackHeaderRows")
+            return headers !== null && headers.count > surface.gridModel.trackIndex
+        }, 3000, "the selected track header is mounted")
+        var header = headers.itemAt(surface.gridModel.trackIndex)
+        verify(header && !header.isAddTrack, "the selected track can be soloed")
+        compare(header.soloChecked, false, "the selected track starts unsoloed")
+        var field = soloTextProbe.createObject(shell.contentItem)
+        verify(field !== null, "the text field belongs to the active shell")
+        field.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(field, "activeFocus", true, 3000)
+        compare(presenter.actionEnabled("roll.solo_tracks"), true,
+                "text focus does not disable the explicit window Solo action")
+        compare(soloItem.enabled, true, "the Edit Solo row remains actionable under text focus")
+        presenter.activate("roll.solo_tracks")
+        tryCompare(header, "soloChecked", true, 3000,
+                   "explicit Edit Solo activation still reaches the selected track")
+        compare(field.activeFocus, true, "the Edit command does not steal text input focus")
+        presenter.activate("roll.solo_tracks")
+        tryCompare(header, "soloChecked", false, 3000,
+                   "explicit Edit Solo restores the previous mix")
+        field.destroy()
+    }
+
+    function test_rulerCursorInsertDiffersFromSelectionEditMenu() {
+        openShell()
+        openSong()
+        var presenter = shell.shellPresenter
+        verify(waitForNative(function() { return editorPage() !== null }, 10000),
+               "the selected tab mounts its editor")
+        var page = editorPage()
+        var surface = findChild(page, "swiftRollOverlay")
+        var ruler = findChild(page, "timelineRulerInput")
+        var editInsert = findChild(shell, "shellAction_edit.insert_time")
+        verify(surface && ruler && editInsert, "the selected tab mounts both Edit and ruler actions")
+        var grid = surface.gridModel
+        compare(presenter.actionEnabled("edit.insert_time"), false,
+                "without a selected span the Edit-menu Insert Time row is disabled")
+        compare(editInsert.enabled, false, "the mounted Edit row follows the selection gate")
+        var x = ruler.width * 0.28
+        mouseClick(ruler, x, ruler.height * 0.75, Qt.RightButton)
+        tryVerify(function() { return surface.rulerMenu.isOpen }, 3000,
+                  "right-clicking the ruler opens the cursor menu")
+        var target = surface.rulerMenu.targetTick()
+        verify(target > 0, "the ruler click targets a non-origin snapped cursor")
+        compare(grid.editCursorTick, target,
+                "the ruler cursor menu commits its clicked snap before offering Insert Time")
+        var panel = null
+        tryVerify(function() {
+            panel = findChild(surface, "quickMenuPanelRoot")
+            return panel !== null && panel.rowObjectNamePrefix === "rulerMenuRow_" && panel.visible
+        }, 5000, "the cursor menu is mounted")
+        tryVerify(function() { return panel.rowItem(0) !== null }, 3000,
+                  "the mounted ruler menu populates its Insert Time row")
+        compare(panel.rowItem(0).itemData.actionId, 1)
+        compare(panel.rowItem(0).itemData.enabled, true,
+                "the cursor ruler Insert Time row is available without a selected span")
+        compare(presenter.actionEnabled("edit.insert_time"), false,
+                "opening a cursor menu does not fabricate a time selection for the Edit row")
+        keyClick(Qt.Key_Escape)
+        tryCompare(surface.rulerMenu, "isOpen", false)
+    }
+
     function test_eventMoveRoutesThroughMenuAndEventListKey() {
         openShell()
         openSong()
@@ -618,11 +692,18 @@ TestCase {
         var page = editorPage()
         var upItem = findChild(shell, "shellAction_eventlist.move_up")
         var downItem = findChild(shell, "shellAction_eventlist.move_down")
-        verify(upItem !== null && downItem !== null, "the Edit menu owns the event moves")
+        var soloItem = findChild(shell, "shellAction_roll.solo_tracks")
+        verify(upItem !== null && downItem !== null && soloItem !== null,
+               "the Edit menu owns the event moves and Solo action")
         compare(presenter.actionEnabled("eventlist.move_up"), false,
                 "the hidden event list disables move up")
         compare(presenter.actionEnabled("eventlist.move_down"), false,
                 "the hidden event list disables move down")
+        compare(upItem.enabled, false, "the hidden list keeps the Move Up menu row disabled")
+        compare(downItem.enabled, false, "the hidden list keeps the Move Down menu row disabled")
+        compare(presenter.actionEnabled("roll.solo_tracks"), true,
+                "hiding the event list keeps the window Solo action enabled")
+        compare(soloItem.enabled, true, "the hidden event list retains the Edit Solo row")
         presenter.activate("view.event_list")
         var events = session.eventListPresenter()
         tryVerify(function() { return events.visible && events.rowCount > 1 }, 3000,
@@ -644,6 +725,9 @@ TestCase {
         compare(events.currentRow, moveRow, "the menu targets the selected event row")
         compare(presenter.actionEnabled("eventlist.move_up"), true,
                 "the selected raw event is eligible for Move Up")
+        compare(presenter.actionEnabled("roll.solo_tracks"), true,
+                "showing the event list does not steal the window Solo action")
+        compare(soloItem.enabled, true, "the shown event list retains the Edit Solo row")
         tryVerify(function() { return upItem.enabled }, 3000,
                   "the selected event enables Move Up")
         upItem.triggered()
@@ -669,6 +753,11 @@ TestCase {
         tryVerify(function() { return !events.visible }, 3000, "the event list hides again")
         compare(presenter.actionEnabled("eventlist.move_up"), false,
                 "hiding the list disables move up again")
+        compare(upItem.enabled, false, "the hidden list revokes the Move Up menu row")
+        compare(downItem.enabled, false, "the hidden list revokes the Move Down menu row")
+        compare(presenter.actionEnabled("roll.solo_tracks"), true,
+                "closing the event list leaves the window Solo action available")
+        compare(soloItem.enabled, true, "the closed event list retains the Edit Solo row")
     }
 
     function test_closeTabClosesTheCleanTab() {

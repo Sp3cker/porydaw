@@ -86,6 +86,7 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
     drawerOriginalNumericPromptTransaction(report, suite: session, service: service)
     editorSelectionCommandChecks(report, suite: session, service: service)
     runTimeRoutingChecks(report: report, suite: session, service: service)
+    runEditRoutingChecks(report: report, fixtureRoot: fixtureRoot)
     runClipboardSelectionChecks(report, suite: session, service: service)
     runTrackHeadersChecks(report, session: session, service: service)
     runTrackHeadersInputChecks(report, session: session, service: service)

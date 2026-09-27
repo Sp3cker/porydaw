@@ -794,6 +794,13 @@ TestCase {
         mousePress(roll, startX, y, Qt.RightButton, Qt.ShiftModifier)
         mouseMove(roll, endX, y, -1, Qt.RightButton, Qt.ShiftModifier)
         mouseRelease(roll, endX, y, Qt.RightButton, Qt.ShiftModifier)
+        var presenter = shell.shellPresenter
+        compare(presenter.actionEnabled("edit.delete_time"), true,
+                "the swept selection enables Delete Time")
+        compare(presenter.actionEnabled("edit.insert_time"), true,
+                "the swept selection enables Insert Time")
+        compare(presenter.actionEnabled("roll.copy"), true,
+                "the swept selection enables Copy instead of the cleared note selection")
         compare(selectedCount(grid), 0, "a swept time selection clears the roll's selected notes")
         verify(session.gridCommandAvailable(0) && session.gridCommandAvailable(2),
                "the swept range owns Copy and Duplicate Time")
@@ -816,6 +823,8 @@ TestCase {
                     return t.track === selected.track && t.notes.length >= 1
                 })
         }, 5000), "Copy over a swept time selection publishes the span clip bytes")
+        compare(presenter.actionEnabled("roll.paste"), true,
+                "the copied time clip enables Paste")
         compare(copied.ticksPerBeat, tpb, "the copied range carries the mounted timebase")
         keyClick(Qt.Key_Delete)
         verify(waitForNative(function() {
@@ -823,11 +832,17 @@ TestCase {
             return covered.every(function(n) { return noteById(grid, n.id) === null })
                 && current.length === before.length - covered.length
         }, 5000), "Delete over a swept time selection removes only the covered content")
+        compare(presenter.actionEnabled("edit.undo"), true,
+                "the range deletion enables Undo")
+        compare(presenter.actionEnabled("edit.redo"), false,
+                "the range deletion invalidates Redo")
         compare(session.gridCommandAvailable(2), true,
                 "a swept time selection survives its range delete")
         keySequence(StandardKey.Undo)
         verify(waitForNative(function() { return noteFacts(grid) === noteFactsFrom(before) }, 5000),
                "Undo restores the deleted span")
+        compare(presenter.actionEnabled("edit.redo"), true,
+                "undoing range deletion enables Redo")
         keySequence(StandardKey.Cut)
         verify(waitForNative(function() {
             return covered.every(function(n) { return noteById(grid, n.id) === null })
@@ -855,6 +870,10 @@ TestCase {
                 && tileOn(grid, cursor, selected.pitch, 24, selected.track, 120) !== null
                 && !session.gridCommandAvailable(2)
         }, 5000), "a range Paste key merges the staged clip and clears the time selection")
+        compare(presenter.actionEnabled("edit.insert_time"), false,
+                "Paste consumes the time range and disables Insert Time")
+        compare(presenter.actionEnabled("edit.delete_time"), false,
+                "Paste consumes the time range and disables Delete Time")
         verify(copied.span === endTick - startTick && clipProbe.readClipJson() === staged
                    && grid.editCursorTick === cursor + 48
                    && tileOn(grid, cursor, selected.pitch, 24, selected.track, 120) !== null,
