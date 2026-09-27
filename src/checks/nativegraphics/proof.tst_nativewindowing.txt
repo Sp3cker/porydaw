@@ -4,16 +4,17 @@ Reference revision: 02dce75dd21f84e3b59b399d84afb9f123775e39
 Original: src/checks/nativegraphics/tst_nativewindowing.cpp
 Original SHA-256: 582680d75ae76272483d539b25d0716d043a765c5f324cbcc9821170036d5745
 Swift counterpart: src/checks/trackheaders/headerfixture.swift; src/checks/trackheaders/trackheadermenu.swift; src/checks/trackheaders/headerinputfixture.swift
+Additional QML counterpart: src/checks/rollqml/tst_SwiftRollWindowing.qml
+Counterpart SHA-256: 202e6e5257f5ad7fb131eefec85b2df74fc8d225938f13932291d1dec84aa7b9
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Disposition tally: 78 sites: 39 NATIVE, 39 MATCHED.
+Disposition tally: 78 sites: 46 MATCHED, 28 GAP, 4 RETIRED-REPRESENTATION.
 
 Command: deno task verify --filter swiftcore --verbose
 Result: passing — the suite ran green with these checks registered.
 Command: deno task verify:qml-roll
-Result: passing — tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest,
-test_gridContrastPreviewAndApply, and test_windowClearColorBeforeFirstFrame
-run green against the live Swift scene (5/5 in the suite).
+Result: PASS — Task154 implementer-reported `swiftroll-window` (1/1); the header picker scenario and existing windowing cases ran green after correcting QtTest character delivery. The initial run failed on multi-character key delivery and was corrected before this pass. Frozen counterpart SHA-256: 202e6e5257f5ad7fb131eefec85b2df74fc8d225938f13932291d1dec84aa7b9.
+Execution evidence for A030–A036: the registered rollqml `test_headerSelectionAndVoiceRequest` executes these predicates in the same picker journey; this proof-only pass did not rerun the lane.
 Converted-window command: deno task verify:qml --verbose
 
 A001 | NativeWindowingTest::freshRig | src/checks/nativegraphics/tst_nativewindowing.cpp:115
@@ -250,8 +251,8 @@ A029 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegra
 Disposition: MATCHED
 
 A030 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:246
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The voice picker is a C++ QDialog (VoicePickerDialog); the Swift scene has no picker widget — the request boundary is covered at A029.
+Disposition: MATCHED
+Mapping: S001 — the mounted header voice picker becomes visible in the executing picker journey.
 Source context since previous assertion:
   ;
       const checks::voicepicker::Picker picker = checks::voicepicker::active(view);
@@ -259,24 +260,24 @@ Original expression:
   QVERIFY(picker.root->isVisible())
 
 A031 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:247
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: VoicePickerDialog widget visibility is C++-only; no Swift-side observation exists.
+Disposition: MATCHED
+Mapping: S002 — the mounted header voice list is visible.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(picker.list->isVisible())
 
 A032 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:248
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: VoicePickerDialog windowTitle is a C++ widget property; no Swift-side observation exists.
+Disposition: MATCHED
+Mapping: S003 — the picker search receives active focus.
 Source context since previous assertion:
   ;
 Original expression:
   QTRY_VERIFY(picker.search->hasActiveFocus())
 
 A033 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:251
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: VoicePickerDialog program list is a C++ widget; no Swift-side observation exists.
+Disposition: MATCHED
+Mapping: S004 — filtering for program 127 exposes its visible row within the list viewport.
 Source context since previous assertion:
   ;
       checks::voicepicker::filter(picker, QStringLiteral("127"));
@@ -285,8 +286,8 @@ Original expression:
                   checks::voicepicker::row(picker, 127)->isVisible())
 
 A034 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:255
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: VoicePickerDialog current-row selection is a C++ widget; no Swift-side observation exists.
+Disposition: MATCHED
+Mapping: S005 — an unmatched search disables picker acceptance.
 Source context since previous assertion:
   ;
       checks::voicepicker::filter(picker, QStringLiteral("zz-no-such-voice"));
@@ -294,8 +295,8 @@ Original expression:
   QTRY_VERIFY(!picker.accept->property("enabled").toBool())
 
 A035 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:258
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: VoicePickerDialog accept() is a C++ widget path; the Swift picker request boundary is covered at A029.
+Disposition: MATCHED
+Mapping: S006 — clearing the search reveals program 0 within the visible list viewport.
 Source context since previous assertion:
   ;
       checks::voicepicker::filter(picker, QString());
@@ -304,8 +305,8 @@ Original expression:
                   checks::voicepicker::row(picker, 0)->isVisible())
 
 A036 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:261
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: VoicePickerDialog close/destruction is a C++ widget path; no Swift-side observation exists.
+Disposition: MATCHED
+Mapping: S007 — Escape closes and unmounts the picker.
 Source context since previous assertion:
   ;
       QTest::keyClick(picker.window, Qt::Key_Escape);
@@ -624,3 +625,38 @@ gridContrastPreviewAndApply -> rollqml/tst_SwiftRollWindowing.qml::test_gridCont
   (ThemeController preview/commit/discard through the production palette push)
 windowClearColorBeforeFirstFrame -> rollqml/tst_SwiftRollWindowing.qml::test_windowClearColorBeforeFirstFrame
   (roll-background clear color before show, first frame paints it)
+
+S001 | test_headerSelectionAndVoiceRequest | src/checks/rollqml/tst_SwiftRollWindowing.qml
+Source line: 290
+Predicate: tryCompare(picker, "visible", true, 5000, "A030: the requested header voice picker is visible")
+Anchor: message "A030: the requested header voice picker is visible"
+
+S002 | test_headerSelectionAndVoiceRequest | src/checks/rollqml/tst_SwiftRollWindowing.qml
+Source line: 294
+Predicate: tryCompare(list, "visible", true, 5000, "A031: the header voice list is visible")
+Anchor: message "A031: the header voice list is visible"
+
+S003 | test_headerSelectionAndVoiceRequest | src/checks/rollqml/tst_SwiftRollWindowing.qml
+Source line: 298
+Predicate: tryCompare(search, "activeFocus", true, 5000, "A032: the header voice search takes active focus")
+Anchor: message "A032: the header voice search takes active focus"
+
+S004 | test_headerSelectionAndVoiceRequest | src/checks/rollqml/tst_SwiftRollWindowing.qml
+Source line: 312
+Predicate: row && row.visible && list.visible && row.width > 0 && row.height > 0 && position.x < list.width && position.x + row.width > 0 && position.y < list.height && position.y + row.height > 0
+Anchor: message "A033: program 127 is visible inside the header voice list viewport"
+
+S005 | test_headerSelectionAndVoiceRequest | src/checks/rollqml/tst_SwiftRollWindowing.qml
+Source line: 323
+Predicate: tryCompare(accept, "enabled", false, 5000, "A034: an unmatched voice search disables acceptance")
+Anchor: message "A034: an unmatched voice search disables acceptance"
+
+S006 | test_headerSelectionAndVoiceRequest | src/checks/rollqml/tst_SwiftRollWindowing.qml
+Source line: 344
+Predicate: row && row.visible && list.visible && row.width > 0 && row.height > 0 && position.x < list.width && position.x + row.width > 0 && position.y < list.height && position.y + row.height > 0
+Anchor: message "A035: clearing the search reveals program 0 in the list viewport"
+
+S007 | test_headerSelectionAndVoiceRequest | src/checks/rollqml/tst_SwiftRollWindowing.qml
+Source line: 348
+Predicate: tryCompare(loader, "item", null, 5000, "A036: Escape unmounts the header voice picker")
+Anchor: message "A036: Escape unmounts the header voice picker"

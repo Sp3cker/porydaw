@@ -212,9 +212,8 @@ TestCase {
         verify(found, "the first presented frame paints the roll background")
     }
 
-    // The window-level half of the C++ headerSelectionAndVoicePicker oracle:
-    // real delegate geometry, real pointer input, and the session's picker
-    // request. Presenter-level coverage lives in swiftcore/TrackHeaders.
+    // C++ headerSelectionAndVoicePicker: delegate geometry, pointer input,
+    // and the mounted picker journey; presenter coverage is in swiftcore.
     function test_headerSelectionAndVoiceRequest() {
         var surface = testCase.selectedSurface()
         var input = testCase.headerInput()
@@ -270,6 +269,9 @@ TestCase {
         var voiceRect = headers.voiceLineRect
         verify(voiceRect.width > 0 && voiceRect.height > 0,
                "the voice line rect is populated")
+        var revision = session.gridPresenter().appliedRevisionText
+        var undoIndex = bootstrap.timeSigUndoIndex()
+        var undoCount = bootstrap.timeSigUndoCount()
         mouseDoubleClickSequence(input,
                                  voiceRect.x + voiceRect.width / 2,
                                  voiceRect.y + voiceRect.height / 2 + alternateRow * rowHeight)
@@ -279,11 +281,79 @@ TestCase {
         compare(testCase.voiceRequests[0], targetTrack,
                 "the picker request carries the clicked track")
 
-        // Cancelling the picker writes nothing and never opens the rename editor.
-        var revision = session.gridPresenter().appliedRevisionText
-        session.completeTrackHeaderVoiceRequest(-1)
+        var loader = findChild(surface, "headerVoicePickerLoader")
+        verify(loader && loader.active, "the header voice picker loader activates")
+        tryVerify(function() { return loader.item !== null }, 5000,
+                  "the production header voice prompt mounts")
+        var picker = loader.item
+        tryCompare(picker, "visible", true, 5000,
+                   "A030: the requested header voice picker is visible")
+        var list = findChild(picker, "voicePickerList")
+        verify(list, "the mounted header picker has a voice list")
+        tryCompare(list, "visible", true, 5000,
+                   "A031: the header voice list is visible")
+        var search = findChild(picker, "voicePickerSearch")
+        verify(search, "the mounted header picker has a search field")
+        tryCompare(search, "activeFocus", true, 5000,
+                   "A032: the header voice search takes active focus")
+
+        keyClick("1")
+        keyClick("2")
+        keyClick("7")
+        tryCompare(search, "text", "127", 5000,
+                   "typing program 127 filters the mounted header picker")
+        tryVerify(function() {
+            var row = findChild(list, "voicePickerRow_127")
+            if (!row || !row.visible || !list.visible || row.width <= 0 || row.height <= 0)
+                return false
+            var position = row.mapToItem(list, 0, 0)
+            return position.x < list.width && position.x + row.width > 0
+                && position.y < list.height && position.y + row.height > 0
+        }, 5000, "A033: program 127 is visible inside the header voice list viewport")
+
+        keySequence(StandardKey.SelectAll)
+        var unmatched = "zz-no-such-voice"
+        for (var i = 0; i < unmatched.length; ++i)
+            keyClick(unmatched.charAt(i))
+        tryCompare(search, "text", "zz-no-such-voice", 5000,
+                   "the header voice search receives the unmatched filter")
+        var accept = findChild(picker, "voicePickerAccept")
+        verify(accept, "the mounted picker has an acceptance control")
+        tryCompare(accept, "enabled", false, 5000,
+                   "A034: an unmatched voice search disables acceptance")
+        keyClick(Qt.Key_Return)
+        compare(loader.item, picker, "Return with no match leaves the header picker mounted")
+        compare(session.gridPresenter().appliedRevisionText, revision,
+                "Return with no match changes no document revision")
+        compare(bootstrap.timeSigUndoIndex(), undoIndex,
+                "Return with no match changes no undo index")
+        compare(bootstrap.timeSigUndoCount(), undoCount,
+                "Return with no match adds no undo command")
+
+        keySequence(StandardKey.SelectAll)
+        keyClick(Qt.Key_Backspace)
+        tryCompare(search, "text", "", 5000,
+                   "clearing the header voice search restores the full list")
+        tryVerify(function() {
+            var row = findChild(list, "voicePickerRow_0")
+            if (!row || !row.visible || !list.visible || row.width <= 0 || row.height <= 0)
+                return false
+            var position = row.mapToItem(list, 0, 0)
+            return position.x < list.width && position.x + row.width > 0
+                && position.y < list.height && position.y + row.height > 0
+        }, 5000, "A035: clearing the search reveals program 0 in the list viewport")
+
+        keyClick(Qt.Key_Escape)
+        tryCompare(loader, "item", null, 5000,
+                   "A036: Escape unmounts the header voice picker")
+        compare(session.headerVoicePickerOpen, false,
+                "Escape closes the header voice picker session")
         compare(session.gridPresenter().appliedRevisionText, revision,
                 "a cancelled picker writes nothing")
+        compare(bootstrap.timeSigUndoIndex(), undoIndex,
+                "a cancelled picker leaves the undo index unchanged")
+        compare(bootstrap.timeSigUndoCount(), undoCount,
+                "a cancelled picker adds no undo command")
         var rename = findChild(surface, "timelineTrackHeaderRename")
         verify(rename && !rename.visible, "the rename editor stays hidden")
     }
