@@ -73,7 +73,6 @@ public final class PianoGrid {
     private var keyboardTransposeAuditionActive = false
     /// Receives roll auditions as (track, pitch, velocity), including band entrants.
     @QtIgnored public var onAudition: ((Int, Int, Int) -> Void)?
-    @QtIgnored public var onCommitCursor: ((Tick) -> Void)?
     private var didApplyInitialHome = false
     private var contentEndTick = GridMetrics.songLengthTicks
     private var staticSceneDirty = true
@@ -756,7 +755,6 @@ public final class PianoGrid {
                     session.editCursor = Tick(tick)
                     editCursorTick = Int(tick)
                     stopAudition()
-                    onCommitCursor?(Tick(tick))
                 }
             }
         } else if case .velocity(let state) = gesture, state.preview == nil {

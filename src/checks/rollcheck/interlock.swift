@@ -88,8 +88,12 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
         session.selectedNotes.contains(seeded[0]) && session.selectedNotes.contains(seeded[1])
     }
     session.clearTimeSelection()
-    var committedTicks: [Tick] = []
-    grid.onCommitCursor = { committedTicks.append($0) }
+    let playhead = SharedPlayheadPresenter()
+    playhead.attach(session: session, audio: nil, grid: grid, drawer: nil)
+    playhead.setFollowEnabled(false)
+    playhead.observe(sample: session.timeline.sample(for: Tick(bTick)), transport: 0)
+    let playbackTick = playhead.tick
+    defer { playhead.detach() }
     func clearSelection() {
         session.clearSelectedNotes()
     }
@@ -144,10 +148,13 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
         grid.endPointer(x: freeX, y: ay)
         report.expect(containsAB(), cppID: id,
                       message: "A008 parked PendingDraw release retains A and B")
-        report.expect(committedTicks.last == session.grid.snapTick(
+        report.expect(session.editCursor == session.grid.snapTick(
             camera.tickAtContentX(freeX), camera: camera)
-            && committedTicks.last == session.editCursor,
+            && grid.editCursorTick == Int(session.editCursor),
             cppID: id, message: "A008 PendingDraw parks the cursor after the right band ends")
+        playhead.refreshProjection()
+        report.expect(playhead.tick == playbackTick, cppID: id,
+                      message: "PendingDraw cursor commit leaves the playback position unchanged")
         report.expect(unchanged(before), cppID: id,
                       message: "A009 PendingDraw interlock preserves MIDI bytes and undo history")
     }

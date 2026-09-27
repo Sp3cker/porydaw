@@ -760,12 +760,10 @@ private func checkRulerSeekEmission(_ report: CheckReport, session: DocumentSess
     defer { session.selectedTrack = previousTrack }
     let previousCursor = session.editCursor
     defer { session.editCursor = previousCursor }
-    defer { automation.clearTimeSelection(); menu.close(); menu.cancelSweep(); menu.onSeek = nil }
+    defer { automation.clearTimeSelection(); menu.close(); menu.cancelSweep() }
     let primary = session.selectedTrack ?? 0
     automation.clearTimeSelection()
     menu.close()
-    var emitted: [Tick] = []
-    menu.onSeek = { emitted.append($0) }
     let cell = max(1, grid.snapTicks)
     let anchor = Tick(grid.snapTickDown(Double(72)))
     let farTick = anchor + Tick(cell * 4)
@@ -777,25 +775,34 @@ private func checkRulerSeekEmission(_ report: CheckReport, session: DocumentSess
         outside = outside + 1
         steps += 1
     }
+    let playhead = SharedPlayheadPresenter()
+    playhead.attach(session: session, audio: nil, grid: grid, drawer: nil)
+    playhead.setFollowEnabled(false)
+    playhead.observe(sample: session.timeline.sample(for: anchor), transport: 0)
+    let playbackTick = playhead.tick
+    defer { playhead.detach() }
     session.editCursor = anchor
     menu.beginSweep(contentX: session.camera.contentX(tick: Double(outside)), pointerY: 0)
     menu.endSweep(contentX: session.camera.contentX(tick: Double(outside)))
-    report.expect(emitted == [outside], cppID: id,
-                  message: "a ruler tap emits one seek for the exact snapped anchor")
+    playhead.refreshProjection()
+    report.expect(session.editCursor == outside && playhead.tick == playbackTick, cppID: id,
+                  message: "a ruler tap commits the exact snapped anchor without moving playback")
     let start = anchor
     let end = outside
     automation.applyTimeSelection(AutomationTimeSelection(
         range: TimeRange(startTick: start, endTick: end), scope: .tracks([primary])))
+    session.editCursor = anchor
     openRulerMenu(menu, at: session.camera.contentX(tick: Double(end) + 0.5))
-    report.expect(emitted == [outside, end]
-                  && session.editCursor == end, cppID: id,
-                  message: "an outside press emits one seek for the exact snapped end tick")
+    playhead.refreshProjection()
+    report.expect(session.editCursor == end && playhead.tick == playbackTick, cppID: id,
+                  message: "an outside press commits the exact snapped end tick without moving playback")
     let chipOff = end + 1
     session.document.setTimeSignature(tick: chipOff, numerator: 7, denominatorPower: 2)
     automation.clearTimeSelection()
     openRulerMenu(menu, at: session.camera.contentX(tick: Double(chipOff)))
-    report.expect(emitted == [outside, end, chipOff], cppID: id,
-                  message: "a chip press emits one seek for the exact chip tick")
+    playhead.refreshProjection()
+    report.expect(session.editCursor == chipOff && playhead.tick == playbackTick, cppID: id,
+                  message: "a chip press commits the exact chip tick without moving playback")
     menu.close()
     session.document.deleteTimeSignature(at: chipOff)
     automation.applyTimeSelection(AutomationTimeSelection(
@@ -810,24 +817,13 @@ private func checkRulerSeekEmission(_ report: CheckReport, session: DocumentSess
     menu.openTimeSelection(contentX: session.camera.contentX(tick: Double((start + end) / 2)))
     automation.clearTimeSelection()
     _ = menu.activate(actionId: 6)
-    report.expect(emitted == [outside, end, chipOff], cppID: id,
-                  message: "inside presses, sweeps, cancels and menu commands emit no seek")
+    playhead.refreshProjection()
+    report.expect(session.editCursor == chipOff && playhead.tick == playbackTick, cppID: id,
+                  message: "inside presses, sweeps, cancels and menu commands preserve cursor and playback")
     menu.close()
     let sample = session.timeline.sample(for: end)
     report.expect(abs(session.timeline.tick(for: sample) - Double(end)) < 0.001, cppID: id,
                   message: "the timeline inverts the sought sample back to the exact tick")
-    let playhead = SharedPlayheadPresenter()
-    let priorCamera = session.onCameraChange
-    let priorPlayback = session.onPlayback
-    let priorSessionChange = session.onChange
-    defer {
-        session.onCameraChange = priorCamera
-        session.onPlayback = priorPlayback
-        session.onChange = priorSessionChange
-        playhead.detach()
-    }
-    playhead.attach(session: session, audio: nil, grid: nil, drawer: nil)
-    playhead.setFollowEnabled(false)
     _ = playhead.observe(sample: sample, transport: 0)
     report.expect(playhead.tick == Double(end), cppID: id,
                   message: "the shared playhead presents the sought tick from its sample")

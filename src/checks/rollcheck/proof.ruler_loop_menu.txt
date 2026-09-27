@@ -824,7 +824,7 @@ S017 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu.swift
 Anchor: message "A112: the outside press publishes the committed cursor through the session observer"
 
 S018 | checkRulerSeekEmission | src/checks/rollcheck/ruler_loop_menu.swift
-Anchor: message "a ruler tap emits one seek for the exact snapped anchor"
+Anchor: message "a ruler tap commits the exact snapped anchor without moving playback"
 
 S019 | checkRulerSeekEmission | src/checks/rollcheck/ruler_loop_menu.swift
 Anchor: message "the shared playhead presents the sought tick from its sample"
