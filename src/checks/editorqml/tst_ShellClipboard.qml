@@ -870,8 +870,8 @@ TestCase {
                 && tileOn(grid, cursor, selected.pitch, 24, selected.track, 120) !== null
                 && !session.gridCommandAvailable(2)
         }, 5000), "a range Paste key merges the staged clip and clears the time selection")
-        compare(presenter.actionEnabled("edit.insert_time"), false,
-                "Paste consumes the time range and disables Insert Time")
+        compare(presenter.actionEnabled("edit.insert_time"), true,
+                "Insert Time remains available after Paste consumes the range")
         compare(presenter.actionEnabled("edit.delete_time"), false,
                 "Paste consumes the time range and disables Delete Time")
         verify(copied.span === endTick - startTick && clipProbe.readClipJson() === staged

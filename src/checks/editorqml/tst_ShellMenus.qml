@@ -661,9 +661,9 @@ TestCase {
         var editInsert = findChild(shell, "shellAction_edit.insert_time")
         verify(surface && ruler && editInsert, "the selected tab mounts both Edit and ruler actions")
         var grid = surface.gridModel
-        compare(presenter.actionEnabled("edit.insert_time"), false,
-                "without a selected span the Edit-menu Insert Time row is disabled")
-        compare(editInsert.enabled, false, "the mounted Edit row follows the selection gate")
+        compare(presenter.actionEnabled("edit.insert_time"), true,
+                "Insert Time remains available without a selected span")
+        compare(editInsert.enabled, true, "the mounted Edit row offers cursor insertion")
         var x = ruler.width * 0.28
         mouseClick(ruler, x, ruler.height * 0.75, Qt.RightButton)
         tryVerify(function() { return surface.rulerMenu.isOpen }, 3000,
@@ -682,10 +682,26 @@ TestCase {
         compare(panel.rowItem(0).itemData.actionId, 1)
         compare(panel.rowItem(0).itemData.enabled, true,
                 "the cursor ruler Insert Time row is available without a selected span")
-        compare(presenter.actionEnabled("edit.insert_time"), false,
-                "opening a cursor menu does not fabricate a time selection for the Edit row")
+        compare(presenter.actionEnabled("edit.insert_time"), true,
+                "the ruler cursor menu preserves Edit Insert Time availability")
         keyClick(Qt.Key_Escape)
         tryCompare(surface.rulerMenu, "isOpen", false)
+        var cursor = target + Math.max(1, grid.snapTicks)
+        grid.setEditCursorTick(cursor)
+        editInsert.triggered()
+        tryCompare(surface.rulerMenu, "insertTimePromptOpen", true, 3000,
+                   "Edit Insert Time opens the cursor prompt")
+        compare(surface.rulerMenu.targetTick(), cursor,
+                "Edit Insert Time anchors at the current edit cursor")
+        verify(surface.rulerMenu.targetTick() !== target,
+               "Edit Insert Time does not reuse the ruler click")
+        var cancel = null
+        tryVerify(function() {
+            cancel = findChild(surface, "insertTimeCancel")
+            return cancel !== null
+        }, 3000, "the cursor prompt mounts its Cancel button")
+        mouseClick(cancel)
+        tryCompare(surface.rulerMenu, "insertTimePromptOpen", false)
     }
 
     function test_eventMoveRoutesThroughMenuAndEventListKey() {
