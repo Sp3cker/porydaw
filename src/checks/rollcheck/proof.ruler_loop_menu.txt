@@ -95,9 +95,11 @@ focus-identity guard (A073) were re-verified against the Reference revision a124
 the anonymous-namespace rulerInput(view) findChild at lines 44-52 or the QGuiApplication
 focusWindow/focusObject staging at lines 389-391) before their RETIRED-REPRESENTATION
 dispositions were kept.
+Command: deno task verify --filter swiftcore-projectsession --verbose (task-86 frozen sources)
+Result: PASS — 1/36 ok, 35 skipped (implementer-recorded run on the frozen tree; it executed the S137-S145 snap-lattice, Clear-row, disabled-row no-write and exact retirement/insertion-arithmetic predicates. This proof-only reconciliation ran no lane, rebuilt nothing and re-ran no check).
 
 
-Counts: MATCHED 95, PARTIAL 11, GAP 0, RETIRED-REPRESENTATION 7
+Counts: MATCHED 106, PARTIAL 0, GAP 0, RETIRED-REPRESENTATION 7
 
 A001 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:119
 Disposition: MATCHED
@@ -108,22 +110,8 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: RETIRED-REPRESENTATION — the row's subject is the file-local native harness lookup rulerInput(view) (an anonymous-namespace findChild of "timelineRulerQuickCanvas"/"timelineRulerInput", ruler_loop_menu.cpp:44-52 at the Reference revision a1244957), native test plumbing with no consumer-visible behavior; the Swift/QML lanes bind the same surface by objectName, so no predicate observes the lookup.
 
 A003 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:128
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S102 asserts the synthetic fixture seeds its 6-aligned note with the 6-tick snap-cell duration, which places the derived loop endpoints on that lattice. Unproved: the native grid.snapTick endpoint assertion itself.
-Unproved: the native grid.snapTick lattice check on startTick/endTick.
-Source context since previous assertion:
-;
-    SongDocument &doc = check.document();
-    const Tick snapCell = seed->snapCell;
-    // Press at the drawn-cell edge: snapCell ticks past the cell start can
-    // land inside the fixture's tick-12 signature chip label.
-    const Tick startTick = seed->cell.tick + seed->cell.dur;
-    const Tick endTick = seed->cell.tick + seed->cell.dur + snapCell;
-
-Original expression:
-QVERIFY2(view.grid().snapTick(double(startTick)) == startTick &&
-                 view.grid().snapTick(double(endTick)) == endTick,
-             "the ruler loop fixture ticks are not snap-aligned")
+Disposition: MATCHED
+Mapping: S137, S102 - the loop fixture's start and end ticks sit exactly on the snap lattice through the production PianoGrid snap, derived from the seeded snap-aligned note
 
 A004 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:134
 Disposition: MATCHED
@@ -254,18 +242,8 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: RETIRED-REPRESENTATION — the row's subject is the file-local native harness lookup rulerInput(view) (an anonymous-namespace findChild of "timelineRulerQuickCanvas"/"timelineRulerInput", ruler_loop_menu.cpp:44-52 at the Reference revision a1244957), native test plumbing with no consumer-visible behavior; the Swift/QML lanes bind the same surface by objectName, so no predicate observes the lookup.
 
 A036 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:244
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S102 asserts the seeded 6-aligned note, from which chipTick derives as seed tick plus the snap cell.
-Unproved: the native grid.snapTick lattice check on chipTick.
-Source context since previous assertion:
-;
-    SongDocument &doc = check.document();
-    const Tick snapCell = seed->snapCell;
-    const Tick chipTick = seed->cell.tick + snapCell;
-
-Original expression:
-QVERIFY2(view.grid().snapTick(double(chipTick)) == chipTick,
-             "the ruler menu fixture tick is not snap-aligned")
+Disposition: MATCHED
+Mapping: S138, S102 - the signature chip tick sits exactly on the snap lattice through the production PianoGrid snap, derived from the seeded snap-aligned note
 
 A037 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:250
 Disposition: MATCHED
@@ -344,15 +322,8 @@ Disposition: MATCHED
 Mapping: S055
 
 A056 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:318
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S056 asserts the mounted document revision is unchanged after the disabled Remove Time Signature click and S113 the tick-row row stays disabled.
-Unproved: the SMF byte equality against the pre-fixture song and the undo-index conjunct.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo,
-             "a disabled ruler-menu row mutated the document")
+Disposition: MATCHED
+Mapping: S139, S056 - the disabled Remove Time Signature click refuses activate, keeps the menu open, and preserves the exact bytes and undo index beside the unchanged revision
 
 A057 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:322
 Disposition: MATCHED
@@ -379,42 +350,20 @@ Disposition: MATCHED
 Mapping: S061, S088
 
 A063 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:350
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S088 proves the selection-scoped row set on the rebuilt menu and S126's scenario resolves and clicks the Clear row.
-Unproved: an asserting predicate for the Clear row's own presence and enablement.
-Source context since previous assertion:
-;
-    const int clearRow = rulerRow(*scoped.model, songview::RulerMenuAction::ClearSelection);
-
-Original expression:
-QVERIFY2(clearRow >= 0 && scoped.model->itemAt(clearRow)->enabled,
-             "the ruler menu omitted an enabled Clear time selection row with a selection")
+Disposition: MATCHED
+Mapping: S140, S088 - the swept ruler menu with a time selection resolves an enabled Clear row by action id beside the proved selection-scoped row set
 
 A064 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:352
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S126's scenario delivers the real rendered Clear-row click (clickRow on the resolved row) and its message names that activation.
-Unproved: a predicate asserting click delivery independently of the close/drop outcome.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(quick_popup::clickMenuRow(*scoped.session, clearRow),
-             "the Clear time selection row did not receive a real click")
+Disposition: MATCHED
+Mapping: S141 - the resolved Clear row receives a real rendered click through activate(actionId:), closing the menu and dropping the range
 
 A065 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:355
 Disposition: MATCHED
 Mapping: S126
 
 A066 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:357
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S126's message names the dropped selection and its bound assertion is the menu close after the Clear click; the drop itself is asserted by the same scenario's message-less gridCommandAvailable(17) compare.
-Unproved: a message anchor for the dropped selection.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(!view.selectionModel().timeSelection().active(),
-             "the Clear time selection row did not clear the selection")
+Disposition: MATCHED
+Mapping: S141 - the activated Clear click drops the time selection, asserted together with the menu close by the same rendered scenario
 
 A067 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:360
 Disposition: MATCHED
@@ -502,17 +451,8 @@ Disposition: MATCHED
 Mapping: S128 (deviation recorded: the mounted scenario performs its document edit through the enabled window Undo action via ShellPresenter.activate("edit.undo"), not a delivered shortcut key, so this anchor is cited for the document-edit retirement and refocus only, never for shortcut key delivery)
 
 A083 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:433
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S114 asserts the document-edit dismissal writes no loop marker beyond the intervening edit and S128 the retirement.
-Unproved: the byte and undo-index equality against the post-edit snapshot.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(doc.smf().write() == afterIntervening && doc.undoStack()->index() == staleUndo &&
-                 doc.revision() == staleRevision &&
-                 check.timeline().loopStartTick == CoreTimeDefaults::kNoTick,
-             "the document-edit dismissal wrote a loop marker")
+Disposition: MATCHED
+Mapping: S142, S114, S128 - the document edit retires the open ruler menu writing no loop marker beyond the edit, with exactly the edit's history (+1/+1) and revision (+1) step and no extra step
 
 A084 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:443
 Disposition: MATCHED
@@ -523,15 +463,8 @@ Disposition: MATCHED
 Mapping: S087, S129
 
 A086 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:448
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S115 asserts the exact song bytes are unchanged across the selection-change dismissal and S129 the retirement.
-Unproved: the undo-index equality against the post-intervening snapshot.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(doc.smf().write() == afterIntervening && doc.undoStack()->index() == staleUndo,
-             "the selection-change dismissal wrote markers")
+Disposition: MATCHED
+Mapping: S143, S115, S129 - the selection-change dismissal preserves the post-edit bytes, undo index, revision and loop markers with no marker write, and retires the menu
 
 A087 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:454
 Disposition: MATCHED
@@ -594,20 +527,8 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: RETIRED-REPRESENTATION — the row's subject is the file-local native harness lookup rulerInput(view) (an anonymous-namespace findChild of "timelineRulerQuickCanvas"/"timelineRulerInput", ruler_loop_menu.cpp:44-52 at the Reference revision a1244957), native test plumbing with no consumer-visible behavior; the Swift/QML lanes bind the same surface by objectName, so no predicate observes the lookup.
 
 A095 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:498
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S108 asserts the insert fixture's shifted note at the seam.
-Unproved: the native grid.snapTick lattice check on insertStart/insertEnd.
-Source context since previous assertion:
-;
-    SongDocument &doc = check.document();
-    const Tick snapCell = seed->snapCell;
-    const Tick insertStart = seed->cell.tick + snapCell;
-    const Tick insertEnd = seed->cell.tick + 2 * snapCell;
-
-Original expression:
-QVERIFY2(view.grid().snapTick(double(insertStart)) == insertStart &&
-                 view.grid().snapTick(double(insertEnd)) == insertEnd,
-             "the ruler insert fixture ticks are not snap-aligned")
+Disposition: MATCHED
+Mapping: S144, S108 - the insert fixture's start and end seams sit exactly on the snap lattice through the production PianoGrid snap, beside the seeded shifted note at the seam
 
 A096 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:502
 Disposition: MATCHED
@@ -642,16 +563,8 @@ Disposition: MATCHED
 Mapping: S063
 
 A104 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:535
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S012 asserts the note lands at the inserted end with changed bytes and history identity and S064 the mounted rendered shift.
-Unproved: the exact undo-index +1 conjunct.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(doc.undoStack()->index() == undoIndex + 1 &&
-                 doc.findNote(check.track(), insertEnd, selected.key, &selected),
-             "the ruler Insert Time row did not shift the selected note one undo at a time")
+Disposition: MATCHED
+Mapping: S145, S012, S064 - the ruler Insert Time row shifts the selected note to the insert end in exactly one undo step (undoIndex + 1) with changed bytes and history identity, mounted and rendered
 
 A105 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:540
 Disposition: MATCHED
@@ -662,15 +575,8 @@ Disposition: MATCHED
 Mapping: S089, S044
 
 A107 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:545
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S013 asserts one undo restores the pre-insertion bytes and S065 the mounted rendered layout.
-Unproved: the exact undo-count == undoIndex + 1 conjunct.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(doc.undoStack()->count() == undoIndex + 1,
-             "the ruler Insert Time row did not commit exactly one undo transaction")
+Disposition: MATCHED
+Mapping: S145, S013, S065 - the ruler Insert Time row commits exactly one undo transaction (undoCount + 1 with the shifted note), and one undo restores the pre-insertion bytes and layout
 
 A108 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:547
 Disposition: MATCHED
@@ -1181,6 +1087,35 @@ Anchor: message "A112: the outside press publishes the committed cursor through 
 
 S136 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu_sweep.swift
 Anchor: message "A113: the exact-end press opens the cursor rows"
+
+S137-S145 are the task-86 additions: S137 the loop-endpoint snap-lattice predicate of checkRulerLoopSetAndUndo, S138 the chip snap-lattice predicate of checkRulerSignatureRemoval, S144 the insert-seam snap-lattice predicate and S145 the exact one-undo shift of checkRulerInsertTime, S140/S141 the swept Clear-row presence and click/close/drop predicates of checkRenderedRulerMenuCommands, and S139 the disabled time-signature no-write predicate, S142 the exact document-edit retirement arithmetic and S143 the exact selection-change retirement preservation of checkRulerMenuRetirement. They execute in the swiftcore-projectsession lane on the frozen task-86 tree (implementer-recorded green; this reconciliation ran no lane).
+
+S137 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu_loop.swift
+Anchor: message "the loop start and end sit exactly on the snap lattice"
+
+S138 | checkRulerSignatureRemoval | src/checks/rollcheck/ruler_loop_menu_loop.swift
+Anchor: message "the signature chip sits exactly on the snap lattice"
+
+S139 | checkRulerMenuRetirement | src/checks/rollcheck/ruler_loop_menu_retirement.swift
+Anchor: message "disabled Remove Time Signature click preserves bytes and undo index"
+
+S140 | checkRenderedRulerMenuCommands | src/checks/rollcheck/ruler_loop_menu_loop.swift
+Anchor: message "a swept ruler menu resolves an enabled Clear row by action id"
+
+S141 | checkRenderedRulerMenuCommands | src/checks/rollcheck/ruler_loop_menu_loop.swift
+Anchor: message "clicking the ruler Clear row closes the menu and drops the range"
+
+S142 | checkRulerMenuRetirement | src/checks/rollcheck/ruler_loop_menu_retirement.swift
+Anchor: message "document edit closes the menu without an extra history or revision step"
+
+S143 | checkRulerMenuRetirement | src/checks/rollcheck/ruler_loop_menu_retirement.swift
+Anchor: message "selection-change dismissal preserves post-edit bytes, history, revision and markers"
+
+S144 | checkRulerInsertTime | src/checks/rollcheck/ruler_loop_menu_loop.swift
+Anchor: message "the ruler insert seams sit exactly on the snap lattice"
+
+S145 | checkRulerInsertTime | src/checks/rollcheck/ruler_loop_menu_loop.swift
+Anchor: message "ruler insertion shifts the note to the end in exactly one undo step"
 
 Remaining original source (closing sequence and helper bodies):
 ;

@@ -13,7 +13,7 @@ Additional Swift counterpart: src/checks/rollqml/tst_SwiftRollSelection.qml
 Additional Swift counterpart: src/checks/velocity/VelocityRollCoreChecks.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Disposition tally: 53 sites: 44 MATCHED, 1 PARTIAL, 1 GAP, 7 RETIRED-REPRESENTATION.
+Disposition tally: 53 sites: 46 MATCHED, 0 PARTIAL, 0 GAP, 7 RETIRED-REPRESENTATION.
 
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS - 12/36 ok, 24 skipped (implementer-recorded task-54 run, replayed here
@@ -36,6 +36,8 @@ Result: PASS - 1/26 ok (implementer-recorded task-54 run); no pencil-velocity si
 depends on the wider lane.
 Command: deno task verify:qml-roll --verbose
 Result: PASS - 1/1 ok (implementer-recorded task-54 run).
+Command: deno task verify:shell --filter shell-grid-menu --verbose (task-86 frozen sources)
+Result: PASS - 1/26 ok, 25 skipped (implementer-recorded run on the frozen tree; it executed test_rollPressFocusAndHoverCursorZones, the source of S063-S064, and the full shell lane passed 26/26. This proof-only reconciliation ran no lane, rebuilt nothing and re-ran no check).
 
 A001 | PianoRollTest::velocityClickLatch | src/checks/rollcheck/pencil_velocity.cpp:56
 Disposition: MATCHED
@@ -222,23 +224,8 @@ Disposition: MATCHED
 Mapping: S017
 
 A047 | PianoRollTest::quickLifecycle | src/checks/rollcheck/pencil_velocity.cpp:318
-Disposition: GAP
-Mapping/reason: No executing predicate asserts that a pointer press on the roll input grants it keyboard focus. The shell lanes force focus (roll.forceActiveFocus) before their assertions, and the note-menu predicates (S057, tst_ShellGridMenu.qml:718) prove the press reaches the grid's pointer path but not the focus grant. Fresh evidence needed: a mounted assertion on swiftRollInput.activeFocus after an unforced press (or a swiftcore equivalent).
-Source context since previous assertion:
-;
-    view.selectionModel().setNoteSelection({note.noteId});
-    QCoreApplication::processEvents();
-    sendWindowMouse(view, rollInput, QEvent::MouseButtonPress, QPointF(cell.center), Qt::LeftButton,
-                    Qt::LeftButton, Qt::NoModifier);
-    QCoreApplication::processEvents();
-    const bool focused = rollInput.hasFocus();
-    sendWindowMouse(view, rollInput, QEvent::MouseButtonRelease, QPointF(cell.center),
-                    Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
-    QCoreApplication::processEvents();
-
-Original expression:
-QVERIFY2(focused,
-             "pressing the roll through the Quick window did not focus the roll input item")
+Disposition: MATCHED
+Mapping: S063 - the mounted scenario stages focus on a chrome control, presses the roll without forcing focus, and asserts swiftRollInput.activeFocus, proving the press-to-focus grant in EditorSurface.qml
 
 A048 | PianoRollTest::quickLifecycle | src/checks/rollcheck/pencil_velocity.cpp:320
 Disposition: MATCHED
@@ -257,21 +244,8 @@ Disposition: MATCHED
 Mapping: S021
 
 A052 | PianoRollTest::quickLifecycle | src/checks/rollcheck/pencil_velocity.cpp:369
-Disposition: PARTIAL
-Mapping/reason: PARTIAL — S024 (src/checks/rollcheck/resize.swift) asserts the note's right edge grip publishes cursorKind 3, S025 (resize.swift) the left edge grip, and S026 (resize.swift) asserts the note body publishes cursorKind 0 (arrow). Unproved: the host QCursor pixmap/shape chain (non-null pixmap, ArrowCursor shape) has no Swift predicate; cursorKind zones are an analogous model, not the same observation.
-Source context since previous assertion:
-;
-    const qreal edgeX =
-        view.camera().displayX(double(note.tick), 0.0, rollInput.devicePixelRatio()) - 1.0;
-    checks::events::sendMouse(rollInput, QEvent::MouseMove, QPointF(edgeX, cell.center.y()),
-                              Qt::NoButton, Qt::NoButton, Qt::NoModifier);
-    const bool edgeCursor = !rollInput.cursor().pixmap().isNull();
-    checks::events::sendMouse(rollGutterInput, QEvent::MouseMove, QPointF(1, cell.center.y()),
-                              Qt::NoButton, Qt::NoButton, Qt::NoModifier);
-
-Original expression:
-QVERIFY2(edgeCursor && rollInput.cursor().shape() == Qt::ArrowCursor,
-             "host cursor publication did not track the note edge and arrow zones")
+Disposition: MATCHED
+Mapping: S064 - the mounted scenario hovers both note edges and the note body and asserts the sized cursor at the edges with the arrow cursor on the body through swiftRollInput.cursorShape
 
 A053 | PianoRollTest::quickLifecycle | src/checks/rollcheck/pencil_velocity.cpp:375
 Disposition: MATCHED
@@ -476,3 +450,11 @@ Anchor: message "a document edit retires the open note menu synchronously"
 
 S062 | test_noteMenuRetiresOnDocumentEditAndPreservesOtherFocus | src/checks/editorqml/tst_ShellGridMenu.qml
 Anchor: message "undo restores the note edited while its menu was open"
+
+S063-S064 are the task-86 additions of test_rollPressFocusAndHoverCursorZones: S063 the unforced roll press that grants the roll input keyboard focus, S064 the real-hover cursor-shape zones (sized cursor at both note edges, arrow cursor on the note body). They execute in the shell-grid-menu lane on the frozen task-86 tree (implementer-recorded green; this reconciliation ran no lane).
+
+S063 | test_rollPressFocusAndHoverCursorZones | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "a drawn note provides hover and focus targets"
+
+S064 | test_rollPressFocusAndHoverCursorZones | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "a drawn note provides hover and focus targets"

@@ -506,6 +506,7 @@ Item {
                         }
 
                         onPressed: function(mouse) {
+                            rollInput.forceActiveFocus(Qt.MouseFocusReason)
                             rollMoves.flush()
                             if (mouse.button === Qt.MiddleButton)
                                 root.gridModel.beginPan(mouse.x, mouse.y)

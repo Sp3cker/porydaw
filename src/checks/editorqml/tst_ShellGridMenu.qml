@@ -684,6 +684,114 @@ TestCase {
         return null
     }
 
+    function test_rollPressFocusAndHoverCursorZones() {
+        openSong()
+        var roll = control("swiftRollInput")
+        var chrome = control("timelineRulerDivisionControl")
+        var target = noteTargets()[0]
+        verify(target !== undefined, "a drawn note provides hover and focus targets")
+        chrome.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(chrome, "activeFocus", true)
+        mousePress(roll, target.point.x, target.point.y, Qt.LeftButton)
+        tryCompare(roll, "activeFocus", true)
+        mouseRelease(roll, target.point.x, target.point.y, Qt.LeftButton)
+        var note = findChild(surface(), "gridNote_" + target.note.id)
+        verify(note !== null && note.width > surface().gridModel.drawThreshold * 2)
+        var edge = note.mapToItem(roll, 1, note.height / 2)
+        mouseMove(roll, edge.x, edge.y)
+        tryCompare(roll, "cursorShape", Qt.SizeHorCursor)
+        edge = note.mapToItem(roll, note.width - 1, note.height / 2)
+        mouseMove(roll, edge.x, edge.y)
+        tryCompare(roll, "cursorShape", Qt.SizeHorCursor)
+        var body = note.mapToItem(roll, note.width / 2, note.height / 2)
+        mouseMove(roll, body.x, body.y)
+        tryCompare(roll, "cursorShape", Qt.ArrowCursor)
+    }
+
+    function test_noteCommandRowsDispatchOnSelectedNote() {
+        openSong()
+        var grid = surface().gridModel
+        var roll = control("swiftRollInput")
+        var original = JSON.parse(grid.noteSummary)
+        var snap = grid.snapTicks
+        var pixelsPerTick = grid.beatWidth / grid.ticksPerBeat
+        var start = Math.ceil((grid.cameraScrollX + roll.width / 3) / pixelsPerTick / snap) * snap
+        var pitchRow = -1
+        for (var row = Math.ceil(grid.cameraScrollY / grid.rowHeight) + 2;
+             row < Math.floor((grid.cameraScrollY + roll.height) / grid.rowHeight) - 2;
+             ++row) {
+            var pitch = 127 - row
+            if (!original.some(function(note) {
+                return note.pitch === pitch && note.tick < start + 7 * snap
+                    && note.tick + note.duration > start
+            })) {
+                pitchRow = row
+                break
+            }
+        }
+        verify(pitchRow >= 0 && (start + 7 * snap) * pixelsPerTick - grid.cameraScrollX < roll.width,
+               "seven snap cells are free and visible for the note commands")
+        var y = (pitchRow + 0.5) * grid.rowHeight - grid.cameraScrollY
+        var x = start * pixelsPerTick - grid.cameraScrollX + grid.drawThreshold / 2
+        var endX = (start + 2.5 * snap) * pixelsPerTick - grid.cameraScrollX
+        mousePress(roll, x, y, Qt.LeftButton)
+        mouseMove(roll, endX, y, -1, Qt.LeftButton)
+        mouseRelease(roll, endX, y, Qt.LeftButton)
+        var source = null
+        tryVerify(function() {
+            source = JSON.parse(grid.noteSummary).find(function(note) {
+                return original.every(function(previous) { return previous.id !== note.id })
+            })
+            return source !== undefined
+        }, 3000)
+        verify(source.pitch === 127 - pitchRow && source.tick === start,
+               "physical note lands at selected row and cell: " + grid.noteSummary
+               + " expected tick " + start + " pitch " + (127 - pitchRow))
+        verify(source.duration === 3 * snap,
+               "the physical draw creates a three-cell source (duration "
+               + source.duration + ", snap " + snap + ")")
+        var centerX = (start + snap) * pixelsPerTick - grid.cameraScrollX
+        mouseClick(roll, centerX, y, Qt.LeftButton)
+        var menu = noteMenu()
+        function activate(actionId, atX) {
+            mouseClick(roll, atX, y, Qt.RightButton)
+            tryCompare(menu, "visible", true)
+            var row = findChild(menu, "shellContextAction_" + actionId)
+            verify(row !== null && row.enabled, "the mounted note menu has enabled " + actionId)
+            mouseClick(row, row.width / 2, row.height / 2)
+            tryCompare(menu, "visible", false)
+        }
+        activate("roll.duplicate_time", centerX)
+        verify(JSON.parse(grid.noteSummary).some(function(note) {
+            return note.tick === start + 3 * snap && note.pitch === source.pitch
+                && note.duration === 3 * snap
+        }), "the Duplicate row copies its selected note one span later")
+        mouseClick(roll, centerX, y, Qt.LeftButton)
+        verify(JSON.parse(grid.noteSummary).some(function(note) {
+            return note.tick === start && note.pitch === source.pitch
+                && note.selected && note.duration === 3 * snap
+        }), "clicking the original selects the three-cell source before Split")
+        var divisionMenu = openGrid("timelineRulerDivisionControl", 1)
+        clickRow(divisionMenu, 3)
+        tryCompare(grid, "gridSelectionMenuId", 16)
+        tryVerify(function() { return grid.visibleGridTicks === snap }, 3000)
+        tryVerify(function() { return findChild(surface(), "quickMenuPanelRoot") === null }, 3000)
+        verify(JSON.parse(grid.noteSummary).some(function(note) {
+            return note.tick === start && note.pitch === source.pitch && note.selected
+        }), "grid division changes retain the selected source")
+        activate("roll.split", centerX)
+        var pieces = JSON.parse(grid.noteSummary).filter(function(note) {
+            return note.pitch === source.pitch && note.tick >= start
+                && note.tick < start + 3 * snap && note.duration === snap
+        })
+        compare(pieces.length, 3, "the Split row yields three grid pieces: " + grid.noteSummary)
+        activate("roll.join", centerX)
+        verify(JSON.parse(grid.noteSummary).some(function(note) {
+            return note.tick === start && note.pitch === source.pitch
+                && note.duration === 3 * snap
+        }), "the Join row merges the selected three pieces")
+    }
+
     function test_noteMenuRetargetAndDismiss() {
         openSong()
         var grid = surface().gridModel

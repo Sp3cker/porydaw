@@ -24,6 +24,8 @@ tst_SwiftRollSelection.qml band-select, band-cancel and edge-hover probes.
 Command: deno task verify:shell --verbose
 Result: PASS — 11/11 ok (controller-recorded post-change run); the shell-grid-input lane ran
 the real right-drag band, Escape cancel and ungrab cancel slots.
+Command: deno task verify --filter swiftcore-projectsession --verbose (task-86 frozen sources)
+Result: PASS — 1/36 ok, 35 skipped (implementer-recorded run on the frozen tree; it executed the latch-establishment drag S059 through checkGroupedVelocityDrag and checkThresholdDrawCell, and the full native lane passed 36/36. This proof-only reconciliation ran no lane, rebuilt nothing and re-ran no check).
 
 A001 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:36
 Disposition: RETIRED-REPRESENTATION
@@ -141,30 +143,8 @@ A012 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cp
 Disposition: RETIRED-REPRESENTATION
 
 A013 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:156
-Disposition: PARTIAL
-Mapping/reason: Related predicate S051 (checkThresholdDrawCell, src/checks/rollcheck/selection.swift, message "empty Ctrl press clears note selection and auditions its row") sounds the pressed row at the published drawing-velocity latch (grid.lastVelocity) and S058 pins that latch to the committed 78 after a 15 px drag from 93. Unproved: this site's own 93 latch precondition — the Swift fixture never seeds the document note at 93 through the modifier drag that precedes this slot.
-Source context since previous assertion:
-  ;
-      const PencilVelocityFixture &fixture = *seed;
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      songview::TimelineInputItem *roll = &check.rollInput();
-      const int track = check.track();
-      const SnappedRows rows{view, *roll};
-      // This slot starts where the former combined scenario entered selection
-      // handling: note B has just been velocity-dragged from 73 to 93, and the
-      // committed value is the pencil's active velocity latch.
-      checks::events::sendMouse(*roll, QEvent::MouseButtonPress, fixture.b.center, Qt::LeftButton,
-                                Qt::LeftButton, Qt::ControlModifier);
-      checks::events::sendMouse(*roll, QEvent::MouseMove, fixture.b.center - QPoint(0, 20),
-                                Qt::NoButton, Qt::LeftButton, Qt::ControlModifier);
-      checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, fixture.b.center - QPoint(0, 20),
-                                Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
-      DocNote latched;
-Original expression:
-  QVERIFY2(doc.findNote(track, fixture.b.tick, uint8_t(fixture.b.key), &latched) &&
-                   latched.velocity == 93,
-               "selection audition fixture did not establish the velocity latch")
+Disposition: MATCHED
+Mapping: S059 - establishVelocityLatch raises note B from 73 to 93 through the real modifier velocity drag and latches the pencil, so the latch-audition staging establishes the 93 latch through the pointer path rather than the seed
 
 A014 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:171
 Disposition: GAP
@@ -438,29 +418,8 @@ A033 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection
 Disposition: RETIRED-REPRESENTATION
 
 A034 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:363
-Disposition: GAP
-Mapping/reason: Precondition, not a port: the C++ slot raises note B to 93 through the modifier velocity gesture. The Swift check seeds the pair at 93/100 directly (velocityPairSeed) and reads those values back (S017/S022); no predicate exercises the modifier drag as the latch-setting step.
-Source context since previous assertion:
-  ;
-      const PencilVelocityFixture &fixture = *seed;
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      songview::TimelineInputItem *roll = &check.rollInput();
-      const int track = check.track();
-      const Cell &a = fixture.a;
-      const Cell &b = fixture.b;
-      // The former combined scenario entered this section after its preceding
-      // velocity drag had raised note B from 73 to 93.
-      checks::events::sendMouse(*roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
-                                Qt::LeftButton, Qt::ControlModifier);
-      checks::events::sendMouse(*roll, QEvent::MouseMove, b.center - QPoint(0, 20), Qt::NoButton,
-                                Qt::LeftButton, Qt::ControlModifier);
-      checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, b.center - QPoint(0, 20),
-                                Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
-      DocNote raised;
-Original expression:
-  QVERIFY2(doc.findNote(track, b.tick, uint8_t(b.key), &raised) && raised.velocity == 93,
-               "modifier velocity fixture did not establish note B at 93")
+Disposition: MATCHED
+Mapping: S059 - establishVelocityLatch raises note B from 73 to 93 through the real modifier velocity drag and latches the pencil before the grouped-drag predicates, replacing the seeded 93 precondition
 
 A035 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:392
 Disposition: MATCHED
@@ -996,3 +955,8 @@ Anchor: message "Ctrl jitter below the published platform slop remains a selecti
 
 S058 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "Ctrl vertical travel at the published platform slop starts velocity"
+
+S059 is the task-86 latch-establishment predicate of establishVelocityLatch: the real modifier velocity drag first lowers note B to 73, then raises it from 73 to 93 and latches the pencil, so both checkGroupedVelocityDrag and checkThresholdDrawCell stage the 93 latch through the pointer path instead of the seed. It executes in the swiftcore-projectsession lane on the frozen task-86 tree (implementer-recorded green; this reconciliation ran no lane).
+
+S059 | establishVelocityLatch | src/checks/rollcheck/selection_editing.swift
+Anchor: message "the modifier velocity drag raises note B from 73 to 93 and latches the pencil"

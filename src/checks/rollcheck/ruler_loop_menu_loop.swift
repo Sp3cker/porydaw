@@ -18,6 +18,10 @@ func checkRulerLoopSetAndUndo(_ report: CheckReport, session: DocumentSession) {
     let snapCell: Tick = 6
     let startTick = note.tick + note.duration
     let endTick = startTick + snapCell
+    let grid = PianoGrid(session: session)
+    report.expect(Tick(grid.snapTickDown(Double(startTick))) == startTick
+                  && Tick(grid.snapTickDown(Double(endTick))) == endTick,
+                  cppID: id, message: "the loop start and end sit exactly on the snap lattice")
     // The legacy fixture begins with both loop markers removed.
     document.setLoop(end: false, tick: nil)
     document.setLoop(end: true, tick: nil)
@@ -91,6 +95,9 @@ func checkRulerSignatureRemoval(_ report: CheckReport, session: DocumentSession)
     let document = rulerMenuDocument(session)
     let snapCell: Tick = 6
     let chipTick = rulerSeedTick + snapCell
+    let grid = PianoGrid(session: session)
+    report.expect(Tick(grid.snapTickDown(Double(chipTick))) == chipTick,
+                  cppID: id, message: "the signature chip sits exactly on the snap lattice")
     document.setTimeSignature(tick: chipTick, numerator: 5, denominatorPower: 2)
     report.expect(PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
         .timeSignatures.contains { $0.tick == chipTick }, cppID: id,
@@ -115,6 +122,10 @@ func checkRulerInsertTime(_ report: CheckReport, session: DocumentSession) {
     let snapCell: Tick = 6
     let insertStart = rulerSeedTick + snapCell
     let insertEnd = insertStart + snapCell
+    let grid = PianoGrid(session: session)
+    report.expect(Tick(grid.snapTickDown(Double(insertStart))) == insertStart
+                  && Tick(grid.snapTickDown(Double(insertEnd))) == insertEnd,
+                  cppID: id, message: "the ruler insert seams sit exactly on the snap lattice")
     guard let note = document.notes(in: 0).first else {
         report.fail(id, "resize fixture note is absent")
         return
@@ -129,6 +140,8 @@ func checkRulerInsertTime(_ report: CheckReport, session: DocumentSession) {
     }
     let before = coreTimeBytes(document)
     let identity = document.history.currentIdentity
+    let undoIndex = document.history.undoIndex
+    let undoCount = document.history.undoCount
     let range = TimeRange(startTick: insertStart, endTick: insertEnd)
     report.expect(document.insertBlankTime(range, scope: TimeScope(tracks: [0])),
                   cppID: id, message: "the selected span inserts blank time")
@@ -136,6 +149,11 @@ func checkRulerInsertTime(_ report: CheckReport, session: DocumentSession) {
         $0.tick == insertEnd && $0.pitch == note.pitch && $0.velocity == note.velocity
     } && document.history.currentIdentity != identity && coreTimeBytes(document) != before,
     cppID: id, message: "A104/A108: the note shifts by exactly one span and the song bytes change")
+    report.expect(document.history.undoIndex == undoIndex + 1
+                  && document.history.undoCount == undoCount + 1
+                  && document.notes(in: 0).contains {
+                      $0.tick == insertEnd && $0.pitch == note.pitch
+                  }, cppID: id, message: "ruler insertion shifts the note to the end in exactly one undo step")
     _ = document.history.undoDocument()
     report.expect(coreTimeBytes(document) == before, cppID: id,
                   message: "A109: one undo restores the song before ruler insertion")
@@ -244,6 +262,20 @@ func checkRenderedRulerMenuCommands(_ report: CheckReport, session: DocumentSess
     report.expect((0..<menu.rows.count).contains(where: { menu.rows[$0].actionId == 5 && menu.rows[$0].enabled })
                   && !(0..<menu.rows.count).contains(where: { menu.rows[$0].actionId == 2 }), cppID: id,
                   message: "a swept range replaces positional rows with selection rows")
+    report.expect((0..<menu.rows.count).contains(where: {
+        menu.rows[$0].actionId == 8 && menu.rows[$0].enabled
+    }), cppID: id, message: "a swept ruler menu resolves an enabled Clear row by action id")
+    _ = menu.activate(actionId: 8)
+    report.expect(!menu.isOpen && session.timeSelection == nil,
+                  cppID: id, message: "clicking the ruler Clear row closes the menu and drops the range")
+    openRulerMenu(menu, at: session.camera.contentX(tick: Double((start + end) / 2)))
+    report.expect(!(0..<menu.rows.count).contains(where: { menu.rows[$0].actionId == 8 }),
+                  cppID: id, message: "reopening the ruler menu after Clear loses its scoped rows")
+    menu.close()
+    menu.beginSweep(contentX: atStart, pointerY: 0)
+    menu.updateSweep(contentX: atEnd)
+    menu.endSweep(contentX: atEnd)
+    openRulerMenu(menu, at: session.camera.contentX(tick: Double((start + end) / 2)))
     let staleBytes = coreTimeBytes(session.document)
     let staleIndex = session.document.history.undoIndex
     let staleCount = session.document.history.undoCount

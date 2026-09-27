@@ -45,19 +45,38 @@ func checkRulerMenuRetirement(_ report: CheckReport, session: DocumentSession) {
     openRulerMenu(menu, at: at)
     let revision = session.document.revision
     let identity = session.document.history.currentIdentity
+    let disabledBytes = coreTimeBytes(session.document)
+    let disabledIndex = session.document.history.undoIndex
+    let disabledCount = session.document.history.undoCount
     report.expect(menu.isOpen && !menu.rows[5].enabled && menu.rows[0].enabled,
                   cppID: id, message: "an unmarked ruler enables Insert Time but not Remove Loop")
     report.expect(!menu.activate(actionId: 4) && menu.isOpen
                   && session.document.history.currentIdentity == identity,
                   cppID: id, message: "a disabled Remove Loop click keeps the ruler menu open without a write")
+    report.expect(coreTimeBytes(session.document) == disabledBytes
+                  && session.document.history.undoIndex == disabledIndex,
+                  cppID: id, message: "disabled Remove Loop changes neither bytes nor undo index")
+    report.expect(menu.rows.contains(where: { $0.actionId == 10 && !$0.enabled })
+                  && !menu.activate(actionId: 10) && menu.isOpen
+                  && coreTimeBytes(session.document) == disabledBytes
+                  && session.document.history.undoIndex == disabledIndex,
+                  cppID: id, message: "disabled Remove Time Signature click preserves bytes and undo index")
     session.document.setLoop(end: false, tick: 48)
     report.expect(!menu.isOpen && session.document.revision != revision,
                   cppID: id, message: "a document edit retires the open ruler menu")
     report.expect(session.timeline.loopStartTick == 48
                   && session.timeline.loopEndTick == TimeDefaults.noTick,
                   cppID: id, message: "a document-edit dismissal writes no loop marker beyond the edit")
+    report.expect(coreTimeBytes(session.document) != disabledBytes
+                  && session.document.history.undoIndex == disabledIndex + 1
+                  && session.document.history.undoCount == disabledCount + 1
+                  && session.document.revision == revision + 1,
+                  cppID: id, message: "document edit closes the menu without an extra history or revision step")
     _ = session.document.history.undoDocument()
     let selectionBytes = coreTimeBytes(session.document)
+    let selectionIndex = session.document.history.undoIndex
+    let selectionRevision = session.document.revision
+    let selectionMarkers = (session.timeline.loopStartTick, session.timeline.loopEndTick)
     openRulerMenu(menu, at: at)
     let selection = AutomationTimeSelection(range: TimeRange(startTick: 48, endTick: 72),
                                             scope: .tracks([session.selectedTrack ?? 0]))
@@ -66,6 +85,12 @@ func checkRulerMenuRetirement(_ report: CheckReport, session: DocumentSession) {
                   cppID: id, message: "a selection change retires the open ruler menu")
     report.expect(coreTimeBytes(session.document) == selectionBytes,
                   cppID: id, message: "a selection-change dismissal writes no markers")
+    report.expect(coreTimeBytes(session.document) == selectionBytes
+                  && session.document.history.undoIndex == selectionIndex
+                  && session.document.revision == selectionRevision
+                  && session.timeline.loopStartTick == selectionMarkers.0
+                  && session.timeline.loopEndTick == selectionMarkers.1,
+                  cppID: id, message: "selection-change dismissal preserves post-edit bytes, history, revision and markers")
     session.clearTimeSelection()
 }
 

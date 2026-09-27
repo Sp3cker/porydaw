@@ -64,9 +64,11 @@ under that rule and is cited through the executed escape test S075). This task-5
 closed the two remaining GAP rows (A064 by the nudge no-edit predicate, A099 by the note-only
 Duplicate seed assert) and indexed the time-menu Clear row; it ran no lane, rebuilt nothing and
 re-ran no check, so the controller still owns the green re-run on the settled tree.
+Command: deno task verify --filter swiftcore-projectsession --verbose (task-86 frozen sources)
+Result: PASS — 1/36 ok, 35 skipped (implementer-recorded run on the frozen tree; it executed the S099-S109 Copy span/no-write, disabled-Paste, zero-emission, velocity-90, stale-Duplicate and Insert Time predicates. This proof-only reconciliation ran no lane, rebuilt nothing and re-ran no check).
 
 
-Counts: MATCHED 78, PARTIAL 8, GAP 0, RETIRED-REPRESENTATION 14
+Counts: MATCHED 86, PARTIAL 0, GAP 0, RETIRED-REPRESENTATION 14
 
 A001 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:105
 Disposition: MATCHED
@@ -178,31 +180,16 @@ Original expression:
                "the Copy activation left the menu open")
 
 A015 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:172
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S037 asserts the mounted Copy row wrote a decodable, non-empty range clip (positive span with a note payload).
-Unproved: the exact span equality with the fixture snap cell.
-Source context since previous assertion:
-  ;
-      const std::optional<songview::Clip> copied =
-          songview::readClipboard(check.timeline().ticksPerBeat);
-Original expression:
-  QVERIFY2(copied.has_value() && copied->span == snapCell,
-               "the menu Copy row did not restore the copied range span")
+Disposition: MATCHED
+Mapping: S103, S099, S037 - the Copy row decodes a clip spanning exactly one snap cell (with the covered note at relTick 0) and the selected-range span, both decodable with note payloads
 
 A016 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:185
 Disposition: MATCHED
 Mapping: S070 (covered note relTick relative to the range start), S071 (its pitch)
 
 A017 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:186
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S039 asserts the rendered Copy activation leaves the document revision unchanged.
-Unproved: the SMF byte equality and the undo-index/undo-count equality.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undoIndex &&
-                   doc.undoStack()->count() == undoCount,
-               "the menu Copy row mutated the document")
+Disposition: MATCHED
+Mapping: S100, S104, S039 - the Copy activation preserves the exact bytes, undo index/count and revision for the selected range and the single snap cell
 
 A018 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:194
 Disposition: MATCHED
@@ -243,15 +230,8 @@ Disposition: MATCHED
 Mapping: S012
 
 A024 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:207
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S040 asserts the rendered disabled-Paste click leaves the revision unchanged and S042 that the clipboard-retirement scenario does not edit the document.
-Unproved: the SMF byte equality and the undo-index/undo-count equality.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undoIndex &&
-                   doc.undoStack()->count() == undoCount,
-               "a click on the disabled Paste row mutated the document")
+Disposition: MATCHED
+Mapping: S106, S040, S042 - the disabled Paste row refuses activate, keeps the menu open, and preserves bytes, undo index/count and revision
 
 A025 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:216
 Disposition: MATCHED
@@ -394,22 +374,12 @@ Original expression:
   QCOMPARE(view.camera().scrollY(), scrollY)
 
 A046 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:291
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S084 asserts zero cursor-movement emissions for the rendered range-paste variant and S034/S055 assert the cursor value unchanged across all eight variants.
-Unproved: the zero emission count for the six menu-entry and note-clip variants.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(cursorMoves.count(), 0)
+Disposition: MATCHED
+Mapping: S107, S084 - every rejected paste variant publishes zero cursor moves, for all eight variants counted through the session observer beside the rendered range variant
 
 A047 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:292
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S085 asserts zero status announcements for the rendered range-paste variant and S034/S058 assert the status text unchanged across all eight variants.
-Unproved: the zero announcement count for the six menu-entry and note-clip variants.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(announcements.count(), 0)
+Disposition: MATCHED
+Mapping: S108, S085 - every rejected paste variant leaves the grid status text unchanged, the observable for zero status announcements, for the rendered range variant and all eight variants
 
 A048 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:305
 Disposition: MATCHED
@@ -420,13 +390,8 @@ Disposition: MATCHED
 Mapping: S083 (the pasted note duration equals the clip span, 2*snapTicks)
 
 A050 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:307
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S083 asserts the pasted note's tick, pitch and duration at the captured cursor.
-Unproved: the pasted note's velocity (90) conjunct; no predicate reads it.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(pasted.velocity, uint8_t(90))
+Disposition: MATCHED
+Mapping: S109, S083 - the admitted paste lands the note at the snap base with velocity 90 alongside its asserted tick, pitch and duration
 
 A051 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:308
 Disposition: MATCHED
@@ -552,15 +517,8 @@ Original expression:
                    "clearing the selection did not retire the open time menu")
 
 A076 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:410
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S021 asserts the history identity unchanged after the stale Duplicate activation, so the retire-without-dispatch shape is proved.
-Unproved: the SMF byte and revision equality.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undoIndex &&
-                   doc.undoStack()->count() == undoCount && doc.revision() == revision,
-               "retiring the menu on selection loss mutated the document")
+Disposition: MATCHED
+Mapping: S102, S021 - the stale Duplicate activation keeps history identity and preserves the exact bytes, undo index/count and revision
 
 A077 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:419
 Disposition: RETIRED-REPRESENTATION
@@ -643,14 +601,8 @@ Original expression:
                "the menu Insert Time row did not retain the selection over the blank span")
 
 A087 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:462
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S020 asserts one undo restores the document before the menu insertion and S049/S050 the rendered insert-time activation and note shift.
-Unproved: the exact undo-count == undoIndex + 1 conjunct.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY2(doc.undoStack()->count() == undoIndex + 1,
-               "the Insert Time row did not commit exactly one undo transaction")
+Disposition: MATCHED
+Mapping: S101, S105, S020 - the time-menu Insert Time row commits exactly one undo entry beside the model insertion's exact one-transaction count, and one undo restores the pre-insertion document
 
 A088 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:465
 Disposition: MATCHED
@@ -1044,6 +996,41 @@ Anchor: message "the rendered time menu Clear row drops the time selection"
 
 S098 | test_timeMenuClearRowDropsSelectionWithoutEditingSong | src/checks/editorqml/tst_ShellGridMenu.qml
 Anchor: message "the rendered time menu Clear row writes no song edit"
+
+S099-S109 are the task-86 additions: S099 the selected-range Copy span and S100 its byte/history no-mutation conjunct of checkTimeSelectionMenuCommands, S103 the exact one-snap-cell Copy span and S104 its no-mutation conjunct, S102 the stale-Duplicate byte/history/revision preservation, S101 the menu Insert Time row's exact one-undo-entry commit alongside the model-level S105 of checkTimeMenuInsertTime, S106 the disabled-Paste no-write click of checkTimeMenuClipboardRetirement, S107/S108 the zero cursor-publication and unchanged status-text predicates of checkRejectedTimeMenuPaste, and S109 the admitted-paste velocity-90 predicate of checkAdmittedTimeMenuPaste. They execute in the swiftcore-projectsession lane on the frozen task-86 tree (implementer-recorded green; this reconciliation ran no lane).
+
+S099 | checkTimeSelectionMenuCommands | src/checks/rollcheck/timemenu.swift
+Anchor: message "Copy decodes a clip spanning exactly the selected snap cells"
+
+S100 | checkTimeSelectionMenuCommands | src/checks/rollcheck/timemenu.swift
+Anchor: message "Copy changes neither document bytes nor undo history"
+
+S101 | checkTimeSelectionMenuCommands | src/checks/rollcheck/timemenu.swift
+Anchor: message "the time-menu Insert Time row commits exactly one undo entry"
+
+S102 | checkTimeSelectionMenuCommands | src/checks/rollcheck/timemenu.swift
+Anchor: message "stale Duplicate preserves bytes, history depth and revision"
+
+S103 | checkTimeSelectionMenuCommands | src/checks/rollcheck/timemenu.swift
+Anchor: message "Copy decodes a note clip spanning exactly one snap cell"
+
+S104 | checkTimeSelectionMenuCommands | src/checks/rollcheck/timemenu.swift
+Anchor: message "single-cell Copy leaves bytes, index and count unchanged"
+
+S105 | checkTimeMenuInsertTime | src/checks/rollcheck/timemenu.swift
+Anchor: message "time insertion adds exactly one undo transaction"
+
+S106 | checkTimeMenuClipboardRetirement | src/checks/rollcheck/timemenu.swift
+Anchor: message "disabled Paste click keeps the menu open and writes nothing"
+
+S107 | checkRejectedTimeMenuPaste | src/checks/rollcheck/timemenu.swift
+Anchor: message "every rejected paste variant publishes zero cursor moves"
+
+S108 | checkRejectedTimeMenuPaste | src/checks/rollcheck/timemenu.swift
+Anchor: message "every rejected paste variant leaves status text unchanged"
+
+S109 | checkAdmittedTimeMenuPaste | src/checks/rollcheck/timemenu.swift
+Anchor: message "the admitted clip lands its original note velocity at the snap base"
 
 Remaining original source (closing sequence and helper bodies):
   ;

@@ -46,6 +46,7 @@ private func checkTimeMenuInsertTime(_ report: CheckReport, session: DocumentSes
     }
     let before = coreTimeBytes(document)
     let identity = document.history.currentIdentity
+    let undoCount = document.history.undoCount
     let range = TimeRange(startTick: insertStart, endTick: insertEnd)
     report.expect(document.insertBlankTime(range, scope: TimeScope(tracks: [0])), cppID: id,
                   message: "the selected span inserts blank time")
@@ -53,6 +54,8 @@ private func checkTimeMenuInsertTime(_ report: CheckReport, session: DocumentSes
         $0.tick == insertEnd && $0.pitch == seed.pitch && $0.velocity == seed.velocity
     } && document.history.currentIdentity != identity,
     cppID: id, message: "A084: the seed shifts from the selection start to its end in one transaction")
+    report.expect(document.history.undoCount == undoCount + 1,
+                  cppID: id, message: "time insertion adds exactly one undo transaction")
     _ = document.history.undoDocument()
     report.expect(coreTimeBytes(document) == before, cppID: id,
                   message: "A088: one undo restores the bytes before time insertion")
@@ -97,7 +100,16 @@ private func checkTimeSelectionMenuCommands(_ report: CheckReport, session: Docu
                   && menu.rows.count == 9
                   && menu.rows[3].actionId == 1 && menu.rows[3].enabled,
                   cppID: id, message: "a selected interval opens an enabled Insert Time row")
+    let copyBytes = coreTimeBytes(session.document)
+    let copyIndex = session.document.history.undoIndex
+    let copyCount = session.document.history.undoCount
     _ = menu.activate(actionId: 11)
+    report.expect(GridClipboard().read()?.clip.span == end - start,
+                  cppID: id, message: "Copy decodes a clip spanning exactly the selected snap cells")
+    report.expect(coreTimeBytes(session.document) == copyBytes
+                  && session.document.history.undoIndex == copyIndex
+                  && session.document.history.undoCount == copyCount,
+                  cppID: id, message: "Copy changes neither document bytes nor undo history")
     let copiedNote = GridClipboard().read()?.clip.tracks
         .first(where: { $0.track == (session.selectedTrack ?? 0) })?
         .notes.first(where: { $0.key == 30 })
@@ -108,6 +120,7 @@ private func checkTimeSelectionMenuCommands(_ report: CheckReport, session: Docu
     menu.openTimeSelection(contentX: midpoint)
     let before = session.document.history.currentIdentity
     let bytes = coreTimeBytes(session.document)
+    let insertCount = session.document.history.undoCount
     let selection = session.timeSelection
     _ = menu.activate(actionId: 1)
     report.expect(!menu.isOpen && session.document.history.currentIdentity != before,
@@ -115,6 +128,8 @@ private func checkTimeSelectionMenuCommands(_ report: CheckReport, session: Docu
     report.expect(session.editCursor == start && session.timeSelection == selection
                   && session.document.note(added[0])?.tick == end + 6,
                   cppID: id, message: "the Insert Time row commits at the seam and retains the blank selection")
+    report.expect(session.document.history.undoCount == insertCount + 1,
+                  cppID: id, message: "the time-menu Insert Time row commits exactly one undo entry")
     if session.document.history.currentIdentity != before {
         _ = session.document.history.undoDocument()
     }
@@ -125,9 +140,39 @@ private func checkTimeSelectionMenuCommands(_ report: CheckReport, session: Docu
     menu.openTimeSelection(contentX: midpoint)
     automation.clearTimeSelection()
     let identity = session.document.history.currentIdentity
+    let staleBytes = coreTimeBytes(session.document)
+    let staleIndex = session.document.history.undoIndex
+    let staleCount = session.document.history.undoCount
+    let staleRevision = session.document.revision
     _ = menu.activate(actionId: 6)
     report.expect(!menu.isOpen && session.document.history.currentIdentity == identity,
                   cppID: id, message: "a stale duplicate click cannot write after selection loss")
+    report.expect(coreTimeBytes(session.document) == staleBytes
+                  && session.document.history.undoIndex == staleIndex
+                  && session.document.history.undoCount == staleCount
+                  && session.document.revision == staleRevision,
+                  cppID: id, message: "stale Duplicate preserves bytes, history depth and revision")
+    let snapCell = Tick(grid.snapTicks)
+    let cellStart = start + snapCell
+    automation.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: cellStart, endTick: cellStart + snapCell),
+        scope: .tracks([session.selectedTrack ?? 0])))
+    menu.openTimeSelection(contentX: session.camera.contentX(tick: Double(cellStart + 1)))
+    let cellBytes = coreTimeBytes(session.document)
+    let cellIndex = session.document.history.undoIndex
+    let cellCount = session.document.history.undoCount
+    _ = menu.activate(actionId: 11)
+    let copiedCell = GridClipboard().read()?.clip
+    report.expect(copiedCell?.span == snapCell
+                  && copiedCell?.tracks.contains(where: {
+                      $0.notes.contains(where: { $0.key == 30 && $0.relTick == 0 })
+                  }) == true, cppID: id,
+                  message: "Copy decodes a note clip spanning exactly one snap cell")
+    report.expect(coreTimeBytes(session.document) == cellBytes
+                  && session.document.history.undoIndex == cellIndex
+                  && session.document.history.undoCount == cellCount,
+                  cppID: id, message: "single-cell Copy leaves bytes, index and count unchanged")
+    automation.clearTimeSelection()
 }
 
 @MainActor
@@ -155,9 +200,17 @@ private func checkTimeMenuClipboardRetirement(_ report: CheckReport, session: Do
     let midpoint = session.camera.contentX(tick: 84)
     menu.openTimeSelection(contentX: midpoint)
     let identity = session.document.history.currentIdentity
+    let disabledBytes = coreTimeBytes(session.document)
+    let disabledIndex = session.document.history.undoIndex
+    let disabledCount = session.document.history.undoCount
     report.expect(menu.isOpen && !menu.rows[6].enabled && menu.rows[0].enabled
                   && menu.rows[8].enabled, cppID: id,
                   message: "Paste starts disabled for an empty clip while Copy and Clear remain enabled")
+    report.expect(!menu.activate(actionId: 13) && menu.isOpen
+                  && coreTimeBytes(session.document) == disabledBytes
+                  && session.document.history.undoIndex == disabledIndex
+                  && session.document.history.undoCount == disabledCount,
+                  cppID: id, message: "disabled Paste click keeps the menu open and writes nothing")
     let note = ClipNote(relTick: 0, key: 60, duration: 6, velocity: 100)
     report.expect(clipboard.write(PorydawClip(tracks: [
         ClipTrack(track: session.selectedTrack ?? 0, notes: [note])
@@ -280,8 +333,19 @@ private func checkRejectedTimeMenuPaste(_ report: CheckReport, session: Document
                 let cursor = session.editCursor
                 let camera = session.camera.snapshot
                 let status = grid.statusText
+                let previousChange = session.onChange
+                var cursorPublications = 0
+                session.onChange = { change in
+                    if change.domains.contains(.cursor) { cursorPublications += 1 }
+                    previousChange?(change)
+                }
                 if fromMenu { _ = menu.activate(actionId: 13) }
                 else { _ = automation.consumeSelectionCommand(command: .paste) }
+                session.onChange = previousChange
+                report.expect(cursorPublications == 0, cppID: id,
+                              message: "every rejected paste variant publishes zero cursor moves")
+                report.expect(grid.statusText == status, cppID: id,
+                              message: "every rejected paste variant leaves status text unchanged")
                 report.expect(coreTimeBytes(session.document) == bytes
                               && session.document.revision == revision
                               && session.document.history.undoIndex == undoIndex
@@ -321,7 +385,7 @@ private func checkAdmittedTimeMenuPaste(_ report: CheckReport, session: Document
     let track = session.selectedTrack ?? 0
     let destination = Tick(grid.snapTickDown(Double(session.timeline.lengthTicks + 96)))
     let clipboard = GridClipboard()
-    let note = ClipNote(relTick: 6, key: 55, duration: 6, velocity: 91)
+    let note = ClipNote(relTick: 6, key: 55, duration: 6, velocity: 90)
     for span: Tick in [24, 0] {
         session.editCursor = destination
         if span > 0 {
@@ -352,6 +416,10 @@ private func checkAdmittedTimeMenuPaste(_ report: CheckReport, session: Document
         report.expect(consumed && session.document.history.undoIndex == index + 1
                       && after != before && cursorPublications == 1,
                       cppID: id, message: "an admitted paste publishes exactly one cursor move")
+        report.expect(session.document.notes(in: track).contains {
+            $0.tick == destination + Tick(note.relTick) && $0.pitch == note.key
+                && $0.velocity == 90
+        }, cppID: id, message: "the admitted clip lands its original note velocity at the snap base")
         report.expect(session.editCursor == nextCursor, cppID: id,
                       message: span > 0 ? "an admitted range paste advances the cursor by the clip span"
                           : "an admitted note-clip paste advances the cursor past the pasted notes")

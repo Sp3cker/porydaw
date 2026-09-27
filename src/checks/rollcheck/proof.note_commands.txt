@@ -24,6 +24,10 @@ Command: deno task verify:shell --verbose
 Result: PASS — 11/11 ok (controller-recorded post-change run); no note-command site
 depends on the shell lane. The shell and roll QML runs predate only a
 swiftcore-checks-only commit; no production or QML source changed after them.
+Command: deno task verify --filter swiftcore-projectsession --verbose (task-86 frozen sources)
+Result: PASS — 1/36 ok, 35 skipped (implementer-recorded run on the frozen tree; it executed runNoteCommandChecks including the S057-S066 arithmetic and no-leak predicates, and the full native lane passed 36/36).
+Command: deno task verify:shell --filter shell-grid-menu --verbose (task-86 frozen sources)
+Result: PASS — 1/26 ok, 25 skipped (implementer-recorded run on the frozen tree; it executed test_noteCommandRowsDispatchOnSelectedNote, the source of S067-S068, and the full shell lane passed 26/26. This proof-only reconciliation ran no lane, rebuilt nothing and re-ran no check).
 
 A001 | ? | src/checks/rollcheck/note_commands.cpp:85
 Disposition: MATCHED
@@ -38,31 +42,16 @@ Disposition: MATCHED
 Mapping: S004
 
 A004 | PianoRollTest::keyboardDuplicateNotes | src/checks/rollcheck/note_commands.cpp:143
-Disposition: PARTIAL
-Mapping/reason: S005 (note_commands.swift) asserts the duplicate copy one span later with a new identity and a history entry, and S002 (note_commands.swift) asserts one undo restores the exact pre-command bytes. Unproved: the exact undo index +1 / count increment that this original expression pins; the Swift predicate proves the history identity and bytes instead.
-Source context since previous assertion:
-      view.selectionModel().setNoteSelection({source.noteId});
-      const int duplicateUndoIndex = doc.undoStack()->index();
-      sendCommandKey(roll, Qt::Key_D);
-      DocNote copy;
-Original expression:
-  QVERIFY2(doc.undoStack()->index() == duplicateUndoIndex + 1 &&
-                   doc.findNote(track, source.tick + source.duration, uint8_t(d.key), &copy) &&
-                   copy.duration == source.duration,
-               "Ctrl+D did not duplicate the selected note one span later in one undo step");
+Disposition: MATCHED
+Mapping: S057, S005, S002 - the duplicate copy lands one span later with a new identity and a history entry, one undo restores the exact pre-command bytes, and the exact undoIndex + 1 / undoCount + 1 arithmetic
 
 A005 | PianoRollTest::keyboardDuplicateNotes | src/checks/rollcheck/note_commands.cpp:148
 Disposition: MATCHED
 Mapping: S006
 
 A006 | PianoRollTest::keyboardDuplicateNotes | src/checks/rollcheck/note_commands.cpp:150
-Disposition: GAP
-Mapping/reason: GAP: after the 38a cutover the session owns the time selection (PianoGrid.timeSelectionSource/onClearTimeSelection were deleted) and checkKeyboardDuplicateNotes still commits no time selection, but no Swift predicate asserts that note duplication left the roll time selection inactive; S009 belongs to the sibling duplicate-precedence case, which commits a range instead of leaving none.
-Source context since previous assertion:
-  (adjacent to previous assertion; no intervening source lines)
-Original expression:
-  QVERIFY2(!view.selectionModel().timeSelection().active(),
-               "note duplication leaked into the time selection");
+Disposition: MATCHED
+Mapping: S058 - after note-only duplication the session time selection stays nil, proving the duplicate never leaks into the time selection
 
 A007 | PianoRollTest::keyboardDuplicatePrefersTimeSelection | src/checks/rollcheck/note_commands.cpp:159
 Disposition: MATCHED
@@ -73,24 +62,8 @@ Disposition: MATCHED
 Mapping: S007
 
 A009 | PianoRollTest::keyboardDuplicatePrefersTimeSelection | src/checks/rollcheck/note_commands.cpp:179
-Disposition: PARTIAL
-Mapping/reason: S008 (note_commands.swift) asserts the time range advances by one span, the copy exists and the edit cursor advances, and S002 (note_commands.swift) asserts one undo restores the pre-command bytes. Unproved: the exact undo index +1 that this original expression pins.
-Source context since previous assertion:
-      view.selectionModel().setNoteSelection({source.noteId});
-      view.selectionModel().setTimeSelection(
-          {d.tick, d.tick + snapCell, songview::EditorSelectionModel::TimeSelection::Tracks, {}});
-      const int duplicateUndoIndex = doc.undoStack()->index();
-      sendCommandKey(roll, Qt::Key_D);
-      const songview::EditorSelectionModel::TimeSelection advanced =
-          view.selectionModel().timeSelection();
-      DocNote copy;
-Original expression:
-  QVERIFY2(doc.undoStack()->index() == duplicateUndoIndex + 1 && advanced.active() &&
-                   advanced.startTick == d.tick + snapCell &&
-                   advanced.endTick == d.tick + 2 * snapCell &&
-                   doc.findNote(track, d.tick + snapCell, uint8_t(d.key), &copy) &&
-                   view.editCursorTick() == d.tick + 2 * snapCell,
-               "Ctrl+D with both selections did not run the time-range arm");
+Disposition: MATCHED
+Mapping: S059, S008, S002 - the time range advances by one span with the copy and the edit cursor advance, one undo restores the pre-command bytes, and the exact undoIndex + 1 / undoCount + 1 arithmetic
 
 A010 | PianoRollTest::keyboardSplitNotesGrid | src/checks/rollcheck/note_commands.cpp:192
 Disposition: MATCHED
@@ -101,22 +74,8 @@ Disposition: MATCHED
 Mapping: S010
 
 A012 | PianoRollTest::keyboardSplitNotesGrid | src/checks/rollcheck/note_commands.cpp:210
-Disposition: PARTIAL
-Mapping/reason: S011 (note_commands.swift) asserts three grid-length fragments and a history entry, and S002 (note_commands.swift) asserts one undo restores the pre-command bytes. Unproved: the exact undo index +1 that this original expression pins.
-Source context since previous assertion:
-      const DocNote &source = *alignedSeed;
-      const Tick start = source.tick;
-      const Tick grid = view.grid().gridTicksAt(start);
-      view.selectionModel().setNoteSelection({source.noteId});
-      const int splitUndoIndex = doc.undoStack()->index();
-      sendCommandKey(roll, Qt::Key_E);
-      DocNote piece;
-Original expression:
-  QVERIFY2(doc.undoStack()->index() == splitUndoIndex + 1 &&
-                   doc.findNote(track, start, key, &piece) && piece.duration == grid &&
-                   doc.findNote(track, start + grid, key, &piece) && piece.duration == grid &&
-                   doc.findNote(track, start + 2 * grid, key, &piece) && piece.duration == grid,
-               "Ctrl+E did not split the selected note into grid pieces in one undo step");
+Disposition: MATCHED
+Mapping: S060, S011, S002 - three grid-length fragments land with a history entry, one undo restores the pre-command bytes, and the exact undoIndex + 1 / undoCount + 1 arithmetic
 
 A013 | PianoRollTest::keyboardSplitNotesGrid | src/checks/rollcheck/note_commands.cpp:216
 Disposition: MATCHED
@@ -135,43 +94,16 @@ Disposition: MATCHED
 Mapping: S015
 
 A017 | PianoRollTest::keyboardSplitAtEditCursor | src/checks/rollcheck/note_commands.cpp:244
-Disposition: PARTIAL
-Mapping/reason: S016 (note_commands.swift) asserts the unselected note splits at the edit cursor into the two exact-duration pieces with a history entry, and S002 (note_commands.swift) asserts one undo restores the pre-command bytes. Unproved: the exact undo index +1.
-Source context since previous assertion:
-      const Tick cursorTick = d.tick + source.duration / 2;
-      view.setEditCursorTick(cursorTick);
-      const int splitUndoIndex = doc.undoStack()->index();
-      sendCommandKey(roll, Qt::Key_E);
-      DocNote piece;
-Original expression:
-  QVERIFY2(doc.undoStack()->index() == splitUndoIndex + 1 &&
-                   doc.findNote(track, d.tick, uint8_t(d.key), &piece) &&
-                   piece.duration == cursorTick - d.tick &&
-                   doc.findNote(track, cursorTick, uint8_t(d.key), &piece) &&
-                   piece.duration == uint32_t(source.duration - (cursorTick - d.tick)),
-               "Ctrl+E did not split the unselected note at the edit cursor in one undo step");
+Disposition: MATCHED
+Mapping: S061, S016, S002 - the unselected note splits at the edit cursor into the two exact-duration pieces with a history entry, one undo restores the pre-command bytes, and the exact undoIndex + 1 / undoCount + 1 arithmetic
 
 A018 | PianoRollTest::keyboardSplitNoop | src/checks/rollcheck/note_commands.cpp:257
 Disposition: MATCHED
 Mapping: S001
 
 A019 | PianoRollTest::keyboardSplitNoop | src/checks/rollcheck/note_commands.cpp:269
-Disposition: PARTIAL
-Mapping/reason: S018 (note_commands.swift) asserts the split outside every note records no undo entry (history identity unchanged). Unproved: the exact undo index equality that this original expression pins; the Swift predicate proves no entry through identity equality.
-Source context since previous assertion:
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      songview::TimelineInputItem &roll = check.rollInput();
-      const Cell &d = seed->cell;
-      const QByteArray before = doc.smf().write();
-      const int undo = doc.undoStack()->index();
-      view.selectionModel().clearNoteSelection();
-      // The timeline end cannot be strictly inside any finite note, regardless
-      // of pitch or the source song's existing notes.
-      view.setEditCursorTick(check.timeline().lengthTicks);
-      sendCommandKey(roll, Qt::Key_E);
-Original expression:
-  QCOMPARE(doc.undoStack()->index(), undo);
+Disposition: MATCHED
+Mapping: S062, S018 - the split outside every note records no undo entry by history identity and the exact undo-index equality
 
 A020 | PianoRollTest::keyboardSplitNoop | src/checks/rollcheck/note_commands.cpp:270
 Disposition: MATCHED
@@ -190,18 +122,8 @@ Disposition: MATCHED
 Mapping: S021
 
 A024 | PianoRollTest::keyboardJoinNotes | src/checks/rollcheck/note_commands.cpp:296
-Disposition: PARTIAL
-Mapping/reason: S022 (note_commands.swift) asserts the one-span join with a history entry, and S002 (note_commands.swift) asserts one undo restores both original notes. Unproved: the exact undo index +1.
-Source context since previous assertion:
-      view.selectionModel().setNoteSelection({first.noteId, second.noteId});
-      const int joinUndoIndex = doc.undoStack()->index();
-      sendCommandKey(roll, Qt::Key_J);
-      DocNote joined;
-Original expression:
-  QVERIFY2(doc.undoStack()->index() == joinUndoIndex + 1 &&
-                   doc.findNote(track, d.tick, uint8_t(d.key), &joined) &&
-                   joined.duration == uint32_t(secondTick - d.tick) + first.duration,
-               "Ctrl+J did not join the selected notes into one span in one undo step");
+Disposition: MATCHED
+Mapping: S063, S022, S002 - the one-span join lands with a history entry, one undo restores both original notes, and the exact undoIndex + 1 / undoCount + 1 arithmetic
 
 A025 | PianoRollTest::keyboardJoinNotes | src/checks/rollcheck/note_commands.cpp:300
 Disposition: MATCHED
@@ -236,20 +158,8 @@ Disposition: MATCHED
 Mapping: S028
 
 A033 | PianoRollTest::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.cpp:361
-Disposition: PARTIAL
-Mapping/reason: S029 (note_commands.swift) asserts the three-cell join preserving the first velocity with a history entry, and S002 (note_commands.swift) asserts one undo restores every mixed-join group. Unproved: the exact undo index +1.
-Source context since previous assertion:
-      view.selectionModel().setNoteSelection(
-          {first.noteId, second.noteId, singleton.noteId, open.noteId});
-      const int joinUndoIndex = doc.undoStack()->index();
-      sendCommandKey(roll, Qt::Key_J);
-
-      DocNote joined;
-Original expression:
-  QVERIFY2(doc.undoStack()->index() == joinUndoIndex + 1 &&
-                   doc.findNote(track, d.tick, uint8_t(d.key), &joined) &&
-                   joined.duration == 3 * grid && joined.velocity == first.velocity,
-               "Ctrl+J did not join the same-key pair into one span with the first velocity");
+Disposition: MATCHED
+Mapping: S064, S029, S002 - the three-cell join preserves the first velocity with a history entry, one undo restores every mixed-join group, and the exact undoIndex + 1 / undoCount + 1 arithmetic
 
 A034 | PianoRollTest::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.cpp:365
 Disposition: MATCHED
@@ -284,20 +194,8 @@ Disposition: MATCHED
 Mapping: S036
 
 A042 | PianoRollTest::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.cpp:426
-Disposition: PARTIAL
-Mapping/reason: S037 (note_commands.swift) asserts both split arms commit as one transaction (identity change), and S045 (note_commands.swift) asserts one undo restores both arms. Unproved: the exact undo index +1 that this original expression pins.
-Source context since previous assertion:
-      const Tick cursorTick = straddlerTick + grid;
-      view.setEditCursorTick(cursorTick);
-      view.selectionModel().setNoteSelection({source.noteId, bystander.noteId});
-
-      const int splitUndoIndex = doc.undoStack()->index();
-      sendCommandKey(roll, Qt::Key_E);
-
-      DocNote piece;
-Original expression:
-  QVERIFY2(doc.undoStack()->index() == splitUndoIndex + 1,
-               "Ctrl+E did not land as exactly one undo step");
+Disposition: MATCHED
+Mapping: S065, S037, S045 - both split arms commit as one transaction, one undo restores both arms, and the exact undoIndex + 1 / undoCount + 1 arithmetic
 
 A043 | PianoRollTest::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.cpp:429
 Disposition: MATCHED
@@ -340,44 +238,20 @@ Disposition: MATCHED
 Mapping: S047
 
 A053 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:505
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/note_commands.cpp) no longer builds or runs. Previous native note: Original native popup obligation: the Quick note menu session must open on a right click. The Swift check invokes the command handler directly and opens no menu.
-Source context since previous assertion:
-          view.selectionModel().setNoteSelection({source.noteId, partner.noteId});
-      }
-      if (command != songview::pianoroll_detail::NoteMenuAction::Join)
-          view.selectionModel().setNoteSelection({source.noteId});
-      view.setPlayheadSample(check.timeline().sampleForTick(d.tick + 6 * grid), true);
-
-      const NoteMenuSession opened = openNoteMenu(check, d);
-Original expression:
-  QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic));
+Disposition: MATCHED
+Mapping: S067 - the mounted journey right-clicks the physically drawn selected note, the note menu opens, and the typed command row resolves enabled through the mounted model
 
 A054 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:507
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/note_commands.cpp) no longer builds or runs. Previous native note: Original native popup obligation: the typed command row must exist in the Quick note menu model.
-Source context since previous assertion:
-      const int row = noteRow(*opened.model, command);
-Original expression:
-  QVERIFY2(row >= 0, "the note menu lost the command's typed row");
+Disposition: MATCHED
+Mapping: S067 - the mounted journey resolves each typed command row (roll.duplicate_time, roll.split, roll.join) through the mounted menu model and asserts it enabled before clicking
 
 A055 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:509
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/note_commands.cpp) no longer builds or runs. Previous native note: Original native popup obligation: a real click on the command's note-menu row must dispatch. The Swift check calls PianoGrid.performCommand(command:) without menu delivery.
-Source context since previous assertion:
-      const int commandUndoIndex = doc.undoStack()->index();
-Original expression:
-  QVERIFY2(quick_popup::clickMenuRow(*opened.session, row),
-               "the command's note menu row did not receive a real click");
+Disposition: MATCHED
+Mapping: S068 - a real click on the mounted Duplicate row dispatches the command, proven by the copy one span later; the same journey clicks the Split and Join rows to their asserted outcomes
 
 A056 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:512
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/note_commands.cpp) no longer builds or runs. Previous native note: Original native popup obligation: the Quick note menu must close after the row activation.
-Source context since previous assertion:
-      QCoreApplication::processEvents();
-Original expression:
-  QVERIFY2(opened.session && !opened.session->isOpen(),
-               "the command's note menu activation left the menu open");
+Disposition: MATCHED
+Mapping: S068 - the mounted journey's row-activation helper asserts the menu closes after every typed-row click, and the Duplicate activation proves the dispatched outcome
 
 A057 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:517
 Disposition: MATCHED
@@ -408,13 +282,8 @@ Disposition: MATCHED
 Mapping: S054
 
 A064 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:541
-Disposition: PARTIAL
-Mapping/reason: S055 (note_commands.swift) asserts the command records a history entry, and S056 (note_commands.swift) asserts one undo restores the pre-menu document. Unproved: the exact undo index +1 that this original expression pins.
-Source context since previous assertion:
-      }
-Original expression:
-  QVERIFY2(doc.undoStack()->index() == commandUndoIndex + 1,
-               "the popup activation did not land as exactly one undo step");
+Disposition: MATCHED
+Mapping: S066, S055, S056 - the document-level twin asserts the command records a history entry, one undo restores the pre-menu document, and the exact undoIndex + 1 / undoCount + 1 arithmetic
 
 Remaining original source (closing sequence and helper bodies):
       unwindTo(doc, undo, before);
@@ -592,3 +461,41 @@ Anchor: message "menu command records a history entry"
 
 S056 | checkKeyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift
 Anchor: message "one undo restores the pre-menu document"
+
+S057-S068 are the task-86 additions: S057 the exact one-undo Duplicate arithmetic and S058 the no-leak time-selection predicate of checkKeyboardDuplicateNotes, S059-S065 the exact one-undo arithmetic of the time-range Duplicate, grid Split, cursor Split, Split no-op, note-pair Join, mixed Join and selected-plus-cursor Split scenarios, S066 the exact one-undo arithmetic of the document-level note-menu twin in checkKeyboardNoteCommandPopupActivation, and S067/S068 the mounted typed-row journey of test_noteCommandRowsDispatchOnSelectedNote in tst_ShellGridMenu.qml (enabled-row resolution through the mounted model, and the Duplicate outcome with menu close). They execute in the swiftcore-projectsession and shell-grid-menu lanes on the frozen task-86 tree (implementer-recorded green; this reconciliation ran no lane).
+
+S057 | checkKeyboardDuplicateNotes | src/checks/rollcheck/note_commands.swift
+Anchor: message "note-only Duplicate commits exactly one undo step"
+
+S058 | checkKeyboardDuplicateNotes | src/checks/rollcheck/note_commands.swift
+Anchor: message "note-only duplication never leaks into the time selection"
+
+S059 | checkKeyboardDuplicatePrefersTimeSelection | src/checks/rollcheck/note_commands.swift
+Anchor: message "time-range Duplicate commits exactly one undo step"
+
+S060 | checkKeyboardSplitNotesGrid | src/checks/rollcheck/note_commands.swift
+Anchor: message "grid Split commits exactly one undo step"
+
+S061 | checkKeyboardSplitAtEditCursor | src/checks/rollcheck/note_commands.swift
+Anchor: message "cursor Split commits exactly one undo step"
+
+S062 | checkKeyboardSplitNoop | src/checks/rollcheck/note_commands.swift
+Anchor: message "a no-op Split adds no undo step"
+
+S063 | checkKeyboardJoinNotes | src/checks/rollcheck/note_commands.swift
+Anchor: message "joining a note pair commits exactly one undo step"
+
+S064 | checkKeyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift
+Anchor: message "mixed Join commits exactly one undo step"
+
+S065 | checkKeyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift
+Anchor: message "selected-and-cursor Split commits exactly one undo step"
+
+S066 | checkKeyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift
+Anchor: message "the note-menu command commits exactly one undo step"
+
+S067 | test_noteCommandRowsDispatchOnSelectedNote | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the mounted note menu has enabled "
+
+S068 | test_noteCommandRowsDispatchOnSelectedNote | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the Duplicate row copies its selected note one span later"

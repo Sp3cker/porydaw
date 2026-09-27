@@ -5,6 +5,27 @@ import PorydawCore
 import QtBridge
 
 @MainActor
+private func establishVelocityLatch(_ report: CheckReport, id: String,
+                                    session: DocumentSession, grid: PianoGrid,
+                                    seed: (ids: [NoteID], rects: [SceneRect])) {
+    let control = 0x0400_0000
+    let x = seed.rects[1].x + seed.rects[1].width / 2
+    let y = seed.rects[1].y + seed.rects[1].height / 2
+    session.setSelectedNotes([seed.ids[1]])
+    grid.beginPointer(x: x, y: y, modifiers: control)
+    grid.updatePointer(x: x, y: y + 27)
+    grid.endPointer(x: x, y: y + 27)
+    report.expect(session.document.note(seed.ids[1])?.velocity == 73, cppID: id,
+                  message: "the modifier drag first lowers note B to velocity 73")
+    grid.beginPointer(x: x, y: y, modifiers: control)
+    grid.updatePointer(x: x, y: y - 20)
+    grid.endPointer(x: x, y: y - 20)
+    report.expect(session.document.note(seed.ids[1])?.velocity == 93
+                  && grid.lastVelocity == 93, cppID: id,
+                  message: "the modifier velocity drag raises note B from 73 to 93 and latches the pencil")
+}
+
+@MainActor
 func checkGroupedVelocityDrag(_ report: CheckReport, session: DocumentSession) {
     let id = "swiftcore/PianoRoll::selectionModifierVelocity"
     let initialSelection = session.selectedNoteOrder
@@ -22,6 +43,7 @@ func checkGroupedVelocityDrag(_ report: CheckReport, session: DocumentSession) {
         report.fail(id, "could not seed the velocity-drag note pair")
         return
     }
+    establishVelocityLatch(report, id: id, session: session, grid: grid, seed: seed)
     guard let plantedBytes = try? session.document.captureSave().bytes else {
         report.fail(id, "could not capture the planted MIDI bytes")
         return
@@ -69,7 +91,7 @@ func checkGroupedVelocityDrag(_ report: CheckReport, session: DocumentSession) {
     report.expect(noteAuditions.last.map { $0.velocity == 0 } == true
                   && grid.lastVelocity == 78, cppID: id,
                   message: "velocity release stops the note audition and latches the committed anchor velocity")
-    report.expect(session.document.note(seed.ids[1]).map { Int($0.velocity) } == 85, cppID: id,
+    report.expect(session.document.note(seed.ids[1]).map { Int($0.velocity) } == 78, cppID: id,
                   message: "the grouped drag applies the same delta to the other selected note")
     report.expect(Set(session.selectedNoteOrder) == Set(seed.ids), cppID: id,
                   message: "a grouped velocity drag preserves the selected notes")
@@ -84,13 +106,13 @@ func checkGroupedVelocityDrag(_ report: CheckReport, session: DocumentSession) {
     grid.updatePointer(x: aX, y: aY + 15)
     grid.endPointer(x: aX, y: aY + 15)
     report.expect(session.document.note(seed.ids[0]).map { Int($0.velocity) } == 78
-        && session.document.note(seed.ids[1]).map { Int($0.velocity) } == 85, cppID: id,
+        && session.document.note(seed.ids[1]).map { Int($0.velocity) } == 78, cppID: id,
         message: "dragging down again reaches the same grouped velocities")
     grid.beginPointer(x: aX, y: aY, modifiers: control)
     grid.updatePointer(x: aX, y: aY - 15)
     grid.endPointer(x: aX, y: aY - 15)
     report.expect(session.document.note(seed.ids[0]).map { Int($0.velocity) } == 93
-        && session.document.note(seed.ids[1]).map { Int($0.velocity) } == 100, cppID: id,
+        && session.document.note(seed.ids[1]).map { Int($0.velocity) } == 93, cppID: id,
         message: "repeating the grouped drag the other way restores both velocities")
     report.expect(Set(session.selectedNoteOrder) == Set(seed.ids), cppID: id,
                   message: "the repeated grouped drag preserves the selected notes")
@@ -103,7 +125,7 @@ func checkGroupedVelocityDrag(_ report: CheckReport, session: DocumentSession) {
                   message: "a chord-held drag on another note re-anchors the selection to the grabbed note")
     report.expect(session.document.note(seed.ids[0]).map { Int($0.velocity) } == 78, cppID: id,
                   message: "the chord-held drag adjusts the grabbed note")
-    report.expect(session.document.note(seed.ids[1]).map { Int($0.velocity) } == 100, cppID: id,
+    report.expect(session.document.note(seed.ids[1]).map { Int($0.velocity) } == 93, cppID: id,
                   message: "the chord-held drag leaves the prior note untouched")
     report.expect(session.document.history.undoCount == chordCount + 1, cppID: id,
                   message: "the chord-held drag commits one undo entry")
@@ -159,6 +181,12 @@ func checkThresholdDrawCell(_ report: CheckReport, session: DocumentSession) {
                          selection: initialSelection,
                          message: "threshold draws unwind to the pre-seed MIDI bytes and history")
     }
+    guard let seed = velocityPairSeed(session: session, grid: grid) else {
+        report.fail(id, "could not seed the velocity-latch note pair")
+        return
+    }
+    establishVelocityLatch(report, id: id, session: session, grid: grid, seed: seed)
+    let plantedIdentity = session.document.history.currentIdentity
     let snap = grid.snapTicks
     guard snap >= 8 else {
         report.fail(id, "the fixed eighth grid is not drawable (snap=\(snap))")
@@ -201,7 +229,7 @@ func checkThresholdDrawCell(_ report: CheckReport, session: DocumentSession) {
     grid.endPointer(x: pressX + grid.drawThreshold - 0.5, y: cell.y)
     report.expect(session.document.notes(in: grid.trackIndex).map(\.id) == beforeNotes.map(\.id)
                   && session.document.history.undoCount == beforeClick
-                  && session.document.history.currentIdentity == baseline.identity,
+                  && session.document.history.currentIdentity == plantedIdentity,
                   cppID: id, message: "below the font-derived draw slop a click adds no note or undo entry")
     report.expect(session.editCursor == Tick(session.grid.snapTick(
         session.camera.tickAtContentX(pressX), camera: session.camera))
