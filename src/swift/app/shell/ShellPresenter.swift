@@ -399,6 +399,11 @@ public final class ShellPresenter: QmlInstantiableStatus {
 
     /// The native window rejects the first close while tabs and dirty banks
     /// answer their gate; no close bypasses hostClosing -> scene removal ->
+    public func releaseEditorKey(autoRepeat: Bool) -> Bool {
+        guard sceneActive, session.songOpen, !autoRepeat else { return false }
+        return session.releaseGridKey(autoRepeat: autoRepeat)
+    }
+
     /// detach ack.
     public func beginClose() -> Bool {
         if closeReady { return true }

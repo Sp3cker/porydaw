@@ -1668,10 +1668,19 @@ TestCase {
         verify(note().tick === original.tick + grid.snapTicks
                && note().pitch === original.pitch,
                "label-focus arrows advance the selected note one grid step")
-        keyClick(Qt.Key_Up)
+        keyPress(Qt.Key_Up)
         verify(note().tick === original.tick + grid.snapTicks
                && note().pitch === original.pitch + 1,
                "label-focus Up transposes the selected note")
+        verify(shell.shellPresenter.releaseEditorKey(false),
+               "real label-focus Up key-down starts a live transpose audition latch")
+        keyRelease(Qt.Key_Up)
+        keyPress(Qt.Key_Up)
+        keyRelease(Qt.Key_Up)
+        compare(note().pitch, original.pitch + 2,
+                "real label-focus Up down/up transposes the note")
+        compare(shell.shellPresenter.releaseEditorKey(false), false,
+                "real label-focus Up key-up already ended the audition latch")
         compare(volumeTab.checked, true, "the active parameter survives label-focus commands")
 
         var notesBefore = grid.noteSummary

@@ -5,11 +5,13 @@ import PorydawCore
 import QtBridge
 
 @MainActor
-func runSelectionChecks(_ report: CheckReport, session: DocumentSession) {
+func runSelectionChecks(_ report: CheckReport, session: DocumentSession, fixtureRoot: String) {
     checkSelectionBandSweep(report, session: session)
     checkSelectionNonScaleMove(report, session: session)
     checkSelectionBandAudition(report, session: session)
     checkKeyboardAuditionTrackSwitch(report, session: session)
+    checkTransposeAudition(report, session: session)
+    checkMountedTransposeAudition(report, fixtureRoot: fixtureRoot)
     checkGroupedVelocityDrag(report, session: session)
     checkThresholdDrawCell(report, session: session)
     checkOrderedSelection(report, session: session)
@@ -327,6 +329,93 @@ private func checkSelectionBandAudition(_ report: CheckReport, session: Document
     } catch {
         report.fail(id, "could not encode the post-band MIDI document: \(error)")
     }
+}
+
+@MainActor
+private func checkTransposeAudition(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::drawerTransposeAuditionReleasesOnPhysicalKeyUp"
+    let originalSelection = session.selectedNoteOrder
+    guard let baseline = try? session.document.captureSave() else {
+        report.fail(id, "could not capture the pre-transpose MIDI bytes")
+        return
+    }
+    let grid = makeCameraGrid(session: session)
+    defer {
+        grid.onAudition = nil
+        selectionRestore(report, id: id, session: session, baseline: baseline,
+                         selection: originalSelection,
+                         message: "transpose audition restores the original document and selection")
+    }
+    guard let selectedTrack = session.selectedTrack,
+          let ids = try? session.document.addNotes([
+              NewNote(track: selectedTrack, tick: 12_000, pitch: 60, duration: 24, velocity: 41),
+              NewNote(track: selectedTrack, tick: 12_048, pitch: 67, duration: 24, velocity: 93)
+          ]), ids.count == 2 else {
+        report.fail(id, "could not seed ordered transpose-audition notes")
+        return
+    }
+    session.setSelectedNotes(ids)
+    var auditions: [(track: Int, pitch: Int, velocity: Int)] = []
+    grid.onAudition = { auditions.append(($0, $1, $2)) }
+    grid.performCommand(command: EditCommand.transposeUp.rawValue)
+    report.expect(session.document.note(ids[0])?.pitch == 61
+        && session.document.note(ids[1])?.pitch == 68
+        && auditions.count == 1 && auditions[0].track == selectedTrack
+        && auditions[0].pitch == 61 && auditions[0].velocity == 41, cppID: id,
+        message: "transpose key-down auditions the transposed pitch above zero velocity")
+}
+
+@MainActor
+private func checkMountedTransposeAudition(_ report: CheckReport, fixtureRoot: String) {
+    let id = "swiftcore/PianoRoll::drawerTransposeAuditionReleasesOnPhysicalKeyUp"
+    let root = stageTestProject(in: fixtureRoot, projectName: "swiftcore-transpose-audition")
+    let app = ApplicationSession()
+    defer {
+        app.hostClosing()
+        app.acknowledgeGridDetached()
+    }
+    app.openProjectAndSong(path: root, label: "mus_session_test")
+    let deadline = Date().addingTimeInterval(25)
+    while !app.songOpen && app.lastSaveError.isEmpty && Date() < deadline {
+        _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+    }
+    guard app.songOpen, let session = app.selectedDocument, let track = session.selectedTrack else {
+        report.fail(id, "mounted fixture could not open: \(app.lastSaveError)")
+        return
+    }
+    guard let ids = try? session.document.addNotes([
+        NewNote(track: track, tick: 12_000, pitch: 60, duration: 24, velocity: 41)
+    ]), let noteID = ids.first else {
+        report.fail(id, "mounted transpose-audition note could not be seeded")
+        return
+    }
+    session.setSelectedNotes([noteID])
+    let grid = app.gridPresenter()
+    let forward = grid.onAudition
+    var auditions: [(track: Int, pitch: Int, velocity: Int)] = []
+    grid.onAudition = { noteTrack, pitch, velocity in
+        auditions.append((noteTrack, pitch, velocity))
+        forward?(noteTrack, pitch, velocity)
+    }
+    defer { grid.onAudition = forward }
+    app.performGridCommand(command: EditCommand.transposeUp.rawValue)
+    let repeated = app.routeGridKey(command: EditCommand.transposeUp.rawValue, autoRepeat: true)
+    if repeated == EditKeyDecision.execute.rawValue {
+        app.performGridCommand(command: EditCommand.transposeUp.rawValue)
+    }
+    let afterRepeat = auditions.count
+    let repeatRelease = app.releaseGridKey(autoRepeat: true)
+    report.expect(repeated == EditKeyDecision.execute.rawValue
+        && session.document.note(noteID)?.pitch == 62
+        && afterRepeat == 2 && auditions[1].pitch == 62 && auditions[1].velocity == 41
+        && !repeatRelease && auditions.count == afterRepeat, cppID: id,
+        message: "autorepeat key-up holds the transpose audition")
+    let physicalRelease = app.releaseGridKey(autoRepeat: false)
+    let duplicateRelease = app.releaseGridKey(autoRepeat: false)
+    report.expect(physicalRelease && !duplicateRelease && auditions.count == afterRepeat + 1
+        && auditions.last?.track == track && auditions.last?.pitch == 62
+        && auditions.last?.velocity == 0, cppID: id,
+        message: "physical key-up ends the transpose audition with a zero-velocity release")
 }
 
 @MainActor

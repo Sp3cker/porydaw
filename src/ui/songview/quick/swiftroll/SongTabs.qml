@@ -53,6 +53,10 @@ Item {
                                                       event.isAutoRepeat)
         }
     }
+    Keys.onReleased: event => {
+        if (root.shellRouter && !root.focusOwnsLocalKeys())
+            event.accepted = root.shellRouter.releaseEditorKey(event.isAutoRepeat)
+    }
     // One physical pixel at any device ratio: the strip separator and every
     // control border draw this same hairline.
     readonly property real hairline: 1 / Screen.devicePixelRatio

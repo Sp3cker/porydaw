@@ -37,7 +37,7 @@ KeybindingRegistryChecks.swift) instead of retiring as native keymap queries, an
 PARTIAL reasons name the existing PianoGrid.onAudition observable instead of claiming none
 exists.
 
-Counts: MATCHED 9, PARTIAL 9, GAP 0, RETIRED-REPRESENTATION 35
+Counts: MATCHED 12, PARTIAL 6, GAP 0, RETIRED-REPRESENTATION 35
 
 A001 | SelectionKeyCoreTest::drawerTransposeAuditionReleasesOnPhysicalKeyUp | src/checks/selectionkey/coreediting.cpp:63
 Disposition: RETIRED-REPRESENTATION
@@ -73,15 +73,8 @@ Original expression:
                "drawer transpose key-down did not reach the Quick window")
 
 A004 | SelectionKeyCoreTest::drawerTransposeAuditionReleasesOnPhysicalKeyUp | src/checks/selectionkey/coreediting.cpp:79
-Disposition: PARTIAL
-Mapping/reason: PARTIAL - the fork clause is the transpose key-down's live audition (one emission with velocity > 0). The Swift audition observable exists (PianoGrid.onAudition, wired to the audio engine) and its emissions - including the velocity-0 release - are asserted for pointer flavors (S046, S047 in rollcheck/selection.swift), but no predicate stages a drawer transpose key-down: unproved as stated (the Swift app has no keyboard-transpose audition path).
-Source context since previous assertion:
-  ;
-      const std::size_t started = auditions.size();
-
-Original expression:
-  QVERIFY2(started == 1 && auditions.back().second > 0,
-               "drawer transpose key-down did not start a live audition")
+Disposition: MATCHED
+Mapping: S049 (transpose key-down auditions the transposed edge pitch above zero velocity with the moved front note velocity)
 
 A005 | SelectionKeyCoreTest::drawerTransposeAuditionReleasesOnPhysicalKeyUp | src/checks/selectionkey/coreediting.cpp:82
 Disposition: RETIRED-REPRESENTATION
@@ -95,14 +88,8 @@ Original expression:
                "drawer autorepeat key-up did not reach the Quick window")
 
 A006 | SelectionKeyCoreTest::drawerTransposeAuditionReleasesOnPhysicalKeyUp | src/checks/selectionkey/coreediting.cpp:84
-Disposition: PARTIAL
-Mapping/reason: PARTIAL - the fork clause is that an autorepeat key-up must not end the live audition. No predicate stages an audition term at all (the Swift audition observable is exercised only by pointer flavors, S046, S047), and the autorepeat predicates that do exist assert key routing rather than an audition (S048, the repeated pencil key): unproved as stated.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(auditions.size() == started,
-               "drawer autorepeat key-up prematurely ended the live audition")
+Disposition: MATCHED
+Mapping: S050 (autorepeat key-up holds the latched transpose audition with no further emission)
 
 A007 | SelectionKeyCoreTest::drawerTransposeAuditionReleasesOnPhysicalKeyUp | src/checks/selectionkey/coreediting.cpp:87
 Disposition: RETIRED-REPRESENTATION
@@ -116,18 +103,8 @@ Original expression:
                "drawer physical key-up did not reach the Quick window")
 
 A008 | SelectionKeyCoreTest::drawerTransposeAuditionReleasesOnPhysicalKeyUp | src/checks/selectionkey/coreediting.cpp:93
-Disposition: PARTIAL
-Mapping/reason: PARTIAL - the fork clause is the physical key-up ending the audition with the velocity-0 release. The velocity-0 release observable is asserted for pointer flavors (S047 asserts zero-velocity releases at auditions[1]/auditions[3]) but no predicate stages a transpose key-up: unproved as stated.
-Source context since previous assertion:
-  ;
-      // The shared release path ends the audition with the velocity-0
-      // release of the engine's single preview slot; that emission repeats
-      // the slot, not the sounding key (AudioEngine::previewNote replaces
-      // whatever preview sounded).
-
-Original expression:
-  QVERIFY2(auditions.size() == started + 1 && auditions.back().second == 0,
-               "drawer physical key-up did not end the transposed note audition")
+Disposition: MATCHED
+Mapping: S051 (physical key-up ends the latched transpose audition with exactly one zero-velocity release)
 
 A009 | SelectionKeyCoreTest::automationRangeAndReboundDelete | src/checks/selectionkey/coreediting.cpp:101
 Disposition: RETIRED-REPRESENTATION
@@ -852,6 +829,14 @@ Anchor: message "pending-draw row changes glissando before horizontal draw slop"
 
 S048 | checkBandKeyAutoRepeat | src/checks/rollcheck/keyboard_parity.swift
 Anchor: message "repeated eligible pencil key is consumed"
+S049 | checkTransposeAudition | src/checks/rollcheck/selection.swift
+Anchor: message "transpose key-down auditions the transposed pitch above zero velocity"
+
+S050 | checkMountedTransposeAudition | src/checks/rollcheck/selection.swift
+Anchor: message "autorepeat key-up holds the transpose audition"
+
+S051 | checkMountedTransposeAudition | src/checks/rollcheck/selection.swift
+Anchor: message "physical key-up ends the transpose audition with a zero-velocity release"
 
 Shared helpers
 selectDrawnVelocityNote (src/checks/editorqml/tst_ShellWindow.qml) and

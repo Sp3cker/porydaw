@@ -70,6 +70,7 @@ public final class PianoGrid {
     private var lastCommandGestureActive = false
     private var keyboardAuditionKey: Int?
     private var keyboardAuditionTrack: Int?
+    private var keyboardTransposeAuditionActive = false
     /// Receives roll auditions as (track, pitch, velocity), including band entrants.
     @QtIgnored public var onAudition: ((Int, Int, Int) -> Void)?
     @QtIgnored public var onCommitCursor: ((Tick) -> Void)?
@@ -507,6 +508,14 @@ public final class PianoGrid {
                 if found {
                     session.mutateCamera { camera in
                         _ = camera.ensureKeyVisible(edgePitch)
+                    }
+                    if let firstID = session.selectedNoteOrder.first(where: {
+                        session.document.note($0)?.track == session.selectedTrack
+                    }), let first = session.document.note(firstID) {
+                        keyboardAuditionKey = Int(first.pitch)
+                        keyboardAuditionTrack = first.track
+                        keyboardTransposeAuditionActive = true
+                        onAudition?(first.track, Int(first.pitch), Int(first.velocity))
                     }
                 }
             case .nudgeLeft, .nudgeRight:
@@ -994,12 +1003,20 @@ public final class PianoGrid {
 
     @QtSignal public func contextMenuRequested(x: Double, y: Double)
 
+    public func finishKeyboardTransposeAudition() -> Bool {
+        guard keyboardTransposeAuditionActive, keyboardAuditionKey != nil,
+              keyboardAuditionTrack != nil else { return false }
+        stopAudition()
+        return true
+    }
+
     @QtIgnored
     private func stopAudition() {
         guard let key = keyboardAuditionKey, let track = keyboardAuditionTrack else { return }
         onAudition?(track, key, 0)
         keyboardAuditionKey = nil
         keyboardAuditionTrack = nil
+        keyboardTransposeAuditionActive = false
     }
 
     @QtIgnored

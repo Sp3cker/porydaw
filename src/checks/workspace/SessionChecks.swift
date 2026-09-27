@@ -66,7 +66,7 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
     runScaleEditingChecks(report, session: session)
     runNoteRenderingChecks(report, session: session)
     runKeyboardChecks(report, session: session)
-    runSelectionChecks(report, session: session)
+    runSelectionChecks(report, session: session, fixtureRoot: fixtureRoot)
     runIdentityChecks(report, session: session)
     runInterlockChecks(report, session: session)
     runNoteCommandChecks(report, session: session)

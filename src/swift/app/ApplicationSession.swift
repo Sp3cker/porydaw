@@ -504,6 +504,11 @@ public final class ApplicationSession: QmlInstantiableStatus {
             ?? EditKeyDecision.decline.rawValue
     }
 
+    public func releaseGridKey(autoRepeat: Bool) -> Bool {
+        guard !autoRepeat, let workspace else { return false }
+        return workspace.grid.finishKeyboardTransposeAudition()
+    }
+
     public func routeEventListCommand(command: Int, autoRepeat: Bool) -> Int {
         guard let command = EditCommand(rawValue: command), eventList.attached,
               eventList.visible, !eventList.editing, !eventList.menuOpen,
