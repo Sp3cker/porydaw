@@ -2,13 +2,12 @@ import QtBridge
 
 @MainActor
 extension SongTabsController {
-    /// Reopens a tab's song in place: the tab closes through the same gate and
-    /// the application opens its label again at the index it had. Re-opening the
-    /// selected song is the reload path — the file on disk may have changed
-    /// under the open document.
+    /// Reloads a selected song through the close gate, keeping its original
+    /// tab selectable until the replacement document is ready.
     @QtIgnored
     func requestReload(tabId: Int) {
         guard pendingCloseId == -1, pendingCloseBank == nil,
+              !reloadsInFlight.contains(tabId),
               let index = tabIndex(of: tabId) else { return }
         reloadId = tabId
         if tabs[index].dirty {
@@ -23,7 +22,8 @@ extension SongTabsController {
     /// at the selected tab's position.
     @QtIgnored
     func requestReplacement(tabId: Int, label: String) {
-        guard pendingCloseId == -1, pendingCloseBank == nil, tab(id: tabId) != nil else { return }
+        guard pendingCloseId == -1, pendingCloseBank == nil,
+              !reloadsInFlight.contains(tabId), tab(id: tabId) != nil else { return }
         replacementLabel = label
         requestReload(tabId: tabId)
     }
@@ -113,19 +113,22 @@ extension SongTabsController {
         app?.tabsDidChange()
     }
 
-    /// Removes one tab and publishes the surviving selection.
+    /// A reload only starts opening here: its old row, page and selectable
+    /// identity remain until the new document is ready.
     func closeTab(index: Int) {
         let tab = tabs[index]
-        let reloadState = reloadId == tab.tabId ? ReloadedTab(tab) : nil
         let tabId = tab.tabId
-        let closingSelected = tabId == selectedId
         if pendingCloseId == tabId { pendingCloseId = -1 }
-        let reopening = reloadId == tabId
-        let replacement = reopening ? replacementLabel : nil
-        if reopening {
+        if reloadId == tabId {
+            let replacement = replacementLabel ?? tab.title
             reloadId = -1
             replacementLabel = nil
+            reloadsInFlight.insert(tabId)
+            app?.reloadApproved(label: replacement, restoring: ReloadedTab(tab))
+            return
         }
+        reloadsInFlight.remove(tabId)
+        let closingSelected = tabId == selectedId
         // The closing workspace releases the one shared engine, the playhead and
         // its drawer slots while the scene still shows it.
         if closingSelected { tab.workspace.deactivate() }
@@ -142,10 +145,39 @@ extension SongTabsController {
             tabs[survivorIndex].workspace.activate()
         }
         app?.tabsDidChange()
-        if let reloadState {
-            app?.reloadApproved(label: replacement ?? tab.title, index: index,
-                                restoring: reloadState)
+    }
+
+    /// Swaps a ready reload into its original row without changing the
+    /// selection the user made while the old document was loading.
+    func finishReload(_ tab: SongTabSession, restoring state: ReloadedTab) -> Bool {
+        guard reloadsInFlight.remove(state.tabId) != nil,
+              let index = tabIndex(of: state.tabId),
+              state.matches(tabs[index]) else { return false }
+        let previous = tabs[index]
+        let wasSelected = selectedId == state.tabId
+        if wasSelected { previous.workspace.deactivate() }
+        app?.tabWillLeave(previous)
+        tabs.remove(at: index)
+        tabs.insert(tab, at: index)
+        if wasSelected {
+            publishSelection(index: index)
+            tab.workspace.activate()
         }
+        app?.tabsDidChange()
+        return true
+    }
+
+    func cancelReload(tabId: Int) {
+        reloadsInFlight.remove(tabId)
+    }
+
+    /// A terminal load failure retires the pending unchanged tab; edits made
+    /// while the old tab remained selectable survive the failed reload.
+    func failReload(restoring state: ReloadedTab) {
+        guard reloadsInFlight.remove(state.tabId) != nil,
+              let index = tabIndex(of: state.tabId),
+              state.matches(tabs[index]) else { return }
+        closeTab(index: index)
     }
 
     func advanceCloseAll() {
@@ -233,6 +265,7 @@ extension SongTabsController {
         tabCount = 0
         pendingCloseId = -1
         reloadId = -1
+        reloadsInFlight.removeAll()
         savingCloseId = -1
         isClosingAll = false
         publishSelection(index: -1)

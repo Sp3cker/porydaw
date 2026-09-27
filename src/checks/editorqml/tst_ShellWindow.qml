@@ -2284,10 +2284,13 @@ TestCase {
                 }, 30000), "the reload completion returns through the native run loop")
                 compare(session.songTabs.tabCount, 2,
                         "the replacement song rejoins the surviving tab")
+                var mountedTabs = findChild(shell.sceneLoader.item, "songTabPages").parent
                 verify(waitForNative(function() {
-                    var current = selectedSurface()
+                    var current = mountedTabs.selectedEditorSurface()
                     return session.songTabs.selectedId === closingId
+                            && session.songTabs.selectedPage
                             && current !== null && current.gridModel !== grid
+                            && current.gridModel === session.songTabs.selectedPage.gridPresenter()
                 }, 5000), "reload installs a different workspace for the song")
             }
             return

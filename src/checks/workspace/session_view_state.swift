@@ -12,6 +12,13 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
     let recipeID = "workspace/WorkspaceSessionTest::restoreProjectOnly"
     let plistPath = URL(fileURLWithPath: fixtureRoot, isDirectory: true)
         .appendingPathComponent("settings.plist").path
+    let domain = plistPath.withCString {
+        CFStringCreateWithCString(kCFAllocatorDefault, $0, CFStringBuiltInEncodings.UTF8.rawValue)
+    }
+    guard let domain else {
+        report.fail(recipeID, "could not address staged preferences domain")
+        return
+    }
     _ = store.resetPreferences()
     store.setString(key: "lastProjectDir", value: root)
     store.setString(key: "lastSongLabel", value: "mus_session_test")
@@ -28,14 +35,22 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
     let legacy = EditorViewStateCodec.loadTabs(store: store)
     report.expectEqual(expected: ["mus_session_test"], actual: legacy.orderedSongs,
                        cppID: recipeID, what: "a legacy selected-song-only recipe yields one ordered song")
+    let sessionKeys = ["lastProjectDir", "lastSongLabel", "lastOpenSongs",
+                       "songFilterText", "songFilterSort", "songFilterCategory",
+                       "editorDrawer.velocityVisible", "editorDrawer.velocityHeight",
+                       "editorDrawer.automationVisible", "editorDrawer.automationHeight",
+                       "editorDrawer.voiceChangesVisible", "editorDrawer.voiceChangesHeight",
+                       "editorDrawer.activePage", "editorDrawer.automationLanes",
+                       "windowGeometry", "windowState"]
     func storedSessionKeys() -> [String: Any] {
-        guard let bytes = FileManager.default.contents(atPath: plistPath),
-              let plist = try? PropertyListSerialization.propertyList(
-                  from: bytes, options: 0, format: nil) as? [String: Any] else { return [:] }
-        return plist.filter { key, _ in
-            key.hasPrefix("last") || key.hasPrefix("songFilter")
-                || key.hasPrefix("editorDrawer") || key.hasPrefix("window")
+        var values: [String: Any] = [:]
+        for key in sessionKeys {
+            guard let name = key.withCString({
+                CFStringCreateWithCString(kCFAllocatorDefault, $0, CFStringBuiltInEncodings.UTF8.rawValue)
+            }), let value = CFPreferencesCopyAppValue(name, domain) else { continue }
+            values[key] = value
         }
+        return values
     }
     let beforeRestore = storedSessionKeys()
     report.expect(beforeRestore.keys.contains("lastProjectDir")
@@ -89,13 +104,10 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
                        cppID: recipeID, what: "normalization omits missing and duplicate songs")
     report.expectEqual(expected: "mus_session_test", actual: available.selectedSong,
                        cppID: recipeID, what: "a missing selected song falls back to the first live tab")
-    let domain = plistPath.withCString {
-        CFStringCreateWithCString(kCFAllocatorDefault, $0, CFStringBuiltInEncodings.UTF8.rawValue)
-    }
     let orderedKey = "lastOpenSongs".withCString {
         CFStringCreateWithCString(kCFAllocatorDefault, $0, CFStringBuiltInEncodings.UTF8.rawValue)
     }
-    guard let domain, let orderedKey else {
+    guard let orderedKey else {
         preconditionFailure("Staged preferences require UTF-8 key and domain strings")
     }
     CFPreferencesSetAppValue(orderedKey, [] as [String] as CFPropertyList, domain)
@@ -141,6 +153,9 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
     }
     report.expectEqual(expected: seed, actual: first.drawerPresenter().chromeState, cppID: id,
                        what: "a fresh tab carries the shared view state before it is ready")
+    report.expect(first.drawerPresenter().chromeState == seed
+                  && EditorViewStateCodec.loadLanes(store: PreferencesStore()) == lanes,
+                  cppID: id, message: "startup adopts complete persisted drawer and lane state")
     let firstID = first.tabId
     app.openSong(label: "mus_session_test2")
     guard until({ app.songTabs.tabCount == 2 || !app.lastSaveError.isEmpty }),
@@ -150,6 +165,9 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
     }
     report.expectEqual(expected: seed, actual: second.drawerPresenter().chromeState, cppID: id,
                        what: "the shared view state starts identically on two song tabs")
+    report.expect(second.drawerPresenter().chromeState == seed
+                  && EditorViewStateCodec.loadLanes(store: PreferencesStore()) == lanes,
+                  cppID: id, message: "second live tab adopts every shared drawer and lane member")
     let automation = DrawerSectionKind.automation.rawValue
     second.drawerPresenter().toggleSection(kind: automation, drawerOwnsFocus: false)
     let changed = second.drawerPresenter().chromeState
@@ -213,6 +231,32 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
     let originalLanes = EditorViewStateCodec.loadLanes(store: PreferencesStore())
     report.expectEqual(expected: lanes, actual: originalLanes, cppID: idStored,
                        what: "the live session retains every seeded lane preference after drawer changes")
+    let laneKey = "editorDrawer.automationLanes".withCString {
+        CFStringCreateWithCString(kCFAllocatorDefault, $0, CFStringBuiltInEncodings.UTF8.rawValue)
+    }
+    guard let laneKey else {
+        report.fail(idStored, "could not address stored lane key")
+        return
+    }
+    let malformed = Data("{ not json".utf8)
+    CFPreferencesSetAppValue(laneKey, malformed as CFPropertyList, domain)
+    store.synchronize()
+    report.expect((CFPreferencesCopyAppValue(laneKey, domain) as? Data) == malformed,
+                  cppID: idStored, message: "live editor poison enters the persisted preference domain")
+    let poisoned = PreferencesStore()
+    report.expect(EditorViewStateCodec.loadChrome(store: poisoned) == backgroundChange
+                  && EditorViewStateCodec.loadLanes(store: poisoned) == EditorLaneState(),
+                  cppID: idStored, message: "poisoned live editor reload defaults only lane members")
+    report.expect((CFPreferencesCopyAppValue(laneKey, domain) as? Data) == malformed,
+                  cppID: idStored, message: "reading live poisoned lanes leaves the preference unchanged")
+    second.drawerPresenter().setSectionBodyHeight(kind: DrawerSectionKind.velocity.rawValue, height: 181)
+    let healed = PreferencesStore()
+    let canonical = CFPreferencesCopyAppValue(laneKey, domain) as? Data
+    let compact = canonical.map { $0.first == 123 && !$0.contains(10) } ?? false
+    report.expect(compact
+                  && EditorViewStateCodec.loadChrome(store: healed) == second.drawerPresenter().chromeState
+                  && EditorViewStateCodec.loadLanes(store: healed) == lanes,
+                  cppID: idStored, message: "real section resize republishes compact lanes with complete chrome")
     let drawer = second.drawerPresenter()
     drawer.setSectionVisible(kind: DrawerSectionKind.velocity.rawValue, visible: true,
                              drawerOwnsFocus: false)
@@ -229,6 +273,12 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
                        cppID: idStored, what: "the full live chrome with all three stored heights persists")
     report.expectEqual(expected: seed, actual: first.drawerPresenter().chromeState,
                        cppID: idStored, what: "the complete three-section chrome reaches the sibling")
+    let completeStore = PreferencesStore()
+    report.expect(EditorViewStateCodec.loadChrome(store: completeStore) == seed
+                  && EditorViewStateCodec.loadLanes(store: completeStore) == lanes
+                  && second.drawerPresenter().chromeState == seed
+                  && first.drawerPresenter().chromeState == seed,
+                  cppID: idStored, message: "restoring all drawer sections retains every lane member on both tabs")
     drawer.setSectionVisible(kind: DrawerSectionKind.automation.rawValue, visible: true,
                              drawerOwnsFocus: false)
     drawer.setSectionVisible(kind: DrawerSectionKind.voiceChanges.rawValue, visible: false,
@@ -282,9 +332,33 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
                        cppID: idStored, what: "the live bare chrome persists with Voice Changes active")
     report.expectEqual(expected: lanes, actual: EditorViewStateCodec.loadLanes(store: reopened),
                        cppID: idStored, what: "the live bare chrome transition retains every stored lane member")
+    report.expect(first.drawerPresenter().chromeState == bare
+                  && drawer.chromeState == bare
+                  && EditorViewStateCodec.loadChrome(store: reopened) == bare
+                  && EditorViewStateCodec.loadLanes(store: reopened) == lanes,
+                  cppID: idStored, message: "unset heights preserve the complete retained shared editor state")
     let unchangedRevision = document.revision == revision
     let unchangedHistory = document.history.currentIdentity == history
     let unchangedDirty = !document.isDirty
     report.expect(unchangedRevision && unchangedHistory && unchangedDirty, cppID: idStored,
                   message: "drawer-only changes leave the song revision, history and dirty state unchanged")
+    app.songTabs.requestClose(tabId: second.tabId)
+    report.expect(app.songTabs.tabCount == 1 && app.songTabs.selectedId == firstID,
+                  cppID: idStored, message: "closing the active editor leaves its sibling selected")
+    app.songTabs.requestClose(tabId: firstID)
+    report.expect(app.songTabs.tabCount == 0 && app.songTabs.selectedId == -1,
+                  cppID: idStored, message: "closing the final editor leaves no live song tab")
+    app.openSong(label: "mus_session_test")
+    guard until({ app.songTabs.tabCount == 1 || !app.lastSaveError.isEmpty }),
+          let returned = app.songTabs.selectedPage else {
+        report.fail(idStored, "fixture workspace failed to reopen: \(app.lastSaveError)")
+        return
+    }
+    let restored = PreferencesStore()
+    report.expect(returned.tabId != firstID && returned.drawerPresenter().chromeState == bare
+                  && EditorViewStateCodec.loadChrome(store: restored) == bare
+                  && EditorViewStateCodec.loadLanes(store: restored) == lanes,
+                  cppID: idStored, message: "reopened tab restores the complete drawer and ordered hidden lanes")
+    report.expect(EditorViewStateCodec.loadLanes(store: restored).hiddenLanes == lanes.hiddenLanes,
+                  cppID: idStored, message: "reopened editor retains the hidden lane ordering")
 }

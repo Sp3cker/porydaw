@@ -134,6 +134,10 @@ internal struct BankCloseTarget {
 @MainActor
 internal struct ReloadedTab {
     let tabId: Int
+    let documentRevision: UInt64
+    let bankSlots: [BankSlotView]
+    let bankDirty: Bool
+    let bankLoadName: String
     let camera: EditorCamera.Snapshot
     let selectedTrack: Int?
     let editCursor: UInt32
@@ -144,6 +148,10 @@ internal struct ReloadedTab {
 
     init(_ tab: SongTabSession) {
         tabId = tab.tabId
+        documentRevision = tab.workspace.session.document.revision
+        bankSlots = tab.workspace.session.bankSlots
+        bankDirty = tab.workspace.session.bankDirty
+        bankLoadName = tab.workspace.session.bankLoadName
         camera = tab.workspace.session.camera.snapshot
         selectedTrack = tab.workspace.session.selectedTrack
         editCursor = tab.workspace.session.editCursor
@@ -151,6 +159,13 @@ internal struct ReloadedTab {
         devicePixelRatio = tab.workspace.grid.devicePixelRatio
         grid = tab.workspace.session.grid
         showsEvents = tab.showsEvents
+    }
+
+    func matches(_ tab: SongTabSession) -> Bool {
+        tab.workspace.session.document.revision == documentRevision
+            && tab.workspace.session.bankSlots == bankSlots
+            && tab.workspace.session.bankDirty == bankDirty
+            && tab.workspace.session.bankLoadName == bankLoadName
     }
 }
 
@@ -219,6 +234,8 @@ public final class SongTabsController {
     @QtIgnored
     var projectSwitchApprovalIndex: Int?
 
+    @QtIgnored
+    var reloadsInFlight: Set<Int> = []
     private var nextTabId = 1
 
     init(palette: GridPalette) {
@@ -289,8 +306,7 @@ public final class SongTabsController {
 
     // MARK: - Model changes
 
-    /// Installs a built tab and selects it. A reload reopens at the index the
-    /// tab had, clamped to the strip the reload left behind.
+    /// Installs a newly opened song and selects it.
     @QtIgnored
     func add(_ tab: SongTabSession, at index: Int?) {
         if let index {

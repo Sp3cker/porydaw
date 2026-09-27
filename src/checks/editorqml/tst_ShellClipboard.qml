@@ -563,16 +563,18 @@ TestCase {
         }, 5000), "the discard control is presented")
         mouseClick(discard, discard.width / 2, discard.height / 2, Qt.LeftButton)
         var replacementGrid = null
+        var mountedTabs = findChild(shell.sceneLoader.item, "songTabPages").parent
         verify(waitForNative(function() {
-            var current = selectedSurface()
-            if (!current)
+            var current = mountedTabs.selectedEditorSurface()
+            if (!current || !tabs.selectedPage)
                 return false
             replacementGrid = current.gridModel
             return tabs.tabCount === 1 && tabs.pendingCloseId === -1
                 && tabs.selectedIndex === reloadIndex
                 && replacementGrid && replacementGrid !== oldGrid
+                && replacementGrid === tabs.selectedPage.gridPresenter()
         }, 15000), "the reload replaces the page and grid in place")
-        var replacementSurface = selectedSurface()
+        var replacementSurface = mountedTabs.selectedEditorSurface()
         var replacementRoll = findChild(replacementSurface, "swiftRollInput")
         verify(replacementRoll !== null, "the replacement roll is mounted")
         verify(waitForNative(function() {

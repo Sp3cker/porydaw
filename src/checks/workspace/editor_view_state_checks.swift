@@ -101,7 +101,6 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
         report.fail(stored, "missing staged settings plist")
         return
     }
-    let plist = URL(fileURLWithPath: plistPath)
     let laneKey = "editorDrawer.automationLanes"
     var full = EditorLaneState()
     full.laneHeight = minimum + 11
@@ -200,42 +199,55 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
             CFPreferencesSetAppValue(key, value as CFPropertyList, domain)
         }
         store.synchronize()
-        do {
-            let staged = try Data(contentsOf: plist)
-            guard let entries = try PropertyListSerialization.propertyList(
-                from: staged, options: 0, format: nil) as? [String: Any] else {
-                report.fail(stored, "invalid staged settings plist")
-                return
-            }
-            let persisted: Bool
-            switch poison {
-            case let .bytes(value): persisted = (entries[laneKey] as? Data) == value
-            case let .text(value): persisted = (entries[laneKey] as? String) == value
-            }
-            report.expect(persisted, cppID: stored, message: "the staged \(name) lane poison reaches disk")
-            let fresh = PreferencesStore()
-            fresh.synchronize()
-            report.expectEqual(expected: seededChrome, actual: EditorViewStateCodec.loadChrome(store: fresh),
-                               cppID: stored, what: "stored chrome survives \(name) lane data")
-            let lanes = EditorViewStateCodec.loadLanes(store: fresh)
-            report.expectEqual(expected: expected, actual: lanes,
-                               cppID: stored, what: "stored \(name) defaults or clamps only lane members")
-            fresh.synchronize()
-            let after = try Data(contentsOf: plist)
-            guard let reread = try PropertyListSerialization.propertyList(
-                from: after, options: 0, format: nil) as? [String: Any] else {
-                report.fail(stored, "invalid reloaded settings plist")
-                return
-            }
-            let unchanged: Bool
-            switch poison {
-            case let .bytes(value): unchanged = (reread[laneKey] as? Data) == value
-            case let .text(value): unchanged = (reread[laneKey] as? String) == value
-            }
-            report.expect(unchanged, cppID: stored,
-                          message: "reading stored \(name) does not rewrite poisoned lane data")
-        } catch {
-            report.fail(stored, "could not stage \(name) lane preferences: \(error)")
+        let persisted = CFPreferencesCopyAppValue(key, domain)
+        let staged: Bool
+        switch poison {
+        case let .bytes(value): staged = (persisted as? Data) == value
+        case let .text(value): staged = (persisted as? String) == value
+        }
+        report.expect(staged, cppID: stored, message: "the staged \(name) lane poison reaches disk")
+        let fresh = PreferencesStore()
+        fresh.synchronize()
+        let reloadedChrome = EditorViewStateCodec.loadChrome(store: fresh)
+        report.expectEqual(expected: seededChrome, actual: reloadedChrome,
+                           cppID: stored, what: "stored chrome survives \(name) lane data")
+        let loaded = EditorViewStateCodec.loadLanes(store: fresh)
+        report.expectEqual(expected: expected, actual: loaded,
+                           cppID: stored, what: "stored \(name) defaults or clamps only lane members")
+        fresh.synchronize()
+        let after = CFPreferencesCopyAppValue(key, domain)
+        let unchanged: Bool
+        switch poison {
+        case let .bytes(value): unchanged = (after as? Data) == value
+        case let .text(value): unchanged = (after as? String) == value
+        }
+        report.expect(unchanged, cppID: stored,
+                      message: "reading stored \(name) does not rewrite poisoned lane data")
+        let completeReload = staged && unchanged && reloadedChrome == seededChrome && loaded == expected
+        switch name {
+        case "invalid JSON":
+            report.expect(completeReload, cppID: stored,
+                          message: "persisted malformed JSON reload defaults lanes and preserves complete chrome")
+        case "empty bytes":
+            report.expect(completeReload, cppID: stored,
+                          message: "persisted empty bytes reload defaults lanes and preserves complete chrome")
+        case "array JSON":
+            report.expect(completeReload, cppID: stored,
+                          message: "persisted array JSON reload defaults lanes and preserves complete chrome")
+        case "wrong type":
+            report.expect(completeReload, cppID: stored,
+                          message: "persisted wrong-typed text reload defaults lanes and preserves complete chrome")
+        case "grammar":
+            report.expect(completeReload, cppID: stored,
+                          message: "persisted arbitrary JSON object reload filters invalid lane members")
+        case "zero height":
+            report.expect(completeReload, cppID: stored,
+                          message: "persisted zero height reload retains the layout-default lane height")
+        case "clamped height":
+            report.expect(completeReload, cppID: stored,
+                          message: "persisted oversized height reload clamps only lane height")
+        default:
+            preconditionFailure("Unrecognized persisted lane scenario")
         }
     }
     EditorViewStateCodec.saveLanes(full, store: store)

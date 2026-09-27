@@ -28,52 +28,12 @@ Result: PASS — build ok (0.16s); ok shellwindow (3.74s); verify 1/11 ok (10 sk
 run_checks PASS. Controller-run on the same frozen tree; the ledger agent did not run it.
 Command: deno task verify:shell --filter shell-tabs --verbose
 Result: PASS: shell-tabs, 1/26, 16.54 s on the task-84 settled sources; implementer-run per the task-84 handoff, not re-run by the ledger agent.
+Command: deno task verify --filter swiftcore-projectsession; deno task verify:shell --filter shell-tabs --verbose
+Result: Task 103 implementer GREEN: shell-tabs 1/26 PASS; own Swift predicates passed in focused run (2 harnesses passed, one failed on unrelated rollcheck A041/AutomationPage tick-zero). Implementer-tested source SHA-256: session_view_state.swift 1877e7b484ff3011a97d729a09468218ba1ff93a5ba1da6da45e4a9dca6990b8; tst_ShellTabs.qml f7c1625360bce81f30bbf182d0a530ceaf330bdb15bdd93bf07f8ad986781ee5.
 
 A001 | MainWindowRoutingLifecycleTest::closeAndReopenProjectsGlobalState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:40
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-open precondition for the two-song Qt MainWindow session (and the two tabs being distinct); no Swift predicate opens a two-song Qt session.
-Source context since previous assertion:
-#include "checks/support/support.h"
-#include "mainwindowroutingfixture.h"
-#include "ui/songview.h"
-
-#include "checks/quickpopupguard.h"
-#include "checks/trackheaders/trackheaderoracles.h"
-#include "ui/mousehints/mousehints.h"
-#include "ui/songview/quick/quickpopupsession.h"
-#include "ui/songview/timelinebandlayout.h"
-#include "ui/songview/trackheadermodel.h"
-#include "ui/transportbar.h"
-
-#include <QCloseEvent>
-#include <QComboBox>
-#include <QCursor>
-#include <QDial>
-#include <QQuickItem>
-#include <QQuickWindow>
-
-#include <QtTest>
-
-namespace checks::mainwindowrouting {
-
-class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowRoutingFixture
-{
-    Q_OBJECT
-    Q_DISABLE_COPY_MOVE(MainWindowRoutingLifecycleTest)
-
-  public:
-    MainWindowRoutingLifecycleTest(QString projectRoot, QString songA, QString songB)
-        : m_projectRoot(std::move(projectRoot))
-        , m_songA(std::move(songA))
-        , m_songB(std::move(songB))
-    {}
-
-  private slots:
-    void closeAndReopenProjectsGlobalState()
-    {
-        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
-Original expression:
-        QVERIFY(session.has_value())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork QVERIFY(session.has_value()) at tst_mainwindowrouting_lifecycle.cpp:40 (oracle fceecd88) is the native openSession fixture guard, not the reopened state; mounted two-song opening and surviving/reopened tabs are proved by S204, S206, S207.
 
 A002 | MainWindowRoutingLifecycleTest::closeAndReopenProjectsGlobalState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:48
 Disposition: MATCHED
@@ -96,24 +56,20 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: Fork QVERIFY(reopened) at tst_mainwindowrouting_lifecycle.cpp:53 (oracle fceecd88) is a bare SongTab* validity check with no behavior content; the reopened song's named loaded content and readiness are proved by S206 ("the reopened song publishes its named loaded content") with S207 ("the reopened song has a ready rendered grid"). [S206][S207]
 
 A006 | MainWindowRoutingLifecycleTest::closeAndReopenProjectsGlobalState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:54
-Disposition: PARTIAL
-Mapping/reason: Related predicates S207 and S208 in src/checks/editorqml/tst_ShellTabs.qml (test_oFreshTabViewStateDefaults: "reopening a closed song creates a fresh tab" with "the reopened song has a ready rendered grid"); unproved: the Qt waitForTabReady readiness gate on the reopened tab — Swift observes the QML grid, never the Qt gate. [S207][S208]
+Disposition: MATCHED
+Mapping: S207
 
 A007 | MainWindowRoutingLifecycleTest::closeAndReopenProjectsGlobalState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:55
-Disposition: PARTIAL
-Mapping/reason: Related predicates S192 and S195 in src/checks/editorqml/tst_ShellTabs.qml (test_sharedDrawerCloseAndReopen: the reopened tab restores automation-hidden and retains velocity-visible from the sibling); unproved: full EditorViewState equality (lane blob, heights, active page) and the Qt SongView representation — Swift observes two drawer sections only; shell-tabs evidence predates the journey. [S192][S195]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(reopened->view().editorViewState(), state)
+Disposition: MATCHED
+Mapping: S192, S232, S233, S234, S235, S236, S237, S238, S239, S245, S246, S264, S265
 
 A008 | MainWindowRoutingLifecycleTest::closeAndReopenProjectsGlobalState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:56
 Disposition: RETIRED-REPRESENTATION
 Mapping/reason: Fork QVERIFY(reopened->timeline()) at tst_mainwindowrouting_lifecycle.cpp:56 (oracle fceecd88) is a bare MidiTimeline pointer-validity check with no behavior content; the reopened timeline's live canonical state is proved by S209-S211 ("reopened song uses the canonical default pixels per beat", "reopened song uses the canonical default keyboard row height", "reopened song homes to its canonical horizontal scroll"). [S209][S210][S211]
 
 A009 | MainWindowRoutingLifecycleTest::closeAndReopenProjectsGlobalState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:57
-Disposition: PARTIAL
-Mapping/reason: Related predicates S209-S212 in src/checks/editorqml/tst_ShellTabs.qml (test_oFreshTabViewStateDefaults: the reopened song uses the canonical default pixels per beat, keyboard row height, home horizontal scroll and canonical vertical scroll); unproved: the Qt SongView representation and full EditorViewState struct equality — Swift observes the QML grid fields, never the C++ view state. [S209][S210][S211][S212]
+Disposition: MATCHED
+Mapping: S209, S210, S211, S212, S247, S248, S249, S250, S251
 
 A010 | MainWindowRoutingLifecycleTest::closeAndReopenProjectsGlobalState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:58
 Disposition: PARTIAL
@@ -124,58 +80,36 @@ Original expression:
         QVERIFY(porydawSnapshot(session->fixture->root()) == snapshot)
 
 A011 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:64
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-open precondition for the two-song Qt MainWindow session (and the two tabs being distinct); no Swift predicate opens a two-song Qt session.
-Source context since previous assertion:
-    }
-
-    void readyReloadPreservesTransients()
-    {
-        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
-Original expression:
-        QVERIFY(session.has_value())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork QVERIFY(session.has_value()) at tst_mainwindowrouting_lifecycle.cpp:64 (oracle fceecd88) guards a native fixture, not the reload outcome; S222 observes the reloaded tab identity and S223-S231 its surviving view state.
 
 A012 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:76
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): alternate-track seed guard scanning the Qt fixture timeline tracks; no Swift predicate searches Qt timeline tracks.
-Source context since previous assertion:
-        MainWindow &window = *session->window;
-        SongTab *reopened = session->b;
-        SongView &view = reopened->view();
-        const SongView::ViewState before = view.viewState();
-        int alternateTrack = -1;
-        for (int track = 0; track < 16; ++track) {
-            if (reopened->timeline()->tracks[track].used && track != before.selectedTrack) {
-                alternateTrack = track;
-                break;
-            }
-        }
-Original expression:
-        QVERIFY(alternateTrack >= 0)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork QVERIFY(alternateTrack >= 0) at tst_mainwindowrouting_lifecycle.cpp:76 (oracle fceecd88) checks the native fixture track scan; S218 checks a real alternate track with rendered notes and S227 checks its retention after reload.
 
 A013 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:99
-Disposition: PARTIAL
-Mapping/reason: Related predicates S213 and S216 in src/checks/editorqml/tst_ShellTabs.qml (test_qReloadPreservesViewAndClearsHistory: "reload seeds a non-default pixels-per-beat zoom" and "reload seeds a non-default horizontal scroll"); unproved: the C++ seeded.scrollPx field read-back after applyViewState — Swift observes the QML camera, never the Qt ViewState field. [S213][S216]
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork QVERIFY(seeded.scrollPx != before.scrollPx) at tst_mainwindowrouting_lifecycle.cpp:99 (oracle fceecd88) reads back a native seeded field; S213 and S216 observe changed zoom and horizontal scroll, S223 and S225 their post-reload values.
 
 A014 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:100
-Disposition: PARTIAL
-Mapping/reason: Related predicates S214 and S215 in src/checks/editorqml/tst_ShellTabs.qml (test_qReloadPreservesViewAndClearsHistory: "reload seeds a non-default keyboard row height" and "reload seeds a non-default vertical camera"); unproved: the C++ seeded.scrollY field read-back after applyViewState — Swift observes the QML camera, never the Qt ViewState field. [S214][S215]
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork QVERIFY(seeded.scrollY != before.scrollY) at tst_mainwindowrouting_lifecycle.cpp:100 (oracle fceecd88) reads back a native seeded field; S215 observes changed vertical camera and S226 its post-reload value.
 
 A015 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:101
-Disposition: PARTIAL
-Mapping/reason: Related predicates S217 and S218 in src/checks/editorqml/tst_ShellTabs.qml (test_qReloadPreservesViewAndClearsHistory: "reload seeds the alternate used track" with rendered notes); unproved: the C++ seeded.selectedTrack field read-back after applyViewState — Swift observes the QML track index, never the Qt ViewState field. [S217][S218]
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork QCOMPARE(seeded.selectedTrack, alternateTrack) at tst_mainwindowrouting_lifecycle.cpp:101 (oracle fceecd88) reads back a native seeded field; S218 observes rendered notes on the used track and S227 its retention.
 
 A016 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:102
-Disposition: PARTIAL
-Mapping/reason: Related predicate S219 in src/checks/editorqml/tst_ShellTabs.qml (test_qReloadPreservesViewAndClearsHistory: "reload seeds the musical-16 grid division", plus the retained division identity across reload); unproved: the C++ seeded.gridSelection field read-back after applyViewState — Swift observes the QML grid-selection identity, never the Qt ViewState field. [S219]
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork QCOMPARE(seeded.gridSelection, songview::GridSelection::musical(16)) at tst_mainwindowrouting_lifecycle.cpp:102 (oracle fceecd88) reads back a native seeded field; S219 and S229 observe the selected division before and after reload.
 
 A017 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:103
-Disposition: PARTIAL
-Mapping/reason: Related predicate S220 in src/checks/editorqml/tst_ShellTabs.qml (test_qReloadPreservesViewAndClearsHistory: "reload seeds triplet grid feel"); unproved: the C++ seeded.gridTriplet field read-back after applyViewState — Swift observes the QML triplet flag, never the Qt ViewState field. [S220]
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork QVERIFY(seeded.gridTriplet) at tst_mainwindowrouting_lifecycle.cpp:103 (oracle fceecd88) reads back a native seeded field; S220 and S230 observe triplet feel before and after reload.
 
 A018 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:104
-Disposition: PARTIAL
-Mapping/reason: Related predicate S221 in src/checks/editorqml/tst_ShellTabs.qml (test_qReloadPreservesViewAndClearsHistory: "reload seeds the visible Event List"); unproved: the C++ seeded.eventList field read-back after applyViewState — Swift observes the QML event-list flag, never the Qt ViewState field. [S221]
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork QVERIFY(seeded.eventList) at tst_mainwindowrouting_lifecycle.cpp:104 (oracle fceecd88) reads back a native seeded field; S221 and S231 observe Event List visibility before and after reload.
 
 A019 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:106
 Disposition: RETIRED-REPRESENTATION
@@ -197,59 +131,35 @@ Original expression:
         QCOMPARE(QApplication::focusWidget(), tabBar)
 
 A022 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:118
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (in-place reload): Qt tab readiness/timeline-identity observation across in-place requestSongOpen reload; no Swift predicate reloads a Qt tab in place.
-Source context since previous assertion:
-        eventListTraffic.clear();
-        const MidiTimeline *beforeReload = reopened->timeline().get();
-        const SongName name = reopened->name();
-        const auto snapshot = porydawSnapshot(session->fixture->root());
-        window.m_workspace->requestSongOpen(name);
-Original expression:
-        QVERIFY(!reopened->isReady())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork QVERIFY(!reopened->isReady()) at tst_mainwindowrouting_lifecycle.cpp:118 (oracle fceecd88) pins the deleted native pre-ready tab stage; S222 proves the same identity returns with rendered notes after reload.
 
 A023 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:119
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (in-place reload): Qt tab readiness/timeline-identity observation across in-place requestSongOpen reload; no Swift predicate reloads a Qt tab in place.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(reopened->timeline().get(), beforeReload)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork QCOMPARE(reopened->timeline().get(), beforeReload) at tst_mainwindowrouting_lifecycle.cpp:119 (oracle fceecd88) pins a native timeline pointer while loading; S222 observes the retained tab ID and swapped rendered grid.
 
 A024 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:132
 Disposition: RETIRED-REPRESENTATION
 
 A025 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:133
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(!stateDropped)
+Disposition: PARTIAL
+Mapping/reason: S258 and S260 retain the mounted tab and its original presentation during the pending reload; S223-S231 prove the seeded view members after the replacement is ready. Residue: fork QVERIFY(!stateDropped) at tst_mainwindowrouting_lifecycle.cpp:133 (oracle fceecd88) polls every seeded camera/track/grid/Event List member at each intermediate not-ready event; the shell journey does not continuously observe those members during the wait. [S258][S260][S223][S224][S225][S226][S227][S228][S229][S230][S231]
 
 A026 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:134
-Disposition: PARTIAL
-Mapping/reason: Related predicate S222 in src/checks/editorqml/tst_ShellTabs.qml (test_qReloadPreservesViewAndClearsHistory: the reloaded song returns in the same tab identity with a swapped grid presenter and rendered notes); unproved: the Qt reopened->isReady() gate after in-place reload — Swift observes the QML tab, never Qt tab readiness. [S222]
+Disposition: MATCHED
+Mapping: S222, S253
 
 A027 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:135
-Disposition: PARTIAL
-Mapping/reason: Related predicate S198 in src/checks/editorqml/tst_ShellWindow.qml (test_seededEventListRestoresBothStates reloads in place: "the reloaded tab installs a fresh timeline" observes tabs.selectedPage !== original with tabCount 2); unproved: the C++ MidiTimeline pointer inequality across the swap — Swift observes the QML page swap, never the timeline pointer; shellwindow evidence predates the journey. [S198]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(reopened->timeline().get() != beforeReload)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork QVERIFY(reopened->timeline().get() != beforeReload) at tst_mainwindowrouting_lifecycle.cpp:135 (oracle fceecd88) pins a native timeline pointer; S222 observes the fresh rendered grid while retaining the tab identity.
 
 A028 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:136
-Disposition: PARTIAL
-Mapping/reason: Related predicates S223-S231 in src/checks/editorqml/tst_ShellTabs.qml (test_qReloadPreservesViewAndClearsHistory retains seeded pixels per beat, key height, horizontal/vertical scroll, track, cursor, grid division, triplet feel and event-list visibility across the in-place reload); unproved: the C++ SongView::ViewState struct equality — Swift observes the QML grid presenter fields, never the Qt view state. [S223][S224][S225][S226][S227][S228][S229][S230][S231]
+Disposition: MATCHED
+Mapping: S223, S224, S225, S226, S227, S228, S229, S230, S231
 
 A029 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:137
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on eventListVisibilityChanged with no corresponding SessionChecks predicate; GAP. Verified: runEventListPlayheadChecks observes event-list rows/tint/follow-scroll, never reload signal silence; not cited.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(eventListTraffic.count(), 0)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork QCOMPARE(eventListTraffic.count(), 0) at tst_mainwindowrouting_lifecycle.cpp:137 (oracle fceecd88) counts emissions on a deleted native SongView signal; S231 proves retained visible Event List after reload and S254 proves its mounted page is present.
 
 A030 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:138
 Disposition: RETIRED-REPRESENTATION
@@ -267,91 +177,44 @@ Original expression:
         QVERIFY(porydawSnapshot(session->fixture->root()) == snapshot)
 
 A032 | MainWindowRoutingLifecycleTest::selectionDuringReloadFocusesWhenReady | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:145
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-open precondition for the two-song Qt MainWindow session (and the two tabs being distinct); no Swift predicate opens a two-song Qt session.
-Source context since previous assertion:
-    }
-
-    void selectionDuringReloadFocusesWhenReady()
-    {
-        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
-Original expression:
-        QVERIFY(session.has_value())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork QVERIFY(session.has_value()) at tst_mainwindowrouting_lifecycle.cpp:145 (oracle fceecd88) guards the native two-song fixture; S252 proves a surviving tab while its sibling reloads and S253 observes the returned ready document.
 
 A033 | MainWindowRoutingLifecycleTest::selectionDuringReloadFocusesWhenReady | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:149
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-tab readiness observation on the two-song Qt session; no Swift predicate observes Qt tab readiness.
-Source context since previous assertion:
-        WorkspaceUi &workspace = *session->window->m_workspace;
-        SongTab *const a = session->a;
-        SongTab *const b = session->b;
-Original expression:
-        QVERIFY(a->isReady())
+Disposition: PARTIAL
+Mapping/reason: S255 and S256 select surviving A during B's reload and keep A selected after B completes; openShell waits for A's rendered grid before either predicate. Residue: fork QVERIFY(a->isReady()) at tst_mainwindowrouting_lifecycle.cpp:149 (oracle fceecd88) queries the native Qt tab readiness gate explicitly; the indexed mounted predicate observes selection, not that gate. [S255][S256]
 
 A034 | MainWindowRoutingLifecycleTest::selectionDuringReloadFocusesWhenReady | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:150
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-tab readiness observation on the two-song Qt session; no Swift predicate observes Qt tab readiness.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(b->isReady())
+Disposition: PARTIAL
+Mapping/reason: S267 proves B starts selected with its visible Event List and S253 proves its fresh ready replacement; openShell waits for B's rendered grid before reload. Residue: fork QVERIFY(b->isReady()) at tst_mainwindowrouting_lifecycle.cpp:150 (oracle fceecd88) queries native Qt readiness at the initial pre-reload instant, not separately asserted by the indexed mounted predicate. [S267][S253]
 
 A035 | MainWindowRoutingLifecycleTest::selectionDuringReloadFocusesWhenReady | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:151
-Disposition: PARTIAL
-Mapping/reason: Related predicate S188 in src/checks/editorqml/tst_ShellWindow.qml (test_d clicks songTabSelect_<id> with tryCompare selectedId and test_e re-selects the first tab by id, proving QML tab-selection switching); unproved: C++ WorkspaceUi pointer identity (selectedSongTab() == tab pointer) in the Qt workspace. [S188]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(workspace.selectedSongTab(), b)
+Disposition: MATCHED
+Mapping: S267, S259
 
 A036 | MainWindowRoutingLifecycleTest::selectionDuringReloadFocusesWhenReady | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:154
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (in-place reload): Qt tab readiness/timeline-identity observation across in-place requestSongOpen reload; no Swift predicate reloads a Qt tab in place.
-Source context since previous assertion:
-
-        workspace.requestSongOpen(b->name());
-Original expression:
-        QVERIFY(!b->isReady())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork QVERIFY(!b->isReady()) at tst_mainwindowrouting_lifecycle.cpp:154 (oracle fceecd88) pins the deleted native pre-ready tab stage; S258 proves B remains mounted/selectable during reload and S253 proves the replacement becomes ready.
 
 A037 | MainWindowRoutingLifecycleTest::selectionDuringReloadFocusesWhenReady | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:156
-Disposition: PARTIAL
-Mapping/reason: Related predicate S188 in src/checks/editorqml/tst_ShellWindow.qml (test_d clicks songTabSelect_<id> with tryCompare selectedId and test_e re-selects the first tab by id, proving QML tab-selection switching); unproved: C++ WorkspaceUi pointer identity (selectedSongTab() == tab pointer) in the Qt workspace. [S188]
-Source context since previous assertion:
-        workspace.selectSongTab(a);
-Original expression:
-        QCOMPARE(workspace.selectedSongTab(), a)
+Disposition: MATCHED
+Mapping: S255, S256
 
 A038 | MainWindowRoutingLifecycleTest::selectionDuringReloadFocusesWhenReady | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:158
-Disposition: PARTIAL
-Mapping/reason: Related predicate S188 in src/checks/editorqml/tst_ShellWindow.qml (test_d clicks songTabSelect_<id> with tryCompare selectedId and test_e re-selects the first tab by id, proving QML tab-selection switching); unproved: C++ WorkspaceUi pointer identity (selectedSongTab() == tab pointer) in the Qt workspace. [S188]
-Source context since previous assertion:
-        workspace.selectSongTab(b);
-Original expression:
-        QCOMPARE(workspace.selectedSongTab(), b)
+Disposition: MATCHED
+Mapping: S259, S260, S262, S263
 
 A039 | MainWindowRoutingLifecycleTest::selectionDuringReloadFocusesWhenReady | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:159
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (in-place reload): Qt tab readiness/timeline-identity observation across in-place requestSongOpen reload; no Swift predicate reloads a Qt tab in place.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(!b->isReady())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork QVERIFY(!b->isReady()) at tst_mainwindowrouting_lifecycle.cpp:159 (oracle fceecd88) pins the deleted native pre-ready tab stage after selecting B; S259 and S260 establish B's selectable pending presentation and S253 its ready replacement.
 
 A040 | MainWindowRoutingLifecycleTest::selectionDuringReloadFocusesWhenReady | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:161
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (in-place reload): waitForTabReady readiness gate after in-place reload; no Swift predicate gates Qt tab readiness.
-Source context since previous assertion:
-
-Original expression:
-        QVERIFY(waitForTabReady(workspace, b))
+Disposition: MATCHED
+Mapping: S253, S263
 
 A041 | MainWindowRoutingLifecycleTest::selectionDuringReloadFocusesWhenReady | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:163
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        QWidget *const focused = QApplication::focusWidget();
-Original expression:
-        QVERIFY(focused && (focused == b || b->isAncestorOf(focused)))
+Disposition: PARTIAL
+Mapping/reason: S263 proves explicitly selected B remains selected on ready publication; S266 observes the reopened mounted plot only after explicitly forcing its focus. Residue: fork QVERIFY(focused && (focused == b || b->isAncestorOf(focused))) at tst_mainwindowrouting_lifecycle.cpp:163 (oracle fceecd88) requires automatic Qt focusWidget ancestry following ready publication, not an explicit QML forceActiveFocus call. [S263][S266]
 
 A042 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:169
 Disposition: GAP
@@ -2197,3 +2060,111 @@ Anchor: message "reload retains triplet grid feel"
 
 S231 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: message "reload retains event list visibility"
+
+S232 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "reopening retains the real resized shared section height"
+
+S233 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the reopened drawer retains its active page"
+
+S234 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "reopening retains the third shared drawer section"
+
+S235 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "reopening retains the hidden automation section height"
+
+S236 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "reopening retains the Voice Changes section height"
+
+S237 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "second live tab adopts every shared drawer and lane member"
+
+S238 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "restoring all drawer sections retains every lane member on both tabs"
+
+S239 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "reopened tab restores the complete drawer and ordered hidden lanes"
+
+S240 | test_oFreshTabViewStateDefaults | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a fresh tab restores all three shared drawer section visibilities"
+
+S241 | test_oFreshTabViewStateDefaults | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a fresh tab restores the shared Velocity section height"
+
+S242 | test_oFreshTabViewStateDefaults | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a fresh tab restores the shared Automation section height"
+
+S243 | test_oFreshTabViewStateDefaults | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a fresh tab restores the shared Voice Changes section height"
+
+S244 | test_oFreshTabViewStateDefaults | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a fresh tab restores the shared active drawer page"
+
+S245 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the second tab paints its changed lane range before close"
+
+S246 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "the full live chrome with all three stored heights persists"
+
+S247 | test_oFreshTabViewStateDefaults | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a fresh tab selects the first track"
+
+S248 | test_oFreshTabViewStateDefaults | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a fresh tab starts its edit cursor at zero"
+
+S249 | test_oFreshTabViewStateDefaults | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a fresh tab starts with automatic grid selection"
+
+S250 | test_oFreshTabViewStateDefaults | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a fresh tab starts with straight grid feel"
+
+S251 | test_oFreshTabViewStateDefaults | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a fresh tab has no event list"
+
+S252 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the reloading song stays in the strip while its document opens"
+
+S253 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the reloaded target adopts a fresh ready document"
+
+S254 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the reloaded tab mounts the retained Event List"
+
+S255 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the user explicitly selects the surviving tab during reload"
+
+S256 | test_qReloadCompletionKeepsDifferentSelection | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "background reload completion cannot steal the user's selected tab"
+
+S257 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "returning to the reloaded tab restores its visible Event List"
+
+S258 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the pending reload keeps its existing mounted tab selectable"
+
+S259 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the user selects the still-reloading tab before its ready publication"
+
+S260 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "selecting the pending target retains its original presentation"
+
+S261 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the user can leave the pending target without discarding it"
+
+S262 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the final explicit selection returns to pending B before ready"
+
+S263 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "reload completion retains the user's selected target"
+
+S264 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the real resize persists the shared velocity section height"
+
+S265 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "dragging the real Velocity grip shrinks its mounted body"
+
+S266 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the reopened tab's automation plot owns the routed keys"
+
+S267 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the reload target starts with its visible Event List"

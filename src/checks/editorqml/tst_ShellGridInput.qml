@@ -770,13 +770,15 @@ TestCase {
         compare(tabs.tabCount, 1, "one tab is open before the reload")
         session.openSong("mus_route101")
         var replacement = null
+        var mountedTabs = findChild(shell.sceneLoader.item, "songTabPages").parent
         verify(waitForNative(function() {
-            var current = selectedSurface()
-            if (!current)
+            var current = mountedTabs.selectedEditorSurface()
+            if (!current || !tabs.selectedPage)
                 return false
             replacement = current.gridModel
             return tabs.tabCount === 1 && tabs.pendingCloseId === -1
                 && replacement && replacement !== oldGrid
+                && replacement === tabs.selectedPage.gridPresenter()
         }, 15000), "re-opening the selected song replaces its grid in place")
         verify(shell.visible, "the mounted window survives the reload")
         verify(waitForNative(function() {
@@ -937,9 +939,12 @@ TestCase {
         }, 15000), "the reload either requests discard or installs the replacement")
         if (session.songTabs.pendingCloseId >= 0)
             session.songTabs.confirmDiscard()
+        var mountedTabs = findChild(shell.sceneLoader.item, "songTabPages").parent
         verify(waitForNative(function() {
-            var replacement = selectedSurface()
-            return replacement && replacement.gridModel !== grid
+            var replacement = mountedTabs.selectedEditorSurface()
+            return replacement && session.songTabs.selectedPage
+                && replacement.gridModel !== grid
+                && replacement.gridModel === session.songTabs.selectedPage.gridPresenter()
                 && replacement.gridModel.renderedNoteCount > 0
         }, 15000), "the selected song reload replaces the grid after the active ruler range")
         compare(session.gridCommandAvailable(17), false,

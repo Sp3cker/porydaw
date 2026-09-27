@@ -778,14 +778,16 @@ public final class ApplicationSession: QmlInstantiableStatus {
         }
     }
 
-    /// Builds one workspace and installs its tab. A load that fails reports and
-    /// installs nothing: a tab exists only for a document that opened.
+    /// Builds one workspace and installs it only after its document is ready.
+    /// A pending reload keeps the original selectable tab until that swap.
     private func openTab(label: String, at index: Int?, restoring tab: ReloadedTab? = nil) async {
         guard let service = catalogService else {
+            if let tab { songTabs.failReload(restoring: tab) }
             failOpen("Open a project before opening a song.")
             return
         }
         guard let audio else {
+            if let tab { songTabs.failReload(restoring: tab) }
             failOpen(String(describing:
                 NativeAudioError.initializationFailed("Audio service is unavailable.")))
             return
@@ -854,16 +856,36 @@ public final class ApplicationSession: QmlInstantiableStatus {
             workspace.automationPage.refreshCamera()
             guard !isDisposed, !Task.isCancelled else {
                 // The host is closing: nothing adopts this document.
+                if let tab { songTabs.cancelReload(tabId: tab.tabId) }
                 workspace.teardown()
                 _ = await session.close()
                 return
             }
             let tabSession = SongTabSession(tabId: tab?.tabId ?? songTabs.reserveTabId(),
                                             title: label, workspace: workspace, app: self)
-            tabSession.showsEvents = tab?.showsEvents ?? false
-            songTabs.add(tabSession, at: index)
+            if let tab {
+                tabSession.showsEvents = songTabs.tab(id: tab.tabId)?.showsEvents ?? tab.showsEvents
+                guard songTabs.finishReload(tabSession, restoring: tab) else {
+                    let changedWhileLoading = songTabs.tab(id: tab.tabId).map {
+                        !tab.matches($0)
+                    } ?? false
+                    workspace.teardown()
+                    _ = await session.close()
+                    if changedWhileLoading {
+                        failOpen("The song changed while reloading; its original tab was kept.")
+                    }
+                    return
+                }
+            } else {
+                songTabs.add(tabSession, at: index)
+            }
         } catch {
-            if !Task.isCancelled { failOpen(String(describing: error)) }
+            if Task.isCancelled {
+                if let tab { songTabs.cancelReload(tabId: tab.tabId) }
+            } else {
+                if let tab { songTabs.failReload(restoring: tab) }
+                failOpen(String(describing: error))
+            }
         }
     }
 
@@ -1105,6 +1127,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
         }
         if persistenceConfigured {
             EditorViewStateCodec.saveChrome(state, store: preferences)
+            EditorViewStateCodec.saveLanes(editorLanes, store: preferences)
         }
     }
 

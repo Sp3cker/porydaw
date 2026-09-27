@@ -49,6 +49,8 @@ Command: deno task verify:shell --filter shell-tabs --verbose
 Result: PASS: shell-tabs, 1/26, 16.54 s on the task-84 settled sources; implementer-run per the task-84 handoff, not re-run by the ledger agent.
 Command: deno task verify --filter swiftcore-projectsession --verbose
 Result: PASS: swiftcore-projectsession, 1/36, 5.16 s on the task-84 settled sources; implementer-run per the task-84 handoff, not re-run by the ledger agent.
+Command: deno task verify --filter swiftcore-projectsession; deno task verify:shell --filter shell-tabs --verbose
+Result: Task 103 implementer GREEN: shell-tabs 1/26 PASS; task predicates passed in focused Swift run (2 harnesses passed, one failed on unrelated rollcheck A041/AutomationPage tick-zero). Implementer-tested source SHA-256: session_view_state.swift 1877e7b484ff3011a97d729a09468218ba1ff93a5ba1da6da45e4a9dca6990b8; tst_ShellTabs.qml f7c1625360bce81f30bbf182d0a530ceaf330bdb15bdd93bf07f8ad986781ee5.
 Task 65 note (ledger pass, no lane re-run): the frozen counterpart write set is src/checks/workspace/session_view_state.swift (sha256 10266bc4650d53a0d7f3b61af5a640bb4bff9456b7d0cf4d3f22c892d117879f, runSessionViewStateChecks :35-81) plus src/checks/editorqml/tst_ShellTabs.qml test_sharedDrawerCloseAndReopen (sha256 9c89b6d2a36e5892de2f8e66b33e5fa18094fbc9b7015b0a2eb269bc40346eeb, :789-821). Indexed S201-S210 (swiftcore editorViewState) and S211-S217 (shell-tabs drawer journey); all are executed (swiftcore-projectsession.json passes; shell-tabs.json functions). No disposition flipped to MATCHED: the session open rows assert windowGeometry, lastProjectDir/lastSongLabel/lastOpenSongs/songFilterText, song-list, sidecar, sessionAndEditorSettings and single-object full-state equalities with no exact Task65 predicate, so they stay GAP/PARTIAL with refreshed reasons (A011/A012/A028/A033/A034 now cite the new drawer/round-trip predicates as related and name the unproved single-object half). The ledger is NOT deleted. Lane evidence is the controller-provided frozen task-65 result (all covering lanes passed). This pass ran only read-only evidence queries and deno task proof check variants.
 
 Command: deno task verify:shell --filter shellwindow --verbose
@@ -118,22 +120,12 @@ A010 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/
 Disposition: RETIRED-REPRESENTATION
 
 A011 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:178
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: drawer chrome and the lane blob now persist via separate shared-PreferencesStore keys (related S204 persists-once and S210 background-persist, session_view_state lane; codec round-trip is indexed at proof.selftest_workspace.txt), but no single-object loadEditorViewState(settings)==complete predicate establishes this exact full-state equality; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-
-          workspace->setEditorViewState(complete);
-Original expression:
-  QVERIFY(loadEditorViewState(settings) == complete)
+Disposition: MATCHED
+Mapping: S244
 
 A012 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:179
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the session hub now fans drawer chrome out to every open workspace (related S203 automation fanout, S201 fresh-tab carry), but no predicate sets a complete full state on one view and reads the identical single object back on that view; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(tab->view().editorViewState() == complete)
+Disposition: MATCHED
+Mapping: S245, S246
 
 A013 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:180
 Disposition: RETIRED-REPRESENTATION
@@ -197,12 +189,8 @@ A027 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/
 Disposition: RETIRED-REPRESENTATION
 
 A028 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:220
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the mounted close/reopen journey now restores shared drawer chrome on a fresh timeline (related S215 reopening-restore and S216 fresh-tab carry, shell-tabs lane; session S201 fresh-tab carry), but no predicate restores the exact complete full state (drawer plus lanes) as one object on the restored tab; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(tab->view().editorViewState(), complete)
+Disposition: MATCHED
+Mapping: S247, S248
 
 A029 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:222
 Disposition: MATCHED
@@ -220,20 +208,12 @@ Disposition: MATCHED
 Mapping: S236, S237
 
 A033 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:230
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the mounted close/reopen journey now restores shared drawer chrome on a fresh timeline (related S215 reopening-restore, shell-tabs lane; session S201 fresh-tab carry), but no predicate restores the exact complete full state as one object on the restored tab; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(restoredTab->view().editorViewState() == complete)
+Disposition: MATCHED
+Mapping: S247, S248
 
 A034 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:231
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: hidden-lane decode order is proved (S190) and drawer chrome now restores on a fresh timeline (related S215/S216), but no predicate restores this exact hiddenLanes equality on the restored tab; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(restoredTab->view().editorViewState().hiddenLanes() == complete.hiddenLanes())
+Disposition: MATCHED
+Mapping: S249
 
 A035 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:235
 Disposition: RETIRED-REPRESENTATION
@@ -989,3 +969,21 @@ Anchor: message "a deleted recipe song leaves the project title visible"
 
 S243 | test_missingSongStartupRecipe (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: message "a deleted recipe song creates no phantom tab"
+
+S244 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "startup adopts complete persisted drawer and lane state"
+
+S245 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "second live tab adopts every shared drawer and lane member"
+
+S246 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "restoring all drawer sections retains every lane member on both tabs"
+
+S247 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "reopened tab restores the complete drawer and ordered hidden lanes"
+
+S248 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "reopening retains the real resized shared section height"
+
+S249 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "reopened editor retains the hidden lane ordering"

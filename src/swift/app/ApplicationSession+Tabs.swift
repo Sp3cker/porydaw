@@ -53,10 +53,10 @@ extension ApplicationSession {
         for tab in pending { retire(tab) }
     }
 
-    /// Reload keeps presentation and tab identity, not document history.
+    /// Reload keeps the original row selectable until its replacement opens.
     @QtIgnored
-    func reloadApproved(label: String, index: Int, restoring tab: ReloadedTab) {
-        startOpen(label: label, at: index, restoring: tab)
+    func reloadApproved(label: String, restoring tab: ReloadedTab) {
+        startOpen(label: label, at: nil, restoring: tab)
     }
 
     /// A document in one tab published a state change: every caption follows its

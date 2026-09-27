@@ -899,6 +899,52 @@ TestCase {
                 && JSON.parse(summaryOf(firstId)).length === initialFirstNotes.length
         }, 5000), "the first song returns to clean before the second opens again")
         clickSelectTab(closingId)
+        var velocityGrip = findChild(surfaceOf(closingId), "drawerHandle_velocity")
+        verify(velocityGrip && velocityGrip.visible, "the shared velocity resize grip is mounted")
+        var velocitySection = surfaceOf(closingId).drawerPresenter.velocitySection
+        var originalHeight = velocitySection.bodyHeight
+        var gripY = velocityGrip.height / 2
+        var displacement = session().baseFontPx
+        mousePress(velocityGrip, velocityGrip.width / 2, gripY, Qt.LeftButton)
+        mouseMove(velocityGrip, velocityGrip.width / 2, gripY + displacement, -1, Qt.LeftButton)
+        mouseRelease(velocityGrip, velocityGrip.width / 2, gripY + displacement, Qt.LeftButton)
+        var resizedHeight = velocitySection.bodyHeight
+        verify(resizedHeight < originalHeight,
+               "dragging the real Velocity grip shrinks its mounted body")
+        compare(settings.int("editorDrawer.velocityHeight", -1), resizedHeight,
+                "the real resize persists the shared velocity section height")
+        compare(settings.string("editorDrawer.activePage", ""), "velocity",
+                "resizing preserves the selected shared drawer page")
+        var surface = surfaceOf(closingId)
+        var volumeTab = findChild(surface, "automationParameterTab0")
+        verify(volumeTab && volumeTab.text === "Volume",
+               "the second tab mounts its real Volume parameter")
+        mouseClick(volumeTab, volumeTab.width / 2, volumeTab.height / 2, Qt.RightButton)
+        var menu = findChild(surface, "automationMenuPanel")
+        var rangeRow = null
+        tryVerify(function() {
+            if (!menu || !menu.visible) return false
+            for (var index = 0; index < menu.rowCount; ++index) {
+                var row = menu.rowItem(index)
+                if (row && row.model.actionId === 12) rangeRow = row
+            }
+            return rangeRow && rangeRow.visible
+        }, 3000, "the second tab opens the real Volume range menu")
+        mouseMove(rangeRow, rangeRow.width / 2, rangeRow.height / 2)
+        var submenu = findChild(surface, "automationMenuSubmenu")
+        var halfRange = null
+        tryVerify(function() {
+            if (!submenu || !submenu.visible) return false
+            for (var index = 0; index < submenu.rowCount; ++index) {
+                var row = submenu.rowItem(index)
+                if (row && row.model.actionId === 16) halfRange = row
+            }
+            return halfRange && halfRange.visible
+        }, 3000, "hover exposes a real 0–64 Volume range choice")
+        mouseClick(halfRange, halfRange.width / 2, halfRange.height / 2)
+        verify(waitForNative(function() {
+            return volumeAxisLabels(closingId).indexOf("64") >= 0
+        }, 5000), "the second tab paints its changed lane range before close")
         var section = surfaceOf(closingId).drawerPresenter.automationSection
         var firstSection = surfaceOf(firstId).drawerPresenter.automationSection
         shell.shellPresenter.activate("view.automation_drawer")
@@ -907,6 +953,8 @@ TestCase {
         tabs().selectTab(firstId)
         tryCompare(firstSection, "visible", false, 3000,
                    "the hidden section stays hidden when the sibling tab becomes active")
+        compare(settings.int("editorDrawer.velocityHeight", -1), resizedHeight,
+                "switching tabs retains the resized section preference")
         tabs().selectTab(closingId)
         shell.shellPresenter.activate("file.close_tab")
         tryCompare(tabs(), "tabCount", 1, 5000)
@@ -924,6 +972,16 @@ TestCase {
                 "reopening restores the shared drawer state on a fresh timeline")
         compare(surfaceOf(reopenedId).drawerPresenter.velocitySection.visible, true,
                 "a fresh tab carries the retained sibling drawer section")
+        compare(settings.int("editorDrawer.velocityHeight", -1), resizedHeight,
+                "reopening retains the real resized shared section height")
+        compare(settings.string("editorDrawer.activePage", ""), "automations",
+                "the reopened drawer retains its active page")
+        compare(surfaceOf(reopenedId).drawerPresenter.voiceChangesSection.visible, true,
+                "reopening retains the third shared drawer section")
+        compare(settings.int("editorDrawer.automationHeight", -1), 200,
+                "reopening retains the hidden automation section height")
+        compare(settings.int("editorDrawer.voiceChangesHeight", -1), 200,
+                "reopening retains the Voice Changes section height")
         compare(fileProbe.fileFingerprint(path), bytes,
                 "reopening never rewrites the project song bytes")
         var firstNotes = summaryOf(firstId)
@@ -994,6 +1052,9 @@ TestCase {
             return page && page.visible && reopenedPlot
                 && reopenedPlot.visible && reopenedPlot.width > 0 && reopenedPlot.height > 0
         }, 3000, "the reopened tab remounts its real automation plot after drawer restore")
+        verify(waitForNative(function() {
+            return volumeAxisLabels(reopenedId).indexOf("64") >= 0
+        }, 5000), "the reopened automation page paints the retained shared lane range")
         reopenedPlot.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(reopenedPlot, "activeFocus", true, 3000,
                    "the reopened tab's automation plot owns the routed keys")
@@ -1868,6 +1929,19 @@ TestCase {
                 "the reopened song publishes its named loaded content")
         verify(gridOf(reopenedId).renderedNoteCount > 0,
                "the reopened song has a ready rendered grid")
+        var restoredDrawer = surfaceOf(reopenedId).drawerPresenter
+        verify(restoredDrawer.velocitySection.visible
+               && restoredDrawer.automationSection.visible
+               && restoredDrawer.voiceChangesSection.visible,
+               "a fresh tab restores all three shared drawer section visibilities")
+        compare(settings.int("editorDrawer.velocityHeight", -1), 173,
+                "a fresh tab restores the shared Velocity section height")
+        compare(settings.int("editorDrawer.automationHeight", -1), 200,
+                "a fresh tab restores the shared Automation section height")
+        compare(settings.int("editorDrawer.voiceChangesHeight", -1), 200,
+                "a fresh tab restores the shared Voice Changes section height")
+        compare(settings.string("editorDrawer.activePage", ""), "velocity",
+                "a fresh tab restores the shared active drawer page")
         compare(gridOf(reopenedId).beatWidth, first.beatWidth,
                 "reopened song uses the canonical default pixels per beat")
         compare(gridOf(reopenedId).rowHeight, first.rowHeight,
@@ -1982,6 +2056,93 @@ TestCase {
                 "reload retains event list visibility")
         verify(!session().canUndo && !session().canRedo,
                "reload clears the old document's undo and redo history")
+    }
+
+    function test_qSelectionDuringReloadKeepsExplicitTarget() {
+        var ids = openShell(["mus_route102", "mus_route101"])
+        var firstId = ids[0]
+        var reloadedId = ids[1]
+        var oldPage = tabs().selectedPage
+        var oldGrid = gridOf(reloadedId)
+        tabs().setSelectedTabEventsVisible(true)
+        compare(tabs().selectedTabShowsEvents, true,
+                "the reload target starts with its visible Event List")
+        session().openSong("mus_route101")
+        compare(tabs().tabCount, 2,
+                "the reloading song stays in the strip while its document opens")
+        verify(pageOf(reloadedId).session === oldPage,
+               "the pending reload keeps its existing mounted tab selectable")
+        var selectFirst = selectButton(firstId)
+        var selectReloading = selectButton(reloadedId)
+        mouseClick(selectFirst, selectFirst.width / 3, selectFirst.height / 2)
+        compare(tabs().selectedId, firstId,
+                "the user explicitly selects the surviving tab during reload")
+        mouseClick(selectReloading, selectReloading.width / 3, selectReloading.height / 2)
+        compare(tabs().selectedId, reloadedId,
+                "the user selects the still-reloading tab before its ready publication")
+        verify(tabs().selectedPage === oldPage,
+               "selecting the pending target retains its original presentation")
+        mouseClick(selectFirst, selectFirst.width / 3, selectFirst.height / 2)
+        compare(tabs().selectedId, firstId,
+                "the user can leave the pending target without discarding it")
+        mouseClick(selectReloading, selectReloading.width / 3, selectReloading.height / 2)
+        compare(tabs().selectedId, reloadedId,
+                "the final explicit selection returns to pending B before ready")
+        verify(waitForNative(function() {
+            return tabs().tabCount === 2 && pageOf(reloadedId) !== null
+                && pageOf(reloadedId).session !== oldPage
+                && pageOf(reloadedId).session.gridPresenter() !== oldGrid
+                && pageOf(reloadedId).session.gridPresenter().renderedNoteCount > 0
+        }, 30000), "the reloaded target adopts a fresh ready document")
+        compare(tabs().selectedId, reloadedId,
+                "reload completion retains the user's selected target")
+        compare(tabs().selectedTabShowsEvents, true,
+                "returning to the reloaded tab restores its visible Event List")
+        verify(findChild(pageOf(reloadedId), "eventListPage") !== null,
+               "the reloaded tab mounts the retained Event List")
+    }
+
+    function test_qReloadCompletionKeepsDifferentSelection() {
+        var ids = openShell(["mus_route102", "mus_route101"])
+        var firstId = ids[0]
+        var pendingId = ids[1]
+        var originalPage = pageOf(pendingId).session
+        session().openSong("mus_route101")
+        var selectFirst = selectButton(firstId)
+        mouseClick(selectFirst, selectFirst.width / 3, selectFirst.height / 2)
+        compare(tabs().selectedId, firstId,
+                "the user selects A while B still occupies its reloading row")
+        verify(waitForNative(function() {
+            return pageOf(pendingId) !== null && pageOf(pendingId).session !== originalPage
+                && pageOf(pendingId).session.gridPresenter().renderedNoteCount > 0
+        }, 30000), "unselected B finishes reloading at its original strip position")
+        compare(tabs().selectedId, firstId,
+                "background reload completion cannot steal the user's selected tab")
+    }
+
+    function test_rFinalCloseStopsAdvancingPlayback() {
+        var onlyId = openShell(["mus_route101"])[0]
+        var bar = findChild(shell, "transportToolbar")
+        var play = findChild(bar, "transport.play")
+        verify(play && play.actionable, "the last tab offers real transport Play")
+        mouseClick(play, play.width / 2, play.height / 2)
+        verify(waitForNative(function() {
+            bar.presenter.refresh()
+            return bar.presenter.state === 3
+        }, 5000), "the last tab enters real playing transport")
+        var initialTick = session().playheadPresenter().tick
+        verify(waitForNative(function() {
+            return session().playheadPresenter().tick > initialTick + 8
+        }, 5000), "the last tab advances its real playhead before close")
+        var close = closeButton(onlyId)
+        mouseClick(close, close.width / 2, close.height / 2)
+        verify(waitForNative(function() {
+            bar.presenter.refresh()
+            return tabs().tabCount === 0 && bar.presenter.state === 0
+        }, 5000), "closing the final tab stops its playing transport")
+        compare(tabs().selectedId, -1, "final close leaves no selected song tab")
+        verify(waitForNative(function() { return pageOf(onlyId) === null }, 5000),
+               "final close releases the previously playing tab page")
     }
 
     function test_rTabSwitchStopsPlayback() {
