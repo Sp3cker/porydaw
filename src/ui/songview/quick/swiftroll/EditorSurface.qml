@@ -886,6 +886,23 @@ Item {
         sourceComponent: Component {
             Item {
                 focus: true
+                function moveRow(delta) {
+                    gridPanel.highlightedRow = Math.min(Math.max(gridPanel.highlightedRow + delta, 0),
+                                                        Math.max(0, gridPanel.rowCount - 1))
+                }
+                Keys.onUpPressed: event => { moveRow(-1); event.accepted = true }
+                Keys.onDownPressed: event => { moveRow(1); event.accepted = true }
+                Keys.onReturnPressed: event => {
+                    root.activateRow(gridPanel, gridPanel.highlightedRow)
+                    event.accepted = true
+                }
+                Keys.onEnterPressed: event => {
+                    root.activateRow(gridPanel, gridPanel.highlightedRow)
+                    event.accepted = true
+                }
+                Keys.onShortcutOverride: event => event.accepted = true
+                Keys.onPressed: event => event.accepted = true
+                Keys.onReleased: event => event.accepted = true
                 Keys.onEscapePressed: (event) => {
                     root.gridModel.dismissGridMenu()
                     event.accepted = true
@@ -900,6 +917,7 @@ Item {
                     items: root.gridModel.gridMenuRows
                 }
                 QuickMenuPanel {
+                    id: gridPanel
                     anchors.fill: parent
                     host: root
                     menuModel: root.gridModel.gridMenuRows

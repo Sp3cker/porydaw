@@ -392,16 +392,8 @@ Original expression:
                             .arg(presenterDiagnostic(surface.grid, error))));
 
 A011 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:286
-Disposition: PARTIAL
-Mapping/reason: S065 proves Copy availability after selection, but no cited predicate asserts the mounted Copy/Paste/Undo/Redo menu items all exist.
-Source context since previous assertion:
-
-    QAction *const copy = actionNamed(window, QStringLiteral("Copy Notes"));
-    QAction *const paste = actionNamed(window, QStringLiteral("Paste Notes"));
-    QAction *const undo = actionNamed(window, QStringLiteral("Undo"));
-    QAction *const redo = actionNamed(window, QStringLiteral("Redo"));
-Original expression:
-    QVERIFY(copy && paste && undo && redo);
+Disposition: MATCHED
+Mapping: S067 - all four mounted Copy, Paste, Undo and Redo items exist
 
 A012 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:287
 Disposition: MATCHED
@@ -460,7 +452,7 @@ Original expression:
 
 A017 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:308
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollgated/clipboardchecks.cpp) no longer builds or runs. Previous native note: QMimeData text beside the clip bytes has no counterpart: production clipboard_host moves only the application/x-porydaw-clip MIME and the Swift app sets no text; the sentinel/preserved BYTES are MATCHED by S055/S059. No QWidget layer exists in the Swift app.
+Mapping/reason: GAP - ED11 clipboard text ownership: production clipboard_host moves only application/x-porydaw-clip MIME; no executing predicate proves QMimeData text alongside the clip bytes. S055/S059 cover bytes only, not text.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -515,7 +507,7 @@ Original expression:
 
 A023 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:324
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollgated/clipboardchecks.cpp) no longer builds or runs. Previous native note: QMimeData text beside the clip bytes has no counterpart: production clipboard_host moves only the application/x-porydaw-clip MIME and the Swift app sets no text; the sentinel/preserved BYTES are MATCHED by S055/S059. No QWidget layer exists in the Swift app.
+Mapping/reason: GAP - ED11 clipboard text ownership: production clipboard_host moves only application/x-porydaw-clip MIME; no executing predicate proves QMimeData text alongside the clip bytes. S055/S059 cover bytes only, not text.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -1646,3 +1638,6 @@ Anchor: message "Copy is enabled"
 
 S066 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboard.qml
 Anchor: message "Copy returns after release"
+
+S067 | test_noteMenuKeyboardDeleteAndEscape | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the mounted Edit menu owns Copy Paste Undo and Redo"

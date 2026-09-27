@@ -325,8 +325,9 @@ TestCase {
                   5000, "the menu loader responds to the published open state")
         var menu = findChild(surface, "quickMenuPanelRoot")
         verify(menu && session.timeSigMenuOpen, "A026: shared ruler menu opens")
+        tryVerify(function() { return findChild(menu, "rulerMenuRow_9") !== null },
+                  5000, "the existing Edit Time Signature menu row is rendered")
         var editRow = findChild(menu, "rulerMenuRow_9")
-        verify(editRow, "the existing Edit Time Signature menu row is rendered")
         mouseClick(editRow, editRow.width / 2, editRow.height / 2, Qt.LeftButton)
         compare(session.timeSigMenuOpen, false, "A027: menu no longer owns the prompt")
         tryVerify(function() { return findChild(surface, "timeSignaturePrompt") !== null },

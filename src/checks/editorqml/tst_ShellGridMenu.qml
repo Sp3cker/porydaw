@@ -1773,4 +1773,141 @@ TestCase {
                 "the time selection and fallback dismissal write no MIDI")
     }
 
+    function test_gridMenuKeyboardTraversalClampsAndActivates() {
+        openSong()
+        var grid = surface().gridModel
+        var menu = openGrid("timelineRulerDivisionControl", 1)
+        tryCompare(menu.parent, "activeFocus", true)
+        keyClick(Qt.Key_Up)
+        tryCompare(menu, "highlightedRow", 0)
+        keyClick(Qt.Key_Up)
+        compare(menu.highlightedRow, 0, "Up clamps at the first grid menu row")
+        keyClick(Qt.Key_Down)
+        keyClick(Qt.Key_Down)
+        tryCompare(menu, "highlightedRow", 2, 3000,
+                   "arrow keys move the grid menu row selection")
+        keyClick(Qt.Key_Return)
+        tryCompare(grid, "gridMenuKind", 0)
+        compare(grid.gridSelectionMenuId, 8, "Return applies the highlighted grid division")
+        menu = openGrid("timelineRulerFeelControl", 2)
+        tryCompare(menu.parent, "activeFocus", true)
+        for (var step = 0; step <= menu.rowCount; ++step)
+            keyClick(Qt.Key_Down)
+        compare(menu.highlightedRow, menu.rowCount - 1,
+                "Down clamps at the last grid menu row")
+        keyClick(Qt.Key_Enter)
+        tryCompare(grid, "gridMenuKind", 0)
+        compare(grid.tripletGrid, true, "Enter applies the highlighted grid feel")
+    }
+
+    function test_noteMenuKeyboardDeleteAndEscape() {
+        var session = openSong()
+        var grid = surface().gridModel
+        var roll = control("swiftRollInput")
+        var targets = noteTargets()
+        verify(targets.length > 2)
+        mouseClick(roll, targets[0].point.x, targets[0].point.y, Qt.LeftButton)
+        mouseClick(roll, targets[1].point.x, targets[1].point.y,
+                   Qt.LeftButton, Qt.ControlModifier)
+        tryVerify(function() {
+            return JSON.parse(grid.noteSummary).filter(function(note) {
+                return note.selected
+            }).length === 2
+        }, 3000)
+        var nudge = findChild(shell, "shellAction_roll.nudge_right")
+        verify(nudge !== null, "the mounted Edit menu owns Nudge Right")
+        tryCompare(nudge, "enabled", true, 3000,
+                   "the mounted Nudge Right row enables for the note selection")
+        var deleteNotes = findChild(shell, "shellAction_roll.delete")
+        tryVerify(function() { return deleteNotes !== null && deleteNotes.enabled }, 3000,
+                  "the mounted Edit menu owns an enabled Delete row before a gesture")
+        verify(findChild(shell, "shellAction_roll.copy") !== null
+               && findChild(shell, "shellAction_roll.paste") !== null
+               && findChild(shell, "shellAction_edit.undo") !== null
+               && findChild(shell, "shellAction_edit.redo") !== null,
+               "the mounted Edit menu owns Copy Paste Undo and Redo")
+        var before = JSON.parse(grid.noteSummary)
+        var selectedIds = before.filter(function(note) { return note.selected })
+            .map(function(note) { return note.id }).sort()
+        var layout = noteLayout()
+        var revision = grid.appliedRevisionText
+        var canUndo = session.canUndo
+        var canRedo = session.canRedo
+        mouseClick(roll, targets[0].point.x, targets[0].point.y, Qt.RightButton)
+        var menu = noteMenu()
+        tryCompare(menu, "visible", true, 3000, "right click opens the mounted note menu")
+        compare(JSON.stringify(JSON.parse(grid.noteSummary).filter(function(note) {
+            return note.selected
+        }).map(function(note) { return note.id }).sort()), JSON.stringify(selectedIds),
+                "opening the note menu preserves an existing multi-selection")
+        keyClick(Qt.Key_Escape)
+        tryVerify(function() {
+            var ids = JSON.parse(grid.noteSummary).filter(function(note) {
+                return note.selected
+            }).map(function(note) { return note.id }).sort()
+            return !menu.visible && JSON.stringify(ids) === JSON.stringify(selectedIds)
+                && grid.appliedRevisionText === revision
+                && session.canUndo === canUndo && session.canRedo === canRedo
+        }, 3000, "Escape closes the grid menu preserving the selection without a history entry")
+        mouseClick(roll, targets[0].point.x, targets[0].point.y, Qt.RightButton)
+        tryCompare(menu, "visible", true)
+        var deleteRow = findChild(menu, "shellContextAction_roll.delete")
+        verify(deleteRow !== null && deleteRow.enabled)
+        for (var step = 0; step < menu.count && !deleteRow.highlighted; ++step)
+            keyClick(Qt.Key_Down)
+        verify(deleteRow.highlighted, "arrow traversal reaches the note menu Delete row")
+        keyClick(Qt.Key_Return)
+        var expected = JSON.stringify(before.filter(function(note) {
+            return selectedIds.indexOf(note.id) < 0
+        }).map(function(note) {
+            return [note.track, note.tick, note.duration, note.pitch, note.velocity]
+        }).sort())
+        tryVerify(function() {
+            return !menu.visible && noteLayout() === expected
+        }, 3000, "Return activates the highlighted grid menu row")
+        compare(JSON.stringify(JSON.parse(grid.noteSummary).map(function(note) {
+            return note.id
+        }).sort()), JSON.stringify(before.filter(function(note) {
+            return selectedIds.indexOf(note.id) < 0
+        }).map(function(note) { return note.id }).sort()),
+                "keyboard Delete removes the selected identities and keeps every other note")
+        session.requestUndo()
+        verify(waitForNative(function() { return noteLayout() === layout }, 5000),
+               "one undo restores exactly the keyboard-deleted notes")
+    }
+
+    function test_transportObservationWithFocusedStop() {
+        var session = openSong()
+        var stop = findChild(shell, "transport.stop")
+        var pause = findChild(shell, "transport.pause")
+        var playhead = session.playheadPresenter()
+        verify(stop !== null && pause !== null && playhead !== null)
+        var play = findChild(shell, "transport.play")
+        verify(play !== null)
+        mouseClick(play, play.width / 2, play.height / 2)
+        tryCompare(playhead, "playing", true)
+        tryCompare(pause, "actionable", true)
+        mouseClick(pause, pause.width / 2, pause.height / 2)
+        tryCompare(playhead, "playing", false)
+        tryCompare(stop, "actionable", true)
+        stop.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(stop, "activeFocus", true)
+        keyClick(Qt.Key_Space)
+        tryCompare(playhead, "playing", true, 3000,
+                   "Space with Stop focused starts the real transport")
+        verify(waitForNative(function() { return playhead.playing && playhead.tick > 0 }, 5000),
+               "the real playing transport advances the shared playhead")
+        mouseClick(pause, pause.width / 2, pause.height / 2)
+        tryCompare(playhead, "playing", false, 3000,
+                   "Pause stops the real transport clock")
+        var pausedTick = playhead.tick
+        wait(100)
+        compare(playhead.tick, pausedTick, "the paused shared playhead stays stationary")
+        stop.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(stop, "activeFocus", true)
+        keyClick(Qt.Key_Enter)
+        verify(waitForNative(function() { return !playhead.playing && playhead.tick === 0 }, 3000),
+               "Enter activates the focused Stop button and rewinds the shared playhead")
+    }
+
 }
