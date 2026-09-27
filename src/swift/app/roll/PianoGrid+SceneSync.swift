@@ -39,6 +39,11 @@ extension PianoGrid {
         case .move, .resize: geometryStable = false
         default: geometryStable = true
         }
+        let initial = session.timeline.tracks.indices.contains(trackIndex)
+            ? session.timeline.tracks[trackIndex].firstProgram : -1
+        let program = max(0, initial)
+        let drumNames = session.bankSlots.indices.contains(program)
+            ? session.bankSlots[program].drumPadNames : nil
         return GridSceneInput(
             metrics: metrics, grid: session.grid, palette: palette, camera: session.camera,
             contentEndTick: contentEndTick, scale: session.scaleProjection,
@@ -54,7 +59,9 @@ extension PianoGrid {
             noteNameOccupiedHeight: typography?.noteNameOccupiedHeight ?? 0,
             timeSelection: session.timeSelection,
             usedTrackCount: session.document.engineTracks.usedTrackCount,
-            selectedTrack: trackIndex, geometryStable: geometryStable)
+            selectedTrack: trackIndex, geometryStable: geometryStable,
+            keyboardNames: drumNames, keyboardBankIdentity: ObjectIdentifier(session.bankLease),
+            keyboardProgram: program)
     }
 
     @QtIgnored

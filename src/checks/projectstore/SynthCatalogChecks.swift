@@ -225,7 +225,8 @@ private func synthStagedFixtureChecks(_ report: CheckReport) {
                         "DirectSoundWaveData_fixture_loop", "DirectSoundWaveData_fixture_pluck"],
                        actual: VoicegroupSource.directSoundSymbols(root), cppID: cppID,
                        what: "S033: staged decomp DirectSound symbol order matches fixture")
-    report.expectEqual(expected: ["ProgrammableWaveData_fixture_pulse", "ProgrammableWaveData_fixture_saw"],
+    report.expectEqual(expected: ["ProgrammableWaveData_fixture_named_pad_long_label_123",
+                                  "ProgrammableWaveData_fixture_pulse", "ProgrammableWaveData_fixture_saw"],
                        actual: VoicegroupSource.progWaveSymbols(root), cppID: cppID,
                        what: "S034: staged decomp programmable wave symbols match fixture")
 }

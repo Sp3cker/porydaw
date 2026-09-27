@@ -127,9 +127,19 @@ Item {
     }
 
     Item {
-        parent: root.gutterContentSide
+        id: keyboardTextClip
+        objectName: "timelineQuickPianoKeyboardTextViewport"
+        parent: root.bandSide
         anchors.fill: parent
+        clip: true
         z: 3
+    }
+
+    Item {
+        parent: keyboardTextClip
+        y: root.gutterContentSide.y
+        width: parent.width
+        height: parent.height
 
         Repeater {
             model: root.timelineScene.pianoKeyboardTextModel

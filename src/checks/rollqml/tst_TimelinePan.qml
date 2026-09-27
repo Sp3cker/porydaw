@@ -1,15 +1,5 @@
-// Timeline-pan assertions for the Swift roll window, run by the rollqml lane:
-//
-//     roll_qml_tests {scratch} -input tst_TimelinePan.qml
-//
-// Ports the deleted timelinepan C++ suite's real-input/window assertions to the
-// production Swift surface: pixel-wheel pan, middle-drag pan, the piano
-// hover-chip overlay, coalesced drawer refresh, track-switch label stability,
-// and the selected-pan render obligation from the native performance harness.
-// Sites asserting C++-only internals (QSGNode pooling, dashed-segment builders,
-// TimelineQuickTextModel zero-signal obligations, drum-pad/program
-// classification, gutter-overflow geometry the Swift layout cannot produce)
-// stay NATIVE in the ledger.
+// Mounted Swift roll journey for pan, hover, drawer, drum labels and selected notes.
+// Run via PORYDAW_ROLL_QML_SUITE=tst_TimelinePan.qml deno task verify:qml-roll.
 import QtQuick
 import QtTest
 import PorydawApp
@@ -506,27 +496,167 @@ TestCase {
                "the coalesced refresh matches a full visual reload")
     }
 
-    // timelinepan's drumGutterTrackSwitch, reduced to what the Swift surface
-    // publishes: the keyboard labels are track-independent note names and are
-    // identical across a track switch.
-    function test_trackSwitchKeepsNoteLabels() {
+    function test_drumPadNamesFollowInitialProgram() {
         var g = grid()
-        var labelsBefore = keyboardLabels()
-        verify(labelsBefore.length > 0, "the keyboard model is populated")
+        var originalScroll = g.cameraScrollY
+        var rows = findChild(surface(), "timelineTrackHeaderRows")
+        var headerInput = findChild(surface(), "timelineTrackHeadersInput")
+        verify(rows && headerInput && rows.count > 1,
+               "the mounted header provides two selectable production tracks")
+        var pickerModel = session.headerVoicePickerModel()
+        var first = rows.itemAt(0)
+        mouseDoubleClickSequence(headerInput,
+            first.subtitleRect.x + first.subtitleRect.width / 2,
+            first.subtitleRect.y + first.subtitleRect.height / 2)
+        tryCompare(session, "headerVoicePickerOpen", true, 5000)
+        var originalProgram = pickerModel.pickerIndex
+        var loader = findChild(surface(), "headerVoicePickerLoader")
+        tryVerify(function() { return loader.item !== null })
+        findChild(loader.item, "voicePickerSearch").text = "11"
+        tryCompare(pickerModel, "pickerIndex", 0, 5000)
+        mouseClick(findChild(loader.item, "voicePickerAccept"))
+        tryCompare(session, "headerVoicePickerOpen", false, 5000)
 
-        g.setTrack(1)
-        tryCompare(g, "trackIndex", 1, 5000)
-        var labelsOther = keyboardLabels()
-        verify(labelsOther.length > 0, "the keyboard model stays populated")
-        for (var i = 0; i < labelsOther.length; ++i) {
-            verify(/^C-?\d+$/.test(labelsOther[i].text),
-                   "every label is a natural-C note name on the non-drum track")
+        try {
+            g.setTrack(0)
+            var gutter = gutterInput()
+            g.setCameraVScroll((127 - 37) * g.rowHeight - gutter.height / 2)
+            g.reloadVisuals()
+            wait(0)
+            function padLabel(text) {
+                var labels = keyboardLabels()
+                for (var i = 0; i < labels.length; ++i) {
+                    if (labels[i].text === text)
+                        return labels[i]
+                }
+                return null
+            }
+            var longName = "fixture_named_pad_long_label_123"
+            tryVerify(function() { return padLabel(longName) !== null }, 5000,
+                      "A038 the rendered fixed keyboard displays the full long drum name")
+            var longPad = padLabel(longName)
+            verify(padLabel("fixture_pluck") !== null && padLabel("fixture_drum") !== null,
+                   "A036 the mounted drum keyboard displays adjacent real sample names")
+            verify(padLabel("D#2") !== null,
+                   "A044 an unnamed pad renders its exact pitch fallback")
+            verify(longPad.width > g.keyboardWidth && longPad.x === 0,
+                   "A039 the long label extends past the keyboard without clipping")
+            verify(longPad.y >= 0 && longPad.y + longPad.height <= gutter.height,
+                   "the loaded accidental pad scrolls into the visible gutter: y="
+                   + longPad.y + " scroll=" + g.cameraScrollY
+                   + " gutterHeight=" + gutter.height)
+            var scene = g.scene
+            var chip = findChild(surface(), "timelineQuickPianoHoverChip")
+            var chipText = findChild(surface(), "timelineQuickPianoHoverChipText")
+            function hover(label, expected) {
+                mouseMove(gutter, gutter.width / 2, label.y + label.height / 2)
+                tryCompare(g, "hoverKey", expected === longName ? 37
+                    : expected === "D#2" ? 39 : 36, 5000)
+                tryCompare(scene, "hoverChipText", expected, 5000)
+                tryVerify(function() {
+                    return chipText.text === expected && chip.visible
+                        && chipText.contentWidth <= chip.width && scene.hoverChipRect.x >= 0
+                }, 5000, "the complete hover name fits its on-screen chip")
+            }
+            hover(longPad, longName)
+            hover(padLabel("D#2"), "D#2")
+            hover(padLabel("fixture_pluck"), "fixture_pluck")
+            var host = null
+            var stack = [surface()]
+            while (stack.length > 0) {
+                var item = stack.pop()
+                if (item.labelText === longName) {
+                    host = item
+                    break
+                }
+                for (var c = 0; c < item.children.length; ++c)
+                    stack.push(item.children[c])
+            }
+            var band = findChild(surface(), "rollContentBand")
+            verify(host && host.parent && host.parent.parent
+                   && host.parent.parent.parent === band
+                   && !host.parent.clip && host.parent.parent.clip
+                   && host.parent.parent.width > g.keyboardWidth && band && !band.clip,
+                   "A041 the label overflows the gutter but clips at the roll-band bounds")
+            var rendered = host.children[1]
+            verify(rendered.contentWidth <= rendered.width && !rendered.clip,
+                   "A043 the overflow text is actually legible without elision")
+            var originalY = longPad.y
+            g.setCameraVScroll(g.cameraScrollY + g.rowHeight)
+            tryVerify(function() {
+                var shifted = padLabel(longName)
+                return shifted !== null && Math.abs(shifted.y - (originalY - g.rowHeight)) < 1
+            }, 5000, "A042 the overflowing label follows exactly one vertical camera scroll")
+
+            g.setTrack(1)
+            tryCompare(g, "trackIndex", 1, 5000)
+            g.reloadVisuals()
+            var melodic = keyboardLabels()
+            verify(melodic.length > 0 && melodic.every(function(label) {
+                return /^C-?\d+$/.test(label.text)
+            }), "A064 the melodic track renders only exact octave-C keyboard names")
+            verify(padLabel(longName) === null,
+                   "A065 the accidental drum name disappears on the melodic track")
+            g.setTrack(0)
+            tryCompare(g, "trackIndex", 0, 5000)
+            g.reloadVisuals()
+            verify(padLabel(longName) !== null,
+                   "A069 switching back restores the same full loaded drum name")
+
+            var voice = findChild(surface(), "voiceChangesPage")
+            var plot = findChild(voice, "voicePlotInput")
+            verify(voice && plot && plot.width > 0,
+                   "the real voice-changes plot accepts later program edits")
+            mouseDoubleClickSequence(plot, plot.width / 3, plot.height / 2)
+            tryCompare(voice.model, "pickerOpen", true, 5000)
+            var voicePicker = voice.picker
+            tryVerify(function() { return voicePicker && voicePicker.visible })
+            findChild(voicePicker, "voicePickerSearch").text = "0"
+            tryCompare(voice.model, "pickerIndex", 0, 5000)
+            mouseClick(findChild(voicePicker, "voicePickerAccept"))
+            tryCompare(voice.model, "pickerOpen", false, 5000)
+            var laterTick = Math.max(bootstrap.timelineLengthTicks(),
+                                     g.ticksPerBeat * 16)
+            g.reloadVisuals()
+            verify(padLabel(longName) !== null,
+                   "A080 genuine synchronization at the initial program keeps the drum pad")
+            g.setEditCursorTick(laterTick)
+            tryCompare(g, "editCursorTick", laterTick, 5000,
+                       "the production grid moves the real edit cursor beyond the voice event")
+            tryCompare(voice.model, "contextSlot", 0, 5000)
+            g.reloadVisuals()
+            verify(padLabel(longName) !== null,
+                   "A082 a later melodic cursor program leaves the initial drum pad")
+            g.setEditCursorTick(0)
+            tryCompare(g, "editCursorTick", 0, 5000)
+            tryCompare(voice.model, "contextSlot", 11, 5000)
+            bootstrap.presentPlayheadTick(laterTick, 2)
+            tryCompare(voice.model, "contextSlot", 0, 5000)
+            g.reloadVisuals()
+            verify(padLabel(longName) !== null,
+                   "A085 the advanced playhead program leaves the initial drum pad")
+            bootstrap.presentPlayheadTick(0, 2)
+            tryCompare(voice.model, "contextSlot", 11, 5000)
+            g.reloadVisuals()
+            verify(padLabel(longName) !== null,
+                   "A087 resetting the playhead retains the initial drum pad")
+        } finally {
+            g.setEditCursorTick(0)
+            bootstrap.presentPlayheadTick(0, 1)
+            g.setCameraVScroll(originalScroll)
+            if (originalProgram >= 0 && originalProgram !== 11) {
+                wait(Qt.styleHints.mouseDoubleClickInterval + 1)
+                mouseDoubleClickSequence(headerInput,
+                    first.subtitleRect.x + first.subtitleRect.width / 2,
+                    first.subtitleRect.y + first.subtitleRect.height / 2)
+                tryCompare(session, "headerVoicePickerOpen", true, 5000)
+                tryVerify(function() { return loader.item !== null })
+                findChild(loader.item, "voicePickerSearch").text = String(originalProgram)
+                tryCompare(pickerModel, "pickerIndex", 0, 5000)
+                mouseClick(findChild(loader.item, "voicePickerAccept"))
+                tryCompare(session, "headerVoicePickerOpen", false, 5000)
+            }
         }
-
-        g.setTrack(0)
-        tryCompare(g, "trackIndex", 0, 5000)
-        verify(sameLabels(keyboardLabels(), labelsBefore),
-               "row count and label rects are identical after switching back")
     }
 
     // timelinepannative's selectionExtentPanPerformance, minus the diagnostic

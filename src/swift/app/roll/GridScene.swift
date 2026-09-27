@@ -151,6 +151,17 @@ public final class GridScene {
     var staticKey: StaticKey?
     @QtIgnored
     var contentWindow: ContentWindow?
+    struct KeyboardWidthKey: Equatable {
+        let bank: ObjectIdentifier?
+        let program: Int
+        let baseFontPx: Double
+        let keyboardWidth: Double
+        let keyHeight: Double
+        let dpr: Double
+    }
+    @QtIgnored var keyboardWidthKey: KeyboardWidthKey?
+    @QtIgnored var keyboardLabelWidths: [Double]?
+    @QtIgnored var keyboardChipWidths: [Double]?
 
     @QtIgnored
     func invalidateStatic() {
@@ -208,7 +219,6 @@ public final class GridScene {
                 }
 
                 refreshHoverChip(input)
-                hoverChipText = GridScene.keyName(key)
                 chipVisible = true
             }
         }
@@ -236,7 +246,12 @@ public final class GridScene {
               let bottom = camera.projection.rowBottom(
                 row, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY, dpr: m.dpr)
         else { return }
-        let width = t.chipAdvance(pitch: input.hoverKey) + m.chipHPadding
+        let name = input.keyboardNames?[input.hoverKey] ?? ""
+        let text = name.isEmpty ? GridScene.keyName(input.hoverKey) : name
+        hoverChipText = text
+        let width = (keyboardChipWidths?[input.hoverKey]
+                     ?? (name.isEmpty ? t.chipAdvance(pitch: input.hoverKey)
+                         : t.chipAdvance(text))) + m.chipHPadding
         let height = t.chipHeight + m.chipVPadding
         let y = min(max(0, (top + bottom) / 2 - height / 2),
                     max(0, snapshot.rollHeight - height))

@@ -286,7 +286,7 @@ private func loaderSubgroupNames(_ bank: UnsafeMutablePointer<LoadedVoiceGroup>,
         (10, Int(VOICE_KEYSPLIT_ALL), 36, "fixture_drum"), (10, Int(VOICE_KEYSPLIT_ALL), 37, ""),
         (10, Int(VOICE_KEYSPLIT_ALL), 38, "fixture_pluck"),
         (11, Int(VOICE_KEYSPLIT_ALL), 36, "fixture_pluck"),
-        (11, Int(VOICE_KEYSPLIT_ALL), 37, "fixture_saw"),
+        (11, Int(VOICE_KEYSPLIT_ALL), 37, "fixture_named_pad_long_label_123"),
         (11, Int(VOICE_KEYSPLIT_ALL), 38, "fixture_drum")
     ]
     var allMatch = true

@@ -5,9 +5,10 @@ Original: src/checks/timelinepan/tst_timelinepan.cpp
 Original SHA-256: 2f7fbeac149980e4fce3f3ea25d4a5a092561bf4afc848fcfb58b117c7f25450
 Swift counterpart: src/checks/nativegraphics/PlayheadFeatureChecks.swift
 Additional Swift counterpart: src/checks/rollqml/tst_TimelinePan.qml
+Additional Swift counterpart: src/checks/rollcheck/keyboard.swift
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
-Disposition tally: 138 sites: 88 MATCHED, 30 GAP, 20 RETIRED-REPRESENTATION.
+Disposition tally: 138 sites: 103 MATCHED, 15 GAP, 20 RETIRED-REPRESENTATION.
 
 Command: deno task verify:qml-roll --verbose
 Result: passing — controller-recorded post-change run after the obsolete
@@ -23,6 +24,10 @@ Shift+wheel because the production WheelHandler is vertical-only and Shift+wheel
 is the real horizontal-pan input path (handleWheel's shift branch scrolls by -d).
 Command: deno task verify --filter swiftcore --verbose
 Result: passing — the suite ran green with these checks registered.
+Command: deno task verify --filter swiftcore-projectsession --verbose
+Result: task-82 implementer-recorded RED→GREEN on the settled tree — real bank-name publication, initial-program policy, exact label geometry, track/bank invalidation and cursor/playhead separation with existing keyboard regressions green; evidence build/proof-evidence/swiftcore-projectsession.json (controller to re-run).
+Command: PORYDAW_ROLL_QML_SUITE=tst_TimelinePan.qml deno task verify:qml-roll --verbose
+Result: task-82 implementer-recorded RED→GREEN on the settled tree — mounted named/fallback hover, overflow, track switching and content-space pan smoke in the TimelinePan suite; evidence build/proof-evidence/swiftroll-window.json (controller to re-run).
 
 A001 | TimelinePanTest::init | src/checks/timelinepan/tst_timelinepan.cpp:242
 Disposition: MATCHED
@@ -246,14 +251,8 @@ Original expression:
   QVERIFY(longIndex.isValid())
 
 A036 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:549
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad-name text assertion ('Kick'); the Swift keyboard model has no drum-pad names.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(model->data(namedIndex, TimelineQuickTextModel::TextRole).toString(),
-               QStringLiteral("Kick"))
+Disposition: MATCHED
+Mapping: S001, S003, S021 — the real loaded drum bank publishes 128 detached pad names, and the Swift model plus the mounted keyboard display the exact loaded sample names ("fixture_pluck"/"fixture_drum") in place of the synthetic "Kick".
 
 A037 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:551
 Disposition: GAP
@@ -265,32 +264,12 @@ Original expression:
   QVERIFY(detail::isBlackKey(namedKey))
 
 A038 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:555
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Long pad-name text assertion; no Swift pad-label path.
-Source context since previous assertion:
-  ;
-      const QString longText = model->data(longIndex, TimelineQuickTextModel::TextRole).toString();
-      const QRectF longRect = model->data(longIndex, TimelineQuickTextModel::RectRole).toRectF();
-      const QString fullLongText = QString::fromUtf8(kDrumPadLongName);
-
-Original expression:
-  QCOMPARE(longText, fullLongText)
+Disposition: MATCHED
+Mapping: S004, S011, S020 — the fixed keyboard label and the hover chip both carry the full 32-character loaded name "fixture_named_pad_long_label_123", also observed on the mounted surface.
 
 A039 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:563
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad-label width vs measured text; no Swift pad-label path.
-Source context since previous assertion:
-  ;
-      const auto geometry = pianoroll_detail::PianoRollGeometry::resolve(view.pianoKeyboardWidth());
-      const QFontMetrics labelMetrics(
-          model->data(longIndex, TimelineQuickTextModel::FontRole).value<QFont>());
-      const qreal expectedWidth =
-          (std::max)(qreal(view.pianoKeyboardWidth() - geometry.pianoKeyboardLabelRightInset),
-                     qreal(labelMetrics.horizontalAdvance(fullLongText) +
-                           geometry.pianoKeyboardLabelRightInset));
-
-Original expression:
-  QCOMPARE(longRect.width(), expectedWidth)
+Disposition: MATCHED
+Mapping: S006, S012, S023 — the fixed label width equals max(keyboardWidth-inset, measured advance+inset) and overflows the keyboard; the hover chip carries measured text plus padding.
 
 A040 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:564
 Disposition: RETIRED-REPRESENTATION
@@ -302,41 +281,20 @@ Original expression:
   QVERIFY(longRect.width() > qreal(view.pianoKeyboardWidth()))
 
 A041 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:565
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad-label rect origin; no Swift pad-label path.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(longRect.left(), 0.0)
+Disposition: MATCHED
+Mapping: S007, S024 — the long label starts at x 0 and overflows the gutter, clipping only at the unclipped roll-band bounds on the mounted surface.
 
 A042 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:566
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad-label rect top vs pad row rect; no Swift pad-label path.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(longRect.top(), padRowRect(view, longKey).top())
+Disposition: MATCHED
+Mapping: S008, S026 — the long label starts at the projected row top and follows exactly one vertical camera scroll on the mounted surface.
 
 A043 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:567
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad-label rect height vs pad row rect; no Swift pad-label path.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(longRect.height(), padRowRect(view, longKey).height())
+Disposition: MATCHED
+Mapping: S009, S025 — the long label fills the projected row height and renders legible without elision on the mounted surface.
 
 A044 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:568
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Unnamed-pad fallback to keyName; no Swift pad-label path.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(model->data(unnamedIndex, TimelineQuickTextModel::TextRole).toString(),
-               detail::keyName(unnamedKey))
+Disposition: MATCHED
+Mapping: S005, S022 — an unnamed pad falls back to its pitch name, observed as D#2 on the mounted surface.
 
 A045 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:577
 Disposition: MATCHED
@@ -396,26 +354,8 @@ A060 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timel
 Disposition: MATCHED
 
 A061 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:648
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad-name text assertion; no Swift pad-label path.
-Source context since previous assertion:
-  ;
-      const int namedKey = (*padKeys)[0];
-      DrumBankFixture fixture(program, namedKey, (*padKeys)[1], (*padKeys)[2]);
-      const LoadedVoiceGroup *const originalBank = view.voicegroup();
-      const auto restoreBank =
-          qScopeGuard([&view, originalBank] { view.setVoicegroup(originalBank); });
-      view.setVoicegroup(&fixture.bank);
-      checks::support::pumpQuick();
-
-      const qreal namedY = padRowRect(view, namedKey).center().y();
-      const auto padText = [&] {
-          return model->data(keyboardRecordAt(*model, namedY), TimelineQuickTextModel::TextRole)
-              .toString();
-      };
-
-Original expression:
-  QCOMPARE(padText(), QStringLiteral("Kick"))
+Disposition: MATCHED
+Mapping: S002, S010 — the drum keyboard labels every projected pitch and the adjacent sample pad retains its loaded name "fixture_drum".
 
 A062 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:653
 Disposition: MATCHED
@@ -424,22 +364,12 @@ A063 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timel
 Disposition: MATCHED
 
 A064 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:655
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Drum-row-count shrink; the Swift keyboard model is track-independent and has no drum rows.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(model->rowCount() < drumRowCount)
+Disposition: MATCHED
+Mapping: S013, S027 — a melodic track shows exactly the visible octave-C names in the model and on the mounted surface, which subsumes the row-count shrink over the drum set.
 
 A065 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:656
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad-row record disappearance; no Swift pad-label path.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!keyboardRecordAt(*model, namedY).isValid())
+Disposition: MATCHED
+Mapping: S014, S028 — the accidental drum name is absent on the melodic track in both the model and the mounted keyboard.
 
 A066 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:660
 Disposition: MATCHED
@@ -451,13 +381,8 @@ A068 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timel
 Disposition: MATCHED
 
 A069 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:668
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad-name restoration assertion; no Swift pad-label path.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(padText(), QStringLiteral("Kick"))
+Disposition: MATCHED
+Mapping: S015, S029 — returning to the drum track restores the exact loaded pad name in both the model and the mounted keyboard.
 
 A070 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:676
 Disposition: MATCHED
@@ -571,13 +496,8 @@ Original expression:
   QCOMPARE(view.currentProgram(track), initial)
 
 A080 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:751
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad-name assertion; no Swift pad-label path.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(padText(), QStringLiteral("Kick"))
+Disposition: MATCHED
+Mapping: S016, S030 — genuine synchronization at the initial program keeps the drum pad while the current program is 11, in the model and on the mounted surface.
 
 A081 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:753
 Disposition: GAP
@@ -590,13 +510,8 @@ Original expression:
   QCOMPARE(view.currentProgram(track), melodic)
 
 A082 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:754
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad-name assertion; no Swift pad-label path.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(padText(), QStringLiteral("Kick"))
+Disposition: MATCHED
+Mapping: S017, S031 — a later melodic cursor program (context slot 0) keeps the initial drum label, in the model and on the mounted surface.
 
 A083 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:759
 Disposition: GAP
@@ -621,13 +536,8 @@ Original expression:
   QCOMPARE(view.currentProgram(track), melodic)
 
 A085 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:761
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad-name assertion; no Swift pad-label path.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(padText(), QStringLiteral("Kick"))
+Disposition: MATCHED
+Mapping: S018, S032 — the advanced playhead program (context slot 0) keeps the initial drum label, in the model and on the mounted surface.
 
 A086 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:763
 Disposition: GAP
@@ -640,13 +550,8 @@ Original expression:
   QCOMPARE(view.currentProgram(track), initial)
 
 A087 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:764
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad-name assertion; no Swift pad-label path.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(padText(), QStringLiteral("Kick"))
+Disposition: MATCHED
+Mapping: S019, S033 — resetting the playhead (context slot 11) retains the initial drum label, in the model and on the mounted surface.
 
 A088 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:765
 Disposition: MATCHED
@@ -886,3 +791,102 @@ wheel/middle-drag pan, hover-chip overlay, coalesced-refresh, track-switch label
 and selected-pan assertions.
 Presenter-level middlePan coverage is review evidence; real-input/window sites are
 covered by the rollqml lane.
+
+S001 | checkDrumPadLabels | src/checks/rollcheck/keyboard.swift
+Anchor: message "A036 the loaded bank publishes detached indexed pad names"
+
+S002 | checkDrumPadLabels | src/checks/rollcheck/keyboard.swift
+Anchor: message "A061 the drum keyboard labels every projected pitch"
+
+S003 | checkDrumPadLabels | src/checks/rollcheck/keyboard.swift
+Anchor: message "A036 the first named sample pad displays its full name"
+
+S004 | checkDrumPadLabels | src/checks/rollcheck/keyboard.swift
+Anchor: message "A038 the full long drum-pad name is a fixed keyboard label"
+
+S005 | checkDrumPadLabels | src/checks/rollcheck/keyboard.swift
+Anchor: message "A044 an unnamed drum pad displays its pitch name"
+
+S006 | checkDrumPadLabels | src/checks/rollcheck/keyboard.swift
+Anchor: message "A039 the long label width includes measured text and inset"
+
+S007 | checkDrumPadLabels | src/checks/rollcheck/keyboard.swift
+Anchor: message "A041 the long label starts at the keyboard origin"
+
+S008 | checkDrumPadLabels | src/checks/rollcheck/keyboard.swift
+Anchor: message "A042 the long label starts at the projected row top"
+
+S009 | checkDrumPadLabels | src/checks/rollcheck/keyboard.swift
+Anchor: message "A043 the long label fills the projected row height"
+
+S010 | checkDrumPadLabels | src/checks/rollcheck/keyboard.swift
+Anchor: message "A061 the adjacent sample pad retains its loaded name"
+
+S011 | checkDrumPadLabels | src/checks/rollcheck/keyboard.swift
+Anchor: message "A038 the hover chip shows the same full pad name"
+
+S012 | checkDrumPadLabels | src/checks/rollcheck/keyboard.swift
+Anchor: message "A039 the full hover chip has measured text width"
+
+S013 | checkDrumPadLabels | src/checks/rollcheck/keyboard.swift
+Anchor: message "A064 a melodic track shows exactly the visible octave-C names"
+
+S014 | checkDrumPadLabels | src/checks/rollcheck/keyboard.swift
+Anchor: message "A065 the accidental drum pad disappears on the melodic track"
+
+S015 | checkDrumPadLabels | src/checks/rollcheck/keyboard.swift
+Anchor: message "A069 returning to the drum track restores the exact pad name"
+
+S016 | checkDrumPadLabels | src/checks/rollcheck/keyboard.swift
+Anchor: message "A080 the initial program classifies the synchronized pad"
+
+S017 | checkDrumPadLabels | src/checks/rollcheck/keyboard.swift
+Anchor: message "A082 a later melodic cursor program keeps the initial drum label"
+
+S018 | checkDrumPadLabels | src/checks/rollcheck/keyboard.swift
+Anchor: message "A085 a later melodic playhead program keeps the initial drum label"
+
+S019 | checkDrumPadLabels | src/checks/rollcheck/keyboard.swift
+Anchor: message "A087 reset playhead keeps the initial drum label"
+
+S020 | test_drumPadNamesFollowInitialProgram | src/checks/rollqml/tst_TimelinePan.qml
+Anchor: message "A038 the rendered fixed keyboard displays the full long drum name"
+
+S021 | test_drumPadNamesFollowInitialProgram | src/checks/rollqml/tst_TimelinePan.qml
+Anchor: message "A036 the mounted drum keyboard displays adjacent real sample names"
+
+S022 | test_drumPadNamesFollowInitialProgram | src/checks/rollqml/tst_TimelinePan.qml
+Anchor: message "A044 an unnamed pad renders its exact pitch fallback"
+
+S023 | test_drumPadNamesFollowInitialProgram | src/checks/rollqml/tst_TimelinePan.qml
+Anchor: message "A039 the long label extends past the keyboard without clipping"
+
+S024 | test_drumPadNamesFollowInitialProgram | src/checks/rollqml/tst_TimelinePan.qml
+Anchor: message "A041 the label overflows the gutter but clips at the roll-band bounds"
+
+S025 | test_drumPadNamesFollowInitialProgram | src/checks/rollqml/tst_TimelinePan.qml
+Anchor: message "A043 the overflow text is actually legible without elision"
+
+S026 | test_drumPadNamesFollowInitialProgram | src/checks/rollqml/tst_TimelinePan.qml
+Anchor: message "A042 the overflowing label follows exactly one vertical camera scroll"
+
+S027 | test_drumPadNamesFollowInitialProgram | src/checks/rollqml/tst_TimelinePan.qml
+Anchor: message "A064 the melodic track renders only exact octave-C keyboard names"
+
+S028 | test_drumPadNamesFollowInitialProgram | src/checks/rollqml/tst_TimelinePan.qml
+Anchor: message "A065 the accidental drum name disappears on the melodic track"
+
+S029 | test_drumPadNamesFollowInitialProgram | src/checks/rollqml/tst_TimelinePan.qml
+Anchor: message "A069 switching back restores the same full loaded drum name"
+
+S030 | test_drumPadNamesFollowInitialProgram | src/checks/rollqml/tst_TimelinePan.qml
+Anchor: message "A080 genuine synchronization at the initial program keeps the drum pad"
+
+S031 | test_drumPadNamesFollowInitialProgram | src/checks/rollqml/tst_TimelinePan.qml
+Anchor: message "A082 a later melodic cursor program leaves the initial drum pad"
+
+S032 | test_drumPadNamesFollowInitialProgram | src/checks/rollqml/tst_TimelinePan.qml
+Anchor: message "A085 the advanced playhead program leaves the initial drum pad"
+
+S033 | test_drumPadNamesFollowInitialProgram | src/checks/rollqml/tst_TimelinePan.qml
+Anchor: message "A087 resetting the playhead retains the initial drum pad"

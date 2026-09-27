@@ -171,6 +171,10 @@ TestCase {
         verify(surface !== null, "the loaded roll is mounted")
         const gutter = findChild(surface, "timelineQuickRollGutter")
         verify(gutter !== null, "the keyboard gutter is mounted")
+        const textViewport = findChild(surface, "timelineQuickPianoKeyboardTextViewport")
+        verify(textViewport !== null && textViewport.clip
+               && textViewport.width > gutter.width,
+               "keyboard text overflows the gutter within the clipped roll-band viewport")
         const grid = surface.gridModel
         verify(grid.rowHeight > 0 && gutter.height > 0, "the keyboard has a viewport")
         for (const edge of ["top", "bottom"]) {
@@ -181,7 +185,7 @@ TestCase {
             let label = null
             tryVerify(function() {
                 const texts = []
-                Audit.collect([gutter], texts, [])
+                Audit.collect([textViewport], texts, [])
                 label = texts.find(function(item) { return item.text === "C5" })
                 if (label === undefined)
                     return false

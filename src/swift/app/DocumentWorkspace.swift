@@ -399,7 +399,7 @@ public final class DocumentWorkspace {
             headerVoicePicker.refresh()
         }
 
-        if documentChanged || !change.domains.intersection([.selection, .scale]).isEmpty {
+        if documentChanged || !change.domains.intersection([.selection, .scale, .bank]).isEmpty {
             if change.domains.contains(.selection) { pitchBend.cancelAndClose() }
             grid.refreshFromSession()
         } else if change.domains.contains(.cursor) {

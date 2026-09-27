@@ -39,6 +39,9 @@ struct GridSceneInput {
     var usedTrackCount = 0
     var selectedTrack = 0
     var geometryStable = false
+    var keyboardNames: [String]?
+    var keyboardBankIdentity: ObjectIdentifier?
+    var keyboardProgram = 0
 }
 @MainActor
 extension GridScene {
@@ -54,6 +57,8 @@ extension GridScene {
         var timeAxis: TimeAxis
         var palette: ObjectIdentifier
         var window: ContentWindow
+        var keyboardBankIdentity: ObjectIdentifier?
+        var keyboardProgram: Int
     }
 
     private func visibleTicks(_ input: GridSceneInput) -> (begin: Tick, end: Tick) {
@@ -78,7 +83,9 @@ extension GridScene {
             pixelsPerTick: snapshot.pixelsPerTick, keyHeight: snapshot.keyHeight,
             projection: camera.projection, dpr: m.dpr, baseFontPx: m.baseFontPx,
             keyboardWidth: m.keyboardWidth, contentEndTick: input.contentEndTick,
-            timeAxis: m.timeAxis, palette: ObjectIdentifier(p), window: window)
+            timeAxis: m.timeAxis, palette: ObjectIdentifier(p), window: window,
+            keyboardBankIdentity: input.keyboardBankIdentity,
+            keyboardProgram: input.keyboardProgram)
         guard key != staticKey else { return }
         staticKey = key
         contentWindow = window
@@ -363,23 +370,48 @@ extension GridScene {
     }
 
     private func rebuildKeyboardText(_ input: GridSceneInput) {
-        guard input.typography != nil else { return }
+        guard let typography = input.typography else { return }
         let m = input.metrics
         let camera = input.camera
         let snapshot = camera.snapshot
+        let names = input.keyboardNames
+        let isDrum = names != nil
+        let widthKey = KeyboardWidthKey(bank: input.keyboardBankIdentity,
+                                        program: input.keyboardProgram,
+                                        baseFontPx: m.baseFontPx, keyboardWidth: m.keyboardWidth,
+                                        keyHeight: snapshot.keyHeight, dpr: m.dpr)
+        if keyboardWidthKey != widthKey {
+            keyboardWidthKey = widthKey
+            keyboardLabelWidths = names?.enumerated().map { key, name in
+                typography.keyLabelAdvance(name.isEmpty ? GridScene.keyName(key) : name)
+            }
+            keyboardChipWidths = names?.enumerated().map { key, name in
+                typography.chipAdvance(name.isEmpty ? GridScene.keyName(key) : name)
+            }
+        }
         var records: [SceneText] = []
         for row in 0..<camera.projection.visibleRowCount {
             guard let key = camera.projection.visiblePitch(at: row),
-                  !GridScene.isBlackKey(key), key % 12 == 0,
+                  isDrum || (!GridScene.isBlackKey(key) && key % 12 == 0),
                   let top = camera.projection.contentRowTop(
                     row, keyHeight: snapshot.keyHeight, dpr: m.dpr),
                   let bottom = camera.projection.contentRowBottom(
                     row, keyHeight: snapshot.keyHeight, dpr: m.dpr)
             else { continue }
+            let name = names?[key] ?? ""
+            let text = name.isEmpty ? GridScene.keyName(key) : name
+            let width = isDrum
+                ? max(m.keyboardWidth - m.keyLabelRightInset,
+                      (keyboardLabelWidths?[key] ?? 0) + m.keyLabelRightInset)
+                : m.keyboardWidth - m.keyLabelRightInset
+            let black = isDrum && GridScene.isBlackKey(key)
+            let background = black ? input.palette.keyboardBlack : input.palette.keyboardNatural
             records.append(SceneText(
-                rect: (0, top, m.keyboardWidth - m.keyLabelRightInset, bottom - top),
-                text: GridScene.keyName(key), color: input.palette.keyboardLabel,
-                font: input.fontSpec(.keyLabel), horizontal: 0x2))
+                rect: (0, top, width, bottom - top), text: text,
+                color: black ? input.palette.keyboardNatural : input.palette.keyboardLabel,
+                font: input.fontSpec(.keyLabel), horizontal: 0x2,
+                background: isDrum ? background : "",
+                backgroundRect: isDrum ? (0, top, width, bottom - top) : (0, 0, 0, 0)))
         }
         syncText(pianoKeyboardTextModel, records, signatures: &keyboardTextSignatures)
     }

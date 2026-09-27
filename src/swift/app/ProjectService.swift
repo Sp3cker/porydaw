@@ -129,14 +129,17 @@ public struct BankSlotView: Equatable, Sendable {
     public var isSynth: Bool
     /// Native split facts copied once at publication; -1 is an invalid child.
     public var subvoiceMacros: [Int32]?
+    /// Detached display names indexed by MIDI key for a loaded drumkit.
+    public var drumPadNames: [String]?
 
     public init(kind: Int32 = BankSlotKind.none, voice: BankVoice? = nil,
                 tone: BankTone? = nil, subvoiceMacros: [Int32]? = nil,
-                isSynth: Bool = false) {
+                drumPadNames: [String]? = nil, isSynth: Bool = false) {
         self.kind = kind
         self.voice = voice
         self.tone = tone
         self.subvoiceMacros = subvoiceMacros
+        self.drumPadNames = drumPadNames
         self.isSynth = isSynth
     }
 
@@ -434,8 +437,23 @@ private func copySlots(_ lease: ProjectBankLease) -> [BankSlotView] {
                 return BankTone(name: name, type: Int32(loaded.type), isSynth: synth, adsr: adsr)
             }
             let subvoices = loaded.flatMap(copySubvoiceMacros)
+            let drumPadNames: [String]? = loaded.flatMap { tone in
+                guard tone.type == UInt8(VOICE_KEYSPLIT_ALL),
+                      let subgroup = tone.subGroup?.assumingMemoryBound(to: ToneData.self),
+                      let bank else { return nil }
+                return (0..<128).map { key in
+                    guard let name = voicegroup_subgroup_slot_name(bank, subgroup, Int32(key))
+                    else { return "" }
+                    let bounded = UnsafeBufferPointer(
+                        start: UnsafeRawPointer(name).assumingMemoryBound(to: UInt8.self),
+                        count: Int(VG_VOICE_NAME_LEN))
+                    let length = bounded.firstIndex(of: 0) ?? bounded.count
+                    return String(decoding: bounded.prefix(length), as: UTF8.self)
+                }
+            }
             return BankSlotView(kind: slot.kind.rawValue, voice: voice, tone: tone,
-                                subvoiceMacros: subvoices, isSynth: synth)
+                                subvoiceMacros: subvoices, drumPadNames: drumPadNames,
+                                isSynth: synth)
         }
     }
 }

@@ -46,6 +46,8 @@ struct GridTypography {
     private let beatMetrics: NativeFontMetrics
     private let boldMetrics: NativeFontMetrics
     private let signatureMetrics: NativeFontMetrics
+    private let chipMetrics: NativeFontMetrics
+    private let keyLabelMetrics: NativeFontMetrics
     private let chipWidths: [Double]
     private let noteNameWidths: [Double]
     private let noteValueMetrics: NativeFontMetrics
@@ -69,7 +71,14 @@ struct GridTypography {
         beatMetrics = beat
         boldMetrics = bold
         signatureMetrics = measure(.sig)
+        chipMetrics = chip
+        guard let keyLabelBase = fonts[.keyLabel] else {
+            preconditionFailure("GridTypography requires the key-label face")
+        }
         let keyLabelFit = measure(.keyLabel).fittedSize(rowHeight: rowHeight)
+        keyLabelMetrics = NativeFontMetrics(GridFontSpec(
+            family: keyLabelBase.family, pixelSize: keyLabelFit,
+            weight: keyLabelBase.weight, letterSpacing: keyLabelBase.letterSpacing))
         guard let valueBase = fonts[.noteValue] else {
             preconditionFailure("GridTypography requires the note-value face")
         }
@@ -113,6 +122,8 @@ struct GridTypography {
     }
 
     func chipAdvance(pitch: Int) -> Double { chipWidths[pitch] }
+    func chipAdvance(_ text: String) -> Double { chipMetrics.advance(text) }
+    func keyLabelAdvance(_ text: String) -> Double { keyLabelMetrics.advance(text) }
 
     /// Advance of the pitch name in the fixed note-name face, for the
     /// complete-name-plus-two-trailing-spaces fit rule in NoteNameLabels.
