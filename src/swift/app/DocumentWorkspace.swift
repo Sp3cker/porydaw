@@ -56,8 +56,6 @@ public final class DocumentWorkspace {
     /// and the three section slots its own pages occupy.
     public let drawer = EditorDrawerPresenter()
     public let otherEventsBand: OtherEventsBandPresenter
-    public var onEditorChromeChanged: ((EditorDrawerChromeState) -> Void)?
-
 
     private unowned let audio: NativeAudio
     private unowned let playhead: SharedPlayheadPresenter
@@ -139,8 +137,11 @@ public final class DocumentWorkspace {
             guard visible else { return }
             self?.drawerSectionBecameVisible(kind)
         }
-        drawer.onChromeChanged = { [weak self] state in
-            self?.onEditorChromeChanged?(state)
+        drawer.onChromeChanged = { [weak session] state in
+            guard let session else { return }
+            var next = session.editorViewState
+            next.chrome = state
+            session.setEditorViewState(next)
         }
 
 
@@ -269,6 +270,9 @@ public final class DocumentWorkspace {
         session.onCameraChangeDetailed = nil
         session.onChange = nil
         session.onPlayback = nil
+        session.onEditorViewStateChanged = nil
+        drawer.onChromeChanged = nil
+        automationPage.onLaneRangeChanged = nil
     }
 
     /// The non-destructive inverse of `activate()`: a hidden workspace keeps its
@@ -318,6 +322,9 @@ public final class DocumentWorkspace {
         session.onChange = nil
         session.onPlayback = nil
         drawer.onSectionVisibilityChanged = nil
+        session.onEditorViewStateChanged = nil
+        drawer.onChromeChanged = nil
+        automationPage.onLaneRangeChanged = nil
         session.onCameraChange = nil
         session.onCameraChangeDetailed = nil
         voiceChangesPage.detach()

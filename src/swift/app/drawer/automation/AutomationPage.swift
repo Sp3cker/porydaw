@@ -214,6 +214,18 @@ public final class AutomationPage: EditorDrawerPage {
     @QtIgnored var frozenCamera: EditorCamera?
     @QtIgnored var ghostPins: Set<AutomationParameter> = []
     @QtIgnored var laneRanges: [AutomationParameter: Int] = [:]
+
+    /// Projects the complete stored range table without originating another change.
+    public func applyLaneRanges(_ lanes: EditorLaneState) {
+        let next = lanes.laneRanges.reduce(into: [AutomationParameter: Int]()) { result, entry in
+            if let parameter = EditorViewStateCodec.parameter(for: entry.key) {
+                result[parameter] = entry.value
+            }
+        }
+        guard laneRanges != next else { return }
+        laneRanges = next
+        refreshCamera()
+    }
     @QtIgnored let clipboard: GridClipboard = GridClipboard()
     /// Lane-menu copy is deliberately separate from the system selection clipboard.
     @QtIgnored var laneClipboardPoints: [AutomationLanePoint] = []

@@ -10,6 +10,7 @@ Additional Swift counterpart: src/checks/workspace/bank_saves.swift
 Additional Swift counterpart: src/checks/workspace/bank_sharing.swift
 Additional Swift counterpart: src/checks/workspace/session_editor_semantics.swift
 Additional Swift counterpart: src/checks/workspace/session_io.swift
+Additional Swift counterpart: src/checks/workspace/session_view_state_fanout.swift
 Additional Swift counterpart: src/checks/workspace/session_playback.swift
 Additional Swift counterpart: src/checks/workspace/session_save.swift
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
@@ -813,12 +814,8 @@ Original expression:
         QCOMPARE(projection.count(), 0)
 
 A103 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:299
-Disposition: GAP
-Mapping/reason: No workspace-hub emission count exists; sibling fanout (S221/S222) and persist-once (S216) are proved (uncited: hub-signal half absent).
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(hub.count(), 1)
+Disposition: MATCHED
+Mapping: S262
 
 A104 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:300
 Disposition: MATCHED
@@ -829,140 +826,64 @@ Original expression:
         QCOMPARE(persisted.count(), 1)
 
 A105 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:301
-Disposition: PARTIAL
-Mapping/reason: Related predicate S221 (drawer-chrome half: full chromeState mirror selected == background); unproved: lane members (hiddenLanes/laneRanges/emptyLanes) of the complete seed.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(a.editorViewState(), state)
+Disposition: MATCHED
+Mapping: S263
 
 A106 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:302
-Disposition: PARTIAL
-Mapping/reason: Related predicate S221 (drawer-chrome half via the sibling mirror); unproved: full-seed equality on the origin tab including lane members.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(b.editorViewState(), state)
+Disposition: MATCHED
+Mapping: S264
 
 A107 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:303
-Disposition: PARTIAL
-Mapping/reason: Related predicate S216 (drawer-chrome persist half: loadChrome == changed); unproved: lane-blob members of the persisted state.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(loadEditorViewState(QSettings{}), state)
+Disposition: MATCHED
+Mapping: S265
 
 A108 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:304
-Disposition: GAP
-Mapping/reason: Lane-identity observations with no lane-fanout predicate in this ledger's registry (deferred: document engine-track remap ingress per the task-65 brief).
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(b.editorViewState().hiddenLanes().size(), size_t{2})
+Disposition: MATCHED
+Mapping: S266
 
 A109 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:305
-Disposition: GAP
-Mapping/reason: Lane-identity observations with no lane-fanout predicate in this ledger's registry (deferred: document engine-track remap ingress per the task-65 brief).
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(b.editorViewState().hiddenLanes().front(), hiddenFirst)
+Disposition: MATCHED
+Mapping: S267
 
 A110 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:306
-Disposition: GAP
-Mapping/reason: Lane-identity observations with no lane-fanout predicate in this ledger's registry (deferred: document engine-track remap ingress per the task-65 brief).
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(b.editorViewState().hiddenLanes().back(), hiddenSecond)
+Disposition: MATCHED
+Mapping: S268
 
 A111 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:313
-Disposition: GAP
-Mapping/reason: Lane-range mutation signal counts with no lane-range fanout predicate in this ledger's registry (updateEditorLaneRange fans out in production, unproved).
-Source context since previous assertion:
-
-        const int originBeforeRange = origin.count();
-        const int hubBeforeRange = hub.count();
-        const int projectionBeforeRange = projection.count();
-        const int persistedBeforeRange = persisted.count();
-        b.setLaneDisplayRange(0, 74, 80);
-Original expression:
-        QCOMPARE(origin.count(), originBeforeRange + 1)
+Disposition: MATCHED
+Mapping: S269
 
 A112 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:314
-Disposition: GAP
-Mapping/reason: Lane-range mutation signal counts with no lane-range fanout predicate in this ledger's registry (updateEditorLaneRange fans out in production, unproved).
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(hub.count(), hubBeforeRange + 1)
+Disposition: MATCHED
+Mapping: S270
 
 A113 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:315
-Disposition: GAP
-Mapping/reason: Lane-range mutation signal counts with no lane-range fanout predicate in this ledger's registry (updateEditorLaneRange fans out in production, unproved).
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(persisted.count(), persistedBeforeRange + 1)
+Disposition: MATCHED
+Mapping: S271
 
 A114 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:316
-Disposition: GAP
-Mapping/reason: Lane-range mutation signal counts with no lane-range fanout predicate in this ledger's registry (updateEditorLaneRange fans out in production, unproved).
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(projection.count(), projectionBeforeRange)
+Disposition: MATCHED
+Mapping: S272
 
 A115 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:317
-Disposition: GAP
-Mapping/reason: Lane-range value observation with no lane-range predicate in this ledger's registry.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(a.editorViewState().laneRanges.at(lane), uint8_t{80})
+Disposition: MATCHED
+Mapping: S273
 
 A116 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:318
-Disposition: GAP
-Mapping/reason: Lane-range value observation with no lane-range predicate in this ledger's registry.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(b.editorViewState().laneRanges.at(lane), uint8_t{80})
+Disposition: MATCHED
+Mapping: S274
 
 A117 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:331
-Disposition: PARTIAL
-Mapping/reason: Related predicate S217 (value-silence half: live chrome and store unchanged on the drawer no-op); unproved: signal-emission counts.
-Source context since previous assertion:
-
-        const int originBeforeNoop = origin.count();
-        const int projectionBeforeNoop = projection.count();
-        const int hubBeforeNoop = hub.count();
-        const int persistedBeforeNoop = persisted.count();
-        b.setLaneDisplayRange(0, 74, 80);
-        EditorViewState unchanged = b.editorViewState();
-        unchanged.emptyLanes.insert(lane);
-        b.setEditorViewState(unchanged);
-        unchanged.emptyLanes.erase({EditorAutomationRowKind::ControlChange, 3, 99});
-        b.setEditorViewState(unchanged);
-        QCoreApplication::processEvents();
-Original expression:
-        QCOMPARE(origin.count(), originBeforeNoop)
+Disposition: MATCHED
+Mapping: S275
 
 A118 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:332
-Disposition: PARTIAL
-Mapping/reason: Related predicate S217 (value-silence half: live chrome and store unchanged on the drawer no-op); unproved: signal-emission counts.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(projection.count(), projectionBeforeNoop)
+Disposition: MATCHED
+Mapping: S276
 
 A119 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:333
-Disposition: PARTIAL
-Mapping/reason: Related predicate S217 (value-silence half: live chrome and store unchanged on the drawer no-op); unproved: signal-emission counts.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(hub.count(), hubBeforeNoop)
+Disposition: MATCHED
+Mapping: S277
 
 A120 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:334
 Disposition: MATCHED
@@ -976,418 +897,207 @@ A121 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSi
 Disposition: RETIRED-REPRESENTATION
 
 A122 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:353
-Disposition: GAP
-Mapping/reason: Document label or track-count observation with no corresponding SessionChecks predicate; GAP.
-Source context since previous assertion:
-        MainWindow &window = *session->window;
-        SongView &a = session->a->view();
-        SongView &b = session->b->view();
-        const EditorAutomationRowId hiddenFirst{EditorAutomationRowKind::ControlChange, 1, 7};
-        const EditorAutomationRowId tempo{EditorAutomationRowKind::Tempo, 0, 0};
-        b.setEditorViewState(completeSeed());
-        window.m_workspace->selectSongTab(session->a);
-        QSignalSpy projection(&a, &SongView::editorViewStateChanged);
-        QSignalSpy origin(&b, &SongView::editorViewStateChanged);
-        QSignalSpy hub(window.m_workspace.get(), &WorkspaceUi::editorViewStateChanged);
-        QSignalSpy persisted(&window, &MainWindow::editorViewStatePersisted);
-        const int tracks = b.document().engineTrackCount();
-Original expression:
-        QVERIFY(tracks >= 2)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Native copied-fixture track-count guard (QVERIFY(tracks >= 2) at fork :353), not user behavior; Swift stages exactly two engine tracks and guards that setup in session_view_state_fanout.swift:149-150 before the real move. No predicate is manufactured for setup.
 
 A123 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:358
 Disposition: MATCHED
 Mapping: S205
 
 A124 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:360
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
-Source context since previous assertion:
-        QCoreApplication::processEvents();
-Original expression:
-        QCOMPARE(origin.count(), 1)
+Disposition: MATCHED
+Mapping: S278
 
 A125 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:361
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(hub.count(), 1)
+Disposition: MATCHED
+Mapping: S279
 
 A126 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:362
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(persisted.count(), 1)
+Disposition: MATCHED
+Mapping: S280
 
 A127 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:364
-Disposition: GAP
-Mapping/reason: Automation-lane identity/remap/mutation or header-model observation with no corresponding SessionChecks predicate; GAP.
-Source context since previous assertion:
-        const EditorViewState remapped = b.editorViewState();
-Original expression:
-        QVERIFY(remapped != before)
+Disposition: MATCHED
+Mapping: S281
 
 A128 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:365
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(projection.count(), 0)
+Disposition: MATCHED
+Mapping: S282
 
 A129 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:366
-Disposition: GAP
-Mapping/reason: Automation-lane identity/remap/mutation or header-model observation with no corresponding SessionChecks predicate; GAP.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(!remapped.isLaneHidden(hiddenFirst))
+Disposition: MATCHED
+Mapping: S283
 
 A130 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:367
-Disposition: GAP
-Mapping/reason: Automation-lane identity/remap/mutation or header-model observation with no corresponding SessionChecks predicate; GAP.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(remapped.hiddenLanes().size(), size_t{2})
+Disposition: MATCHED
+Mapping: S284
 
 A131 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:368
-Disposition: GAP
-Mapping/reason: Automation-lane identity/remap/mutation or header-model observation with no corresponding SessionChecks predicate; GAP.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(remapped.hiddenLanes().front().controller, uint8_t{7})
+Disposition: MATCHED
+Mapping: S285
 
 A132 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:369
-Disposition: GAP
-Mapping/reason: Automation-lane identity/remap/mutation or header-model observation with no corresponding SessionChecks predicate; GAP.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(remapped.hiddenLanes().front().track != uint8_t{1})
+Disposition: MATCHED
+Mapping: S286
 
 A133 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:370
-Disposition: GAP
-Mapping/reason: Automation-lane identity/remap/mutation or header-model observation with no corresponding SessionChecks predicate; GAP.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(remapped.hiddenLanes().back().controller, uint8_t{80})
+Disposition: MATCHED
+Mapping: S287
 
 A134 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:371
-Disposition: GAP
-Mapping/reason: Automation-lane identity/remap/mutation or header-model observation with no corresponding SessionChecks predicate; GAP.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(remapped.laneRanges.at(tempo), uint8_t{100})
+Disposition: MATCHED
+Mapping: S288
 
 A135 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:372
-Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(a.editorViewState(), remapped)
+Disposition: MATCHED
+Mapping: S289
 
 A136 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:373
-Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(loadEditorViewState(QSettings{}), remapped)
+Disposition: MATCHED
+Mapping: S290
 
 A137 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:376
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
-Source context since previous assertion:
-        b.document().undoStack()->undo();
-        QCoreApplication::processEvents();
-Original expression:
-        QCOMPARE(origin.count(), 2)
+Disposition: MATCHED
+Mapping: S291
 
 A138 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:377
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(hub.count(), 2)
+Disposition: MATCHED
+Mapping: S292
 
 A139 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:378
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(persisted.count(), 2)
+Disposition: MATCHED
+Mapping: S293
 
 A140 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:379
-Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(a.editorViewState(), before)
+Disposition: MATCHED
+Mapping: S294
 
 A141 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:380
-Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(b.editorViewState(), before)
+Disposition: MATCHED
+Mapping: S295
 
 A142 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:381
-Disposition: PARTIAL
-Mapping/reason: Related predicate S206 (trackRemapPublicationContract, src/checks/editcheck/DocumentTrackChecks.swift): the move undo publishes the exact inverse remap at model level; unproved: SMF byte equality after the Qt undoStack undo and the Qt undo-stack wiring in this test.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(b.document().smf().write(), midi)
+Disposition: MATCHED
+Mapping: S296
 
 A143 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:382
-Disposition: PARTIAL
-Mapping/reason: Related predicates S030, S057, S060, S061, S062, S063 in src/checks/workspace/session_io.swift and src/checks/workspace/session_save.swift (document dirty tracking across open/save/edit/undo/redo); unproved: Qt undo-stack and reload/teardown dirtiness wiring in this test.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(!b.document().isDirty())
+Disposition: MATCHED
+Mapping: S297
 
 A144 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:383
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(projection.count(), 0)
+Disposition: MATCHED
+Mapping: S298
 
 A145 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:396
 Disposition: MATCHED
 Mapping: S205
 
 A146 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:398
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
-Source context since previous assertion:
-        QCoreApplication::processEvents();
-Original expression:
-        QCOMPARE(origin.count(), 0)
+Disposition: MATCHED
+Mapping: S299
 
 A147 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:399
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(hub.count(), 0)
+Disposition: MATCHED
+Mapping: S300
 
 A148 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:400
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(persisted.count(), 0)
+Disposition: MATCHED
+Mapping: S301
 
 A149 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:403
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
-Source context since previous assertion:
-        b.document().undoStack()->undo();
-        QCoreApplication::processEvents();
-Original expression:
-        QCOMPARE(origin.count(), 0)
+Disposition: MATCHED
+Mapping: S302
 
 A150 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:404
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(projection.count(), 0)
+Disposition: MATCHED
+Mapping: S303
 
 A151 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:405
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(hub.count(), 0)
+Disposition: MATCHED
+Mapping: S304
 
 A152 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:406
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(persisted.count(), 0)
+Disposition: MATCHED
+Mapping: S305
 
 A153 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:407
-Disposition: PARTIAL
-Mapping/reason: Related predicate S206 (trackRemapPublicationContract, src/checks/editcheck/DocumentTrackChecks.swift): the move undo publishes the exact inverse remap at model level; unproved: SMF byte equality after the quiet-move undo and the Qt undo-stack wiring in this test.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(b.document().smf().write(), quietMidi)
+Disposition: MATCHED
+Mapping: S306
 
 A154 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:408
-Disposition: PARTIAL
-Mapping/reason: Related predicates S030, S057, S060, S061, S062, S063 in src/checks/workspace/session_io.swift and src/checks/workspace/session_save.swift (document dirty tracking across open/save/edit/undo/redo); unproved: Qt undo-stack and reload/teardown dirtiness wiring in this test.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(!b.document().isDirty())
+Disposition: MATCHED
+Mapping: S307
 
 A155 | MainWindowRoutingStateTest::viewOnlyLaneMutationsPersistWithoutDocumentMutation | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:414
 Disposition: RETIRED-REPRESENTATION
 
 A156 | MainWindowRoutingStateTest::viewOnlyLaneMutationsPersistWithoutDocumentMutation | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:431
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
-Source context since previous assertion:
-        MainWindow &window = *session->window;
-        SongView &a = session->a->view();
-        SongView &b = session->b->view();
-        b.setEditorViewState(completeSeed());
-        const QByteArray midi = b.document().smf().write();
-        const uint64_t revision = b.document().revision();
-        const int undoCount = b.document().undoStack()->count();
-        const auto snapshot = porydawSnapshot(session->fixture->root());
-        QSignalSpy origin(&b, &SongView::editorViewStateChanged);
-        QSignalSpy hub(window.m_workspace.get(), &WorkspaceUi::editorViewStateChanged);
-        QSignalSpy persisted(&window, &MainWindow::editorViewStatePersisted);
-        const EditorAutomationRowId lane{EditorAutomationRowKind::ControlChange, 2, 40};
-        EditorViewState next = b.editorViewState();
-        next.emptyLanes.insert(lane);
-        b.setEditorViewState(next);
-        QCoreApplication::processEvents();
-Original expression:
-        QCOMPARE(origin.count(), 1)
+Disposition: MATCHED
+Mapping: S308
 
 A157 | MainWindowRoutingStateTest::viewOnlyLaneMutationsPersistWithoutDocumentMutation | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:432
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(hub.count(), 1)
+Disposition: MATCHED
+Mapping: S309
 
 A158 | MainWindowRoutingStateTest::viewOnlyLaneMutationsPersistWithoutDocumentMutation | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:433
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(persisted.count(), 1)
+Disposition: MATCHED
+Mapping: S310
 
 A159 | MainWindowRoutingStateTest::viewOnlyLaneMutationsPersistWithoutDocumentMutation | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:434
-Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(a.editorViewState(), b.editorViewState())
+Disposition: MATCHED
+Mapping: S311
 
 A160 | MainWindowRoutingStateTest::viewOnlyLaneMutationsPersistWithoutDocumentMutation | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:435
-Disposition: PARTIAL
-Mapping/reason: Related predicates S228 (lane-blob persist leg) and S216 (chrome persist leg); unproved: sibling-tab lane mirror and the combined store-load-vs-live comparison.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(loadEditorViewState(QSettings{}), b.editorViewState())
+Disposition: MATCHED
+Mapping: S312
 
 A161 | MainWindowRoutingStateTest::viewOnlyLaneMutationsPersistWithoutDocumentMutation | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:436
-Disposition: GAP
-Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(b.document().smf().write(), midi)
+Disposition: MATCHED
+Mapping: S313
 
 A162 | MainWindowRoutingStateTest::viewOnlyLaneMutationsPersistWithoutDocumentMutation | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:437
-Disposition: GAP
-Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(b.document().revision(), revision)
+Disposition: MATCHED
+Mapping: S314
 
 A163 | MainWindowRoutingStateTest::viewOnlyLaneMutationsPersistWithoutDocumentMutation | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:438
-Disposition: GAP
-Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(b.document().undoStack()->count(), undoCount)
+Disposition: MATCHED
+Mapping: S315
 
 A164 | MainWindowRoutingStateTest::viewOnlyLaneMutationsPersistWithoutDocumentMutation | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:439
 Disposition: GAP
-Mapping/reason: Fixture-root byte snapshot or project-snapshot-root observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP — the fork snapshots the entire copied project directory after view-only insertion; MIDI-byte, revision and history predicates S313–S315 do not prove non-song sidecar bytes unchanged.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(porydawSnapshot(session->fixture->root()) == snapshot)
 
 A165 | MainWindowRoutingStateTest::viewOnlyLaneMutationsPersistWithoutDocumentMutation | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:444
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
-Source context since previous assertion:
-        next = b.editorViewState();
-        next.emptyLanes.erase(lane);
-        b.setEditorViewState(next);
-        QCoreApplication::processEvents();
-Original expression:
-        QCOMPARE(origin.count(), 2)
+Disposition: MATCHED
+Mapping: S316
 
 A166 | MainWindowRoutingStateTest::viewOnlyLaneMutationsPersistWithoutDocumentMutation | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:445
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(hub.count(), 2)
+Disposition: MATCHED
+Mapping: S317
 
 A167 | MainWindowRoutingStateTest::viewOnlyLaneMutationsPersistWithoutDocumentMutation | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:446
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(persisted.count(), 2)
+Disposition: MATCHED
+Mapping: S318
 
 A168 | MainWindowRoutingStateTest::viewOnlyLaneMutationsPersistWithoutDocumentMutation | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:447
-Disposition: GAP
-Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(b.document().smf().write(), midi)
+Disposition: MATCHED
+Mapping: S319
 
 A169 | MainWindowRoutingStateTest::viewOnlyLaneMutationsPersistWithoutDocumentMutation | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:448
-Disposition: GAP
-Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(b.document().revision(), revision)
+Disposition: MATCHED
+Mapping: S320
 
 A170 | MainWindowRoutingStateTest::viewOnlyLaneMutationsPersistWithoutDocumentMutation | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:449
-Disposition: GAP
-Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(b.document().undoStack()->count(), undoCount)
+Disposition: MATCHED
+Mapping: S321
 
 A171 | MainWindowRoutingStateTest::viewOnlyLaneMutationsPersistWithoutDocumentMutation | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:450
 Disposition: GAP
-Mapping/reason: Fixture-root byte snapshot or project-snapshot-root observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP — the fork snapshots the entire copied project directory after view-only removal; MIDI-byte, revision and history predicates S319–S321 do not prove non-song sidecar bytes unchanged.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1398,7 +1108,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A173 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:474
 Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP — S322/S323 reject and preserve a pure EditorViewState copy, but no rejected document track-remap ingress establishes the selected sibling remains unchanged.
 Source context since previous assertion:
         MainWindow &window = *session->window;
         SongView &a = session->a->view();
@@ -1422,7 +1132,7 @@ Original expression:
 
 A174 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:475
 Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP — pure-value rejection S322/S323 does not exercise a rejected remap delivered through the live document or prove its background origin state unchanged.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1430,7 +1140,7 @@ Original expression:
 
 A175 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:476
 Disposition: GAP
-Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP — pure-value rejection S322/S323 does not exercise the live document remap ingress or prove original MIDI bytes remain unchanged.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1438,7 +1148,7 @@ Original expression:
 
 A176 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:477
 Disposition: GAP
-Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP — pure-value rejection S322/S323 does not exercise the live document remap ingress or prove document revision remains unchanged.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1446,7 +1156,7 @@ Original expression:
 
 A177 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:478
 Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP — pure-value rejection S322/S323 does not exercise the live document remap ingress or prove persisted preferences remain unchanged.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1454,7 +1164,7 @@ Original expression:
 
 A178 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:479
 Disposition: GAP
-Mapping/reason: Fixture-root byte snapshot or project-snapshot-root observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP — the fork snapshots the entire copied project directory after a rejected document remap; S322/S323 only exercise a pure value copy, not sidecar bytes.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1462,7 +1172,7 @@ Original expression:
 
 A179 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:480
 Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
+Mapping/reason: GAP — pure-value rejection S322/S323 does not exercise the live document remap ingress or prove zero background-origin emissions.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1470,7 +1180,7 @@ Original expression:
 
 A180 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:481
 Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
+Mapping/reason: GAP — pure-value rejection S322/S323 does not exercise the live document remap ingress or prove zero workspace emissions.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1478,28 +1188,19 @@ Original expression:
 
 A181 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:482
 Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
+Mapping/reason: GAP — pure-value rejection S322/S323 does not exercise the live document remap ingress or prove zero preference-write notifications.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(persisted.count(), 0)
 
 A182 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:485
-Disposition: GAP
-Mapping/reason: EditorViewState.remapEngineTracks validation-state rejection; GAP: the Swift app has no remapEngineTracks method, so no counterpart asserts this rejection.
-Source context since previous assertion:
-        EditorViewState valueCopy = completeSeed();
-        const EditorViewState original = valueCopy;
-Original expression:
-        QVERIFY(!valueCopy.remapEngineTracks({0, 0}))
+Disposition: MATCHED
+Mapping: S322
 
 A183 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:486
-Disposition: GAP
-Mapping/reason: EditorViewState value equality after the rejected remap; GAP: the Swift app has no remapEngineTracks method and no EditorViewState, so no counterpart asserts this noop.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(valueCopy, original)
+Disposition: MATCHED
+Mapping: S323
 
 A184 | MainWindowRoutingStateTest::mouseHintFollowsRealTargets | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:492
 Disposition: MATCHED
@@ -2738,3 +2439,189 @@ Anchor: message "the sibling retains hidden Velocity's stored height"
 
 S261 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
 Anchor: message "the sibling retains hidden Voice Changes' stored height"
+
+S262 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A103 initial complete seed publishes exactly one workspace notification"
+
+S263 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A105 selected sibling holds every member of the complete editor seed"
+
+S264 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A106 background origin holds every member of the complete editor seed"
+
+S265 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A107 synchronized preferences hold every member of the complete editor seed"
+
+S266 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A108 seeded background state holds two ordered hidden lanes"
+
+S267 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A109 first hidden lane remains CC7 on engine track one"
+
+S268 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A110 last hidden lane remains CC80 on engine track zero"
+
+S269 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A111 changing background CC74 range publishes one more origin notification"
+
+S270 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A112 changing background CC74 range publishes one more workspace notification"
+
+S271 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A113 changing background CC74 range finishes one more preference write"
+
+S272 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A114 changing background CC74 range never originates from selected sibling"
+
+S273 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A115 selected sibling adopts the independent CC74 range 80"
+
+S274 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A116 background origin retains the independent CC74 range 80"
+
+S275 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A117 identical range and empty lane noops emit no origin notification"
+
+S276 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A118 identical range and empty lane noops emit no sibling notification"
+
+S277 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A119 identical range and empty lane noops emit no workspace notification"
+
+S278 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A124 real track move emits exactly one more origin notification"
+
+S279 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A125 real track move emits exactly one more workspace notification"
+
+S280 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A126 real track move finishes exactly one more preference write"
+
+S281 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A127 real track move changes the owned complete editor value"
+
+S282 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A128 real track move never originates from the sibling"
+
+S283 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A129 real track move removes the old hidden CC7 identity"
+
+S284 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A130 real track move retains both ordered hidden lanes"
+
+S285 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A131 first remapped hidden lane remains CC7"
+
+S286 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A132 first remapped hidden CC7 moves off engine track one onto zero"
+
+S287 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A133 last remapped hidden lane remains CC80"
+
+S288 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A134 real engine-track move preserves Tempo range 100"
+
+S289 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A135 selected sibling receives the independently expected full remapped editor value"
+
+S290 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A136 preferences receive the independently expected full remapped editor value"
+
+S291 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A137 Undo emits exactly one more origin notification"
+
+S292 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A138 Undo emits exactly one more workspace notification"
+
+S293 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A139 Undo finishes exactly one more preference write"
+
+S294 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A140 Undo restores the sibling complete editor value"
+
+S295 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A141 Undo restores the background origin complete editor value"
+
+S296 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A142 Undo restores the complete original MIDI bytes"
+
+S297 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A143 Undo returns the document to a clean state"
+
+S298 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A144 Undo never publishes a sibling-origin notification"
+
+S299 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A146 quiet track move emits no editor-origin notification"
+
+S300 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A147 quiet track move emits no workspace editor notification"
+
+S301 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A148 quiet track move finishes no editor preference write"
+
+S302 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A149 quiet Undo emits no editor-origin notification"
+
+S303 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A150 quiet Undo emits no sibling-origin notification"
+
+S304 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A151 quiet Undo emits no workspace editor notification"
+
+S305 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A152 quiet Undo finishes no editor preference write"
+
+S306 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A153 quiet Undo restores original MIDI bytes"
+
+S307 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A154 quiet Undo restores clean document state"
+
+S308 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A156 empty lane insertion emits exactly one origin notification"
+
+S309 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A157 empty lane insertion emits exactly one workspace notification"
+
+S310 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A158 empty lane insertion finishes exactly one preference write"
+
+S311 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A159 empty lane insertion projects origin value to selected sibling"
+
+S312 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A160 empty lane insertion stores the live origin complete state"
+
+S313 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A161 view-only insertion leaves all MIDI bytes unchanged"
+
+S314 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A162 view-only insertion leaves document revision unchanged"
+
+S315 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A163 view-only insertion leaves document history count unchanged"
+
+S316 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A165 empty lane removal emits exactly one more origin notification"
+
+S317 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A166 empty lane removal emits exactly one more workspace notification"
+
+S318 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A167 empty lane removal finishes exactly one more preference write"
+
+S319 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A168 view-only removal leaves all MIDI bytes unchanged"
+
+S320 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A169 view-only removal leaves document revision unchanged"
+
+S321 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A170 view-only removal leaves document history count unchanged"
+
+S322 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A182 duplicate track destinations reject the pure complete-value remap"
+
+S323 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A183 rejected pure remap preserves every original editor-value member"

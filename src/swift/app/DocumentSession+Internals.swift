@@ -106,6 +106,12 @@ extension DocumentSession {
     /// and the presenter is notified.
     internal func handleDocumentChange(_ change: DocumentChange) {
         withStateChanges {
+            if let map = change.trackRemap?.engineTrackMap {
+                var next = editorViewState
+                if next.remapEngineTracks(map) {
+                    setEditorViewState(next)
+                }
+            }
             let priorScope = selectedTracks
             let priorPrimary = selectedTrack
             let priorNotes = selectedNoteOrder

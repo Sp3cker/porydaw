@@ -1,4 +1,5 @@
 import Foundation
+import PorydawApp
 import QtBridge
 
 @MainActor
@@ -7,6 +8,34 @@ public final class TabsDrawerProbe: QmlInstantiableStatus {
     public init() {}
 
     public func componentComplete() {}
+
+    public func stageCompleteState() {
+        var state = EditorViewState()
+        state.chrome.velocity = .init(visible: true, height: 173)
+        state.chrome.automation = .init(visible: true, height: 44)
+        state.chrome.voiceChanges = .init(visible: true, height: 55)
+        state.chrome.activePage = .automation
+        let floor = Int((AutomationPagePolicy.seedBaseFontPx * 7 / 3).rounded())
+        let ceiling = Int((AutomationPagePolicy.seedBaseFontPx * 32 / 3).rounded())
+        state.lanes.laneHeight = (floor + ceiling) / 2
+        state.lanes.laneHeights = ["cc:0:74": floor + 3, "cc:1:7": floor + 5]
+        state.lanes.laneRanges = ["cc:0:74": 90, "tempo": 100]
+        state.lanes.emptyLanes = [.init(track: 0, controller: 74)]
+        state.lanes.hiddenLanes = [.init(track: 1, controller: 7),
+                                   .init(track: 0, controller: 80)]
+        EditorViewStateCodec.save(state, store: PreferencesStore())
+    }
+
+    public func savedLaneRange(track: Int, controller: Int) -> Int {
+        EditorViewStateCodec.loadLanes(store: PreferencesStore())
+            .laneRanges["cc:\(track):\(controller)"] ?? -1
+    }
+
+    public func savedHiddenOrder() -> String {
+        EditorViewStateCodec.loadLanes(store: PreferencesStore()).hiddenLanes.map {
+            "\($0.track):\($0.controller)"
+        }.joined(separator: ",")
+    }
 
     public func fileFingerprint(path: String) -> String {
         guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else { return "" }

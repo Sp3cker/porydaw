@@ -43,7 +43,63 @@ public struct EditorLaneState: Equatable, Sendable {
     public var hiddenLanes: [Lane] = []
 
     public init() {}
+
+    /// Remaps track-owned lanes as one value, rejecting invalid destinations.
+    /// Returns false for rejection or an unchanged value.
+    public mutating func remapEngineTracks(_ map: [Int?]) -> Bool {
+        var destinations: Set<Int> = []
+        for destination in map.compactMap({ $0 }) {
+            guard (0...15).contains(destination), destinations.insert(destination).inserted else {
+                return false
+            }
+        }
+        func remap(_ lane: Lane) -> Lane? {
+            guard map.indices.contains(lane.track), let track = map[lane.track] else { return nil }
+            return Lane(track: track, controller: lane.controller)
+        }
+        func remapRows(_ rows: [String: Int]) -> [String: Int] {
+            var result: [String: Int] = [:]
+            for (key, value) in rows {
+                if key == "tempo" {
+                    result[key] = value
+                } else if case let .controlChange(track, controller) =
+                    EditorViewStateCodec.parameter(for: key),
+                    let lane = remap(Lane(track: track, controller: Int(controller))) {
+                    result["cc:\(lane.track):\(lane.controller)"] = value
+                } else if case let .pitchBend(track) = EditorViewStateCodec.parameter(for: key),
+                          let lane = remap(Lane(track: track, controller: 255)) {
+                    result["cc:\(lane.track):255"] = value
+                }
+            }
+            return result
+        }
+        var next = self
+        next.laneHeights = remapRows(laneHeights)
+        next.laneRanges = remapRows(laneRanges)
+        next.emptyLanes = Set(emptyLanes.compactMap(remap))
+        next.hiddenLanes = hiddenLanes.compactMap(remap)
+        guard next != self else { return false }
+        self = next
+        return true
+    }
 }
+
+/// One complete, presentation-only editor preference transaction.
+public struct EditorViewState: Equatable, Sendable {
+    public var chrome = EditorDrawerChromeState()
+    public var lanes = EditorLaneState()
+
+    public init() {}
+}
+
+extension EditorViewState {
+    /// Remaps track-owned lanes while preserving chrome.
+    /// Returns false for rejection or an unchanged value.
+    public mutating func remapEngineTracks(_ map: [Int?]) -> Bool {
+        lanes.remapEngineTracks(map)
+    }
+}
+
 
 public struct DrawerChromeSection: Equatable, Sendable {
     public var visible: Bool
@@ -67,6 +123,21 @@ public struct EditorDrawerChromeState: Equatable, Sendable {
 public enum EditorViewStateCodec {
     private static let lanesKey = "editorDrawer.automationLanes"
     private static let chromePrefix = "editorDrawer."
+
+    @MainActor
+    public static func load(store: PreferencesStore) -> EditorViewState {
+        var state = EditorViewState()
+        state.chrome = loadChrome(store: store)
+        state.lanes = loadLanes(store: store)
+        return state
+    }
+
+    @MainActor
+    public static func save(_ state: EditorViewState, store: PreferencesStore) {
+        writeChrome(state.chrome, store: store)
+        writeLanes(state.lanes, store: store)
+        store.synchronize()
+    }
 
     @MainActor
     public static func loadChrome(store: PreferencesStore) -> EditorDrawerChromeState {
@@ -93,6 +164,12 @@ public enum EditorViewStateCodec {
 
     @MainActor
     public static func saveChrome(_ state: EditorDrawerChromeState, store: PreferencesStore) {
+        writeChrome(state, store: store)
+        store.synchronize()
+    }
+
+    @MainActor
+    private static func writeChrome(_ state: EditorDrawerChromeState, store: PreferencesStore) {
         for (name, section) in [("velocity", state.velocity),
                                 ("automation", state.automation),
                                 ("voiceChanges", state.voiceChanges)] {
@@ -105,7 +182,6 @@ public enum EditorViewStateCodec {
             }
         }
         store.setString(key: chromePrefix + "activePage", value: state.activePage.name)
-        store.synchronize()
     }
 
 
@@ -138,9 +214,14 @@ public enum EditorViewStateCodec {
 
     @MainActor
     public static func saveLanes(_ state: EditorLaneState, store: PreferencesStore) {
+        writeLanes(state, store: store)
+        store.synchronize()
+    }
+
+    @MainActor
+    private static func writeLanes(_ state: EditorLaneState, store: PreferencesStore) {
         guard let bytes = encodeLanes(state) else { return }
         store.setData(lanesKey, bytes)
-        store.synchronize()
     }
 
     public static func decodeLanes(_ bytes: Data) -> EditorLaneState {

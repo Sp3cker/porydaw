@@ -180,14 +180,16 @@ extension ApplicationSession {
                 session.grid.axis = session.projectionCache.timeAxis
                 session.grid.setTicksPerClock(session.gridClockTicks)
             }
+            session.applyEditorViewStateProjection(editorViewState)
             let workspace = DocumentWorkspace(
                 session: session, audio: audio, playhead: playhead,
                 playheadGuides: playheadGuides, eventList: eventList, palette: palette,
                 typography: typography, callbacks: makeCallbacks(for: session))
-            workspace.onEditorChromeChanged = { [weak self] state in
-                self?.updateEditorChrome(state)
+            session.onEditorViewStateChanged = { [weak self, weak session] state in
+                guard let self, let session else { return }
+                self.publishEditorViewState(state, from: session)
             }
-            workspace.drawer.applyChrome(editorChrome)
+            workspace.drawer.applyChrome(session.editorViewState.chrome)
             if let tab {
                 // The first viewport normally homes the roll to the song's
                 // pitches. Complete that one-time initialization before
@@ -222,14 +224,15 @@ extension ApplicationSession {
                 workspace?.grid.refreshTimeSelectionHighlight()
                 self?.gridCommandAvailabilityChanged()
             }
-            workspace.automationPage.onLaneRangeChanged = { [weak self] parameter, range in
-                self?.updateEditorLaneRange(parameter: parameter, range: range)
-            }
-            workspace.automationPage.laneRanges = editorLanes.laneRanges.reduce(into: [:]) {
-                if let parameter = EditorViewStateCodec.parameter(for: $1.key) {
-                    $0[parameter] = $1.value
+            workspace.automationPage.onLaneRangeChanged = { [weak session] parameter, range in
+                guard let session, let key = EditorViewStateCodec.rowKey(for: parameter) else {
+                    return
                 }
+                var next = session.editorViewState
+                next.lanes.laneRanges[key] = range
+                session.setEditorViewState(next)
             }
+            workspace.automationPage.applyLaneRanges(session.editorViewState.lanes)
             workspace.automationPage.refreshCamera()
             guard !isDisposed, !Task.isCancelled else {
                 // The host is closing: nothing adopts this document.
@@ -317,31 +320,22 @@ extension ApplicationSession {
                                       store: preferences)
     }
 
-    private func updateEditorChrome(_ state: EditorDrawerChromeState) {
-        guard editorChrome != state else { return }
-        editorChrome = state
-        for tab in songTabs.allTabs where tab.workspace.drawer.chromeState != state {
-            tab.workspace.drawer.applyChrome(state)
-        }
-        if persistenceConfigured {
-            EditorViewStateCodec.saveChrome(state, store: preferences)
-            EditorViewStateCodec.saveLanes(editorLanes, store: preferences)
-        }
-    }
-
-    private func updateEditorLaneRange(parameter: AutomationParameter, range: Int) {
-        guard let key = EditorViewStateCodec.rowKey(for: parameter) else { return }
-        guard editorLanes.laneRanges[key] != range else { return }
-        editorLanes.laneRanges[key] = range
+    private func publishEditorViewState(_ state: EditorViewState, from origin: DocumentSession) {
+        guard songTabs.allTabs.contains(where: { $0.workspace.session === origin }),
+              editorViewState != state else { return }
+        editorViewState = state
         for tab in songTabs.allTabs {
-            let page = tab.workspace.automationPage
-            if page.laneRanges[parameter] != range {
-                page.laneRanges[parameter] = range
-                page.refreshCamera()
+            let workspace = tab.workspace
+            if workspace.session !== origin {
+                workspace.session.applyEditorViewStateProjection(state)
             }
+            workspace.drawer.applyChrome(state.chrome)
+            workspace.automationPage.applyLaneRanges(state.lanes)
         }
+        onEditorViewStateChanged?(state)
         if persistenceConfigured {
-            EditorViewStateCodec.saveLanes(editorLanes, store: preferences)
+            EditorViewStateCodec.save(state, store: preferences)
+            onEditorViewStatePersisted?(state)
         }
     }
 

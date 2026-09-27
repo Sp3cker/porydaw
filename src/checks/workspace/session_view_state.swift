@@ -118,6 +118,8 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
                        cppID: recipeID,
                        what: "an explicitly empty ordered-song key stays empty despite a selected label")
     _ = store.resetPreferences()
+    runCompleteEditorViewStateChecks(report: report, store: store, fixtureRoot: fixtureRoot)
+    _ = store.resetPreferences()
     var seed = EditorDrawerChromeState()
     seed.velocity = .init(visible: true, height: 173)
     seed.automation = .init(visible: false, height: 64)

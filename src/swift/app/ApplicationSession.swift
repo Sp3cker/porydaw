@@ -105,9 +105,14 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored
     var persistenceConfigured = false
     @QtIgnored
-    var editorLanes = EditorLaneState()
+    var editorViewState = EditorViewState()
     @QtIgnored
-    public internal(set) var editorChrome = EditorDrawerChromeState()
+    public var editorChrome: EditorDrawerChromeState { editorViewState.chrome }
+    @QtIgnored
+    public var onEditorViewStateChanged: ((EditorViewState) -> Void)?
+    @QtIgnored
+    public var onEditorViewStatePersisted: ((EditorViewState) -> Void)?
+
 
     @QtIgnored
     var isRestoringTabs = false
@@ -391,6 +396,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtSignal public func openFailed(message: String)
     @QtSignal public func operationFailed(message: String)
     @QtSignal public func allTabsClosed()
+
     @QtSignal public func closeCancelled()
     @QtSignal public func changeTrackVoiceRequested(track: Int)
     @QtSignal public func addTrackVoiceRequested()
@@ -419,10 +425,11 @@ public final class ApplicationSession: QmlInstantiableStatus {
     // MARK: - Project and song opens
     public func configurePersistence() {
         persistenceConfigured = true
-        editorChrome = EditorViewStateCodec.loadChrome(store: preferences)
-        editorLanes = EditorViewStateCodec.loadLanes(store: preferences)
+        editorViewState = EditorViewStateCodec.load(store: preferences)
         for tab in songTabs.allTabs {
-            tab.workspace.drawer.applyChrome(editorChrome)
+            tab.workspace.session.applyEditorViewStateProjection(editorViewState)
+            tab.workspace.drawer.applyChrome(editorViewState.chrome)
+            tab.workspace.automationPage.applyLaneRanges(editorViewState.lanes)
         }
     }
 

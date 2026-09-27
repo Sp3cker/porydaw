@@ -77,6 +77,8 @@ public final class DocumentSession {
     public var bankDirty: Bool { sharedBank.value.dirty }
     public var bankLoadName: String { sharedBank.value.loadName }
     public private(set) var isClosed = false
+    public private(set) var editorViewState = EditorViewState()
+
 
     /// Selection order is authoritative; membership is its cached lookup index.
     /// Both are session-only and never dirty the document or enter history.
@@ -126,6 +128,9 @@ public final class DocumentSession {
     /// Session-state callback. Document changes invoke it after selection
     /// reconciliation, timeline rebuild, and playback publication.
     public var onChange: ((SessionChange) -> Void)?
+    /// A changed origin publishes once; sibling projections do not publish.
+    public var onEditorViewStateChanged: ((EditorViewState) -> Void)?
+
     public var onPlayback: ((PlaybackTimeline) -> Void)?
     internal var selectionTransitionObservers: [UUID: (SelectionTransition) -> Void] = [:]
     /// Presentation-only camera publication. The document workspace is the sole subscriber.
@@ -133,6 +138,20 @@ public final class DocumentSession {
     /// Camera publication with the field-level delta used by the workspace
     /// to choose projection-only drawer updates.
     public var onCameraChangeDetailed: ((EditorCamera.Snapshot, EditorCamera.Change) -> Void)?
+
+    /// Sets presentation-only editor state without document history.
+    /// Returns true only for a changed value and publishes its origin once.
+    @discardableResult
+    public func setEditorViewState(_ state: EditorViewState) -> Bool {
+        guard editorViewState != state else { return false }
+        editorViewState = state
+        onEditorViewStateChanged?(state)
+        return true
+    }
+
+    internal func applyEditorViewStateProjection(_ state: EditorViewState) {
+        editorViewState = state
+    }
 
     public func addSelectionTransitionObserver(_ observer: @escaping (SelectionTransition) -> Void) -> UUID {
         let token = UUID()
@@ -447,6 +466,7 @@ public final class DocumentSession {
     public func close() async -> Bool {
         guard !bankPersistenceInFlight, !document.history.bankTransitionInFlight else { return false }
         onChange = nil
+        onEditorViewStateChanged = nil
         selectionTransitionObservers.removeAll()
         onPlayback = nil
         onCameraChange = nil

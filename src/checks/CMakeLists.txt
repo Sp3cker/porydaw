@@ -280,6 +280,7 @@ if(APPLE)
         workspace/session_support.swift
         workspace/editor_view_state_checks.swift
         workspace/session_view_state.swift
+        workspace/session_view_state_fanout.swift
         workspace/transport_checks.swift
         workspace/session_fixtures.swift
         workspace/session_editor_semantics.swift

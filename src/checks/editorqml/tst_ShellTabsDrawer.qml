@@ -446,4 +446,134 @@ ShellTabsSupport {
             return tab && tab.checked
         }, 3000, "the restored first song presents Pan over its new primary track")
     }
+    function test_completeEditorStateRangeAndHeaderMove() {
+        fileProbe.stageCompleteState()
+        var ids = openShell(["mus_route101", "mus_littleroot_test"])
+        var firstId = ids[0]
+        var secondId = ids[1]
+        clickSelectTab(firstId)
+        var first = surfaceOf(firstId)
+        compare(fileProbe.savedLaneRange(0, 74), 90,
+                "complete seeded editor preference retains CC74 range 90")
+        compare(fileProbe.savedHiddenOrder(), "1:7,0:80",
+                "complete seeded editor preference retains hidden lane order")
+        compare(volumeAxisLabels(firstId).join(","), "127,0",
+                "the mounted Volume axis starts at its independent default 127")
+        clickSelectTab(secondId)
+        tryVerify(function() {
+            return volumeAxisLabels(secondId).indexOf("127") >= 0
+        }, 3000, "the sibling Volume axis retains its default before a real range gesture")
+        clickSelectTab(firstId)
+        var firstBytes = fileProbe.fileFingerprint(
+            fileProbe.songPath(bootstrap.projectRoot, "mus_route101"))
+        var baselineNotes = JSON.parse(summaryOf(firstId))
+        baselineNotes.sort(function(a, b) { return a.id - b.id })
+        var baseline = JSON.stringify(baselineNotes.map(function(note) {
+            return [note.id, note.tick, note.duration, note.pitch, note.track, note.velocity]
+        }))
+        var tab = findChild(first, "automationParameterTab0")
+        verify(tab !== null, "the mounted selected automation tab exists")
+        verify(tab.visible, "the mounted selected automation tab is visible")
+        compare(tab.text, "Volume", "the mounted selected automation tab is Volume")
+        mouseClick(tab, tab.width / 2, tab.height / 2, Qt.RightButton)
+        var menu = findChild(first, "automationMenuPanel")
+        var rangeRow = null
+        tryVerify(function() {
+            return menu !== null && menu.visible
+        }, 3000, "a real Volume menu opens from the mounted tab")
+        tryVerify(function() {
+            for (var index = 0; index < menu.rowCount; ++index) {
+                var row = menu.rowItem(index)
+                if (row && row.model.actionId === 12) rangeRow = row
+            }
+            return rangeRow !== null
+        }, 3000, "the real Volume menu contains a Range action")
+        tryVerify(function() {
+            return rangeRow.visible
+        }, 3000, "the Volume Range action is visible")
+        mouseMove(rangeRow, rangeRow.width / 2, rangeRow.height / 2)
+        var submenu = findChild(first, "automationMenuSubmenu")
+        var halfRange = null
+        tryVerify(function() {
+            return submenu !== null && submenu.visible
+        }, 3000, "hovering Range opens the real submenu")
+        tryVerify(function() {
+            for (var index = 0; index < submenu.rowCount; ++index) {
+                var row = submenu.rowItem(index)
+                if (row && row.model.actionId === 16) halfRange = row
+            }
+            return halfRange !== null
+        }, 3000, "the Range submenu contains a 0–64 action")
+        tryVerify(function() {
+            return halfRange.visible
+        }, 3000, "the 0–64 submenu action is visible")
+        mouseClick(halfRange, halfRange.width / 2, halfRange.height / 2)
+        tryVerify(function() {
+            return fileProbe.savedLaneRange(0, 7) === 64
+        }, 5000, "choosing the real 0–64 Volume action persists CC7 range 64")
+        compare(fileProbe.savedLaneRange(0, 74), 90,
+                "choosing the Volume range preserves independent CC74 range 90")
+        tryVerify(function() {
+            return volumeAxisLabels(firstId).indexOf("64") >= 0
+        }, 5000, "the origin paints a Volume axis maximum of 64")
+        keyClick(Qt.Key_Escape)
+        clickSelectTab(secondId)
+        tryVerify(function() {
+            return volumeAxisLabels(secondId).indexOf("64") >= 0
+        }, 3000, "the sibling paints the 0–64 range after tab switch")
+        clickSelectTab(firstId)
+        var header = findChild(first, "timelineTrackHeadersInput")
+        var rows = findChild(first, "timelineTrackHeaderRows")
+        verify(header !== null, "the mounted track header exists")
+        verify(rows !== null, "the mounted track header pointer rows exist")
+        verify(rows.count >= 2, "the mounted track header exposes two real pointer rows")
+        verify(first.headersModel.rowHeight > 0, "the mounted header exposes positive row height")
+        var rowHeight = first.headersModel.rowHeight
+        var title = rows.itemAt(1).titleRect
+        var x = title.x + title.width / 2
+        var startY = rowHeight + title.y + title.height / 2 - first.headersModel.scrollY
+        var endY = rowHeight * 0.1 - first.headersModel.scrollY
+        verify(startY > 0 && startY < header.height,
+               "the second track header pointer target is visible")
+        verify(endY > 0 && endY < header.height,
+               "the first-row drop slot pointer target is visible")
+        mousePress(header, x, startY, Qt.LeftButton)
+        mouseMove(header, x, endY, 20, Qt.LeftButton)
+        mouseRelease(header, x, endY, Qt.LeftButton)
+        tryVerify(function() {
+            return fileProbe.savedLaneRange(1, 7) === 64
+        }, 5000, "real header reorder remaps CC7 range to engine track one")
+        compare(fileProbe.savedLaneRange(1, 74), 90,
+                "real header reorder remaps CC74 range to engine track one")
+        compare(fileProbe.savedLaneRange(0, 74), -1,
+                "real header reorder removes old CC74 track identity")
+        compare(fileProbe.savedHiddenOrder(), "0:7,1:80",
+                "real header reorder preserves ordered hidden CC identities")
+        keySequence(StandardKey.Undo)
+        verify(waitForNative(function() {
+            return fileProbe.savedLaneRange(0, 7) === 64
+        }, 5000), "Undo restores CC7 range to engine track zero")
+        compare(fileProbe.savedLaneRange(0, 74), 90,
+                "Undo restores CC74 range to engine track zero")
+        compare(fileProbe.savedLaneRange(1, 74), -1,
+                "Undo removes old CC74 engine-track-one identity")
+        compare(fileProbe.savedHiddenOrder(), "1:7,0:80",
+                "Undo restores ordered hidden CC identities")
+        verify(waitForNative(function() {
+            return !session().documentDirty
+        }, 5000), "Undo restores a clean MIDI document")
+        verify(!session().canUndo, "Undo exhausts the original document history")
+        clickSelectTab(secondId)
+        tryVerify(function() {
+            return volumeAxisLabels(secondId).indexOf("64") >= 0
+        }, 3000, "the sibling paints the restored Volume range after tab switch")
+        var restoredNotes = JSON.parse(summaryOf(firstId))
+        restoredNotes.sort(function(a, b) { return a.id - b.id })
+        compare(JSON.stringify(restoredNotes.map(function(note) {
+            return [note.id, note.tick, note.duration, note.pitch, note.track, note.velocity]
+        })), baseline, "Undo restores source MIDI note identity and content")
+        compare(fileProbe.fileFingerprint(
+            fileProbe.songPath(bootstrap.projectRoot, "mus_route101")), firstBytes,
+                "the cosmetic range and restored move never change saved MIDI bytes")
+    }
 }
