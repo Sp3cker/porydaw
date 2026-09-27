@@ -18,8 +18,9 @@ Status: **in execution.** Landed: 52 (32aa160d), 53 (e7c58e06) + 53b (342dc379),
 (acdcd7e0), 129 (3b9bdd06), 130 (7c4f393b), 131 (236b8e7d), 132 (c9088d17), 133 (c2fe633e),
 134 (df5d2c3c), 135 (99f51fb7), 136 (8b086787), 137 (97363697), 138 (e4aa0296); bank-edit
 undo gate (3fbfe933). Resize sweep 9.9 s → 1.5–2.1 s with no per-resize or per-scroll scene
-rebuild; user grid rework 7e292570. Next: wave 139+ (§16). Proof files: 155 → 69 (fully
-closed ledgers deleted); open GAP+PARTIAL rows 3703 → 1575 (1246 GAP + 329 PARTIAL).
+rebuild; user grid rework 7e292570. Next: wave 147–154 (§17), with 144/146 finishing
+under §16. Historical pre-139 census: proof files 155 → 69; open GAP+PARTIAL rows
+3703 → 1575 (1246 GAP + 329 PARTIAL). Wave-147 planning census: 68 ledgers.
 Known residues: QtBridge queues property notifications, so same-GUI-pass geometry clauses
 (host A095) stay PARTIAL; lanes use the null audio backend, so physical-output conjuncts
 stay PARTIAL.
@@ -2356,4 +2357,175 @@ write paths, brief links/headings and the computed conflict matrix.
   unselected mutation/signal/sidecar clauses remain open.
 - The 190 strict-mapping errors outside the four named ledgers and any
   explicitly unproved selected clauses are deferred, not silently upgraded.
+
+## 17. Wave 147–154 — registration closure and remaining project consumers
+
+### Selection and bounded briefs
+
+Planning baseline: `deno task proof list` reports **68 ledgers** while
+144/146 are still in flight. Counts below are the selected rows' live
+dispositions, not historical header tallies. Planning used per-area and
+per-file `proof sites ... --status GAP` / `PARTIAL`, inspected current
+Swift/QML owners and check registration, and read fork source with
+`git show fceecd88:<path>`. The unscoped `proof sites --status GAP` form is
+invalid; use `--area` or a source path.
+
+Select **165 open rows (141 GAP + 24 PARTIAL)** across eight bounded
+surfaces. Prioritize three whole-ledger candidates (action, support,
+regionedlayout: 97 open rows) without pretending every remaining project
+worker protocol or native raster clause is portable owner behavior.
+Each brief contains the exact A-id/fork-line inventory and setup-only
+classification; these tables intentionally do not repeat it.
+
+| Task | Surface / brief | GAP | PARTIAL | Group | Route / seat |
+|---|---|---:|---:|---|---|
+| 147 | [Charmap-only Register repair, clean open-song deletion and fallback refusal](task-147-brief.md) | 40 | 9 | B | SDD-track / sdd-implementer — mounted confirmation, disk and tab outcomes |
+| 148 | [Music-player limits reach opened project metadata](task-148-brief.md) | 13 | 0 | A | SDD-track / sdd-implementer — symbolic parser and effective-budget boundary |
+| 149 | [Persisted MIDI import discovery and real compiler roundtrip](task-149-brief.md) | 18 | 0 | A | SDD-track / sdd-implementer — file/project/compiler boundary, not wizard UI |
+| 150 | [Regioned remove/re-register marker repair and exact bytes](task-150-brief.md) | 35 | 0 | A | SDD-track / sdd-implementer — numeric/alias/migration/overflow invariants |
+| 151 | [Song identity in registration/deletion plans and catalog reads](task-151-brief.md) | 12 | 0 | A | SDD-track / sdd-implementer — plan consumers without a fake FIFO |
+| 152 | [Coherent workspace bank view and applied receipt](task-152-brief.md) | 0 | 15 | B | SDD-track / sdd-implementer — conflict and publication identity |
+| 153 | [Bare and bank-recipe save flags and refreshed identity](task-153-brief.md) | 16 | 0 | B | SDD-track / sdd-implementer — ordered persistence and receipt semantics |
+| 154 | [Mounted header voice-picker filter, reveal and Escape](task-154-brief.md) | 7 | 0 | A | SDD-track / sdd-implementer — actual header prompt, not request-only coverage |
+| **Total** | | **141** | **24** | | |
+
+The four-to-six-file write sets are explicit cohesive-surface exceptions:
+each contains its real owner, existing check host and one ledger, with no
+new manifest or runner registration. None is a standalone mapping/debt pass.
+Already-proven clauses reuse their existing predicates; do not duplicate
+journeys merely to attach IDs. Setup guards are not new passing assertions.
+
+### Conflict matrix and dispatch groups
+
+`—` means disjoint complete write sets, including conditional production
+repairs and ledgers. There are **no intra-wave C or L conflicts**. Read-only
+consumption of another task's owner and use of a common lane are not writes.
+The complete closed paths live in each brief.
+
+| | 147 | 148 | 149 | 150 | 151 | 152 | 153 | 154 |
+|---|---|---|---|---|---|---|---|---|
+| 147 | — | — | — | — | — | — | — | — |
+| 148 | — | — | — | — | — | — | — | — |
+| 149 | — | — | — | — | — | — | — | — |
+| 150 | — | — | — | — | — | — | — | — |
+| 151 | — | — | — | — | — | — | — | — |
+| 152 | — | — | — | — | — | — | — | — |
+| 153 | — | — | — | — | — | — | — | — |
+| 154 | — | — | — | — | — | — | — | — |
+
+| Group | Tasks | Prior-wave ownership gate / checkpoint |
+|---|---|---|
+| A | 148, 149, 150, 151, 154 | Accepted/checkpointed 139–143 and 145; no interface waits for 144/146. All five are independent writers. |
+| B | 147, 152, 153 | Accepted/checkpointed 144 and 146 before file reuse. B may overlap unfinished A because its complete write sets are disjoint; it does not consume new A interfaces. |
+
+Prior-wave reuse is concrete: 147 reuses `ShellQmlTests.swift` after 146;
+152 reuses `DocumentSession.swift` after 144 and `bank_edits.swift` after
+141/146; 153 reuses `session_save.swift` after 140/146. Neither group touches
+`session_view_state_fanout.swift`, `tst_ShellTabsClose.qml`, host ledgers,
+Task146's four debt ledgers, or its in-flight clipboard/focus/parameter/
+label QML files. Do not reset or restage a sibling's edits.
+
+Single-owner boundaries: 150 owns region algorithms; 151 owns service/store
+plan adapters; 148 owns catalog/open budget mapping; 149 owns import/codec/
+flags-writing checks; 153 alone owns `ProjectService+Bank.swift` (save methods
+only); 152 consumes its edit methods read-only. No shared CMake,
+`ShellQmlEntries.swift`, `SessionChecks.swift` or other runner-manifest writes.
+If a demonstrated defect falls outside a closed set, stop for rebriefing
+instead of creating an undeclared second writer.
+
+Checkpoint accepted prior writers once at the B ownership gate, batching
+other accepted A work when ready; persist remaining accepted work at final
+handoff. There is no per-task commit requirement or A→B dependency added
+merely for bookkeeping.
+
+### Shared constraints and verification ownership
+
+The fork/independent-literal/fail-closed rules in §16 continue. Setup and
+error-buffer mechanics are classified separately, never mapped to a bare
+successful call. Retire only representation, not visible behavior. Fresh
+executed message predicates are required for every upgraded behavior row;
+the separate ledger writer updates only that task's rows with the proving
+source/check change. Whole-ledger deletion requires every row closed and
+the corresponding old check source removed if still present. The three
+candidate onboarding `.cpp` sources are already absent from the live tree.
+No production C++ deletion is authorized by this wave.
+
+For this wave, writers perform read-only/local structural inspection while
+parallel edits are active; the controller runs the exact brief commands
+once their shared compiled sources settle, under the lock/alarm policy.
+This supersedes §16's implementer-owned focused-run timing for this wave,
+not its evidence requirement. Deduplicate identical lane commands across
+tasks, retain each task's named predicate evidence and hand settled checks
+to the ledger writer. Do not run project-wide builds/tests, lint or
+formatters mid-flight. Reuse the brief commands without rediscovery unless
+a concrete registration mismatch or scope change is documented.
+
+Covering lanes are `shell-songs`, `projectstore-open`,
+`swiftcore-midiimport`, `swiftcore-projectsession`,
+`swiftcore-bankhistory` and `verify:qml-roll`; their exact locked commands
+are in the briefs. Important registration distinctions: bank receipt checks
+run from `runBankHistorySuite`, not `runProjectSessionSuite`; import's
+compiler seam only discovers registered song-table entries, so its two
+compiler variants are registered while the roundtrip/discovery label stays
+unregistered; the header picker mounts `VoicePickerPrompt.qml`, not the
+drawer `VoicePicker.qml`. Native QML lanes require the macOS Qt desktop.
+No null-backend result proves physical audio.
+
+After all accepted sources settle, the controller owns the project-wide
+integration gate once, using §16's locked `verify --verbose` and
+`verify:shell --verbose`, plus the focused roll lane above and
+`deno task proof check --executed`. Run `deno task proof check
+--strict-mappings` only as an exact debt inventory: remaining out-of-scope
+errors are not a pass and this wave does not renew 146's mechanical
+exception. Planning checks validate documentation paths, headings, links,
+selected dispositions, fork assertion-start citations and the computed
+write-set intersections; this docs-only commit runs no application suite.
+
+### Retirement flags and retained boundaries
+
+**Whole-ledger candidates:** action (49), support (13), regionedlayout
+(35 remaining) can be deleted after their selected surface passes and all
+setup/representation rows are disposed alongside the proving change.
+Their current GAP preambles are stale; that is not permission for a
+ledger-only cleanup.
+
+**No all-nonportable remainder was evidence-certified among the inspected
+retirement candidates.** Do not delete a ledger merely because its original
+C++ harness no longer builds. The following negative flags are deliberate:
+
+| Ledger / remaining obligation | Evidence against blanket nonportable retirement |
+|---|---|
+| `retained/proof.tst_nativeboundaries.txt` (18 GAP) | Fork `tst_nativeboundaries.cpp:157–249` checks project open/song/bank publication, compiler/save, bank identity and loop/player progression through old C ABI units. A015–A019 (`:266–294`) include excluded export/audio. API-specific setup is representation; portable publication/save obligations and exclusions are not whole-ledger retirement evidence. |
+| `nativegraphics/proof.tst_nativewindowing.txt` (35 GAP before 154) | A002/A008 (`:130,164`) are Win32 `WM_ERASEBKGND` representation candidates. A030–A036 are the live picker consumer selected by 154; A047 (`:304`) is persisted contrast 100; A055–A078 (`:405–460`) retain real rendered shrink/clear/reactivation outcomes. The removed chunk-store implementation alone cannot retire those pixels. |
+| `swiftrollbench/proof.tst_swiftrollbench.txt` (6 GAP) | A009–A014 require published roll geometry, actual frames and moved scroll/zoom viewports. A dead timing harness does not make the viewport/render outcomes obsolete. |
+| `swiftqtml/proof.tst_swiftqtml.txt` (78 GAP) | Synthetic BridgeProbe rows include live QtBridge model/replacement/delegate behaviors; a prototype-only fixture label is insufficient evidence that every framework contract is dead. No retirement certificate is claimed without a consumer audit. |
+| Small PARTIAL tails | Automation presentation A037 still lacks a permanent physical DPR2 pencil-ink predicate; roll selection A009 retains audition sample-duration; windowtier lifetime A054 retains mounted in-memory song-byte isolation. These are coverage/infrastructure gaps, not all-representation tails. |
+
+These are flags, not ledger edits. Native poryaaaa, clipboard/font and
+`src/project/` boundaries remain retained under AGENTS.md; neither a
+service test nor a screenshot authorizes deleting their implementation.
+
+### Deferred and excluded
+
+Only this wave's exact selected rows supersede §16 deferrals. In particular:
+
+- Import wizard A046–A078 remains unbuilt; model/file compilation is not
+  evidence for its controls, name sanitization, overflow refusal or accept.
+- Project FIFO/result-count/catalog-preemption/stage-order protocols remain
+  open. Swift's awaited value APIs are not a replacement event log.
+  Workspace A003/A004 loading refusal and the pending-reload input gate
+  stay deferred; workspace A099/A100 ghost-ID edit remains PARTIAL, not
+  substituted with a foreign lease or arbitrary filesystem failure.
+- Iomutations preview cleanup, creation-collision and shutdown rows remain
+  open. A registration method that preserves an existing MIDI is not proof
+  of an unbuilt New Song creation collision.
+- Mainwindowrouting open clusters were inspected but not selected ahead of
+  three eligible onboarding ledger closures. Whole-project view-only byte
+  snapshots (`state` A164/A171) and actual native/window close and routing
+  observations still need their own consumer evidence; Task144's tab-close
+  lane must not be relabeled as window-close proof.
+- Savecore A016–A026 catalog-outage policy; P3 WAV export; P4 sample studio;
+  transport A009/A010/A013; physical audio output; ImageIO decoding; and
+  pending-reload input gating remain excluded. No strict-mapping debt
+  outside Task146's approved exception is selected.
 
