@@ -320,9 +320,11 @@ TestCase {
             for (var kind = 0; kind < 3; ++kind)
                 drawer.setSectionVisible(kind, true, false)
             tryVerify(function() {
-                return drawer.velocitySection.bodyHeight > 0
-                    && drawer.automationSection.bodyHeight > 0
-                    && drawer.voiceChangesSection.bodyHeight > 0
+                var sections = [drawer.velocitySection, drawer.automationSection,
+                                drawer.voiceChangesSection]
+                return sections.every(function(section) {
+                    return section.visible && section.bodyWidth > 0 && section.bodyHeight > 0
+                })
             }, 5000, "all three mounted drawer bands have published nonempty bodies")
             tryVerify(function() {
                 var names = ["velocityPlotInput", "automationPlot", "voicePlotInput"]
@@ -344,6 +346,15 @@ TestCase {
                 return velocityBody.height !== before.height
                        && sceneRect(handle).y + handle.height === sceneRect(velocityBody).y
             }, 5000, "resizing the mounted velocity section changes its physical body")
+            var drawerItem = findChild(s, "editorDrawer")
+            tryVerify(function() {
+                var published = drawer.section(1)
+                var physical = sceneRect(velocityBody)
+                return published.visible
+                       && sameRect(physical, Qt.rect(drawerItem.x + published.bodyX,
+                                                     drawerItem.y + published.bodyY,
+                                                     published.bodyWidth, published.bodyHeight))
+            }, 5000, "resized velocity body rect equals the published section geometry")
             hostBandGeometry()
             var variants = [
                 { kind: 1, body: "drawerBody_velocity", page: "velocityPage",
@@ -384,13 +395,42 @@ TestCase {
                     var g = drawer.section(entry.kind)
                     return !g.visible && g.bodyWidth === 0 && g.bodyHeight === 0
                 }, 5000, entry.absent)
+                var hidden = drawer.section(entry.kind)
+                verify(!hidden.visible && hidden.bodyWidth === 0 && hidden.bodyHeight === 0,
+                       "hidden drawer band has no published active body extent")
                 tryVerify(function() { return !body.visible && !body.enabled }, 5000,
                           entry.inactive)
+                verify(!body.visible, "hidden drawer band body is physically invisible")
+                var hiddenRect = sceneRect(body)
+                verify(hiddenRect.width === 0 && hiddenRect.height === 0,
+                       "hidden drawer band publishes an empty physical body rect")
                 verify(!effectivelyVisible(plot, body), entry.plotHidden)
                 verify(!effectivelyVisible(gutter, body), entry.gutterHidden)
                 drawer.setSectionVisible(entry.kind, true, false)
                 tryVerify(function() { return sameRect(sceneRect(body), saved) }, 5000,
                           entry.restoreMessage)
+                tryVerify(function() {
+                    var geometry = drawer.section(entry.kind)
+                    var physical = sceneRect(body)
+                    return sameRect(physical, saved)
+                           && sameRect(physical, Qt.rect(drawerItem.x + geometry.bodyX,
+                                                          drawerItem.y + geometry.bodyY,
+                                                          geometry.bodyWidth, geometry.bodyHeight))
+                }, 5000, "restored drawer band recovers its saved published body rect")
+                var restored = drawer.section(entry.kind)
+                var restoredRect = sceneRect(body)
+                verify(restored.visible && effectivelyVisible(body, drawerItem),
+                       "restored drawer band publishes visible physical body")
+                var split = s.headersModel.trackHeaderWidth + s.gridModel.keyboardWidth
+                verify(effectivelyVisible(plot, body) && effectivelyVisible(gutter, body)
+                       && sameRect(sceneRect(plot),
+                                   Qt.rect(split, restoredRect.y,
+                                           restoredRect.x + restored.bodyWidth - split,
+                                           restored.bodyHeight))
+                       && sameRect(sceneRect(gutter),
+                                   Qt.rect(restoredRect.x, restoredRect.y,
+                                           split - restoredRect.x, restored.bodyHeight)),
+                       "restored drawer plot and gutter inputs tile published section geometry")
                 hostBandGeometry()
             }
             session.songTabs.setSelectedTabEventsVisible(true)

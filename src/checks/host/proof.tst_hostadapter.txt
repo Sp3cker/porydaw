@@ -5,7 +5,7 @@ Original: src/checks/host/tst_hostadapter.cpp
 Original SHA-256: 6e63b0766e5899601bb5a68b18a516715fe0669549a1929c4bc43ddb550c1bbe
 Swift counterpart: src/checks/rollqml/tst_SwiftRollTrackHeaders.qml :: test_mountedRulerRollVelocityAndDrawerChromeGeometry
 Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml (converted QML drawer lane)
-Additional Swift counterpart: src/checks/rollqml/tst_SwiftRollPlots.qml (converted QML roll lane)
+Additional Swift counterpart: src/checks/rollqml/tst_SwiftRollPlots.qml (converted QML roll lane; SHA-256 b4fca80de33783a5373ce4508bc15b888887c3c40f153f9f11179ae4c8807e36)
 Additional Swift counterpart: src/checks/drawerpresentation/other_events_band.swift
 Additional Swift counterpart: src/checks/rollcheck/ruler_loop_menu.swift
 Additional Swift counterpart: src/checks/host/HostBehaviorChecks.swift :: hostNoteDiscovery + hostVelocityMarker + hostCosmeticOnly + hostAutomationTempo + hostPlayheadFollowing + hostVelocityAxisVoice (SHA-256 e310f9ed4cefe927cfdbe7ffae749e4ae2c82f9029a1f72e69c6ce498e4f7336)
@@ -24,6 +24,8 @@ Command: deno task verify --filter swiftcore-projectsession; PORYDAW_ROLL_QML_SU
 Result: PASS 1/36 swiftcore-projectsession ok plus 1/1 on each roll lane (task-67 locked runs on the frozen tree, quoted from the implementer handoff; ledger writer ran no lane). Execution evidence: build/proof-evidence/swiftcore-projectsession.json lists the HostBehaviorChecks messages anchored as S023-S026/S035-S036 below, and build/proof-evidence/swiftroll-window.json lists the executed QML functions anchored as S027-S034 below.
 Command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-projectsession --verbose
 Result: The implementer handoff reports all 14 selected A predicates PASS (artifact://7611 lines 6192–6203, 7462–7465), while the aggregate lane FAILED on unrelated project-workspace failedOpenRetainsLiveProject and HostBehaviorChecks playheadFollowing (Noise expected, Square 2 observed). Evidence provenance: Task143 handoff; this ledger writer ran no verification lane. The final counterpart source SHA-256 values are recorded above.
+Command: deno task verify:qml-roll --filter swiftroll-window
+Result: Mounted test_hostMountedBandsResizeHideAndEventList passes; the full swiftroll-window lane is transiently red only on a sibling's in-flight tst_SwiftRollTrackHeaders.qml. Verification evidence and provenance: Task156 handoff/controller report; ledger writer ran no lane.
 
 Command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-projectsession --verbose
 Result: PASS 1/36 ok (Task142 implementer handoff; ledger writer ran no lane). Execution evidence: the frozen HostBehaviorChecks.swift SHA-256 e310f9ed4cefe927cfdbe7ffae749e4ae2c82f9029a1f72e69c6ce498e4f7336 and the handoff predicate report anchor A013/A015/A016/A164/A165/A168 in the HostBehaviorChecks message set; no Task142 failures reported.
@@ -569,8 +571,8 @@ A092 | bandGeometryPublishesWithTheChoreography | src/checks/host/tst_hostadapte
 Disposition: RETIRED-REPRESENTATION
 
 A093 | bandGeometryPublishesWithTheChoreography | src/checks/host/tst_hostadapter.cpp:316
-Disposition: PARTIAL
-Mapping/reason: S046 confirms the three mounted drawer bodies have nonempty published geometry before resize; unproved: the original canonical TimelineBandLayout geometry presence.
+Disposition: MATCHED
+Mapping: S046
 Source context since previous assertion:
   ;
           const DrawerChrome &chrome = drawer->chrome();
@@ -580,8 +582,8 @@ Original expression:
   QVERIFY(before.has_value())
 
 A094 | bandGeometryPublishesWithTheChoreography | src/checks/host/tst_hostadapter.cpp:320
-Disposition: PARTIAL
-Mapping/reason: S047 proves the mounted velocity body changes after resize; unproved: the original canonical TimelineBandLayout geometry presence after the choreography.
+Disposition: MATCHED
+Mapping: S047
 Source context since previous assertion:
   ;
 
@@ -601,8 +603,8 @@ Original expression:
   QVERIFY(after->rect != before->rect)
 
 A096 | bandGeometryPublishesWithTheChoreography | src/checks/host/tst_hostadapter.cpp:327
-Disposition: PARTIAL
-Mapping/reason: S038/S047 prove the mounted velocity body follows independently published section geometry and changes after resize; unproved: equality of the removed velocityBandRect root property to canonical layout geometry, including same-GUI-pass publication.
+Disposition: MATCHED
+Mapping: S113
 Source context since previous assertion:
   ;
           // No event-loop pump: the drawer chrome snapshot publishes through
@@ -667,8 +669,8 @@ A100 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:362
 Disposition: RETIRED-REPRESENTATION
 
 A101 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:365
-Disposition: PARTIAL
-Mapping/reason: S048/S049/S050 prove the velocity, automation and voice-change section geometry publishes zero body width and height after each is hidden; unproved: absence from the original canonical TimelineBandLayout.
+Disposition: MATCHED
+Mapping: S114
 Source context since previous assertion:
   ;
           view.setDrawerSectionVisible(page, false);
@@ -678,8 +680,8 @@ Original expression:
   QVERIFY(!view.timelineBandLayout().geometry(band).has_value())
 
 A102 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:366
-Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the hidden band visible property cleared on the QML root; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S115
 Source context since previous assertion:
   ;
 
@@ -687,8 +689,8 @@ Original expression:
   QVERIFY(!root->property(qPrintable(visibleProperty)).toBool())
 
 A103 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:367
-Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the hidden band rect property cleared on the QML root; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S116
 Source context since previous assertion:
   ;
 
@@ -737,8 +739,8 @@ Original expression:
   QVERIFY(!gutter->isVisible())
 
 A107 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:387
-Disposition: PARTIAL
-Mapping/reason: S060/S061/S062 prove each restored drawer body returns to its exact prior physical geometry; unproved: presence in the original canonical TimelineBandLayout.
+Disposition: MATCHED
+Mapping: S117
 Source context since previous assertion:
   ;
           view.setDrawerSectionVisible(page, true);
@@ -748,8 +750,8 @@ Original expression:
   QVERIFY(view.timelineBandLayout().geometry(band).has_value())
 
 A108 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:388
-Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the restored band visible property on the QML root; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S118
 Source context since previous assertion:
   ;
 
@@ -757,8 +759,8 @@ Original expression:
   QVERIFY(root->property(qPrintable(visibleProperty)).toBool())
 
 A109 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:389
-Disposition: PARTIAL
-Mapping/reason: S039/S042/S045 re-run after restoration and prove the mounted drawer plot and gutter tile the Swift-published section body geometry; unproved: correspondence to the original canonical TimelineBandLayout and its complete mapped bounds.
+Disposition: MATCHED
+Mapping: S119
 Source context since previous assertion:
   ;
 
@@ -1479,9 +1481,13 @@ S045 | hostBandGeometry | src/checks/rollqml/tst_SwiftRollPlots.qml
 Anchor: message "voice-change physical surfaces tile their published body geometry"
 
 S046 | test_hostMountedBandsResizeHideAndEventList | src/checks/rollqml/tst_SwiftRollPlots.qml
+Source line: 328
+Predicate: sections.every(function(section) { return section.visible && section.bodyWidth > 0 && section.bodyHeight > 0 })
 Anchor: message "all three mounted drawer bands have published nonempty bodies"
 
 S047 | test_hostMountedBandsResizeHideAndEventList | src/checks/rollqml/tst_SwiftRollPlots.qml
+Source line: 348
+Predicate: velocityBody.height !== before.height && sceneRect(handle).y + handle.height === sceneRect(velocityBody).y
 Anchor: message "resizing the mounted velocity section changes its physical body"
 
 S048 | test_hostMountedBandsResizeHideAndEventList | src/checks/rollqml/tst_SwiftRollPlots.qml
@@ -1736,3 +1742,38 @@ Source line: 462
 cppID: swiftcore/HostBehaviorChecks::playheadFollowing
 Predicate: report.expect(page.axisModel.map.voiceName == "Square 1", cppID: id, message: "A168: the non-following sample at tick twenty-six restores Square 1")
 Anchor: message "A168: the non-following sample at tick twenty-six restores Square 1"
+
+S113 | test_hostMountedBandsResizeHideAndEventList | src/checks/rollqml/tst_SwiftRollPlots.qml
+Source line: 357
+Predicate: published.visible && sameRect(physical, Qt.rect(drawerItem.x + published.bodyX, drawerItem.y + published.bodyY, published.bodyWidth, published.bodyHeight))
+Anchor: message "resized velocity body rect equals the published section geometry"
+
+S114 | test_hostMountedBandsResizeHideAndEventList | src/checks/rollqml/tst_SwiftRollPlots.qml
+Source line: 400
+Predicate: !hidden.visible && hidden.bodyWidth === 0 && hidden.bodyHeight === 0
+Anchor: message "hidden drawer band has no published active body extent"
+
+S115 | test_hostMountedBandsResizeHideAndEventList | src/checks/rollqml/tst_SwiftRollPlots.qml
+Source line: 403
+Predicate: !body.visible
+Anchor: message "hidden drawer band body is physically invisible"
+
+S116 | test_hostMountedBandsResizeHideAndEventList | src/checks/rollqml/tst_SwiftRollPlots.qml
+Source line: 406
+Predicate: hiddenRect.width === 0 && hiddenRect.height === 0
+Anchor: message "hidden drawer band publishes an empty physical body rect"
+
+S117 | test_hostMountedBandsResizeHideAndEventList | src/checks/rollqml/tst_SwiftRollPlots.qml
+Source line: 419
+Predicate: sameRect(physical, saved) && sameRect(physical, Qt.rect(drawerItem.x + geometry.bodyX, drawerItem.y + geometry.bodyY, geometry.bodyWidth, geometry.bodyHeight))
+Anchor: message "restored drawer band recovers its saved published body rect"
+
+S118 | test_hostMountedBandsResizeHideAndEventList | src/checks/rollqml/tst_SwiftRollPlots.qml
+Source line: 423
+Predicate: restored.visible && effectivelyVisible(body, drawerItem)
+Anchor: message "restored drawer band publishes visible physical body"
+
+S119 | test_hostMountedBandsResizeHideAndEventList | src/checks/rollqml/tst_SwiftRollPlots.qml
+Source line: 433
+Predicate: effectivelyVisible(plot, body) && effectivelyVisible(gutter, body) && sameRect(sceneRect(plot), Qt.rect(split, restoredRect.y, restoredRect.x + restored.bodyWidth - split, restored.bodyHeight)) && sameRect(sceneRect(gutter), Qt.rect(restoredRect.x, restoredRect.y, split - restoredRect.x, restored.bodyHeight))
+Anchor: message "restored drawer plot and gutter inputs tile published section geometry"
