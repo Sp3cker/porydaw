@@ -23,7 +23,7 @@ deno task verify --filter swiftcore --verbose -> verify: 1/6 ok (11.40s, 5 skipp
 Result: swiftcore PASS. No live native jurisdiction_smoke run exists or is claimed; the deleted harness
 neither builds nor executes.
 
-Retirement: 187 original assertion sites, all terminal (162 RETIRED-REPRESENTATION, 25 honest GAPs, zero
+Retirement: 187 original assertion sites (162 RETIRED-REPRESENTATION, 21 MATCHED, 4 honest GAPs
 
 Execution boundary: SwiftGridPrototype is retired: its C++ sources were deleted in fe1ff4df9f4834cbd4e4e59d2e710078c10a8ced and no target/registration for this prototype remains. The undo/cancel/escape predicates below execute through the production Swift grid lane (PianoGrid/DocumentSession), not the deleted prototype undo scene.
 
@@ -196,8 +196,8 @@ A055 | verifyDoubleClickRow | src/checks/swiftgridprototype/jurisdiction_smoke.c
 Disposition: RETIRED-REPRESENTATION
 
 A056 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:435
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor). The retired pitch-curve undo/redo rows and pitch-editor Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S087 - the real roll click selects the anchor note
 Source context since previous assertion:
 
     pass("undo-doubleclick-add-and-remove");
@@ -211,8 +211,8 @@ Original expression:
     require(undoSelectedCount(scene.model) == 1, "click did not select one note for the popup");
 
 A057 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:437
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor). The retired pitch-curve undo/redo rows and pitch-editor Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S088 - the G key realizes the anchored popup
 Source context since previous assertion:
 
     QTest::keyClick(scene.window, Qt::Key_G);
@@ -222,8 +222,8 @@ Original expression:
         "G did not open a functional pitch popup");
 
 A058 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:442
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor). The retired pitch-curve undo/redo rows and pitch-editor Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S089 - the remounted pitch graph has an interactive canvas
 Source context since previous assertion:
 
     auto *graph = scene.item("pitchBendGraph");
@@ -232,8 +232,8 @@ Original expression:
     require(plot.width() > 0 && plot.height() > 0, "pitch graph has no native canvas geometry");
 
 A059 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:459
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor). The retired pitch-curve undo/redo rows and pitch-editor Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S090 - a committed Shift line paints its diagonal
 Source context since previous assertion:
 
     const QRectF curveRegion = graph->mapRectToScene(plot).adjusted(6, 6, -6, -6);
@@ -257,8 +257,8 @@ Original expression:
             "pitch gesture did not change the committed curve");
 
 A060 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:462
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor). The retired pitch-curve undo/redo rows and pitch-editor Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S091 - Escape closes the pitch-bend editor
 Source context since previous assertion:
 
     QTest::keyClick(scene.window, Qt::Key_Escape);
@@ -267,8 +267,8 @@ Original expression:
                "Escape did not dismiss the pitch popup");
 
 A061 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:464
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor). The retired pitch-curve undo/redo rows and pitch-editor Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S092 - one Shift-line stroke pushes exactly one history entry
 Source context since previous assertion:
 
 Original expression:
@@ -276,8 +276,8 @@ Original expression:
             "pitch commit did not push exactly one controller command");
 
 A062 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:467
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor). The retired pitch-curve undo/redo rows and pitch-editor Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S093 - the cancelled editor remounts over the selected note
 Source context since previous assertion:
 
     QTest::keyClick(scene.window, Qt::Key_G);
@@ -287,8 +287,8 @@ Original expression:
         "pitch popup did not reopen");
 
 A063 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:471
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor). The retired pitch-curve undo/redo rows and pitch-editor Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S094 - reopening restores the released curve instead of the cancelled preview
 Source context since previous assertion:
 
     QTest::qWait(40ms);
@@ -297,8 +297,8 @@ Original expression:
             "edited pitch curve did not survive popup close and reopen");
 
 A064 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:474
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor). The retired pitch-curve undo/redo rows and pitch-editor Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S095 - Escape dismisses the reopened pitch editor
 Source context since previous assertion:
 
     QTest::keyClick(scene.window, Qt::Key_Escape);
@@ -307,8 +307,8 @@ Original expression:
                "Escape did not dismiss the reopened pitch popup");
 
 A065 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:477
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor). The retired pitch-curve undo/redo rows and pitch-editor Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S096 - the undo shortcut returns the history stack to its pre-stroke depth
 Source context since previous assertion:
 
     scene.undo();
@@ -316,8 +316,8 @@ Original expression:
     require(scene.canRedo() && !scene.canUndo(), "pitch undo left canUndo/canRedo inconsistent");
 
 A066 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:479
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor). The retired pitch-curve undo/redo rows and pitch-editor Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S097 - the pitch editor reopens over the undone note
 Source context since previous assertion:
 
     QTest::keyClick(scene.window, Qt::Key_G);
@@ -327,8 +327,8 @@ Original expression:
         "pitch popup did not reopen after undo");
 
 A067 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:483
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor). The retired pitch-curve undo/redo rows and pitch-editor Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S098 - reopening after undo paints the pre-stroke curve
 Source context since previous assertion:
 
     QTest::qWait(40ms);
@@ -337,8 +337,8 @@ Original expression:
             "pitch undo did not restore the pre-commit curve on reopen");
 
 A068 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:486
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor). The retired pitch-curve undo/redo rows and pitch-editor Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S099 - Escape dismisses the reopened editor after undo
 Source context since previous assertion:
 
     QTest::keyClick(scene.window, Qt::Key_Escape);
@@ -638,8 +638,8 @@ A165 | verifyEscapeGestureRow | src/checks/swiftgridprototype/jurisdiction_smoke
 Disposition: RETIRED-REPRESENTATION
 
 A166 | verifyEscapePitchEditorRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:856
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor). The retired pitch-curve undo/redo rows and pitch-editor Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S087 - the real roll click selects the anchor note
 Source context since previous assertion:
 
     pass("escape-cancels-live-gesture-preserving-selection");
@@ -656,8 +656,8 @@ Original expression:
     require(undoSelectedCount(scene.model) == 1, "click did not select one note for the popup");
 
 A167 | verifyEscapePitchEditorRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:858
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor). The retired pitch-curve undo/redo rows and pitch-editor Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S088 - the G key realizes the anchored popup
 Source context since previous assertion:
 
     QTest::keyClick(scene.window, Qt::Key_G);
@@ -667,8 +667,8 @@ Original expression:
         "G did not open the pitch popup for the Escape row");
 
 A168 | verifyEscapePitchEditorRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:866
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor). The retired pitch-curve undo/redo rows and pitch-editor Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S100 - the bend-range field displays the committed typed value
 Source context since previous assertion:
 
     QTest::mouseDClick(scene.window, Qt::LeftButton, Qt::NoModifier,
@@ -681,16 +681,16 @@ Original expression:
                "pitch bend range numeric editor did not accept text input");
 
 A169 | verifyEscapePitchEditorRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:868
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor). The retired pitch-curve undo/redo rows and pitch-editor Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S101 - typing the bend-range value pushes exactly one document command
 Source context since previous assertion:
 
 Original expression:
     require(scene.revision() == 1, "numeric edit did not push exactly one command");
 
 A170 | verifyEscapePitchEditorRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:885
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor). The retired pitch-curve undo/redo rows and pitch-editor Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S102 - the held stroke previews an uncommitted change to the drawn curve
 Source context since previous assertion:
 
     auto *graph = scene.item("pitchBendGraph");
@@ -714,8 +714,8 @@ Original expression:
             "unreleased pitch gesture did not produce a live preview");
 
 A171 | verifyEscapePitchEditorRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:888
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor). The retired pitch-curve undo/redo rows and pitch-editor Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S103 + S104 - Escape dismisses the pitch editor during an active stroke, from the graph and the focused popup
 Source context since previous assertion:
 
     QTest::keyClick(scene.window, Qt::Key_Escape);
@@ -724,8 +724,8 @@ Original expression:
                "Escape did not dismiss the pitch popup through the arbiter");
 
 A172 | verifyEscapePitchEditorRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:891
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor). The retired pitch-curve undo/redo rows and pitch-editor Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S105 - Escape drops the held preview without writing a history entry
 Source context since previous assertion:
 
     QTest::mouseRelease(scene.window, Qt::LeftButton, Qt::ShiftModifier, high);
@@ -733,8 +733,8 @@ Original expression:
     require(scene.revision() == 1, "Escape discard pushed an undo command");
 
 A173 | verifyEscapePitchEditorRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:892
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor). The retired pitch-curve undo/redo rows and pitch-editor Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S106 - Escape retains undo for the previously committed controller edit
 Source context since previous assertion:
 
 Original expression:
@@ -1088,3 +1088,63 @@ Anchor: message "committed document edit performs no standalone camera publicati
 
 S086 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "one edit publishes one coherent playback and document refresh after reconciliation"
+
+S087 | openViaG | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the real roll click selects the anchor note"
+
+S088 | openViaG | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the G key realizes the anchored popup"
+
+S089 | test_livePreviewSurvivesUndoRedo | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the remounted pitch graph has an interactive canvas"
+
+S090 | test_opaquePopupAndPaintedDiagonals | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "a committed Shift line paints its diagonal"
+
+S091 | test_graphVertexDeleteUndoAndWindowSoloResumption | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "Escape closes the pitch-bend editor"
+
+S092 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "one Shift-line stroke pushes exactly one history entry"
+
+S093 | test_typedControllersSurvivePreviewCancellation | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the cancelled editor remounts over the selected note"
+
+S094 | test_typedControllersSurvivePreviewCancellation | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "reopening restores the released curve instead of the cancelled preview"
+
+S095 | test_typedControllersSurvivePreviewCancellation | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "Escape dismisses the reopened pitch editor"
+
+S096 | test_keyboardUndoWhileOpenRestoresCurve | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the undo shortcut returns the history stack to its pre-stroke depth"
+
+S097 | test_undoAfterDismissalReopensOriginalCurve | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the pitch editor reopens over the undone note"
+
+S098 | test_undoAfterDismissalReopensOriginalCurve | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "reopening after undo paints the pre-stroke curve"
+
+S099 | test_undoAfterDismissalReopensOriginalCurve | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "Escape dismisses the reopened editor after undo"
+
+S100 | test_typedControllersSurvivePreviewCancellation | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the bend-range field displays the committed typed value"
+
+S101 | test_typedControllersSurvivePreviewCancellation | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "typing the bend-range value pushes exactly one document command"
+
+S102 | test_typedControllersSurvivePreviewCancellation | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the held stroke previews an uncommitted change to the drawn curve"
+
+S103 | test_typedControllersSurvivePreviewCancellation | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "Escape dismisses the pitch editor during an active stroke"
+
+S104 | test_popupFocusedEscapeDiscardsActivePreview | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "Escape from the focused popup dismisses the active graph gesture"
+
+S105 | test_typedControllersSurvivePreviewCancellation | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "Escape drops the held preview without writing a history entry"
+
+S106 | test_typedControllersSurvivePreviewCancellation | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "Escape retains undo for the previously committed controller edit"

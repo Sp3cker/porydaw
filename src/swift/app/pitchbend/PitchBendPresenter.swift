@@ -117,13 +117,13 @@ public final class PitchBendPresenter {
                                 palette: palette, track: note.track)
         pitch.bendRange = bendRange
         pitch.rebuild()
-        pitch.onCommit = { [weak self, weak pitch] in
+        pitch.onCommit = { [weak self, weak pitch] sampledStroke in
             guard let self, let pitch else { return }
-            self.commit(pitch, lane: .pitchBend)
+            self.commit(pitch, lane: .pitchBend, sampledStroke: sampledStroke)
         }
-        mod.onCommit = { [weak self, weak mod] in
+        mod.onCommit = { [weak self, weak mod] sampledStroke in
             guard let self, let mod else { return }
-            self.commit(mod, lane: .controller(1))
+            self.commit(mod, lane: .controller(1), sampledStroke: sampledStroke)
         }
         pitch.onWheelSteps = { [weak self] steps in
             guard let self else { return }
@@ -296,13 +296,31 @@ public final class PitchBendPresenter {
         return current.pitch == note.pitch
     }
 
-    private func commit(_ graph: PitchBendLane, lane: Lane) {
+    private func commit(_ graph: PitchBendLane, lane: Lane, sampledStroke: Bool = false) {
         guard isOpen, let note, spanStillPresent() else { return }
         let sorted = graph.kernel.orderedPoints
         var points: [LaneWrite] = []
         points.reserveCapacity(sorted.count)
-        for point in sorted {
-            points.append(LaneWrite(tick: Tick(point.tick), value: point.value))
+        if sampledStroke {
+            var previousValue = 0
+            var previousTick = 0
+            var hasPrevious = false
+            for point in sorted {
+                let endpoint = point.tick == graph.kernel.startTick
+                    || point.tick == graph.kernel.endTick
+                let fineSample = hasPrevious && point.tick > previousTick
+                    && point.tick - previousTick == graph.kernel.fineTicks
+                if endpoint || !hasPrevious || point.value != previousValue || fineSample {
+                    points.append(LaneWrite(tick: Tick(point.tick), value: point.value))
+                }
+                previousValue = point.value
+                previousTick = point.tick
+                hasPrevious = true
+            }
+        } else {
+            for point in sorted {
+                points.append(LaneWrite(tick: Tick(point.tick), value: point.value))
+            }
         }
         session.document.writeLane(track: note.track, lane: lane,
                                    from: note.tick, through: Tick(noteEnd),

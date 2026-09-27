@@ -25,6 +25,8 @@ func runPitchBendChecks(_ report: CheckReport, session: DocumentSession) {
                                 points: origin, endValue: 0)
     let fromX = curve.x(at: 120)
     let toX = curve.x(at: 168)
+    let keyboardBeforeStroke = curve.keyboardTick
+    let liveBeforeStroke = curve.liveValue
     curve.begin(x: fromX, y: curve.y(at: 4096), line: true)
     curve.update(x: toX, y: curve.y(at: -4096), fine: true)
     report.expect(curve.hasGesture && curve.points[120] != nil
@@ -34,12 +36,23 @@ func runPitchBendChecks(_ report: CheckReport, session: DocumentSession) {
                   && curve.points[96] == 0 && curve.points[192] == 0,
                   cppID: "swiftcore/PitchBendEditingTest::shiftDragDrawsLinearRamp",
                   message: "a Shift stroke previews an angled interior ramp without changing endpoints")
+    report.expect(curve.liveValue == curve.value(atY: curve.y(at: -4096))
+                  && curve.liveValue != liveBeforeStroke,
+                  cppID: "swiftcore/PitchBendEditingTest::shiftDragDrawsLinearRamp",
+                  message: "moving the stroke previews the live controller value")
     curve.cancelGesture()
     report.expect(!curve.hasGesture && curve.points == origin,
                   cppID: "swiftcore/PitchBendEditingTest::freehandStrokePushesSingleUndoCommand",
                   message: "cancel discards the complete uncommitted stroke")
+    report.expect(curve.keyboardTick == keyboardBeforeStroke
+                  && curve.liveValue == liveBeforeStroke,
+                  cppID: "swiftcore/PitchBendEditingTest::shiftDragDrawsLinearRamp",
+                  message: "cancelling the preview restores the keyboard cursor and live value")
 
     curve.begin(x: fromX, y: curve.y(at: 4096), line: false)
+    report.expect(curve.hasGesture && curve.selectedTick == nil,
+                  cppID: "swiftcore/PitchBendEditingTest::freehandStrokePushesSingleUndoCommand",
+                  message: "pressing an empty curve starts a selection-free stroke")
     curve.update(x: toX, y: curve.y(at: -4096), fine: false)
     curve.finish()
     report.expect(curve.points[120] != nil && curve.points[132] != nil
@@ -64,6 +77,9 @@ func runPitchBendChecks(_ report: CheckReport, session: DocumentSession) {
                   && curve.points[192] == 0,
                   cppID: "swiftcore/PitchBendEditingTest::vertexAltDragMovesPoint",
                   message: "dragging an interior vertex moves it but preserves the note-off endpoint")
+    report.expect(curve.points[180] == 8191,
+                  cppID: "swiftcore/PitchBendEditingTest::vertexAltDragMovesPoint",
+                  message: "a vertex drag previews the moved controller value at full bend")
     curve.cancelGesture()
     report.expect(curve.points == beforeMove,
                   cppID: "swiftcore/PitchBendEditingTest::vertexAltDragMovesPoint",
@@ -496,6 +512,48 @@ private func pitchBendDocumentPredicates(_ report: CheckReport, session: Documen
                            what: "the second undo restores the pre-stroke bytes")
     }
 
+    let canonicalID = "swiftcore/PitchBendEditingTest::canonicalCurveCommit"
+    let canonicalService = ProjectService()
+    let canonicalSession = pitchBendSyntheticSession(session, service: canonicalService)
+    defer { withExtendedLifetime(canonicalService) {} }
+    if let scene = pitchBendCheckScene(report, cppID: canonicalID, session: canonicalSession) {
+        defer { scene.presenter.cancelAndClose() }
+        let graph = scene.presenter.pitchGraph()
+        let start = Int(scene.note.tick)
+        let end = Int(scene.noteEnd)
+        let fine = graph.kernel.fineTicks
+        guard end - start > 10 * fine else {
+            report.fail(canonicalID, "the canonical curve fixture needs space for fine samples")
+            return
+        }
+        let strokeStart = start + 8 * fine
+        let strokeEnd = start + 10 * fine
+        graph.kernel.setCurve([
+            start: 0, start + 3 * fine: 0, start + 4 * fine: 0,
+            start + 5 * fine: 4096, start + 6 * fine: 4096, end: 0
+        ], endValue: 0)
+        graph.rebuild()
+        let index = canonicalSession.document.history.undoIndex
+        graph.press(x: graph.kernel.x(at: strokeStart), y: graph.kernel.y(at: 8191),
+                    modifiers: 0x0200_0000)
+        graph.drag(x: graph.kernel.x(at: strokeEnd), y: graph.kernel.y(at: 8191),
+                   modifiers: 0x0200_0000)
+        let sampledStroke = graph.kernel.isSampledStroke
+        graph.release(x: graph.kernel.x(at: strokeEnd), y: graph.kernel.y(at: 8191),
+                      modifiers: 0x0200_0000)
+        let written = canonicalSession.document.lanePoints(track: scene.note.track,
+                                                            lane: .pitchBend)
+        let prefix = written.prefix { $0.tick <= Tick(start + 5 * fine) }
+        report.expect(sampledStroke && canonicalSession.document.history.undoIndex == index + 1
+                      && prefix.count == 3
+                      && prefix[0].tick == Tick(start) && prefix[0].value == 0
+                      && prefix[1].tick == Tick(start + 4 * fine) && prefix[1].value == 0
+                      && prefix[2].tick == Tick(start + 5 * fine) && prefix[2].value == 4096
+                      && written.last?.tick == scene.noteEnd && written.last?.value == 0,
+                      cppID: canonicalID,
+                      message: "the committed curve drops coarse plateaus but keeps fine neighbors and endpoints")
+    }
+
     if let scene = pitchBendCheckScene(report, cppID: confinementID, session: session) {
         defer { scene.presenter.cancelAndClose() }
         let graph = scene.presenter.pitchGraph()
@@ -585,7 +643,9 @@ private func pitchBendObserveDocument(_ session: DocumentSession,
 private func pitchBendOwnerLifetimePredicates(_ report: CheckReport, suite: DocumentSession) {
     let id = "swiftcore/PitchBendEditingTest::duplicateNoteAtSameTickDoesNotReanchor"
     let service = ProjectService()
-    let session = pitchBendSyntheticSession(suite, service: service)
+    var file = makeMidiFixture()
+    file.chunks[1].events = [.channel(tick: 0, status: 0xC0, data0: 0)]
+    let session = pitchBendSyntheticSession(suite, service: service, file: file)
     defer { withExtendedLifetime(service) {} }
     let document = session.document
     guard let ids = try? document.addNotes([
@@ -597,6 +657,8 @@ private func pitchBendOwnerLifetimePredicates(_ report: CheckReport, suite: Docu
         report.fail(id, "the duplicate-note fixture must provide both distinct note identities")
         return
     }
+    report.expect(document.notes(in: 0).count == 2, cppID: id,
+                  message: "the duplicate-note fixture holds exactly two notes")
     report.expect(impostor.id != original.id, cppID: id,
                   message: "the duplicate note retains an independent identity")
     report.expect(impostor.tick == original.tick, cppID: id,

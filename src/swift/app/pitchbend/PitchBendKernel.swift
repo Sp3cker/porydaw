@@ -14,6 +14,7 @@ public struct PitchBendKernel {
         var anchor: Point
         var previous: Point
         var line: Bool
+        var sampled = false
     }
     private struct VertexDrag {
         var original: [Int: Int]
@@ -58,6 +59,10 @@ public struct PitchBendKernel {
     }
 
     public var hasGesture: Bool { gesture != nil }
+    public var isSampledStroke: Bool {
+        guard case .stroke(let stroke) = gesture else { return false }
+        return stroke.sampled
+    }
     public var minimumValue: Int { lane == .pitch ? -8192 : 0 }
     public var maximumValue: Int { lane == .pitch ? 8191 : 127 }
     public var orderedPoints: [Point] {
@@ -204,6 +209,7 @@ public struct PitchBendKernel {
         switch gesture {
         case .stroke(var stroke):
             let point = Point(tick: tick(atX: x, fine: stroke.line), value: value(atY: y))
+            if point.tick != stroke.previous.tick { stroke.sampled = true }
             if stroke.line { points = stroke.original }
             replace(from: stroke.line ? stroke.anchor : stroke.previous, to: point, fine: stroke.line)
             stroke.previous = point

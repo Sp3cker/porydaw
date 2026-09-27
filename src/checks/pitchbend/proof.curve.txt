@@ -44,7 +44,7 @@ fork's denomPow2 parametrization (8 beats over 2^3) through
 document.setTimeSignature; the mod-reset ingress is presenter.resetModCurve plus
 the mounted click on the real modWheelReset item (its findChild null guard is
 unmessaged).
-Disposition tally: 123 sites: 120 MATCHED, 3 PARTIAL.
+Disposition tally: 123 sites: 122 MATCHED, 1 PARTIAL (A026 stays PARTIAL by controller ruling: no QML-visible byte observable).
 
 Command: deno task verify --filter swiftcore --verbose (task-40 implementer run)
 Result: the controller reports the new pitch-bend rows PASSED inside the
@@ -348,8 +348,8 @@ Original expression:
       QVERIFY(m_fixture.sendUndo());
 
 A025 | PitchBendEditingTest::standardUndoShortcutRestoresCurve | src/checks/pitchbend/curve.cpp:98
-Disposition: PARTIAL
-Mapping/reason: PARTIAL - S046 proves the mounted StandardKey.Undo restores the curve and revision text, and S017 proves the index restore through the API undo path (document.history.undoDocument() lands on the pre-stroke index); no predicate executes the window shortcut and reads the history index together
+Disposition: MATCHED
+Mapping: S150 + S017 + S018 - the mounted StandardKey.Undo journey returns the history stack to its pre-stroke depth (S150); the index and byte halves ride the API undo path (S017/S018)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -679,8 +679,8 @@ Original expression:
       QVERIFY(m_fixture.setUp(false, true));
 
 A059 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:213
-Disposition: PARTIAL
-Mapping/reason: S064 + S065 + S066 + S067 - the duplicate pair's independent identity and shared tick, key and span execute, but no executing predicate asserts the fork's exactly-two-notes count (the Swift fixture inserts the pair into the synthetic fixture's existing track, a registered fixture deviation): unproved: the notes.size() == 2 clause
+Disposition: MATCHED
+Mapping: S151 + S064 + S065 + S066 + S067 - the reshaped fixture track holds exactly the two duplicate notes (S151); the pair's independent identity and shared tick, key and span ride S064-S067
 Source context since previous assertion:
 
       const std::vector<DocNote> notes = m_fixture.document().notesForTrack(0);
@@ -1650,6 +1650,12 @@ S148 | test_noteScopedCurveAndControls | src/checks/editorqml/tst_ShellPitchBend
 Anchor: message "the selected note presents both Swift-backed lanes"
 S149 | test_noteScopedCurveAndControls | src/checks/editorqml/tst_ShellPitchBend.qml
 Anchor: message "modulation reset writes the default curve"
+
+S150 | test_keyboardUndoWhileOpenRestoresCurve | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the undo shortcut returns the history stack to its pre-stroke depth"
+
+S151 | pitchBendOwnerLifetimePredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the duplicate-note fixture holds exactly two notes"
 
 Executed coverage without an A row: S073 (the undoDocument push result) and
 S077 (undo leaves the dismissed anchored editor closed); no

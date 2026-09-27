@@ -64,7 +64,7 @@ public final class PitchBendLane {
     public var gridLines: QListModel<SceneRect> = QListModel()
     public var curveLines: QListModel<PitchBendLine> = QListModel()
     public var vertices: QListModel<PitchBendVertex> = QListModel()
-    @QtIgnored public var onCommit: (() -> Void)?
+    @QtIgnored public var onCommit: ((Bool) -> Void)?
     @QtIgnored public var onWheelSteps: ((Int) -> Void)?
     @QtIgnored public var bendRange = 2
     private var gestureStartingPoints: [Int: Int]?
@@ -103,11 +103,12 @@ public final class PitchBendLane {
 
     public func settleGesture() {
         guard kernel.hasGesture else { return }
+        let sampledStroke = kernel.isSampledStroke
         kernel.finish()
         let changed = gestureStartingPoints != kernel.points
         gestureStartingPoints = nil
         rebuild()
-        if changed { onCommit?() }
+        if changed { onCommit?(sampledStroke) }
     }
 
     public func cancelGesture() {
@@ -125,7 +126,7 @@ public final class PitchBendLane {
     public func removeSelectedVertex() {
         guard kernel.removeSelectedVertex() else { return }
         rebuild()
-        onCommit?()
+        onCommit?(false)
     }
 
     public func hitVertex(x: Double, y: Double) -> Int {

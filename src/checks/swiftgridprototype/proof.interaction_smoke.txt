@@ -24,7 +24,7 @@ deno task verify --filter swiftcore --verbose -> verify: 1/6 ok (11.40s, 5 skipp
 Result: swiftcore PASS. No live native interaction_smoke run exists or is claimed; the deleted harness
 neither builds nor executes.
 
-Retirement: 48 original assertion sites, all terminal (12 RETIRED-REPRESENTATION, 36 honest GAPs, zero
+Retirement: 48 original assertion sites (16 RETIRED-REPRESENTATION, 22 MATCHED, 10 honest GAPs
 
 Execution boundary: SwiftGridPrototype is retired: its C++ sources were deleted in fe1ff4df9f4834cbd4e4e59d2e710078c10a8ced and no target/registration for this prototype remains. The band-selection predicates below execute through the production Swift grid lane (PianoGrid/DocumentSession), not the deleted prototype scene.
 
@@ -38,8 +38,8 @@ A002 | center | src/checks/swiftgridprototype/interaction_smoke.cpp:73
 Disposition: RETIRED-REPRESENTATION
 
 A003 | verifyCurveExport | src/checks/swiftgridprototype/interaction_smoke.cpp:117
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - prototype-only exact tick-13 export contract; shipped canonicalization keeps fine samples and endpoints for sampled strokes only, the behavior half is S109
 Source context since previous assertion:
 
     return sceneRect(item).center().toPoint();
@@ -90,8 +90,8 @@ Original expression:
                 "canonical curve export kept redundant plateaus or removed fine samples");
 
 A004 | verifyCurveExport | src/checks/swiftgridprototype/interaction_smoke.cpp:120
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - prototype-only exact endpoint contract; shipped export keeps endpoints for sampled strokes only, the behavior half is S109
 Source context since previous assertion:
 
         for (size_t i = 0; i < count; ++i)
@@ -100,8 +100,8 @@ Original expression:
                     "canonical curve export changed an endpoint or fine interpolation anchor");
 
 A005 | verifyCurveExport | src/checks/swiftgridprototype/interaction_smoke.cpp:128
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S087 - a vertex drag previews the moved controller value at full bend
 Source context since previous assertion:
 
     };
@@ -117,8 +117,8 @@ Original expression:
             "vertex drag did not preview the moved controller event");
 
 A006 | verifyCurveExport | src/checks/swiftgridprototype/interaction_smoke.cpp:137
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S088 - pressing an empty curve starts a selection-free stroke
 Source context since previous assertion:
 
     sgc_cancel(session);
@@ -131,8 +131,8 @@ Original expression:
             "stroke press did not open a selection-free curve gesture");
 
 A007 | verifyCurveExport | src/checks/swiftgridprototype/interaction_smoke.cpp:140
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S089 - moving the stroke previews the live controller value
 Source context since previous assertion:
 
     sgc_move(session, sgc_x_at_tick(session, 10), sgc_y_at_value(session, 8191), 0);
@@ -141,8 +141,8 @@ Original expression:
             "stroke move did not preview the live controller value");
 
 A008 | verifyCurveExport | src/checks/swiftgridprototype/interaction_smoke.cpp:143
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S090 - cancelling the preview restores the keyboard cursor and live value
 Source context since previous assertion:
 
     sgc_cancel(session);
@@ -288,8 +288,8 @@ Original expression:
             "Enter did not activate the focused Stop button");
 
 A029 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:242
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S091 - the G key realizes the anchored popup
 Source context since previous assertion:
 
     pass("transport-space-priority-and-local-enter");
@@ -301,8 +301,8 @@ Original expression:
                "G did not open a functional pitch popup");
 
 A030 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:245
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S092 - the anchored popup stays inside the window
 Source context since previous assertion:
 
     auto *popup = item("pitchBendPopup");
@@ -311,8 +311,8 @@ Original expression:
             "pitch popup is not clamped inside the application window");
 
 A031 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:249
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S093 - the remounted pitch graph has an interactive canvas
 Source context since previous assertion:
 
     auto *graph = item("pitchBendGraph");
@@ -321,8 +321,8 @@ Original expression:
     require(plot.width() > 0 && plot.height() > 0, "pitch graph has no native canvas geometry");
 
 A032 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:263
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S094 - a committed Shift line paints its diagonal
 Source context since previous assertion:
 
     const QPoint low = graph
@@ -343,8 +343,8 @@ Original expression:
             "pitch gesture did not render the production track-colored curve");
 
 A033 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:267
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S095 - Escape closes the pitch-bend editor
 Source context since previous assertion:
 
     const QImage drawn = window->grabWindow();
@@ -354,8 +354,8 @@ Original expression:
                "Escape did not dismiss the pitch popup");
 
 A034 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:270
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S096 - reopening remounts the painted graph
 Source context since previous assertion:
 
     QTest::keyClick(window, Qt::Key_G);
@@ -364,8 +364,8 @@ Original expression:
                "pitch popup did not reopen");
 
 A035 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:277
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S097 - reopening restores the released curve instead of the cancelled preview
 Source context since previous assertion:
 
     QTest::qWait(40ms);
@@ -378,8 +378,8 @@ Original expression:
             "edited pitch curve did not survive popup close and reopen");
 
 A036 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:285
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S098 - the bend-range field displays the committed typed value
 Source context since previous assertion:
 
     pass("native-pitch-curve-raster-and-committed-reopen");
@@ -393,8 +393,8 @@ Original expression:
                "pitch bend range numeric editor did not accept text input");
 
 A037 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:289
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S099 - pitch reset removes interior vertices while preserving the note-off value
 Source context since previous assertion:
 
     click("pitchBendReset");
@@ -404,8 +404,8 @@ Original expression:
             "Reset did not restore the zero pitch curve");
 
 A038 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:292
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S100 - Escape dismisses the pitch editor during an active stroke
 Source context since previous assertion:
 
     QTest::keyClick(window, Qt::Key_Escape);
@@ -414,8 +414,8 @@ Original expression:
                "pitch popup did not close after numeric editing");
 
 A039 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:295
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S101 - the reopened bend-range input displays the committed value
 Source context since previous assertion:
 
     QTest::keyClick(window, Qt::Key_G);
@@ -428,8 +428,8 @@ Original expression:
         "pitch bend range did not survive popup reopen");
 
 A040 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:307
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S102 - the held stroke previews an uncommitted change to the drawn curve
 Source context since previous assertion:
 
     pass("pitch-popup-numeric-range-reset-and-persistence");
@@ -443,8 +443,8 @@ Original expression:
                 "unreleased pitch gesture did not produce a live preview");
 
 A041 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:312
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native mouseGrabberItem acquisition; the Swift overlay gesture owns acquisition
 Source context since previous assertion:
 
     };
@@ -454,8 +454,8 @@ Original expression:
     require(pitchGrabber, "pitch gesture did not acquire the native mouse grab");
 
 A042 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:316
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - prototype ungrab-abort contract; shipped grab loss keeps the preview and the session resolves by close reason
 Source context since previous assertion:
 
     pitchGrabber->ungrabMouse();
@@ -466,8 +466,8 @@ Original expression:
             "aborted pitch gesture did not restore the committed curve");
 
 A043 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:322
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S100 + S108 - Escape dismisses the active gesture from the graph and from the focused popup
 Source context since previous assertion:
 
     for (const char *focusTarget : std::array{"pitchBendGraph", "pitchBendPopup"}) {
@@ -479,8 +479,8 @@ Original expression:
                    "Escape did not dismiss an active pitch gesture");
 
 A044 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:326
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S103 - the cancelled editor remounts over the selected note
 Source context since previous assertion:
 
         QTest::mouseRelease(window, Qt::LeftButton, Qt::ShiftModifier, high);
@@ -490,8 +490,8 @@ Original expression:
                    "pitch popup did not reopen after cancelling a live gesture");
 
 A045 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:329
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S097 + S101 - reopening restores the released curve and the committed bend-range value
 Source context since previous assertion:
 
         QTest::qWait(40ms);
@@ -501,8 +501,8 @@ Original expression:
                 "Escape persisted a live preview or discarded a previously committed numeric edit");
 
 A046 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:354
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S104 - outside click dismisses without editing or changing selection
 Source context since previous assertion:
 
     }
@@ -532,8 +532,8 @@ Original expression:
                "outside click did not dismiss the pitch popup");
 
 A047 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:357
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S105 - the reopened LFO input displays the committed value
 Source context since previous assertion:
 
     QTest::keyClick(window, Qt::Key_G);
@@ -546,8 +546,8 @@ Original expression:
         "LFO speed did not survive popup reopen");
 
 A048 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:365
-Disposition: GAP
-Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
+Disposition: MATCHED
+Mapping: S106 + S107 - modulation edits persist independently after reopening and leave the pitch curve unchanged
 Source context since previous assertion:
 
     QTest::qWait(40ms);
@@ -822,3 +822,72 @@ Anchor: message "committed document edit performs no standalone camera publicati
 
 S086 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "one edit publishes one coherent playback and document refresh after reconciliation"
+
+S087 | runPitchBendChecks | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "a vertex drag previews the moved controller value at full bend"
+
+S088 | runPitchBendChecks | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "pressing an empty curve starts a selection-free stroke"
+
+S089 | runPitchBendChecks | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "moving the stroke previews the live controller value"
+
+S090 | runPitchBendChecks | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "cancelling the preview restores the keyboard cursor and live value"
+
+S091 | openViaG | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the G key realizes the anchored popup"
+
+S092 | test_gAnchorsPopupAndShrinkingWindowReclamps | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the anchored popup stays inside the window"
+
+S093 | test_livePreviewSurvivesUndoRedo | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the remounted pitch graph has an interactive canvas"
+
+S094 | test_opaquePopupAndPaintedDiagonals | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "a committed Shift line paints its diagonal"
+
+S095 | test_graphVertexDeleteUndoAndWindowSoloResumption | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "Escape closes the pitch-bend editor"
+
+S096 | test_opaquePopupAndPaintedDiagonals | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "reopening remounts the painted graph"
+
+S097 | test_typedControllersSurvivePreviewCancellation | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "reopening restores the released curve instead of the cancelled preview"
+
+S098 | test_typedControllersSurvivePreviewCancellation | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the bend-range field displays the committed typed value"
+
+S099 | test_noteScopedCurveAndControls | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "pitch reset removes interior vertices while preserving the note-off value"
+
+S100 | test_typedControllersSurvivePreviewCancellation | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "Escape dismisses the pitch editor during an active stroke"
+
+S101 | test_typedControllersSurvivePreviewCancellation | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the reopened bend-range input displays the committed value"
+
+S102 | test_typedControllersSurvivePreviewCancellation | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the held stroke previews an uncommitted change to the drawn curve"
+
+S103 | test_typedControllersSurvivePreviewCancellation | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the cancelled editor remounts over the selected note"
+
+S104 | test_cancelReopenAndOutsideClickDoNotEdit | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "outside click dismisses without editing or changing selection"
+
+S105 | test_modulationAndLfoSurviveOutsideDismissal | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the reopened LFO input displays the committed value"
+
+S106 | test_modulationAndLfoSurviveOutsideDismissal | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "modulation edits persist independently after reopening"
+
+S107 | test_modulationAndLfoSurviveOutsideDismissal | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "editing modulation leaves the pitch curve unchanged"
+
+S108 | test_popupFocusedEscapeDiscardsActivePreview | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "Escape from the focused popup dismisses the active graph gesture"
+
+S109 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the committed curve drops coarse plateaus but keeps fine neighbors and endpoints"
