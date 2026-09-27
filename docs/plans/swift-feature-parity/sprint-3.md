@@ -1612,3 +1612,342 @@ predecessor closes one.
 | `workspace/proof.tabs_scale.txt` | 2 | 4 | 6 |
 | `workspace/proof.tabs_transport.txt` | 1 | 1 | 2 |
 | **Total** | **1,865** | **519** | **2,384** |
+
+## 14. Wave 123+
+
+### Scope and selection
+
+This wave uses the accepted 600-line split (`c271dd89`,
+`split-600-wave.md`), not the former monolithic file names. Tasks 118 and
+119 remain reserved. The first planning census contained **79 ledgers,
+1,715 GAP + 421 PARTIAL = 2,136 open rows**. The final snapshot below is
+**79 ledgers, 1,714 GAP + 421 PARTIAL = 2,135 open rows**: the state
+ledger lost one GAP during concurrent task-118 work. Neither change is
+claimed as work completed by these briefs. No zero-open ledger remains
+in this inventory.
+
+Select **351 currently open rows: 317 GAP + 34 PARTIAL**, across fifteen
+ledgers. `proof list` was queried by area to avoid its 30-file display
+cap; `sites` and `show` supplied the selected identities and original
+clauses. Every selected identity was checked against its live open
+disposition, including the reserved 118/119 identities. The source oracle
+is still `fceecd88`, with each brief recording the ledger's pinned
+revision. Existing write paths were checked against the split layout;
+only three named song-registration check files are new. Planning ran no
+build, test suite, formatter or commit.
+
+| Task | Surface / brief | GAP | PARTIAL | Open | Full-closure candidates |
+|---|---|---:|---:|---:|---:|
+| 123 | [Velocity gesture validity and exact drawer consequences](task-123-brief.md) | 27 | 4 | 31 | 2 |
+| 124 | [Automation lane ownership and malformed native clipboard](task-124-brief.md) | 20 | 0 | 20 | 2 |
+| 125 | [Raw-event engine promotion and retained roll identity](task-125-brief.md) | 13 | 17 | 30 | 2 |
+| 126 | [Existing Register Song transaction and source repair](task-126-brief.md) | 88 | 0 | 88 | 1 |
+| 127 | [Existing Delete Song transaction and reference protection](task-127-brief.md) | 71 | 0 | 71 | 1 |
+| 128 | [Regioned registration allocation and migration](task-128-brief.md) | 82 | 0 | 82 | 1 |
+| 129 | [Live timeline edits and actual audio progress](task-129-brief.md) | 16 | 4 | 20 | 1 |
+| 130 | [Exact roll ruler, selection and Highlight/Fold framebuffer](task-130-brief.md) | 0 | 9 | 9 | 2 |
+| **Total** | | **317** | **34** | **351** | **12** |
+
+All eight route SDD-track to `sdd-implementer`. Full ledgers are selected
+before scattered partial residues; none is a ledger-only reconciliation.
+The larger 126/127/128 selections are three independently runnable
+families of the same existing registration service, separated at their
+mutation boundaries to avoid conflicting writers. Their many original
+assertions include prerequisite guards; those do not justify 241 new
+setup-success assertions. Complete source bytes, allocation/removal
+semantics and actual existing confirmation input supply the consumers.
+
+The strongest inspected production divergences are task 123's unchecked
+gesture seed/preview identities and task 125's raw-event engine promotion:
+the raw edit paths currently commit without the before/after track remap
+that the typed track operations already use. Task 124 also replaces
+snapped-tick selection membership with the actual half-open displayed
+interval and restores lane-stack endpoint semantics without adding a
+stacked-lane UI. Task 125 consumes task 118's accepted remap/state contract;
+it does not reopen that writer's scope.
+
+Current source overrides stale ledger preambles. SongDockController and
+the mounted ShellSongs suite already expose Register and Delete
+confirmation transactions. Their supported allocation, repair, deletion
+and regional-layout semantics are therefore eligible now, despite §13's
+blanket onboardcheck parking. The source-creation voicegroup rows and
+Import MIDI wizard rows are not similarly eligible.
+
+### Parallel groups, owners and checkpoints
+
+| Group | Concurrent tasks | Selected rows | Start boundary |
+|---|---|---:|---|
+| A | 123, 124, 126, 129 | 159 (151 GAP + 8 PARTIAL) | Accepted split and each brief's existing-surface prerequisite |
+| B | 125, 127, 130 | 110 (84 GAP + 26 PARTIAL) | Group A accepted/checkpointed; task 118 accepted before 125 |
+| C | 128 | 82 (82 GAP + 0 PARTIAL) | Group B accepted/checkpointed, including 126/127 registration ownership |
+
+Exact write sets are file-disjoint inside each group, including conditional
+production repairs and ledger-writer paths. Group A's four tasks leave
+capacity for reserved 118/119 only as those writers' own dependencies
+permit; never exceed six concurrent implementers. A conditional write
+still reserves its file. No writer may borrow a sibling's unused path.
+
+Reserved task 118 ownership includes its live post-split files:
+`TabsDrawerProbe.swift`, `tst_ShellTabsDrawer.qml`,
+`workspace/session_view_state.swift`, `ApplicationSession+Tabs.swift`,
+`ApplicationSession.swift`, `DocumentSession+Internals.swift`,
+`DocumentSession.swift`, `DocumentWorkspace.swift`,
+`drawer/automation/AutomationPage.swift` and
+`timeline/EditorViewStateCodec.swift`. Its selected state-ledger rows
+remain reserved even if a disposition changes during planning.
+
+Task 119 keeps both raster ledgers and its post-split automation/voice
+raster surface: AutomationPage and its content/overlay publication,
+AutomationPage.qml/AutomationPlot.qml, VoiceChangesInteraction and
+VoiceChangesPage.qml, automation painting/canvas-editing checks, the
+automation-hover/curves/presentation/preview and voice-input/transactions
+drawer suites, shell drawer-parity suites/support, and
+ShellQmlTests.swift/ShellQmlEntries.swift. This wave does not write those
+files. Its distinct AutomationTransactions/AutomationLaneMenu suites are
+task 124's model/clipboard consumers; VelocityRaster/VelocityEditing are
+task 123's velocity consumers. No ownership claim extends to every split
+descendant merely because the historical brief named tst_EditorDrawer.qml.
+
+Cross-group hot-file reuse is confined to the registration family:
+
+| Existing path | Earlier owner | Later owner |
+|---|---:|---:|
+| `src/swift/project/SongRegistration.swift` | 126 | 128 |
+| `src/swift/project/SongRegistration+Writes.swift` | 126 | 128 |
+| `src/swift/project/SongRegistration+Store.swift` | 126 | 127 |
+| `src/swift/project/SongRegistration+Removal.swift` | 127 | 128 |
+| `src/swift/app/ProjectService+Songs.swift` | 126 | 127 |
+| `src/swift/app/songlist/SongDockController.swift` | 126 | 127 |
+| `src/checks/songlist/songlist_service.swift` | 126 | 127, then 128 |
+| `src/checks/editorqml/tst_ShellSongs.qml` | 126 | 127 |
+| `src/checks/CMakeLists.txt` | 126 | 127, then 128 |
+
+Take accepted Group A and Group B checkpoints before these files are
+reused, then a final Group C handoff. These are sparse integration
+milestones, not per-task commits. Never checkpoint unreviewed or failing
+work. A discovered necessary write outside the closed set must revise the
+group ownership contract before editing, not silently expand an agent's
+territory. Task 125's accepted-118 prerequisite is semantic, not permission
+to edit the reserved origin/hub files.
+
+### Evidence and execution contract
+
+This shared contract applies once to every linked brief:
+
+- **Real input and authoritative state.** Pointer/key/menu/modal claims
+  use the actual production surface. Model-only fork API stimuli remain
+  valid, paired with mounted input where the original user consequence
+  requires it. No fake popup, direct hint claim, new gesture, second
+  dispatcher or test-only production observation API.
+- **Independent full-state expectations.** Derive exact bytes, ordering,
+  IDs, lane ownership, history, ticks and geometry from fork clauses and
+  fixture inputs, not from the tested Swift output. Prove preview-time
+  nonmutation, one release commit, cancellation/stale-release preservation
+  and full Undo/Redo bytes where those are the original transaction.
+  Cancellation must be exercised with a real staged draft, not an
+  untouched document.
+- **No setup-only or implementation-shape tests.** Retire only bounded
+  obsolete pointer/signal/widget/fixture representations, with their
+  behavioral consumers still proved. Missing UI is not retirement
+  evidence. Delete incidental implementation/wording checks instead of
+  re-pinning them; preserve retained behavioral assertion literals.
+  New literals are complete and unique in their function.
+- **Real framebuffer.** Expected pixels use independent oracle/palette
+  arithmetic and scene-mapped physical coordinates, with negative samples.
+  A tested item's own color, arbitrary changed pixels, a capture guard or
+  a Swift dpr=2 argument does not prove the raster. Task 124's domain-edge
+  and task 130's ring claims require observed DPR2 execution. Task 119
+  retains its own raster child ownership. Offscreen Qt proof is not
+  physical macOS host-window equivalence.
+- **Existing boundaries.** editorqml has no ShellWindow key dispatcher;
+  window shortcuts/Escape/Undo go through the named shell lanes.
+  Registration, bank and preference mutations use isolated copied
+  fixtures and the real service. Restore staged source files and compare
+  full bytes. Never mutate the shared bank lease or checked-in fixtures.
+  Use synchronized CFPreferences/UserDefaults for settings, not cached
+  plist bytes.
+- **Post-split ownership.** Extend existing one-concept owners; every
+  Swift/QML file remains at most 600 lines. The existing single-domain
+  `src/checks/CMakeLists.txt` source manifest is explicitly exempt; register
+  the new checks there directly, with no manifest extraction. No new C++;
+  visible QtBridge ownership, base-font sizing and WCAG-AA text/surface
+  pairs stay mandatory. The only planned new files are the three named
+  Swift registration check sources, registered by their respective tasks.
+- **Execution ownership.** Implementers run their recorded narrow lanes
+  after their code/check changes settle, under the exact lock below and
+  in a coordinated settled-source window. The lock serializes builds,
+  not source edits. No project-wide suites, formatters or linters
+  mid-flight; read-only proof queries may run while others edit.
+- **Separate ledger writer.** Implementers do not edit proof files.
+  A separate writer receives settled proving code and executed evidence,
+  updates only that surface's selected rows, and lands the update with
+  the surface. No source repinning, bulk compaction, unrelated closure or
+  standalone ledger reconciliation. A correct existing production path
+  need not acquire an invented failing-before test.
+
+Every brief contains copyable narrow commands using:
+
+```sh
+/usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task …
+```
+
+After all implementers and the separate ledger writer finish, the
+controller runs the final project-wide gates once on settled sources:
+
+```sh
+/usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify:shell --verbose
+/usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --verbose
+/usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task proof check --executed
+```
+
+Mounted smoke and actual renderer/source-file behavior are mandatory;
+compiling checks alone proves neither. Retain the 175-second alarm and
+180-second post-lock bound, required native/audio prerequisites and exact
+sample/raster clauses. No timeout workaround, silent narrowing or claim
+that these commands were executed during planning.
+
+### Conditional ledger and native retirement
+
+The twelve whole-ledger candidates are velocitymodel/velocity (123),
+clipmime/laneselection (124), identity/remap (125), registration (126),
+deletion (127), regionedlayout (128), selftest_timeline (129), and
+geometry/scale_projection (130). They contain **341** of the selected
+open rows. The remaining ten selected rows belong to partially retained
+transport, keyboard and selection ledgers.
+
+**When a ledger fully closes, delete that ledger and every unbuilt C++
+unit that no still-open ledger exercises in the same commit.** Selected
+subset success is not full closure: resolve every retained/native
+obligation first. Check the complete include/use graph and live build
+targets before removing a production unit; direct original-check
+references alone are insufficient.
+
+| Conditional candidate | Owner / necessary gate | Known reason not to promise deletion yet |
+|---|---|---|
+| `src/core/velocitymodel.cpp`, `src/core/velocitymodel.h` | 123, only after both velocity ledgers close and all remaining callers/open-ledger uses clear | `songdocument.cpp` still includes velocitymodel.h; its other open-ledger consumers must be discharged, not ignored |
+| `src/core/songdocument_range.cpp` | 125, after 124's lane/MIME closures and both identity/remap closures, plus exhaustive remaining-use audit | Other range/time-selection consumers may retain it transitively; the census's witness list is not exhaustive authorization |
+| `src/core/mid2agbtables.h` | Not owned by this wave | velocitymodel.cpp includes it today; the earlier DELETE_NOW classification is unsafe while that blocker remains |
+| miditimeline, songdocument_tempo, timelineplayer | No deletion assigned | Host, routing, transport and/or automation open ledgers still require them |
+| timeeditor_insert, songdocument, workspace/onboarding native family | No deletion assigned | Unselected keyboard range rows and other project/workspace/onboarding obligations remain |
+
+The selected original C++ check files are already absent; do not recreate
+or count them as new deletions. There is **no unconditional C++ deletion
+claim**. The first two rows are conditional write permissions only;
+record any surviving blocker rather than treating proximity to a closed
+ledger as proof of dead code.
+
+### Exclusions and unresolved policy
+
+Never select savecore A016–A026, presentation A032–A037 (New Voicegroup),
+voicegroupsourceediting A086–A092 (creation/include insertion), P3 WAV
+export, lifecycle A041's Qt focus ancestry, or the sidecar-directory
+snapshots, explicitly state A164/A171/A178. All 118/119 selected rows and
+post-split write sets stay reserved until accepted. No new user gesture
+absent from `fceecd88` is authorized.
+
+No host, project, samplecheck or MIDI-export ledger is selected.
+Onboardcheck import A046–A096 remains the unsupported wizard, not the
+already-proved converter core; action/debuglayout/support are also
+unselected. Only the three inspected existing registration/removal
+families supersede §13's onboarding deferral. No New Song, Import MIDI,
+Import Sample, New Voicegroup, theme or export interface is smuggled in.
+
+Keep bank unknown-synth-save and viewcache pending/dirty-close differences
+open. An immutable-file failure is not the fork's invalid-synth stimulus.
+Keep transport A009/A010/A013 open under the user's cursor-never-seeks
+decision; do not silently restore the old seek or invent a retirement
+label. Keyboard A077–A080 and selection A009 remain outside task 130.
+The twelve conditional closures are not permission to claim unrelated
+setup guards, a new creation API or a native-window substitute.
+
+### Recomputed per-ledger census
+
+Paths are relative to `src/checks/`. This is the final in-flight planning
+snapshot, not a post-wave forecast. `proof list --area <area>` covered all
+79 live ledgers; `--no-swift` is a filter, not a compact-output mode.
+Re-query selected dispositions before dispatch. If a predecessor closes
+a row, update the reservation/count explicitly rather than substitute
+unrelated work.
+
+| Ledger | GAP | PARTIAL | Open |
+|---|---:|---:|---:|
+| `automation/hover/proof.tst_automationhover.txt` | 0 | 7 | 7 |
+| `automation/presentation/proof.tst_automationpresentation.txt` | 0 | 1 | 1 |
+| `automation/proof.automationnodedrag.txt` | 0 | 3 | 3 |
+| `automation/proof.automationownership.txt` | 0 | 15 | 15 |
+| `automation/proof.automationpainting.txt` | 0 | 3 | 3 |
+| `automation/proof.automationselection.txt` | 0 | 4 | 4 |
+| `automation/raster/proof.interaction.txt` | 33 | 0 | 33 |
+| `automation/raster/proof.painting.txt` | 25 | 0 | 25 |
+| `automationgesturecheck/proof.contract.txt` | 0 | 2 | 2 |
+| `automationgesturecheck/proof.crosslane.txt` | 0 | 2 | 2 |
+| `automationgesturecheck/proof.hover.txt` | 0 | 2 | 2 |
+| `automationgesturecheck/proof.parity.txt` | 0 | 7 | 7 |
+| `clipboard/proof.clipmime_test.txt` | 1 | 0 | 1 |
+| `clipboard/proof.laneselection_test.txt` | 19 | 0 | 19 |
+| `drawerpresentation/proof.velocity.txt` | 0 | 4 | 4 |
+| `host/proof.tst_hostadapter.txt` | 49 | 17 | 66 |
+| `host/proof.tst_hostintegration.txt` | 51 | 13 | 64 |
+| `host/proof.tst_hostseams.txt` | 3 | 1 | 4 |
+| `keyboard/proof.tst_velocitymodel.txt` | 27 | 0 | 27 |
+| `mainwindowrouting/proof.tst_mainwindowrouting_input.txt` | 21 | 20 | 41 |
+| `mainwindowrouting/proof.tst_mainwindowrouting_lifecycle.txt` | 48 | 27 | 75 |
+| `mainwindowrouting/proof.tst_mainwindowrouting_native.txt` | 28 | 1 | 29 |
+| `mainwindowrouting/proof.tst_mainwindowrouting_state.txt` | 79 | 22 | 101 |
+| `midi/proof.tst_midiexport.txt` | 0 | 13 | 13 |
+| `nativegraphics/proof.tst_nativewindowing.txt` | 35 | 0 | 35 |
+| `onboardcheck/proof.action.txt` | 40 | 9 | 49 |
+| `onboardcheck/proof.debuglayout.txt` | 72 | 0 | 72 |
+| `onboardcheck/proof.deletion.txt` | 71 | 0 | 71 |
+| `onboardcheck/proof.import.txt` | 51 | 0 | 51 |
+| `onboardcheck/proof.regionedlayout.txt` | 82 | 0 | 82 |
+| `onboardcheck/proof.registration.txt` | 88 | 0 | 88 |
+| `onboardcheck/proof.support.txt` | 13 | 0 | 13 |
+| `project/proof.identity.txt` | 17 | 35 | 52 |
+| `project/proof.ioflow.txt` | 49 | 16 | 65 |
+| `project/proof.iomutations.txt` | 43 | 54 | 97 |
+| `project/proof.mk.txt` | 36 | 0 | 36 |
+| `project/proof.save.txt` | 1 | 34 | 35 |
+| `project/proof.workspace.txt` | 83 | 17 | 100 |
+| `retained/proof.tst_nativeboundaries.txt` | 18 | 0 | 18 |
+| `rollcheck/proof.identity.txt` | 6 | 0 | 6 |
+| `rollcheck/proof.keyboard.txt` | 4 | 2 | 6 |
+| `rollcheck/proof.presentation.txt` | 0 | 7 | 7 |
+| `rollcheck/proof.remap.txt` | 7 | 17 | 24 |
+| `rollcheck/proof.resize.txt` | 0 | 6 | 6 |
+| `rollcheck/proof.scale_editing.txt` | 0 | 3 | 3 |
+| `rollcheck/proof.scale_projection.txt` | 0 | 3 | 3 |
+| `rollcheck/proof.selection.txt` | 0 | 2 | 2 |
+| `rollcheck/static/proof.geometry.txt` | 0 | 3 | 3 |
+| `samplecheck/proof.analysis.txt` | 21 | 0 | 21 |
+| `samplecheck/proof.decoder.txt` | 93 | 0 | 93 |
+| `samplecheck/proof.dsp.txt` | 61 | 0 | 61 |
+| `samplecheck/proof.editor.txt` | 80 | 0 | 80 |
+| `samplecheck/proof.integration.txt` | 68 | 0 | 68 |
+| `samplecheck/proof.project.txt` | 63 | 0 | 63 |
+| `samplecheck/proof.soundfont.txt` | 22 | 0 | 22 |
+| `selectionkey/proof.corearrows.txt` | 1 | 0 | 1 |
+| `selectionkey/proof.gesturecommands.txt` | 0 | 4 | 4 |
+| `selectionkey/proof.gesturevelocity.txt` | 0 | 5 | 5 |
+| `selectionkey/proof.windowtier_keyboard.txt` | 0 | 1 | 1 |
+| `selectionkey/proof.windowtier_lifetime.txt` | 0 | 1 | 1 |
+| `swiftqtml/proof.tst_swiftqtml.txt` | 78 | 0 | 78 |
+| `swiftrollbench/proof.tst_swiftrollbench.txt` | 6 | 0 | 6 |
+| `swiftrollgated/proof.clipboardchecks.txt` | 2 | 0 | 2 |
+| `themelayout/proof.tst_themelayout_color.txt` | 0 | 2 | 2 |
+| `themelayout/proof.tst_themelayout_settings.txt` | 33 | 1 | 34 |
+| `visual/proof.browsers.txt` | 5 | 3 | 8 |
+| `visual/proof.chrome.txt` | 3 | 4 | 7 |
+| `visual/proof.dialogs.txt` | 24 | 0 | 24 |
+| `visual/proof.quick.txt` | 5 | 0 | 5 |
+| `voicegroup/proof.tst_voicegroupbank.txt` | 0 | 15 | 15 |
+| `voicegroup/proof.tst_voicegroupviewcache.txt` | 3 | 1 | 4 |
+| `voicegroup/proof.voicegroupsourceediting.txt` | 7 | 0 | 7 |
+| `voicegroupsave/proof.presentation.txt` | 6 | 0 | 6 |
+| `voicegroupsave/proof.savecore.txt` | 11 | 0 | 11 |
+| `workspace/proof.selftest_timeline.txt` | 13 | 0 | 13 |
+| `workspace/proof.selftest_transport.txt` | 3 | 7 | 10 |
+| `workspace/proof.session.txt` | 3 | 0 | 3 |
+| `workspace/proof.tabs_scale.txt` | 2 | 4 | 6 |
+| `workspace/proof.tabs_transport.txt` | 1 | 1 | 2 |
+| **Total** | **1,714** | **421** | **2,135** |
