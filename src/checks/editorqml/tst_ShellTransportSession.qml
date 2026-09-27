@@ -228,9 +228,13 @@ ShellTransportSupport {
         var paused = session.playheadPresenter().tick
         verify(waitForNative(function() { return play.actionable && play.enabled }, 3000),
                "the mounted Play control becomes actionable while paused")
+        var beforeResume = session.playheadPresenter().tick
         mouseClick(play, play.width / 2, play.height / 2)
         verify(waitForNative(function() { return bar.presenter.state === 3 }, 3000),
                "toolbar Play resumes when its action completes")
+        verify(waitForNative(function() {
+            return session.playheadPresenter().tick > beforeResume
+        }, 5000), "toolbar resume advances beyond its immediately preceding pause position")
         verify(session.playheadPresenter().tick > cursor + 8,
                "toolbar Play resumes beyond the cursor rather than restarting")
         verify(waitForNative(function() { return pause.actionable && pause.enabled }, 3000),
@@ -381,4 +385,104 @@ ShellTransportSupport {
         compare(survivor.soloChecked, false,
                 "deleting the solo track drops its mask instead of soloing its successor")
     }
+    function test_liveEditAuditionAndFinalCloseDuringPlayback() {
+        var bar = openShell()
+        var session = shell.shellPresenter.session
+        openSong()
+        verify(waitForNative(function() { return rollSurface() !== null }, 10000),
+               "the live-edit song mounts its roll before playing")
+        var surface = rollSurface()
+        var grid = surface.gridModel
+        var roll = findChild(surface, "swiftRollInput")
+        var gutter = findChild(surface, "timelineQuickRollGutter")
+        var play = findChild(bar, "transport.play")
+        var stop = findChild(bar, "transport.stop")
+        verify(roll && gutter && play && stop, "real roll, keyboard and toolbar inputs mount")
+        var initial = grid.noteSummary
+        var tabId = session.songTabs.selectedId
+        grid.setCameraVScroll((127 - 61 + 0.5) * grid.rowHeight - roll.height / 2)
+        var pitch = 61
+        var tick = grid.snapTicks * 2
+        var notes = JSON.parse(initial)
+        while (notes.some(function(n) {
+            return n.track === grid.trackIndex && n.pitch === pitch
+        }))
+            ++pitch
+        var x = tick * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX
+        var y = (127 - pitch + 0.5) * grid.rowHeight - grid.cameraScrollY
+        verify(x > 1 && x + grid.beatWidth + grid.snapTicks * grid.beatWidth
+               / grid.ticksPerBeat < roll.width - 1 && y > grid.rowHeight
+               && y < roll.height - 1, "a fresh note cell is visible in the roll")
+        mouseClick(play, play.width / 2, play.height / 2)
+        tryCompare(bar.presenter, "state", 3, 3000)
+        mousePress(roll, x, y, Qt.LeftButton)
+        mouseMove(roll, x + grid.beatWidth, y, -1, Qt.LeftButton)
+        mouseRelease(roll, x + grid.beatWidth, y, Qt.LeftButton)
+        var added = null
+        verify(waitForNative(function() {
+            added = JSON.parse(grid.noteSummary).find(function(n) {
+                return n.track === grid.trackIndex && !notes.some(function(old) {
+                    return old.id === n.id
+                })
+            })
+            return added !== undefined
+        }, 3000), "a real roll draw commits a new note while the selected song plays")
+        compare(session.documentDirty, true, "the mounted live note edit dirties its selected tab")
+        compare(bar.presenter.state, 3, "mounted roll draw cannot stop playback")
+        var item = findChild(surface, "gridNote_" + added.id)
+        verify(item && item.visible, "the newly drawn note paints a movable face")
+        var pxPerTick = grid.beatWidth / grid.ticksPerBeat
+        var centerX = item.mapToItem(roll, item.width / 2, item.height / 2).x
+        var centerY = (127 - added.pitch + 0.5) * grid.rowHeight - grid.cameraScrollY
+        var dx = grid.snapTicks * pxPerTick
+        verify(centerX > 1 && centerX + dx < roll.width - 1 && centerY > grid.rowHeight
+               && centerY < roll.height - 1, "the new note has a real drag target")
+        mouseMove(roll, centerX, centerY)
+        mousePress(roll, centerX, centerY, Qt.LeftButton)
+        mouseMove(roll, centerX + dx, centerY - grid.rowHeight, -1, Qt.LeftButton)
+        mouseRelease(roll, centerX + dx, centerY - grid.rowHeight, Qt.LeftButton)
+        verify(waitForNative(function() {
+            return JSON.parse(grid.noteSummary).some(function(n) {
+                return n.id === added.id && n.pitch === added.pitch + 1
+                    && n.tick === added.tick + grid.snapTicks
+            })
+        }, 3000), "real roll drag moves the playing note by one snap and one key")
+        compare(bar.presenter.state, 3, "mounted note movement leaves playback Playing")
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        keySequence(StandardKey.Undo)
+        verify(waitForNative(function() {
+            return JSON.parse(grid.noteSummary).some(function(n) {
+                return n.id === added.id && n.tick === added.tick
+                    && n.pitch === added.pitch
+            })
+        }, 3000), "first mounted Undo restores the newly drawn note's position")
+        keySequence(StandardKey.Undo)
+        verify(waitForNative(function() { return grid.noteSummary === initial }, 5000),
+               "mounted Undo restores the entire pre-edit roll note state")
+        compare(session.documentDirty, false, "mounted Undo restores the clean selected song")
+        compare(bar.presenter.state, 3, "mounted Undo preserves the playing transport")
+        var beforeAudition = session.playheadPresenter().tick
+        var gutterKey = 127 - Math.floor((grid.cameraScrollY + gutter.height / 2)
+                                         / grid.rowHeight)
+        mousePress(gutter, gutter.width / 2, gutter.height / 2, Qt.LeftButton)
+        compare(grid.hoverKey, gutterKey, "mounted keyboard press projects the hovered pitch")
+        verify(waitForNative(function() {
+            return session.playheadPresenter().tick > beforeAudition
+        }, 5000), "keyboard gutter press leaves real song playback advancing")
+        mouseRelease(gutter, gutter.width / 2, gutter.height / 2, Qt.LeftButton)
+        compare(bar.presenter.state, 3, "releasing the keyboard press leaves playback Playing")
+        mouseClick(stop, stop.width / 2, stop.height / 2)
+        tryCompare(bar.presenter, "state", 1, 3000)
+        mousePress(gutter, gutter.width / 2, gutter.height / 2, Qt.LeftButton)
+        mouseRelease(gutter, gutter.width / 2, gutter.height / 2, Qt.LeftButton)
+        compare(bar.presenter.state, 1, "keyboard press while stopped leaves transport Stopped")
+        var close = findChild(shell.sceneLoader.item, "songTabClose_" + tabId)
+        verify(close && close.visible, "the final tab exposes its mounted close button")
+        mouseClick(close, close.width / 2, close.height / 2)
+        verify(waitForNative(function() {
+            bar.presenter.refresh()
+            return session.songTabs.tabCount === 0 && bar.presenter.state === 0
+        }, 5000), "mounted final-tab close retires the stopped song and audio presentation")
+    }
+
 }

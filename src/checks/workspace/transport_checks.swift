@@ -36,6 +36,7 @@ internal func runTransportBarChecks(_ report: CheckReport) {
         return
     }
     checkSelectedWorkspaceAudio(report, fixtureRoot: fixtureRoot)
+    checkLiveTimelineTransport(report, fixtureRoot: fixtureRoot)
 }
 
 @MainActor

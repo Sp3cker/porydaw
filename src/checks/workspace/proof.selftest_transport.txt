@@ -20,50 +20,31 @@ Shared helper: src/checks/workspace/session_support.swift
 Shared SHA-256: 79d2a5010d685bd2a2ec6547db1c7430319c5006b18827f97fed1d49239ac306
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport is a single long live-transport flow: mixer-settings updates that must not drop playback, pause stability, paused seek with playhead sync, resume, loop-disabled mid-song seek, stop/start, pause, restart-from-pause rewind, and final tab close.
-selftest_transport.cpp contributes 20 sites: 5 MATCHED, 6 PARTIAL, 3 GAP, 6 RETIRED-REPRESENTATION. The paired
-SessionChecks/session_*/bank_* counterpart drives the disjoint
-DocumentSession/ProjectService/bank-history suite; it never opens a MainWindow,
-workspace tab, transport, scale control, or editor-codec flow. The mounted
-shell-transport QML lane (src/checks/editorqml/tst_ShellTransport.qml, entry
-shell-transport) does open ShellWindow with a staged fixture project and the
-application's NativeAudio transport, and eleven of this flow's transport
-clauses are matched or partially matched through it as S186-S197; the
-workspace-audio telemetry in src/checks/workspace/transport_checks.swift is a
-supplemental mask/audition observation and is not mapped to these transport
-rows.
-Bookkeeping does not overclaim: unsure cases are recorded as GAP, never
+WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport is a live-transport
+flow covering PCM settings, pause stability and paused tick alignment, resume,
+the old seek cases, stop/restart and final tab close. The current 20-site tally
+is 7 MATCHED, 7 PARTIAL, 0 GAP and 6 RETIRED-REPRESENTATION. Mounted
+shell-transport input is cited as S186–S197; task-129 real NativeAudio renderer
+observations and final-tab closure are cited as S198–S204. The selected
+workspace lane uses the Null backend, so physical-device output is not claimed.
+Transport A009/A010/A013 preserve the user's cursor-never-seeks decision.
 
-Command: deno task verify --filter projectstore --filter swiftcore --verbose
-Result: PASS — 24 applicable entries, 7 filtered skips (controller-run final run on the
-frozen sources pinned above; the ledger agent did not run it). Inside swiftcore the
-workspace-audio telemetry observed actual NativeAudio CGB activity and polyphony for the
-selected mute/solo/tab masks after the fixture received its explicit program 0.
-Command: deno task verify:shell --filter shell-transport --verbose
-Result: PASS — shell-transport 1/1 applicable (4.78s).
+Command: deno task verify --filter swiftcore-projectsession --verbose
+Result: PASS — 1 applicable entry, 35 filtered skips (check implementer's
+frozen-source run; the ledger writer did not run this lane).
+Command: deno task verify:shell --filter shell-transport-session --verbose
+Result: PASS — 1 applicable entry, 74 filtered skips (same frozen-source run).
 
 No native execution remains: the QtTest suites declared in
 src/checks/workspace/tst_workspacesessions.h (WorkspaceTransportSelfTest)
 would run against a real MainWindow with the Null audio backend and a staged
 fixture project copy (workspace_test::ProjectCopy; fixture.h/fixture.cpp
 carries no assertion sites), but the harness is compiled into no CMake target
-and is unregistered in src/checks/checkcatalog.cpp, so each native site was
-reconciled to GAP (user-visible behavior) or RETIRED-REPRESENTATION (fixture
-and wait plumbing). On the Swift side, pdcSuiteRun in
-src/checks/support/corecheck/CoreCheckSupport.swift dispatches suites 10 and 11 to
-runProjectSessionSuite and runBankHistorySuite, and those entry points never
-open a workspace, tab, transport, scale control, or editor-codec flow; the
-mounted shell-transport QML lane is the counterpart that opens the workspace
-and transport (S186-S197). The 184
-paired predicates are split across SessionChecks.swift (both suite entry
-points and their shared-state checks) and the session_*/bank_* counterparts
-(session_editor_semantics.swift, session_io.swift,
-session_playback.swift, session_save.swift, bank_edits.swift,
-bank_history_probes.swift, bank_saves.swift, bank_sharing.swift);
-session_fixtures.swift (makeMidiFixture, stageTestProject) and
-session_support.swift (runBlocking, operationFailureMessage,
-noteOffSample, bytes, configLineBytes) are shared helpers that carry no
-expects for this pairing.
+and is unregistered in src/checks/checkcatalog.cpp. The mounted shell lane
+opens a selected workspace and transport (S186–S197), and the task-129
+selected-workspace check observes NativeAudio's real renderer (S198–S204).
+The original check remains pinned above; Null-backend renderer samples do
+not establish physical audio-device delivery.
 
 A001 | WorkspaceTransportSelfTest::init | src/checks/workspace/selftest_transport.cpp:57
 Disposition: RETIRED-REPRESENTATION
@@ -78,8 +59,8 @@ A004 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks
 Disposition: RETIRED-REPRESENTATION
 
 A005 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:131
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.updateSettings with the transport projection exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: PARTIAL
+Mapping/reason: S201 compares all four replaced PCM settings on NativeAudio, Playing transport and strict renderer sample progress; unproved: physical audio-device output under the Null backend.
 Source context since previous assertion:
   ;
       const uint64_t beforeSettings = window.m_audio.playheadSamples();
@@ -97,7 +78,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A007 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:144
 Disposition: PARTIAL
-Mapping/reason: Related predicate S186 (test_toolbarResumeAndSpaceRestartAtEditCursor: the mounted toolbar Pause presents bar.presenter.state 2, the audio-transport Paused projection); unproved: the original's 100 ms playhead-stability window — no predicate samples the playhead across 100 ms.
+Mapping/reason: S186 presents Paused from the mounted toolbar, and S202 samples NativeAudio.playheadSamples throughout a monotonic, uninterrupted 100 ms pause; unproved: physical-device pause/output under the Null backend.
 Source context since previous assertion:
   ;
       window.pausePlayback();
@@ -115,16 +96,8 @@ Original expression:
       }())
 
 A008 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:156
-Disposition: PARTIAL
-Mapping/reason: Related predicate S187 (test_rulerCommitMovesCursorOnlyInEveryTransportState: the paused press leaves the shared playhead at the pause point); unproved: the original's 0.25-tick closeness between the presented paused playhead and the audio tick.
-Source context since previous assertion:
-  ;
-      window.synchronizePlayhead();
-      constexpr double toleranceTicks = 0.25;
-      const uint64_t pausedSample = window.m_audio.playheadSamples();
-      const double pausedTick = window.m_audio.timeline()->tickForSample(pausedSample);
-Original expression:
-  QVERIFY(std::abs(view->playheadTick() - pausedTick) <= toleranceTicks)
+Disposition: MATCHED
+Mapping: S203 (presented paused tick agrees within 0.25 tick with the audio timeline at its current sample)
 
 A009 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:163
 Disposition: PARTIAL
@@ -142,7 +115,7 @@ Original expression:
 
 A011 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:170
 Disposition: PARTIAL
-Mapping/reason: Related predicates S192, S193, S194 (the mounted toolbar Play from paused presents Playing, advances past the committed cursor, and does not jump behind the prior pause point); unproved: the original's strict increase beyond the pre-resume sample — S193's bound (past the committed cursor) already held before the resume and S194 admits a stationary or one-tick-backward result.
+Mapping/reason: Related predicates S192 and S204 (mounted Play resumes from Paused, and the NativeAudio renderer sample count strictly exceeds the value captured immediately before resume); unproved: physical-device output under the Null backend.
 Source context since previous assertion:
   ;
 
@@ -174,7 +147,7 @@ Mapping: S197 (mounted transport.stop click then tryCompare bar.presenter.state 
 
 A015 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:186
 Disposition: PARTIAL
-Mapping/reason: Related predicates S189, S190, S191 (mounted Play from the committed edit cursor presents Playing, parks the shared playhead on that cursor, and the real audio position advances past it); unproved: the original's 0.25 s-of-samples lower bound — the mounted advance only requires passing the committed cursor by more than 8 ticks.
+Mapping/reason: Related predicates S189, S190, S191 and S198 (mounted Play presents Playing; Swift audio samples advance at least sampleRate * 0.25 beyond the actual Play target); unproved: physical-device output, because the executed lane uses the Null audio backend. The cursor-never-seeks decision remains unchanged.
 Source context since previous assertion:
   ;
       window.startPlayback();
@@ -196,22 +169,12 @@ Disposition: MATCHED
 Mapping: S197 (mounted transport.stop click then tryCompare bar.presenter.state 1 == Stopped; that probe carries no message literal, so S197 anchors test_transportControlTransitionsAndSettings)
 
 A019 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:203
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner SongTabsController.requestClose exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-      const SongName name = tab->name();
-      window.m_workspace->requestCloseSelectedTab();
-Original expression:
-  QTRY_VERIFY(!window.m_workspace->songTabFor(name))
+Disposition: MATCHED
+Mapping: S199 (closing the final clean tab retires the selected song)
 
 A020 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:204
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner SongTabsController tab retirement (tabCount) exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(window.m_workspace->openTabCount(), qsizetype(0))
+Disposition: MATCHED
+Mapping: S200 (closing the final tab leaves the workspace tab count at zero)
 
 Remaining original source (closing sequence and helper bodies):
   ;
@@ -254,3 +217,24 @@ Anchor: message "Space restarts from the edit cursor instead of the pause point"
 
 S197 | test_transportControlTransitionsAndSettings | src/checks/editorqml/tst_ShellTransport.qml
 Anchor: function
+
+S198 | checkLiveTimelineTransport | src/checks/workspace/session_playback.swift
+Anchor: message "stopped Play progresses at least a quarter second beyond its actual start sample"
+
+S199 | checkLiveTimelineTransport | src/checks/workspace/session_playback.swift
+Anchor: message "closing the final clean tab retires the selected song"
+
+S200 | checkLiveTimelineTransport | src/checks/workspace/session_playback.swift
+Anchor: message "final tab closure leaves no open workspace tabs"
+
+S201 | checkLiveTimelineTransport | src/checks/workspace/session_playback.swift
+Anchor: message "all four replaced PCM settings reach the playing device as its sample advances"
+
+S202 | checkLiveTimelineTransport | src/checks/workspace/session_playback.swift
+Anchor: message "paused device samples remain unchanged throughout an uninterrupted 100 ms window"
+
+S203 | checkLiveTimelineTransport | src/checks/workspace/session_playback.swift
+Anchor: message "presented paused playhead is within 0.25 tick of the device timeline"
+
+S204 | checkLiveTimelineTransport | src/checks/workspace/session_playback.swift
+Anchor: message "toolbar resume strictly advances past the sample captured immediately before resume"
