@@ -808,6 +808,8 @@ TestCase {
                 "the mounted release retires its drawn preview")
         if (unlockAtPress) {
             mountedVelocityRulerAndPaint(model, detent, input, grid, notes, 76)
+            mountedRawVelocityGesture(input, grid, notes)
+            mountedRawVelocityRamp(input, grid, notes)
             for (var family of [{ slot: 6, snap: 64 }, { slot: 7, snap: 76 }]) {
                 mouseDoubleClickSequence(voiceInput, insertionX, voiceInput.height / 2,
                                          Qt.LeftButton)
@@ -837,6 +839,8 @@ TestCase {
                            "the actual wave first graduation stays clear of the bottom detent")
                 }
                 mountedVelocityRulerAndPaint(model, detent, input, grid, notes, family.snap)
+                mountedRawVelocityGesture(input, grid, notes)
+                mountedRawVelocityRamp(input, grid, notes)
             }
             var ramp = findChild(page, "velocityRamp")
             var rampStartX = input.width * 0.6
@@ -1011,6 +1015,151 @@ TestCase {
                 return model.contextSlot === 0 && !model.detentsAvailable && !detent.visible
             }, 3000), "changing the staged PSG voice back to direct sound hides its detent")
         }
+    }
+
+    function mountedRawVelocityGesture(input, grid, notes) {
+        var ruler = findChild(velocityPageItem(), "velocityRulerInput")
+        var roll = rollInput()
+        var inset = grid.baseFontPx * 0.75
+        var yFor = function(value) {
+            return inset + (ruler.height - 2 * inset) * (127 - value) / 126
+        }
+        var laterPoint = gridPointFor(notes[1].tick + notes[1].duration / 2,
+                                      notes[1].pitch)
+        mouseClick(roll, laterPoint.x, laterPoint.y, Qt.LeftButton,
+                   Qt.ControlModifier)
+        for (var index = 0; index < 2; ++index) {
+            var note = notes[index]
+            var point = gridPointFor(note.tick + note.duration / 2, note.pitch)
+            mouseClick(roll, point.x, point.y, Qt.LeftButton)
+            var value = index === 0 ? 33 : 87
+            mousePress(ruler, ruler.width / 2, yFor(value), Qt.LeftButton, Qt.ControlModifier)
+            mouseRelease(ruler, ruler.width / 2, yFor(value), Qt.LeftButton)
+        }
+        var firstPoint = gridPointFor(notes[0].tick + notes[0].duration / 2, notes[0].pitch)
+        mouseClick(roll, firstPoint.x, firstPoint.y, Qt.LeftButton, Qt.ControlModifier)
+        var staged = JSON.parse(grid.noteSummary)
+        compare(staged.find(function(note) { return note.id === notes[0].id }).velocity, 33,
+                "the mounted raw drag begins with a quiet velocity of 33")
+        compare(staged.find(function(note) { return note.id === notes[1].id }).velocity, 87,
+                "the mounted raw drag begins with a later velocity of 87")
+        var first = velocityHandleFor(notes[0].id)
+        var later = velocityHandleFor(notes[1].id)
+        verify(first.selected && later.selected && first.x > 0 && first.x < input.width,
+               "the mounted raw drag captures both visible note columns")
+        var baseline = grid.noteSummary
+        var before = Number(revision())
+        var rawAtPress = Math.round(1 + (ruler.height - inset - first.y) * 126
+                                    / (ruler.height - 2 * inset))
+        var endY = yFor(rawAtPress + 7)
+        mousePress(input, first.x, first.y, Qt.LeftButton, Qt.ControlModifier)
+        mouseMove(input, first.x, endY, -1, Qt.LeftButton, Qt.NoModifier)
+        verify(waitForNative(function() {
+            var quiet = velocityHandleFor(notes[0].id)
+            var companion = velocityHandleFor(notes[1].id)
+            return quiet && companion && quiet.preview && companion.preview
+        }, 3000), "the mounted raw plot routes the modifier-held press into two previews")
+        compare(velocityHandleFor(notes[0].id).value, 40,
+                "the mounted raw gesture previews quiet literal 40")
+        compare(velocityHandleFor(notes[1].id).value, 94,
+                "the mounted raw gesture previews later literal 94")
+        compare(grid.noteSummary, baseline,
+                "the mounted raw gesture keeps both stored velocities while held")
+        compare(Number(revision()), before,
+                "the mounted raw gesture stages no document revision")
+        mouseRelease(input, first.x, endY, Qt.LeftButton)
+        verify(waitForNative(function() {
+            var current = JSON.parse(grid.noteSummary)
+            return current.some(function(note) { return note.id === notes[0].id && note.velocity === 40 })
+                && current.some(function(note) { return note.id === notes[1].id && note.velocity === 94 })
+        }, 5000), "the mounted raw release commits exactly 40 and 94")
+        compare(Number(revision()), before + 1,
+                "the mounted raw release advances exactly one revision")
+        compare(velocityHandleFor(notes[2].id).preview, false,
+                "the mounted raw release leaves the outsider without a preview")
+    }
+
+    function mountedRawVelocityRamp(input, grid, notes) {
+        var ruler = findChild(velocityPageItem(), "velocityRulerInput")
+        var roll = rollInput()
+        var inset = grid.baseFontPx * 0.75
+        var yFor = function(value) {
+            return inset + (ruler.height - 2 * inset) * (127 - value) / 126
+        }
+        var firstPosition = gridPointFor(notes[0].tick + notes[0].duration / 2,
+                                         notes[0].pitch)
+        var laterPosition = gridPointFor(notes[1].tick + notes[1].duration / 2,
+                                         notes[1].pitch)
+        mouseClick(roll, firstPosition.x, firstPosition.y, Qt.LeftButton,
+                   Qt.ControlModifier)
+        mouseClick(roll, laterPosition.x, laterPosition.y, Qt.LeftButton,
+                   Qt.ControlModifier)
+        var originalScroll = grid.cameraScrollY
+        grid.setCameraVScroll((127 - notes[2].pitch + 0.5) * grid.rowHeight
+                              - roll.height / 2)
+        var midpoint = gridPointFor(notes[2].tick + notes[2].duration / 2,
+                                    notes[2].pitch)
+        verify(midpoint.x > 0 && midpoint.x < roll.width
+               && midpoint.y > 0 && midpoint.y < roll.height,
+               "the middle note is visible after the mounted roll scroll")
+        mouseClick(roll, midpoint.x, midpoint.y, Qt.LeftButton)
+        mousePress(ruler, ruler.width / 2, yFor(56), Qt.LeftButton, Qt.ControlModifier)
+        mouseRelease(ruler, ruler.width / 2, yFor(56), Qt.LeftButton)
+        grid.setCameraVScroll(originalScroll)
+        mouseClick(roll, firstPosition.x, firstPosition.y, Qt.LeftButton,
+                   Qt.ControlModifier)
+        mouseClick(roll, laterPosition.x, laterPosition.y, Qt.LeftButton,
+                   Qt.ControlModifier)
+        var first = velocityHandleFor(notes[0].id)
+        var middle = velocityHandleFor(notes[2].id)
+        var later = velocityHandleFor(notes[1].id)
+        var pressX = 2 * middle.x - later.x
+        verify(first.selected && middle.selected && later.selected
+               && first.x < middle.x && middle.x < later.x
+               && pressX > 0 && pressX < middle.x
+               && Math.abs(pressX - first.x) <= first.hitRadius,
+               "the mounted raw ramp brackets the selected midpoint in distinct columns")
+        var original = grid.noteSummary
+        var before = Number(revision())
+        mousePress(input, pressX, yFor(37), Qt.LeftButton,
+                   Qt.ControlModifier | Qt.ShiftModifier)
+        mouseMove(input, later.x, yFor(93), -1, Qt.LeftButton, Qt.NoModifier)
+        verify(waitForNative(function() {
+            var a = velocityHandleFor(notes[0].id)
+            var b = velocityHandleFor(notes[2].id)
+            var c = velocityHandleFor(notes[1].id)
+            return a && b && c && a.preview && b.preview && c.preview
+                && a.value === 37 && b.value === 65 && c.value === 93
+        }, 3000), "the mounted unlocked ramp previews literal 37, 65 and 93")
+        compare(grid.noteSummary, original,
+                "the mounted raw ramp keeps the committed roll unchanged while held")
+        compare(Number(revision()), before,
+                "the mounted raw ramp defers its revision until release")
+        mouseRelease(input, later.x, yFor(93), Qt.LeftButton)
+        verify(waitForNative(function() {
+            var current = JSON.parse(grid.noteSummary)
+            return current.some(function(note) { return note.id === notes[0].id && note.velocity === 37 })
+                && current.some(function(note) { return note.id === notes[2].id && note.velocity === 65 })
+                && current.some(function(note) { return note.id === notes[1].id && note.velocity === 93 })
+        }, 5000), "the mounted raw ramp commits literal 37, 65 and 93")
+        compare(Number(revision()), before + 1,
+                "the mounted raw ramp release advances one revision")
+        mouseClick(roll, firstPosition.x, firstPosition.y, Qt.LeftButton,
+                   Qt.ControlModifier)
+        mouseClick(roll, laterPosition.x, laterPosition.y, Qt.LeftButton,
+                   Qt.ControlModifier)
+        grid.setCameraVScroll((127 - notes[2].pitch + 0.5) * grid.rowHeight
+                              - roll.height / 2)
+        midpoint = gridPointFor(notes[2].tick + notes[2].duration / 2, notes[2].pitch)
+        mousePress(ruler, ruler.width / 2, yFor(104), Qt.LeftButton,
+                   Qt.ControlModifier)
+        mouseRelease(ruler, ruler.width / 2, yFor(104), Qt.LeftButton)
+        mouseClick(roll, midpoint.x, midpoint.y, Qt.LeftButton,
+                   Qt.ControlModifier)
+        grid.setCameraVScroll(originalScroll)
+        mouseClick(roll, firstPosition.x, firstPosition.y, Qt.LeftButton)
+        mouseClick(roll, laterPosition.x, laterPosition.y, Qt.LeftButton,
+                   Qt.ControlModifier)
     }
 
     function mountedVelocityRulerAndPaint(model, detent, input, grid, notes, expectedSnap) {

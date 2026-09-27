@@ -225,9 +225,11 @@ func drawerVelocityUnlockedRelativeKeepsOffsets(_ report: CheckReport, session: 
         report.fail(drawerVelocityUnlockedRelativeID, "the square pair published no handles")
         return
     }
-    let moveY = firstHandle.y - 24
+    let moveY = page.axisModel.velocityToY(page.axisModel.yToVelocity(firstHandle.y) + 7)
     let moveDelta = page.axisModel.yToVelocity(moveY) - page.axisModel.yToVelocity(firstHandle.y)
     let baseline = DocumentSnapshot(document)
+    report.expectEqual(expected: 7, actual: moveDelta, cppID: drawerVelocityUnlockedRelativeID,
+                       what: "the square drag displacement delivers seven raw velocity steps")
     _ = page.pointerPress(x: firstHandle.x, y: firstHandle.y, surface: 1, button: 1, modifiers: unlock)
     _ = page.pointerMove(x: firstHandle.x, y: moveY, buttons: 1)
     report.expectEqual(expected: 33 + moveDelta, actual: Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked quiet note takes the shared raw delta")
@@ -253,9 +255,11 @@ func drawerVelocityUnlockedRelativeKeepsOffsets(_ report: CheckReport, session: 
         report.fail(drawerVelocityUnlockedRelativeID, "the noise pair published no handles")
         return
     }
-    let noiseMoveY = noiseHandle.y - 24
+    let noiseMoveY = page.axisModel.velocityToY(page.axisModel.yToVelocity(noiseHandle.y) + 7)
     let noiseMoveDelta = page.axisModel.yToVelocity(noiseMoveY) - page.axisModel.yToVelocity(noiseHandle.y)
     let noiseBaseline = DocumentSnapshot(document)
+    report.expectEqual(expected: 7, actual: noiseMoveDelta, cppID: drawerVelocityUnlockedRelativeID,
+                       what: "the noise drag displacement delivers seven raw velocity steps")
     _ = page.pointerPress(x: noiseHandle.x, y: noiseHandle.y, surface: 1, button: 1, modifiers: unlock)
     _ = page.pointerMove(x: noiseHandle.x, y: noiseMoveY, buttons: 1)
     report.expectEqual(expected: 33 + noiseMoveDelta, actual: Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked noise note takes the shared raw delta")
@@ -304,12 +308,15 @@ func drawerVelocityUnlockedRampInterpolates(_ report: CheckReport, session: Docu
     let pressY = page.axisModel.velocityToY(37)
     let endY = page.axisModel.velocityToY(93)
     report.expect(middleHandle.x > min(firstHandle.x, lastHandle.x) && middleHandle.x < max(firstHandle.x, lastHandle.x), cppID: drawerVelocityUnlockedRampID, message: "the square middle note sits inside the swept span")
+    let squarePressX = 2 * middleHandle.x - lastHandle.x
+    report.expect(squarePressX < middleHandle.x && abs(squarePressX - firstHandle.x) <= firstHandle.hitRadius,
+                  cppID: drawerVelocityUnlockedRampID,
+                  message: "the square midpoint brackets a first-column press inside its hit radius")
     var baseline = DocumentSnapshot(document)
-    _ = page.pointerPress(x: firstHandle.x, y: pressY, surface: 1, button: 1, modifiers: unlock | shift)
+    _ = page.pointerPress(x: squarePressX, y: pressY, surface: 1, button: 1, modifiers: unlock | shift)
     _ = page.pointerMove(x: lastHandle.x, y: endY, buttons: 1)
-    let squareMiddleExpected = page.axisModel.yToVelocity(velocityRampValue(at: middleHandle.x, x0: firstHandle.x, y0: pressY, x1: lastHandle.x, y1: endY))
     report.expectEqual(expected: 37, actual: Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked square ramp starts raw")
-    report.expectEqual(expected: squareMiddleExpected, actual: Int(page.frozenPreview[middle.id] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked square middle interpolates raw")
+    report.expectEqual(expected: 65, actual: Int(page.frozenPreview[middle.id] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked square middle interpolates raw")
     report.expectEqual(expected: 93, actual: Int(page.frozenPreview[notes[1].id] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked square ramp ends raw")
     report.expect(page.frozenPreview[notes[2].id] == nil, cppID: drawerVelocityUnlockedRampID, message: "the note outside the triple previews nothing")
     report.expectEqual(expected: baseline.revision, actual: document.revision, cppID: drawerVelocityUnlockedRampID, what: "the deferred unlocked ramp stages no revision before release")
@@ -317,7 +324,7 @@ func drawerVelocityUnlockedRampInterpolates(_ report: CheckReport, session: Docu
     report.expectEqual(expected: baseline.revision + 1, actual: document.revision, cppID: drawerVelocityUnlockedRampID, what: "one unlocked ramp release commits one revision")
     report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityUnlockedRampID, message: "the release clears its preview")
     report.expectEqual(expected: 37, actual: Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the release commits the first raw ramp velocity")
-    report.expectEqual(expected: squareMiddleExpected, actual: Int(document.note(middle.id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the release commits the interpolated raw velocity")
+    report.expectEqual(expected: 65, actual: Int(document.note(middle.id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the release commits the interpolated raw velocity")
     report.expectEqual(expected: 93, actual: Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the release commits the last raw ramp velocity")
     report.expectEqual(expected: Int(notes[2].velocity), actual: Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the release leaves the outside note alone")
     guard let noiseMiddle = drawerVelocityPaintAddNote(report, cppID: drawerVelocityUnlockedRampID, document: document, page: page, tick: 102, pitch: 60, duration: 6, velocity: 56) else {
@@ -334,18 +341,21 @@ func drawerVelocityUnlockedRampInterpolates(_ report: CheckReport, session: Docu
         return
     }
     report.expect(noiseMiddleHandle.x > min(noiseFirstHandle.x, noiseLastHandle.x) && noiseMiddleHandle.x < max(noiseFirstHandle.x, noiseLastHandle.x), cppID: drawerVelocityUnlockedRampID, message: "the noise middle note sits inside the swept span")
+    let noisePressX = 2 * noiseMiddleHandle.x - noiseLastHandle.x
+    report.expect(noisePressX < noiseMiddleHandle.x && abs(noisePressX - noiseFirstHandle.x) <= noiseFirstHandle.hitRadius,
+                  cppID: drawerVelocityUnlockedRampID,
+                  message: "the noise midpoint brackets a first-column press inside its hit radius")
     baseline = DocumentSnapshot(document)
-    _ = page.pointerPress(x: noiseFirstHandle.x, y: pressY, surface: 1, button: 1, modifiers: unlock | shift)
+    _ = page.pointerPress(x: noisePressX, y: pressY, surface: 1, button: 1, modifiers: unlock | shift)
     _ = page.pointerMove(x: noiseLastHandle.x, y: endY, buttons: 1)
     report.expectEqual(expected: 37, actual: Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked noise ramp starts raw")
-    let noiseMiddleExpected = page.axisModel.yToVelocity(velocityRampValue(at: noiseMiddleHandle.x, x0: noiseFirstHandle.x, y0: pressY, x1: noiseLastHandle.x, y1: endY))
-    report.expectEqual(expected: noiseMiddleExpected, actual: Int(page.frozenPreview[noiseMiddle.id] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked noise middle interpolates raw")
+    report.expectEqual(expected: 65, actual: Int(page.frozenPreview[noiseMiddle.id] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked noise middle interpolates raw")
     report.expectEqual(expected: 93, actual: Int(page.frozenPreview[noiseLast.id] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked noise ramp ends raw")
     report.expectEqual(expected: baseline.revision, actual: document.revision, cppID: drawerVelocityUnlockedRampID, what: "the deferred noise ramp stages no revision before release")
     _ = page.pointerRelease(x: noiseLastHandle.x, y: endY, button: 1)
     report.expectEqual(expected: baseline.revision + 1, actual: document.revision, cppID: drawerVelocityUnlockedRampID, what: "one unlocked noise release commits one revision")
     report.expectEqual(expected: 37, actual: Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the release commits the first noise raw velocity")
-    report.expectEqual(expected: noiseMiddleExpected, actual: Int(document.note(noiseMiddle.id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the release commits the interpolated noise velocity")
+    report.expectEqual(expected: 65, actual: Int(document.note(noiseMiddle.id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the release commits the interpolated noise velocity")
     report.expectEqual(expected: 93, actual: Int(document.note(noiseLast.id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the release commits the last noise raw velocity")
     let waveMap = VelocityMap(voiceKind: .wave)
     let waveAxis = VelocityAxisModel(map: waveMap, geometry: page.axisModel.geometry)
