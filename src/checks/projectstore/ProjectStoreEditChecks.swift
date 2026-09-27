@@ -15,13 +15,15 @@ private func editExternally(root: URL, fence: TimeInterval) throws -> VgVoice? {
     guard writer.open(projectRoot: root.path, voicegroupArg: "_fixture_rich", error: &error),
           var voice = writer.voiceAt(slot: 0) else { return nil }
     voice.release = voice.release == 3 ? 4 : 3
-    guard writer.setVoice(slot: 0, voice: voice), try writer.save() else { return nil }
+    guard writer.setVoice(slot: 0, voice: voice) else { return nil }
+    try Data(writer.sourceBytes()).write(to: URL(filePath: writer.filePath))
     try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSinceNow: fence)],
                                           ofItemAtPath: writer.filePath)
     return voice
 }
 
 internal func runProjectStoreEditSuite(_ report: CheckReport) {
+    checkBlankTokenConflicts(report)
     do {
         try withTempProjectCopy(prefix: "projectstore-edit") { root in
             let store = ProjectStore(projectRoot: root)
@@ -169,76 +171,89 @@ internal func runProjectStoreEditSuite(_ report: CheckReport) {
             }
 
             do {
-                try withTempProjectCopy(prefix: "projectstore-edit") { expiryRoot in
-                    let expiryStore = ProjectStore(projectRoot: expiryRoot)
-                    guard case .success = awaitValue({ try await expiryStore.open() }),
+                try withTempProjectCopy(prefix: "projectstore-edit") { rebaseRoot in
+                    let rebaseStore = ProjectStore(projectRoot: rebaseRoot)
+                    guard case .success = awaitValue({ try await rebaseStore.open() }),
                           case .success(let base) = awaitValue({
-                              try await expiryStore.loadBank(voicegroupArg: "_fixture_rich")
+                              try await rebaseStore.loadBank(voicegroupArg: "_fixture_rich")
                           }),
-                          let externalValue = try editExternally(root: expiryRoot, fence: 3600),
+                          let externalValue = try editExternally(root: rebaseRoot, fence: 3600),
                           case .success(let fresh) = awaitValue({
-                              try await expiryStore.loadBank(voicegroupArg: "_fixture_rich")
+                              try await rebaseStore.loadBank(voicegroupArg: "_fixture_rich")
                           }),
                           let blankSlot = fresh.slotViews.firstIndex(where: { $0.kind == .none }) else {
-                        editExpect("E10", false, report, "expiry fixture failed to reload an external change")
+                        editExpect("E10", false, report, "rebase fixture failed to reload an external change")
                         return
                     }
                     let blankValue = VgVoice(macro: .square1, sustain: 15)
                     guard case .success(.applied(let materialized, _, let maybeToken)) = awaitValue({
-                        try await expiryStore.applyVoicegroupEdit(
+                        try await rebaseStore.applyVoicegroupEdit(
                             lease: fresh,
                             operation: .set(.init(slot: blankSlot, value: blankValue, expected: nil)))
                     }), let liveToken = maybeToken,
                           case .success(let saved?) = awaitValue({
-                              try await expiryStore.saveVoicegroup(lease: materialized)
+                              try await rebaseStore.saveVoicegroup(lease: materialized)
                           }),
-                          let replacedValue = try editExternally(root: expiryRoot, fence: 7200) else {
+                          let replacedValue = try editExternally(root: rebaseRoot, fence: 7200) else {
                         editExpect("E10", false, report, "blank-slot insertion minted no token or failed to save")
                         return
                     }
+                    let sourcePath = URL(filePath: saved.sourcePath)
+                    let refreshedBytes = try Data(contentsOf: sourcePath)
                     let replaced = awaitValue {
-                        try await expiryStore.loadBank(voicegroupArg: "_fixture_rich")
+                        try await rebaseStore.loadBank(voicegroupArg: "_fixture_rich")
                     }
-                    let expired = awaitValue {
-                        try await expiryStore.revertBlankSlot(lease: saved, materializationToken: liveToken)
+                    let reverted = awaitValue {
+                        try await rebaseStore.revertBlankSlot(lease: saved, materializationToken: liveToken)
                     }
-                    guard case .success(let current) = replaced, case .success(.conflict(let id)) = expired else {
-                        editExpect("E10", false, report,
-                                   "reload or expired-token revert misbehaved: \(String(describing: expired))")
+                    let rebaseMessage = "external edit of a different slot in the same section, bank rebuilt clean: revert applies, the external edit survives, the published bank is dirty."
+                    guard case .success(let rebuilt) = replaced,
+                          case .success(.applied(let restored, _, _)) = reverted else {
+                        editExpect("E10", false, report, rebaseMessage)
                         return
                     }
+                    let diskAfterRevert = try Data(contentsOf: sourcePath)
                     editExpect("E10", fresh.bankToken != base.bankToken &&
                                fresh.slotViews[0].voice == externalValue && !saved.dirty &&
-                               current.bankToken != saved.bankToken && current.slotViews[0].voice == replacedValue &&
-                               current.slotViews[blankSlot].voice == blankValue && id == saved.id, report,
-                               "an external byte change to a clean bank reloads it and burns its minted tokens")
+                               rebuilt.bankToken != saved.bankToken && !rebuilt.dirty &&
+                               rebuilt.slotViews[blankSlot].voice == blankValue &&
+                               restored.slotViews[0].voice == replacedValue &&
+                               restored.slotViews[blankSlot].voice == nil && restored.dirty &&
+                               diskAfterRevert == refreshedBytes, report, rebaseMessage)
+                    guard case .success(.applied(let current, _, _)) = awaitValue({
+                        try await rebaseStore.applyVoicegroupEdit(
+                            lease: restored,
+                            operation: .set(.init(slot: blankSlot, value: blankValue, expected: nil)))
+                    }) else {
+                        editExpect("E11", false, report, "blank-slot redo failed to restore the saved baseline")
+                        return
+                    }
 
                     guard let pendingSlot = current.slotViews.firstIndex(where: { $0.kind == .none }),
                           case .success(.applied(let pending, _, let maybePendingToken)) = awaitValue({
-                              try await expiryStore.applyVoicegroupEdit(
+                              try await rebaseStore.applyVoicegroupEdit(
                                   lease: current,
                                   operation: .set(.init(slot: pendingSlot, value: blankValue, expected: nil)))
                           }), let pendingToken = maybePendingToken else {
                         editExpect("E11", false, report, "second blank-slot insertion minted no token")
                         return
                     }
-                    let sourcePath = URL(filePath: current.sourcePath)
                     let baseline = try Data(contentsOf: sourcePath)
-                    guard try editExternally(root: expiryRoot, fence: 10800) != nil else {
+                    guard try editExternally(root: rebaseRoot, fence: 10800) != nil else {
                         editExpect("E11", false, report, "overlapping external edit failed to write")
                         return
                     }
                     let overlapped = awaitValue {
-                        try await expiryStore.loadBank(voicegroupArg: "_fixture_rich")
+                        try await rebaseStore.loadBank(voicegroupArg: "_fixture_rich")
                     }
                     try baseline.write(to: sourcePath)
                     try FileManager.default.setAttributes(
                         [.modificationDate: Date(timeIntervalSinceNow: 14400)], ofItemAtPath: sourcePath.path)
                     let retained = awaitValue {
-                        try await expiryStore.loadBank(voicegroupArg: "_fixture_rich")
+                        try await rebaseStore.loadBank(voicegroupArg: "_fixture_rich")
                     }
                     let undone = awaitValue {
-                        try await expiryStore.revertBlankSlot(lease: pending, materializationToken: pendingToken)
+                        try await rebaseStore.revertBlankSlot(lease: pending, materializationToken: pendingToken)
                     }
                     if case .failure(let conflict) = overlapped, conflict is VoicegroupStoreError,
                        case .success(let kept) = retained,
@@ -252,11 +267,111 @@ internal func runProjectStoreEditSuite(_ report: CheckReport) {
                     }
                 }
             } catch {
-                editExpect("E10", false, report, "cannot prepare expiry fixture: \(error)")
+                editExpect("E10", false, report, "cannot prepare rebase fixture: \(error)")
             }
         }
     } catch {
         editFail(["E01", "E02", "E03", "E04", "E05", "E06", "E07", "E08", "E09"],
                  report, "cannot prepare edit fixture: \(error)")
+    }
+}
+
+private enum BlankTokenConflictEdit: CaseIterable {
+    case filledSlot, insertBefore, removeBefore
+}
+
+private func checkBlankTokenConflicts(_ report: CheckReport) {
+    for edit in BlankTokenConflictEdit.allCases {
+        let message: String
+        switch edit {
+        case .filledSlot:
+            message = "external edit of the filled slot's line: revert returns conflict and the external bytes survive."
+        case .insertBefore:
+            message = "external insertion before the filled slot shifts it: revert conflicts and no unrelated line is lost."
+        case .removeBefore:
+            message = "external removal before the filled slot shifts it: revert conflicts and no unrelated line is lost."
+        }
+        do {
+            try withTempProjectCopy(prefix: "projectstore-token-conflict") { root in
+                let store = ProjectStore(projectRoot: root)
+                guard case .success = awaitValue({ try await store.open() }),
+                      case .success(let base) = awaitValue({
+                          try await store.loadBank(voicegroupArg: "_fixture_rich")
+                      }),
+                      let blank = base.slotViews.firstIndex(where: { $0.kind == .none }),
+                      case .success(.applied(let filled, _, let maybeToken)) = awaitValue({
+                          try await store.applyVoicegroupEdit(
+                              lease: base, operation: .set(.init(
+                                  slot: blank, value: VgVoice(macro: .square1, sustain: 15), expected: nil)))
+                      }), let token = maybeToken,
+                      case .success(let saved?) = awaitValue({
+                          try await store.saveVoicegroup(lease: filled)
+                      }) else {
+                    editExpect("E10", false, report, "conflict fixture failed to save a tokenized blank")
+                    return
+                }
+                let sourcePath = URL(filePath: saved.sourcePath)
+                let savedBytes = try Data(contentsOf: sourcePath)
+                let externalBytes: Data
+                switch edit {
+                case .filledSlot:
+                    let writer = VoicegroupSource()
+                    var error: String?
+                    guard writer.open(projectRoot: root.path, voicegroupArg: "_fixture_rich", error: &error),
+                          writer.setVoice(slot: blank, voice: VgVoice(macro: .noise, sustain: 9)) else {
+                        editExpect("E10", false, report, "external writer could not edit the filled slot")
+                        return
+                    }
+                    externalBytes = Data(writer.sourceBytes())
+                case .insertBefore, .removeBefore:
+                    var lines = String(decoding: savedBytes, as: UTF8.self).components(separatedBy: "\n")
+                    guard let index = lines.firstIndex(where: { $0.contains("voice_directsound ") }) else {
+                        editExpect("E10", false, report, "shift fixture has no preceding voice line")
+                        return
+                    }
+                    if edit == .insertBefore {
+                        lines.insert("\tvoice_noise 60, 0, 1, 2, 2, 9, 3", at: index)
+                    } else {
+                        lines.remove(at: index)
+                    }
+                    externalBytes = Data(lines.joined(separator: "\n").utf8)
+                }
+                try externalBytes.write(to: sourcePath)
+                try FileManager.default.setAttributes(
+                    [.modificationDate: Date(timeIntervalSinceNow: 3600)], ofItemAtPath: sourcePath.path)
+                guard case .success(let rebuilt) = awaitValue({
+                    try await store.loadBank(voicegroupArg: "_fixture_rich")
+                }) else {
+                    editExpect("E10", false, report, "external conflict fixture failed to rebuild")
+                    return
+                }
+                let reverted = awaitValue {
+                    try await store.revertBlankSlot(lease: saved, materializationToken: token)
+                }
+                let after = awaitValue { try await store.loadBank(voicegroupArg: "_fixture_rich") }
+                let diskAfterRevert = try Data(contentsOf: sourcePath)
+                let preserved: Bool
+                if case .success(.conflict(let id)) = reverted, case .success(let current) = after {
+                    preserved = id == saved.id && !rebuilt.dirty &&
+                        rebuilt.bankToken != saved.bankToken && !current.dirty &&
+                        current.bankToken == rebuilt.bankToken && diskAfterRevert == externalBytes
+                } else {
+                    preserved = false
+                }
+                try savedBytes.write(to: sourcePath)
+                try FileManager.default.setAttributes(
+                    [.modificationDate: Date(timeIntervalSinceNow: 7200)], ofItemAtPath: sourcePath.path)
+                let spent = awaitValue {
+                    try await store.revertBlankSlot(lease: saved, materializationToken: token)
+                }
+                if case .success(.conflict(let id)) = spent {
+                    editExpect("E10", preserved && id == saved.id, report, message)
+                } else {
+                    editExpect("E10", false, report, message)
+                }
+            }
+        } catch {
+            editExpect("E10", false, report, "cannot prepare token conflict fixture: \(error)")
+        }
     }
 }

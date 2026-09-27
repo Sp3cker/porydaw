@@ -26,7 +26,7 @@ private struct BankMemo {
     var sourceFileTime: Date
 }
 
-// Tokens are single-use, scoped to the bank that produced the source delta.
+// Single-use tokens survive bank rebuilds; the source delta's byte match guards undo.
 private struct TokenRegistry {
     struct Entry {
         let id: VoicegroupId
@@ -47,11 +47,6 @@ private struct TokenRegistry {
     mutating func consume(_ token: UInt64) -> Entry? {
         entries.removeValue(forKey: token)
     }
-
-    mutating func expire(id: VoicegroupId) {
-        entries = entries.filter { $0.value.id != id }
-    }
-
 }
 
 /// Worker-confined bank ownership. Call every method from the store's serial executor;
@@ -138,7 +133,6 @@ public final class VoicegroupStore {
         }
         bank.graftMintedSynths(source: source)
         let view = Self.publish(id: id, source: source, bank: bank)
-        tokens.expire(id: id)
         records[id] = BankRecord(id: id, source: source, current: bank,
                                  sourceFileTime: time, published: view)
         memos[arg] = BankMemo(id: id, filePath: path, sourceFileTime: time)

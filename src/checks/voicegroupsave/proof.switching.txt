@@ -365,229 +365,72 @@ QVERIFY2(settle([this] {
              "redo-tail undo did not restore clean baseline")
 
 A030 | VoicegroupSaveTest::blankTokenRebasesAcrossSourceReplacement | src/checks/voicegroupsave/switching.cpp:180
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
-Source context since previous assertion:
-;
-}
-
-void VoicegroupSaveTest::blankTokenRebasesAcrossSourceReplacement()
-{
-    const QString other = otherVoicegroupArg();
-
-Original expression:
-QVERIFY2(m_window->m_workspace->projectState().catalog.groupArgs.size() >= 2 &&
-                 !other.isEmpty(),
-             "required staged voicegroups missing: >=2 groupArgs via sound/voice_groups.inc and "
-             "sound/voicegroups/fixture_alt.inc")
+Disposition: MATCHED
+Mapping: S024
 
 A031 | VoicegroupSaveTest::blankTokenRebasesAcrossSourceReplacement | src/checks/voicegroupsave/switching.cpp:185
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
-Source context since previous assertion:
-;
-    const int blank = firstBlankSlot();
-
-Original expression:
-QVERIFY2(blank >= 0, "fixture must provide a blank slot for structural-token rebasing")
+Disposition: MATCHED
+Mapping: S025
 
 A032 | VoicegroupSaveTest::blankTokenRebasesAcrossSourceReplacement | src/checks/voicegroupsave/switching.cpp:204
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
-Source context since previous assertion:
-;
-    const QString homeArg = m_document->cfg().voicegroupArg;
-    const auto reopenCleanHome = [this, &other, &homeArg] {
-        SongCfg cfg = m_document->cfg();
-        cfg.voicegroupArg = other;
-        m_document->setCfg(cfg);
-        if (!settle([this, &other] {
-                return m_document->cfg().voicegroupArg == other && m_tab->voicegroupId() &&
-                       *m_tab->voicegroupId() != *m_homeId;
-            }))
-            return false;
-        requestUndo();
-        return waitForVoicegroup(homeArg, *m_homeId) && settle([this] {
-                   return m_browser->selectedBankView() && !m_browser->selectedBankView()->dirty;
-               });
-    };
-
-    const VgVoice materialized = m_originalVoice;
-    m_browser->submitPickerEdit(blank, materialized);
-
-Original expression:
-QVERIFY2(settle([this, blank, &materialized] {
-                 const LoadedBankView *const bank = m_browser->selectedBankView();
-                 return bank && bank->dirty && bank->slotViews.at(blank).voice &&
-                        *bank->slotViews.at(blank).voice == materialized;
-             }),
-             "blank slot did not materialize under a reversible token")
+Disposition: MATCHED
+Mapping: S026
 
 A033 | VoicegroupSaveTest::blankTokenRebasesAcrossSourceReplacement | src/checks/voicegroupsave/switching.cpp:211
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
-Source context since previous assertion:
-;
-    const int saveBefore = m_savedReceipts;
-
-Original expression:
-QVERIFY(saveSelectedSong())
+Disposition: MATCHED
+Mapping: S027
 
 A034 | VoicegroupSaveTest::blankTokenRebasesAcrossSourceReplacement | src/checks/voicegroupsave/switching.cpp:212
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(waitForCleanSave(saveBefore), "materialized blank did not save")
+Disposition: MATCHED
+Mapping: S028
 
 A035 | VoicegroupSaveTest::blankTokenRebasesAcrossSourceReplacement | src/checks/voicegroupsave/switching.cpp:218
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
-Source context since previous assertion:
-;
-
-    VoicegroupSource sibling;
-    QString error;
-    VgVoice unrelated = m_originalVoice;
-    unrelated.release = adjacentRelease(unrelated.release);
-
-Original expression:
-QVERIFY2(sibling.open(m_project->root(), homeArg, &error), qPrintable(error))
+Disposition: MATCHED
+Mapping: S029
 
 A036 | VoicegroupSaveTest::blankTokenRebasesAcrossSourceReplacement | src/checks/voicegroupsave/switching.cpp:219
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(sibling.setVoice(m_dsSlot, unrelated), "could not update sibling source slot")
+Disposition: MATCHED
+Mapping: S030
 
 A037 | VoicegroupSaveTest::blankTokenRebasesAcrossSourceReplacement | src/checks/voicegroupsave/switching.cpp:220
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(sibling.save(&error), qPrintable(error))
+Disposition: MATCHED
+Mapping: S031
 
 A038 | VoicegroupSaveTest::blankTokenRebasesAcrossSourceReplacement | src/checks/voicegroupsave/switching.cpp:221
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(reopenCleanHome(), "external source refresh did not rebind cleanly")
+Disposition: MATCHED
+Mapping: S032
 
 A039 | VoicegroupSaveTest::blankTokenRebasesAcrossSourceReplacement | src/checks/voicegroupsave/switching.cpp:223
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
-Source context since previous assertion:
-;
-    const QByteArray refreshed = readFileBytes(m_voicegroupPath);
-
-Original expression:
-QVERIFY2(settle([this, blank, &unrelated] {
-                 const LoadedBankView *const bank = m_browser->selectedBankView();
-                 return bank && bank->slotViews.at(blank).voice &&
-                        bank->slotViews.at(m_dsSlot).voice &&
-                        bank->slotViews.at(m_dsSlot).voice->release == unrelated.release;
-             }),
-             "reopened source did not contain structural and unrelated edits")
+Disposition: MATCHED
+Mapping: S033
 
 A040 | VoicegroupSaveTest::blankTokenRebasesAcrossSourceReplacement | src/checks/voicegroupsave/switching.cpp:232
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
-Source context since previous assertion:
-;
-
-    requestUndo();
-
-Original expression:
-QVERIFY2(settle([this, blank, &unrelated, &refreshed] {
-                 const LoadedBankView *const bank = m_browser->selectedBankView();
-                 return bank && !bank->slotViews.at(blank).voice &&
-                        bank->slotViews.at(m_dsSlot).voice &&
-                        bank->slotViews.at(m_dsSlot).voice->release == unrelated.release &&
-                        bank->dirty && readFileBytes(m_voicegroupPath) == refreshed;
-             }),
-             "blank undo restored stale file bytes instead of rebasing its token")
+Disposition: MATCHED
+Mapping: S034
 
 A041 | VoicegroupSaveTest::blankTokenRebasesAcrossSourceReplacement | src/checks/voicegroupsave/switching.cpp:241
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
-Source context since previous assertion:
-;
-    requestRedo();
-
-Original expression:
-QVERIFY2(settle([this, blank, &materialized, &unrelated, &refreshed] {
-                 const LoadedBankView *const bank = m_browser->selectedBankView();
-                 return bank && bank->slotViews.at(blank).voice &&
-                        *bank->slotViews.at(blank).voice == materialized &&
-                        bank->slotViews.at(m_dsSlot).voice &&
-                        bank->slotViews.at(m_dsSlot).voice->release == unrelated.release &&
-                        !bank->dirty && readFileBytes(m_voicegroupPath) == refreshed;
-             }),
-             "blank redo did not preserve unrelated refreshed bytes")
+Disposition: MATCHED
+Mapping: S035
 
 A042 | VoicegroupSaveTest::blankTokenRebasesAcrossSourceReplacement | src/checks/voicegroupsave/switching.cpp:252
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
-Source context since previous assertion:
-;
-
-    requestUndo();
-
-Original expression:
-QVERIFY2(settle([this, blank] {
-                 return m_browser->selectedBankView() &&
-                        !m_browser->selectedBankView()->slotViews.at(blank).voice;
-             }),
-             "cleanup blank undo did not apply")
+Disposition: MATCHED
+Mapping: S036
 
 A043 | VoicegroupSaveTest::blankTokenRebasesAcrossSourceReplacement | src/checks/voicegroupsave/switching.cpp:258
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
-Source context since previous assertion:
-;
-    m_browser->submitPickerEdit(m_dsSlot, m_originalVoice);
-
-Original expression:
-QVERIFY2(waitForBankRelease(m_dsSlot, m_originalVoice.release, true),
-             "restoring unrelated slot did not settle")
+Disposition: MATCHED
+Mapping: S037
 
 A044 | VoicegroupSaveTest::blankTokenRebasesAcrossSourceReplacement | src/checks/voicegroupsave/switching.cpp:261
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
-Source context since previous assertion:
-;
-    const int finalSave = m_savedReceipts;
-
-Original expression:
-QVERIFY(saveSelectedSong())
+Disposition: MATCHED
+Mapping: S038
 
 A045 | VoicegroupSaveTest::blankTokenRebasesAcrossSourceReplacement | src/checks/voicegroupsave/switching.cpp:262
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(waitForCleanSave(finalSave), "cleanup source save did not settle")
+Disposition: MATCHED
+Mapping: S039
 
 A046 | VoicegroupSaveTest::blankTokenRebasesAcrossSourceReplacement | src/checks/voicegroupsave/switching.cpp:263
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
-Source context since previous assertion:
-;
-
-Original expression:
-QCOMPARE(readFileBytes(m_voicegroupPath), m_voicegroupBytes)
+Disposition: MATCHED
+Mapping: S040
 
 Remaining original source (closing sequence and helper bodies):
 ;
@@ -667,3 +510,54 @@ Anchor: message "selector commit loads the alternate bank lease"
 
 S023 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
 Anchor: message "the -G switch records an undoable config edit"
+
+S024 | blankTokenRebasesAcrossSourceReplacement | src/checks/workspace/bank_switching.swift
+Anchor: message "required staged voicegroups missing: >=2 groupArgs via sound/voice_groups.inc and sound/voicegroups/fixture_alt.inc"
+
+S025 | blankTokenRebasesAcrossSourceReplacement | src/checks/workspace/bank_switching.swift
+Anchor: message "fixture must provide a blank slot for structural-token rebasing"
+
+S026 | blankTokenRebasesAcrossSourceReplacement | src/checks/workspace/bank_switching.swift
+Anchor: message "blank slot did not materialize under a reversible token"
+
+S027 | blankTokenRebasesAcrossSourceReplacement | src/checks/workspace/bank_switching.swift
+Anchor: message "saving the materialized blank did not persist its source"
+
+S028 | blankTokenRebasesAcrossSourceReplacement | src/checks/workspace/bank_switching.swift
+Anchor: message "materialized blank did not save"
+
+S029 | blankTokenRebasesAcrossSourceReplacement | src/checks/workspace/bank_switching.swift
+Anchor: message "external writer did not open the saved home source"
+
+S030 | blankTokenRebasesAcrossSourceReplacement | src/checks/workspace/bank_switching.swift
+Anchor: message "could not update sibling source slot"
+
+S031 | blankTokenRebasesAcrossSourceReplacement | src/checks/workspace/bank_switching.swift
+Anchor: message "external writer did not save the unrelated source edit"
+
+S032 | blankTokenRebasesAcrossSourceReplacement | src/checks/workspace/bank_switching.swift
+Anchor: message "external source refresh did not rebind cleanly"
+
+S033 | blankTokenRebasesAcrossSourceReplacement | src/checks/workspace/bank_switching.swift
+Anchor: message "reopened source did not contain structural and unrelated edits"
+
+S034 | blankTokenRebasesAcrossSourceReplacement | src/checks/workspace/bank_switching.swift
+Anchor: message "blank undo restored stale file bytes instead of rebasing its token"
+
+S035 | blankTokenRebasesAcrossSourceReplacement | src/checks/workspace/bank_switching.swift
+Anchor: message "blank redo did not preserve unrelated refreshed bytes"
+
+S036 | blankTokenRebasesAcrossSourceReplacement | src/checks/workspace/bank_switching.swift
+Anchor: message "cleanup blank undo did not apply"
+
+S037 | blankTokenRebasesAcrossSourceReplacement | src/checks/workspace/bank_switching.swift
+Anchor: message "restoring unrelated slot did not settle"
+
+S038 | blankTokenRebasesAcrossSourceReplacement | src/checks/workspace/bank_switching.swift
+Anchor: message "saving the restored source did not persist cleanup"
+
+S039 | blankTokenRebasesAcrossSourceReplacement | src/checks/workspace/bank_switching.swift
+Anchor: message "cleanup source save did not settle"
+
+S040 | blankTokenRebasesAcrossSourceReplacement | src/checks/workspace/bank_switching.swift
+Anchor: message "cleanup source bytes differ from the original voicegroup bytes"
