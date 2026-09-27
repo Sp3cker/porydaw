@@ -6,7 +6,16 @@ Original: src/checks/automationgesturecheck/hover.cpp
 Original SHA-256: c0bbc4a68e09aec50cdbfcbf6f3fec04750e3c34fcf6f7c7de7a6e5d495d3bed
 Swift counterpart: src/checks/automation/automationcanvasediting.swift
 
-Disposition tally: 30 sites: 7 MATCHED, 2 PARTIAL, 18 GAP, 3 RETIRED-REPRESENTATION.
+Disposition tally: 30 sites: 22 MATCHED, 1 PARTIAL, 3 GAP, 4 RETIRED-REPRESENTATION.
+
+Task-96 GREEN: `deno task verify --filter swiftcore-projectsession --verbose`
+PASS (1/36 selected); `deno task verify:qml --verbose` PASS
+(editorqml-drawer 1/1); `deno task verify:shell --verbose` PASS (26/26);
+`deno task verify` PASS (36/36), on frozen check SHA-256 values:
+automationcanvashover.swift f50cea3b9daad724657d650219d933a404415d47cc0ffddea152bb16ef384959;
+gestureNodeDragPhantom.swift 1ec8e09fff393ff6f0549ba7b03084a5a71c5b38054071c9d99dbeef30f20e6f;
+tst_EditorDrawer.qml cb90b5dda2cc2e68e6bcf74c9f2622cca85ba477588dd65c5e87c6554449f411.
+These are implementer-observed lane results, not a ledger-writer rerun.
 
 Command: deno task verify --filter swiftcore (implementer run on the counterpart
 hashes pinned above) -> run_checks PASS (1/14 ok, 13 skipped).
@@ -48,77 +57,28 @@ Original expression:
                     QStringLiteral("native Quick timeline host accepts pointer input"));
 
 A003 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:337
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires native accessibility description on the retired automation host.
-Source context since previous assertion:
-Original expression:
-      probe.require(!rig.automationHost().accessibilityDescription().isEmpty(),
-                    QStringLiteral("attaching the input host did not publish an accessibility "
-                                   "description"));
+Disposition: MATCHED
+Mapping: S029
 
 A004 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:343
 Disposition: MATCHED
 Mapping: S011, S012, S013
 
 A005 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:365
-Disposition: PARTIAL
-Mapping/reason: S026 (hover enter publishes exactly one ring) proves a pointer move publishes the hover ring on the production page at model level; unproved: native hover visibility and layer revision on the retired Quick host.
-Source context since previous assertion:
-      };
-
-      leaveCanvas(rig);
-      const auto idle = rig.quickScene().layer(songview::TimelineQuickLayer::AutomationHover);
-      rig.mouseMove(lane.insertionPos, Qt::NoButton);
-      rig.pump();
-      const qreal expectedRootX = rig.view().timelineSplitX() +
-                                  rig.view().camera().contentX(lane.insertionTick) -
-                                  quickHost->geometry().x();
-      QDeadlineTimer timeout{1000};
-      auto hoverLayer = rig.quickScene().layer(songview::TimelineQuickLayer::AutomationHover);
-      while ((!quickHost->hoverVisible() ||
-              std::abs(quickHost->hoverRootContentX() - expectedRootX) > layout::singlePixel() ||
-              hoverLayer.revision <= idle.revision) &&
-             !timeout.hasExpired()) {
-          rig.pump();
-          hoverLayer = rig.quickScene().layer(songview::TimelineQuickLayer::AutomationHover);
-      }
-      previewUnchanged("direct hover");
-Original expression:
-      probe.require(quickHost->hoverVisible(),
-                    QStringLiteral("direct pointer move did not publish the automation hover "
-                                   "guide"));
+Disposition: MATCHED
+Mapping: S030, S031
 
 A006 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:368
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires native hover content coordinates within one pixel on the retired surface.
-Source context since previous assertion:
-Original expression:
-      probe.require(std::abs(quickHost->hoverRootContentX() - expectedRootX) <= layout::singlePixel(),
-                    QStringLiteral("direct pointer move left the automation hover guide at x=%1, "
-                                   "expected x=%2")
-                        .arg(quickHost->hoverRootContentX())
-                        .arg(expectedRootX));
+Disposition: MATCHED
+Mapping: S032, S033
 
 A007 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:373
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires the native hover layer revision to advance on the retired surface.
-Source context since previous assertion:
-Original expression:
-      probe.require(hoverLayer.revision > idle.revision,
-                    QStringLiteral("direct pointer move did not rebuild the automation hover "
-                                   "layer"));
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S030, S031, S034: `hoverLayer.revision > idle.revision` is the deleted native Quick render-layer revision; sibling A005/A006/A008 prove fresh mounted guide and ghost output.
 
 A008 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:379
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires filled-node pixels on the retired framebuffer.
-Source context since previous assertion:
-      const HoverObservation routed = observeHover(rig);
-      const QPointF insertionCenter =
-          rig.automationContentToViewport(QPointF(lane.insertionX, lane.heldY));
-Original expression:
-      probe.require(hasFilledNodeAt(routed.layer, insertionCenter),
-                    QStringLiteral("direct pointer move did not render the held-value insertion "
-                                   "point"));
+Disposition: MATCHED
+Mapping: S034, S035
 
 A009 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:382
 Disposition: MATCHED
@@ -129,29 +89,12 @@ Disposition: MATCHED
 Mapping: S016, S017, S018
 
 A011 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:396
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires the native cursor-clear counter on the retired automation host.
-Source context since previous assertion:
-Original expression:
-      probe.require(rig.automationHost().cursorClears() > cursorClearsBeforeLeave,
-                    QStringLiteral("pointer leave did not clear the automation cursor"));
+Disposition: MATCHED
+Mapping: S036
 
 A012 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:405
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires native focus requests on the retired automation host.
-Source context since previous assertion:
-
-      // FocusLost is a no-op while a press is live: native menus temporarily
-      // transfer focus and must not tear down gesture state.
-      const int grabsBefore = rig.automationHost().grabReleases();
-      rig.mousePress(lane.insertionPos);
-      rig.pump();
-      previewUnchanged("press");
-Original expression:
-      probe.require(rig.automationHost().focusRequests() > 0 &&
-                        rig.automationHost().lastFocusReason() == Qt::MouseFocusReason,
-                    QStringLiteral("handled automation press did not request input focus through "
-                                   "the host"));
+Disposition: MATCHED
+Mapping: S037
 
 A013 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:412
 Disposition: GAP
@@ -165,18 +108,8 @@ Original expression:
                     QStringLiteral("focus-lost cancellation released the pointer grab"));
 
 A014 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:420
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires the retired rig to report idle after hover routing.
-Source context since previous assertion:
-
-      // Strong cancellation: releases the grab, clears hover and gesture, and
-      // mutates nothing.
-      rig.canvas().inputCancelled(songview::TimelineInputCancelReason::WindowDeactivated);
-      rig.pump();
-      previewUnchanged("window-deactivation cancellation");
-Original expression:
-      probe.require(rig.isIdle(),
-                    QStringLiteral("window-deactivation cancellation left a live gesture"));
+Disposition: MATCHED
+Mapping: S038
 
 A015 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:422
 Disposition: GAP
@@ -192,25 +125,8 @@ Disposition: MATCHED
 Mapping: S019
 
 A017 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:446
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires native hover visibility and layer revision on the retired surface.
-Source context since previous assertion:
-
-      // Cancellation must not latch passive hover off.
-      rig.mouseMove(lane.insertionPos, Qt::NoButton);
-      rig.pump();
-      QDeadlineTimer resumeTimeout{1000};
-      hoverLayer = rig.quickScene().layer(songview::TimelineQuickLayer::AutomationHover);
-      while ((!quickHost->hoverVisible() ||
-              std::abs(quickHost->hoverRootContentX() - expectedRootX) > layout::singlePixel() ||
-              hoverLayer.revision <= cancelled.layer.revision) &&
-             !resumeTimeout.hasExpired()) {
-          rig.pump();
-          hoverLayer = rig.quickScene().layer(songview::TimelineQuickLayer::AutomationHover);
-      }
-Original expression:
-      probe.require(quickHost->hoverVisible() && hoverLayer.revision > cancelled.layer.revision,
-                    QStringLiteral("cancellation latched passive hover off"));
+Disposition: MATCHED
+Mapping: S039, S040
 
 A018 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:454
 Disposition: MATCHED
@@ -231,113 +147,37 @@ A022 | runCase | src/checks/automationgesturecheck/hover.cpp:480
 Disposition: RETIRED-REPRESENTATION
 
 A023 | runCase | src/checks/automationgesturecheck/hover.cpp:502
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires the native insertion-line topology flag on the retired surface.
-Source context since previous assertion:
-      const auto geometry = rig.geometry();
-      const QPointF insertionCenter =
-          rig.automationContentToViewport(QPointF(lane.insertionX, lane.heldY));
-      const QPointF nodeCenter = rig.automationContentToViewport(QPointF(lane.nodeX, lane.nodeY));
-      const QPointF strayGhostCenter =
-          rig.automationContentToViewport(QPointF(lane.nodeX, lane.heldY));
-      const QPointF framebufferOffset(rig.automationGutterInput().bounds().width(), 0.0);
-      const QPointF insertionFramebufferCenter = insertionCenter + framebufferOffset;
-      const QPointF nodeFramebufferCenter = nodeCenter + framebufferOffset;
-
-      rig.mouseMove(lane.insertionPos, Qt::NoButton);
-      rig.pump();
-      const HoverObservation insertion = observeHover(rig);
-      previewUnchanged("insertion preview");
-      topology.insertionLine = insertion.framebufferReady && insertion.chromeVisible;
-      topology.heldGhost =
-          insertion.framebufferReady && insertion.layer.revision > idle.layer.revision &&
-          hasFilledNodeAt(insertion.layer, insertionCenter) &&
-          pixelChangedAt(idle.framebuffer, insertion.framebuffer, insertionFramebufferCenter);
-      topology.insertionLabel = hasValueText(insertion);
-Original expression:
-      probe.require(topology.insertionLine,
-                    QStringLiteral("inter-node hover did not retain its Quick insertion line"));
+Disposition: MATCHED
+Mapping: S031, S041
 
 A024 | runCase | src/checks/automationgesturecheck/hover.cpp:504
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires the native held-ghost topology flag on the retired surface.
-Source context since previous assertion:
-Original expression:
-      probe.require(topology.heldGhost,
-                    QStringLiteral("inter-node hover did not retain its Quick held-value ghost"));
+Disposition: MATCHED
+Mapping: S034, S035
 
 A025 | runCase | src/checks/automationgesturecheck/hover.cpp:506
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires the native insertion-label topology flag on the retired surface.
-Source context since previous assertion:
-Original expression:
-      probe.require(topology.insertionLabel,
-                    QStringLiteral("inter-node hover did not retain its Quick value text"));
+Disposition: MATCHED
+Mapping: S014, S042
 
 A026 | runCase | src/checks/automationgesturecheck/hover.cpp:514
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires the native no-repeat-churn topology flag on the retired surface.
-Source context since previous assertion:
-
-      rig.mouseMove(lane.insertionPos, Qt::NoButton);
-      rig.pump();
-      const HoverObservation repeated = observeHover(rig);
-      previewUnchanged("repeat hover");
-      topology.noRepeatChurn = sameRetainedHover(insertion, repeated);
-Original expression:
-      probe.require(topology.noRepeatChurn,
-                    QStringLiteral("repeat hover at the same coordinate churned Quick state"));
+Disposition: MATCHED
+Mapping: S043
 
 A027 | runCase | src/checks/automationgesturecheck/hover.cpp:537
-Disposition: PARTIAL
-Mapping/reason: S026 (hover enter publishes exactly one ring) proves an existing-node hover publishes exactly one ring on the production page at model level; unproved: Quick annulus pixels, framebuffer readiness, and layer revision on the retired surface.
-Source context since previous assertion:
-
-      rig.mouseMove(lane.nodePos, Qt::NoButton);
-      const auto awaitHoverRevision = [&](quint64 priorRevision) {
-          QDeadlineTimer timeout{1000};
-          HoverObservation observation = observeHover(rig);
-          while ((!observation.framebufferReady || observation.layer.revision <= priorRevision) &&
-                 !timeout.hasExpired()) {
-              rig.pump();
-              observation = observeHover(rig);
-          }
-          return observation;
-      };
-      const HoverObservation nodeHover = awaitHoverRevision(insertion.layer.revision);
-      previewUnchanged("node hover");
-      topology.nodeRing =
-          nodeHover.framebufferReady && nodeHover.layer.revision > insertion.layer.revision &&
-          !nodeHover.layer.triangles.empty() &&
-          hasAnnulusPixelChanges(insertion.framebuffer, nodeHover.framebuffer, nodeFramebufferCenter,
-                                 nodelane::hoverRingRadius(geometry), 2 * layout::singlePixel());
-      topology.nodeLabel = hasValueText(nodeHover);
-      topology.noInsertionGhost = !hasFilledNodeAt(nodeHover.layer, strayGhostCenter);
-Original expression:
-      probe.require(topology.nodeRing,
-                    QStringLiteral("existing-node hover did not retain its Quick node ring"));
+Disposition: MATCHED
+Mapping: S044, S045
 
 A028 | runCase | src/checks/automationgesturecheck/hover.cpp:539
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires the native node-label topology flag on the retired surface.
-Source context since previous assertion:
-Original expression:
-      probe.require(topology.nodeLabel,
-                    QStringLiteral("existing-node hover did not retain its Quick value text"));
+Disposition: MATCHED
+Mapping: S015, S046
 
 A029 | runCase | src/checks/automationgesturecheck/hover.cpp:541
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires the native no-insertion-ghost topology flag on the retired surface.
-Source context since previous assertion:
-Original expression:
-      probe.require(topology.noInsertionGhost,
-                    QStringLiteral("existing-node hover retained an insertion ghost"));
+Disposition: MATCHED
+Mapping: S047
 
 A030 | runCase | src/checks/automationgesturecheck/hover.cpp:564
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires leave-cleared pixels on the retired framebuffer.
+Disposition: PARTIAL
+Mapping/reason: S016, S017, S035, S041, S048, S049, S050 prove mounted guide/ghost/label/ring clearing on pointer leave, including changed ghost and guide pixels; unproved: full guide/ghost/ring/text and framebuffer clearing immediately on a lane transition without pointer leave.
 Source context since previous assertion:
-
       leaveCanvas(rig);
       const auto awaitClear = [&] {
           QDeadlineTimer timeout{1000};
@@ -495,3 +335,69 @@ Anchor: message "hover move republishes without writing" #1
 
 S028 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "hover move republishes without writing" #2
+
+S029 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the real automation plot input describes its active parameter"
+
+S030 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the background move keeps its hover ('"
+
+S031 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "inter-node hover exposes the actual guide"
+
+S032 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the mounted insertion guide aligns within one plot pixel"
+
+S033 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
+Anchor: message "inter-node CC hover aligns its insertion guide within one pixel"
+
+S034 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "inter-node hover exposes the held-value ghost"
+
+S035 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the filled held-value ghost changes plot pixels until leave"
+
+S036 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "leaving restores the neutral plot cursor"
+
+S037 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "a handled automation press focuses the actual input"
+
+S038 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "window deactivation cancels the live automation gesture"
+
+S039 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "a real move after deactivation restores passive hover"
+
+S040 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the node ring recovers after a strong cancellation"
+
+S041 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the actual insertion guide changes plot pixels until leave"
+
+S042 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "background hover retains its value label without a ring"
+
+S043 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "a repeated hover at the same point publishes nothing new"
+
+S044 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the hovered node draws its hover ring"
+
+S045 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the node hover paints over the background hover"
+
+S046 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the ring and value label appear together"
+
+S047 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "a written-node hover suppresses the insertion ghost"
+
+S048 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
+Anchor: message "leaving clears the guide ghost ring and label together"
+
+S049 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "leaving clears the mounted held-value ghost"
+
+S050 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "leaving the plot unrings every node"

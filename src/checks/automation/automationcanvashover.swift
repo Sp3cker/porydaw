@@ -8,6 +8,13 @@ let drawerAutomationHoverModelID = "swiftcore/AutomationPage::hoverModel"
 @MainActor
 func drawerAutomationHoverModel(_ report: CheckReport, suite: DocumentSession,
                                 service: ProjectService) {
+    for mode in ["vanilla", "dark-neutral-high", "immaterial"] {
+        let colors = GridPalette()
+        ShellAppearance.apply(to: colors, mode: mode, contrast: 50)
+        let ratio = PaletteMath.contrastRatio(colors.windowText, colors.rollBackground)
+        report.expect(ratio >= 3, cppID: drawerAutomationHoverModelID,
+                      message: "\(mode) mounted insertion guide and ghost ink clear 3:1 on the roll background")
+    }
     let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
                                     pan: [(24, 64), (120, 40)],
                                     tempo: [(0, 500_000), (48, 400_000)])
@@ -37,6 +44,16 @@ func drawerAutomationHoverModel(_ report: CheckReport, suite: DocumentSession,
         .valueText(lane.heldValue(at: backgroundTick) ?? 64), actual: page.hoverText,
                        cppID: drawerAutomationHoverModelID,
                        what: "a background hover reads the value the lane holds there")
+    report.expectEqual(expected: true, actual: page.hoverDisplay["hasGhost"] as? Bool,
+                       cppID: drawerAutomationHoverModelID,
+                       what: "inter-node CC hover publishes a held-value ghost")
+    report.expect(abs((page.hoverDisplay["guideX"] as? Double ?? -100) - fixture.x(page.hover?.tick ?? 0)) <= 1,
+                  cppID: drawerAutomationHoverModelID,
+                  message: "inter-node CC hover aligns its insertion guide within one pixel")
+    report.expect(abs((page.hoverDisplay["ghostY"] as? Double ?? -100)
+                      - fixture.y(fixture.panLane, lane.heldValue(at: backgroundTick) ?? 64)) <= 1,
+                  cppID: drawerAutomationHoverModelID,
+                  message: "inter-node CC hover paints its ghost at the held-value row")
     report.expect(!page.publishedNodes.isEmpty, cppID: drawerAutomationHoverModelID,
                   message: "a background hover keeps the lane's nodes")
     report.expect(page.publishedNodes.allSatisfy { !$0.hovered },
@@ -50,6 +67,9 @@ func drawerAutomationHoverModel(_ report: CheckReport, suite: DocumentSession,
     _ = page.pointerMove(x: backgroundX, y: backgroundY, buttons: 0)
     report.expectEqual(expected: builds, actual: page.hoverBuildCount, cppID: drawerAutomationHoverModelID,
                        what: "a repeated hover does not churn")
+    report.expectEqual(expected: true, actual: page.hoverDisplay["hasGhost"] as? Bool,
+                       cppID: drawerAutomationHoverModelID,
+                       what: "a repeated CC hover retains its published ghost")
     report.expectEqual(expected: revision, actual: fixture.snapshot, cppID: drawerAutomationHoverModelID,
                        what: "a repeated hover still writes nothing")
     if let node = lane.points.first(where: { $0.tick == 24 }) {
@@ -71,6 +91,9 @@ func drawerAutomationHoverModel(_ report: CheckReport, suite: DocumentSession,
         report.expectEqual(expected: 1, actual: page.publishedNodes.filter(\.hovered).count,
                            cppID: drawerAutomationHoverModelID,
                            what: "exactly the hovered node carries the ring")
+        report.expectEqual(expected: false, actual: page.hoverDisplay["hasGhost"] as? Bool,
+                           cppID: drawerAutomationHoverModelID,
+                           what: "an existing-node hover suppresses the insertion ghost")
         report.expectEqual(expected: AutomationHintProfile.node, actual: page.hoverHintProfile, cppID: drawerAutomationHoverModelID,
                            what: "an arrow node hover offers the node profile")
         report.expectEqual(expected: revision, actual: fixture.snapshot, cppID: drawerAutomationHoverModelID,
@@ -107,6 +130,9 @@ func drawerAutomationHoverModel(_ report: CheckReport, suite: DocumentSession,
     report.expect(page.publishedNodes.allSatisfy { !$0.hovered },
                   cppID: drawerAutomationHoverModelID,
                   message: "leaving the plot unrings every node")
+    report.expectEqual(expected: false, actual: page.hoverDisplay["visible"] as? Bool,
+                       cppID: drawerAutomationHoverModelID,
+                       what: "leaving clears the guide ghost ring and label together")
     report.expectEqual(expected: AutomationCursorKind.arrow.rawValue, actual: page.cursorKind,
                        cppID: drawerAutomationHoverModelID,
                        what: "an arrow hover never arms the pencil cursor")
@@ -141,6 +167,15 @@ func drawerAutomationHoverModel(_ report: CheckReport, suite: DocumentSession,
                        what: "leaving pencil mode restores the sweep profile")
     page.pointerLeave()
     fixture.activate(.tempo)
+    let tempoBackgroundTick = Tick(24)
+    let tempoProjection = fixture.projection(.tempo)
+    let tempoY = fixture.y(.tempo, tempoProjection.heldValue(at: tempoBackgroundTick) ?? 120)
+    _ = page.pointerMove(x: fixture.x(tempoBackgroundTick), y: tempoY, buttons: 0)
+    report.expectEqual(expected: true, actual: page.hoverDisplay["hasGhost"] as? Bool,
+                       cppID: drawerAutomationHoverModelID,
+                       what: "inter-node Tempo hover publishes a held-value ghost")
+    report.expect(!page.hoverText.isEmpty, cppID: drawerAutomationHoverModelID,
+                  message: "inter-node Tempo hover labels the held value")
     if let tempoNode = page.projection?.points.first(where: { $0.tick == 48 }) {
         _ = page.pointerMove(x: tempoNode.x, y: tempoNode.y, buttons: 0)
         if let tempoHover = page.hover,
@@ -157,6 +192,9 @@ func drawerAutomationHoverModel(_ report: CheckReport, suite: DocumentSession,
         report.expectEqual(expected: 1, actual: page.publishedNodes.filter(\.hovered).count,
                            cppID: drawerAutomationHoverModelID,
                            what: "Tempo rings exactly its hovered node")
+        report.expectEqual(expected: false, actual: page.hoverDisplay["hasGhost"] as? Bool,
+                           cppID: drawerAutomationHoverModelID,
+                           what: "an existing Tempo node suppresses the insertion ghost")
         report.expectEqual(expected: revision, actual: fixture.snapshot, cppID: drawerAutomationHoverModelID,
                            what: "Tempo hover topology preserves the document")
         page.pointerLeave()

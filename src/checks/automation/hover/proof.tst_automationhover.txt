@@ -16,6 +16,14 @@ Additional Swift counterpart: src/checks/editorqml/tst_ShellDrawerParity.qml
 Additional Swift counterpart: src/checks/editorqml/EditorQmlTests.swift
 Additional Swift counterpart: src/checks/automation/presentation/painting.swift
 
+Task-96 GREEN: `deno task verify --filter swiftcore-projectsession --verbose`
+PASS (1/36 selected); `deno task verify:qml --verbose` PASS
+(editorqml-drawer 1/1); `deno task verify:shell --verbose` PASS (26/26);
+`deno task verify` PASS (36/36), on frozen check SHA-256 values:
+automationcanvashover.swift f50cea3b9daad724657d650219d933a404415d47cc0ffddea152bb16ef384959;
+gestureNodeDragPhantom.swift 1ec8e09fff393ff6f0549ba7b03084a5a71c5b38054071c9d99dbeef30f20e6f;
+tst_EditorDrawer.qml cb90b5dda2cc2e68e6bcf74c9f2622cca85ba477588dd65c5e87c6554449f411.
+These are implementer-observed lane results, not a ledger-writer rerun.
 
 Command: deno task verify --filter swiftcore --verbose
 Result: run_checks PASS on lane feature/gaps-automation-views; the swiftcore entries
@@ -112,15 +120,8 @@ Disposition: MATCHED
 Mapping: S076, S010, S012, S006, S062
 
 A011 | AutomationHoverTest::directInputHostRouting | src/checks/automation/hover/tst_automationhover.cpp:122
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: the hover value label shows the published hover text (S011, S050) and a background hover draws no ring (S091); the raw-triangle filled-node ink at the insertion viewport (hasFilledNodeAt over the retired AutomationHover mesh) has no pixel-level counterpart and is unproved.
-Source context since previous assertion:
-
-      const auto &layer =
-          m_fixture->rig->quickScene()->layer(songview::TimelineQuickLayer::AutomationHover);
-
-Original expression:
-  QVERIFY(automation_hover::hasFilledNodeAt(layer, lane->insertionViewport));
+Disposition: MATCHED
+Mapping: S096, S097
 
 A012 | AutomationHoverTest::directInputHostRouting | src/checks/automation/hover/tst_automationhover.cpp:123
 Disposition: MATCHED
@@ -317,13 +318,8 @@ Disposition: MATCHED
 Mapping: S010, S006, S012, S076, S062
 
 A037 | AutomationHoverTest::guideGhostTextAndRing | src/checks/automation/hover/tst_automationhover.cpp:220
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: the background hover reads the held value (S011), the drawn label shows it (S050), and a background hover draws no ring (S091); the raw-triangle filled-ghost ink at the insertion column (hasFilledNodeAt over the retired AutomationHover mesh, and its absence at the pointer) has no pixel-level counterpart and is unproved.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(topology.heldGhost);
+Disposition: MATCHED
+Mapping: S096, S097
 
 A038 | AutomationHoverTest::guideGhostTextAndRing | src/checks/automation/hover/tst_automationhover.cpp:221
 Disposition: MATCHED
@@ -338,13 +334,8 @@ Disposition: MATCHED
 Mapping: S016, S003, S050
 
 A041 | AutomationHoverTest::guideGhostTextAndRing | src/checks/automation/hover/tst_automationhover.cpp:224
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: hovering a node rings exactly that node (S017, S052) with its own value text (S016), and a background hover draws no ring (S091); the stray-viewport outline-leak pixels (!hasFilledNodeAt at the retired mesh's stray ghost viewport) have no pixel-level counterpart and are unproved.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(topology.suppressesInsertionGhost);
+Disposition: MATCHED
+Mapping: S098, S099
 
 A042 | AutomationHoverTest::guideGhostTextAndRing | src/checks/automation/hover/tst_automationhover.cpp:225
 Disposition: MATCHED
@@ -407,15 +398,8 @@ Disposition: MATCHED
 Mapping: S010
 
 A052 | AutomationHoverTest::leaveClearsRetainedHover | src/checks/automation/hover/tst_automationhover.cpp:257
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: the background hover reads the held value (S011, S005), the drawn label shows it (S050), and a background hover draws no ring (S091); the raw-triangle filled-node ink at the insertion viewport has no pixel-level counterpart and is unproved.
-Source context since previous assertion:
-
-      const auto &hoverLayer =
-          m_fixture->rig->quickScene()->layer(songview::TimelineQuickLayer::AutomationHover);
-
-Original expression:
-  QVERIFY(automation_hover::hasFilledNodeAt(hoverLayer, lane->insertionViewport));
+Disposition: MATCHED
+Mapping: S096, S097
 
 A053 | AutomationHoverTest::leaveClearsRetainedHover | src/checks/automation/hover/tst_automationhover.cpp:258
 Disposition: MATCHED
@@ -505,13 +489,8 @@ Disposition: MATCHED
 Mapping: S085, S086, S087, S078, S028
 
 A064 | AutomationHoverTest::tempoAndCcTopologyMatch | src/checks/automation/hover/tst_automationhover.cpp:283
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: the Tempo background hover publishes and reads the held value (S067, S011) and a background hover draws no ring (S091); the raw-triangle filled-ghost ink for the Tempo lane has no pixel-level counterpart and is unproved.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(tempoTopology.heldGhost);
+Disposition: MATCHED
+Mapping: S100, S101, S060, S062
 
 A065 | AutomationHoverTest::tempoAndCcTopologyMatch | src/checks/automation/hover/tst_automationhover.cpp:284
 Disposition: MATCHED
@@ -526,13 +505,8 @@ Disposition: MATCHED
 Mapping: S029, S050
 
 A068 | AutomationHoverTest::tempoAndCcTopologyMatch | src/checks/automation/hover/tst_automationhover.cpp:287
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: Tempo rings exactly its hovered node (S030, S088, S089, S090) and a background hover draws no ring (S091); the Tempo stray-viewport outline-leak pixels have no pixel-level counterpart and are unproved.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(tempoTopology.suppressesInsertionGhost);
+Disposition: MATCHED
+Mapping: S102, S103, S060, S065
 
 A069 | AutomationHoverTest::tempoAndCcTopologyMatch | src/checks/automation/hover/tst_automationhover.cpp:288
 Disposition: MATCHED
@@ -758,7 +732,7 @@ Original expression:
 
 A099 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:381
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: the published effects of the pencil tool are asserted (S008 pencil profile, S009 restore, S045 pencil cursor after a stroke), but no check presses the PencilToggle key command; the converted checks set page.isPencilMode directly.
+Mapping/reason: S026, S027 and S104 show pencil-profile activation and restoration, but no executing check sends the ShellWindow PencilToggle B key command and verifies the mounted tool's mode; the editorqml host has no ShellWindow key dispatcher. Unproved: shortcut activation.
 Source context since previous assertion:
 
 
@@ -785,7 +759,7 @@ Mapping: S026, S018
 
 A104 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:389
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: same unproved condition as A099; the published restoration is asserted (S009) but no PencilToggle key command is exercised.
+Mapping/reason: S027 and S104 show pencil-profile restoration after directly clearing isPencilMode; no executing check sends the ShellWindow PencilToggle B key command and observes mode release. Unproved: shortcut deactivation.
 Source context since previous assertion:
 
 
@@ -819,7 +793,7 @@ Original expression:
 
 A108 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:406
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: the origin phantom is asserted as a projection fact (S046), but no predicate hovers the phantom anchor and asserts the hint claim of the plot or the origin-phantom profile.
+Mapping/reason: S105 and S106 show phantom hover instructions on the real mounted plot, and S107 identifies its profile, but MouseHints exposes no current source token. Unproved: `hints.currentSource() == plot`.
 Source context since previous assertion:
 
       m_fixture->rig->view().setEditorHorizontalScroll(geometry.pointHitRadius + 8.0);
@@ -834,41 +808,20 @@ Original expression:
   QTRY_VERIFY(hints.currentSource() == plot);
 
 A109 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:407
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: same unproved condition as A108; no predicate observes the phantom hover text.
-Source context since previous assertion:
-
-
-Original expression:
-  QTRY_VERIFY(!hints.currentText().isEmpty());
+Disposition: MATCHED
+Mapping: S105, S106
 
 A110 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:409
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: same unproved condition as A108; the distinctness of the phantom hint text from the node text is unproved.
-Source context since previous assertion:
-
-      const QString phantomText = hints.currentText();
-
-Original expression:
-  QVERIFY(phantomText != nodeText);
+Disposition: MATCHED
+Mapping: S106
 
 A111 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:410
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: same unproved condition as A108; the distinctness of the phantom hint text from the sweep text is unproved.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(phantomText != sweepText);
+Disposition: MATCHED
+Mapping: S106
 
 A112 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:411
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: same unproved condition as A108; the distinctness of the phantom hint text from the pencil text is unproved.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(phantomText != pencilText);
+Disposition: MATCHED
+Mapping: S108, S109
 
 A113 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:417
 Disposition: GAP
@@ -913,7 +866,7 @@ Mapping: S056, S059
 
 A121 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:440
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: the open menu keeps the page hint profile empty (S081) and the status and hint-service text muted (S092); ownership by the menu HoverHint is unproved because MouseHints exposes no current owner/source.
+Mapping/reason: S110 and S111 show an open menu suppresses the underlay status and hint-service text, but MouseHints exposes no menu owner/source token. Unproved: `menu.session->owns(hints.currentSource())`.
 Source context since previous assertion:
 
 
@@ -926,7 +879,7 @@ Mapping: S081, S092
 
 A123 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:447
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: motion between underlying targets keeps the page hint profile empty (S082) and the status and hint-service text muted (S093); continued ownership by the menu HoverHint is unproved because MouseHints exposes no current owner/source.
+Mapping/reason: S112 shows pointer motion between underlying targets preserves muted status and hint-service text while the menu stays open; MouseHints exposes no menu owner/source token. Unproved: continued `menu.session->owns(hints.currentSource())`.
 Source context since previous assertion:
 
 
@@ -948,7 +901,7 @@ Mapping: S057
 
 A126 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:455
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: the hover recovery is asserted only after a further pointer motion (S058, S055) with the underlay hint text restored on that motion (S094); a recovery that republishes the hover without pointer movement is unproved, because the Swift owner revives hover through pointer motion by design.
+Mapping/reason: S113 and S114 prove plot hover and underlay hint restoration after pointer movement following dismissal; unproved: `hints.currentSource() == plot` at the stationary pointer immediately on dismissal.
 Source context since previous assertion:
 
 
@@ -957,7 +910,7 @@ Original expression:
 
 A127 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:456
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: same unproved condition as A126; the recovered sweep hint text at the stationary pointer is unproved (S094 restores it only after pointer motion).
+Mapping/reason: S114 proves the underlay hint returns on subsequent pointer movement; unproved: recovery of `hints.currentText() == sweepText` at the stationary pointer immediately on dismissal.
 Source context since previous assertion:
 
 
@@ -1492,6 +1445,63 @@ Anchor: message "pointer motion after a dismissal restores the underlay hint"
 
 S095 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "the ring and value label appear together"
+
+S096 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the filled held-value ghost changes plot pixels until leave"
+
+S097 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the filled insertion ghost follows the held-value curve"
+
+S098 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
+Anchor: message "an existing-node hover suppresses the insertion ghost"
+
+S099 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "a written-node hover suppresses the insertion ghost"
+
+S100 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
+Anchor: message "inter-node Tempo hover publishes a held-value ghost"
+
+S101 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
+Anchor: message "inter-node CC hover publishes a held-value ghost"
+
+S102 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
+Anchor: message "an existing Tempo node suppresses the insertion ghost"
+
+S103 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
+Anchor: message "an existing-node hover suppresses the insertion ghost"
+
+S104 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the pencil profile changes the mounted plot instructions"
+
+S105 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the mounted phantom hint reaches the status strip"
+
+S106 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the actual plot owns distinct origin-phantom instructions"
+
+S107 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
+Anchor: message "an origin phantom hover advertises its own operation"
+
+S108 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the phantom profile returns after disarming the pencil"
+
+S109 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the pencil profile changes the mounted plot instructions"
+
+S110 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the open menu mutes the underlay hint"
+
+S111 | drawerAutomationMenuHintMuting | src/checks/automation/automationcanvashover.swift
+Anchor: message "the open menu owns the hint scope"
+
+S112 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "motion between underlying targets stays muted"
+
+S113 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "pointer motion after a dismissal recovers the hover"
+
+S114 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "pointer motion after a dismissal restores the underlay hint"
 
 Shared helpers: the swiftcore predicates run under drawerAutomationAutomationFixture with the
 suite dispatch in src/checks/automation/AutomationPageChecks.swift; the QML predicates run in the

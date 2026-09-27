@@ -10,7 +10,16 @@ Additional Swift counterpart: src/checks/automation/domain/gesturePointRange.swi
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
 Additional Swift counterpart: src/checks/automation/automationselection.swift
 
-Disposition tally: 21 sites: 8 MATCHED, 11 PARTIAL, 2 GAP.
+Disposition tally: 21 sites: 9 MATCHED, 12 PARTIAL, 0 GAP.
+
+Task-96 GREEN: `deno task verify --filter swiftcore-projectsession --verbose`
+PASS (1/36 selected); `deno task verify:qml --verbose` PASS
+(editorqml-drawer 1/1); `deno task verify:shell --verbose` PASS (26/26);
+`deno task verify` PASS (36/36), on frozen check SHA-256 values:
+automationcanvashover.swift f50cea3b9daad724657d650219d933a404415d47cc0ffddea152bb16ef384959;
+gestureNodeDragPhantom.swift 1ec8e09fff393ff6f0549ba7b03084a5a71c5b38054071c9d99dbeef30f20e6f;
+tst_EditorDrawer.qml cb90b5dda2cc2e68e6bcf74c9f2622cca85ba477588dd65c5e87c6554449f411.
+These are implementer-observed lane results, not a ledger-writer rerun.
 
 Command: deno task verify --filter swiftcore (implementer run on the counterpart
 hashes pinned above) -> run_checks PASS (1/14 ok, 13 skipped).
@@ -455,34 +464,12 @@ Disposition: MATCHED
 Mapping: S030, S031, S032, S033
 
 A018 | runOriginPhantom | src/checks/automationgesturecheck/parity.cpp:459
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/parity.cpp) no longer builds or runs. Previous native note: Requires the native automation cursor shape on the retired surface.
-Source context since previous assertion:
-  }
-
-  void runOriginPhantom(Context &ctx)
-  {
-      seed(ctx, kFixture);
-      ctx.rig.setAutomationZoom(96.0);
-      ctx.rig.setAutomationScroll(0.0);
-      ctx.rig.pump();
-      const qreal coveredX = at(ctx, kFixtureTick, 100).position.x();
-      ctx.rig.setAutomationScroll(coveredX + 2.0 * ctx.rig.geometry().pointHitRadius);
-      ctx.rig.pump();
-      const QPointF start(0.0, at(ctx, kFixtureTick, 100).position.y());
-      const QPointF target(0.0, at(ctx, kFixtureTick, 110).position.y());
-      const QPointF hover = ctx.adapter.kind == AdapterKind::Cc
-                                ? start - QPointF(ctx.rig.geometry().pointHitRadius / 2.0, 0.0)
-                                : start;
-      ctx.rig.mouseMove(hover, Qt::NoButton);
-      ctx.rig.pump();
-Original expression:
-      ctx.check.require(ctx.rig.automationCursor().shape() == Qt::ArrowCursor,
-                        QStringLiteral("origin phantom hover did not keep the arrow cursor"));
+Disposition: MATCHED
+Mapping: S055, S056
 
 A019 | runOriginPhantom | src/checks/automationgesturecheck/parity.cpp:485
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/parity.cpp) no longer builds or runs. Previous native note: Requires the native Quick layer revision to advance on the retired surface.
+Disposition: PARTIAL
+Mapping/reason: S057 and S058 assert full-span held-value curves at activation and movement for CC and Tempo, S059 asserts the moved curve shifts in the target direction, and S060 observes changed mounted raster pixels; unproved: deleted native Quick-layer revision comparisons `originalLayer.revision > transientBefore.revision && movedLayer.revision > originalLayer.revision`.
 Source context since previous assertion:
       const auto before = snapshot(ctx.rig.document());
       const qreal arm = qreal(ctx.rig.geometry().nodeDragActivationDistance + 2);
@@ -752,3 +739,21 @@ Anchor: message "a pencil stroke on an empty lane commits once"
 
 S054 | drawerAutomationTempoBendClickRestore | src/checks/automation/automationselection.swift
 Anchor: message "the tempo pencil click records one revision"
+
+S055 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
+Anchor: message "an origin phantom hover keeps the arrow cursor"
+
+S056 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the origin phantom hover retains the arrow"
+
+S057 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
+Anchor: message "an activated phantom paints a full held-value preview curve"
+
+S058 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
+Anchor: message "a moved phantom retains its full preview curve"
+
+S059 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
+Anchor: message "a moved phantom shifts the preview curve toward its target by a pixel"
+
+S060 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "a moved origin phantom changes the drawn held-value curve"

@@ -53,15 +53,16 @@ extension AutomationPage {
         guard let session, let hover else {
             let wasVisible = hoverVisible
             hoverVisible = false
-            hoverText = ""
-            hoverTick = 0
-            hoverLabelRect = Self.rect(0, 0, 0, 0)
             if wasVisible {
                 hoverDisplay = [
                     "visible": false, "text": "", "hasNode": false, "nodeTick": 0.0,
+                    "guideX": 0.0, "ghostY": 0.0, "hasGhost": false,
                     "x": 0.0, "y": 0.0, "width": 0.0, "height": 0.0,
                 ]
             }
+            hoverText = ""
+            hoverTick = 0
+            hoverLabelRect = Self.rect(0, 0, 0, 0)
             return
         }
         let facts = facts(parameter: hover.parameter, modifiers: .init(), session: session)
@@ -76,6 +77,9 @@ extension AutomationPage {
         hoverDisplay = [
             "visible": true, "text": hover.text, "hasNode": hoveredTick != nil,
             "nodeTick": hoveredTick ?? 0.0,
+            "guideX": projection.x(hover.tick),
+            "ghostY": hover.value.map { projection.y($0, metadata: metadata) } ?? 0.0,
+            "hasGhost": !hover.hasPoint && hover.value != nil,
             "x": hoverLabelRect["x"] ?? 0.0, "y": hoverLabelRect["y"] ?? 0.0,
             "width": hoverLabelRect["width"] ?? 0.0,
             "height": hoverLabelRect["height"] ?? 0.0,
@@ -108,22 +112,35 @@ extension AutomationPage {
         let projection = rampProjection ?? makeProjection(facts: facts, camera: gestureCamera)
         let extent = nodePaint.nodeRadius
         let limit = max(0, plotWidth)
-        let rects = previewPoints.map { point in
+        var rects = previewPoints.map { point in
             SceneRect(x: (min(max(0, projection.x(point.tick)), limit) - extent).rounded(),
                       y: (projection.y(point.value, metadata: facts.metadata) - extent).rounded(),
                       width: 2 * extent, height: 2 * extent, fillColor: palette.selectionEdge,
                       primitiveName: "automationPreviewNode")
         }
+        if case let .phantom(transaction) = gesture, transaction.drag.exceeded {
+            let next = facts.snapshot.displaySeries.first {
+                $0.tick > transaction.target.original.tick
+            }
+            let end = min(max(0, next.map { projection.x($0.tick) } ?? limit), limit)
+            if end > 0 {
+                let y = projection.y(transaction.target.current.value, metadata: facts.metadata)
+                rects.append(SceneRect(x: 0, y: (y - 1).rounded(), width: end,
+                                       height: 2, fillColor: palette.selectionEdge,
+                                       primitiveName: "automationPreviewCurve"))
+            }
+        }
         syncRects(previewRects, rects)
-        previewLabelText = previewText
         let labelPoint: AutomationLanePoint?
         if case let .node(transaction) = gesture { labelPoint = transaction.grabbed?.current }
         else { labelPoint = previewPoints.last }
         guard let last = labelPoint, !previewText.isEmpty else {
             previewLabelVisible = false
+            previewLabelText = ""
             previewLabelRect = Self.rect(0, 0, 0, 0)
             return
         }
+        previewLabelText = previewText
         previewLabelVisible = true
         previewLabelRect = labelRect(
             text: previewText, tick: last.tick,

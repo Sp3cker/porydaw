@@ -235,12 +235,35 @@ func drawerAutomationNodeDragAndPhantomOutcomes(_ report: CheckReport, suite: Do
         report.expectEqual(expected: Double(projected.point.tick), actual: handle.tick,
                            cppID: phantomID, what: "the phantom retains its source tick")
         let y = projected.point.y
+        _ = scrolled.page.pointerMove(x: 0, y: y, buttons: 0)
+        report.expectEqual(expected: AutomationCursorKind.arrow.rawValue,
+                           actual: scrolled.page.cursorKind, cppID: phantomID,
+                           what: "an origin phantom hover keeps the arrow cursor")
+        report.expectEqual(expected: AutomationHintProfile.originPhantom,
+                           actual: scrolled.page.hoverHintProfile, cppID: phantomID,
+                           what: "an origin phantom hover advertises its own operation")
         let targetY = scrolled.y(parameter, 110)
         report.expect(scrolled.page.pointerPress(x: 0, y: y, surface: 1,
                                                  button: AutomationQtButton.left),
                       cppID: phantomID, message: "the origin phantom takes its press")
         _ = scrolled.page.pointerMove(x: 0, y: y - 30, buttons: AutomationQtButton.left)
+        let firstCurve = scrolled.page.previewRects.first {
+            $0.primitiveName == "automationPreviewCurve"
+        }
+        report.expect(firstCurve != nil && (firstCurve?.width ?? 0) > scrolled.page.geometry.pointHitRadius * 2,
+                      cppID: phantomID,
+                      message: "an activated phantom paints a full held-value preview curve")
         _ = scrolled.page.pointerMove(x: 0, y: targetY - 30, buttons: AutomationQtButton.left)
+        let movedCurve = scrolled.page.previewRects.first {
+            $0.primitiveName == "automationPreviewCurve"
+        }
+        report.expect(movedCurve != nil && (movedCurve?.width ?? 0) > scrolled.page.geometry.pointHitRadius * 2,
+                      cppID: phantomID,
+                      message: "a moved phantom retains its full preview curve")
+        let curveDelta = (movedCurve?.y ?? -1) - (firstCurve?.y ?? -1)
+        report.expect(abs(curveDelta) > 0.5 && curveDelta * (targetY - y) > 0,
+                      cppID: phantomID,
+                      message: "a moved phantom shifts the preview curve toward its target by a pixel")
         report.expectEqual(expected: before, actual: scrolled.snapshot, cppID: phantomID,
                            what: "a scrolled-origin preview writes nothing")
         _ = scrolled.page.pointerRelease(x: 0, y: targetY - 30,

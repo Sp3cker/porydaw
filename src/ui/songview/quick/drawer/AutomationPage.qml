@@ -77,6 +77,7 @@ FocusScope {
         readonly property color selectionRing: "transparent"
         readonly property color selectionFill: "transparent"
         readonly property color selectionEdge: "transparent"
+        readonly property color automationNodeInk: "transparent"
         readonly property color selectionText: "transparent"
         readonly property color windowText: "transparent"
     }
@@ -99,7 +100,8 @@ FocusScope {
         readonly property bool bandVisible: false
         readonly property var bandRect: ({ "x": 0, "y": 0, "width": 0, "height": 0 })
         readonly property var hoverDisplay: ({ "visible": false, "text": "",
-            "hasNode": false, "nodeTick": 0, "x": 0, "y": 0, "width": 0, "height": 0 })
+            "hasNode": false, "nodeTick": 0, "guideX": 0, "ghostY": 0,
+            "hasGhost": false, "x": 0, "y": 0, "width": 0, "height": 0 })
         readonly property bool previewLabelVisible: false
         readonly property string previewLabelText: ""
         readonly property var previewLabelRect: ({ "x": 0, "y": 0, "width": 0, "height": 0 })
@@ -284,7 +286,7 @@ FocusScope {
         Binding {
             target: page.model
             property: "plotFocused"
-            value: plot.activeFocus && page.visible
+            value: (plot.activeFocus || plotInput.activeFocus) && page.visible
             when: page.model !== null
             restoreMode: Binding.RestoreNone
         }
@@ -339,6 +341,33 @@ FocusScope {
             objectName: "automationCurveRuns"
             anchors.fill: parent
             rects: (page.pageModel ? page.pageModel.curveRuns : [])
+        }
+
+        Rectangle {
+            id: hoverGuide
+            objectName: "automationHoverGuide"
+            readonly property var display: page.pageModel.hoverDisplay
+            visible: display.visible && display.hasGhost
+            x: display.guideX - width / 2
+            y: 0
+            width: 1 / page.Screen.devicePixelRatio
+            height: plot.height
+            color: page.gridPalette.windowText
+            Accessible.ignored: true
+        }
+
+        Rectangle {
+            objectName: "automationHoverGhost"
+            readonly property var display: page.pageModel.hoverDisplay
+            readonly property real radiusPx: Math.max(1, Math.round(page.baseFontPx * 3 / 16))
+            visible: display.visible && display.hasGhost
+            x: display.guideX - radiusPx
+            y: display.ghostY - radiusPx
+            width: radiusPx * 2
+            height: width
+            radius: radiusPx
+            color: page.gridPalette.windowText
+            Accessible.ignored: true
         }
 
         // One drawn node per published entry, plus the origin phantom at the plot
@@ -512,9 +541,10 @@ FocusScope {
 
             onPressed: mouse => {
                 plotMoves.flush()
-                plot.forceActiveFocus(Qt.MouseFocusReason)
                 mouse.accepted = page.pageModel.pointerPress(
                     mouse.x, mouse.y, page.plotSurface, mouse.button, mouse.modifiers)
+                if (mouse.accepted)
+                    plotInput.forceActiveFocus(Qt.MouseFocusReason)
             }
             onDoubleClicked: (mouse) => {
                 plotMoves.flush()
@@ -544,6 +574,10 @@ FocusScope {
                 dispatch: (x, y, buttons, modifiers) =>
                     page.pageModel.pointerMove(x, y, buttons, modifiers)
             }
+            Accessible.role: Accessible.Canvas
+            Accessible.name: qsTr("Automation plot")
+            Accessible.description: page.pageModel.accessibleDescription
+            Accessible.focusable: true
         }
 
         // The plot is one mixed-profile input group. Its Swift hover

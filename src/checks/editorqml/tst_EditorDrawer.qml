@@ -2086,6 +2086,8 @@ TestCase {
         var point = testCase.automationNodePoint(nodes[written])
         verify(point, "the written node has a drawn hit target")
         var input = testCase.automationPlotInput()
+        verify(input.Accessible.description.indexOf("Volume") >= 0,
+               "the real automation plot input describes its active parameter")
         var revision = bootstrap.automationDocumentRevision()
         var builds = bootstrap.automationHoverBuilds()
         mouseMove(input, point.x, point.y)
@@ -2126,6 +2128,8 @@ TestCase {
                      "the hover ring centers on its node vertically")
         compare(hoverRing.width, 2 * hoveredNode.model.ringRadius,
                 "the hover ring spans twice its ring radius")
+        compare(findChild(page, "automationHoverGhost").visible, false,
+                "a written-node hover suppresses the insertion ghost")
         var nodeText = label.text
         builds = bootstrap.automationHoverBuilds()
         mouseMove(input, point.x, point.y)
@@ -2156,6 +2160,23 @@ TestCase {
         mouseMove(input, gapX, free.y)
         tryVerify(function() { return model.hoverVisible === true }, 2000,
                   "the background move keeps its hover ('" + model.hoverText + "')")
+        var guide = findChild(page, "automationHoverGuide")
+        var ghost = findChild(page, "automationHoverGhost")
+        verify(guide && ghost, "the mounted plot draws its insertion guide and filled ghost")
+        tryCompare(guide, "visible", true, 2000,
+                   "inter-node hover exposes the actual guide")
+        tryCompare(ghost, "visible", true, 2000,
+                   "inter-node hover exposes the held-value ghost")
+        compare(String(guide.color).toLowerCase(),
+                testCase.drawerPalette().windowText.toLowerCase(),
+                "the mounted insertion guide draws with roll-safe palette ink")
+        compare(String(ghost.color).toLowerCase(),
+                testCase.drawerPalette().windowText.toLowerCase(),
+                "the mounted insertion ghost draws with roll-safe palette ink")
+        fuzzyCompare(guide.x + guide.width / 2, model.hoverDisplay.guideX, 1,
+                     "the mounted insertion guide aligns within one plot pixel")
+        fuzzyCompare(ghost.y + ghost.height / 2, model.hoverDisplay.ghostY, 1,
+                     "the filled insertion ghost follows the held-value curve")
         var clear = true
         for (var t = 0; t < sorted.length; ++t) {
             if (Math.abs(model.hoverTick - sorted[t]) <= 0.5)
@@ -2183,11 +2204,38 @@ TestCase {
         var idleRegion = testCase.regionOf(backgroundGrab, testCase.surface, input)
         var scaleX = (idleRegion.x1 - idleRegion.x0 + 1) / input.width
         var scaleY = (idleRegion.y1 - idleRegion.y0 + 1) / input.height
+        var insertX = Math.round(idleRegion.x0 + model.hoverDisplay.guideX * scaleX)
+        var insertY = Math.round(idleRegion.y0 + model.hoverDisplay.ghostY * scaleY)
+        var guideY = Math.round(idleRegion.y0 + Math.max(4, input.height * 0.18) * scaleY)
         var gutter = testCase.automationGutter()
         mouseMove(gutter, gutter.width / 2, gutter.height / 2)
         tryVerify(function() { return model.hoverVisible === false }, 2000,
                   "leaving the plot clears the hover")
+        tryCompare(guide, "visible", false, 2000,
+                   "leaving clears the mounted insertion guide")
+        tryCompare(ghost, "visible", false, 2000,
+                   "leaving clears the mounted held-value ghost")
+        tryCompare(label, "visible", false, 2000,
+                   "leaving clears the mounted value label")
+        compare(input.cursorShape, Qt.ArrowCursor,
+                "leaving restores the neutral plot cursor")
         compare(model.hoverText, "", "leaving the plot clears the hover text")
+        waitForRendering(testCase.surface)
+        var clearedImage = grabImage(testCase.surface)
+        verify(backgroundGrab.red(insertX, guideY) !== clearedImage.red(insertX, guideY)
+               || backgroundGrab.green(insertX, guideY) !== clearedImage.green(insertX, guideY)
+               || backgroundGrab.blue(insertX, guideY) !== clearedImage.blue(insertX, guideY),
+               "the actual insertion guide changes plot pixels until leave")
+        var ghostPixelsChanged = false
+        for (var offset = -2; offset <= 2; ++offset) {
+            var pixelY = insertY + offset
+            if (pixelY < 0 || pixelY >= backgroundGrab.height) continue
+            if (backgroundGrab.red(insertX, pixelY) !== clearedImage.red(insertX, pixelY)
+                    || backgroundGrab.green(insertX, pixelY) !== clearedImage.green(insertX, pixelY)
+                    || backgroundGrab.blue(insertX, pixelY) !== clearedImage.blue(insertX, pixelY))
+                ghostPixelsChanged = true
+        }
+        verify(ghostPixelsChanged, "the filled held-value ghost changes plot pixels until leave")
         ringed = 0
         laneNodes = testCase.automationLaneNodes()
         for (var k = 0; k < laneNodes.length; ++k) {
@@ -2204,6 +2252,21 @@ TestCase {
                    "the returned node hover redraws its ring")
         tryCompare(label, "visible", true, 2000,
                    "the returned node hover redraws its value label")
+        mousePress(input, point.x, point.y, Qt.LeftButton)
+        tryCompare(input, "activeFocus", true, 2000,
+                   "a handled automation press focuses the actual input")
+        compare(bootstrap.automationInteractionActive(), true,
+                "the pressed node owns the live interaction")
+        bootstrap.cancelInput()
+        tryCompare(testCase.automationModel(), "interactionActive", false, 2000,
+                   "window deactivation cancels the live automation gesture")
+        mouseRelease(input, point.x, point.y, Qt.LeftButton)
+        mouseMove(input, gapX, free.y)
+        tryCompare(guide, "visible", true, 2000,
+                   "a real move after deactivation restores passive hover")
+        mouseMove(input, point.x, point.y)
+        tryCompare(hoverRing, "visible", true, 2000,
+                   "the node ring recovers after a strong cancellation")
         waitForRendering(testCase.surface)
         var hovered = grabImage(testCase.surface)
         var changed = false
@@ -2245,6 +2308,86 @@ TestCase {
         mouseMove(input, point.x, point.y)
         tryVerify(function() { return model.hoverVisible === true }, 2000,
                   "the node hover returns after a dismissal")
+    }
+
+    function test_productionAutomationOriginPhantomCurveRaster() {
+        if (testCase.containerPhase) skip("the production owner runs in its own process")
+        testCase.mountProductionAutomation("automation-origin-phantom-curve")
+        verify(testCase.writeVolumeLanePoints(bootstrap.automationVolumeIndex()))
+        var input = testCase.automationPlotInput()
+        var grid = testCase.surface.gridModel
+        var written = testCase.automationLaneNodes()[testCase.automationWrittenNodeIndex()]
+        verify(written, "the written lane provides a source for the origin phantom")
+        var status = findChild(testCase.surface, "mouseHintStatus")
+        var hint = findChild(status, "mouseHintStatusText")
+        verify(hint, "the mounted phantom hint reaches the status strip")
+        var nodePoint = testCase.automationNodePoint(written)
+        mouseMove(input, nodePoint.x, nodePoint.y)
+        tryVerify(function() { return hint.text.length > 0 }, 2000,
+                  "the written node offers an operational hint")
+        var nodeHint = hint.text
+        var free = testCase.automationFreePoint()
+        verify(free, "the mounted lane has a sweep target")
+        mouseMove(input, free.x, free.y)
+        tryVerify(function() { return hint.text.length > 0 && hint.text !== nodeHint },
+                  2000, "the sweep hint differs from the written-node hint")
+        var sweepHint = hint.text
+        grid.setCameraHScroll(grid.cameraScrollX + written.model.x + 18)
+        var phantom = null
+        tryVerify(function() {
+            var nodes = testCase.automationNodeItems()
+            phantom = nodes.find(function(node) { return node.model.phantom })
+            return phantom !== undefined && phantom !== null
+        }, 2000, "the scrolled lane draws its real origin phantom")
+        var y = phantom.model.y
+        var delta = y < input.height / 2 ? 30 : -30
+        mouseMove(input, 1, y)
+        tryCompare(input, "cursorShape", Qt.ArrowCursor, 2000,
+                   "the origin phantom hover retains the arrow")
+        tryVerify(function() {
+            return hint.text.length > 0 && hint.text !== nodeHint && hint.text !== sweepHint
+        }, 2000, "the actual plot owns distinct origin-phantom instructions")
+        var phantomHint = hint.text
+        var model = testCase.automationModel()
+        model.isPencilMode = true
+        var pencilPoint = testCase.automationFreePoint()
+        verify(pencilPoint, "the scrolled lane has a free pencil location")
+        mouseMove(input, pencilPoint.x, pencilPoint.y)
+        tryVerify(function() {
+            return hint.text.length > 0 && hint.text !== phantomHint
+        }, 2000, "the pencil profile changes the mounted plot instructions")
+        model.isPencilMode = false
+        mouseMove(input, 1, y)
+        tryCompare(hint, "text", phantomHint, 2000,
+                   "the phantom profile returns after disarming the pencil")
+        var revision = bootstrap.automationDocumentRevision()
+        mousePress(input, 1, y, Qt.LeftButton)
+        mouseMove(input, 1, y + delta, -1, Qt.LeftButton)
+        waitForRendering(input)
+        var first = grabImage(testCase.surface)
+        mouseMove(input, 1, y + 3 * delta, -1, Qt.LeftButton)
+        waitForRendering(input)
+        var moved = grabImage(testCase.surface)
+        var region = testCase.regionOf(first, testCase.surface, input)
+        var sx = (region.x1 - region.x0 + 1) / input.width
+        var sy = (region.y1 - region.y0 + 1) / input.height
+        var changed = false
+        for (var px = 8; px <= Math.min(80, input.width / 3); px += 4) {
+            for (var py = Math.min(y, y + 2 * delta) - 4;
+                 py <= Math.max(y, y + 2 * delta) + 4; py += 2) {
+                var x = Math.round(region.x0 + px * sx)
+                var row = Math.round(region.y0 + py * sy)
+                if (row < region.y0 || row > region.y1) continue
+                if (first.red(x, row) !== moved.red(x, row)
+                        || first.green(x, row) !== moved.green(x, row)
+                        || first.blue(x, row) !== moved.blue(x, row))
+                    changed = true
+            }
+        }
+        verify(changed, "a moved origin phantom changes the drawn held-value curve")
+        compare(bootstrap.automationDocumentRevision(), revision,
+                "the origin phantom raster preview writes nothing")
+        mouseRelease(input, 1, y + 3 * delta, Qt.LeftButton)
     }
 
     function test_productionAutomationGhostCurvesDrawUnderActive() {
