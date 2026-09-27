@@ -263,4 +263,115 @@ internal func runEditRoutingChecks(report: CheckReport, fixtureRoot: String) {
                   (try? document.state.file.encoded()) == original &&
                   (try? inactive.document.state.file.encoded()) == inactiveOriginal,
                   cppID: deleteID, message: "one undo restores exact whole-song removal bytes")
+    checkMountedPitchKeyAndUndo(report: report, fixtureRoot: fixtureRoot)
+}
+
+@MainActor
+internal func checkMountedPitchKeyAndUndo(report: CheckReport, fixtureRoot: String) {
+    let keyID = "selectionkey/SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys"
+    let curveID = "pitchbend/PitchBendEditingTest::standardUndoShortcutRestoresCurve"
+    let tapID = "selectionkey/SelectionWindowTierTest::parameterLabelActivationAndSharedCommands"
+    let shell = ShellPresenter()
+    let app = shell.session
+    defer {
+        app.hostClosing()
+        app.acknowledgeGridDetached()
+    }
+    func until(_ predicate: () -> Bool) -> Bool {
+        let deadline = Date().addingTimeInterval(25)
+        while !predicate() && Date() < deadline {
+            _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+        }
+        return predicate()
+    }
+    app.openProjectAndSong(path: fixtureRoot, label: "mus_route101")
+    guard until({ app.songOpen || !app.lastSaveError.isEmpty }),
+          let tab = app.songTabs.selectedPage,
+          let session = app.selectedDocument,
+          let note = session.document.notes(in: 0)
+              .first(where: { !$0.isUnterminated && $0.duration >= 3 }),
+          let baseline = try? session.document.state.file.encoded() else {
+        report.fail(keyID, "the real routing fixture cannot stage the selected pitch note")
+        return
+    }
+    let document = session.document
+    session.selectPrimaryTrack(0)
+    session.setSelectedNotes([note.id])
+    report.expect(session.selectedTrack == note.track
+                  && session.selectedNotes == Set([note.id])
+                  && session.timeSelection == nil,
+                  cppID: keyID,
+                  message: "the selected primary-track pitch note has no time selection")
+    let openingIndex = document.history.undoIndex
+    report.expect(shell.routeEditorKey(key: 0x47, modifiers: 0, autoRepeat: false),
+                  cppID: keyID, message: "the first routed G opens the selected pitch note")
+    let editor = tab.pitchBendPresenter()
+    guard editor.isOpen, let firstGraph = editor.currentPitch else {
+        report.fail(keyID, "the routed pitch opener has no live graph")
+        return
+    }
+    report.expect(shell.routeEditorKey(key: 0x47, modifiers: 0, autoRepeat: true),
+                  cppID: keyID, message: "eligible pitch G autorepeat is consumed by the production route")
+    report.expect(editor.isOpen && editor.currentPitch === firstGraph
+                  && document.history.undoIndex == openingIndex
+                  && (try? document.state.file.encoded()) == baseline,
+                  cppID: keyID,
+                  message: "pitch G autorepeat retains the one opening and never creates a second transaction")
+    pitchBendStroke(firstGraph, x0f: 0.20, y0f: 0.75,
+                    x1f: 0.80, y1f: 0.25)
+    report.expect(document.history.undoIndex == openingIndex + 1
+                  && (try? document.state.file.encoded()) != baseline,
+                  cppID: curveID,
+                  message: "the selected note's drawn pitch curve commits one song transaction")
+    shell.activate(id: "edit.undo")
+    report.expect(until({ document.history.undoIndex == openingIndex
+                         && (try? document.state.file.encoded()) == baseline }),
+                  cppID: curveID,
+                  message: "canonical window Undo restores the exact serialized full-song bytes")
+    report.expect(editor.isOpen && editor.currentPitch === firstGraph,
+                  cppID: curveID,
+                  message: "canonical window Undo keeps the original pitch popup graph alive")
+    editor.cancelAndClose()
+    let page = tab.automationPage()
+    let selectedLanes: Set<AutomationParameter> = [
+        .controlChange(track: 0, controller: TimeDefaults.ccPan),
+        .controlChange(track: 0, controller: TimeDefaults.ccModulation),
+    ]
+    let selectedRange = TimeRange(startTick: 5760, endTick: 5784)
+    page.selectRange(from: selectedRange.startTick, to: selectedRange.endTick,
+                     lanes: selectedLanes)
+    report.expect(session.timeSelection?.range == selectedRange, cppID: tapID,
+                  message: "the Tap draft starts with the exact selected time bounds")
+    report.expect(session.timeSelection?.scope == .lanes, cppID: tapID,
+                  message: "the Tap draft starts with lane-scoped time selection")
+    report.expect(session.timeSelection?.lanes == selectedLanes, cppID: tapID,
+                  message: "the Tap draft starts with Pan and Modulation selected")
+    report.expect(session.timeSelection?.tempo == false && session.selectedNotes.isEmpty,
+                  cppID: tapID,
+                  message: "the Tap draft excludes Tempo and has no competing note selection")
+    let tapIndex = document.history.undoIndex
+    let tapCount = document.history.undoCount
+    let tapNotes = session.selectedNotes
+    let tapSelection = session.timeSelection
+    page.tapTempoTap(atMilliseconds: 1_000)
+    page.tapTempoTap(atMilliseconds: 1_500)
+    report.expect(page.tapTempoTapCount == 2, cppID: tapID,
+                  message: "the real automation page holds two uncommitted tempo taps")
+    shell.activate(id: "transport.play_pause")
+    report.expect(document.history.undoCount == tapCount, cppID: tapID,
+                  message: "window Space during a Tap draft preserves the exact undo count")
+    report.expect(document.history.undoIndex == tapIndex, cppID: tapID,
+                  message: "window Space during a Tap draft preserves the exact undo index")
+    report.expect(session.selectedNotes == tapNotes && session.timeSelection == tapSelection,
+                  cppID: tapID,
+                  message: "window Space during a Tap draft preserves the selected note and time range")
+    report.expect(session.timeSelection?.range == selectedRange
+                  && session.timeSelection?.scope == .lanes
+                  && session.timeSelection?.lanes == selectedLanes
+                  && session.timeSelection?.tempo == false
+                  && session.selectedNotes.isEmpty,
+                  cppID: tapID,
+                  message: "window Space retains exact Pan and Modulation bounds without Tempo or notes")
+    shell.activate(id: "transport.play_pause")
+    page.resetTapTempo()
 }

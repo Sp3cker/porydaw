@@ -1480,6 +1480,56 @@ TestCase {
         keyClick(Qt.Key_Space)
         tryCompare(playhead, "playing", false, 3000)
 
+        var automationSection = surface.drawerPresenter.automationSection
+        var voiceSection = surface.drawerPresenter.voiceChangesSection
+        var poly = shell.shellPresenter
+        var polyDock = findChild(shell, "shellPolyphonyDock")
+        verify(polyDock, "the mounted shell contains its polyphony dock")
+        compare(automationSection.visible, false, "focused chrome starts with Automation hidden")
+        compare(section.visible, true, "focused chrome starts with Velocity visible")
+        compare(voiceSection.visible, false, "focused chrome starts with Voice Changes hidden")
+        compare(polyDock.visible, false, "focused chrome starts with the polyphony dock hidden")
+        function checkChromeShortcut(key, modifiers, changed, anchor) {
+            toggle.forceActiveFocus(Qt.TabFocusReason)
+            tryCompare(toggle, "activeFocus", true, 3000)
+            var before = [automationSection.visible, section.visible,
+                          voiceSection.visible, polyDock.visible]
+            keyClick(key, modifiers)
+            var after = [automationSection.visible, section.visible,
+                         voiceSection.visible, polyDock.visible]
+            verify(after.every(function(value, index) {
+                return value === (index === changed ? !before[index] : before[index])
+            }), anchor)
+        }
+        var beforeChrome = [automationSection.visible, section.visible,
+                            voiceSection.visible, polyDock.visible]
+        checkChromeShortcut(Qt.Key_A, Qt.NoModifier, 0,
+                            "focused velocity chrome A toggles only Automation")
+        compare(automationSection.visible, true,
+                "focused velocity chrome A shows the mounted Automation section")
+        checkChromeShortcut(Qt.Key_V, Qt.NoModifier, 1,
+                            "focused velocity chrome V toggles only Velocity")
+        compare(section.visible, false,
+                "focused velocity chrome V hides the mounted Velocity section")
+        checkChromeShortcut(Qt.Key_P, Qt.NoModifier, 2,
+                            "focused velocity chrome P toggles only Voice Changes")
+        compare(voiceSection.visible, true,
+                "focused velocity chrome P shows the mounted Voice Changes section")
+        checkChromeShortcut(Qt.Key_P, Qt.ControlModifier | Qt.ShiftModifier, 3,
+                            "focused velocity chrome Ctrl+Shift+P toggles only Polyphony")
+        compare(polyDock.visible, true,
+                "focused velocity chrome Ctrl+Shift+P shows the mounted polyphony dock")
+        poly.activate("view.polyphony_debugger")
+        poly.activate("view.voice_changes_drawer")
+        poly.activate("view.velocity_drawer")
+        poly.activate("view.automation_drawer")
+        tryCompare(polyDock, "visible", beforeChrome[3], 3000,
+                   "restored polyphony visibility reaches the mounted dock")
+        compare([automationSection.visible, section.visible,
+                 voiceSection.visible, polyDock.visible].toString(),
+                beforeChrome.toString(),
+                "chrome shortcut exercise restores the drawer before the next shell")
+
         var textProbe = textProbeComponent.createObject(shell.contentItem,
                                                         { x: 20, y: 20 })
         verify(textProbe, "the text field mounts inside the production window")
@@ -2327,6 +2377,8 @@ TestCase {
             page = findChild(surface, "automationPage")
             return page && page.visible && page.height > 0
         }, 3000, "the active song mounts its automation plot")
+        tryCompare(page, "activeFocus", true, 3000,
+                   "the opened automation band owns active focus before the Tap journey")
         var model = page.pageModel
         verify(model && model.tabCount > 1, "the track exposes multiple parameter tabs")
         var initialActive = null
@@ -2336,17 +2388,15 @@ TestCase {
                 initialActive = scanCandidate
         }
         verify(initialActive, "one parameter tab starts active")
-        var firstLabel = null
-        for (var index = 0; index < model.tabCount; ++index) {
-            var candidate = findChild(page, "automationParameterTab" + index)
-            if (candidate && candidate.enabled && !candidate.checked
-                    && !findChild(candidate, "automationTempoTapButton")) {
-                firstLabel = candidate
-                break
-            }
-        }
+        var firstLabel = findChild(page, "automationParameterTab1")
+        var secondLabel = findChild(page, "automationParameterTab2")
+        verify(firstLabel && firstLabel.enabled && firstLabel.text === "Pan"
+               && firstLabel.model.index === 1 && firstLabel !== initialActive,
+               "the focused first parameter is the controller 10 Pan lane")
         verify(firstLabel && firstLabel !== initialActive, "an inactive label is available")
-        var secondLabel = initialActive
+        verify(secondLabel && secondLabel.enabled && secondLabel.text === "Modulation"
+               && secondLabel.model.index === 2 && secondLabel !== firstLabel,
+               "the focused second parameter is the controller 1 Modulation lane")
         verify(secondLabel && secondLabel !== firstLabel, "a second label is available")
         var tempoTab = null
         for (var tempoIndex = 0; tempoIndex < model.tabCount; ++tempoIndex) {
@@ -2358,6 +2408,8 @@ TestCase {
             }
         }
         verify(tempoTab, "the tempo tab hosts the tap button")
+        verify(tempoTab && tempoTab.enabled && tempoTab.model.tempo,
+               "the Tempo parameter is enabled before its focused Tap button")
         var tapButton = findChild(page, "automationTempoTapButton")
         verify(tapButton && tapButton.visible, "the tempo Tap button is drawn")
         firstLabel.forceActiveFocus(Qt.OtherFocusReason)
@@ -2408,6 +2460,17 @@ TestCase {
         compare(session.documentDirty, false, "label Return never edits the song")
         compare(grid.noteSummary, notesBefore, "label Return never moves the selection")
         compare(grid.editCursorTick, cursorBefore, "label Return never moves the cursor")
+        var plot = findChild(page, "automationPlotInput")
+        verify(plot && plot.width > 0 && plot.height > 0,
+               "the mounted automation plot is available for the Tap time band")
+        var bandY = plot.height / 2
+        mousePress(plot, plot.width / 5, bandY, Qt.RightButton)
+        mouseMove(plot, plot.width * 3 / 5, bandY, -1, Qt.RightButton)
+        mouseRelease(plot, plot.width * 3 / 5, bandY, Qt.RightButton)
+        var insertTime = findChild(shell, "shellAction_edit.insert_time")
+        tryCompare(insertTime, "enabled", true, 3000,
+                   "a real automation band stages a lane time range before Tap Space")
+        notesBefore = grid.noteSummary
         tapButton.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(tapButton, "activeFocus", true, 3000,
                    "the tempo Tap button takes keyboard focus")
@@ -2436,6 +2499,8 @@ TestCase {
         compare(model.tapTempoTapCount, 2, "transport Space never taps")
         compare(session.documentDirty, false, "tap Space never edits the song")
         compare(grid.noteSummary, notesBefore, "tap Space never moves the selection")
+        compare(insertTime.enabled, true,
+                "Tap Space preserves the mounted automation lane time range")
         verify(grid.appliedRevisionText === revisionBeforeTap && session.canUndo === undoBeforeTap,
                "tap Space never changes the revision or undo availability")
         keyClick(Qt.Key_Space)
@@ -2472,9 +2537,12 @@ TestCase {
             automationPage = findChild(drawer, "automationPage")
             return automationPage && automationPage.activeFocus
         }, 3000, "the automation page receives drawer focus before grip focus")
-        grip.forceActiveFocus(Qt.TabFocusReason)
+        for (var tabStep = 0; tabStep < 96 && !grip.activeFocus; ++tabStep)
+            keyClick(Qt.Key_Tab)
         tryCompare(grip, "activeFocus", true, 3000,
-                   "A014 automation resize grip owns active focus before arrows")
+                   "real Tab traversal reaches the automation resize grip")
+        compare(grip.activeFocus, true,
+                "A014 automation resize grip owns active focus before arrows")
         var beforeHeight = section.bodyHeight
         var beforeNote = pair.map(function(item) { return note(item.id) })
         var beforeRevision = grid.appliedRevisionText
@@ -2512,9 +2580,12 @@ TestCase {
         compare(copyActivatedSpy.count, 0, "A018 grip arrows never activate window Copy")
         compare(soloActivatedSpy.count, 0, "A018 grip arrows never activate window Solo")
 
-        toggle.forceActiveFocus(Qt.TabFocusReason)
+        for (var toggleStep = 0; toggleStep < 96 && !toggle.activeFocus; ++toggleStep)
+            keyClick(Qt.Key_Tab)
         tryCompare(toggle, "activeFocus", true, 3000,
-                   "A108 automation toggle owns active focus before arrows")
+                   "real Tab traversal reaches the automation drawer toggle")
+        compare(toggle.activeFocus, true,
+                "A108 automation toggle owns active focus before arrows")
         var snap = grid.snapTicks
         keyClick(Qt.Key_Right)
         verify(pair.every(function(previous) {
@@ -2591,6 +2662,8 @@ TestCase {
                 break
             }
         }
+        verify(volumeTab && volumeTab.enabled && volumeTab.model.index === 0,
+               "the focused Volume label represents controller 7")
         verify(volumeTab && volumeTab.enabled, "the real parameter label is available")
         var tabPress = findChild(volumeTab, "automationParameterTabPress" + volumeTab.model.index)
         mouseClick(tabPress, tabPress.width / 2, tabPress.height / 2)
@@ -2772,6 +2845,9 @@ TestCase {
                    "second resumed automation S turns off intended Solo")
         compare(soloActivatedSpy.count, 2,
                 "second resumed automation S activates window Solo once")
+        volumeTab.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(volumeTab, "activeFocus", true, 3000,
+                   "the closed value prompt permits refocusing the Volume controller 7 label")
     }
 
     function test_nLabelTimeSelectionCommands() {

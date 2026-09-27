@@ -85,18 +85,8 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: Native `focusAutomationBand` (windowtier_keyboard.cpp:140 at c17d966f) has no Swift counterpart; the mounted journeys stage focus through the QML surface (a real toggle click or forceActiveFocus on the real chrome) and assert it (S182 grip active focus, S189 toggle active focus).
 
 A013 | SelectionWindowTierTest::chromeGripKeysStayLocal | src/checks/selectionkey/windowtier_keyboard.cpp:146
-Disposition: PARTIAL
-Mapping/reason: Related predicate S069 (:1311) in src/checks/editorqml/tst_ShellWindow.qml (test_lChromeArrowsAndUnknownKey): drawerHandle_automation is the mounted grip the journey focuses. Unproved as stated: real Tab traversal (the accepted staged-focus deviation — QML has no counterpart to the fork's process-global TabFocusAllControls guard) and the grip's activeFocus assertion (:1316, message-less).
-Source context since previous assertion:
-  ;
-      view.selectionModel().setNoteSelection({pair->ids[0], pair->ids[1]});
-      // The resize grip: real Tab traversal from the focused automation band to
-      // the grip, whose visible focus border is activeFocus-driven.
-      const QPointer<QQuickItem> grip = tabTo(
-          quickWindow(), {QStringLiteral("drawerAutomationHandle")}, chromeTraversalBound(document));
-
-Original expression:
-  QVERIFY2(grip, "Tab traversal never reached the automation resize grip")
+Disposition: MATCHED
+Mapping: S200 - real Tab keys traverse from the focused automation page to the active resize grip.
 
 A014 | SelectionWindowTierTest::chromeGripKeysStayLocal | src/checks/selectionkey/windowtier_keyboard.cpp:147
 Disposition: MATCHED
@@ -163,44 +153,8 @@ A023 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/
 Disposition: RETIRED-REPRESENTATION
 
 A024 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:219
-Disposition: PARTIAL
-Mapping/reason: Related predicates S061 (:1214) and S082 (:1388) in src/checks/editorqml/tst_ShellWindow.qml (test_kParameterTabActivationAndTapCession, test_mLabelCommandsAndPromptTextOwnership): a real parameter label takes keyboard focus through forceActiveFocus and the window delivery routes from it (S043, S045). Unproved as stated: the fork's CC-lane label identity (focusParameter(kController)) — the mounted journeys pick labels by tab text, not by automation row lane.
-Source context since previous assertion:
-  ;
-
-      songview::EditorSelectionModel::TimeSelection selected;
-      selected.startTick = tick;
-      selected.endTick = tick + 24;
-      selected.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
-      selected.lanes = {{kTrack, kController}, {kTrack, kSecondController}};
-      view.selectionModel().setTimeSelection(selected);
-      const auto selectionUnchanged = [&] {
-          const auto &actual = view.selectionModel().timeSelection();
-          return actual.startTick == selected.startTick && actual.endTick == selected.endTick &&
-                 actual.scope == selected.scope && actual.lanes == selected.lanes &&
-                 actual.tempo == selected.tempo && view.selectionModel().noteSelection().empty();
-      };
-      const QByteArray before = document.smf().write();
-      const int undoBefore = document.undoStack()->index();
-      const uint64_t cursorBefore = view.editCursorTick();
-      QPointer<QQuickItem> label;
-      const auto focusParameter = [&](uint8_t controller) {
-          const int index = checks::support::automationParameterIndex(
-              *canvas, {EditorAutomationRowKind::ControlChange, kTrack, controller});
-          if (index < 0 || !QTest::qWaitFor([&] {
-                  label = checks::support::visualDescendant(
-                      quick->rootObject(), QStringLiteral("automationParameterTab%1").arg(index));
-                  return label && label->window() == quickWindow() && label->isVisible() &&
-                         label->isEnabled() && label->width() > 0 && label->height() > 0;
-              }))
-              return false;
-          label->forceActiveFocus(Qt::OtherFocusReason);
-          selectionkey::settle();
-          return label && label->hasActiveFocus();
-      };
-
-Original expression:
-  QVERIFY(focusParameter(kController))
+Disposition: MATCHED
+Mapping: S201, S202 - the enabled Pan/controller 10 label takes keyboard focus before the mounted commands.
 
 A025 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:225
 Disposition: MATCHED
@@ -211,17 +165,8 @@ Disposition: MATCHED
 Mapping: S032, S033, S034, S031, S022, S042
 
 A027 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:238
-Disposition: PARTIAL
-Mapping/reason: Related predicate S062 (:1247) in src/checks/editorqml/tst_ShellWindow.qml (test_kParameterTabActivationAndTapCession): the mounted lane focuses the second parameter label and its activation retargets exactly once (S045). Unproved as stated: the fork's kSecondController lane identity of that label.
-Source context since previous assertion:
-  ;
-
-      // Enter/Return are the advertised local label-activation keys: each one
-      // activates exactly once without retargeting selection or editing.
-      QSignalSpy parameterChanges(canvas, &AutomationCanvas::activeParameterChanged);
-
-Original expression:
-  QVERIFY(focusParameter(kSecondController))
+Disposition: MATCHED
+Mapping: S203, S204 - the enabled Modulation/controller 1 label takes keyboard focus before Return.
 
 A028 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:242
 Disposition: MATCHED
@@ -241,13 +186,8 @@ Disposition: MATCHED
 Mapping: S120, S121, S122, S123, S124, S125
 
 A031 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:245
-Disposition: PARTIAL
-Mapping/reason: Related predicates S082 (:1388) and S087 (:1412) in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): the Volume parameter label is realized, activated and focused, and the label-focus command sequence leaves the active parameter unchanged. Unproved as stated: focusParameter(7)'s own focus observation — the mounted Volume-label activeFocus assertion (:1393) carries no message.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(focusParameter(7))
+Disposition: MATCHED
+Mapping: S205, S206 - the Volume/controller 7 label owns active focus before the command journey.
 
 A032 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:248
 Disposition: MATCHED
@@ -551,39 +491,12 @@ Original expression:
   QCOMPARE(canvas->parameterRow(canvas->activeParameter()), std::optional{volume})
 
 A082 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:355
-Disposition: PARTIAL
-Mapping/reason: Related predicate S053 (:1279) in src/checks/editorqml/tst_ShellWindow.qml (test_kParameterTabActivationAndTapCession): the mounted tap journey snapshots the shell's full note state before the Tap deliveries. Unproved as stated: the reserved tick-2400 two-note pair (test_k stages no note fixture).
-Source context since previous assertion:
-  ;
-  }
-
-  // The tempo tab's tap-tempo Tap button keeps the same activation-key contract
-  // as the parameter labels above: plain Enter and Return each add exactly one
-  // tap through real window delivery, tempo-row focus and selection stay
-  // untouched, modified and auto-repeat Return remain shared editing input, and
-  // bare Space stays with the window transport shortcut — no tap, no edit.
-  void SelectionWindowTierTest::tapButtonKeysAndTransportCession()
-  {
-      SongView &view = this->view();
-      SongDocument &document = this->document();
-      const selectionkey::ScenarioRollback rollback(view, document);
-      view.selectTrack(kTrack);
-      view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
-      view.setDrawerSectionHeight(EditorDrawerPage::Automations, 200);
-      const std::optional<NotePair> pair = addNotePair(document, kTrack, 2400);
-
-Original expression:
-  QVERIFY2(pair.has_value(),
-               "the reserved tick-2400 note pair could not be inserted and resolved")
+Disposition: RETIRED-REPRESENTATION
+Mapping: S053 - the reserved tick-2400 pair insertion guard `QVERIFY2(pair.has_value(), "the reserved tick-2400 note pair could not be inserted and resolved")` at c17d966f:src/checks/selectionkey/windowtier_keyboard.cpp:355 retires as a native fixture prerequisite; the mounted Tap journey snapshots the song before editing.
 
 A083 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:357
-Disposition: PARTIAL
-Mapping/reason: Related predicate S064 (:1262) in src/checks/editorqml/tst_ShellWindow.qml (test_kParameterTabActivationAndTapCession): a real Tap button takes keyboard focus through window delivery. Unproved as stated: the native automation band focus (focusAutomationBand) — the mounted lane focuses the Tap button directly.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(focusAutomationBand(view), "could not focus the automation band")
+Disposition: MATCHED
+Mapping: S208 - the opened automation page owns active focus before the mounted Tap journey; native focusAutomationBand request identity retires.
 
 A084 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:361
 Disposition: RETIRED-REPRESENTATION
@@ -612,14 +525,8 @@ Original expression:
   QVERIFY2(focusTap(), "the tempo Tap button never became focusable")
 
 A086 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:377
-Disposition: PARTIAL
-Mapping/reason: Related predicates S064 (:1262) and S054 (:1273) in src/checks/editorqml/tst_ShellWindow.qml (test_kParameterTabActivationAndTapCession): the mounted Tap journey drives a real focused Tap button and the resulting draft readout. Unproved as stated: the native canvas parameter-enabled staging precondition — the mounted journey's precondition is the realized draft readout, not a canvas enablement probe.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(canvas->parametersEnabled(),
-               "the tap-tempo canvas session would be disabled for this staging")
+Disposition: MATCHED
+Mapping: S209, S064 - the mounted Tempo parameter is enabled before the real Tap button receives focus and registers the taps.
 
 A087 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:396
 Disposition: MATCHED
@@ -669,22 +576,12 @@ Original expression:
   QVERIFY2(document.revision() == revisionBefore, "Return changed the revision")
 
 A092 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:405
-Disposition: PARTIAL
-Mapping/reason: Partial via S065 (:1276, tap keys never change the revision or the undo availability). Unproved as stated: the exact undo stack index (the mounted lane pins availability through session.canUndo).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(document.undoStack()->index() == undoIndexBefore, "Return changed the undo index")
+Disposition: MATCHED
+Mapping: S210, S212, S065 - two direct tempo taps preserve exact undo index; mounted Return delivers the second tap without changing revision or undo availability.
 
 A093 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:406
-Disposition: PARTIAL
-Mapping/reason: Partial via S065 (:1276, tap keys never change the revision or the undo availability). Unproved as stated: the exact undo stack count (the mounted lane pins availability).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(document.undoStack()->count() == undoCountBefore, "Return changed the undo count")
+Disposition: MATCHED
+Mapping: S211, S212, S065 - two direct tempo taps preserve exact undo count; mounted Return delivers the second tap without changing revision or undo availability.
 
 A094 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:407
 Disposition: MATCHED
@@ -729,17 +626,12 @@ Original expression:
   QVERIFY2(document.revision() == revisionBefore, "bare Space changed the revision")
 
 A102 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:429
-Disposition: PARTIAL
-Mapping/reason: Partial via S067 (:1289, bare Space on the Tap button never changes the revision or the undo availability). Unproved as stated: the exact undo stack count (the mounted lane pins availability).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(document.undoStack()->count() == undoCountBefore, "bare Space changed the undo count")
+Disposition: MATCHED
+Mapping: S213, S214, S067 - Swift pins the exact undo count across window transport with a two-tap draft; mounted Space leaves revision and undo availability unchanged.
 
 A103 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:430
 Disposition: PARTIAL
-Mapping/reason: Related predicates S059 (:1287) and S067 (:1289) in src/checks/editorqml/tst_ShellWindow.qml (test_kParameterTabActivationAndTapCession): bare Space on the focused Tap button leaves the full grid note summary unchanged and the revision and undo availability pinned. Unproved as stated: the fork's two-tap tempo session and draft-readout preconditions, the time-selection component of selectionUnchanged() (the mounted lane stages no time selection; the two-lane range remains unproved), and byte-level document identity (dirty flag only, S046).
+Mapping/reason: S059, S067, S215, S216, S217, S218 - mounted Space leaves its real automation lane range and note selection unchanged after two taps; Swift Space preserves exact Pan/Modulation two-lane bounds, Tempo exclusion and empty note selection. PARTIAL: the mounted journey selects one lane, not the fork's two-lane selection, so that simultaneous mounted conjunct remains unproved.
 Source context since previous assertion:
   ;
 
@@ -759,20 +651,8 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: Native `focusAutomationBand` (windowtier_keyboard.cpp:449 at c17d966f) has no Swift counterpart; the mounted toggle journey stages focus through the QML surface and asserts it (S189 toggle active focus).
 
 A107 | SelectionWindowTierTest::chromeToggleRoutesNoteArrows | src/checks/selectionkey/windowtier_keyboard.cpp:457
-Disposition: PARTIAL
-Mapping/reason: Related predicate S069 (:1311) in src/checks/editorqml/tst_ShellWindow.qml (test_lChromeArrowsAndUnknownKey): drawerToggle_automation is present and focusable in the mounted drawer. Unproved as stated: real Tab traversal (the accepted staged-focus deviation — no QML counterpart to the fork's process-global TabFocusAllControls guard) and the toggle's activeFocus assertion (:1341, message-less).
-Source context since previous assertion:
-  ;
-      view.selectionModel().setNoteSelection({pair->ids[0], pair->ids[1]});
-
-      // The drawer toggle: bare Space stays with the window transport shortcut,
-      // Enter/Return activate locally, and the note arrows route to the
-      // selected notes with the exact production effect.
-      const QPointer<QQuickItem> toggle = tabTo(
-          quickWindow(), {QStringLiteral("drawerAutomationToggle")}, chromeTraversalBound(document));
-
-Original expression:
-  QVERIFY2(toggle, "Tab traversal never reached the automation drawer toggle")
+Disposition: MATCHED
+Mapping: S207 - real Tab keys traverse from the automation grip to the active drawer toggle.
 
 A108 | SelectionWindowTierTest::chromeToggleRoutesNoteArrows | src/checks/selectionkey/windowtier_keyboard.cpp:458
 Disposition: MATCHED
@@ -1093,4 +973,61 @@ Anchor: message "A068 Select All includes the second reserved note by its origin
 
 S199 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "A075 lane Paste leaves both original notes unchanged by ID"
+
+S200 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "real Tab traversal reaches the automation resize grip"
+
+S201 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the focused first parameter is the controller 10 Pan lane"
+
+S202 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the first label takes keyboard focus"
+
+S203 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the focused second parameter is the controller 1 Modulation lane"
+
+S204 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the second label takes keyboard focus"
+
+S205 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the focused Volume label represents controller 7"
+
+S206 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "A031 the Volume label owns active focus before commands"
+
+S207 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "real Tab traversal reaches the automation drawer toggle"
+
+S208 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the opened automation band owns active focus before the Tap journey"
+
+S209 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the Tempo parameter is enabled before its focused Tap button"
+
+S210 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "two direct tempo taps preserve the exact undo index"
+
+S211 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "two direct tempo taps preserve the exact undo count"
+
+S212 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Return on the focused Tap button adds the second tap"
+
+S213 | checkMountedPitchKeyAndUndo | src/checks/workspace/session_edit_routing.swift
+Anchor: message "window Space during a Tap draft preserves the exact undo count"
+
+S214 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "bare Space on the Tap button owns transport"
+
+S215 | checkMountedPitchKeyAndUndo | src/checks/workspace/session_edit_routing.swift
+Anchor: message "the Tap draft starts with Pan and Modulation selected"
+
+S216 | checkMountedPitchKeyAndUndo | src/checks/workspace/session_edit_routing.swift
+Anchor: message "window Space retains exact Pan and Modulation bounds without Tempo or notes"
+
+S217 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "a real automation band stages a lane time range before Tap Space"
+
+S218 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Tap Space preserves the mounted automation lane time range"
 

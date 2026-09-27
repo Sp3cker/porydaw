@@ -540,6 +540,17 @@ private func windowTierKeyboardOutcomes(_ report: CheckReport, suite: DocumentSe
                   message: "A056 prompt Escape keeps Tempo excluded")
     report.expect(session.selectedNotes.isEmpty, cppID: id,
                   message: "A056 prompt Escape keeps the note selection empty")
+    let tapIndex = document.history.undoIndex
+    let tapCount = document.history.undoCount
+    page.tapTempoTap(atMilliseconds: 1_000)
+    page.tapTempoTap(atMilliseconds: 1_500)
+    report.expect(page.tapTempoTapCount == 2 && page.tapTempoDraftBpm > 0,
+                  cppID: id, message: "two tempo taps publish a draft without committing it")
+    report.expect(document.history.undoIndex == tapIndex, cppID: id,
+                  message: "two direct tempo taps preserve the exact undo index")
+    report.expect(document.history.undoCount == tapCount, cppID: id,
+                  message: "two direct tempo taps preserve the exact undo count")
+    page.resetTapTempo()
     router.perform(.copy)
     let clip = GridClipboard().read()?.clip
     report.expectEqual(expected: [ClipLanePoint(relTick: 0, value: 32)],

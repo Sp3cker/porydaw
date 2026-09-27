@@ -156,16 +156,8 @@ Original expression:
         QCOMPARE(uint64_t(session->b->view().playheadTick() + 0.5), tick)
 
 A020 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:144
-Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
-Source context since previous assertion:
-    }
-
-    void catalogueViewBindingsReachPersistentQuickFocus()
-    {
-        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
-Original expression:
-        QVERIFY(session.has_value())
+Disposition: RETIRED-REPRESENTATION
+Mapping: S374 - native `QVERIFY(session.has_value())` at 5f768e3:src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:144 guards C++ MainWindow fixture construction; the mounted shell opens both real ready songs.
 
 A021 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:151
 Disposition: RETIRED-REPRESENTATION
@@ -223,120 +215,64 @@ Disposition: RETIRED-REPRESENTATION
 Mapping: fork-verified native QAction tooltip projection at Reference revision 5f768e3
 
 A035 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:180
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp) no longer builds or runs. Previous native note: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-
-        songview::TimelineQuickView *const quick = view.quickView();
-        QQuickWindow *const quickWindow = quick ? quick->quickWindow() : nullptr;
-        QQuickItem *const velocityToggle = quick && quick->rootObject()
-                                               ? quick->rootObject()->findChild<QQuickItem *>(
-                                                     QStringLiteral("drawerVelocityToggle"))
-                                               : nullptr;
-Original expression:
-        QVERIFY2(quickWindow && velocityToggle,
-                 "the active tab's persistent velocity drawer toggle is unavailable")
+Disposition: RETIRED-REPRESENTATION
+Mapping: S412 - native `QVERIFY2(quickWindow && velocityToggle, "the active tab's persistent velocity drawer toggle is unavailable")` at 5f768e3:src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:180 pins native Quick-window/toggle pointer lookup; the mounted shell sees its real roll and toggle.
 
 A036 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:183
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp) no longer builds or runs. Previous native note: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        velocityToggle->forceActiveFocus(Qt::OtherFocusReason);
-Original expression:
-        QTRY_VERIFY(velocityToggle->hasActiveFocus())
+Disposition: PARTIAL
+Mapping/reason: S411 - the mounted shell delivers A while the velocity toggle is targeted, and the helper tests its activeFocus without a message before every shortcut. PARTIAL: no message-anchored predicate pins the focused toggle itself or native QApplication focus identity.
 
 A037 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:184
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp) no longer builds or runs. Previous native note: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(quickWindow->activeFocusItem(), velocityToggle)
+Disposition: PARTIAL
+Mapping/reason: S411 - the mounted A shortcut tests QML activeFocus before delivery and observes the automation section. PARTIAL: native QQuickWindow activeFocusItem pointer identity is not observed as a separate message-anchored predicate.
 
 A038 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:191
-Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
-Source context since previous assertion:
-
-        QSignalSpy automationTriggered(automation, &QAction::triggered);
-        QSignalSpy velocityTriggered(velocity, &QAction::triggered);
-        QSignalSpy voiceChangesTriggered(voiceChanges, &QAction::triggered);
-        QSignalSpy polyphonyTriggered(polyphony, &QAction::triggered);
-
-Original expression:
-        QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::Automations))
+Disposition: MATCHED
+Mapping: S413 - mounted Automation is hidden before chrome shortcuts, after synchronized drawer preference staging.
 
 A039 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:192
-Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(view.drawerSectionVisible(EditorDrawerPage::Velocity))
+Disposition: MATCHED
+Mapping: S414 - mounted Velocity is visible before chrome shortcuts.
 
 A040 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:193
-Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::VoiceChanges))
+Disposition: MATCHED
+Mapping: S415 - mounted Voice Changes is hidden before chrome shortcuts.
 
 A041 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:194
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp) no longer builds or runs. Previous native note: Original native visibility/rendering obligation (widget shown/hidden, pixel grab). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(!window.m_polyDock->isVisible())
+Disposition: MATCHED
+Mapping: S416 - the real mounted polyphony dock is hidden before the chrome shortcuts.
 
 A042 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:196
 Disposition: RETIRED-REPRESENTATION
 Mapping: fork-verified native QAction signal-delivery pin at Reference revision 5f768e3
 
 A043 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:197
-Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(view.drawerSectionVisible(EditorDrawerPage::Automations))
+Disposition: MATCHED
+Mapping: S411, S413, S417 - real A from focused velocity chrome shows Automation from an observed hidden baseline, leaving the other three states unchanged.
 
 A044 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:199
 Disposition: RETIRED-REPRESENTATION
 Mapping: fork-verified native QAction signal-delivery pin at Reference revision 5f768e3
 
 A045 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:200
-Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::Velocity))
+Disposition: MATCHED
+Mapping: S414, S418, S421 - real V from focused velocity chrome hides mounted Velocity from an observed visible baseline, leaving the other three states unchanged.
 
 A046 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:202
 Disposition: RETIRED-REPRESENTATION
 Mapping: fork-verified native QAction signal-delivery pin at Reference revision 5f768e3
 
 A047 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:203
-Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(view.drawerSectionVisible(EditorDrawerPage::VoiceChanges))
+Disposition: MATCHED
+Mapping: S415, S419, S422 - real P from focused velocity chrome shows mounted Voice Changes from an observed hidden baseline, leaving the other three states unchanged.
 
 A048 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:205
 Disposition: RETIRED-REPRESENTATION
 Mapping: fork-verified native QAction signal-delivery pin at Reference revision 5f768e3
 
 A049 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:206
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp) no longer builds or runs. Previous native note: Original native visibility/rendering obligation (widget shown/hidden, pixel grab). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(window.m_polyDock->isVisible())
+Disposition: MATCHED
+Mapping: S416, S420, S423 - real Ctrl+Shift+P from focused velocity chrome shows the mounted polyphony dock from an observed hidden baseline, leaving the other three states unchanged.
 
 A050 | MainWindowRoutingInputTest::copyActionRoutesCompleteClipAndTimeSelection | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:212
 Disposition: RETIRED-REPRESENTATION
@@ -2463,3 +2399,42 @@ Anchor: message "selected note Copy leaves both songs and histories untouched"
 
 S410 | runEditRoutingChecks | src/checks/workspace/session_edit_routing.swift
 Anchor: message "both Copy paths leave both songs and histories untouched"
+
+S411 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "focused velocity chrome A toggles only Automation"
+
+S412 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the roll and drawer chrome are visible"
+
+S413 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "focused chrome starts with Automation hidden"
+
+S414 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "focused chrome starts with Velocity visible"
+
+S415 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "focused chrome starts with Voice Changes hidden"
+
+S416 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "focused chrome starts with the polyphony dock hidden"
+
+S417 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "focused velocity chrome A shows the mounted Automation section"
+
+S418 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "focused velocity chrome V hides the mounted Velocity section"
+
+S419 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "focused velocity chrome P shows the mounted Voice Changes section"
+
+S420 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "focused velocity chrome Ctrl+Shift+P shows the mounted polyphony dock"
+
+S421 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "focused velocity chrome V toggles only Velocity"
+
+S422 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "focused velocity chrome P toggles only Voice Changes"
+
+S423 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "focused velocity chrome Ctrl+Shift+P toggles only Polyphony"
