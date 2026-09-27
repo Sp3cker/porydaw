@@ -309,8 +309,8 @@ Original expression:
   QVERIFY(qHash(*kick) == qHash(*sameKick))
 
 A020 | ProjectIdentityTest::savedRecipe_dedupOrderSelection | src/checks/project/identity.cpp:146
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe undo/redo tempo timing, not normalizeSavedRecipe dedup/order/selection; the conjunctions below remain open.
+Disposition: MATCHED
+Mapping: S023 — saved-recipe normalization preserves the supplied project path.
 Source context since previous assertion:
   ;
   }
@@ -327,8 +327,8 @@ Original expression:
   QCOMPARE(recipe.projectPath, QStringLiteral("/projects/demo"))
 
 A021 | ProjectIdentityTest::savedRecipe_dedupOrderSelection | src/checks/project/identity.cpp:147
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe undo/redo tempo timing, not normalizeSavedRecipe dedup/order/selection; the conjunctions below remain open.
+Disposition: MATCHED
+Mapping: S024 — normalization removes empty and repeated labels, leaving exactly three songs.
 Source context since previous assertion:
   ;
 
@@ -336,8 +336,8 @@ Original expression:
   QCOMPARE(recipe.orderedSongs.size(), 3)
 
 A022 | ProjectIdentityTest::savedRecipe_dedupOrderSelection | src/checks/project/identity.cpp:150
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe undo/redo tempo timing, not normalizeSavedRecipe dedup/order/selection; the conjunctions below remain open.
+Disposition: MATCHED
+Mapping: S025 — the first surviving normalized song retains label b.
 Source context since previous assertion:
   ;
       if (recipe.orderedSongs.size() != 3)
@@ -347,8 +347,8 @@ Original expression:
   QCOMPARE(recipe.orderedSongs[0].value(), QStringLiteral("b"))
 
 A023 | ProjectIdentityTest::savedRecipe_dedupOrderSelection | src/checks/project/identity.cpp:151
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe undo/redo tempo timing, not normalizeSavedRecipe dedup/order/selection; the conjunctions below remain open.
+Disposition: MATCHED
+Mapping: S026 — the second surviving normalized song retains label a.
 Source context since previous assertion:
   ;
 
@@ -356,8 +356,8 @@ Original expression:
   QCOMPARE(recipe.orderedSongs[1].value(), QStringLiteral("a"))
 
 A024 | ProjectIdentityTest::savedRecipe_dedupOrderSelection | src/checks/project/identity.cpp:152
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe undo/redo tempo timing, not normalizeSavedRecipe dedup/order/selection; the conjunctions below remain open.
+Disposition: MATCHED
+Mapping: S027 — the third surviving normalized song retains label c.
 Source context since previous assertion:
   ;
 
@@ -365,8 +365,8 @@ Original expression:
   QCOMPARE(recipe.orderedSongs[2].value(), QStringLiteral("c"))
 
 A025 | ProjectIdentityTest::savedRecipe_dedupOrderSelection | src/checks/project/identity.cpp:153
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe undo/redo tempo timing, not normalizeSavedRecipe dedup/order/selection; the conjunctions below remain open.
+Disposition: MATCHED
+Mapping: S028 — the normalized recipe retains a selected value for the matching input label.
 Source context since previous assertion:
   ;
 
@@ -374,8 +374,8 @@ Original expression:
   QVERIFY(recipe.selected)
 
 A026 | ProjectIdentityTest::savedRecipe_dedupOrderSelection | src/checks/project/identity.cpp:155
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe undo/redo tempo timing, not normalizeSavedRecipe dedup/order/selection; the conjunctions below remain open.
+Disposition: MATCHED
+Mapping: S029 — the matching selected value retains label a.
 Source context since previous assertion:
   ;
       if (recipe.selected)
@@ -384,8 +384,8 @@ Original expression:
   QCOMPARE(recipe.selected->value(), QStringLiteral("a"))
 
 A027 | ProjectIdentityTest::savedRecipe_selectionFallbacks | src/checks/project/identity.cpp:162
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe undo/redo tempo timing, not selection fallbacks; the conjunctions below remain open.
+Disposition: MATCHED
+Mapping: S030 — a missing selected label yields a fallback selection.
 Source context since previous assertion:
   ;
   }
@@ -399,8 +399,8 @@ Original expression:
   QVERIFY(missing.selected)
 
 A028 | ProjectIdentityTest::savedRecipe_selectionFallbacks | src/checks/project/identity.cpp:164
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe undo/redo tempo timing, not selection fallbacks; the conjunctions below remain open.
+Disposition: MATCHED
+Mapping: S031 — the missing-selection fallback is the first ordered label a.
 Source context since previous assertion:
   ;
       if (missing.selected)
@@ -409,8 +409,8 @@ Original expression:
   QCOMPARE(missing.selected->value(), QStringLiteral("a"))
 
 A029 | ProjectIdentityTest::savedRecipe_selectionFallbacks | src/checks/project/identity.cpp:168
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe undo/redo tempo timing, not selection fallbacks; the conjunctions below remain open.
+Disposition: MATCHED
+Mapping: S032 — an empty selected label yields a fallback selection.
 Source context since previous assertion:
   ;
 
@@ -421,8 +421,8 @@ Original expression:
   QVERIFY(empty.selected)
 
 A030 | ProjectIdentityTest::savedRecipe_selectionFallbacks | src/checks/project/identity.cpp:170
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe undo/redo tempo timing, not selection fallbacks; the conjunctions below remain open.
+Disposition: MATCHED
+Mapping: S033 — the empty-selection fallback chooses the first ordered label a.
 Source context since previous assertion:
   ;
       if (empty.selected)
@@ -431,8 +431,8 @@ Original expression:
   QCOMPARE(empty.selected->value(), QStringLiteral("a"))
 
 A031 | ProjectIdentityTest::savedRecipe_legacySingleLabelAndEmpty | src/checks/project/identity.cpp:177
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe redo tempo timing, not legacy single-label or empty recipes; the conjunctions below remain open.
+Disposition: MATCHED
+Mapping: S034 — an empty ordered-label list with selected solo normalizes to one tab.
 Source context since previous assertion:
   ;
   }
@@ -446,8 +446,8 @@ Original expression:
   QCOMPARE(legacy.orderedSongs.size(), 1)
 
 A032 | ProjectIdentityTest::savedRecipe_legacySingleLabelAndEmpty | src/checks/project/identity.cpp:179
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe redo tempo timing, not legacy single-label or empty recipes; the conjunctions below remain open.
+Disposition: MATCHED
+Mapping: S035 — the sole normalized legacy tab keeps label solo.
 Source context since previous assertion:
   ;
       if (legacy.orderedSongs.size() == 1)
@@ -456,8 +456,8 @@ Original expression:
   QCOMPARE(legacy.orderedSongs[0].value(), QStringLiteral("solo"))
 
 A033 | ProjectIdentityTest::savedRecipe_legacySingleLabelAndEmpty | src/checks/project/identity.cpp:180
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe redo tempo timing, not legacy single-label or empty recipes; the conjunctions below remain open.
+Disposition: MATCHED
+Mapping: S036 — the normalized solo tab has a selected value.
 Source context since previous assertion:
   ;
 
@@ -465,8 +465,8 @@ Original expression:
   QVERIFY(legacy.selected)
 
 A034 | ProjectIdentityTest::savedRecipe_legacySingleLabelAndEmpty | src/checks/project/identity.cpp:182
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe redo tempo timing, not legacy single-label or empty recipes; the conjunctions below remain open.
+Disposition: MATCHED
+Mapping: S037 — the selected value for the legacy solo tab is solo.
 Source context since previous assertion:
   ;
       if (legacy.selected)
@@ -475,8 +475,8 @@ Original expression:
   QCOMPARE(legacy.selected->value(), QStringLiteral("solo"))
 
 A035 | ProjectIdentityTest::savedRecipe_legacySingleLabelAndEmpty | src/checks/project/identity.cpp:185
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe redo tempo timing, not legacy single-label or empty recipes; the conjunctions below remain open.
+Disposition: MATCHED
+Mapping: S038 — a fully empty normalized recipe contains no tabs.
 Source context since previous assertion:
   ;
 
@@ -486,8 +486,8 @@ Original expression:
   QVERIFY(empty.orderedSongs.isEmpty())
 
 A036 | ProjectIdentityTest::savedRecipe_legacySingleLabelAndEmpty | src/checks/project/identity.cpp:186
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe redo tempo timing, not legacy single-label or empty recipes; the conjunctions below remain open.
+Disposition: MATCHED
+Mapping: S039 — the fully empty normalized recipe has no selected tab.
 Source context since previous assertion:
   ;
 
@@ -771,3 +771,54 @@ Anchor: message "A043 redo restores latest tick three"
 
 S022 | historyMergeContracts | src/checks/editcheck/NoteHistoryChecks.swift
 Anchor: message "A048 undo returns to saved tick three"
+
+S023 | savedRecipe | src/checks/projectstore/ProjectIdentityChecks.swift
+Anchor: message "A020: project path passes through"
+
+S024 | savedRecipe | src/checks/projectstore/ProjectIdentityChecks.swift
+Anchor: message "A021: empty and repeated labels are removed"
+
+S025 | savedRecipe | src/checks/projectstore/ProjectIdentityChecks.swift
+Anchor: message "A022: first surviving label stays first"
+
+S026 | savedRecipe | src/checks/projectstore/ProjectIdentityChecks.swift
+Anchor: message "A023: second surviving label stays second"
+
+S027 | savedRecipe | src/checks/projectstore/ProjectIdentityChecks.swift
+Anchor: message "A024: third surviving label stays third"
+
+S028 | savedRecipe | src/checks/projectstore/ProjectIdentityChecks.swift
+Anchor: message "A025: matching selection survives"
+
+S029 | savedRecipe | src/checks/projectstore/ProjectIdentityChecks.swift
+Anchor: message "A026: matching selected label is preserved"
+
+S030 | savedRecipe | src/checks/projectstore/ProjectIdentityChecks.swift
+Anchor: message "A027: missing selection falls back"
+
+S031 | savedRecipe | src/checks/projectstore/ProjectIdentityChecks.swift
+Anchor: message "A028: missing selection picks the first label"
+
+S032 | savedRecipe | src/checks/projectstore/ProjectIdentityChecks.swift
+Anchor: message "A029: empty selection falls back"
+
+S033 | savedRecipe | src/checks/projectstore/ProjectIdentityChecks.swift
+Anchor: message "A030: empty selection picks the first label"
+
+S034 | savedRecipe | src/checks/projectstore/ProjectIdentityChecks.swift
+Anchor: message "A031: lone selected label creates one tab"
+
+S035 | savedRecipe | src/checks/projectstore/ProjectIdentityChecks.swift
+Anchor: message "A032: selected-alone tab retains its label"
+
+S036 | savedRecipe | src/checks/projectstore/ProjectIdentityChecks.swift
+Anchor: message "A033: selected-alone label remains selected"
+
+S037 | savedRecipe | src/checks/projectstore/ProjectIdentityChecks.swift
+Anchor: message "A034: selected-alone selection retains its label"
+
+S038 | savedRecipe | src/checks/projectstore/ProjectIdentityChecks.swift
+Anchor: message "A035: empty recipe contains no tabs"
+
+S039 | savedRecipe | src/checks/projectstore/ProjectIdentityChecks.swift
+Anchor: message "A036: empty recipe has no selected tab"

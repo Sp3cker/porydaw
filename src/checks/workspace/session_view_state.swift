@@ -96,7 +96,8 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
                            orderedSongs: ["missing-song", "mus_session_test", "mus_session_test"],
                            selectedSong: "other-song"), store: store)
     let ordered = EditorViewStateCodec.loadTabs(store: store)
-    report.expectEqual(expected: ["missing-song", "mus_session_test", "mus_session_test"],
+    // fceecd88:src/checks/project/identity.cpp:142-155 deduplicates saved labels.
+    report.expectEqual(expected: ["missing-song", "mus_session_test"],
                        actual: ordered.orderedSongs, cppID: recipeID,
                        what: "a present ordered recipe is not extended by its selected label")
     let available = ordered.normalized(available: ["mus_session_test"])
@@ -114,9 +115,11 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
     store.setString(key: "lastSongLabel", value: "mus_session_test")
     report.expect(store.hasValue(key: "lastOpenSongs"), cppID: recipeID,
                   message: "the explicitly empty ordered-song key is present before load")
-    report.expectEqual(expected: [], actual: EditorViewStateCodec.loadTabs(store: store).orderedSongs,
+    // fceecd88:src/checks/project/identity.cpp:174-182 restores a lone selected label.
+    report.expectEqual(expected: ["mus_session_test"],
+                       actual: EditorViewStateCodec.loadTabs(store: store).orderedSongs,
                        cppID: recipeID,
-                       what: "an explicitly empty ordered-song key stays empty despite a selected label")
+                       what: "an explicitly empty ordered-song key restores its selected label")
     _ = store.resetPreferences()
     runCompleteEditorViewStateChecks(report: report, store: store, fixtureRoot: fixtureRoot)
     _ = store.resetPreferences()

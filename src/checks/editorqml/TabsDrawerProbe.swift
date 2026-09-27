@@ -47,6 +47,11 @@ public final class TabsDrawerProbe: QmlInstantiableStatus {
         return "\(data.count):\(String(hash, radix: 16))"
     }
 
+    public func fileBytesBase64(path: String) -> String {
+        guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else { return "" }
+        return data.base64EncodedString()
+    }
+
     public func songPath(projectRoot: String, label: String) -> String {
         projectRoot + "/sound/songs/midi/" + label + ".mid"
     }

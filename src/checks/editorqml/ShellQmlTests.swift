@@ -210,6 +210,12 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
         return EditorViewStateCodec.loadTabs(store: preferences).orderedSongs == [song]
     }
 
+    public func seedStartupRecipe(projectPath: String, songs: [String], selected: String) {
+        EditorViewStateCodec.saveTabs(
+            WorkspaceTabRecipe(projectPath: projectPath, orderedSongs: songs, selectedSong: selected),
+            store: preferences)
+    }
+
 
     /// Widget oracle geometry for the standalone production voicegroup panel.
     public func voicegroupReferenceJson(variant: String) -> String {

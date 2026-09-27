@@ -44,6 +44,113 @@ ShellTabsSupport {
                 "a project-only restore publishes Opened on the mounted status bar")
     }
 
+    function test_duplicateRecipeRestoresOrderedTabsWithoutWritingProject() {
+        settings.setString("identityRecipeSentinel", "keep this value")
+        bootstrap.seedStartupRecipe(bootstrap.projectRoot,
+                                    ["mus_route102", "", "mus_route101", "mus_route102",
+                                     "mus_littleroot_test", "mus_route101"], "mus_route101")
+        var firstPath = fileProbe.songPath(bootstrap.projectRoot, "mus_route102")
+        var secondPath = fileProbe.songPath(bootstrap.projectRoot, "mus_route101")
+        var thirdPath = fileProbe.songPath(bootstrap.projectRoot, "mus_littleroot_test")
+        var tablePath = bootstrap.projectRoot + "/sound/song_table.inc"
+        var firstBytes = fileProbe.fileBytesBase64(firstPath)
+        var secondBytes = fileProbe.fileBytesBase64(secondPath)
+        var thirdBytes = fileProbe.fileBytesBase64(thirdPath)
+        var tableBytes = fileProbe.fileBytesBase64(tablePath)
+        verify(firstBytes.length > 0, "the first saved recipe song is readable before startup")
+        verify(secondBytes.length > 0, "the second saved recipe song is readable before startup")
+        verify(thirdBytes.length > 0, "the third saved recipe song is readable before startup")
+        verify(tableBytes.length > 0, "the saved recipe project table is readable before startup")
+        shell = shellComponent.createObject(null)
+        verify(waitForNative(function() {
+            return tabs().tabCount === 3 && tabOrderIds().length === 3
+        }, 30000), "duplicate and empty recipe labels restore exactly three live tabs")
+        var ids = tabOrderIds()
+        waitForPage(ids[0])
+        waitForPage(ids[1])
+        waitForPage(ids[2])
+        compare(pageOf(ids[0]).session.title, "mus_route102",
+                "the first surviving recipe label is the first mounted page")
+        compare(pageOf(ids[1]).session.title, "mus_route101",
+                "the second surviving recipe label is the second mounted page")
+        compare(pageOf(ids[2]).session.title, "mus_littleroot_test",
+                "the third surviving recipe label is the third mounted page")
+        compare(tabs().selectedId, ids[1],
+                "the surviving saved selection activates its exact mounted page")
+        compare(settings.string("lastSongLabel", ""), "mus_route101",
+                "successful restore preserves the saved selection in preferences")
+        compare(settings.string("lastProjectDir", ""), bootstrap.projectRoot,
+                "successful restore preserves the saved project path")
+        shell.close()
+        verify(waitForNative(function() {
+            return shell.shellPresenter.closeReady && shell.sessionStatePersisted
+        }, 30000), "the restored clean tabs close and persist their mounted order")
+        compare(settings.string("identityRecipeSentinel", ""), "keep this value",
+                "opening and closing the shell preserves unrelated preferences")
+        compare(fileProbe.fileBytesBase64(firstPath), firstBytes,
+                "opening and closing the shell preserves the first song file")
+        compare(fileProbe.fileBytesBase64(secondPath), secondBytes,
+                "opening and closing the shell preserves the second song file")
+        compare(fileProbe.fileBytesBase64(thirdPath), thirdBytes,
+                "opening and closing the shell preserves the third song file")
+        compare(fileProbe.fileBytesBase64(tablePath), tableBytes,
+                "opening and closing the shell preserves the project song table")
+    }
+
+    function test_missingSelectionFallsBackToFirstOrderedPage() {
+        bootstrap.seedStartupRecipe(bootstrap.projectRoot,
+                                    ["mus_route102", "mus_route101"], "mus_gym")
+        shell = shellComponent.createObject(null)
+        verify(waitForNative(function() {
+            return tabs().tabCount === 2 && tabOrderIds().length === 2
+        }, 30000), "the missing-selection recipe restores both listed songs")
+        var ids = tabOrderIds()
+        waitForPage(ids[0])
+        waitForPage(ids[1])
+        compare(pageOf(ids[0]).session.title, "mus_route102",
+                "a missing selection keeps the first listed page first")
+        compare(pageOf(ids[1]).session.title, "mus_route101",
+                "a missing selection keeps the second listed page second")
+        compare(tabs().selectedId, ids[0],
+                "a missing selected label falls back to the first mounted page")
+        compare(settings.string("lastSongLabel", ""), "mus_gym",
+                "the fallback does not rewrite the original missing selection")
+    }
+
+    function test_emptySelectionFallsBackToFirstOrderedPage() {
+        bootstrap.seedStartupRecipe(bootstrap.projectRoot,
+                                    ["mus_route101", "mus_littleroot_test"], "")
+        shell = shellComponent.createObject(null)
+        verify(waitForNative(function() {
+            return tabs().tabCount === 2 && tabOrderIds().length === 2
+        }, 30000), "the empty-selection recipe restores both listed songs")
+        var ids = tabOrderIds()
+        waitForPage(ids[0])
+        waitForPage(ids[1])
+        compare(pageOf(ids[0]).session.title, "mus_route101",
+                "an empty selection keeps the first listed page first")
+        compare(pageOf(ids[1]).session.title, "mus_littleroot_test",
+                "an empty selection keeps the second listed page second")
+        compare(tabs().selectedId, ids[0],
+                "an empty selected label falls back to the first mounted page")
+        compare(settings.string("lastSongLabel", "missing"), "",
+                "the fallback does not rewrite the original empty selection")
+    }
+
+    function test_emptyOrderedLabelsUseLegacySelectedSong() {
+        bootstrap.seedStartupRecipe(bootstrap.projectRoot, ["", ""], "mus_route101")
+        shell = shellComponent.createObject(null)
+        verify(waitForNative(function() {
+            return tabs().tabCount === 1 && tabOrderIds().length === 1
+        }, 30000), "an empty ordered recipe with a selected song restores exactly one tab")
+        var ids = tabOrderIds()
+        waitForPage(ids[0])
+        compare(pageOf(ids[0]).session.title, "mus_route101",
+                "the legacy selected song is the exact mounted page")
+        compare(tabs().selectedId, ids[0],
+                "the legacy selected song is active after startup")
+    }
+
     function test_selectedSongOnlyStartupRecipe() {
         settings.setString("lastProjectDir", bootstrap.projectRoot)
         settings.setString("lastSongLabel", "mus_route101")

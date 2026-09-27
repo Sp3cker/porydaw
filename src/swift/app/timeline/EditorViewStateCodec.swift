@@ -1,5 +1,6 @@
 import Foundation
 import CoreFoundation
+import PorydawProject
 import QtBridgeCpp
 
 /// The historical QSettings workspace recipe. These keys are application-wide,
@@ -188,10 +189,12 @@ public enum EditorViewStateCodec {
     @MainActor
     public static func loadTabs(store: PreferencesStore) -> WorkspaceTabRecipe {
         let selected = store.string(key: "lastSongLabel", fallback: "")
-        let ordered = store.strings("lastOpenSongs") ?? (selected.isEmpty ? [] : [selected])
-        return WorkspaceTabRecipe(
+        let saved = normalizeSavedRecipe(
             projectPath: store.string(key: "lastProjectDir", fallback: ""),
-            orderedSongs: ordered, selectedSong: selected)
+            labels: store.strings("lastOpenSongs") ?? [], selected: selected)
+        return WorkspaceTabRecipe(projectPath: saved.projectPath,
+                                  orderedSongs: saved.orderedSongs.map(\.value),
+                                  selectedSong: saved.selected?.value ?? "")
     }
 
     @MainActor
