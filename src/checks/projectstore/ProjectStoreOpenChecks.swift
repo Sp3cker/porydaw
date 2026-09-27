@@ -110,6 +110,74 @@ internal func runProjectStoreOpenSuite(_ report: CheckReport) {
         report.fail("\(id)/A05", "second open failed or timed out: \(String(describing: repeated))")
     }
 
+    let supportID = "onboardcheck/support.cpp"
+    let playerCopy = FileManager.default.temporaryDirectory.appendingPathComponent(
+        "projectstore-player-table-\(UUID().uuidString)", isDirectory: true)
+    do {
+        try FileManager.default.copyItem(at: rootURL, to: playerCopy)
+        defer { try? FileManager.default.removeItem(at: playerCopy) }
+        let playerTable = playerCopy.appendingPathComponent("sound/music_player_table.inc")
+        let table = """
+            \t.equiv NUM_TRACKS_BGM, 12
+            \t.equiv NUM_TRACKS_SE2, 20
+
+            gMPlayTable::
+            \tmusic_player gMPlayInfo_BGM, gMPlayTrack_BGM, NUM_TRACKS_BGM, 0
+            \tmusic_player gMPlayInfo_SE1, gMPlayTrack_SE1, 3, 1
+            \tmusic_player gMPlayInfo_SE2, gMPlayTrack_SE2, NUM_TRACKS_SE2, 1
+            \tmusic_player gMPlayInfo_SE3, gMPlayTrack_SE3, NUM_TRACKS_WHO, 0
+            """
+        try table.write(to: playerTable, atomically: true, encoding: .utf8)
+        let customStore = ProjectStore(projectRoot: playerCopy)
+        guard let opened = awaitValue({ try await customStore.open() }),
+              case .success(let custom) = opened else {
+            report.fail(supportID, "custom-player project failed to open")
+            return
+        }
+        guard let groupsOutcome = awaitValue({ try await customStore.voicegroupArgs() }),
+              case .success(let voicegroups) = groupsOutcome else {
+            report.fail(supportID, "custom-player project voicegroup read failed")
+            return
+        }
+        report.expectEqual(
+            expected: ["_dummy", "_fixture_alt", "_fixture_bass", "_fixture_drums_a",
+                       "_fixture_drums_b", "_fixture_keys", "_fixture_rich"],
+            actual: voicegroups, cppID: supportID,
+            what: "A002: opened project enumerates exactly the seven fixture voicegroup arguments")
+        report.expect(
+            custom.players.map(\.name) == [
+                "MUSIC_PLAYER_BGM", "MUSIC_PLAYER_SE1", "MUSIC_PLAYER_SE2",
+                "MUSIC_PLAYER_SE3", "MUSIC_PLAYER_SE_1TRK",
+            ] && custom.players.map(\.number) == [0, 1, 2, 3, 4]
+                && custom.players.last?.trackCount == -1,
+            cppID: supportID,
+            message: "A003: opened project retains the five declared player names, numbers and omitted fifth limit")
+        report.expect(custom.players.first { $0.name == "MUSIC_PLAYER_BGM" }?.trackCount == 12,
+                      cppID: supportID,
+                      message: "A006: opened BGM player resolves the symbolic twelve-track limit")
+        report.expect(custom.players.first { $0.name == "MUSIC_PLAYER_SE1" }?.trackCount == 3,
+                      cppID: supportID,
+                      message: "A007: opened SE1 player reads the literal three-track limit")
+        report.expect(custom.players.first { $0.name == "MUSIC_PLAYER_SE2" }?.trackCount == 16,
+                      cppID: supportID,
+                      message: "A008: opened SE2 player caps the symbolic twenty-track limit at sixteen")
+        report.expect(custom.players.first { $0.name == "MUSIC_PLAYER_SE3" }?.trackCount == -1,
+                      cppID: supportID,
+                      message: "A009: opened SE3 player preserves the unresolved limit as minus one")
+        guard let bgmSong = custom.songs.first(where: { $0.label == "mus_dummy" }) else {
+            report.fail(supportID, "custom-player project lacks the fixture BGM song")
+            return
+        }
+        report.expect(custom.trackBudgetFor(song: bgmSong) == 12, cppID: supportID,
+                      message: "A011: opened BGM song receives the twelve-track budget")
+        var unknownSong = bgmSong
+        unknownSong.player = "MUSIC_PLAYER_SE3"
+        report.expect(custom.trackBudgetFor(song: unknownSong) == 16, cppID: supportID,
+                      message: "A012: opened unknown-limit SE3 song receives the sixteen-track ceiling")
+    } catch {
+        report.fail(supportID, "custom-player project staging or read failed: \(error)")
+    }
+
     let detachedRoot = FileManager.default.temporaryDirectory.appendingPathComponent(
         "projectstore-detached-\(UUID().uuidString)", isDirectory: true)
     do {
