@@ -2,12 +2,17 @@
 
 Status: **in execution.** Landed: 52 (32aa160d), 53 (e7c58e06) + 53b (342dc379), 54 (8d27003d),
 55 (c34ccff6), 56 (92db95fc), 57 (153804d7), 58 (374bc21f), 59a (e833eaa6), 59b (3df72bba),
-60 (df33f77e), 61 (089652fc), 62 (d4fd8b3b), 63 (83af818e), 64 (74134e8d), 66 (8a6f2e21),
-66b (f8b4dc68), 67 (1cbfa737). In flight: 65 (window state). Proof files: 155 → 141.
-Open decisions for the user: blank-token rebase across external same-section source edits
-(conflicts with tested E10 blanket token expiry); catalog-outage status path (Swift scan has
-none). Feature gaps logged: keyboard-transpose audition (coreediting A004/A006/A008). Fork
-oracle: `fceecd88` (`git show fceecd88:<path>`).
+60 (df33f77e), 61 (089652fc), 62 (d4fd8b3b), 63 (83af818e), 64 (74134e8d), 65 (79c8d90e +
+044bc3a6), 66 (8a6f2e21), 66b (f8b4dc68), 67 (1cbfa737), 68 (2c77b0de), 69 (6a963cb3),
+71 (dcf6fdf3), 72 (62f58c98), 73 (62b12d40), 74 (ba09af7b), 75 (917dd499). Next: 76 (roll
+chrome keyboard traversal), then 77 (content-coordinate roll scene; resize lag). Proof files:
+155 → 134.
+User rulings this sprint: insert-cursor commits never seek or move the playhead in any
+transport state (8f6d41d2, deliberate deviation from fork `mainwindow.cpp:520-528`; Go to
+Start still rewinds); the ~115 ms anti-click settle hold on resume stays. Open decisions:
+blank-token rebase across external same-section source edits (conflicts with tested E10
+blanket token expiry); catalog-outage status path (Swift scan has none). Fork oracle:
+`fceecd88` (`git show fceecd88:<path>`).
 
 ## 1. Objective and success criteria
 
