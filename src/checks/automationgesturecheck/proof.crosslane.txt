@@ -623,10 +623,10 @@ Anchor: message "a right-drag band publishes its shared time selection"
 S027 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a cancelled stale gesture never writes on release"
 
-S028 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S028 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "a stale release after a mid-gesture rebuild commits nothing"
 
-S029 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S029 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "a stale release leaves no interaction live"
 
 S030 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
@@ -674,16 +674,16 @@ Anchor: message "tempo, pan and LFO lanes isolate by band" #2
 S044 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "undo restores the isolated lane"
 
-S045 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S045 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "the selected-range drag commits once"
 
 S046 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "a sweep ramp commits one document edit"
 
-S047 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S047 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "the selected-range band follows its drag"
 
-S048 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S048 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "a selected-range drag deletes through the range"
 
 S049 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
@@ -692,5 +692,5 @@ Anchor: message "the unselected volume lane is excluded"
 S050 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
 Anchor: message "a multi-lane drag preserves tempo and CC order"
 
-S051 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S051 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "a stale batch release writes nothing"

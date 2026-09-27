@@ -805,7 +805,7 @@ Anchor: message "A008 committing an active range clears the competing note selec
 S040 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "Up transposes one semitone"
 
-S041 | checkTimeSelectionHighlights | src/checks/rollcheck/keyboard.swift
+S041 | checkTimeSelectionHighlights | src/checks/rollcheck/keyboard_time_selection.swift
 Anchor: message "Right over an active time selection nudges the covered notes and advances the band start"
 
 
@@ -821,21 +821,21 @@ Anchor: message "roll.paste"
 S045 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
 Anchor: message "roll.select_all"
 
-S046 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S046 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "Ctrl note press auditions its own velocity and latches the drawing velocity"
 
-S047 | checkThresholdDrawCell | src/checks/rollcheck/selection.swift
+S047 | checkThresholdDrawCell | src/checks/rollcheck/selection_editing.swift
 Anchor: message "pending-draw row changes glissando before horizontal draw slop"
 
 S048 | checkBandKeyAutoRepeat | src/checks/rollcheck/keyboard_parity.swift
 Anchor: message "repeated eligible pencil key is consumed"
-S049 | checkTransposeAudition | src/checks/rollcheck/selection.swift
+S049 | checkTransposeAudition | src/checks/rollcheck/selection_audition.swift
 Anchor: message "transpose key-down auditions the transposed pitch above zero velocity"
 
-S050 | checkMountedTransposeAudition | src/checks/rollcheck/selection.swift
+S050 | checkMountedTransposeAudition | src/checks/rollcheck/selection_audition.swift
 Anchor: message "autorepeat key-up holds the transpose audition"
 
-S051 | checkMountedTransposeAudition | src/checks/rollcheck/selection.swift
+S051 | checkMountedTransposeAudition | src/checks/rollcheck/selection_audition.swift
 Anchor: message "physical key-up ends the transpose audition with a zero-velocity release"
 
 Shared helpers

@@ -303,34 +303,34 @@ Anchor: function
 S004 | checkGestureInterlock | src/checks/rollcheck/interlock.swift
 Anchor: message "A018 velocity aborts preserve MIDI bytes and undo history"
 
-S005 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S005 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: function
 
-S006 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S006 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "the modifier press pins the hover mark to the anchor row"
 
-S007 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S007 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "the drag previews 78 before release"
 
-S008 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S008 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "the velocity drag publishes its preview status"
 
-S009 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S009 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "the velocity preview commits nothing before release"
 
-S010 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S010 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "a 15px modifier drag lands the anchor at 78 from 93"
 
-S011 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S011 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "the grouped drag applies the same delta to the other selected note"
 
-S012 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S012 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "a grouped velocity drag preserves the selected notes"
 
-S013 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S013 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "one grouped velocity drag commits one undo entry"
 
-S014 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S014 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "undo restores both fixture velocities at once"
 
 S015 | selectionRestore helper (shared by selection.swift checks) | src/checks/rollcheck/selection.swift

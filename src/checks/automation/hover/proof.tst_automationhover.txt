@@ -1235,76 +1235,76 @@ Anchor: message "switching tools updates stationary hover instructions"
 S009 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "leaving pencil mode restores sweep instructions"
 
-S010 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S010 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "a background move publishes its hover" #1
 
-S011 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S011 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "a background hover reads the value the lane holds there"
 
-S012 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S012 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "the insertion tick sits between its neighboring nodes"
 
-S013 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S013 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "hovering the background writes nothing"
 
-S014 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S014 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "a repeated hover does not churn"
 
-S015 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S015 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "a repeated hover still writes nothing"
 
-S016 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S016 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "the node hover reads the node's own text"
 
-S017 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S017 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "exactly the hovered node carries the ring"
 
-S018 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S018 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "an arrow node hover offers the node profile"
 
-S019 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S019 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "leaving the plot clears the hover"
 
-S020 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S020 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "a repeated leave stays clear without churn"
 
-S021 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S021 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "leave passes write nothing"
 
-S022 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S022 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "a strong cancellation clears a live hover"
 
-S023 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S023 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "cancelling a hover changes no document or history state"
 
-S024 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S024 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "a move after a cancellation revives the hover"
 
-S025 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S025 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "an idle cancellation is a no-op on document and history"
 
-S026 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S026 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "a stationary pencil toggle offers the pencil profile"
 
-S027 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S027 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "leaving pencil mode restores the sweep profile"
 
-S028 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S028 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "Tempo hovers its node exactly like a CC lane" #1
 
-S029 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S029 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "the Tempo node hover names its value"
 
-S030 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S030 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "Tempo rings exactly its hovered node"
 
-S031 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S031 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "Tempo hover topology preserves the document"
 
-S032 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S032 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "Tempo leaves clear exactly like a CC lane"
 
-S033 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S033 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "a stale release after a mid-gesture rebuild commits nothing"
 
 S034 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
@@ -1406,58 +1406,58 @@ Anchor: message ": the node hover ring draws"
 S066 | checkAutomationParameter | src/checks/editorqml/tst_ShellDrawerParity.qml
 Anchor: message ": node hovering writes nothing"
 
-S067 | drawerAutomationHoverResidual | src/checks/automation/automationcanvasediting.swift
+S067 | drawerAutomationHoverResidual | src/checks/automation/automationcanvashover.swift
 Anchor: message "a tempo background hover reads the held value"
 
-S068 | drawerAutomationHoverResidual | src/checks/automation/automationcanvasediting.swift
+S068 | drawerAutomationHoverResidual | src/checks/automation/automationcanvashover.swift
 Anchor: message "a hover after switching away and back revives"
 
-S069 | drawerAutomationHoverResidual | src/checks/automation/automationcanvasediting.swift
+S069 | drawerAutomationHoverResidual | src/checks/automation/automationcanvashover.swift
 Anchor: message "the revived hover reads the current held value"
 
-S070 | drawerAutomationHoverResidual | src/checks/automation/automationcanvasediting.swift
+S070 | drawerAutomationHoverResidual | src/checks/automation/automationcanvashover.swift
 Anchor: message "the sweep profile instructs the ramp gesture"
 
-S071 | drawerAutomationHoverResidual | src/checks/automation/automationcanvasediting.swift
+S071 | drawerAutomationHoverResidual | src/checks/automation/automationcanvashover.swift
 Anchor: message "a ramp ignores its interior excursion"
 
-S072 | drawerAutomationHoverResidual | src/checks/automation/automationcanvasediting.swift
+S072 | drawerAutomationHoverResidual | src/checks/automation/automationcanvashover.swift
 Anchor: message "the ramp keeps its anchor"
 
-S073 | drawerAutomationHoverResidual | src/checks/automation/automationcanvasediting.swift
+S073 | drawerAutomationHoverResidual | src/checks/automation/automationcanvashover.swift
 Anchor: message "a live sweep retains its originating hint profile"
 
-S074 | drawerAutomationHoverResidual | src/checks/automation/automationcanvasediting.swift
+S074 | drawerAutomationHoverResidual | src/checks/automation/automationcanvashover.swift
 Anchor: message "the drafted sweep commits"
 
-S075 | drawerAutomationHoverResidual | src/checks/automation/automationcanvasediting.swift
+S075 | drawerAutomationHoverResidual | src/checks/automation/automationcanvashover.swift
 Anchor: message "the committed sweep is undoable"
 
-S076 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S076 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "a background hover anchors within a pixel of its pointer"
 
-S077 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S077 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "the node hover anchors exactly on its drawn node"
 
-S078 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S078 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "the Tempo hover anchors exactly on its drawn node"
 
-S079 | drawerAutomationMenuHintMuting | src/checks/automation/automationcanvasediting.swift
+S079 | drawerAutomationMenuHintMuting | src/checks/automation/automationcanvashover.swift
 Anchor: message "a node hover offers the node profile before the menu opens"
 
-S080 | drawerAutomationMenuHintMuting | src/checks/automation/automationcanvasediting.swift
+S080 | drawerAutomationMenuHintMuting | src/checks/automation/automationcanvashover.swift
 Anchor: message "a right press on a node starts its band"
 
-S081 | drawerAutomationMenuHintMuting | src/checks/automation/automationcanvasediting.swift
+S081 | drawerAutomationMenuHintMuting | src/checks/automation/automationcanvashover.swift
 Anchor: message "the open menu owns the hint scope"
 
-S082 | drawerAutomationMenuHintMuting | src/checks/automation/automationcanvasediting.swift
+S082 | drawerAutomationMenuHintMuting | src/checks/automation/automationcanvashover.swift
 Anchor: message "motion between underlying targets keeps the menu scope"
 
-S083 | drawerAutomationMenuHintMuting | src/checks/automation/automationcanvasediting.swift
+S083 | drawerAutomationMenuHintMuting | src/checks/automation/automationcanvashover.swift
 Anchor: message "Escape claims the open menu"
 
-S084 | drawerAutomationMenuHintMuting | src/checks/automation/automationcanvasediting.swift
+S084 | drawerAutomationMenuHintMuting | src/checks/automation/automationcanvashover.swift
 Anchor: message "pointer motion after a dismissal revives the hover"
 
 S085 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift

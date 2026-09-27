@@ -1069,46 +1069,46 @@ Anchor: deleted
 S028 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
 
-S029 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
+S029 | checkCommandRouting | src/checks/rollcheck/note_commands_routing.swift
 Anchor: message "nudge right advances the selected note one snap cell"
 
-S030 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
+S030 | checkCommandRouting | src/checks/rollcheck/note_commands_routing.swift
 Anchor: message "nudge left returns the selected note one snap cell"
 
-S031 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
+S031 | checkCommandRouting | src/checks/rollcheck/note_commands_routing.swift
 Anchor: message "nudge right snaps an off-grid note forward to the lattice"
 
-S032 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
+S032 | checkCommandRouting | src/checks/rollcheck/note_commands_routing.swift
 Anchor: message "nudge left snaps an off-grid note back to the lattice"
 
-S033 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
+S033 | checkCommandRouting | src/checks/rollcheck/note_commands_routing.swift
 Anchor: message "octave transpose raises the selected note twelve keys"
 
-S034 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
+S034 | checkCommandRouting | src/checks/rollcheck/note_commands_routing.swift
 Anchor: message "octave transpose down restores the selected note pitch"
 
-S035 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
+S035 | checkCommandRouting | src/checks/rollcheck/note_commands_routing.swift
 Anchor: message "shorten clamps the shorter note at one tick"
 
-S036 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
+S036 | checkCommandRouting | src/checks/rollcheck/note_commands_routing.swift
 Anchor: message "repeated shorten at the floor is a no-op"
 
-S037 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
+S037 | checkCommandRouting | src/checks/rollcheck/note_commands_routing.swift
 Anchor: message "merged shorten presses undo in one step"
 
-S038 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
+S038 | checkCommandRouting | src/checks/rollcheck/note_commands_routing.swift
 Anchor: message "copy leaves the document and published summary untouched"
 
-S039 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
+S039 | checkCommandRouting | src/checks/rollcheck/note_commands_routing.swift
 Anchor: message "delete is refused while a pointer gesture owns the grid"
 
-S040 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
+S040 | checkCommandRouting | src/checks/rollcheck/note_commands_routing.swift
 Anchor: message "pencil mode still toggles mid-gesture without touching notes"
 
-S041 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
+S041 | checkCommandRouting | src/checks/rollcheck/note_commands_routing.swift
 Anchor: message "pencil mode toggles back mid-gesture without touching notes"
 
-S042 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
+S042 | checkCommandRouting | src/checks/rollcheck/note_commands_routing.swift
 Anchor: message "releasing a zero-delta press commits nothing"
 
 S043 | swiftcore/PianoRoll::withKeyboardSeed | src/checks/rollcheck/keyboard.swift
@@ -1198,22 +1198,22 @@ Anchor: message "undo restores the pre-gesture song bytes"
 S071 | checkKeyboardKeepsEditedNoteVisible | src/checks/rollcheck/keyboard.swift
 Anchor: message "every Left nudge keeps the whole note in the viewport"
 
-S072 | checkRulerSweepScope | src/checks/rollcheck/ruler_loop_menu.swift
+S072 | checkRulerSweepScope | src/checks/rollcheck/ruler_loop_menu_sweep.swift
 Anchor: message "A025: a plain ruler drag sweeps the exact range with primary-only scope"
 
-S073 | checkRulerSweepScope | src/checks/rollcheck/ruler_loop_menu.swift
+S073 | checkRulerSweepScope | src/checks/rollcheck/ruler_loop_menu_sweep.swift
 Anchor: message "A026: a Control ruler drag sweeps the exact range with intersecting-track scope"
 
-S074 | checkRulerTapAndCancel | src/checks/rollcheck/ruler_loop_menu.swift
+S074 | checkRulerTapAndCancel | src/checks/rollcheck/ruler_loop_menu_sweep.swift
 Anchor: message "A035: tapping the ruler outside the selection commits the cursor without clearing it"
 
-S075 | checkRulerTapAndCancel | src/checks/rollcheck/ruler_loop_menu.swift
+S075 | checkRulerTapAndCancel | src/checks/rollcheck/ruler_loop_menu_sweep.swift
 Anchor: message "A035: the tap commit publishes the cursor through the session observer"
 
-S076 | checkTimeSelectionHighlights | src/checks/rollcheck/keyboard.swift
+S076 | checkTimeSelectionHighlights | src/checks/rollcheck/keyboard_time_selection.swift
 Anchor: message "A053/A029 covered notes ring, including the time-scoped ghost"
 
-S077 | checkTimeSelectionHighlights | src/checks/rollcheck/keyboard.swift
+S077 | checkTimeSelectionHighlights | src/checks/rollcheck/keyboard_time_selection.swift
 Anchor: message "A054 time-covered notes never leak into the note selection"
 
 S078 | checkKeyboardSkipsGhosts | src/checks/rollcheck/keyboard.swift
@@ -1228,7 +1228,7 @@ Anchor: message "transpose and nudge remap the selected note with ghosts present
 S081 | checkKeyboardSkipsGhosts | src/checks/rollcheck/keyboard.swift
 Anchor: message "keyboard remaps leave other-track ghost notes untouched"
 
-S082 | checkRulerSweepSingleTrackScope | src/checks/rollcheck/note_rendering.swift
+S082 | checkRulerSweepSingleTrackScope | src/checks/rollcheck/note_rendering_economy.swift
 Anchor: message "the sweep fixture can provision the intersecting other-track note"
 
 S083 | test_otherEventsBandMountsBetweenDrawerAndScrollbar | src/checks/editorqml/tst_EditorDrawer.qml
@@ -1243,28 +1243,28 @@ Anchor: message "track markers use the stable track-identity fill"
 S086 | runOtherEventsBandChecks | src/checks/drawerpresentation/other_events_band.swift
 Anchor: message "marker x is the shared camera content position of its tick"
 
-S087 | checkThresholdDrawCell | src/checks/rollcheck/selection.swift
+S087 | checkThresholdDrawCell | src/checks/rollcheck/selection_editing.swift
 Anchor: message "A056 clicking inside the primary time selection clears its active span"
 
-S088 | checkRulerSweepScope | src/checks/rollcheck/ruler_loop_menu.swift
+S088 | checkRulerSweepScope | src/checks/rollcheck/ruler_loop_menu_sweep.swift
 Anchor: message "releasing a swept range retains the time selection"
 
-S089 | checkRulerSweepScope | src/checks/rollcheck/ruler_loop_menu.swift
+S089 | checkRulerSweepScope | src/checks/rollcheck/ruler_loop_menu_sweep.swift
 Anchor: message "undoing the note and track restores the fixture bytes"
 
-S090 | checkRulerTapAndCancel | src/checks/rollcheck/ruler_loop_menu.swift
+S090 | checkRulerTapAndCancel | src/checks/rollcheck/ruler_loop_menu_sweep.swift
 Anchor: message "cancelling a sweep keeps the selection and cursor without committing"
 
 S091 | swiftcore/PianoRoll::withKeyboardSeed | src/checks/rollcheck/keyboard.swift
 Anchor: message "the scenario unwind restores the slot's post-seed bytes"
 
-S092 | checkTimeSelectionHighlights | src/checks/rollcheck/keyboard.swift
+S092 | checkTimeSelectionHighlights | src/checks/rollcheck/keyboard_time_selection.swift
 Anchor: message "the time-shortcut fixture seeds its covered note"
 
-S093 | checkTimeSelectionHighlights | src/checks/rollcheck/keyboard.swift
+S093 | checkTimeSelectionHighlights | src/checks/rollcheck/keyboard_time_selection.swift
 Anchor: message "Up over an active time selection transposes the covered notes"
 
-S094 | checkTimeSelectionHighlights | src/checks/rollcheck/keyboard.swift
+S094 | checkTimeSelectionHighlights | src/checks/rollcheck/keyboard_time_selection.swift
 Anchor: message "Right over an active time selection nudges the covered notes and advances the band start"
 
 S095 | test_rulerDragThresholdAndRightDragMenu | src/checks/editorqml/tst_ShellGridMenu.qml

@@ -421,77 +421,77 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift counterpart execution sites
 
-S001 | compareCodecCase | src/checks/midi/MidiSmfCodecChecks.swift
+S001 | compareCodecCase | src/checks/midi/MidiSmfCodecCompare.swift
 Anchor: message "independent Swift validity (error=\(swift.error))"
 
-S002 | compareCodecCase | src/checks/midi/MidiSmfCodecChecks.swift
+S002 | compareCodecCase | src/checks/midi/MidiSmfCodecCompare.swift
 Anchor: message "Swift error expected to contain '\(expectedSwiftError)', actual='\(swift.error)'"
 
-S003 | compareCodecCase | src/checks/midi/MidiSmfCodecChecks.swift
+S003 | compareCodecCase | src/checks/midi/MidiSmfCodecCompare.swift
 Anchor: message "independent canonical byte vector"
 
-S004 | compareCodecCase | src/checks/midi/MidiSmfCodecChecks.swift
+S004 | compareCodecCase | src/checks/midi/MidiSmfCodecCompare.swift
 Anchor: message "independent format-0 provenance"
 
-S005 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
+S005 | expectDecodedStructure | src/checks/midi/MidiSmfCodecCompare.swift
 Anchor: message "independent decoded order chunk=\(chunkIndex) event=\(eventIndex)"
 
-S006 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
+S006 | expectDecodedStructure | src/checks/midi/MidiSmfCodecCompare.swift
 Anchor: message "independent end tick chunk=\(chunkIndex) last=\(last.tick) end=\(chunk.endTick)"
 
-S007 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
+S007 | expectDecodedStructure | src/checks/midi/MidiSmfCodecCompare.swift
 Anchor: message "independent decoded division"
 
-S008 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
+S008 | expectDecodedStructure | src/checks/midi/MidiSmfCodecCompare.swift
 Anchor: message "independent decoded format-0 provenance"
 
-S009 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
+S009 | expectDecodedStructure | src/checks/midi/MidiSmfCodecCompare.swift
 Anchor: message "independent decoded chunk count"
 
-S010 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
+S010 | expectDecodedStructure | src/checks/midi/MidiSmfCodecCompare.swift
 Anchor: message "independent decoded chunk=\(index) end tick"
 
-S011 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
+S011 | expectDecodedStructure | src/checks/midi/MidiSmfCodecCompare.swift
 Anchor: message "independent decoded chunk=\(index) event count"
 
-S012 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
+S012 | expectDecodedStructure | src/checks/midi/MidiSmfCodecCompare.swift
 Anchor: function
 
-S013 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
+S013 | expectDecodedStructure | src/checks/midi/MidiSmfCodecCompare.swift
 Anchor: message "independent decoded event chunk=\(item.chunk) index=\(item.index)"
 
-S014 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecChecks.swift
+S014 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecCompare.swift
 Anchor: function
 
-S015 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecChecks.swift
+S015 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecCompare.swift
 Anchor: function
 
-S016 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecChecks.swift
+S016 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecCompare.swift
 Anchor: message "mid2agb compiles Swift XCMD traffic"
 
-S017 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecChecks.swift
+S017 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecCompare.swift
 Anchor: message "one xIECV command"
 
-S018 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecChecks.swift
+S018 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecCompare.swift
 Anchor: message "one xIECL command"
 
-S019 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecChecks.swift
+S019 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecCompare.swift
 Anchor: message "xIECV carries value 64"
 
-S020 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecChecks.swift
+S020 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecCompare.swift
 Anchor: message "xIECL carries value 51"
 
-S021 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecChecks.swift
+S021 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecCompare.swift
 Anchor: message "unknown selector emits no echo command"
 
-S022 | compareFixture | src/checks/midi/MidiSmfCodecChecks.swift
+S022 | compareFixture | src/checks/midi/MidiSmfCodecCompare.swift
 Anchor: function
 
-S023 | compareFixture | src/checks/midi/MidiSmfCodecChecks.swift
+S023 | compareFixture | src/checks/midi/MidiSmfCodecCompare.swift
 Anchor: function
 
-S024 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecChecks.swift
+S024 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecCompare.swift
 Anchor: function
 
-S025 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecChecks.swift
+S025 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecCompare.swift
 Anchor: function

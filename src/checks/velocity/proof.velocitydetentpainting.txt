@@ -1143,76 +1143,76 @@ Anchor: message "the command table keeps Set Velocity on the notes arm"
 S078 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
 Anchor: message "the command table keeps Set Velocity's consume route"
 
-S079 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S079 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: function
 
-S080 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S080 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: function
 
-S081 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S081 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the square pair presents the intrinsic ruler"
 
-S082 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S082 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the square context offers the enabled detent control"
 
-S083 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S083 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlocked ruler consumes its own press"
 
-S084 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S084 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "one unlocked ruler click makes one revision"
 
-S085 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S085 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "one unlocked ruler click makes one history entry"
 
-S086 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S086 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the modifier-unlocked square click keeps the raw velocity"
 
-S087 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S087 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the modifier-unlocked square click sets every selected note raw"
 
-S088 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S088 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the ruler click leaves the unselected note alone"
 
-S089 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S089 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the ruler click keeps its selection"
 
-S090 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S090 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the bare release after the captured unlock writes nothing more"
 
-S091 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S091 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the detents-disabled ruler consumes its own press"
 
-S092 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S092 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "one detents-disabled ruler click makes one revision"
 
-S093 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S093 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the detents-disabled square click keeps the raw velocity"
 
-S094 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S094 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the detents-disabled square click sets every selected note raw"
 
-S095 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S095 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the noise pair presents the intrinsic ruler"
 
-S096 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S096 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "one unlocked noise ruler click makes one revision"
 
-S097 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S097 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the modifier-unlocked noise click keeps the raw velocity"
 
-S098 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S098 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the modifier-unlocked noise click sets every selected note raw"
 
-S099 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S099 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "one detents-disabled noise ruler click makes one revision"
 
-S100 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S100 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the detents-disabled noise click keeps the raw velocity"
 
-S101 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S101 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the detents-disabled noise click sets every selected note raw"
 
-S102 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S102 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlock bypasses the wave detent the locked ruler canonicalizes onto"
 
 S103 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift
@@ -1284,73 +1284,73 @@ Anchor: message "the locked wave sweep covers both columns"
 S125 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift
 Anchor: message "the locked wave paint canonicalizes raw 73 onto its detent"
 
-S126 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S126 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: function
 
-S127 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S127 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: function
 
-S128 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S128 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the square pair presents the intrinsic ruler"
 
-S129 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S129 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: function
 
-S130 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S130 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlocked square sweep previews the first raw velocity"
 
-S131 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S131 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlocked square sweep previews the last raw velocity"
 
-S132 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S132 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unselected note previews nothing"
 
-S133 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S133 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the deferred unlocked paint stages no revision before release"
 
-S134 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S134 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "one unlocked paint release commits one revision"
 
-S135 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S135 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlocked paint entry is undoable"
 
-S136 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S136 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release commits the first raw velocity"
 
-S137 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S137 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release commits the last raw velocity"
 
-S138 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S138 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release leaves the unselected note alone"
 
-S139 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S139 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release keeps the paint selection"
 
-S140 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S140 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: function
 
-S141 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S141 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlocked noise sweep previews the first raw velocity"
 
-S142 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S142 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlocked noise sweep previews the last raw velocity"
 
-S143 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S143 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the deferred noise paint stages no revision before release"
 
-S144 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S144 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "one unlocked noise release commits one revision"
 
-S145 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S145 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release commits the first noise raw velocity"
 
-S146 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S146 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release commits the last noise raw velocity"
 
-S147 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S147 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlocked wave sweep covers both columns"
 
-S148 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S148 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlocked wave paint keeps both raw velocities"
 
 S149 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift

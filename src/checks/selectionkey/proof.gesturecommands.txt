@@ -375,10 +375,10 @@ Anchor: message "panning mutates nothing"
 S018 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "the released pan leaves document and history untouched"
 
-S019 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
+S019 | checkCommandRouting | src/checks/rollcheck/note_commands_routing.swift
 Anchor: message "delete is refused while a pointer gesture owns the grid"
 
-S020 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
+S020 | checkCommandRouting | src/checks/rollcheck/note_commands_routing.swift
 Anchor: message "releasing a zero-delta press commits nothing"
 
 S021 | checkPlayheadMiddlePan | src/checks/nativegraphics/PlayheadFeatureChecks.swift

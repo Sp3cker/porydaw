@@ -609,7 +609,7 @@ S024 | flashFadeLawChecks | src/checks/polyphony/PolyphonyPanelChecks.swift
 Anchor: message "a lower event total rebases the flash baseline"
   PolyphonyPanelChecks.swift:158-165 sample.eventTotal = 2 then increase then sample.eventTotal = 1; report.expect(panel.counters[1].flashAlpha == 0, cppID: id, message: "a lower event total rebases the flash baseline")
 
-S025 | themePresetValueChecks | src/checks/themecolor/ThemeColorChecks.swift
+S025 | themePresetValueChecks | src/checks/themecolor/ThemeColorPresets.swift
 Anchor: message "\(tag): polyphony flash identity"
   ThemeColorChecks.swift:271-272 report.expectEqual(expected: "#D92626", actual: palette.polyphonyFlashBackground, cppID: themeCompletenessID, what: "\(tag): polyphony flash identity") — one row per preset (mode=vanilla, dark-neutral-high, immaterial).
 

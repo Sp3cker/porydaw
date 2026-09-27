@@ -772,61 +772,61 @@ timelineRulerScope function, which proof.keyboard.txt indexes. S079-S082 are
 the mounted deferred-open predicates of tst_ShellGridMenu.qml
 test_rulerRightPressCapturesAndReleaseOpensAtReleasePosition.
 
-S001 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+S001 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "A004: both markers begin absent"
 
-S002 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+S002 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "A009: setting loop start moves its marker to the cell edge"
 
-S003 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+S003 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "A015/A017: the end marker is one snap cell later and changes the song"
 
-S004 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+S004 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "A022: removal clears both markers"
 
-S005 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+S005 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "A024: first undo restores only the end marker"
 
-S006 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+S006 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "A025/A026: second undo restores both markers and song bytes"
 
-S007 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+S007 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "A030: the selection bounds become the loop markers"
 
-S008 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+S008 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "A032: first selection undo restores only the old end"
 
-S009 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+S009 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "A033: second selection undo restores the manual markers"
 
-S010 | checkRulerSignatureRemoval | src/checks/rollcheck/ruler_loop_menu.swift
+S010 | checkRulerSignatureRemoval | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "A037: the explicit 5/4 signature exists at the snap cell"
 
-S011 | checkRulerSignatureRemoval | src/checks/rollcheck/ruler_loop_menu.swift
+S011 | checkRulerSignatureRemoval | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "A050: removing the chip deletes the exact event"
 
-S012 | checkRulerInsertTime | src/checks/rollcheck/ruler_loop_menu.swift
+S012 | checkRulerInsertTime | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "A104/A108: the note shifts by exactly one span and the song bytes change"
 
-S013 | checkRulerInsertTime | src/checks/rollcheck/ruler_loop_menu.swift
+S013 | checkRulerInsertTime | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "A109: one undo restores the song before ruler insertion"
 
-S014 | checkRulerChip | src/checks/rollcheck/ruler_loop_menu.swift
+S014 | checkRulerChip | src/checks/rollcheck/ruler_loop_menu_sweep.swift
 Anchor: message "A059: an off-grid chip press commits the chip's exact event tick"
 
-S015 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu.swift
+S015 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu_sweep.swift
 Anchor: message "A098/A099: a press inside the interval keeps the selection and cursor"
 
-S016 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu.swift
+S016 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu_sweep.swift
 Anchor: message "A110-A113: the exact-end press clears, commits the end tick, opens cursor rows"
 
-S017 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu.swift
+S017 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu_sweep.swift
 Anchor: message "A112: the outside press publishes the committed cursor through the session observer"
 
-S018 | checkRulerSeekEmission | src/checks/rollcheck/ruler_loop_menu.swift
+S018 | checkRulerSeekEmission | src/checks/rollcheck/ruler_loop_menu_seek.swift
 Anchor: message "a ruler tap commits the exact snapped anchor without moving playback"
 
-S019 | checkRulerSeekEmission | src/checks/rollcheck/ruler_loop_menu.swift
+S019 | checkRulerSeekEmission | src/checks/rollcheck/ruler_loop_menu_seek.swift
 Anchor: message "the shared playhead presents the sought tick from its sample"
 
 S020 | test_rulerCommitMovesCursorOnlyInEveryTransportState | src/checks/editorqml/tst_ShellTransport.qml
@@ -844,7 +844,7 @@ Anchor: message "the paused commit leaves the mounted clock at the pause point"
 S024 | test_rulerCommitMovesCursorOnlyInEveryTransportState | src/checks/editorqml/tst_ShellTransport.qml
 Anchor: message "the stopped ruler menu mounts before keyboard dismissal"
 
-S025 | checkRulerChip | src/checks/rollcheck/ruler_loop_menu.swift
+S025 | checkRulerChip | src/checks/rollcheck/ruler_loop_menu_sweep.swift
 Anchor: message "A039: a snap-aligned chip press commits the chip tick and enables Remove Time Signature"
 
 S026 | test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
@@ -967,43 +967,43 @@ Anchor: message "the in-selection Insert Time row shifts the rendered notes"
 S065 | test_rulerSelectionInsertTimeRowsShiftNotesAndUndo | src/checks/editorqml/tst_ShellGridMenu.qml
 Anchor: message "one undo restores the rendered notes before the ruler insertion"
 
-S066 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+S066 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu_retirement.swift
 Anchor: message "the ruler right press does not open the menu"
 
-S067 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+S067 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu_retirement.swift
 Anchor: message "the ruler menu opens on right release"
 
-S068 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+S068 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu_retirement.swift
 Anchor: message "the ruler right press leaves the cursor untouched until release"
 
-S069 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+S069 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu_retirement.swift
 Anchor: message "a right press inside the interval keeps the selection"
 
-S070 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+S070 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu_retirement.swift
 Anchor: message "a right press inside the interval keeps the cursor"
 
-S071 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+S071 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu_retirement.swift
 Anchor: message "right release inside the interval preserves the selection"
 
-S072 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+S072 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu_retirement.swift
 Anchor: message "right release inside the interval does not seek"
 
-S073 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+S073 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu_retirement.swift
 Anchor: message "a right press outside keeps the band until release"
 
-S074 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+S074 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu_retirement.swift
 Anchor: message "a press outside clears the selection on release"
 
-S075 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+S075 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu_retirement.swift
 Anchor: message "a press outside commits the cursor on release"
 
-S076 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+S076 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu_retirement.swift
 Anchor: message "the ruler sweep stays unarmed below the drag distance"
 
-S077 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+S077 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu_retirement.swift
 Anchor: message "the ruler sweep arms at the drag distance"
 
-S078 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+S078 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu_retirement.swift
 Anchor: message "a below-slop ruler release commits the snapped anchor"
 
 S079 | test_rulerRightPressCapturesAndReleaseOpensAtReleasePosition | src/checks/editorqml/tst_ShellGridMenu.qml
@@ -1018,22 +1018,22 @@ Anchor: message "ruler menu is positioned at the release rather than press coord
 S082 | test_rulerRightPressCapturesAndReleaseOpensAtReleasePosition | src/checks/editorqml/tst_ShellGridMenu.qml
 Anchor: message "release commits the captured press tick, not the release tick"
 
-S083 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu.swift
+S083 | checkRulerDeferredTiming | src/checks/rollcheck/ruler_loop_menu_retirement.swift
 Anchor: message "a below-slop ruler tap preserves the prior time-selection band"
 
-S084 | checkRulerMenuRetirement | src/checks/rollcheck/ruler_loop_menu.swift
+S084 | checkRulerMenuRetirement | src/checks/rollcheck/ruler_loop_menu_retirement.swift
 Anchor: message "an unmarked ruler enables Insert Time but not Remove Loop"
 
-S085 | checkRulerMenuRetirement | src/checks/rollcheck/ruler_loop_menu.swift
+S085 | checkRulerMenuRetirement | src/checks/rollcheck/ruler_loop_menu_retirement.swift
 Anchor: message "a disabled Remove Loop click keeps the ruler menu open without a write"
 
-S086 | checkRulerMenuRetirement | src/checks/rollcheck/ruler_loop_menu.swift
+S086 | checkRulerMenuRetirement | src/checks/rollcheck/ruler_loop_menu_retirement.swift
 Anchor: message "a document edit retires the open ruler menu"
 
-S087 | checkRulerMenuRetirement | src/checks/rollcheck/ruler_loop_menu.swift
+S087 | checkRulerMenuRetirement | src/checks/rollcheck/ruler_loop_menu_retirement.swift
 Anchor: message "a selection change retires the open ruler menu"
 
-S088 | checkRenderedRulerMenuCommands | src/checks/rollcheck/ruler_loop_menu.swift
+S088 | checkRenderedRulerMenuCommands | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "a swept range replaces positional rows with selection rows"
 
 S089 | test_rulerSelectionInsertTimeRowsShiftNotesAndUndo | src/checks/editorqml/tst_ShellGridMenu.qml
@@ -1048,75 +1048,75 @@ Anchor: message "clearing the time selection unmounts its panel before the ruler
 S092 | test_rulerClipboardRowsFollowClipAndTimeSelection | src/checks/editorqml/tst_ShellGridMenu.qml
 Anchor: message "an outside ruler press drops Copy and Cut with the time selection"
 
-S093 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu.swift
+S093 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu_seek.swift
 Anchor: message "the mounted grid enables Set Loop Start without markers"
 
-S094 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu.swift
+S094 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu_seek.swift
 Anchor: message "the mounted grid enables Set Loop End without markers"
 
-S095 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu.swift
+S095 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu_seek.swift
 Anchor: message "the mounted grid disables Remove Loop without markers"
 
-S096 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu.swift
+S096 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu_seek.swift
 Anchor: message "the grid Set Loop Start arm writes at the committed edit cursor"
 
-S097 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu.swift
+S097 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu_seek.swift
 Anchor: message "the mounted grid enables Remove Loop when one marker exists"
 
-S098 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu.swift
+S098 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu_seek.swift
 Anchor: message "the grid Set Loop End arm writes at the committed edit cursor"
 
-S099 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu.swift
+S099 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu_seek.swift
 Anchor: message "the grid Remove Loop arm clears both markers"
 
-S100 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu.swift
+S100 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu_seek.swift
 Anchor: message "the grid Remove Loop arm records a separate end-marker undo"
 
-S101 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu.swift
+S101 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu_seek.swift
 Anchor: message "the grid Remove Loop arm records a separate start-marker undo"
 
 S102-S129 are the task-53 additions: S102-S107 the loop/undo arithmetic and the signature-removal single-command depth of checkRulerLoopSetAndUndo and checkRulerSignatureRemoval, S108 the ruler insert-time fixture seed, S109-S112 the rendered presenter rows/clicks/close and the exact dismissal byte and history-depth preservation of checkRenderedRulerMenuCommands, S113 the chip row-guard predicate of checkRulerChip, S114/S115 the retirement no-write conjuncts of checkRulerMenuRetirement, and S116-S129 the mounted loop-row close/outside-dismissal/Escape/row-guard/clear-rebuild/retirement-focus predicates of tst_ShellGridMenu.qml (the document-edit retirement in S128 drives its edit through ShellPresenter.activate("edit.undo") on the enabled window Undo action, not a delivered shortcut key). They execute under swiftcore/PianoRoll::* in the swiftcore projectSession lane and under the shell-grid-menu lane.
 
-S102 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+S102 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "the ruler fixture seeds its snap-aligned range"
 
-S103 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+S103 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "Set Loop Start writes exactly one undo entry"
 
-S104 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+S104 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "Set Loop End advances the undo index by exactly one"
 
-S105 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+S105 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "Remove Loop Markers advances the undo index by exactly two"
 
-S106 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+S106 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "Loop from Selection advances the undo index by exactly two"
 
-S107 | checkRulerSignatureRemoval | src/checks/rollcheck/ruler_loop_menu.swift
+S107 | checkRulerSignatureRemoval | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "removing an explicit time signature writes exactly one undo entry"
 
-S108 | checkRulerInsertTime | src/checks/rollcheck/ruler_loop_menu.swift
+S108 | checkRulerInsertTime | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "the ruler insert fixture seeds its shifted note"
 
-S109 | checkRenderedRulerMenuCommands | src/checks/rollcheck/ruler_loop_menu.swift
+S109 | checkRenderedRulerMenuCommands | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "the ruler opens a typed, enabled Set Loop Start row"
 
-S110 | checkRenderedRulerMenuCommands | src/checks/rollcheck/ruler_loop_menu.swift
+S110 | checkRenderedRulerMenuCommands | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "the clicked start row closes and writes the loop marker"
 
-S111 | checkRenderedRulerMenuCommands | src/checks/rollcheck/ruler_loop_menu.swift
+S111 | checkRenderedRulerMenuCommands | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "the clicked end row writes a second undoable marker"
 
-S112 | checkRenderedRulerMenuCommands | src/checks/rollcheck/ruler_loop_menu.swift
+S112 | checkRenderedRulerMenuCommands | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "dismissing the ruler menu preserves the exact song bytes and history depth"
 
-S113 | checkRulerChip | src/checks/rollcheck/ruler_loop_menu.swift
+S113 | checkRulerChip | src/checks/rollcheck/ruler_loop_menu_sweep.swift
 Anchor: message "a tick-row ruler press ignores the signature chip"
 
-S114 | checkRulerMenuRetirement | src/checks/rollcheck/ruler_loop_menu.swift
+S114 | checkRulerMenuRetirement | src/checks/rollcheck/ruler_loop_menu_retirement.swift
 Anchor: message "a document-edit dismissal writes no loop marker beyond the edit"
 
-S115 | checkRulerMenuRetirement | src/checks/rollcheck/ruler_loop_menu.swift
+S115 | checkRulerMenuRetirement | src/checks/rollcheck/ruler_loop_menu_retirement.swift
 Anchor: message "a selection-change dismissal writes no markers"
 
 S116 | test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
@@ -1161,25 +1161,25 @@ Anchor: message "a document edit retires the open ruler menu and refocuses the r
 S129 | test_rulerClearSelectionAndRetirementFocus | src/checks/editorqml/tst_ShellGridMenu.qml
 Anchor: message "a selection change retires the open ruler menu and refocuses the ruler band"
 
-S130 | checkRulerMenuRetirement | src/checks/rollcheck/ruler_loop_menu.swift
+S130 | checkRulerMenuRetirement | src/checks/rollcheck/ruler_loop_menu_retirement.swift
 Anchor: message "the stale ruler fixture seeds its resize note"
 
-S131 | checkRulerMenuRetirement | src/checks/rollcheck/ruler_loop_menu.swift
+S131 | checkRulerMenuRetirement | src/checks/rollcheck/ruler_loop_menu_retirement.swift
 Anchor: message "the stale ruler press ticks lie on the snap lattice"
 
-S132 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu.swift
+S132 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu_sweep.swift
 Anchor: message "A110-A113: the exact-end press clears, commits the end tick, opens cursor rows"
 
-S133 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu.swift
+S133 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu_sweep.swift
 Anchor: message "A111: the exact-end press clears the time selection"
 
-S134 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu.swift
+S134 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu_sweep.swift
 Anchor: message "A112: the exact-end press commits the snapped end tick"
 
-S135 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu.swift
+S135 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu_sweep.swift
 Anchor: message "A112: the outside press publishes the committed cursor through the session observer"
 
-S136 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu.swift
+S136 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu_sweep.swift
 Anchor: message "A113: the exact-end press opens the cursor rows"
 
 Remaining original source (closing sequence and helper bodies):

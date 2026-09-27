@@ -1499,28 +1499,28 @@ int runEventViewsChromeCheck(const QStringList &qtArguments)
 
 Swift assertion predicates
 
-S001 | eventListRowsAndEditContract | src/checks/eventviews/EventListPlayheadChecks.swift
+S001 | eventListRowsAndEditContract | src/checks/eventviews/EventListPlayheadContractChecks.swift
 Anchor: message "shape \(index) has one EOT row after its events"
 
-S002 | eventListRowsAndEditContract | src/checks/eventviews/EventListPlayheadChecks.swift
+S002 | eventListRowsAndEditContract | src/checks/eventviews/EventListPlayheadContractChecks.swift
 Anchor: message "shape \(index) EOT tick mirrors the chunk end"
 
-S003 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
+S003 | eventListTypographyParity | src/checks/eventviews/EventListPageAppearanceChecks.swift
 Anchor: message "\(name) follows the captured typography role"
 
-S008 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
+S008 | eventListTypographyParity | src/checks/eventviews/EventListPageAppearanceChecks.swift
 Anchor: message "seed column \(column) follows the fork fraction"
 
-S010 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
+S010 | eventListTypographyParity | src/checks/eventviews/EventListPageAppearanceChecks.swift
 Anchor: message "base 26 doubles default column \(column)"
 
-S011 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
+S011 | eventListTypographyParity | src/checks/eventviews/EventListPageAppearanceChecks.swift
 Anchor: message "base 10 rounds default column \(column)"
 
-S012 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
+S012 | eventListTypographyParity | src/checks/eventviews/EventListPageAppearanceChecks.swift
 Anchor: message "user-resized Type column survives font changes"
 
-S013 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
+S013 | eventListTypographyParity | src/checks/eventviews/EventListPageAppearanceChecks.swift
 Anchor: message "untouched columns rederive after Type resize"
 
 S015 | test_filterAndEditOnMountedPage | src/checks/editorqml/tst_ShellEventList.qml
@@ -1702,7 +1702,7 @@ S097 | eventListMenuInvalidation | src/checks/eventviews/EventListPageChecks.swi
 Anchor: message "a document edit retires the row menu"
 S098 | eventListMenuInvalidation | src/checks/eventviews/EventListPageChecks.swift
 Anchor: message "row changes leave the filter menu open"
-S099 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
+S099 | eventListTypographyParity | src/checks/eventviews/EventListPageAppearanceChecks.swift
 Anchor: message "the resized store keeps six entries"
 S100 | eventListDeleteMatrix | src/checks/eventviews/EventListPageChecks.swift
 Anchor: message "end-of-track-only delete leaves document and cursor unchanged"

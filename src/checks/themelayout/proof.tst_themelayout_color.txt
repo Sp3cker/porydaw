@@ -322,10 +322,10 @@ Anchor: message "\(row): lightness matches the closed form"
 S002 | themeModeAndContrastValidation | src/checks/themecolor/ThemeColorChecks.swift
 Anchor: message "unknown mode repairs to vanilla"
 
-S003 | themePresetValueChecks | src/checks/themecolor/ThemeColorChecks.swift
+S003 | themePresetValueChecks | src/checks/themecolor/ThemeColorPresets.swift
 Anchor: message "\(tag): window"
 
-S004 | themeAssertComplete | src/checks/themecolor/ThemeColorChecks.swift
+S004 | themeAssertComplete | src/checks/themecolor/ThemeColorPresets.swift
 Anchor: function
 
 S005 | themeGridContrastChecks | src/checks/themecolor/ThemeColorChecks.swift
@@ -352,7 +352,7 @@ Anchor: message "vanilla" #1
 S012 | test_bThemeRepairThroughProductionShell | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "vanilla" #1
 
-S013 | themeAssertComplete | src/checks/themecolor/ThemeColorChecks.swift
+S013 | themeAssertComplete | src/checks/themecolor/ThemeColorPresets.swift
 Anchor: message "\(what): scaleHighlight retains the fork tint"
   ThemeColorChecks.swift:240-243 report.expect(channels.a == 51 && channels.r == 181 && channels.g == 149 && channels.b == 252) for the scaleHighlight field of every applied palette - one row per preset (mode=vanilla, dark-neutral-high, immaterial) and per adjusted contrast via themeGridContrastChecks.
 

@@ -2539,40 +2539,40 @@ Anchor: message "note undos leave the saved bank edit applied"
 S146 | bankQueuedSave | src/checks/workspace/bank_saves.swift
 Anchor: message "note undos leave saved bank bytes intact"
 
-S147 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift
+S147 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing_history.swift
 Anchor: message "adjacent release edit reaches the production bank view"
 
-S148 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift
+S148 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing_history.swift
 Anchor: message "adjacent release edit dirties the bank"
 
-S149 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift
+S149 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing_history.swift
 Anchor: message "adjacent release edit does not dirty the document"
 
-S150 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift
+S150 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing_history.swift
 Anchor: message "lower release bound reaches the production bank view"
 
-S151 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift
+S151 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing_history.swift
 Anchor: message "lower-bound bank edit dirties the bank"
 
-S152 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift
+S152 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing_history.swift
 Anchor: message "lower-bound bank edit does not dirty the document"
 
-S153 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift
+S153 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing_history.swift
 Anchor: message "upper release bound reaches the production bank view"
 
-S154 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift
+S154 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing_history.swift
 Anchor: message "upper-bound bank edit dirties the bank"
 
-S155 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift
+S155 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing_history.swift
 Anchor: message "upper-bound bank edit does not dirty the document"
 
-S156 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift
+S156 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing_history.swift
 Anchor: message "opening another song reuses the unsaved shared-bank record"
 
-S157 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift
+S157 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing_history.swift
 Anchor: message "another song publishes the unsaved shared-bank edit"
 
-S158 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift
+S158 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing_history.swift
 Anchor: message "another song preserves shared-bank dirty state"
 
 S159 | bankCatalogOutage | src/checks/workspace/bank_saves.swift
@@ -2623,13 +2623,13 @@ Anchor: message "failed bank save retains the dirty bank record"
 S174 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift
 Anchor: message "failed ordered save retains the dirty document record"
 
-S176 | bankCoordinatorGate | src/checks/workspace/bank_sharing.swift
+S176 | bankCoordinatorGate | src/checks/workspace/bank_sharing_history.swift
 Anchor: message "session gate refuses a second transition while the first is pending"
 
-S177 | bankCoordinatorGate | src/checks/workspace/bank_sharing.swift
+S177 | bankCoordinatorGate | src/checks/workspace/bank_sharing_history.swift
 Anchor: message "coordinator publishes only the applied transition"
 
-S178 | bankCoordinatorGate | src/checks/workspace/bank_sharing.swift
+S178 | bankCoordinatorGate | src/checks/workspace/bank_sharing_history.swift
 Anchor: message "coordinator adopts the applied transition lease"
 
 S179 | releaseEditorBankHistorySemantics | src/checks/workspace/bank_edits.swift

@@ -591,13 +591,13 @@ Remaining original source (closing sequence and helper bodies):
 Counterpart executable predicate index
 The S entries are exact predicates defined in the converted automation Swift suites pinned by the counterpart hashes above. Their presence alone does not close any A entry; execution is claimed only as recorded in Verification. Preserve their surrounding setup and order in the paired source.
 
-S001 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S001 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "a gesture with no target finishes as a no-op"
 
-S002 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S002 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "a stationary release without Shift deletes"
 
-S003 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S003 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "a released stroke past the slop is a move"
 
 S004 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
@@ -624,10 +624,10 @@ Anchor: message "Escape claims the live gesture"
 S011 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a cancelled gesture mutates nothing"
 
-S012 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S012 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "a time lock keeps the original value"
 
-S013 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S013 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "a time lock keeps the mapped tick"
 
 S014 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
@@ -663,13 +663,13 @@ Anchor: message "a right-drag band publishes its shared time selection"
 S024 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "an escape leaves no interaction live"
 
-S025 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S025 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "a stale release after a mid-gesture rebuild commits nothing"
 
 S026 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a cancelled stale gesture never writes on release"
 
-S027 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S027 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "a stale release leaves no interaction live"
 
 S028 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
@@ -690,22 +690,22 @@ Anchor: message "a press that never travelled commits nothing"
 S033 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the parked press leaves the document alone"
 
-S034 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S034 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "a reset phantom finishes as no edit"
 
-S035 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S035 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "a reset restores the phantom's source value"
 
-S036 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S036 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "a write on the projected node resolves to a promotion"
 
-S037 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S037 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "the promotion commits"
 
-S038 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S038 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "the projected node becomes a written event at its own tick"
 
-S039 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S039 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "one undo returns the lane to its projected node alone"
 
 S040 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
@@ -714,28 +714,28 @@ Anchor: message "each stepped tick interpolates its value across the stroke"
 S041 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "a ramp sweep fills every lattice tick between its endpoints"
 
-S042 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S042 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "a node drag commits the tick and count outcomes"
 
-S043 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S043 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "a node drag commits one revision"
 
-S044 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S044 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "a node drag preview writes nothing before release"
 
 S045 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gesturePencil.swift
 Anchor: message "a pencil preview mutates nothing until release"
 
-S046 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S046 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "a stale batch release writes nothing"
 
-S047 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S047 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "the selected-range drag moves both nodes and preserves outside points"
 
-S048 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S048 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "the selected-range band follows its drag"
 
-S049 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S049 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "the selected-range drag commits once"
 
 S050 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift

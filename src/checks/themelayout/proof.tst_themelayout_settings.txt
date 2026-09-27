@@ -546,7 +546,7 @@ Anchor: message "commit applies the dark window surface"
 S005 | test_themePersistence | src/checks/editorqml/tst_Theme.qml
 Anchor: message "themeMode"
 
-S006 | themePresetValueChecks | src/checks/themecolor/ThemeColorChecks.swift
+S006 | themePresetValueChecks | src/checks/themecolor/ThemeColorPresets.swift
 Anchor: message "\(tag): menu aliases the item surface"
 
 S007 | test_menuChromeFollowsTheme | src/checks/editorqml/tst_Theme.qml

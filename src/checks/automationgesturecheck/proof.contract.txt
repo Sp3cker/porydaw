@@ -939,13 +939,13 @@ Anchor: message "the ramp's midpoint interpolates linearly"
 S006 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the completed ramp is a changed span replacement"
 
-S007 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S007 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "a gesture with no target finishes as a no-op"
 
-S008 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S008 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "a stationary release without Shift deletes"
 
-S009 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S009 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "a released stroke past the slop is a move"
 
 S010 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
@@ -1029,19 +1029,19 @@ Anchor: message "the heterogeneous drag is redoable"
 S036 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "a second undo parks the drag again"
 
-S037 | drawerAutomationLegacyDefaultPromotion | src/checks/automation/domain/tst_automationdomain.swift
+S037 | drawerAutomationLegacyDefaultPromotion | src/checks/automation/domain/tst_automationdomainLegacy.swift
 Anchor: function
 
-S038 | drawerAutomationLegacyDefaultPromotion | src/checks/automation/domain/tst_automationdomain.swift
+S038 | drawerAutomationLegacyDefaultPromotion | src/checks/automation/domain/tst_automationdomainLegacy.swift
 Anchor: function
 
-S039 | drawerAutomationLegacySpanRows | src/checks/automation/domain/tst_automationdomain.swift
+S039 | drawerAutomationLegacySpanRows | src/checks/automation/domain/tst_automationdomainLegacy.swift
 Anchor: function
 
-S040 | drawerAutomationLegacySpanRows | src/checks/automation/domain/tst_automationdomain.swift
+S040 | drawerAutomationLegacySpanRows | src/checks/automation/domain/tst_automationdomainLegacy.swift
 Anchor: function
 
-S041 | drawerAutomationLegacySpanRows | src/checks/automation/domain/tst_automationdomain.swift
+S041 | drawerAutomationLegacySpanRows | src/checks/automation/domain/tst_automationdomainLegacy.swift
 Anchor: function
 
 S042 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift
@@ -1095,40 +1095,40 @@ Anchor: message "A038 redo again removes volume"
 S058 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a cancelled stale gesture never writes on release"
 
-S059 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S059 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "a stale release after a mid-gesture rebuild commits nothing"
 
-S060 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S060 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "a stale release leaves no interaction live"
 
-S061 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S061 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "a node drag commits the tick and count outcomes"
 
-S062 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S062 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "a node drag commits one revision"
 
-S063 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S063 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "the moved tick is undoable"
 
-S064 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S064 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "a scrolled-origin drag commits through its phantom"
 
-S065 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S065 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "the phantom edit commits once"
 
-S066 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S066 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "undo restores the phantom source"
 
-S067 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S067 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "the selected-range drag moves both nodes and preserves outside points"
 
-S068 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S068 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "the selected-range band follows its drag"
 
-S069 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+S069 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "the selected-range drag commits once"
 
-S070 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+S070 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "a stale batch release writes nothing"
 
 S071 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift

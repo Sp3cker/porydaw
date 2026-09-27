@@ -706,13 +706,13 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | historyMergeContracts | src/checks/editcheck/NoteChecks.swift
+S001 | historyMergeContracts | src/checks/editcheck/NoteHistoryChecks.swift
 Anchor: message "one merged document gesture undoes to its oldest origin and redoes to its latest result"
 
-S002 | historyMergeContracts | src/checks/editcheck/NoteChecks.swift
+S002 | historyMergeContracts | src/checks/editcheck/NoteHistoryChecks.swift
 Anchor: message "a saved boundary seals the document gesture so one undo restores the saved result"
 
-S003 | historyMergeContracts | src/checks/editcheck/NoteChecks.swift
+S003 | historyMergeContracts | src/checks/editcheck/NoteHistoryChecks.swift
 Anchor: message "a self-cancelling document gesture disappears so undo crosses the prior post-save edit"
 
 S004 | sessionOpenAndRecovery | src/checks/workspace/session_io.swift

@@ -823,31 +823,31 @@ verify:qml-roll --verbose). S012, S042 and S043 are shell-lane Qt Quick Test pre
 presence alone does not close an A entry: each mapping requires corresponding execution and
 equivalent setup.
 
-S001 | checkSelectionBandAudition | src/checks/rollcheck/selection.swift
+S001 | checkSelectionBandAudition | src/checks/rollcheck/selection_audition.swift
 Anchor: message "covering a note starts its band audition at the document velocity"
 
-S002 | checkSelectionBandAudition | src/checks/rollcheck/selection.swift
+S002 | checkSelectionBandAudition | src/checks/rollcheck/selection_audition.swift
 Anchor: message "shrinking the band past a note releases its audition immediately"
 
-S003 | checkSelectionBandAudition | src/checks/rollcheck/selection.swift
+S003 | checkSelectionBandAudition | src/checks/rollcheck/selection_audition.swift
 Anchor: message "re-covering a note re-auditions it"
 
-S004 | checkSelectionBandAudition | src/checks/rollcheck/selection.swift
+S004 | checkSelectionBandAudition | src/checks/rollcheck/selection_audition.swift
 Anchor: message "the drag end releases every auditioned key"
 
-S005 | checkSelectionBandAudition | src/checks/rollcheck/selection.swift
+S005 | checkSelectionBandAudition | src/checks/rollcheck/selection_audition.swift
 Anchor: message "band release selects every swept note identity"
 
-S006 | checkSelectionBandAudition | src/checks/rollcheck/selection.swift
+S006 | checkSelectionBandAudition | src/checks/rollcheck/selection_audition.swift
 Anchor: message "band audition changes no document revision or undo entry"
 
-S007 | checkSelectionBandAudition | src/checks/rollcheck/selection.swift
+S007 | checkSelectionBandAudition | src/checks/rollcheck/selection_audition.swift
 Anchor: message "band audition leaves the planted MIDI bytes untouched"
 
-S008 | checkSelectionBandSweep | src/checks/rollcheck/selection.swift
+S008 | checkSelectionBandSweep | src/checks/rollcheck/selection_band.swift
 Anchor: message "band release selects both swept note identities"
 
-S009 | checkSelectionBandSweep | src/checks/rollcheck/selection.swift
+S009 | checkSelectionBandSweep | src/checks/rollcheck/selection_band.swift
 Anchor: message "selection sweep changes no document or undo command"
 
 S010 | test_bandSelectsSweptNotes | src/checks/rollqml/tst_SwiftRollSelection.qml
@@ -859,91 +859,91 @@ Anchor: function
 S012 | test_escapeCancel band | src/checks/editorqml/tst_ShellGridInput.qml
 Anchor: function
 
-S013 | checkThresholdDrawCell | src/checks/rollcheck/selection.swift
+S013 | checkThresholdDrawCell | src/checks/rollcheck/selection_editing.swift
 Anchor: message "crossing the draw threshold enters the draw gesture"
 
-S014 | checkThresholdDrawCell | src/checks/rollcheck/selection.swift
+S014 | checkThresholdDrawCell | src/checks/rollcheck/selection_editing.swift
 Anchor: message "a threshold drag draws one snap cell"
 
 S015 | selectionRestore helper (shared by selection.swift checks) | src/checks/rollcheck/selection.swift
 Anchor: function
 
-S016 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S016 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "the modifier press pins the hover mark to the anchor row"
 
-S017 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S017 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "a 15px modifier drag lands the anchor at 78 from 93"
 
-S018 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S018 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "the grouped drag applies the same delta to the other selected note"
 
-S019 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S019 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "a grouped velocity drag preserves the selected notes"
 
-S020 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S020 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "one grouped velocity drag commits one undo entry"
 
-S021 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S021 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "undo restores both fixture velocities at once"
 
-S022 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S022 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "repeating the grouped drag the other way restores both velocities"
 
-S023 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S023 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "the repeated grouped drag preserves the selected notes"
 
-S024 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S024 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "a chord-held drag on another note re-anchors the selection to the grabbed note"
 
-S025 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S025 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "the chord-held drag adjusts the grabbed note"
 
-S026 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S026 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "the chord-held drag leaves the prior note untouched"
 
-S027 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S027 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "the chord-held drag commits one undo entry"
 
-S028 | checkDeferredModifierSelection | src/checks/rollcheck/selection.swift
+S028 | checkDeferredModifierSelection | src/checks/rollcheck/selection_band.swift
 Anchor: message "Ctrl press defers removal of an already-selected note"
 
-S029 | checkDeferredModifierSelection | src/checks/rollcheck/selection.swift
+S029 | checkDeferredModifierSelection | src/checks/rollcheck/selection_band.swift
 Anchor: message "Ctrl release toggles the pressed note without changing the other"
 
-S030 | checkDeferredModifierSelection | src/checks/rollcheck/selection.swift
+S030 | checkDeferredModifierSelection | src/checks/rollcheck/selection_band.swift
 Anchor: message "modifier selection clicks push no document edit"
 
-S031 | checkSelectionNonScaleMove | src/checks/rollcheck/selection.swift
+S031 | checkSelectionNonScaleMove | src/checks/rollcheck/selection_band.swift
 Anchor: message "body press selects exactly the grabbed note"
 
-S032 | checkSelectionNonScaleMove | src/checks/rollcheck/selection.swift
+S032 | checkSelectionNonScaleMove | src/checks/rollcheck/selection_band.swift
 Anchor: message "move preview does not commit before release"
 
-S033 | checkSelectionNonScaleMove | src/checks/rollcheck/selection.swift
+S033 | checkSelectionNonScaleMove | src/checks/rollcheck/selection_band.swift
 Anchor: message "move release keeps the same NoteID at the target"
 
-S034 | checkSelectionNonScaleMove | src/checks/rollcheck/selection.swift
+S034 | checkSelectionNonScaleMove | src/checks/rollcheck/selection_band.swift
 Anchor: message "move release vacates the original cell"
 
-S035 | checkSelectionNonScaleMove | src/checks/rollcheck/selection.swift
+S035 | checkSelectionNonScaleMove | src/checks/rollcheck/selection_band.swift
 Anchor: message "move release retains the moved note as the selection"
 
-S036 | checkSelectionNonScaleMove | src/checks/rollcheck/selection.swift
+S036 | checkSelectionNonScaleMove | src/checks/rollcheck/selection_band.swift
 Anchor: message "move release commits one undoable edit"
 
-S037 | checkSelectionNonScaleMove | src/checks/rollcheck/selection.swift
+S037 | checkSelectionNonScaleMove | src/checks/rollcheck/selection_band.swift
 Anchor: message "right nudge moves the same NoteID without reselecting"
 
-S038 | checkSelectionNonScaleMove | src/checks/rollcheck/selection.swift
+S038 | checkSelectionNonScaleMove | src/checks/rollcheck/selection_band.swift
 Anchor: message "right nudge retains the moved note as the selection"
 
-S039 | checkSelectionNonScaleMove | src/checks/rollcheck/selection.swift
+S039 | checkSelectionNonScaleMove | src/checks/rollcheck/selection_band.swift
 Anchor: message "right nudge commits an undoable edit"
 
-S040 | checkSelectionNonScaleMove | src/checks/rollcheck/selection.swift
+S040 | checkSelectionNonScaleMove | src/checks/rollcheck/selection_band.swift
 Anchor: message "undo restores the original note identity and position"
 
-S041 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S041 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "Ctrl press on a grouped anchor preserves the selection"
 
 S042 | test_rightDragCommit | src/checks/editorqml/tst_ShellGridInput.qml
@@ -952,47 +952,47 @@ Anchor: function
 S043 | test_ungrabCancel | src/checks/editorqml/tst_ShellGridInput.qml
 Anchor: function
 
-S044 | checkOrderedSelection | src/checks/rollcheck/selection.swift
+S044 | checkOrderedSelection | src/checks/rollcheck/selection_editing.swift
 Anchor: message "band keeps press order before newly covered notes"
 
 S045 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "right-drag band selects exactly the visible intersecting notes"
 
-S046 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S046 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "the drag previews 78 before release"
 
-S047 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S047 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "the velocity drag publishes its preview status"
 
-S048 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S048 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "the velocity preview commits nothing before release"
 
-S049 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S049 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "dragging down again reaches the same grouped velocities"
 
-S050 | checkKeyboardAuditionTrackSwitch | src/checks/rollcheck/selection.swift
+S050 | checkKeyboardAuditionTrackSwitch | src/checks/rollcheck/selection_audition.swift
 Anchor: message "keyboard audition releases on the pressed track after a track switch"
 
-S051 | checkThresholdDrawCell | src/checks/rollcheck/selection.swift
+S051 | checkThresholdDrawCell | src/checks/rollcheck/selection_editing.swift
 Anchor: message "empty Ctrl press clears note selection and auditions its row"
 
-S052 | checkThresholdDrawCell | src/checks/rollcheck/selection.swift
+S052 | checkThresholdDrawCell | src/checks/rollcheck/selection_editing.swift
 Anchor: message "pending-draw row changes glissando before horizontal draw slop"
 
-S053 | checkThresholdDrawCell | src/checks/rollcheck/selection.swift
+S053 | checkThresholdDrawCell | src/checks/rollcheck/selection_editing.swift
 Anchor: message "below the font-derived draw slop a click adds no note or undo entry"
 
-S054 | checkThresholdDrawCell | src/checks/rollcheck/selection.swift
+S054 | checkThresholdDrawCell | src/checks/rollcheck/selection_editing.swift
 Anchor: message "within-slop release parks the nearest snapped edit cursor and stops audition"
 
-S055 | checkThresholdDrawCell | src/checks/rollcheck/selection.swift
+S055 | checkThresholdDrawCell | src/checks/rollcheck/selection_editing.swift
 Anchor: message "crossing draw slop does not re-attack the sounding press key"
 
 S056 | test_emptyClickSlopAndDoubleDraw | src/checks/editorqml/tst_ShellGridInput.qml
 Anchor: message "below draw slop, click creates no note"
 
-S057 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S057 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "Ctrl jitter below the published platform slop remains a selection click"
 
-S058 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+S058 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "Ctrl vertical travel at the published platform slop starts velocity"

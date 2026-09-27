@@ -640,88 +640,88 @@ Anchor: message "a band selection writes nothing"
 S086 | drawerVelocityBandExpandContract | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a band selection leaves every velocity captured"
 
-S087 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
+S087 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: function
 
-S088 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
+S088 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "pressing another node provisionally selects it"
 
-S089 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
+S089 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "a provisional press holds a live gesture"
 
-S090 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
+S090 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "cancelling clears the provisional gesture"
 
-S091 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
+S091 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "cancelling restores selection membership and insertion order"
 
-S092 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
+S092 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "cancelling writes nothing at all"
 
-S093 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
+S093 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "a release after cancellation is inert"
 
-S094 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
+S094 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "a late release cannot revive the discarded selection"
 
-S095 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
+S095 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "a cancelled press leaves every velocity captured"
 
-S096 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
+S096 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: function
 
-S097 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
+S097 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "a band press holds a live gesture"
 
-S098 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
+S098 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "cancelling clears the live band"
 
-S099 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
+S099 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "a cancelled band restores selection membership and insertion order"
 
-S100 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
+S100 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "cancelling writes nothing at all"
 
-S101 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
+S101 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "input after cancellation starts no band"
 
-S102 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
+S102 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "input after cancellation cannot replace the restored selection"
 
-S103 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
+S103 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "a cancelled band leaves every velocity captured"
 
-S104 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift
+S104 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: function
 
-S105 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift
+S105 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "a live drag previews the pressed note"
 
-S106 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift
+S106 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "a live drag previews every selected target"
 
-S107 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift
+S107 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "a live drag reports an active gesture"
 
-S108 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift
+S108 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "a primary-track switch ends the live gesture"
 
-S109 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift
+S109 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "a primary-track switch clears every preview"
 
-S110 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift
+S110 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "a primary-track switch writes nothing at all"
 
-S111 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift
+S111 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "a release after the switch is inert"
 
-S112 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift
+S112 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "a late release still writes nothing"
 
-S113 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift
+S113 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "a cancelled drag leaves every velocity captured"
 
-S114 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift
+S114 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "a late release previews nothing"
 
 S115 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
@@ -730,10 +730,10 @@ Anchor: message "a PSG voice uses the intrinsic level ruler"
 S116 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
 Anchor: message "Programmable Wave publishes five volume levels"
 
-S117 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift
+S117 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "a cancelled gesture leaves the undo depth unchanged"
 
-S118 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
+S118 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "a cancelled gesture leaves the undo depth unchanged"
 
 S119 | drawerVelocityBandExpandContract | src/checks/velocity/VelocityClickSelectionChecks.swift
@@ -742,5 +742,5 @@ Anchor: message "a cancelled gesture leaves the undo depth unchanged"
 S120 | drawerVelocityBandExpandContract | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a band selection preserves the timeline projection"
 
-S121 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
+S121 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickCancellationChecks.swift
 Anchor: message "a cancelled gesture leaves the undo depth unchanged"

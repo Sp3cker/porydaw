@@ -778,241 +778,241 @@ Anchor: message "a vertical span resolves to the near endpoint"
 S028 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the published hit radius is font-relative and positive"
 
-S029 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift
+S029 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: function
 
-S030 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift
+S030 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the square pair presents the intrinsic ruler"
 
-S031 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift
+S031 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: function
 
-S032 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift
+S032 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the press-locked quiet note previews its snapped level"
 
-S033 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift
+S033 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the press-locked later note keeps its own snapped offset"
 
-S034 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift
+S034 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unselected note previews nothing"
 
-S035 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift
+S035 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the locked drag stages no revision before release"
 
-S036 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift
+S036 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the document keeps the quiet origin during preview"
 
-S037 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift
+S037 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the document keeps the later origin during preview"
 
-S038 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift
+S038 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "one locked drag release commits one revision"
 
-S039 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift
+S039 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release clears its preview"
 
-S040 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift
+S040 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release commits the snapped quiet level"
 
-S041 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift
+S041 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release commits the snapped later level"
 
-S042 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift
+S042 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release leaves the unselected note alone"
 
-S043 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift
+S043 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release keeps the drag selection"
 
-S044 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift
+S044 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: function
 
-S045 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift
+S045 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the press-locked noise note previews its snapped level"
 
-S046 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift
+S046 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the press-locked second noise note keeps its own snapped offset"
 
-S047 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift
+S047 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the locked noise drag stages no revision before release"
 
-S048 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift
+S048 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "one locked noise release commits one revision"
 
-S049 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift
+S049 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release commits the snapped noise level"
 
-S050 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift
+S050 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release commits the snapped second noise level"
 
-S051 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift
+S051 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the press-locked wave quiet note previews its snapped level"
 
-S052 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift
+S052 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the press-locked wave later note keeps its own snapped offset"
 
-S053 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift
+S053 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: function
 
-S054 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift
+S054 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: function
 
-S055 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift
+S055 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: function
 
-S056 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift
+S056 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlocked quiet note takes the shared raw delta"
 
-S057 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift
+S057 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlocked later note takes the same raw delta"
 
-S058 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift
+S058 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unselected note previews nothing"
 
-S059 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift
+S059 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlocked drag stages no revision before release"
 
-S060 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift
+S060 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the document keeps the quiet origin during preview"
 
-S061 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift
+S061 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the document keeps the later origin during preview"
 
-S062 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift
+S062 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "one unlocked drag release commits one revision"
 
-S063 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift
+S063 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release clears its preview"
 
-S064 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift
+S064 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release commits the shared raw delta"
 
-S065 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift
+S065 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release commits the same raw delta on every target"
 
-S066 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift
+S066 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release leaves the unselected note alone"
 
-S067 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift
+S067 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release keeps the drag selection"
 
-S068 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift
+S068 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: function
 
-S069 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift
+S069 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlocked noise note takes the shared raw delta"
 
-S070 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift
+S070 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlocked second noise note takes the same raw delta"
 
-S071 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift
+S071 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlocked noise drag stages no revision before release"
 
-S072 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift
+S072 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "one unlocked noise release commits one revision"
 
-S073 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift
+S073 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release commits the shared noise delta"
 
-S074 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift
+S074 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release commits the same noise delta on every target"
 
-S075 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift
+S075 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlocked wave quiet note previews its raw offset"
 
-S076 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift
+S076 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlocked wave later note keeps its own raw offset"
 
-S077 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S077 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: function
 
-S078 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S078 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: function
 
-S079 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S079 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the square triple presents the intrinsic ruler"
 
-S080 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S080 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: function
 
-S081 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S081 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the square middle note sits inside the swept span"
 
-S082 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S082 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlocked square ramp starts raw"
 
-S083 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S083 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlocked square middle interpolates raw"
 
-S084 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S084 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlocked square ramp ends raw"
 
-S085 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S085 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the note outside the triple previews nothing"
 
-S086 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S086 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the deferred unlocked ramp stages no revision before release"
 
-S087 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S087 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "one unlocked ramp release commits one revision"
 
-S088 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S088 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release clears its preview"
 
-S089 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S089 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release commits the first raw ramp velocity"
 
-S090 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S090 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release commits the interpolated raw velocity"
 
-S091 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S091 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release commits the last raw ramp velocity"
 
-S092 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S092 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release leaves the outside note alone"
 
-S093 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S093 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the noise triple presents the intrinsic ruler"
 
-S094 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S094 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: function
 
-S095 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S095 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the noise middle note sits inside the swept span"
 
-S096 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S096 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlocked noise ramp starts raw"
 
-S097 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S097 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlocked noise middle interpolates raw"
 
-S098 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S098 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlocked noise ramp ends raw"
 
-S099 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S099 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the deferred noise ramp stages no revision before release"
 
-S100 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S100 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "one unlocked noise release commits one revision"
 
-S101 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S101 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release commits the first noise raw velocity"
 
-S102 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S102 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release commits the interpolated noise velocity"
 
-S103 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S103 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the release commits the last noise raw velocity"
 
-S104 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S104 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlocked wave ramp starts raw"
 
-S105 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S105 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlocked wave middle interpolates raw"
 
-S106 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift
+S106 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the unlocked wave ramp ends raw"
 
-S107 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+S107 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the square context offers the enabled detent control"
 
 S108 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift
@@ -1033,7 +1033,7 @@ Anchor: message "the added middle note resolves at its placed pitch"
 S113 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift
 Anchor: message "the document keeps the middle velocity during preview"
 
-S114 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift
+S114 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentUnlockedChecks.swift
 Anchor: message "the outside note previews nothing"
 
 S115 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift

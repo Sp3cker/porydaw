@@ -1397,10 +1397,10 @@ Anchor: message "marker x is the shared camera content position of its tick"
 S020 | runOtherEventsBandChecks | src/checks/drawerpresentation/other_events_band.swift
 Anchor: message "hover lines format timestamp, File or one-based Track, and the event label"
 
-S021 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+S021 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "A009: setting loop start moves its marker to the cell edge"
 
-S022 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+S022 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu_loop.swift
 Anchor: message "A015/A017: the end marker is one snap cell later and changes the song"
 
 S023 | hostNoteDiscovery | src/checks/host/HostBehaviorChecks.swift

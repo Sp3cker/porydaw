@@ -793,259 +793,259 @@ S041, S055, S056, S073 and S074. The three seed guards A019/A035/A047, the width
 guard A037 and the free-cell guards A048/A049/A050 stay GAP: the Swift counterparts report
 those fixture failures through report.fail branches, which never appear in pass evidence.
 
-S001 | checkNoteBorders | src/checks/rollcheck/note_rendering.swift
+S001 | checkNoteBorders | src/checks/rollcheck/note_rendering_borders.swift
 Anchor: message "A007/A012 3px contiguous selection ring stops at inset"
 
-S002 | checkNoteBorders | src/checks/rollcheck/note_rendering.swift
+S002 | checkNoteBorders | src/checks/rollcheck/note_rendering_borders.swift
 Anchor: message "A008-A011 2px black frame lies inside every selected edge"
 
-S003 | checkNoteBorders | src/checks/rollcheck/note_rendering.swift
+S003 | checkNoteBorders | src/checks/rollcheck/note_rendering_borders.swift
 Anchor: message "A013/A014 unselected bottom border bounds the face"
 
-S004 | checkNoteBorders | src/checks/rollcheck/note_rendering.swift
+S004 | checkNoteBorders | src/checks/rollcheck/note_rendering_borders.swift
 Anchor: message "A002 5.0-key-height note has room for a 1px border"
 
-S005 | checkNoteBorders | src/checks/rollcheck/note_rendering.swift
+S005 | checkNoteBorders | src/checks/rollcheck/note_rendering_borders.swift
 Anchor: message "A003 tiny note retains its 1px black border"
 
-S006 | checkNoteBorders | src/checks/rollcheck/note_rendering.swift
+S006 | checkNoteBorders | src/checks/rollcheck/note_rendering_borders.swift
 Anchor: message "A004 tiny note face survives inside its border"
 
-S007 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering.swift
+S007 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering_borders.swift
 Anchor: message "A020 velocity zero uses the neutral palette fill"
 
-S008 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering.swift
+S008 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering_borders.swift
 Anchor: message "A021 velocity zero palette fill is opaque"
 
-S009 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering.swift
+S009 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering_borders.swift
 Anchor: message "A022 published full velocity uses the track identity fill"
 
-S010 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering.swift
+S010 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering_borders.swift
 Anchor: message "A023 published full velocity is opaque"
 
-S011 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering.swift
+S011 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering_borders.swift
 Anchor: message "A024 published middle velocity is opaque"
 
-S012 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering.swift
+S012 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering_borders.swift
 Anchor: message "A025 published middle velocity differs from both endpoints"
 
 S013 | test_noteRasterParity | src/checks/editorqml/tst_ShellNoteVisuals.qml
 Anchor: function
 
-S014 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+S014 | checkVelocityColorMode | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "velocity mode leaves the ghost fill on its identity mix"
 
-S015 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+S015 | checkVelocityColorMode | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "ghost fill is identical with the mode off"
 
-S016 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+S016 | checkNoteNameMode | src/checks/rollcheck/note_rendering_names.swift
 Anchor: message "ghost notes are never labeled"
 
-S017 | checkGhostNotes | src/checks/rollcheck/note_rendering.swift
+S017 | checkGhostNotes | src/checks/rollcheck/note_rendering_ghosts.swift
 Anchor: message "A016 both fixture notes project, other-track note as ghost"
 
-S018 | checkGhostNotes | src/checks/rollcheck/note_rendering.swift
+S018 | checkGhostNotes | src/checks/rollcheck/note_rendering_ghosts.swift
 Anchor: message "A017 ghost face uses the track-identity mix"
 
-S019 | checkGhostNotes | src/checks/rollcheck/note_rendering.swift
+S019 | checkGhostNotes | src/checks/rollcheck/note_rendering_ghosts.swift
 Anchor: message "A017 ghost face edge matches its interior: no border or ring"
 
-S020 | checkGhostNotes | src/checks/rollcheck/note_rendering.swift
+S020 | checkGhostNotes | src/checks/rollcheck/note_rendering_ghosts.swift
 Anchor: message "A031 velocity-color mode leaves the ghost fill byte-identical"
 
-S021 | checkGhostNotes | src/checks/rollcheck/note_rendering.swift
+S021 | checkGhostNotes | src/checks/rollcheck/note_rendering_ghosts.swift
 Anchor: message "A036 ghost notes are never labeled"
 
-S022 | checkGhostNotes | src/checks/rollcheck/note_rendering.swift
+S022 | checkGhostNotes | src/checks/rollcheck/note_rendering_ghosts.swift
 Anchor: message "A016 a distinct other track exists for the ghost seed"
 
-S023 | checkGhostNotes | src/checks/rollcheck/note_rendering.swift
+S023 | checkGhostNotes | src/checks/rollcheck/note_rendering_ghosts.swift
 Anchor: message "A017 immaterial ghost face mixes into its themed roll lane"
 
-S024 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering.swift
+S024 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering_borders.swift
 Anchor: message "immaterial track-six velocity-100 native note color"
 
-S025 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+S025 | checkVelocityColorMode | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "every velocity fill from 2 to 127 is opaque"
   note_rendering.swift:365 report.expect(allOpaque, cppID: "swiftcore/PianoRoll::velocityColorMode", message: "every velocity fill from 2 to 127 is opaque"); allOpaque = (2...127).allSatisfy { publishedOpaque(PaletteMath.velocityNoteColor(velocity: $0, zeroColor: zeroInk)) }.
 
-S026 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+S026 | checkVelocityColorMode | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "velocity hue falls monotonically from purple to red"
   note_rendering.swift:367 report.expect(hueOrdered) over 1..<127: each fill equals the independent expectedVelocityHue oracle and its hue degrees do not rise.
 
-S027 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+S027 | checkVelocityColorMode | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "velocity 1 publishes the purple endpoint in palette format"
   note_rendering.swift:371-372 report.expect(minimum == "#5F44E9"); minimum is the live published note fill after setVelocities(1) on the seeded note.
 
-S028 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+S028 | checkVelocityColorMode | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "velocity 1 matches the velocity color API"
   note_rendering.swift:373-374 report.expect(minimum == PaletteMath.velocityNoteColor(velocity: 1, zeroColor: zeroInk)).
 
-S029 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+S029 | checkVelocityColorMode | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "velocity 127 publishes the red endpoint in palette format"
   note_rendering.swift:375-376 report.expect(maximum == "#E90904") on the live published fill.
 
-S030 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+S030 | checkVelocityColorMode | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "velocity 127 matches the velocity color API"
   note_rendering.swift:377-378 report.expect(maximum == PaletteMath.velocityNoteColor(velocity: 127, zeroColor: zeroInk)).
 
-S031 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+S031 | checkVelocityColorMode | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "velocity 64 publishes the independently interpolated HSV hue"
   note_rendering.swift:379-380 report.expect(midpoint == expectedVelocityHue(64)), the transcribed HSV oracle rather than the implementation.
 
-S032 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+S032 | checkVelocityColorMode | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "velocity 64 matches the velocity color API"
   note_rendering.swift:381-382 report.expect(midpoint == PaletteMath.velocityNoteColor(velocity: 64, zeroColor: zeroInk)).
 
-S033 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+S033 | checkVelocityColorMode | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "velocity hue fills are opaque"
   note_rendering.swift:383-385 report.expect(publishedOpaque(minimum) && publishedOpaque(midpoint) && publishedOpaque(maximum)).
 
-S034 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+S034 | checkVelocityColorMode | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "velocity zero uses the neutral palette fill"
   note_rendering.swift:388-389 report.expect(PaletteMath.velocityNoteColor(velocity: 0, zeroColor: zeroInk) == zeroInk).
 
-S035 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+S035 | checkVelocityColorMode | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "velocity mode leaves the ghost fill on its identity mix"
   note_rendering.swift:413-414 report.expect(ghostOn.count == 1 && ghostOn[0].fillColor == expectedGhost), a synthetic ghost note rebuilt through GridSceneInput(velocityColorMode: true).
 
-S036 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+S036 | checkVelocityColorMode | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "ghost fill is identical with the mode off"
   note_rendering.swift:415-416 the same synthetic ghost face rebuilt with velocityColorMode: false keeps the identity ghost mix.
 
-S037 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+S037 | checkVelocityColorMode | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "disabling the mode restores the identity fill"
   note_rendering.swift:422-423 report.expect(publishedFill() == palette.noteFill(track: track, velocity: 127)) after the mode toggle-off on the live grid.
 
-S038 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+S038 | checkVelocityColorMode | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "disabling the mode restores the minimum identity fill"
   note_rendering.swift:431-432 report.expect(publishedFill() == palette.noteFill(track: track, velocity: 1)).
 
-S039 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+S039 | checkVelocityColorMode | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "velocity-mode flips leave the document revision unchanged"
   note_rendering.swift:433-434 report.expect(modeOnRevisionUnchanged && modeOffRevisionUnchanged), each sampled around setVelocityColorMode.
 
-S040 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+S040 | checkNoteNameMode | src/checks/rollcheck/note_rendering_names.swift
 Anchor: message "a wide selected-track note gets exactly one name label"
   note_rendering.swift:492-493 report.expect(wide.count == 1) over the published name records matching GridScene.keyName(pitch).
 
-S041 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+S041 | checkNoteNameMode | src/checks/rollcheck/note_rendering_names.swift
 Anchor: message "the name label uses the contrasting keyboard ink"
   note_rendering.swift:503-506 report.expect(record.labelColor == PaletteMath.aaContrastInk(fill: light: dark: fallbackLight: fallbackDark:) && PaletteMath.contrastRatio(fill, record.labelColor) >= 4.5).
 
-S042 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+S042 | checkNoteNameMode | src/checks/rollcheck/note_rendering_names.swift
 Anchor: message "the name label is left-aligned and vertically centred"
   note_rendering.swift:507-509 report.expect(record.labelHorizontalAlignment == 0x1 && record.labelVerticalAlignment == 0x80).
 
-S043 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+S043 | checkNoteNameMode | src/checks/rollcheck/note_rendering_names.swift
 Anchor: message "the name label uses the fixed reduced caption face"
   note_rendering.swift:510-511 report.expect((record.labelFont["pixelSize"] as? Int) == 11).
 
-S044 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+S044 | checkNoteNameMode | src/checks/rollcheck/note_rendering_names.swift
 Anchor: message "a too-narrow note gets no name label"
   note_rendering.swift:522-523 report.expect(matchingRecords().isEmpty) after the camera returns to minimum time zoom.
 
-S045 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+S045 | checkNoteNameMode | src/checks/rollcheck/note_rendering_names.swift
 Anchor: message "no name labels below the key-height threshold"
   note_rendering.swift:534-535 report.expect(matchingRecords().isEmpty) once the row height drops under the fixed face threshold.
 
-S046 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+S046 | checkNoteNameMode | src/checks/rollcheck/note_rendering_names.swift
 Anchor: message "ghost notes are never labeled"
   note_rendering.swift:549-550 report.expect(ghostLabels.count == 1 && ghostLabels[0].labelText == GridScene.keyName(pitch)) through the pure layout entry with one ghost and one plain face.
 
-S047 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+S047 | checkNoteNameMode | src/checks/rollcheck/note_rendering_names.swift
 Anchor: message "the low-contrast velocity hue gets AA-clearing label ink"
   note_rendering.swift:553-555 report.expect(PaletteMath.contrastRatio(hardFill, NoteNameLabels.textColor(fillColor: hardFill, palette:)) >= 4.5) at velocity 121, the fork chooser's worst ramp point.
 
-S048 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+S048 | checkNoteNameMode | src/checks/rollcheck/note_rendering_names.swift
 Anchor: message "disabling the mode empties the name model"
   note_rendering.swift:558-559 report.expect(grid.scene.pianoNoteTextModel.count == 0).
 
-S049 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+S049 | checkNoteNameMode | src/checks/rollcheck/note_rendering_names.swift
 Anchor: message "note-name fixture undo restores the document"
   note_rendering.swift:574-576 report.expect(session.document.state == beforeState && session.document.history.currentIdentity == beforeIdentity) after the fixture's notes are undone.
 
-S050 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+S050 | checkNoteNameMode | src/checks/rollcheck/note_rendering_names.swift
 Anchor: message "an abutting short same-pitch note carries no label (first)"
   note_rendering.swift:606-607 report.expect(!hasLabel(short.id)) where hasLabel requires a name record whose x equals box.x + metrics.spaceHalf.
 
-S051 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+S051 | checkNoteNameMode | src/checks/rollcheck/note_rendering_names.swift
 Anchor: message "an abutting short same-pitch note carries no label (second)"
   note_rendering.swift:608-609 report.expect(!hasLabel(adjacent)) for the neighbor added at the short note's end tick.
 
-S052 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+S052 | checkNoteNameMode | src/checks/rollcheck/note_rendering_names.swift
 Anchor: message "a distant wide note keeps its label"
   note_rendering.swift:610-611 report.expect(hasLabel(wide.id)) for the wide note seeded past the short pair.
 
-S053 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+S053 | checkNoteNameMode | src/checks/rollcheck/note_rendering_names.swift
 Anchor: message "a row at the exact padded fit still labels"
   note_rendering.swift:622-623 report.expect(hasLabel(wide.id)) with fitHeight = measured.noteNameOccupiedHeight.rounded(.up) + 2 * metrics.spaceHalf + metrics.pixel.
 
-S054 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+S054 | checkNoteNameMode | src/checks/rollcheck/note_rendering_names.swift
 Anchor: message "one pixel shorter the label hides instead of shrinking"
   note_rendering.swift:630-631 report.expect(!hasLabel(wide.id)) at fitHeight - metrics.pixel.
 
-S055 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+S055 | checkNoteNameMode | src/checks/rollcheck/note_rendering_names.swift
 Anchor: message "label ink is chosen against the bright velocity fill"
   note_rendering.swift:633, consumed at 638-640: report.expect(PaletteMath.contrastRatio(fill, NoteNameLabels.textColor(fillColor: fill, palette:)) >= 4.5) for PaletteMath.velocityNoteColor(velocity: 100).
 
-S056 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+S056 | checkNoteNameMode | src/checks/rollcheck/note_rendering_names.swift
 Anchor: message "label ink is chosen against the dark velocity fill"
   note_rendering.swift:634, consumed at 638-640: the same contrast >= 4.5 expectation for PaletteMath.velocityNoteColor(velocity: 1).
 
-S057 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+S057 | checkVelocityValues | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "velocity-value fixture undo restores the document"
   note_rendering.swift:663-665 report.expect(document.state == initialState && document.history.currentIdentity == initialIdentity) in the check's undo teardown.
 
-S058 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+S058 | checkVelocityValues | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "velocity drag publishes the preview value on its note\(rowMessage)"
   note_rendering.swift:727-729 report.expect(labels.contains { $0.labelText == String(preview) && fits($0, box: box) }); fits requires the label rect to equal the note box with AlignHCenter (0x4) and AlignVCenter (0x80). One row per key height ("" at 32.0, " at row 8.6", " at row 9.0").
 
-S059 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+S059 | checkVelocityValues | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "other notes show their document velocity during a drag\(rowMessage)"
   note_rendering.swift:730-733 report.expect(labels.contains { $0.labelText == String(otherNote.velocity) && fits($0, box: otherBox) }).
 
-S060 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+S060 | checkVelocityValues | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "velocity values replace note names while shown\(rowMessage)"
   note_rendering.swift:734-737 report.expect(!labels.contains { $0.labelText == GridScene.keyName(Int(note.pitch)) || $0.labelText == GridScene.keyName(other.pitch) }).
 
-S061 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+S061 | checkVelocityValues | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "the dragged note's fill follows its preview velocity\(rowMessage)"
   note_rendering.swift:738-739 report.expect(fill == expectedFill): velocityNoteColor(preview) in velocity-color mode, palette.noteFill(track:velocity: preview) otherwise.
 
-S062 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+S062 | checkVelocityValues | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "the preview value uses AA ink against its live fill\(rowMessage)"
   note_rendering.swift:740-744 report.expect(labels.contains { $0.labelText == String(preview) && $0.labelColor == grid.palette.noteLabelInk(forFill: fill) }).
 
-S063 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+S063 | checkVelocityValues | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "previewing velocity leaves the document unchanged\(rowMessage)"
   note_rendering.swift:745-746 report.expect(document.revision == revisionBeforeDrag) while the drag is live.
 
-S064 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+S064 | checkVelocityValues | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "ending the drag clears velocity values"
   note_rendering.swift:751-754 report.expect(grid.previewVelocity(noteID) == nil && the published labels no longer carry String(preview)) after endPointer on the 9.0 row.
 
-S065 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+S065 | checkVelocityValues | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "release commits the preview velocity"
   note_rendering.swift:755-756 report.expect(document.note(noteID)?.velocity == UInt8(preview)).
 
-S066 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+S066 | checkVelocityValues | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "one allowance-short box hides the velocity value"
   note_rendering.swift:774-777 report.expect(NoteNameLabels.valueLabels(faces: [narrow], ...).isEmpty) with narrow.box.width = threshold - metrics.pixel.
 
-S067 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+S067 | checkVelocityValues | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "a box at the exact velocity-value fit shows the value"
   note_rendering.swift:778-781 report.expect(NoteNameLabels.valueLabels(faces: [fitted], ...).count == 1) at threshold = measured.noteValueAdvance("100") + fontPx(baseFontPx, 0.5).
 
-S068 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+S068 | checkVelocityValues | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "ghost notes never display velocity values"
   note_rendering.swift:785-788 the same fitted box marked ghost produces no value record.
 
-S069 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+S069 | checkVelocityValues | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "the draw preview carries the last velocity while the modifier is held"
   note_rendering.swift:827-833 report.expect(a label with labelText == String(grid.lastVelocity), x and width equal to pianoDrawPreviewFill's box, and AlignHCenter) after a Control draw drag.
 
-S070 | checkVelocityValues | src/checks/rollcheck/note_rendering.swift
+S070 | checkVelocityValues | src/checks/rollcheck/note_rendering_velocity.swift
 Anchor: message "cancelling the draw preview edits no note"
   note_rendering.swift:835-836 report.expect(grid.drawPreview == nil && document.revision == revisionBeforeDraw) after inputCancelled.
 

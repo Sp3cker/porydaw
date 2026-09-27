@@ -2404,7 +2404,7 @@ Anchor: message "undo demotes the metadata chunk"
 S097 | coreRawEventDocumentSeams | src/checks/editcheck/tst_songdocument_songraw.swift
 Anchor: message "redo repromotes the metadata chunk"
 
-S098 | eventListRowsAndEditContract | src/checks/eventviews/EventListPlayheadChecks.swift
+S098 | eventListRowsAndEditContract | src/checks/eventviews/EventListPlayheadContractChecks.swift
 Anchor: message "tick editing honors maxTick"
 
 S099 | eventViewsChannelAndDataConversions | src/checks/editcheck/EventViewsEditsParity.swift
@@ -2665,178 +2665,178 @@ Anchor: message "inserted preset note-on mints a fresh identity"
 S184 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift
 Anchor: message "preset insert resolves by its fresh identity"
 
-S185 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S185 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A002 event-list presenter attaches to the basic fixture"
 
-S186 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S186 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A003 mounted rows expose two events and one EOT sentinel"
 
-S187 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S187 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A004 tick-12 NoteOn row exists in the fixture"
 
-S188 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S188 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A005 commitCellEdit commits the typed tick 15"
 
-S189 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S189 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A006 the NoteOn row republishes at tick 15"
 
-S190 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S190 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A007 tick string equals the typed digits"
 
-S191 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S191 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A008 typed tick commit pushes one undo step"
 
-S192 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S192 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A009 chunk stays tick-sorted after the typed commit"
 
-S193 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S193 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A010 undo restores the tick-12 NoteOn row"
 
-S194 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S194 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A014 commitCellEdit commits the 64-bit tick"
 
-S195 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S195 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A015 64-bit commit pushes one undo step"
 
-S196 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S196 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A016 committed chunk keeps its events"
 
-S197 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S197 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A017 back event tick is exactly 3000000000"
 
-S198 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S198 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A018 chunk stays tick-sorted after the 64-bit commit"
 
-S199 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S199 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A019 undo restores the tick-12 NoteOn row"
 
-S200 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S200 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A023 typed kNoTick commit is refused"
 
-S201 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S201 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A024 refused kNoTick pushes no undo step"
 
-S202 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S202 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A025 the tick-12 NoteOn row survives the refusal"
 
-S203 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S203 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A026 typed kMaxTick commits"
 
-S204 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S204 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A027 kMaxTick commit pushes one undo step"
 
-S205 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S205 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A028 committed chunk keeps its events"
 
-S206 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S206 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A029 back event tick is exactly kMaxTick"
 
-S207 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S207 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A030 chunk stays tick-sorted after the kMaxTick commit"
 
-S208 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S208 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A031 undo restores the tick-12 NoteOn row"
 
-S209 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S209 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A037 beginEditing opens the tick cell"
 
-S210 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S210 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A037 typed kNoTick leaves the edit session open"
 
-S211 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S211 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A037 refused kNoTick pushes no undo step"
 
-S212 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S212 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A038 typed kNoTick leaves the document bytes unchanged"
 
-S213 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S213 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A041 typed kMaxTick commits and closes the editor"
 
-S214 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S214 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A041 committed kMaxTick pushes one undo step"
 
-S215 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S215 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A042 committed chunk keeps its events"
 
-S216 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S216 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A043 back event tick is exactly kMaxTick"
 
-S217 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S217 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A044 the NoteOn row republishes at kMaxTick"
 
-S218 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S218 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A045 tick string equals the exact kMaxTick digits"
 
-S219 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S219 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A046 chunk stays tick-sorted after the kMaxTick commit"
 
-S220 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S220 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A047 undo restores the tick-12 NoteOn row"
 
-S221 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S221 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A051 commitCellEdit commits the typed channel 5"
 
-S222 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S222 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A053 tick-12 NoteOn event survives the channel edit"
 
-S223 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S223 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A055 commitCellEdit commits the typed data1 100"
 
-S224 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S224 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A056 commitCellEdit commits the typed data2 33"
 
-S225 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S225 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A057 the three cell commits push one undo step each"
 
-S226 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S226 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A058 typed channel 5 stores the status nibble 4"
 
-S227 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S227 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A059 typed data bytes land on the note event"
 
-S228 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S228 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A060 tick-0 meta row exists in the fixture"
 
-S229 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S229 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A061 meta row exposes its raw event index"
 
-S230 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S230 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A062 commitCellEdit commits the quoted blob"
 
-S231 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S231 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A063 the blob commit pushes the fourth undo step"
 
-S232 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S232 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A064 quoted blob stores the room bytes"
 
-S233 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S233 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A065 undo restores channel 0, 60/90 and the marker bytes"
 
-S234 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S234 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A114 insert-copy adds one copy of the marker event"
 
-S235 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S235 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A115 insert-copy pushes one undo step"
 
-S236 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S236 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A116 chunk stays tick-sorted after the insert"
 
-S237 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S237 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "insert-copy focuses and selects the inserted row"
 
-S238 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S238 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A117 undo restores the marker count"
 
-S239 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S239 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "tempo row exists after the tempo edit"
 
-S240 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S240 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "tempo insert copies the source µs-per-quarter-note"
 
-S241 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S241 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A118 EOT-row insert pushes no undo step"
 
-S242 | eventListCellCommitContract | src/checks/eventviews/EventListPageChecks.swift
+S242 | eventListCellCommitContract | src/checks/eventviews/EventListPageCellCommitChecks.swift
 Anchor: message "A119 EOT-row insert adds no event"
 
 S243 | test_keyboardSelectionStaysOnMountedEventRows | src/checks/editorqml/tst_ShellEventList.qml

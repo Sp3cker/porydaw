@@ -865,13 +865,13 @@ Anchor: message "stale bank redo entry is removed without mutating document stat
 S009 | historyTransitionRegressions | src/checks/workspace/bank_history_probes.swift
 Anchor: message "hard bank failure keeps the entry available and does not cross it"
 
-S010 | bankCoordinatorGate | src/checks/workspace/bank_sharing.swift
+S010 | bankCoordinatorGate | src/checks/workspace/bank_sharing_history.swift
 Anchor: message "session gate refuses a second transition while the first is pending"
 
-S011 | bankSharedHistoryAndLifecycle | src/checks/workspace/bank_sharing.swift
+S011 | bankSharedHistoryAndLifecycle | src/checks/workspace/bank_sharing_history.swift
 Anchor: message "same-slot stale peer undo cannot replace the newer edit"
 
-S012 | bankSharedHistoryAndLifecycle | src/checks/workspace/bank_sharing.swift
+S012 | bankSharedHistoryAndLifecycle | src/checks/workspace/bank_sharing_history.swift
 Anchor: message "stale bank command prunes without dropping document history"
 
 S013 | historyTransitionRegressions | src/checks/workspace/bank_history_probes.swift
@@ -895,7 +895,7 @@ Anchor: message "redo rematerializes the voice without changing other slots"
 S019 | bankBlankMaterialization | src/checks/workspace/bank_edits.swift
 Anchor: message "blank-slot undo reverts and redo rematerializes with a fresh token" #2
 
-S020 | bankSharedHistoryAndLifecycle | src/checks/workspace/bank_sharing.swift
+S020 | bankSharedHistoryAndLifecycle | src/checks/workspace/bank_sharing_history.swift
 Anchor: message "stale conflicts prune exactly one command preserving identities"
 
 S021 | bankMergeSealing | src/checks/workspace/bank_edits.swift
@@ -907,11 +907,11 @@ Anchor: message "adjacent same-slot edits merge and self-canceling pairs vanish"
 S023 | bankBindingIdentityIsolation | src/checks/workspace/bank_sharing.swift
 Anchor: message "fixture sections share a source but not binding identity"
 
-S024 | bankCoordinatorGate | src/checks/workspace/bank_sharing.swift
+S024 | bankCoordinatorGate | src/checks/workspace/bank_sharing_history.swift
 Anchor: message "the session gate routes transitions and prunes stale conflicts" #1
 
-S025 | bankCoordinatorGate | src/checks/workspace/bank_sharing.swift
+S025 | bankCoordinatorGate | src/checks/workspace/bank_sharing_history.swift
 Anchor: message "the session gate routes transitions and prunes stale conflicts" #2
 
-S026 | bankCoordinatorGate | src/checks/workspace/bank_sharing.swift
+S026 | bankCoordinatorGate | src/checks/workspace/bank_sharing_history.swift
 Anchor: message "the session gate routes transitions and prunes stale conflicts" #3

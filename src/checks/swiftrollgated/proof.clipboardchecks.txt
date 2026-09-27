@@ -1245,56 +1245,56 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | checkOrderedSelection | src/checks/rollcheck/selection.swift
+S001 | checkOrderedSelection | src/checks/rollcheck/selection_editing.swift
 Anchor: message "Ctrl-add of earlier A(v40) retains later B(v90) as first selection"
     report.expect(session.selectedNoteOrder == [b, a]
         && session.document.note(session.selectedNoteOrder[0])?.velocity == 90,
         cppID: id, message: "Ctrl-add of earlier A(v40) retains later B(v90) as first selection")
 
-S002 | checkOrderedSelection | src/checks/rollcheck/selection.swift
+S002 | checkOrderedSelection | src/checks/rollcheck/selection_editing.swift
 Anchor: message "deselecting and re-adding appends the note"
     report.expectEqual([a, b], session.selectedNoteOrder, cppID: id,
                        what: "deselecting and re-adding appends the note")
 
-S003 | checkOrderedSelection | src/checks/rollcheck/selection.swift
+S003 | checkOrderedSelection | src/checks/rollcheck/selection_editing.swift
 Anchor: message "replacement preserves first occurrence and removes duplicates"
     report.expectEqual([b, a], session.selectedNoteOrder, cppID: id,
                        what: "replacement preserves first occurrence and removes duplicates")
 
-S004 | checkOrderedSelection | src/checks/rollcheck/selection.swift
+S004 | checkOrderedSelection | src/checks/rollcheck/selection_editing.swift
 Anchor: message "band keeps press order before newly covered notes"
     report.expect(Array(session.selectedNoteOrder.prefix(2)) == [b, a]
         && session.selectedNotes.contains(c),
         cppID: id, message: "band keeps press order before newly covered notes")
 
-S005 | checkOrderedSelection | src/checks/rollcheck/selection.swift
+S005 | checkOrderedSelection | src/checks/rollcheck/selection_editing.swift
 Anchor: message "band cancellation restores selection order"
     report.expectEqual([b, a], session.selectedNoteOrder, cppID: id,
                        what: "band cancellation restores selection order")
 
-S006 | checkOrderedSelection | src/checks/rollcheck/selection.swift
+S006 | checkOrderedSelection | src/checks/rollcheck/selection_editing.swift
 Anchor: message "order-only replacement publishes the selection domain"
     report.expectEqual([SessionChangeDomains.selection], publications, cppID: id,
                        what: "order-only replacement publishes the selection domain")
 
-S007 | checkOrderedSelection | src/checks/rollcheck/selection.swift
+S007 | checkOrderedSelection | src/checks/rollcheck/selection_editing.swift
 Anchor: message "order-only replacement and additive selection coalesce"
     report.expectEqual([SessionChangeDomains.selection], publications, cppID: id,
                        what: "order-only replacement and additive selection coalesce")
 
-S008 | checkOrderedSelection | src/checks/rollcheck/selection.swift
+S008 | checkOrderedSelection | src/checks/rollcheck/selection_editing.swift
 Anchor: message "unchanged normalized selection publishes nothing"
     report.expect(publications.isEmpty, cppID: id,
                   message: "unchanged normalized selection publishes nothing")
 
-S009 | checkOrderedSelection | src/checks/rollcheck/selection.swift
+S009 | checkOrderedSelection | src/checks/rollcheck/selection_editing.swift
 Anchor: message "selection gestures never mutate document or history"
     report.expect(session.document.revision == revision
         && session.document.history.currentIdentity == history
         && session.document.isDirty == dirty,
         cppID: id, message: "selection gestures never mutate document or history")
 
-S010 | checkOrderedSelection | src/checks/rollcheck/selection.swift
+S010 | checkOrderedSelection | src/checks/rollcheck/selection_editing.swift
 Anchor: message "deletion prunes membership and preserves survivor order"
     report.expect(session.selectedNoteOrder == [c, a] && session.selectedNotes == Set([c, a]),
                   cppID: id, message: "deletion prunes membership and preserves survivor order")
@@ -1463,14 +1463,14 @@ Anchor: message "press outside projected pitch rows is rejected"
         session.document.revision == cancelRevision,
         cppID: projectionID, message: "press outside projected pitch rows is rejected")
 
-S036 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+S036 | checkIsolation | src/checks/rollcheck/EditorGridCameraIsolation.swift
 Anchor: message "ensureTickVisible uses the reveal fraction in one publication"
     report.expect(
         counters.camera == before + 1
             && gridCameraNear(tickReveal.scrollX, expectedTickReveal),
         cppID: isolationID, message: "ensureTickVisible uses the reveal fraction in one publication")
 
-S037 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+S037 | checkIsolation | src/checks/rollcheck/EditorGridCameraIsolation.swift
 Anchor: message "preferEnd true aligns an oversized range to the right edge"
     report.expect(
         counters.camera == before + 1
@@ -1480,39 +1480,39 @@ Anchor: message "preferEnd true aligns an oversized range to the right edge"
                     + 1 / grid.devicePixelRatio),
         cppID: isolationID, message: "preferEnd true aligns an oversized range to the right edge")
 
-S038 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+S038 | checkIsolation | src/checks/rollcheck/EditorGridCameraIsolation.swift
 Anchor: message "preferEnd false aligns an oversized range to its start"
     report.expect(
         counters.camera == before + 1 && gridCameraNear(startReveal.scrollX, 0),
         cppID: isolationID, message: "preferEnd false aligns an oversized range to its start")
 
-S039 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+S039 | checkIsolation | src/checks/rollcheck/EditorGridCameraIsolation.swift
 Anchor: message "ensureKeyVisible aligns the bottom pitch at the viewport edge"
     report.expect(
         counters.camera == before + 1
             && gridCameraNear(keyReveal.scrollY, keyReveal.maxVScroll),
         cppID: isolationID, message: "ensureKeyVisible aligns the bottom pitch at the viewport edge")
 
-S040 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+S040 | checkIsolation | src/checks/rollcheck/EditorGridCameraIsolation.swift
 Anchor: message "presenter scroll values track the revealed session camera"
     report.expect(
         gridCameraNear(grid.cameraScrollX, session.camera.snapshot.scrollX)
             && gridCameraNear(grid.cameraScrollY, session.camera.snapshot.scrollY),
         cppID: isolationID, message: "presenter scroll values track the revealed session camera")
 
-S041 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+S041 | checkIsolation | src/checks/rollcheck/EditorGridCameraIsolation.swift
 Anchor: message "redundant, non-finite, hidden, and already-visible navigation is silent"
     report.expect(
         counters.camera == before,
         cppID: isolationID, message: "redundant, non-finite, hidden, and already-visible navigation is silent")
 
-S042 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+S042 | checkIsolation | src/checks/rollcheck/EditorGridCameraIsolation.swift
 Anchor: message "direct edit-cursor change neither moves camera nor republishes presenter cursor"
     report.expect(
         session.camera.snapshot == published && grid.editCursorTick == Int(cursor),
         cppID: isolationID, message: "direct edit-cursor change neither moves camera nor republishes presenter cursor")
 
-S043 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+S043 | checkIsolation | src/checks/rollcheck/EditorGridCameraIsolation.swift
 Anchor: message "camera navigation is isolated from document, playback, dirty state, and history"
     report.expect(
         counters.document == 0 && counters.playback == 0 && counters.cursor == 1
@@ -1521,13 +1521,13 @@ Anchor: message "camera navigation is isolated from document, playback, dirty st
             && session.document.history.canRedo == canRedo,
         cppID: isolationID, message: "camera navigation is isolated from document, playback, dirty state, and history")
 
-S044 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+S044 | checkIsolation | src/checks/rollcheck/EditorGridCameraIsolation.swift
 Anchor: message "committed document edit performs no standalone camera publication"
     report.expect(
         inserted?.count == 1 && counters.camera == 0,
         cppID: isolationID, message: "committed document edit performs no standalone camera publication")
 
-S045 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+S045 | checkIsolation | src/checks/rollcheck/EditorGridCameraIsolation.swift
 Anchor: message "one edit publishes one coherent playback and document refresh after reconciliation"
     report.expect(
         counters.playback == 1 && counters.document == 1 && counters.coherentDocumentCallback,
