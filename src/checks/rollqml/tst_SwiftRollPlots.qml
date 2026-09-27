@@ -180,6 +180,248 @@ TestCase {
             && Math.abs(actual.height - expected.height) <= 0.2
     }
 
+    function effectivelyVisible(item, host) {
+        var current = item
+        while (current && current !== host) {
+            if (!current.visible)
+                return false
+            current = current.parent
+        }
+        return current === host && host.visible
+    }
+
+    function hostBandGeometry() {
+        var s = surface()
+        var split = s.headersModel.trackHeaderWidth + s.gridModel.keyboardWidth
+        var right = s.width - s.headersModel.scrollbarWidth
+        var canonical = canonicalBand()
+        var eventHeight = s.otherEventsPresenter.bandHeight
+        var eventY = s.height - findChild(s, "mouseHintStatus").height
+                     - s.headersModel.scrollbarWidth - eventHeight
+        var ruler = findChild(s, "timelineQuickRuler")
+        var rulerInput = findChild(s, "timelineRulerInput")
+        var rollPlot = findChild(s, "timelineQuickRollPlot")
+        var rollGutter = findChild(s, "timelineQuickRollGutter")
+        var other = findChild(s, "timelineOtherEventsBand")
+        var otherInput = findChild(other, "timelineOtherEventsInput")
+        var otherGutter = findChild(other, "timelineOtherEventsGutterInput")
+        var headers = findChild(s, "timelineQuickTrackHeaders")
+        var headerInput = findChild(headers, "timelineTrackHeadersInput")
+        verify(ruler && rulerInput && rollPlot && rollGutter && otherInput && otherGutter
+               && headers && headerInput,
+               "all mounted host bands expose their physical input surfaces")
+        var headerRect = sceneRect(headers)
+        verify(sameRect(sceneRect(rollBand()), canonical),
+               "the mounted roll band retains its independent canonical footprint")
+        verify(sameRect(headerRect, Qt.rect(0, s.gridModel.rulerHeight,
+                                         s.headersModel.trackHeaderWidth,
+                                         Math.max(canonical.height - s.gridModel.rulerHeight, 0))),
+               "track headers publish a band without a timeline plot")
+        verify(sceneRect(headerInput).x >= headerRect.x
+               && sceneRect(headerInput).x + headerInput.width <= headerRect.x + headerRect.width,
+               "track header input remains inside its own band")
+        var rows = [
+            { band: ruler, plot: rulerInput,
+              expectedBand: Qt.rect(s.headersModel.trackHeaderWidth, 0,
+                                    right - s.headersModel.trackHeaderWidth, s.gridModel.rulerHeight),
+              right: right, origin: "ruler input starts at the shared plot split",
+              edge: "ruler input reaches its independently calculated band edge",
+              tiling: "ruler input stays inside its mounted band height",
+              header: "ruler input does not intersect track headers" },
+            { band: rollBand(), plot: rollInput(), expectedBand: canonical,
+              right: right, origin: "roll input starts at the shared plot split",
+              edge: "roll input reaches its independently calculated band edge",
+              tiling: "roll input stays inside its mounted band height",
+              header: "roll input does not intersect track headers" },
+            { band: other, plot: otherInput,
+              expectedBand: Qt.rect(0, eventY, s.width, eventHeight),
+              right: right, origin: "Other Events input starts at the shared plot split",
+              edge: "Other Events input reaches its independently calculated band edge",
+              tiling: "Other Events input stays inside its mounted band height",
+              header: "Other Events input does not intersect track headers" }
+        ]
+        for (var i = 0; i < rows.length; ++i) {
+            var row = rows[i]
+            var bandRect = sceneRect(row.band)
+            var inputRect = sceneRect(row.plot)
+            verify(inputRect.x === split, row.origin)
+            verify(sameRect(bandRect, row.expectedBand)
+                   && inputRect.x + inputRect.width === row.right, row.edge)
+            verify(inputRect.y >= bandRect.y
+                   && inputRect.y + inputRect.height <= bandRect.y + bandRect.height,
+                   row.tiling)
+            verify(!((headerRect.x < inputRect.x + inputRect.width)
+                     && (inputRect.x < headerRect.x + headerRect.width)
+                     && (headerRect.y < inputRect.y + inputRect.height)
+                     && (inputRect.y < headerRect.y + headerRect.height)), row.header)
+        }
+        verify(sceneRect(otherGutter).x === 0 && otherGutter.width === split
+               && otherGutter.height === eventHeight && other.height === eventHeight,
+               "Other Events gutter input matches the presenter band height and shared header width")
+        verify(sceneRect(rollGutter).x === s.headersModel.trackHeaderWidth
+               && rollGutter.width === s.gridModel.keyboardWidth,
+               "roll keyboard input ends exactly at the shared plot split")
+        var drawerItem = findChild(s, "editorDrawer")
+        var sections = [
+            { kind: 1, body: "drawerBody_velocity", page: "velocityPage",
+              plot: "velocityPlotInput", gutter: "velocityRulerInput",
+              mountMessage: "velocity plot and gutter are present in the mounted body",
+              visibleMessage: "velocity band is published as visible",
+              bodyMessage: "velocity body follows the independently published geometry",
+              message: "velocity physical inputs tile their published body geometry" },
+            { kind: 0, body: "drawerBody_automation", page: "automationPage",
+              plot: "automationPlot", gutter: "automationGutter",
+              mountMessage: "automation plot and gutter are present in the mounted body",
+              visibleMessage: "automation band is published as visible",
+              bodyMessage: "automation body follows the independently published geometry",
+              message: "automation physical surfaces tile their published body geometry" },
+            { kind: 2, body: "drawerBody_voiceChanges", page: "voiceChangesPage",
+              plot: "voicePlotInput", gutter: "voiceGutter",
+              mountMessage: "voice-change plot and gutter are present in the mounted body",
+              visibleMessage: "voice-change band is published as visible",
+              bodyMessage: "voice-change body follows the independently published geometry",
+              message: "voice-change physical surfaces tile their published body geometry" }
+        ]
+        for (var j = 0; j < sections.length; ++j) {
+            var entry = sections[j]
+            var body = findChild(drawerItem, entry.body)
+            var page = findChild(body, entry.page)
+            var plot = findChild(page, entry.plot)
+            var gutter = findChild(page, entry.gutter)
+            verify(body && page && plot && gutter, entry.mountMessage)
+            var geometry = s.drawerPresenter.section(entry.kind)
+            var rect = sceneRect(body)
+            var plotRect = sceneRect(plot)
+            var gutterRect = sceneRect(gutter)
+            verify(geometry.visible && effectivelyVisible(body, drawerItem), entry.visibleMessage)
+            verify(sameRect(rect, Qt.rect(drawerItem.x + geometry.bodyX,
+                                         drawerItem.y + geometry.bodyY,
+                                         geometry.bodyWidth, geometry.bodyHeight)),
+                   entry.bodyMessage)
+            verify(effectivelyVisible(plot, body) && effectivelyVisible(gutter, body)
+                   && plotRect.x === split && plotRect.x + plotRect.width === rect.x + rect.width
+                   && plotRect.y === rect.y && plotRect.height === rect.height
+                   && gutterRect.x === rect.x && gutterRect.x + gutterRect.width === split
+                   && gutterRect.y === rect.y && gutterRect.height === rect.height
+                   && headerRect.x + headerRect.width <= plotRect.x,
+                   entry.message)
+        }
+    }
+
+    function test_hostMountedBandsResizeHideAndEventList() {
+        var s = surface()
+        var drawer = s.drawerPresenter
+        var original = [drawer.automationSection.visible, drawer.velocitySection.visible,
+                        drawer.voiceChangesSection.visible]
+        var eventsWereVisible = session.songTabs.selectedTabShowsEvents
+        var previousHeight = null
+        try {
+            session.songTabs.setSelectedTabEventsVisible(false)
+            for (var kind = 0; kind < 3; ++kind)
+                drawer.setSectionVisible(kind, true, false)
+            tryVerify(function() {
+                return drawer.velocitySection.bodyHeight > 0
+                    && drawer.automationSection.bodyHeight > 0
+                    && drawer.voiceChangesSection.bodyHeight > 0
+            }, 5000, "all three mounted drawer bands have published nonempty bodies")
+            tryVerify(function() {
+                var names = ["velocityPlotInput", "automationPlot", "voicePlotInput"]
+                for (var i = 0; i < names.length; ++i) {
+                    var input = findChild(s, names[i])
+                    if (!input || input.width <= 0 || input.height <= 0 || !input.visible)
+                        return false
+                }
+                return true
+            }, 5000, "all three mounted plot inputs become active before geometry verification")
+            hostBandGeometry()
+            var handle = findChild(s, "drawerHandle_velocity")
+            var velocityBody = findChild(s, "drawerBody_velocity")
+            verify(handle && velocityBody, "velocity resize chrome and body are mounted together")
+            var before = sceneRect(velocityBody)
+            previousHeight = before.height
+            drawer.adjustResizeHandle(1, 1)
+            tryVerify(function() {
+                return velocityBody.height !== before.height
+                       && sceneRect(handle).y + handle.height === sceneRect(velocityBody).y
+            }, 5000, "resizing the mounted velocity section changes its physical body")
+            hostBandGeometry()
+            var variants = [
+                { kind: 1, body: "drawerBody_velocity", page: "velocityPage",
+                  plot: "velocityPlotInput", gutter: "velocityRulerInput",
+                  mounted: "hidden velocity section retains its mounted plot and gutter",
+                  absent: "hidden velocity section publishes no active geometry",
+                  inactive: "hidden velocity body disables its physical inputs",
+                  plotHidden: "hidden velocity plot cannot receive input",
+                  gutterHidden: "hidden velocity gutter cannot receive input",
+                  restoreMessage: "restored velocity body recovers its exact prior geometry" },
+                { kind: 0, body: "drawerBody_automation", page: "automationPage",
+                  plot: "automationPlot", gutter: "automationGutter",
+                  mounted: "hidden automation section retains its mounted plot and gutter",
+                  absent: "hidden automation section publishes no active geometry",
+                  inactive: "hidden automation body disables its physical inputs",
+                  plotHidden: "hidden automation plot cannot receive input",
+                  gutterHidden: "hidden automation gutter cannot receive input",
+                  restoreMessage: "restored automation body recovers its exact prior geometry" },
+                { kind: 2, body: "drawerBody_voiceChanges", page: "voiceChangesPage",
+                  plot: "voicePlotInput", gutter: "voiceGutter",
+                  mounted: "hidden voice-change section retains its mounted plot and gutter",
+                  absent: "hidden voice-change section publishes no active geometry",
+                  inactive: "hidden voice-change body disables its physical inputs",
+                  plotHidden: "hidden voice-change plot cannot receive input",
+                  gutterHidden: "hidden voice-change gutter cannot receive input",
+                  restoreMessage: "restored voice-change body recovers its exact prior geometry" }
+            ]
+            for (var index = 0; index < variants.length; ++index) {
+                var entry = variants[index]
+                var body = findChild(s, entry.body)
+                var page = findChild(body, entry.page)
+                var plot = findChild(page, entry.plot)
+                var gutter = findChild(page, entry.gutter)
+                var saved = sceneRect(body)
+                drawer.setSectionVisible(entry.kind, false, false)
+                verify(findChild(body, entry.plot) && findChild(body, entry.gutter), entry.mounted)
+                tryVerify(function() {
+                    var g = drawer.section(entry.kind)
+                    return !g.visible && g.bodyWidth === 0 && g.bodyHeight === 0
+                }, 5000, entry.absent)
+                tryVerify(function() { return !body.visible && !body.enabled }, 5000,
+                          entry.inactive)
+                verify(!effectivelyVisible(plot, body), entry.plotHidden)
+                verify(!effectivelyVisible(gutter, body), entry.gutterHidden)
+                drawer.setSectionVisible(entry.kind, true, false)
+                tryVerify(function() { return sameRect(sceneRect(body), saved) }, 5000,
+                          entry.restoreMessage)
+                hostBandGeometry()
+            }
+            session.songTabs.setSelectedTabEventsVisible(true)
+            tryCompare(s, "showEvents", true)
+            var rollPlot = findChild(s, "timelineQuickRollPlot")
+            var rollGutter = findChild(s, "timelineQuickRollGutter")
+            verify(!rollPlot.visible && !playhead().rollBodyVisible,
+                   "Event List removes the roll band projection")
+            verify(!effectivelyVisible(rollInput(), rollBand()),
+                   "Event List hides the roll plot input")
+            verify(!effectivelyVisible(rollGutter, rollBand()),
+                   "Event List hides the roll gutter input")
+            verify(effectivelyVisible(findChild(s, "velocityPlotInput"),
+                                      findChild(s, "drawerBody_velocity")),
+                   "Event List leaves the velocity band available")
+            session.songTabs.setSelectedTabEventsVisible(false)
+            tryCompare(s, "showEvents", false)
+            verify(effectivelyVisible(rollInput(), rollBand()),
+                   "leaving Event List restores the roll plot input")
+            verify(effectivelyVisible(rollGutter, rollBand()),
+                   "leaving Event List restores the roll gutter input")
+            hostBandGeometry()
+        } finally {
+            session.songTabs.setSelectedTabEventsVisible(eventsWereVisible)
+            for (var restore = 0; restore < 3; ++restore)
+                drawer.setSectionVisible(restore, original[restore], false)
+            if (previousHeight !== null)
+                drawer.setSectionBodyHeight(1, previousHeight)
+        }
+    }
+
     // ---- the case ------------------------------------------------------------
 
     // nativegraphics tst_playhead_plots.cpp::plotGeometryAndLifecycle: the roll

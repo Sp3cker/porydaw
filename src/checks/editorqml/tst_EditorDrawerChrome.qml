@@ -105,8 +105,8 @@ EditorDrawerTestSupport {
         var marker = null
         for (var i = 0; i < markers.count; ++i) {
             var candidate = markers.itemAt(i)
-            if (candidate.model.x > presenter.markerHalfWidth
-                && candidate.model.x < input.width - presenter.markerHalfWidth) {
+            if (candidate.s.x > presenter.markerHalfWidth
+                && candidate.s.x < input.width - presenter.markerHalfWidth) {
                 marker = candidate
                 break
             }
@@ -115,27 +115,55 @@ EditorDrawerTestSupport {
         fuzzyCompare(marker.x + presenter.markerHalfWidth,
                      marker.model.tick * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX,
                      0.01, "the marker follows the same tick projection as the roll")
-        verify(marker.model.color !== "", "the marker receives a track or file palette color")
-        mouseMove(input, marker.model.x, band.height / 2)
+        verify(marker.s.color !== "", "the marker receives a track or file palette color")
+        var tooltip = findChild(testCase.surface, "timelineOtherEventsToolTip")
+        verify(tooltip && !tooltip.visible && tooltip.toolTipText === "",
+               "the mounted Other Events tooltip starts empty and hidden")
+        var tooltipLabel = null
+        for (var child of tooltip.children) {
+            if (typeof child.text === "string")
+                tooltipLabel = child
+        }
+        verify(tooltipLabel, "the Other Events tooltip contains a rendered text item")
+        mouseMove(input, marker.s.x, band.height / 2)
         tryCompare(presenter, "toolTipVisible", true)
         verify(presenter.toolTipText.includes(marker.model.label),
                "the hover tooltip describes the visible marker")
         verify(presenter.toolTipText.includes(" · Track ") || presenter.toolTipText.includes(" · File · "),
                "the tooltip names the event scope and formatted time")
-        var tooltip = findChild(testCase.surface, "timelineOtherEventsToolTip")
         tryCompare(tooltip, "visible", true)
+        var pointer = input.mapToItem(testCase.surface, marker.s.x, band.height / 2)
+        fuzzyCompare(presenter.toolTipX, marker.s.x, 0.01,
+                     "the hover position is measured in the physical plot input")
+        fuzzyCompare(presenter.toolTipY, band.height / 2, 0.01,
+                     "the hover height is measured in the physical plot input")
+        fuzzyCompare(tooltip.anchorRect.x, pointer.x, 0.01,
+                     "the rendered tooltip anchors to the mapped pointer column")
+        fuzzyCompare(tooltip.anchorRect.y, pointer.y, 0.01,
+                     "the rendered tooltip anchors to the mapped pointer row")
+        verify(tooltipLabel.text.includes(marker.model.label)
+               && /^\d+:\d\d · (Track \d+|File) · /.test(tooltipLabel.text),
+               "the painted tooltip shows the marker label scope and formatted time")
         testCase.rollInput().forceActiveFocus()
-        mouseClick(input, marker.model.x, band.height / 2)
+        mouseClick(input, marker.s.x, band.height / 2)
         compare(testCase.rollInput().activeFocus, true,
                 "clicking the event band does not steal the roll's keyboard focus")
         var ruler = findChild(testCase.surface, "timelineRulerInput")
         mouseMove(ruler, ruler.width / 2, ruler.height / 2)
         tryCompare(presenter, "toolTipVisible", false)
-        mouseMove(input, marker.model.x, band.height / 2)
+        tryCompare(presenter, "toolTipText", "")
+        tryCompare(tooltip, "visible", false)
+        compare(tooltipLabel.text, "",
+                "leaving for the ruler clears the painted tooltip text")
+        mouseMove(input, marker.s.x, band.height / 2)
         tryCompare(presenter, "toolTipVisible", true)
         session.cancelGridInput(1)
         tryCompare(presenter, "toolTipVisible", false, 1000,
                    "cancelling input also retires the band tooltip")
+        tryCompare(presenter, "toolTipText", "")
+        tryCompare(tooltip, "visible", false)
+        compare(tooltipLabel.text, "",
+                "cancelling input clears the painted Other Events tooltip")
         var oldScroll = grid.cameraScrollX
         mouseWheel(input, input.width / 2, input.height / 2,
                    0, -120, Qt.NoButton, Qt.ShiftModifier)
