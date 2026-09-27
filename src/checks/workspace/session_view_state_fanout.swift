@@ -62,7 +62,9 @@ func runCompleteEditorViewStateChecks(report: CheckReport, store: PreferencesSto
         report.fail(id, "complete state second copied song failed to open")
         return
     }
+    let secondID = app.songTabs.selectedId
     app.songTabs.selectTab(tabId: firstID)
+    let freshSecondDepth = second.document.history.undoCount
     var originCount = 0
     var siblingCount = 0
     let firstCallback = first.onEditorViewStateChanged
@@ -316,6 +318,99 @@ func runCompleteEditorViewStateChecks(report: CheckReport, store: PreferencesSto
                   message: "view-only removal restores selected sibling complete value")
     report.expect(EditorViewStateCodec.load(store: PreferencesStore()) == seed, cppID: id,
                   message: "view-only removal restores synchronized complete preferences")
+    let isolationID = "host/HostIntegrationTest::nonSelectedEditorStateFansOutWithoutTouchingSongBytes"
+    guard let firstBytes = try? first.document.state.file.encoded(),
+          let secondBytes = try? second.document.state.file.encoded() else {
+        report.fail(isolationID, "both song baselines must be encodable before background fanout")
+        return
+    }
+    let firstRevision = first.document.revision
+    let secondRevision = second.document.revision
+    let firstDepth = first.document.history.undoCount
+    let secondDepth = second.document.history.undoCount
+    var isolated = seed
+    isolated.chrome.automation = .init(visible: false, height: 44)
+    isolated.chrome.voiceChanges = .init(visible: true, height: 149)
+    isolated.chrome.activePage = .voiceChanges
+    isolated.lanes.laneRanges["cc:0:74"] = 96
+    originCount = 0
+    siblingCount = 0
+    hubCount = 0
+    persistedCount = 0
+    guard second.setEditorViewState(isolated) else {
+        report.fail(isolationID, "background origin refused the fork-literal editor state")
+        return
+    }
+    report.expect(hubCount == 1, cppID: isolationID,
+                  message: "A150 background editor state publishes exactly once")
+    report.expect(persistedCount == 1, cppID: isolationID,
+                  message: "A151 background editor state persists exactly once")
+    report.expect(second.editorViewState == isolated, cppID: isolationID,
+                  message: "A152 background origin reads back the fork-literal editor state")
+    report.expect(first.editorViewState == isolated, cppID: isolationID,
+                  message: "A153 selected sibling reads back the fork-literal editor state")
+    report.expect(EditorViewStateCodec.load(store: PreferencesStore()) == isolated,
+                  cppID: isolationID, message: "synchronized preferences retain the literal background state")
+    report.expect((try? first.document.state.file.encoded()) == firstBytes, cppID: isolationID,
+                  message: "A155 selected sibling song bytes survive background fanout")
+    report.expect((try? second.document.state.file.encoded()) == secondBytes, cppID: isolationID,
+                  message: "A156 background origin song bytes survive background fanout")
+    report.expect(first.document.revision == firstRevision, cppID: isolationID,
+                  message: "A157 selected sibling revision survives background fanout")
+    report.expect(second.document.revision == secondRevision, cppID: isolationID,
+                  message: "A158 background origin revision survives background fanout")
+    report.expect(first.document.history.undoCount == firstDepth, cppID: isolationID,
+                  message: "A159 selected sibling history depth survives background fanout")
+    report.expect(second.document.history.undoCount == secondDepth, cppID: isolationID,
+                  message: "A160 background origin history depth survives background fanout")
+    report.expect(originCount == 1 && siblingCount == 0, cppID: isolationID,
+                  message: "background origin alone emits its local editor notification")
+
+    let seamsID = "host/HostSeamsTest::documentChangedPreservesCosmetics"
+    var cosmetics = EditorViewState()
+    cosmetics.chrome.velocity = .init(visible: true, height: 180)
+    cosmetics.chrome.activePage = .velocity
+    guard first.setEditorViewState(cosmetics) else {
+        report.fail(seamsID, "selected document must accept cosmetic state")
+        return
+    }
+    app.automationPage().refreshFromDocument()
+    app.velocityPage().refreshFromDocument()
+    app.voiceChangesPage().refreshFromDocument()
+    report.expect(first.editorViewState == cosmetics, cppID: seamsID,
+                  message: "A028 three drawer document-changed deliveries preserve exact cosmetic state")
+
+    let freshID = "host/HostIntegrationTest::documentMutationUndoRedoAndReloadPreemptPreview"
+    let depthID = "host/HostIntegrationTest::projectSwitchAndClosePreserveProjectBoundaries"
+    guard let selected = second.document.notes(in: 0).first else {
+        report.fail(freshID, "second song must contain a selectable note")
+        return
+    }
+    app.songTabs.selectTab(tabId: secondID)
+    guard let oldTab = app.songTabs.selectedPage, app.selectedDocument === second else {
+        report.fail(freshID, "second song must be the selected ready tab")
+        return
+    }
+    second.setSelectedNotes([selected.id])
+    app.songTabs.requestClose(tabId: oldTab.tabId)
+    guard until({ app.songTabs.tabCount == 1 }) else {
+        report.fail(freshID, "clean second tab did not close before fresh binding")
+        return
+    }
+    app.openSong(label: "mus_session_test2")
+    guard until({ app.songTabs.tabCount == 2 || !app.lastSaveError.isEmpty }),
+          let reopened = app.selectedDocument, reopened !== second,
+          let reopenedTab = app.songTabs.selectedPage, reopenedTab.tabId != oldTab.tabId else {
+        report.fail(freshID, "same song did not reopen through a fresh tab binding")
+        return
+    }
+    report.expect(reopened.document.history.undoCount == freshSecondDepth, cppID: depthID,
+                  message: "A172 second song fresh open restores its independently recorded history depth")
+    report.expect(reopened.document.history.undoCount == 0, cppID: freshID,
+                  message: "A135 fresh same-song tab has zero undo history")
+    report.expect(reopened.selectedNotes.isEmpty, cppID: freshID,
+                  message: "A136 fresh same-song tab has no selected notes")
+
     var invalidCopy = seed
     report.expect(!invalidCopy.remapEngineTracks([0, 0]), cppID: id,
                   message: "A182 duplicate track destinations reject the pure complete-value remap")

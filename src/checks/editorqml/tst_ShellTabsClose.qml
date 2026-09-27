@@ -11,6 +11,14 @@ ShellTabsSupport {
         var firstId = ids[0]
         var secondId = ids[1]
         var thirdId = ids[2]
+        var thirdSurface = surfaceOf(thirdId)
+        var thirdNode = findChild(thirdSurface, "velocityNodeFill")
+        var thirdInput = findChild(thirdSurface, "velocityPlotInput")
+        verify(thirdNode && thirdInput && thirdNode.width > 0,
+               "the background-close candidate has a drawn velocity node")
+        var thirdHit = thirdNode.mapToItem(thirdInput, thirdNode.width / 2, thirdNode.height / 2)
+        mouseClick(thirdInput, thirdHit.x, thirdHit.y)
+        tryCompare(pageOf(thirdId).session.velocityPage(), "selectedCount", 1, 3000)
         clickSelectTab(secondId)
         var activeSummary = summaryOf(secondId)
         var activePage = pageOf(secondId)
@@ -32,6 +40,18 @@ ShellTabsSupport {
         compare(summaryOf(secondId), activeSummary, "the active document is untouched")
         verify(pageOf(secondId).visible, "the active page stays presented")
         verify(pageOf(firstId) !== null, "the background close kept the first tab")
+        session().openSong("mus_route102")
+        verify(waitForNative(function() { return tabs().tabCount === 3 }, 30000),
+               "the closed background song opens through a fresh binding")
+        var freshThird = tabs().selectedId
+        verify(freshThird !== thirdId, "the reopened background song owns a new tab identity")
+        waitForPage(freshThird)
+        compare(pageOf(freshThird).session.velocityPage().selectedNoteIdText(), "",
+                "the reopened background tab inherits no prior note selection")
+        compare(session().canUndo, false, "the reopened background tab inherits no prior history")
+        var freshNode = findChild(surfaceOf(freshThird), "velocityNodeFill")
+        verify(freshNode && !freshNode.parent.model.preview,
+               "the reopened background tab renders no old velocity preview")
     }
 
     function test_gSelectedCleanCloseRetargetsSurvivor() {
@@ -70,9 +90,24 @@ ShellTabsSupport {
         var onlyId = ids[0]
         compare(tabs().tabCount, 1)
         verify(JSON.parse(summaryOf(onlyId)).length > 0, "the staged song publishes notes")
+        var surface = surfaceOf(onlyId)
+        var plotInput = findChild(surface, "velocityPlotInput")
+        var node = findChild(surface, "velocityNodeFill")
+        verify(plotInput && node && node.width > 0 && node.height > 0,
+               "the closing tab exposes a real velocity note")
+        var hit = node.mapToItem(plotInput, node.width / 2, node.height / 2)
+        mouseClick(plotInput, hit.x, hit.y)
+        tryCompare(pageOf(onlyId).session.velocityPage(), "selectedCount", 1, 3000)
         var sceneRoot = tabsRoot()
         var pagesProbe = regionOf(grabImage(tabsRoot()), tabsRoot(), pages())
         var filledFrame = grabRegionStable(tabsRoot(), pagesProbe)
+        mousePress(plotInput, hit.x, hit.y, Qt.LeftButton)
+        mouseMove(plotInput, hit.x, hit.y - session().baseFontPx * 2, -1, Qt.LeftButton)
+        tryVerify(function() {
+            return node.parent.model.preview
+        }, 3000, "the mounted velocity gesture holds a preview before close")
+        verify(session().canUndo === false && !session().documentDirty,
+               "the held velocity preview has not committed a song edit")
         var close = closeButton(onlyId)
         mouseClick(close, close.width / 2, close.height / 2)
         verify(waitForNative(function() { return tabs().tabCount === 0 }, 5000),
@@ -112,7 +147,7 @@ ShellTabsSupport {
         }
         compare(leakedPixels, 0, "no leaked rendering survives outside the label ink")
 
-        session().openSong("mus_route102")
+        session().openSong("mus_route101")
         verify(waitForNative(function() { return tabs().tabCount === 1 }, 30000),
                "the empty strip opens again")
         verify(shell.visible, "the window stays exposed with an empty strip")
@@ -120,6 +155,12 @@ ShellTabsSupport {
         verify(reopenedId >= 0 && reopenedId !== onlyId,
                "the reopened tab is a new identity")
         waitForPage(reopenedId)
+        compare(pageOf(reopenedId).session.velocityPage().selectedNoteIdText(), "",
+                "the fresh same-song page has an empty note selection")
+        compare(session().canUndo, false, "the fresh same-song page has no prior undo history")
+        var reopenedNode = findChild(surfaceOf(reopenedId), "velocityNodeFill")
+        verify(reopenedNode && !reopenedNode.parent.model.preview,
+               "A137 fresh same-song page has no carried velocity preview")
         verify(pageOf(reopenedId).visible, "the reopened page is presented")
         verify(selectButton(reopenedId) !== null, "the reopened song has a strip tab")
         verify(tabsRoot() === sceneRoot, "the reopened tab renders in the same view")

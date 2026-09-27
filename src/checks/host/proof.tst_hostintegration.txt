@@ -6,17 +6,25 @@ Original SHA-256: 4083b59bbb5e88019ed164c1296e3f8ea36e3a6fe6673d8b0ef74316dbdbae
 Swift counterpart: src/checks/velocity/VelocityClickSelectionChecks.swift (drawerVelocityPrimaryTrackSwitchCancels :267-312; drawerVelocityLifecycleCancellation :315-383 plus bank route :384-461); src/checks/velocity/VelocityPageChecks.swift call-list entry; src/checks/editorqml/tst_ShellWindow.qml test_kVelocityGestureTermination plus data (:976-1083)
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 Additional Swift counterpart: src/checks/host/HostBehaviorChecks.swift :: hostNoteDiscovery + hostVelocityGestureContracts + hostVelocityExactGestures + hostLifecycleTermination + hostPlayheadFollowing + hostVelocityAxisVoice + hostCosmeticOnly (SHA-256 e310f9ed4cefe927cfdbe7ffae749e4ae2c82f9029a1f72e69c6ce498e4f7336)
+Additional Swift counterpart: src/checks/workspace/session_view_state_fanout.swift (SHA-256 a856e21e1f145a33665fd7776a3b89635677e316ac21e3c6ca3249339c587523)
+Additional QML counterpart: src/checks/editorqml/tst_ShellTabsClose.qml (SHA-256 d4d05854ffc009768dc7c56f0e6c90bf6beb53d7f3fac5d8f9a8ac4dc08df736)
 
 
 NATIVE is no longer used: every site that observed a native-window, embedding, delivery, framebuffer, settings, popup, or harness obligation is RETIRED-REPRESENTATION, because the mechanism that carried it is gone (this C++ file was deleted at 31ea635f, appears in no CMake target, and checkcatalog.cpp registers no host entry; re-verified 2026-09-24). GAP sites are behavior assertions whose Swift owners exist but whose original predicates have no executed Swift equivalent; each mapping names the owner verified under src/swift/app. The Reference revision and Original SHA-256 below were re-verified against each other (git show <revision>:<path> | shasum -a 256) before any retirement claim.
 
 Command: deno task proof check
-Result: PASS - structure, entry IDs, metadata, and present tallies only; not source freshness, execution, or parity. Quoted post-merge verification (not re-executed here): deno task verify --filter swiftcore PASS 1/6; deno task verify:shell --filter shellwindow PASS 1/12; deno task verify:qml PASS editorqml-drawer 1/1. No lane executes the deleted harness itself.
+Result: Task144 ledger writer ran `deno task proof check` once after settled edits: successful, zero errors reported; 68 proof files, 4864 indexed C++ sites, 4588 anchors resolved (28 historical). Warning: strict-mapping debt: 485 sites. This checks structure and tallies, not source freshness, execution, or semantic parity.
 Command: deno task verify --filter swiftcore-projectsession
 Result: PASS 1/36 ok (task-67 locked run on the frozen tree, quoted from the implementer handoff; ledger writer ran no lane). Execution evidence: build/proof-evidence/swiftcore-projectsession.json lists every HostBehaviorChecks predicate message anchored as S001-S010 below.
 
 Task 142 verification command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-projectsession --verbose
 Task 142 verification result: PASS 1/36 ok (Task142 implementer handoff; ledger writer ran no lane). Execution evidence: the frozen HostBehaviorChecks.swift SHA-256 e310f9ed4cefe927cfdbe7ffae749e4ae2c82f9029a1f72e69c6ce498e4f7336; the handoff reports the selected task predicates passed, including integration anchors A004, A028, A044, A045, A053, A054, A063, A065, A066, and A070–A078.
+
+Task 144 verification command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-projectsession --verbose
+Task 144 verification result: PASS 1/36 ok (Task144 implementer handoff; ledger writer ran no lane). The frozen session_view_state_fanout.swift SHA-256 is a856e21e1f145a33665fd7776a3b89635677e316ac21e3c6ca3249339c587523; handoff reports the lane passed.
+Task 144 verification command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify:shell --filter shell-tabs-close --verbose
+Task 144 verification result: PASS 1/75 ok (Task144 implementer handoff; ledger writer ran no lane). The frozen tst_ShellTabsClose.qml SHA-256 is d4d05854ffc009768dc7c56f0e6c90bf6beb53d7f3fac5d8f9a8ac4dc08df736; handoff reports the mounted shell lane passed.
+Execution evidence: Task144 handoff predicates correspond to S029-S042 below; ShellTabsClose predicate corresponds to S031. No missing or ambiguous assertions among assigned sites.
 
 A001 | twoTabReadySessionWithTwoNoteSeed | src/checks/host/tst_hostintegration.cpp:145
 Disposition: RETIRED-REPRESENTATION
@@ -967,32 +975,16 @@ A134 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hos
 Disposition: RETIRED-REPRESENTATION
 
 A135 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:585
-Disposition: GAP
-Mapping/reason: Swift DocumentSession history owns the history depth of the fresh tab; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.undoStack()->count(), 0)
+Disposition: MATCHED
+Mapping: S029
 
 A136 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:586
-Disposition: GAP
-Mapping/reason: Swift note selection owns the note selection empty in the fresh tab; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(view.selectionModel().noteSelection().empty())
+Disposition: MATCHED
+Mapping: S030
 
 A137 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:588
-Disposition: GAP
-Mapping/reason: Swift VelocityPage owns the preview cleared in the fresh tab; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-          }
-
-Original expression:
-  QVERIFY(!view.previewVelocity(notes[0].noteId))
+Disposition: MATCHED
+Mapping: S031
 
 A138 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:594
 Disposition: RETIRED-REPRESENTATION
@@ -1048,118 +1040,47 @@ A149 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/t
 Disposition: RETIRED-REPRESENTATION
 
 A150 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:651
-Disposition: GAP
-Mapping/reason: Swift SongTabsController/DocumentWorkspace owns the editor view-state publication count; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-          SongView &origin = session->first->view();
-          SongView &peer = session->active->view();
-          const QByteArray beforeA = fileBytes(session->first->document().midPath());
-          const QByteArray beforeB = fileBytes(session->active->document().midPath());
-          const uint64_t revisionA = session->first->document().revision();
-          const uint64_t revisionB = session->active->document().revision();
-          const int undoA = session->first->document().undoStack()->count();
-          const int undoB = session->active->document().undoStack()->count();
-          EditorViewState state = origin.editorViewState();
-          state.velocity = {true, 173};
-          state.automation = {false, 44};
-          state.voiceChanges = {true, 149};
-          state.activePage = EditorDrawerPage::VoiceChanges;
-          const EditorAutomationRowId lane{EditorAutomationRowKind::ControlChange, 0, 74};
-          state.emptyLanes.insert(lane);
-          state.laneRanges[lane] = 96;
-          QSignalSpy publication(session->window->m_workspace.get(),
-                                 &WorkspaceUi::editorViewStateChanged);
-          QSignalSpy persistence(session->window.get(), &MainWindow::editorViewStatePersisted);
-          origin.setEditorViewState(state);
-          QCoreApplication::processEvents();
-
-Original expression:
-  QCOMPARE(publication.count(), 1)
+Disposition: MATCHED
+Mapping: S032
 
 A151 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:652
-Disposition: GAP
-Mapping/reason: Swift DocumentWorkspace/SongTabsController preference persistence owns the editor view-state persistence count; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(persistence.count(), 1)
+Disposition: MATCHED
+Mapping: S033
 
 A152 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:653
-Disposition: GAP
-Mapping/reason: Swift SongTabsController/SongTabSession owns the origin tab editor view state; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(origin.editorViewState(), state)
+Disposition: MATCHED
+Mapping: S034
 
 A153 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:654
-Disposition: GAP
-Mapping/reason: Swift SongTabsController/SongTabSession owns the peer tab editor view state; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(peer.editorViewState(), state)
+Disposition: MATCHED
+Mapping: S035
 
 A154 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:656
 Disposition: RETIRED-REPRESENTATION
 
 A155 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:657
-Disposition: GAP
-Mapping/reason: Swift SongDocument state bytes owns the origin song bytes untouched; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(fileBytes(session->first->document().midPath()), beforeA)
+Disposition: MATCHED
+Mapping: S036
 
 A156 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:658
-Disposition: GAP
-Mapping/reason: Swift SongDocument state bytes owns the peer song bytes untouched; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(fileBytes(session->active->document().midPath()), beforeB)
+Disposition: MATCHED
+Mapping: S037
 
 A157 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:659
-Disposition: GAP
-Mapping/reason: Swift DocumentSession.revision owns the origin document revision untouched; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(session->first->document().revision(), revisionA)
+Disposition: MATCHED
+Mapping: S038
 
 A158 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:660
-Disposition: GAP
-Mapping/reason: Swift DocumentSession.revision owns the peer document revision untouched; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(session->active->document().revision(), revisionB)
+Disposition: MATCHED
+Mapping: S039
 
 A159 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:661
-Disposition: GAP
-Mapping/reason: Swift DocumentSession history owns the origin history depth untouched; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(session->first->document().undoStack()->count(), undoA)
+Disposition: MATCHED
+Mapping: S040
 
 A160 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:662
-Disposition: GAP
-Mapping/reason: Swift DocumentSession history owns the peer history depth untouched; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(session->active->document().undoStack()->count(), undoB)
+Disposition: MATCHED
+Mapping: S041
 
 A161 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:668
 Disposition: RETIRED-REPRESENTATION
@@ -1202,14 +1123,8 @@ A171 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_host
 Disposition: RETIRED-REPRESENTATION
 
 A172 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:693
-Disposition: GAP
-Mapping/reason: Swift DocumentSession history owns the reopened tab history depth after close/reopen; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-          const QString secondPath = second->document().midPath();
-
-Original expression:
-  QCOMPARE(second->document().undoStack()->count(), undoB)
+Disposition: MATCHED
+Mapping: S042
 
 A173 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:694
 Disposition: RETIRED-REPRESENTATION
@@ -1514,3 +1429,86 @@ Source line: 146
 cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
 Predicate: report.expect(document.note(note.id)?.velocity == 1 && document.revision == before.revision + 1, cppID: id, message: "A028: the first pointer gesture commits velocity one in one revision")
 Anchor: message "A028: the first pointer gesture commits velocity one in one revision"
+
+S029 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Source line: 410
+cppID: host/HostIntegrationTest::documentMutationUndoRedoAndReloadPreemptPreview
+Predicate: report.expect(reopened.document.history.undoCount == 0, cppID: freshID, message: "A135 fresh same-song tab has zero undo history")
+Anchor: message "A135 fresh same-song tab has zero undo history"
+
+S030 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Source line: 412
+cppID: host/HostIntegrationTest::documentMutationUndoRedoAndReloadPreemptPreview
+Predicate: report.expect(reopened.selectedNotes.isEmpty, cppID: freshID, message: "A136 fresh same-song tab has no selected notes")
+Anchor: message "A136 fresh same-song tab has no selected notes"
+
+S031 | test_hFinalCloseEmptyAndReopen | src/checks/editorqml/tst_ShellTabsClose.qml
+Source line: 163
+Predicate: verify(reopenedNode && !reopenedNode.parent.model.preview, "A137 fresh same-song page has no carried velocity preview")
+Anchor: message "A137 fresh same-song page has no carried velocity preview"
+
+S032 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Source line: 345
+cppID: host/HostIntegrationTest::nonSelectedEditorStateFansOutWithoutTouchingSongBytes
+Predicate: report.expect(hubCount == 1, cppID: isolationID, message: "A150 background editor state publishes exactly once")
+Anchor: message "A150 background editor state publishes exactly once"
+
+S033 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Source line: 347
+cppID: host/HostIntegrationTest::nonSelectedEditorStateFansOutWithoutTouchingSongBytes
+Predicate: report.expect(persistedCount == 1, cppID: isolationID, message: "A151 background editor state persists exactly once")
+Anchor: message "A151 background editor state persists exactly once"
+
+S034 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Source line: 349
+cppID: host/HostIntegrationTest::nonSelectedEditorStateFansOutWithoutTouchingSongBytes
+Predicate: report.expect(second.editorViewState == isolated, cppID: isolationID, message: "A152 background origin reads back the fork-literal editor state")
+Anchor: message "A152 background origin reads back the fork-literal editor state"
+
+S035 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Source line: 351
+cppID: host/HostIntegrationTest::nonSelectedEditorStateFansOutWithoutTouchingSongBytes
+Predicate: report.expect(first.editorViewState == isolated, cppID: isolationID, message: "A153 selected sibling reads back the fork-literal editor state")
+Anchor: message "A153 selected sibling reads back the fork-literal editor state"
+
+S036 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Source line: 355
+cppID: host/HostIntegrationTest::nonSelectedEditorStateFansOutWithoutTouchingSongBytes
+Predicate: report.expect((try? first.document.state.file.encoded()) == firstBytes, cppID: isolationID, message: "A155 selected sibling song bytes survive background fanout")
+Anchor: message "A155 selected sibling song bytes survive background fanout"
+
+S037 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Source line: 357
+cppID: host/HostIntegrationTest::nonSelectedEditorStateFansOutWithoutTouchingSongBytes
+Predicate: report.expect((try? second.document.state.file.encoded()) == secondBytes, cppID: isolationID, message: "A156 background origin song bytes survive background fanout")
+Anchor: message "A156 background origin song bytes survive background fanout"
+
+S038 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Source line: 359
+cppID: host/HostIntegrationTest::nonSelectedEditorStateFansOutWithoutTouchingSongBytes
+Predicate: report.expect(first.document.revision == firstRevision, cppID: isolationID, message: "A157 selected sibling revision survives background fanout")
+Anchor: message "A157 selected sibling revision survives background fanout"
+
+S039 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Source line: 361
+cppID: host/HostIntegrationTest::nonSelectedEditorStateFansOutWithoutTouchingSongBytes
+Predicate: report.expect(second.document.revision == secondRevision, cppID: isolationID, message: "A158 background origin revision survives background fanout")
+Anchor: message "A158 background origin revision survives background fanout"
+
+S040 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Source line: 363
+cppID: host/HostIntegrationTest::nonSelectedEditorStateFansOutWithoutTouchingSongBytes
+Predicate: report.expect(first.document.history.undoCount == firstDepth, cppID: isolationID, message: "A159 selected sibling history depth survives background fanout")
+Anchor: message "A159 selected sibling history depth survives background fanout"
+
+S041 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Source line: 365
+cppID: host/HostIntegrationTest::nonSelectedEditorStateFansOutWithoutTouchingSongBytes
+Predicate: report.expect(second.document.history.undoCount == secondDepth, cppID: isolationID, message: "A160 background origin history depth survives background fanout")
+Anchor: message "A160 background origin history depth survives background fanout"
+
+S042 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Source line: 408
+cppID: host/HostIntegrationTest::projectSwitchAndClosePreserveProjectBoundaries
+Predicate: report.expect(reopened.document.history.undoCount == freshSecondDepth, cppID: depthID, message: "A172 second song fresh open restores its independently recorded history depth")
+Anchor: message "A172 second song fresh open restores its independently recorded history depth"

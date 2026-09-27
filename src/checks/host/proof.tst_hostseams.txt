@@ -5,6 +5,7 @@ Original: src/checks/host/tst_hostseams.cpp
 Original SHA-256: 2d0d99c86a6373c9d97b973ef41ea654cbe0bd22e9e6ecb02e454047c6004a50
 Swift counterpart: src/checks/host/HostBehaviorChecks.swift :: hostAutomationTempo + hostBandGeometry + hostCameraEndpoints + hostCosmeticOnly
 Additional Swift counterpart: src/checks/automation/automationselection.swift :: hostTempoRangeAndBandRows (SHA-256 3b1854346596713dc5a14302792285923980fa443daae2b8f342c57d03b74d41)
+Additional Swift counterpart: src/checks/workspace/session_view_state_fanout.swift (SHA-256 a856e21e1f145a33665fd7776a3b89635677e316ac21e3c6ca3249339c587523)
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 
@@ -13,11 +14,15 @@ NATIVE is no longer used: every site that observed a native-window, embedding, d
 Command: deno task verify:qml-roll --filter swiftroll-window
 Result: PASS 1/1 (quoted post-merge fc39ba34 result; lane not re-run here). The lane close handshake (bootstrap.hostClosing() then bootstrap.acknowledgeSceneRemoval(), forwarding to ApplicationSession.hostClosing()/acknowledgeGridDetached()) executes the Swift close path named in the RETIRED-REPRESENTATION mappings. swiftcore/shell lanes are not cited: no site maps to their predicates.
 Command: deno task proof check
-Result: PASS - structure, entry IDs, metadata, and present tallies only; not source freshness, execution, or parity.
+Result: Task144 ledger writer ran `deno task proof check` once after settled edits: successful, zero errors reported; 68 proof files, 4864 indexed C++ sites, 4588 anchors resolved (28 historical). Warning: strict-mapping debt: 485 sites. This checks structure and tallies, not source freshness, execution, or semantic parity.
 Command: deno task verify --filter swiftcore-projectsession
 Result: PASS 1/36 ok (task-67 locked run on the frozen tree, quoted from the implementer handoff; ledger writer ran no lane). Execution evidence: build/proof-evidence/swiftcore-projectsession.json lists every HostBehaviorChecks predicate message anchored as S001-S007 below.
 Command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-projectsession --verbose
 Result: The implementer handoff reports the selected A006 and A010 predicates PASS (artifact://7611 lines 6192–6203), while the aggregate lane FAILED on unrelated project-workspace failedOpenRetainsLiveProject and HostBehaviorChecks playheadFollowing (Noise expected, Square 2 observed). Evidence provenance: Task143 handoff; this ledger writer ran no verification lane. The final counterpart source SHA-256 is recorded above.
+
+Task 144 verification command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-projectsession --verbose
+Task 144 verification result: PASS 1/36 ok (Task144 implementer handoff; ledger writer ran no lane). The frozen session_view_state_fanout.swift SHA-256 is a856e21e1f145a33665fd7776a3b89635677e316ac21e3c6ca3249339c587523; handoff reports the lane passed.
+Execution evidence: Task144 handoff predicates correspond to S010 below. No missing or ambiguous assertion among the assigned site.
 
 A001 | automationPlotFillsHostViewport | src/checks/host/tst_hostseams.cpp:41
 Disposition: RETIRED-REPRESENTATION
@@ -246,21 +251,8 @@ A027 | documentChangedPreservesCosmetics | src/checks/host/tst_hostseams.cpp:116
 Disposition: RETIRED-REPRESENTATION
 
 A028 | documentChangedPreservesCosmetics | src/checks/host/tst_hostseams.cpp:125
-Disposition: GAP
-Mapping/reason: Swift SongTabsController/SongTabSession with EditorDrawerPresenter owns editor view state across document changes (verified under src/swift/app); no executed predicate asserts state preserved across documentChanged. Open obligation.
-Source context since previous assertion:
-  ;
-          EditorViewState state;
-          state.velocity = {true, 180};
-          state.activePage = EditorDrawerPage::Velocity;
-          host.view().applyEditorViewState(state);
-          auto *drawer = host.view().editorDrawer();
-          drawer->automationPage()->documentChanged();
-          drawer->velocityArea()->documentChanged();
-          drawer->voiceChangeArea()->documentChanged();
-
-Original expression:
-  QCOMPARE(host.view().editorViewState(), state)
+Disposition: MATCHED
+Mapping: S010
 
 A029 | embeddedWindowOwnershipTransfersToTheContainer | src/checks/host/tst_hostseams.cpp:145
 Disposition: RETIRED-REPRESENTATION
@@ -403,3 +395,9 @@ Source line: 232
 cppID: host/HostSeamsTest::automationPlotFillsHostViewport
 Predicate: report.expect(page.plotOrigin == Double(gutter) && page.plotWidth == expectedWidth && page.plotHeight == expectedHeight && bothAutomation.bodyWidth == width && bothAutomation.bodyHeight == 180, cppID: seamsID, message: "A010 the tempo lane body fills the font-derived plot from its local origin at section height 180")
 Anchor: message "A010 the tempo lane body fills the font-derived plot from its local origin at section height 180"
+
+S010 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Source line: 381
+cppID: host/HostSeamsTest::documentChangedPreservesCosmetics
+Predicate: report.expect(first.editorViewState == cosmetics, cppID: seamsID, message: "A028 three drawer document-changed deliveries preserve exact cosmetic state")
+Anchor: message "A028 three drawer document-changed deliveries preserve exact cosmetic state"
