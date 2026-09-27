@@ -162,6 +162,19 @@ TestCase {
         verify(referencePane, "the production pane accepts the isolated diagnostic fixture")
         var row = findChild(referencePane, "polyphonyEventRow_2")
         verify(row, "the positioned event is rendered in the production log")
+        const tail = findChild(referencePane, "polyphonyEventRow_1")
+        const liveText = findChild(referencePane, "polyphonyEventRow_0")
+        compare(fixture.eventCount, 3, "mounted diagnostic fixture retains all three fork events")
+        verify(tail && liveText, "the middle tail and newest live rows are rendered")
+        verify(tail.children[0].text.indexOf("3:2.0") >= 0
+               && tail.children[0].text.indexOf("tail cut") >= 0,
+               "mounted middle event shows tick 216 and the release tail cut")
+        verify(row.children[0].text.indexOf("2:1.0") >= 0
+               && row.children[0].text.indexOf("cut off by Trk 5") >= 0,
+               "mounted oldest positioned event retains the steal position and source")
+        verify(liveText.children[0].text.indexOf("live") >= 0
+               && liveText.children[0].text.indexOf("dropped") >= 0,
+               "mounted newest event retains the live drop")
         var scroll = findChild(referencePane, "polyphonyScroll")
         scroll.contentY = Math.max(0, scroll.contentHeight - scroll.height)
         verify(waitForPolish(referencePane), "event log scrolls into the visible pane")
@@ -179,18 +192,29 @@ TestCase {
             compare(text.font.weight, body.weight, "polyphony data row keeps regular body weight")
         }
         compare(probe.lastJumpTick(), -1, "no event has requested a navigation")
+        compare(probe.observedJumpCount(), 0, "no pointer action has emitted a jump")
         mouseClick(live, live.width / 2, live.height / 2)
         compare(probe.lastJumpTick(), -1,
                 "live overflow cannot request a document cursor jump")
         mouseDoubleClickSequence(live, live.width / 2, live.height / 2, Qt.LeftButton)
         compare(probe.lastJumpTick(), -1,
                 "double-clicking live overflow cannot request a document cursor jump")
+        compare(probe.observedJumpCount(), 0,
+                "live row pointer activation emits no navigation callback")
         mouseClick(row, row.width / 2, row.height / 2)
         compare(probe.lastJumpTick(), -1,
                 "single-clicking a positioned log row does not jump")
         mouseDoubleClickSequence(row, row.width / 2, row.height / 2, Qt.LeftButton)
         compare(probe.lastJumpTick(), 96,
                 "double-clicking a positioned log row requests the event's document tick")
+        compare(probe.observedJumpCount(), 1,
+                "positioned row double-click emits exactly one navigation callback")
+        compare(probe.lastJumpTrack(), 2,
+                "positioned row pointer navigation targets track index two")
+        compare(probe.lastJumpKey(), 60,
+                "positioned row pointer navigation targets middle C")
+        compare(probe.lastJumpDpr(), referencePane.Screen.devicePixelRatio,
+                "positioned row pointer navigation retains the rendered screen DPR")
         probe.bumpOverflowCounter()
         var overflowCell = findChild(referencePane, "polyphonyOverflowRow_1")
         verify(overflowCell, "the increasing track has a rendered counter row")
@@ -221,12 +245,117 @@ TestCase {
                "a short pane keeps the log reachable by scrolling")
         referencePane.height = 600
         verify(waitForPolish(referencePane), "reference pane returns to its original height")
+        referencePane.height = referencePane.em * 980 / 12
+        verify(waitForPolish(referencePane), "expanded pane settles its scroll extent")
+        compare(Math.max(0, scroll.contentHeight - scroll.height), 0,
+                "expanded pane has no vertical scroll range")
         var reset = findChild(referencePane, "polyphonyReset")
         mouseClick(reset, reset.width / 2, reset.height / 2)
         compare(fixture.eventCount, 0, "Reset clears visible diagnostic events")
         presenter.activate("view.polyphony_debugger")
         tryVerify(function() { return !dock().visible }, 3000,
                   "the same View action hides the mounted panel")
+    }
+
+    function collectChannelCells(item, cells) {
+        if (item.objectName === "polyphonyChannelCell")
+            cells.push(item)
+        if (item.children.length > 0
+                && item.children[0].objectName === "polyphonyChannelCell")
+            verify(waitForPolish(item), "channel flow relayout settles before measuring resized cells")
+        for (const child of item.children)
+            collectChannelCells(child, cells)
+    }
+
+    function responsiveGeometry(pane) {
+        const usage = findChild(pane, "polyphonyUsageSection")
+        const overflow = findChild(pane, "polyphonyOverflowSection")
+        const scroll = findChild(pane, "polyphonyScroll")
+        const cells = []
+        collectChannelCells(usage, cells)
+        verify(waitForPolish(pane), "responsive sections settle after channel flow relayout")
+        const u = usage.mapToItem(pane, 0, 0)
+        const o = overflow.mapToItem(pane, 0, 0)
+        const rectsFit = u.x >= 0 && u.y >= 0 && u.x + usage.width <= pane.width
+            && o.x >= 0 && o.y >= 0 && o.x + overflow.width <= pane.width
+            && u.y + usage.height <= scroll.contentHeight
+            && o.y + overflow.height <= scroll.contentHeight
+        var cellsFit = cells.length > 0
+        for (const cell of cells) {
+            const point = cell.mapToItem(scroll.contentItem, 0, 0)
+            if (point.x < 0 || point.x + cell.width > scroll.width
+                    || point.y < 0 || point.y + cell.height > scroll.contentHeight
+                    || cell.mapToItem(usage, 0, 0).y + cell.height > usage.height)
+                cellsFit = false
+        }
+        return {
+            rectsFit: rectsFit,
+            stacked: o.y >= u.y + usage.height,
+            sideBySide: o.x >= u.x + usage.width,
+            cellsFit: cellsFit
+        }
+    }
+
+    function test_responsiveChannelGridAndSections() {
+        const presenter = createShell()
+        const session = presenter.session
+        const fixture = probe.fixturePresenter()
+        referencePane = referenceComponent.createObject(shell.contentItem, {
+            presenter: fixture, colors: session.palette,
+            typography: session.typographyFonts, layoutSpaces: session.layoutSpaces,
+            baseFontPx: session.baseFontPx, width: 380, height: 760
+        })
+        verify(referencePane, "responsive geometry uses the production panel with rich events")
+        verify(findChild(referencePane, "polyphonyUsageSection")
+               && findChild(referencePane, "polyphonyOverflowSection")
+               && findChild(referencePane, "polyphonyScroll"),
+               "responsive production pane mounts usage overflow and scroll viewport")
+        verify(waitForPolish(referencePane), "initial tall pane settles its complete geometry")
+        var geometry = responsiveGeometry(referencePane)
+        verify(geometry.rectsFit && geometry.stacked,
+               "initial tall panel keeps complete usage and overflow rectangles stacked in scrollable content")
+        verify(geometry.cellsFit, "initial tall panel contains every rendered channel cell")
+
+        referencePane.width = 180
+        referencePane.height = 980
+        verify(waitForPolish(referencePane), "tall narrow pane settles its complete geometry")
+        compare(referencePane.wideLayout, false, "tall narrow pane selects vertical layout")
+        geometry = responsiveGeometry(referencePane)
+        verify(geometry.rectsFit,
+               "tall narrow panel keeps complete usage and overflow rectangles inside scrollable content")
+        verify(geometry.stacked, "tall narrow overflow rectangle begins below the usage rectangle")
+        verify(geometry.cellsFit, "tall narrow panel contains every rendered channel cell")
+
+        referencePane.width = 900
+        referencePane.height = 600
+        verify(waitForPolish(referencePane), "wide pane settles its complete geometry")
+        compare(referencePane.wideLayout, true, "wide pane selects horizontal layout")
+        geometry = responsiveGeometry(referencePane)
+        verify(geometry.rectsFit && geometry.sideBySide,
+               "wide panel keeps complete usage and overflow rectangles separated in scrollable content")
+        verify(geometry.cellsFit, "wide panel contains every rendered channel cell")
+
+        referencePane.width = 380
+        referencePane.height = 240
+        verify(waitForPolish(referencePane), "short pane settles its complete geometry for the grid")
+        compare(referencePane.wideLayout, false, "short pane selects vertical layout")
+        geometry = responsiveGeometry(referencePane)
+        verify(geometry.rectsFit && geometry.stacked,
+               "short panel keeps complete usage and overflow rectangles stacked in scrollable content")
+        verify(geometry.cellsFit, "short panel contains every rendered channel cell")
+        const scroll = findChild(referencePane, "polyphonyScroll")
+        verify(scroll.contentHeight > scroll.height,
+               "short responsive panel exposes the clipped log via scrolling")
+
+        referencePane.height = 980
+        verify(waitForPolish(referencePane), "expanded pane settles its complete geometry for the grid")
+        compare(referencePane.wideLayout, false, "expanded pane selects vertical layout")
+        geometry = responsiveGeometry(referencePane)
+        verify(geometry.rectsFit && geometry.stacked,
+               "expanded panel keeps complete usage and overflow rectangles stacked in scrollable content")
+        verify(geometry.cellsFit, "expanded panel contains every rendered channel cell")
+        compare(Math.max(0, scroll.contentHeight - scroll.height), 0,
+                "expanded responsive panel restores zero vertical scroll range")
     }
 
     function compareRegion(reference, name, target, tolerance) {

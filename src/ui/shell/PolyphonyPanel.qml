@@ -277,7 +277,7 @@ Item {
                 objectName: "polyphonyEventLog"
                 y: logHeading.y + logHeading.height + panel.gap / 2
                 width: parent.width
-                height: Math.max(panel.em * 4, scroll.height - panel.margin - y)
+                height: Math.max(panel.em * 4, scroll.height - 2 * panel.margin - y)
                 color: panel.colors.buttonBackground
                 border.color: panel.colors.outline
                 border.width: 1

@@ -12,11 +12,19 @@ public final class PolyphonyShellProbe: QmlInstantiableStatus {
         ProcessInfo.processInfo.environment["PORYDAW_POLYPHONY_PROFILE"] ?? ""
     private let fixture = PolyphonyPanelPresenter()
     private var jumpedTick = -1
+    private var jumpedTrack = -1
+    private var jumpedKey = -1
+    private var jumpedDpr = 0.0
+    private var jumpCount = 0
     private var stealCount: UInt32 = 1
 
     public init() {
-        fixture.onJump = { [weak self] tick, _, _, _ in
+        fixture.onJump = { [weak self] tick, track, key, dpr in
             self?.jumpedTick = Int(tick)
+            self?.jumpedTrack = track
+            self?.jumpedKey = key
+            self?.jumpedDpr = dpr
+            self?.jumpCount += 1
         }
     }
     public func componentComplete() {}
@@ -24,11 +32,19 @@ public final class PolyphonyShellProbe: QmlInstantiableStatus {
     public func fixturePresenter() -> PolyphonyPanelPresenter {
         stealCount = 1
         jumpedTick = -1
+        jumpedTrack = -1
+        jumpedKey = -1
+        jumpedDpr = 0
+        jumpCount = 0
         publishFixture()
         return fixture
     }
 
     public func lastJumpTick() -> Int { jumpedTick }
+    public func lastJumpTrack() -> Int { jumpedTrack }
+    public func lastJumpKey() -> Int { jumpedKey }
+    public func lastJumpDpr() -> Double { jumpedDpr }
+    public func observedJumpCount() -> Int { jumpCount }
     public func bumpOverflowCounter() {
         stealCount += 1
         publishFixture()

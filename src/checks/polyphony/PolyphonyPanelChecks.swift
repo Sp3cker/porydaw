@@ -50,28 +50,43 @@ func runPolyphonyPanelChecks(_ report: CheckReport) {
     let eventID = "swiftcore/PolyphonyPanel::ringAndJump"
     let oldest = M4APolyEvent(type: 1, trackIndex: 2, midiKey: 60,
                                byTrack: 4, program: 5, tick: 96)
+    let middle = M4APolyEvent(type: 2, trackIndex: 2, midiKey: 72,
+                               byTrack: 0, program: 5, tick: 216)
     let newest = M4APolyEvent(type: 0, trackIndex: 1, midiKey: 67,
                                byTrack: 1, program: 0, tick: UInt32.max)
     snapshot.events[0] = oldest
-    snapshot.events[1] = newest
-    snapshot.eventTotal = 2
+    snapshot.events[1] = middle
+    snapshot.events[2] = newest
+    snapshot.eventTotal = 3
     panel.update(snapshot)
-    report.expectEqual(expected: 2, actual: panel.eventCount, cppID: eventID, what: "ring drains oldest first")
+    report.expectEqual(expected: 3, actual: panel.eventCount, cppID: eventID, what: "ring drains oldest first")
     report.expect(panel.events[0].text.contains("live") && panel.events[0].text.contains("dropped"),
                   cppID: eventID, message: "newest live drop appears first")
-    report.expect(panel.events[1].text.contains("2:1.0")
-        && panel.events[1].text.contains("Trk 3")
-        && panel.events[1].text.contains("C4")
-        && panel.events[1].text.contains("(voice 5)")
-        && panel.events[1].text.contains("cut off by Trk 5"),
+    report.expect(panel.events[1].text.contains("3:2.0"), cppID: eventID,
+                  message: "middle tail-cut event formats tick 216 as bar 3 beat 2")
+    report.expect(panel.events[1].text.contains("tail cut"), cppID: eventID,
+                  message: "middle tail-cut event identifies the shortened release")
+    report.expect(panel.events[2].text.contains("2:1.0")
+        && panel.events[2].text.contains("Trk 3")
+        && panel.events[2].text.contains("C4")
+        && panel.events[2].text.contains("(voice 5)")
+        && panel.events[2].text.contains("cut off by Trk 5"),
         cppID: eventID, message: "positioned steal formats bar beat track and key")
     var jumped: (UInt32, Int, Int, Double)?
-    panel.onJump = { tick, track, key, dpr in jumped = (tick, track, key, dpr) }
+    var jumpCount = 0
+    panel.onJump = { tick, track, key, dpr in
+        jumpCount += 1
+        jumped = (tick, track, key, dpr)
+    }
     panel.activateEvent(index: 0, devicePixelRatio: 2)
     report.expect(jumped == nil, cppID: eventID, message: "live sentinel cannot jump")
-    panel.activateEvent(index: 1, devicePixelRatio: 2)
+    report.expect(jumpCount == 0, cppID: eventID,
+                  message: "live sentinel emits no jump callback")
+    panel.activateEvent(index: 2, devicePixelRatio: 2)
     report.expect(jumped?.0 == 96 && jumped?.1 == 2 && jumped?.2 == 60 && jumped?.3 == 2,
                   cppID: eventID, message: "positioned row jumps to the precise note")
+    report.expect(jumpCount == 1, cppID: eventID,
+                  message: "positioned row emits exactly one jump callback")
 
     snapshot.eventTotal = 1
     snapshot.events[0] = oldest
