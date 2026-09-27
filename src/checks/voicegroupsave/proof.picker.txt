@@ -14,7 +14,7 @@ mounted QML predicates; retained native checks are not Swift parity evidence.
 Command: deno task verify --filter swiftcore-projectsession --verbose.
 Result: the picker presenter predicates executed (build/proof-evidence/swiftcore-projectsession.json);
 the lane run itself was not clean at this freeze — the unrelated
-swiftcore/PianoRoll::timeMenuDuplicateAvailability test failed the suite.
+swiftcore/PianoRoll::timeMenuDuplicateAvailability test failed the suite. Task-89 implementer GREEN: the swiftcore-projectsession focused run passes within full verify 36/36, and the mounted predicates pass within verify:shell 26/26.
 
 A001 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:41
 Disposition: MATCHED
@@ -78,8 +78,8 @@ Original expression:
 QVERIFY(m_browser->samplePickerReplacesSymbolCombo())
 
 A004 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:45
-Disposition: PARTIAL
-Mapping/reason: S013 (test_yPickerReturnFallbackAndWaveUndo, "filtering a wave auditions as wave") asserts the picker's current row follows the filter text in the wave journey; the popup's current symbol at open, which this row reads from the selected voice, is unproved on either lane.
+Disposition: MATCHED
+Mapping: S028
 Source context since previous assertion:
 ;
     const VgVoice before = *m_browser->selectedBankView()->slotViews.at(m_dsSlot).voice;
@@ -218,8 +218,8 @@ Original expression:
 QVERIFY(m_browser->samplePickerPopupIsVisible())
 
 A017 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:85
-Disposition: PARTIAL
-Mapping/reason: S003 asserts the mounted first picker row click leaves the editor draft symbol unchanged; this row inspects the published bank slot directly, and no presenter predicate asserts the bank slot after an audition.
+Disposition: MATCHED
+Mapping: S003, S029
 Source context since previous assertion:
 ;
 
@@ -293,8 +293,8 @@ QVERIFY2(settle([this, &before] {
              "sample picker undo did not restore the voice symbol")
 
 A024 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:104
-Disposition: PARTIAL
-Mapping/reason: S018 asserts the mounted undo restores the editor draft symbol; the picker's republished current symbol after that undo is unproved on either lane.
+Disposition: MATCHED
+Mapping: S018, S030
 Source context since previous assertion:
 ;
 
@@ -466,8 +466,8 @@ Disposition: MATCHED
 Mapping: S001
 
 A038 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:171
-Disposition: PARTIAL
-Mapping/reason: S022 asserts the wave list holds only catalog wave symbols; the picker's current symbol at open, which this row reads from the slot's wave voice, is unproved on either lane.
+Disposition: MATCHED
+Mapping: S022, S031
 Source context since previous assertion:
 ;
 
@@ -670,3 +670,15 @@ Anchor: message "wave undo restores the wave voice and the DirectSound original"
 
 S027 | test_yPickerReturnFallbackAndWaveUndo | src/checks/editorqml/tst_ShellVoicegroup.qml
 Anchor: message "wave undo restores the wave voice and the DirectSound original" #2
+
+S028 | test_yPickerReturnFallbackAndWaveUndo | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "picker opens with the selected sample symbol current"
+
+S029 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "first-row audition leaves the selected bank slot symbol unchanged"
+
+S030 | test_yPickerReturnFallbackAndWaveUndo | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "picker undo republishes the original sample symbol as current"
+
+S031 | test_yPickerReturnFallbackAndWaveUndo | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "wave picker opens with the selected wave symbol current"

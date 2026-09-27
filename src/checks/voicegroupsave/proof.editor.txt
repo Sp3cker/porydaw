@@ -17,7 +17,7 @@ Command: deno task verify --filter swiftcore-bankhistory --verbose
 Result: PASS - the task-62 handoff records 1/36; the release byte-parity predicates cited here (mountedEditReachesPeerTabAudio, releaseEditorBankHistorySemantics) execute in that lane.
 
 Command: deno task verify --filter swiftcore-projectsession --verbose
-Result: the task-62 handoff records its voicelist assertions passing, but the suite failed in unrelated concurrent swiftcore/PianoRoll::timeMenuNoteDuplicateAvailability (artifact://10182 line 1722) and was not re-run; the presenter anchors cited below ride that suite.
+Result: the task-62 handoff records its voicelist assertions passing, but the suite failed in unrelated concurrent swiftcore/PianoRoll::timeMenuNoteDuplicateAvailability (artifact://10182 line 1722) and was not re-run; the presenter anchors cited below ride that suite. Task-89 implementer GREEN: the swiftcore-projectsession focused run passes within full verify 36/36.
 
 Command: deno task proof check
 Result: 0 errors for this ledger - all 32 cited S anchors resolve to a message literal in the named function of the named counterpart file; deno task proof check --executed leaves no MATCHED row without an executed predicate (AnchorFix pass: S031 is now the deterministic report.expect "fixture slot 3 is a blank draft" and executes every lane run).
@@ -100,8 +100,8 @@ Original expression:
 QVERIFY(!m_document->isDirty())
 
 A010 | VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline | src/checks/voicegroupsave/editor.cpp:75
-Disposition: PARTIAL
-Mapping/reason: S029 restores the editor draft release after the focused spin undo (draft.release === before && !controller.bankDirty) and VoiceEditor.qml:306 binds the spin's value to that draft; unproved: a predicate reading the mounted spin's displayed value after the bank undo, so the native spin->value() readback itself remains unobserved.
+Disposition: MATCHED
+Mapping: S029, S033
 Source context since previous assertion:
 ;
 
@@ -208,8 +208,8 @@ Original expression:
 QVERIFY(m_browser->activateVoiceType(VgMacro::Square1))
 
 A021 | VoicegroupSaveTest::blankTemplateMaterializesUndoably | src/checks/voicegroupsave/editor.cpp:95
-Disposition: PARTIAL
-Mapping/reason: S013 (draft macro 3 + dirty bank), S021 (the materialized voice is published in the slot) and S025 (the bank edit keeps the song document clean) cover the bank/UI/document conjuncts; unproved: the materialized slot's engine voice type (native engine->voices[blank].type == VOICE_SQUARE_1) - the lane reads native bytes only for release edits (S008/S009) and CGB channel telemetry for a type edit, never the materialized blank slot's type.
+Disposition: MATCHED
+Mapping: S021, S025, S013, S034
 Source context since previous assertion:
 ;
 
@@ -245,8 +245,8 @@ QVERIFY2(settle([this, blank] {
              "blank template undo did not restore the structural row")
 
 A023 | VoicegroupSaveTest::blankTemplateMaterializesUndoably | src/checks/voicegroupsave/editor.cpp:117
-Disposition: PARTIAL
-Mapping/reason: S022 (the redo rematerializes the voice row without dirtying the song) and S013 (redo macro 3 with the bank dirty) cover the bank/draft conjuncts; unproved: the re-materialized slot's engine voice type, the same engine-parity conjunct as A021.
+Disposition: MATCHED
+Mapping: S013, S022, S035
 Source context since previous assertion:
 ;
     requestRedo();
@@ -370,8 +370,8 @@ Original expression:
 QCOMPARE(field->hasFocus(), true)
 
 A032 | VoicegroupSaveTest::adsrFieldSpaceTogglesTransport | src/checks/voicegroupsave/editor.cpp:171
-Disposition: PARTIAL
-Mapping/reason: S018/S020 assert the mounted ADSR journey's play then pause states (3 then 2), the closest executing predicates; unproved: a predicate observing the transport's Stopped state (TransportBarPresenter state 1) after the ADSR field journey, since the Swift journey pauses instead of stopping playback.
+Disposition: MATCHED
+Mapping: S018, S020, S036
 Source context since previous assertion:
 ;
 
@@ -548,3 +548,15 @@ S032 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
 Anchor: message "slot 0 renders the fixture's square_1 voice"
 Line: 81
 Predicate: report.expectEqual(expected: "000  Square 1", actual: list.rows[0].title, cppID: bindingID)
+
+S033 | test_editorSpinKeyCommitsAndUndo | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "focused spin readback returns to the original release after bank undo"
+
+S034 | bankBlankMaterialization | src/checks/workspace/bank_edits.swift
+Anchor: message "materialized blank slot has square-one engine type"
+
+S035 | bankBlankMaterialization | src/checks/workspace/bank_edits.swift
+Anchor: message "redo restores the blank slot square-one engine type"
+
+S036 | test_xSpaceInFocusedAdsrFieldTogglesTransport | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "Stop after ADSR Space leaves the transport stopped"

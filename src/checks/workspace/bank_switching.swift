@@ -60,6 +60,9 @@ internal func bankSwitchingParity(report: CheckReport, fixtureRoot: String) {
         report.expect(session.bankSlots[0].voice == edited && session.bankDirty,
                       cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
                       message: "undo replays the carried edit onto the home bank")
+        report.expect(session.bankLease.withVoices({ $0?.pointee.release }) == UInt8(edited.release),
+                      cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
+                      message: "the returned home engine voice carries the unsaved release edit")
         report.expect(session.document.state.config.voicegroupArgument == originalArg,
                       cppID: id, message: "selector undo restores the home binding and selector text")
         report.expectEqual(expected: Optional(homeBytes), actual: bytes(at: homeBankPath),
@@ -109,17 +112,51 @@ internal func bankSwitchingParity(report: CheckReport, fixtureRoot: String) {
                       && !session.document.isDirty && bytes(at: homeBankPath) == savedBank,
                       cppID: "vgsavecheck/VoicegroupSaveTest::valueCommandSurvivesSourceReplacement",
                       message: "value redo restores the saved canonical voice without writing")
+        try runBlocking {
+            try await session.selectVoicegroup("_fixture_alt")
+            try await session.selectVoicegroup(originalArg)
+        }
+        report.expect(!session.bankDirty && session.bankSlots[0].voice == edited
+                      && bytes(at: homeBankPath) == savedBank,
+                      cppID: "vgsavecheck/VoicegroupSaveTest::valueCommandSurvivesSourceReplacement",
+                      message: "a clean round trip reopens the saved home source without changing disk bytes")
+        report.expect(session.document.state.config.voicegroupArgument == originalArg,
+                      cppID: "vgsavecheck/VoicegroupSaveTest::valueCommandSurvivesSourceReplacement",
+                      message: "clean round trip restores the home voicegroup argument")
+        report.expect(session.bankLoadName == "test_vg",
+                      cppID: "vgsavecheck/VoicegroupSaveTest::valueCommandSurvivesSourceReplacement",
+                      message: "clean round trip binds the home voicegroup load name")
+        report.expect(session.bankLease.sourcePath == originalLease.sourcePath
+                      && session.bankLease.sectionLabel == originalLease.sectionLabel,
+                      cppID: "vgsavecheck/VoicegroupSaveTest::valueCommandSurvivesSourceReplacement",
+                      message: "clean round trip rebinds the saved home source and section")
+        try runBlocking {
+            _ = try await session.undo()
+            _ = try await session.undo()
+        }
         try runBlocking { _ = try await session.undo() }
         try runBlocking { try await session.save() }
         report.expect(bytes(at: homeBankPath) == homeBytes && !session.bankDirty,
                       cppID: "vgsavecheck/VoicegroupSaveTest::valueCommandSurvivesSourceReplacement",
                       message: "a restoring save refreshes the baseline bytes")
+        report.expect(!session.document.isDirty,
+                      cppID: "vgsavecheck/VoicegroupSaveTest::valueCommandSurvivesSourceReplacement",
+                      message: "restoration save also leaves the song document clean")
         try runBlocking { _ = try await session.redo() }
         report.expect(session.bankSlots[0].voice == edited && session.bankDirty
                       && bytes(at: homeBankPath) == homeBytes,
                       cppID: "vgsavecheck/VoicegroupSaveTest::valueCommandSurvivesSourceReplacement",
                       message: "the redo tail re-applies after a restoring save")
+        report.expect(session.bankDirty && !session.document.isDirty
+                      && session.bankSlots[0].voice == edited
+                      && bytes(at: homeBankPath) == homeBytes,
+                      cppID: "vgsavecheck/VoicegroupSaveTest::valueCommandSurvivesSourceReplacement",
+                      message: "redo tail dirties only the bank and preserves baseline disk bytes")
         try runBlocking { _ = try await session.undo() }
+        report.expect(session.bankSlots[0].voice == original[0].voice
+                      && !session.bankDirty && !session.document.isDirty,
+                      cppID: "vgsavecheck/VoicegroupSaveTest::valueCommandSurvivesSourceReplacement",
+                      message: "redo-tail undo restores the clean baseline")
         blankTokenRebasesAcrossSourceReplacement(report: report, session: session, service: service, root: root)
     } catch {
         report.fail(id, "switching scenario threw: \(error)")

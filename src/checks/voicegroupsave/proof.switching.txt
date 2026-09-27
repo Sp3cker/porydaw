@@ -68,8 +68,8 @@ Disposition: MATCHED
 Mapping: S002
 
 A005 | VoicegroupSaveTest::switchCarriesUnsavedBankEdit | src/checks/voicegroupsave/switching.cpp:48
-Disposition: PARTIAL
-Mapping/reason: S010 replays the carried edit onto the home bank (voice, dirty); engine-voice parity is unproved.
+Disposition: MATCHED
+Mapping: S010, S041
 Source context since previous assertion:
 ;
 
@@ -140,8 +140,8 @@ Original expression:
 QVERIFY(selector->findText(SongRegistry::voicegroupDisplayName(other)) >= 0)
 
 A012 | VoicegroupSaveTest::selectorSwitchUsesUndoableCfgEdit | src/checks/voicegroupsave/switching.cpp:81
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S042, S019
 Source context since previous assertion:
 ;
 
@@ -168,8 +168,8 @@ Original expression:
 QVERIFY(!m_document->isDirty())
 
 A016 | VoicegroupSaveTest::selectorSwitchUsesUndoableCfgEdit | src/checks/voicegroupsave/switching.cpp:90
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S011, S043
 Source context since previous assertion:
 ;
 
@@ -245,8 +245,8 @@ Original expression:
 QVERIFY2(waitForCleanSave(firstSave), "value command save did not settle")
 
 A021 | VoicegroupSaveTest::valueCommandSurvivesSourceReplacement | src/checks/voicegroupsave/switching.cpp:127
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S045, S046, S047, S048
 Source context since previous assertion:
 ;
 
@@ -314,8 +314,8 @@ Original expression:
 QVERIFY(saveSelectedSong())
 
 A026 | VoicegroupSaveTest::valueCommandSurvivesSourceReplacement | src/checks/voicegroupsave/switching.cpp:156
-Disposition: PARTIAL
-Mapping/reason: S015 restores the baseline bank bytes to a clean bank; the clean document half of the receipt is unproved.
+Disposition: MATCHED
+Mapping: S015, S044
 Source context since previous assertion:
 ;
 
@@ -349,8 +349,8 @@ QVERIFY2(settle([this, &edited] {
              "redo-tail command did not reapply to refreshed canonical bytes")
 
 A029 | VoicegroupSaveTest::valueCommandSurvivesSourceReplacement | src/checks/voicegroupsave/switching.cpp:168
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S049
 Source context since previous assertion:
 ;
     requestUndo();
@@ -561,3 +561,30 @@ Anchor: message "cleanup source save did not settle"
 
 S040 | blankTokenRebasesAcrossSourceReplacement | src/checks/workspace/bank_switching.swift
 Anchor: message "cleanup source bytes differ from the original voicegroup bytes"
+
+S041 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
+Anchor: message "the returned home engine voice carries the unsaved release edit"
+
+S042 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
+Anchor: message "the selector drives the undoable -G seam"
+
+S043 | test_zySelectorFailurePreservesBinding | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "selector undo displays the home voicegroup again"
+
+S044 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
+Anchor: message "restoration save also leaves the song document clean"
+
+S045 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
+Anchor: message "a clean round trip reopens the saved home source without changing disk bytes"
+
+S046 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
+Anchor: message "clean round trip restores the home voicegroup argument"
+
+S047 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
+Anchor: message "clean round trip binds the home voicegroup load name"
+
+S048 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
+Anchor: message "clean round trip rebinds the saved home source and section"
+
+S049 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
+Anchor: message "redo-tail undo restores the clean baseline"

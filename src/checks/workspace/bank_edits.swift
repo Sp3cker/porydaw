@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
+import PorydawProjectNative
 import PorydawPlayback
 
 // MARK: - Bank Edit Scenarios
@@ -74,6 +75,10 @@ internal func bankBlankMaterialization(report: CheckReport, session: DocumentSes
         report.expectEqual(expected: materializedSlots, actual: session.bankSlots,
                            cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
                            what: "blank materialization publishes the requested voice and preserves other slots")
+        report.expect(session.bankLease.withVoices({ $0?.advanced(by: 3).pointee.type })
+                      == UInt8(VOICE_SQUARE_1),
+                      cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
+                      message: "materialized blank slot has square-one engine type")
 
         // Undo materialization reverts the slot
         _ = try runBlocking {
@@ -93,6 +98,10 @@ internal func bankBlankMaterialization(report: CheckReport, session: DocumentSes
         report.expectEqual(expected: materializedSlots, actual: session.bankSlots,
                            cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
                            what: "redo rematerializes the voice without changing other slots")
+        report.expect(session.bankLease.withVoices({ $0?.advanced(by: 3).pointee.type })
+                      == UInt8(VOICE_SQUARE_1),
+                      cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
+                      message: "redo restores the blank slot square-one engine type")
         if let originalToken {
             do {
                 _ = try runBlocking {
@@ -323,6 +332,7 @@ internal func bankConflicts(report: CheckReport, session: DocumentSession, servi
 
 @MainActor
 internal func releaseEditorBankHistorySemantics(_ report: CheckReport, fixtureRoot: String) {
+    releaseBoundaryEngineParity(report, fixtureRoot: fixtureRoot)
     let rows: [(name: String, pixelsUp: Int, target: Int32)] = [
         ("set-value", 0, -1),
         ("drag-up", 12, 106),
@@ -383,5 +393,65 @@ internal func releaseEditorBankHistorySemantics(_ report: CheckReport, fixtureRo
         } catch {
             report.fail(cppID, "production release edit or bank undo failed: \(error)")
         }
+    }
+}
+
+@MainActor
+internal func releaseBoundaryEngineParity(_ report: CheckReport, fixtureRoot: String) {
+    let id = "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank"
+    let root = stageTestProject(in: fixtureRoot, projectName: "swiftcore-release-boundary-engine")
+    let service = ProjectService()
+    let fixtures = fixtureRoot
+    do {
+        let rich = try String(contentsOfFile: fixtures + "/sound/voicegroups/fixture_rich.inc",
+                              encoding: .utf8)
+        let sampleVoice = rich.split(separator: "\n", omittingEmptySubsequences: false)
+        guard sampleVoice.count > 2, sampleVoice[2].contains("voice_directsound") else {
+            report.fail(id, "rich fixture does not contain the DirectSound release boundary voice")
+            return
+        }
+        try (sampleVoice.prefix(3).joined(separator: "\n") + "\n")
+            .write(toFile: root + "/sound/voicegroups/fixture_rich.inc",
+                   atomically: true, encoding: .utf8)
+        try """
+        .include "sound/voicegroups/test_vg.inc"
+        .include "sound/voicegroups/fixture_rich.inc"
+        """.write(toFile: root + "/sound/voice_groups.inc",
+                   atomically: true, encoding: .utf8)
+        try FileManager.default.copyItem(atPath: fixtures + "/sound/direct_sound_data.inc",
+                                         toPath: root + "/sound/direct_sound_data.inc")
+        try FileManager.default.copyItem(atPath: fixtures + "/sound/direct_sound_samples",
+                                         toPath: root + "/sound/direct_sound_samples")
+        let assembly = root + "/data/sound_data.s"
+        try FileManager.default.createDirectory(
+            atPath: root + "/data", withIntermediateDirectories: true)
+        try ".include \"sound/direct_sound_data.inc\"\n"
+            .write(toFile: assembly, atomically: true, encoding: .utf8)
+        let session = try runBlocking {
+            try await service.open(root: root)
+            return try await DocumentSession.open(service: service, label: "mus_session_test")
+        }
+        _ = try runBlocking { try await session.selectVoicegroup("_fixture_rich") }
+        guard var previous = session.bankSlots[0].voice else {
+            report.fail(id, "fixture slot zero has no editable voice")
+            return
+        }
+        let adjacent = previous.release == 255 ? 254 : previous.release + 1
+        for (name, value) in [("adjacent", adjacent), ("lower-bound", Int32(0)),
+                              ("upper-bound", Int32(255))] {
+            let expected = previous
+            var next = expected
+            next.release = value
+            let edited = next
+            _ = try runBlocking {
+                try await session.applyBankEdit(slot: 0, value: edited, expected: expected)
+            }
+            report.expect(session.bankLease.withVoices({ $0?.pointee.release }) == UInt8(value),
+                          cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[\(name)]",
+                          message: "release \(name) converges to the exact engine byte")
+            previous = edited
+        }
+    } catch {
+        report.fail(id, "release engine boundary journey failed: \(error)")
     }
 }

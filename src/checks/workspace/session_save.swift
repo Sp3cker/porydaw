@@ -252,6 +252,7 @@ private func sessionSaveJourney(report: CheckReport, fixtureRoot: String) {
         _ = try session.document.addNotes([
             NewNote(track: 0, tick: newerTick, pitch: 76, duration: 24, velocity: 89),
         ])
+        let newerMidi = Data(try session.document.captureSave().bytes)
         _ = try runBlocking { try await service.save(snapshot, bank: nil) }
         session.document.didSave(snapshot)
         report.expect(session.document.isDirty && bytes(at: midiPath) == Data(snapshot.bytes)
@@ -262,6 +263,9 @@ private func sessionSaveJourney(report: CheckReport, fixtureRoot: String) {
         report.expect(!session.document.isDirty && bytes(at: midiPath) != Data(snapshot.bytes),
                       cppID: "vgsavecheck/VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit",
                       message: "retrying from the newer state cleans the session")
+        report.expect(bytes(at: midiPath) == newerMidi,
+                      cppID: "vgsavecheck/VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit",
+                      message: "retry writes the exact newer MIDI snapshot bytes")
     } catch {
         report.fail(id, "save journey failed: \(error)")
     }

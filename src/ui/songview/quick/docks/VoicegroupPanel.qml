@@ -44,6 +44,12 @@ ColumnLayout {
             model: panel.controller.argChoices
             textRole: "name"
             editText: panel.controller.selectorText
+            Connections {
+                target: panel.controller
+                function onSelectorTextChanged() {
+                    selector.editText = panel.controller.selectorText
+                }
+            }
             onActivated: {
                 panel.controller.selectorText = editText
                 panel.controller.commitVoicegroupSelection()

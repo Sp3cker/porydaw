@@ -271,6 +271,12 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
         auditions.append((symbol, kind, adsr))
     }
     list.onSampleAuditionStopRequested = { stops += 1 }
+    list.selectSlot(slot: 0)
+    let committedSymbol = session.bankSlots[0].voice?.symbol
+    list.requestSampleAudition(symbol: "DirectSoundWaveData_fixture_bass")
+    report.expect(committedSymbol != nil && session.bankSlots[0].voice?.symbol == committedSymbol,
+                  cppID: pickerID,
+                  message: "first-row audition leaves the selected bank slot symbol unchanged")
     var sample = draft.voice
     sample.attack = 240
     sample.decay = 180

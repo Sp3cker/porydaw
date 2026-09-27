@@ -16,8 +16,31 @@ TestCase {
     visible: true
 
     ShellQmlBootstrap { id: bootstrap }
+    TabsDrawerProbe { id: fileProbe }
     ApplicationSession { id: app }
+    property int saveStarts: 0
+    property int saveFinishes: 0
+    Connections {
+        target: app
+        function onSaveInProgressChanged() {
+            if (app.saveInProgress)
+                ++testCase.saveStarts
+            else
+                ++testCase.saveFinishes
+        }
+    }
     property var fullShell: null
+    property int shellSaveStarts: 0
+    property int shellSaveFinishes: 0
+    Connections {
+        target: fullShell ? fullShell.shellPresenter.session : null
+        function onSaveInProgressChanged() {
+            if (fullShell.shellPresenter.session.saveInProgress)
+                ++testCase.shellSaveStarts
+            else
+                ++testCase.shellSaveFinishes
+        }
+    }
     Component {
         id: fullShellComponent
         ShellWindow {
@@ -392,6 +415,8 @@ TestCase {
         verify(waitForNative(function() {
             return draft.release === before && !controller.bankDirty
         }, 15000), "undo restores release after a focused spin edit")
+        tryCompare(release, "value", before, 5000,
+                   "focused spin readback returns to the original release after bank undo")
     }
 
     function test_editorQueuedEditsKeepTheirSlot() {
@@ -419,6 +444,9 @@ TestCase {
         const controller = app.voiceListController()
         controller.selectSlot(4)
         const draft = controller.editorModel()
+        const bankPath = bootstrap.projectRoot + "/sound/voicegroups/fixture_rich.inc"
+        const beforeBytes = fileProbe.fileFingerprint(bankPath)
+        verify(beforeBytes.length > 0, "the mounted bank's persisted bytes are readable")
         const initial = draft.release
         draft.change("release", initial === 7 ? 6 : initial + 1)
         verify(waitForNative(function() { return controller.bankDirty && draft.release !== initial },
@@ -426,15 +454,28 @@ TestCase {
         const save = findChild(panel, "vgSaveButton")
         compareRole(save, "body", "voice editor save button")
         verify(save !== null && save.enabled, "mounted editor offers save for dirty bank")
+        const startsBefore = saveStarts
+        const finishesBefore = saveFinishes
         mouseClick(save, save.width / 2, save.height / 2)
-        verify(waitForNative(function() { return !controller.bankDirty || app.lastSaveError.length > 0 },
-                             15000), "mounted save completes: " + app.lastSaveError)
+        verify(waitForNative(function() { return saveStarts === startsBefore + 1 }, 5000),
+               "real mounted Save starts exactly one in-progress receipt: "
+               + saveStarts + " vs " + startsBefore + ", active=" + app.saveInProgress)
+        verify(waitForNative(function() {
+            return !app.saveInProgress && !controller.bankDirty
+                   || app.lastSaveError.length > 0
+        }, 15000), "mounted save completes: " + app.lastSaveError)
         compare(app.lastSaveError, "")
         compare(controller.bankDirty, false)
         compare(save.enabled, false)
         compare(draft.release, initial === 7 ? 6 : initial + 1)
+        compare(app.saveInProgress, false,
+                "a completed mounted save lowers the in-progress receipt")
         verify(!controller.bankDirty && !app.documentDirty && !save.enabled,
                "a unified save cleans the dock")
+        compare(saveFinishes, finishesBefore + 1,
+                "successful mounted Save completes exactly one receipt")
+        verify(fileProbe.fileFingerprint(bankPath) !== beforeBytes,
+               "completed mounted Save persists the edited bank bytes")
     }
 
     function cleanup() {
@@ -446,6 +487,148 @@ TestCase {
         fullShell.destroy()
         fullShell = null
         wait(0)
+    }
+
+    function test_zzzzzUnifiedSaveAndUndoRestorationReceipts() {
+        fullShell = fullShellComponent.createObject(null)
+        const shell = fullShell
+        shell.requestActivate()
+        tryCompare(shell, "active", true)
+        const session = shell.shellPresenter.session
+        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        verify(waitForNative(function() {
+            return session.songOpen || session.lastSaveError.length > 0
+        }, 30000), "unified receipt fixture opens: " + session.lastSaveError)
+        compare(session.lastSaveError, "")
+        const voice = session.voiceListController()
+        tryCompare(voice, "isBound", true, 5000)
+        voice.selectSlot(0)
+        const midiPath = fileProbe.songPath(bootstrap.projectRoot, "mus_route101")
+        const cfgPath = bootstrap.projectRoot + "/sound/songs/midi/midi.cfg"
+        const bankPath = bootstrap.projectRoot + "/sound/voicegroups/fixture_rich.inc"
+        const initialMidi = fileProbe.fileFingerprint(midiPath)
+        const initialCfg = fileProbe.fileFingerprint(cfgPath)
+        const initialBank = fileProbe.fileFingerprint(bankPath)
+        verify(initialMidi.length > 0 && initialCfg.length > 0 && initialBank.length > 0,
+               "unified save baseline MIDI, song flags and bank bytes are readable")
+        const settings = shell.shellPresenter.settingsStore
+        settings.open()
+        const changedVolume = settings.masterVolume === 110 ? 111 : 110
+        settings.changeMasterVolume(changedVolume)
+        settings.apply()
+        verify(waitForNative(function() {
+            return !settings.isApplying && shell.shellPresenter.windowModified
+        }, 15000), "mounted song config edit dirties the document: "
+                  + "volume=" + settings.masterVolume + " modified="
+                  + shell.shellPresenter.windowModified + " error=" + session.lastSaveError)
+        compare(settings.masterVolume, changedVolume,
+                "applied song setting retains the edited master volume")
+        const draft = voice.editorModel()
+        const previousRelease = draft.release
+        const editedRelease = previousRelease === 255 ? 254 : previousRelease + 1
+        draft.change("release", editedRelease)
+        verify(waitForNative(function() {
+            return draft.release === editedRelease && voice.bankDirty
+        }, 15000), "mounted bank edit joins the dirty song save")
+        const editor = findChild(shell, "voicegroupEditorSurface")
+        const save = findChild(editor, "vgSaveButton")
+        verify(save && save.enabled, "mounted bank Save handles the unified dirty journey")
+        const beforeStarts = shellSaveStarts
+        const beforeFinishes = shellSaveFinishes
+        mouseClick(save)
+        verify(waitForNative(function() {
+            return !session.saveInProgress && !voice.bankDirty
+                   || session.lastSaveError.length > 0
+        }, 15000), "unified Save completes: " + session.lastSaveError)
+        verify(session.lastSaveError === "" && shellSaveStarts === beforeStarts + 1
+               && shellSaveFinishes === beforeFinishes + 1 && !voice.bankDirty
+               && !shell.shellPresenter.windowModified,
+               "unified Save completes one clean song-and-bank receipt")
+        verify(fileProbe.fileFingerprint(cfgPath) !== initialCfg
+               && fileProbe.fileFingerprint(bankPath) !== initialBank
+               && fileProbe.fileFingerprint(midiPath) === initialMidi,
+               "unified Save persists song flags and bank bytes without changing MIDI")
+        session.requestUndo()
+        verify(waitForNative(function() { return voice.bankDirty }, 15000),
+               "undo after Save dirties the saved bank")
+        session.requestUndo()
+        verify(waitForNative(function() {
+            return shell.shellPresenter.windowModified && draft.release === previousRelease
+        }, 15000), "restoration undo dirties the saved song and restores the bank voice")
+        const restoreStarts = shellSaveStarts
+        const restoreFinishes = shellSaveFinishes
+        mouseClick(save)
+        verify(waitForNative(function() {
+            return !session.saveInProgress && !voice.bankDirty
+                   || session.lastSaveError.length > 0
+        }, 15000), "restoration Save completes: " + session.lastSaveError)
+        verify(session.lastSaveError === "" && shellSaveStarts === restoreStarts + 1
+               && shellSaveFinishes === restoreFinishes + 1 && !voice.bankDirty
+               && !shell.shellPresenter.windowModified,
+               "undo restoration Save completes one clean receipt")
+        compare(fileProbe.fileFingerprint(cfgPath), initialCfg,
+                "restoration Save writes the original song flags")
+        compare(fileProbe.fileFingerprint(midiPath), initialMidi,
+                "restoration Save preserves the original MIDI")
+        compare(fileProbe.fileFingerprint(bankPath), initialBank,
+                "restoration Save writes the original bank")
+        cleanup()
+    }
+
+    function test_zzzzzzReleaseBoundaryEditsLeaveSongClean() {
+        fullShell = fullShellComponent.createObject(null)
+        const shell = fullShell
+        shell.requestActivate()
+        tryCompare(shell, "active", true)
+        const session = shell.shellPresenter.session
+        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        verify(waitForNative(function() {
+            return session.songOpen || session.lastSaveError.length > 0
+        }, 30000), "release boundary fixture opens: " + session.lastSaveError)
+        compare(session.lastSaveError, "")
+        const voice = session.voiceListController()
+        tryCompare(voice, "isBound", true, 5000)
+        voice.selectSlot(0)
+        const scroll = findChild(shell, "voiceEditorScrollView")
+        verify(scroll !== null, "voice editor scroll view mounts after the song opens")
+        waitForRendering(scroll)
+        const editor = findChild(shell, "voicegroupEditorSurface")
+        tryVerify(function() { return !!findChild(editor, "vgReleaseSpin") }, 5000,
+                  "the mounted sample release field loads with the bank")
+        const release = findChild(editor, "vgReleaseSpin")
+        verify(release && release.enabled, "sample release spin is mounted")
+        scroll.contentY = Math.max(0, scroll.contentHeight - scroll.height)
+        waitForRendering(release)
+        const initial = release.value
+        const bankPath = bootstrap.projectRoot + "/sound/voicegroups/fixture_rich.inc"
+        const persisted = fileProbe.fileFingerprint(bankPath)
+        verify(persisted.length > 0, "release fixture bank bytes are readable")
+        release.forceActiveFocus()
+        keyClick(initial === release.to ? Qt.Key_Down : Qt.Key_Up)
+        const adjacent = initial === release.to ? initial - 1 : initial + 1
+        tryCompare(release, "value", adjacent, 15000,
+                   "mounted release spin accepts an adjacent value")
+        verify(waitForNative(function() { return voice.bankDirty }, 15000),
+               "adjacent release edit dirties the bank")
+        compare(shell.shellPresenter.windowModified, false,
+                "adjacent bank edit leaves the document window unmodified")
+        for (let value = adjacent; value > 0; --value)
+            keyClick(Qt.Key_Down)
+        tryCompare(release, "value", 0, 15000,
+                   "mounted release spin accepts the lower boundary")
+        compare(voice.bankDirty, true, "zero release leaves the bank dirty")
+        compare(shell.shellPresenter.windowModified, false,
+                "zero release leaves the song window unmodified")
+        for (let value = 0; value < release.to; ++value)
+            keyClick(Qt.Key_Up)
+        tryCompare(release, "value", 255, 15000,
+                   "mounted release spin accepts the upper boundary")
+        compare(voice.bankDirty, true, "255 release leaves the bank dirty")
+        compare(shell.shellPresenter.windowModified, false,
+                "255 release leaves the song window unmodified")
+        compare(fileProbe.fileFingerprint(bankPath), persisted,
+                "release edits never save the bank without Save")
+        cleanup()
     }
 
     function test_xSpaceInFocusedAdsrFieldTogglesTransport() {
@@ -487,6 +670,11 @@ TestCase {
         keyClick(Qt.Key_Space)
         tryCompare(bar.presenter, "state", 2, 3000,
                    "the same ADSR focus pauses transport on the next Space")
+        const stop = findChild(shell, "transport.stop")
+        verify(stop && stop.enabled, "mounted transport offers Stop after focused ADSR Space")
+        mouseClick(stop, stop.width / 2, stop.height / 2)
+        tryCompare(bar.presenter, "state", 1, 3000,
+                   "Stop after ADSR Space leaves the transport stopped")
         cleanup()
     }
 
@@ -503,6 +691,9 @@ TestCase {
             return popup
         }
         let popup = openPicker()
+        verify(popup.parent.currentEntry()
+               && popup.parent.currentEntry().symbol === sampleOriginal,
+               "picker opens with the selected sample symbol current")
         let search = findChild(popup, "vgSamplePickerSearch")
         let list = findChild(popup, "vgSamplePickerList")
         search.text = "unlisted_typography_sample"
@@ -517,10 +708,18 @@ TestCase {
         app.requestUndo()
         verify(waitForNative(function() { return draft.symbol === sampleOriginal }, 15000),
                "picker undo restores the symbol and preview")
+        popup = openPicker()
+        verify(popup.parent.currentEntry()
+               && popup.parent.currentEntry().symbol === sampleOriginal,
+               "picker undo republishes the original sample symbol as current")
+        popup.close()
         draft.changeType(7, "ProgrammableWaveData_fixture_pulse")
         verify(waitForNative(function() { return draft.macro === 7 }, 15000),
                "wave mode lists the catalog's waves with full symbols")
         popup = openPicker()
+        verify(popup.parent.currentEntry()
+               && popup.parent.currentEntry().symbol === "ProgrammableWaveData_fixture_pulse",
+               "wave picker opens with the selected wave symbol current")
         search = findChild(popup, "vgSamplePickerSearch")
         list = findChild(popup, "vgSamplePickerList")
         verify(list.model.some(row => row.symbol === "ProgrammableWaveData_fixture_saw")
@@ -660,18 +859,35 @@ TestCase {
             return controller.bankLoadName === "fixture_alt" || app.lastSaveError.length > 0
         }, 15000), "selector switches to the staged alternate: " + app.lastSaveError)
         compare(app.lastSaveError, "")
+        compare(selector.enabled, true,
+                "mounted selector stays available after a successful activation")
+        const retainedRow = findChild(panel, "voicegroupRow_0").title
         selector.editText = "_porydaw_missing_voicegroup"
         selector.contentItem.forceActiveFocus()
         keyClick(Qt.Key_Return)
         verify(waitForNative(function() {
             return app.lastSaveError.indexOf("_porydaw_missing_voicegroup") >= 0
         }, 15000), "a missing -G names itself in the failure")
-        compare(controller.bankLoadName, "fixture_alt")
+        compare(selector.enabled, true,
+                "mounted selector survives the failed -G activation")
+        compare(controller.isLoading, false,
+                "failed rebind settles the dock instead of leaving it loading")
+        compare(controller.selectorEnabled, true,
+                "failed rebind leaves the selector enabled")
+        const release = findChild(panel, "vgReleaseSpin")
+        verify(release !== null, "failed rebind retains the mounted release field")
+        verify(release.enabled, "failed rebind keeps the release spin enabled")
+        compare(controller.bankLoadName, "fixture_alt",
+                "failed rebind retains the previous bank binding")
+        compare(findChild(panel, "voicegroupRow_0").title, retainedRow,
+                "failed rebind retains the selected slot row text")
         app.requestUndo()
         verify(waitForNative(function() {
             return controller.bankLoadName === "fixture_rich"
                    && controller.selectorText === "fixture_rich"
         }, 15000), "undo after a failed rebind restores the home voicegroup")
+        tryCompare(selector, "editText", "fixture_rich", 5000,
+                   "selector undo displays the home voicegroup again")
     }
 
     function test_zzSynthMintAndMountedSave() {
@@ -690,26 +906,61 @@ TestCase {
         const waveform = findChild(panel, "vgSynthWaveformCombo")
         verify(waveform !== null && waveform.visible, "mounted synth waveform is visible")
         compare(draft.waveform, 0)
+        const editorScroll = findChild(panel, "voiceEditorScrollView")
+        editorScroll.contentY = Math.max(0, editorScroll.contentHeight - editorScroll.height)
+        waitForRendering(waveform)
+        mouseClick(waveform)
+        const pulseChoice = waveform.popup.contentItem.itemAtIndex(0)
+        verify(pulseChoice !== null, "mounted waveform popup offers Pulse")
+        mouseClick(pulseChoice)
+        tryCompare(waveform, "currentIndex", 0, 5000,
+                   "mounted waveform activation selects Pulse")
         draft.changeSynth("baseDuty", 77)
         verify(waitForNative(function() { return draft.baseDuty === 77 }, 15000),
                "duty LFO mints an edited pulse voice")
-        const pulse = draft.symbol
-        verify(/^DirectSoundSynth_GoldenSun_4D[0-9A-F]{6}$/.test(pulse)
-               && !controller.synthCatalogChoices().includes(pulse),
+        const initialPulse = draft.symbol
+        verify(/^DirectSoundSynth_GoldenSun_4D[0-9A-F]{6}$/.test(initialPulse)
+               && !controller.synthCatalogChoices().includes(initialPulse),
                "synth activation publishes the param-named symbol")
         const baseDuty = findChild(panel, "vgSynthBaseDutySpin")
         verify(baseDuty !== null && baseDuty.visible, "pulse parameters occupy the editor")
         compare(baseDuty.value, 77)
+        for (const step of [
+            { name: "DutyStep", field: "dutyStep", suffix: "4D010000" },
+            { name: "ModDepth", field: "modDepth", suffix: "4D010100" },
+            { name: "Phase", field: "phase", suffix: "4D010101" }
+        ]) {
+            const spin = findChild(panel, "vgSynth" + step.name + "Spin")
+            verify(spin !== null && spin.visible,
+                   "mounted synth " + step.name + " parameter exists")
+            spin.forceActiveFocus()
+            keyClick(Qt.Key_Up)
+            verify(waitForNative(function() {
+                return draft[step.field] === 1
+                    && draft.symbol === "DirectSoundSynth_GoldenSun_" + step.suffix
+            }, 15000), "synth " + step.field + " commits its cumulative param-named symbol")
+        }
+        const pulse = draft.symbol
         verify(controller.synthCatalogChoices().indexOf(pulse) < 0,
                "uncommitted synth does not masquerade as a saved definition")
+        const startsBefore = saveStarts
+        const finishesBefore = saveFinishes
         const save = findChild(panel, "vgSaveButton")
         mousePress(save, save.width / 2, save.height / 2)
         mouseRelease(save, save.width / 2, save.height / 2)
+        verify(waitForNative(function() { return saveStarts === startsBefore + 1 }, 5000),
+               "synth Save starts one real completion receipt")
         verify(waitForNative(function() {
             return (!controller.bankDirty && controller.synthCatalogChoices().includes(pulse))
                    || app.lastSaveError.length > 0
         }, 15000), "save persists synth and refreshes catalog: " + app.lastSaveError)
         compare(app.lastSaveError, "")
+        verify(!app.saveInProgress && saveFinishes === finishesBefore + 1
+               && !controller.bankDirty && !app.documentDirty,
+               "saved synth completes one receipt with a clean bank and document")
+        const bankPath = bootstrap.projectRoot + "/sound/voicegroups/fixture_rich.inc"
+        const pulseBytes = fileProbe.fileFingerprint(bankPath)
+        verify(pulseBytes.length > 0, "the saved synth bank bytes are readable")
         compare(draft.symbol, pulse)
         draft.changeSynth("waveform", 1)
         verify(waitForNative(function() {
@@ -720,6 +971,12 @@ TestCase {
         verify(waitForNative(function() {
             return draft.symbol === pulse && draft.waveform === 0
         }, 15000), "undo restores saved pulse voice")
+        editorScroll.contentY = Math.max(0, editorScroll.contentHeight - editorScroll.height)
+        waitForRendering(waveform)
+        mouseClick(waveform)
+        mouseClick(waveform.popup.contentItem.itemAtIndex(0))
+        verify(waitForNative(function() { return draft.waveform === 0 }, 15000),
+               "mounted waveform returns to Pulse after a saw edit")
         const pulseDepth = draft.modDepth
         draft.changeSynth("modDepth", pulseDepth === 255 ? 254 : pulseDepth + 1)
         controller.selectSlot(4)
@@ -734,6 +991,39 @@ TestCase {
         app.requestUndo()
         verify(waitForNative(function() { return draft.release === otherRelease }, 15000),
                "undo removes only the selected slot's edit")
+        controller.selectSlot(0)
+        draft.changeSynth("waveform", 1)
+        verify(waitForNative(function() {
+            return draft.waveform === 1 && controller.bankDirty
+        }, 15000), "saw edit prepares the saved synth's undo journey")
+        mouseClick(save, save.width / 2, save.height / 2)
+        verify(waitForNative(function() {
+            return !app.saveInProgress && !controller.bankDirty
+                   || app.lastSaveError.length > 0
+        }, 15000), "saw save completes before restoration: " + app.lastSaveError)
+        compare(app.lastSaveError, "")
+        app.requestUndo()
+        verify(waitForNative(function() {
+            return draft.symbol === pulse && controller.bankDirty
+        }, 15000), "undo of the saved saw dirties the pulse restoration")
+        const restoreStarts = saveStarts
+        const restoreFinishes = saveFinishes
+        const scroll = findChild(panel, "voiceEditorScrollView")
+        scroll.contentY = Math.max(0, scroll.contentHeight - scroll.height)
+        waitForRendering(save)
+        verify(save.enabled, "post-undo synth Save remains enabled for restored dirty pulse")
+        mousePress(save, save.width / 2, save.height / 2)
+        mouseRelease(save, save.width / 2, save.height / 2)
+        verify(waitForNative(function() { return saveStarts === restoreStarts + 1 }, 5000),
+               "post-undo Save starts exactly one completed-save receipt")
+        verify(waitForNative(function() {
+            return !app.saveInProgress && !controller.bankDirty || app.lastSaveError.length > 0
+        }, 15000), "post-undo synth Save completes: " + app.lastSaveError)
+        verify(app.lastSaveError === "" && saveFinishes === restoreFinishes + 1
+               && !controller.bankDirty && !app.documentDirty,
+               "post-undo synth Save completes cleanly with one receipt")
+        compare(fileProbe.fileFingerprint(bankPath), pulseBytes,
+                "restoring the saved pulse reproduces its bank bytes")
     }
 
     function test_referenceProfileCapture() {
@@ -764,6 +1054,10 @@ TestCase {
         const scroll = findChild(panel, "voiceEditorScrollView")
         verify(release !== null && release.visible && release.enabled && scroll !== null,
                "mounted release spin is available for the shared bank")
+        verify(waitForNative(function() {
+            return !controller.isLoading && controller.currentSlot === 4
+                   && release.value === controller.editorModel().release
+        }, 5000), "the newly opened peer publishes its mounted slot-four value")
         const peerBefore = release.value
         tabs.selectTab(firstId)
         verify(waitForNative(function() {

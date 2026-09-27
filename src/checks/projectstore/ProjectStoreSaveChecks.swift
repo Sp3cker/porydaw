@@ -224,6 +224,19 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
                           message: "a staged synth macro reaches the published catalog")
             let store = ProjectStore(projectRoot: root)
             let opened = awaitValue { try await store.open() }
+            let stagedCatalog = awaitValue { await store.voicegroupCatalog() }
+            guard case .success(let staged)? = stagedCatalog else {
+                report.fail("vgsavecheck/VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave",
+                            "staged project catalog refresh failed")
+                return
+            }
+            report.expect(staged.direct.synths.find("VgSaveCheckSaw") == VgSynthDesc(waveform: 1),
+                          cppID: "vgsavecheck/VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave",
+                          message: "project catalog refresh settles the staged synth definition")
+            let definitionsBefore = staged.direct.synths.defs.count
+            report.expect(definitionsBefore > 0,
+                          cppID: "vgsavecheck/VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave",
+                          message: "staged catalog captures the synth definition count before mint")
             let loaded = awaitValue { try await store.loadBank(voicegroupArg: "_fixture_rich") }
             guard case .success = opened, case .success(let lease) = loaded,
                   let original = lease.slotViews.first?.voice else {
@@ -293,6 +306,18 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
                           && soundData.contains("direct_sound_synth_data.inc"),
                           cppID: "vgsavecheck/VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave",
                           message: "saving writes the synth symbol and its data wiring")
+            let refreshed = awaitValue { await freshStore.voicegroupCatalog() }
+            guard case .success(let updated)? = refreshed else {
+                report.fail("vgsavecheck/VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave",
+                            "saved project catalog refresh failed")
+                return
+            }
+            report.expect(updated.direct.synths.defs.count == definitionsBefore + 1,
+                          cppID: "vgsavecheck/VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave",
+                          message: "saving one mint increases the refreshed definition count by one")
+            report.expect(updated.direct.synths.find(symbol) == descriptor,
+                          cppID: "vgsavecheck/VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave",
+                          message: "refreshed project catalog contains the saved synth symbol")
             let savedBankBytes = try Data(contentsOf: URL(filePath: lease.sourcePath))
             if case .success(let clean?) = saved {
                 var sawVoice = changed
