@@ -404,87 +404,193 @@ private func sessionSynthUndoTail(report: CheckReport, fixtureRoot: String) {
 
 @MainActor
 internal func savedMidiCompilesAfterDocumentSave(_ report: CheckReport, fixtureRoot: String) {
-    let cppID = "savecheck/ProjectSaveTest::savedMidiCompilesWhenAvailable"
+    let reopenID = "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes"
+    let historyID = "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot"
+    let compileID = "savecheck/ProjectSaveTest::savedMidiCompilesWhenAvailable"
     let songLabel = "mus_route101"
-    let fileManager = FileManager.default
     let sourceRoot = URL(fileURLWithPath: fixtureRoot, isDirectory: true)
     let privateRoot = sourceRoot.deletingLastPathComponent().appendingPathComponent(
         "\(sourceRoot.lastPathComponent)-saved-midi-\(UUID().uuidString)",
         isDirectory: true)
+    let fileManager = FileManager.default
 
     do {
         try fileManager.copyItem(at: sourceRoot, to: privateRoot)
     } catch {
-        report.fail(cppID, "could not copy the staged project to a private sibling: \(error)")
+        report.fail(reopenID, "private save fixture copy failed: \(error)")
         return
     }
+    // Removing the private fixture is best-effort cleanup after all assertions.
     defer { try? fileManager.removeItem(at: privateRoot) }
+    let midiDir = privateRoot.appendingPathComponent("sound/songs/midi")
+    let cfgURL = midiDir.appendingPathComponent("midi.cfg")
+    let midiURL = midiDir.appendingPathComponent("\(songLabel).mid")
+
+    let cfgBefore: [Data]
+    let originalMidi: Data
+    do {
+        cfgBefore = try Data(contentsOf: cfgURL).split(separator: 0x0A, omittingEmptySubsequences: false)
+        originalMidi = try Data(contentsOf: midiURL)
+    } catch {
+        report.fail(reopenID, "private save fixture source read failed: \(error)")
+        return
+    }
 
     let service = ProjectService()
     do {
-        try runBlocking {
-            var openedSession: DocumentSession?
+        try runBlocking { try await service.open(root: privateRoot.path) }
+        let session = try runBlocking {
+            try await DocumentSession.open(service: service, label: songLabel, sampleRate: 48_000)
+        }
+        defer {
             do {
-                try await service.open(root: privateRoot.path)
-                let session = try await DocumentSession.open(
-                    service: service, label: songLabel, sampleRate: 48_000)
-                openedSession = session
-
-                let document = session.document
-                guard let track = (0..<document.engineTracks.usedTrackCount).first(where: {
-                    !document.notes(in: $0).isEmpty
-                }) else {
-                    throw NSError(
-                        domain: "SwiftCoreCheck", code: 1,
-                        userInfo: [NSLocalizedDescriptionKey:
-                            "original fixture song has no nonempty engine track"])
-                }
-                guard let lastEnd = document.state.file.chunks.map(\.endTick).max(),
-                      lastEnd <= TimeDefaults.maxTick - 624 else {
-                    throw NSError(
-                        domain: "SwiftCoreCheck", code: 2,
-                        userInfo: [NSLocalizedDescriptionKey:
-                            "original fixture has no collision-free [base, base + 528) tail"])
-                }
-
-                let base = lastEnd + 96
-                _ = try document.addNotes([
-                    NewNote(track: track, tick: base, pitch: 72, duration: 24, velocity: 93),
-                ])
-                let oldLoopStart = session.timeline.loopStartTick
-                guard oldLoopStart == TimeDefaults.noTick ||
-                      oldLoopStart <= TimeDefaults.maxTick - 24 else {
-                    throw NSError(
-                        domain: "SwiftCoreCheck", code: 3,
-                        userInfo: [NSLocalizedDescriptionKey:
-                            "original fixture loop start cannot be advanced by 24 ticks"])
-                }
-                let savedLoopStart: Tick =
-                    oldLoopStart == TimeDefaults.noTick ? 0 : oldLoopStart + 24
-                document.setLoop(end: false, tick: Int64(savedLoopStart))
-                var config = document.state.config
-                config.masterVolume = 111
-                document.setConfig(config)
-                try await session.save()
-
-                guard await session.close() else {
-                    await service.close()
-                    throw NSError(
-                        domain: "SwiftCoreCheck", code: 4,
-                        userInfo: [NSLocalizedDescriptionKey:
-                            "saved document session did not close cleanly"])
-                }
-                await service.close()
+                let closed = try runBlocking { await session.close() }
+                report.expect(closed, cppID: reopenID,
+                              message: "edited song session closes after the save journey")
+                try runBlocking { await service.close() }
             } catch {
-                if let openedSession {
-                    _ = await openedSession.close()
-                }
-                await service.close()
-                throw error
+                report.fail(reopenID, "closing edited song session failed: \(error)")
             }
         }
+        let document = session.document
+        let track = (0..<document.engineTracks.usedTrackCount).first {
+            !document.notes(in: $0).isEmpty
+        }
+        guard let track else {
+            report.fail(reopenID, "source song has no nonempty engine track for the save edit")
+            return
+        }
+        let lastEnd = document.state.file.chunks.map(\.endTick).max() ?? 0
+        guard lastEnd <= TimeDefaults.maxTick - 624 else {
+            report.fail(reopenID, "source song has no collision-free 528-tick tail window")
+            return
+        }
+        let base = lastEnd + 96
+        let oldLoopStart = session.timeline.loopStartTick
+        guard oldLoopStart == TimeDefaults.noTick ||
+              oldLoopStart <= TimeDefaults.maxTick - 24 else {
+            report.fail(reopenID, "source loop start cannot advance by 24 ticks")
+            return
+        }
+        let expectedLoopStart: Tick = oldLoopStart == TimeDefaults.noTick ? 0 : oldLoopStart + 24
+        let originalNotes = (0..<document.engineTracks.usedTrackCount).flatMap {
+            document.notes(in: $0).map { note in
+                "\(note.track):\(note.tick):\(note.pitch):\(note.duration):\(note.velocity)"
+            }
+        }
+        let expectedNotes = (originalNotes + ["\(track):\(base):72:24:93"]).sorted()
+        _ = try document.addNotes([
+            NewNote(track: track, tick: base, pitch: 72, duration: 24, velocity: 93),
+        ])
+        document.setLoop(end: false, tick: Int64(expectedLoopStart))
+        var config = document.state.config
+        config.masterVolume = 111
+        document.setConfig(config)
+        try runBlocking { try await session.save() }
+        // MIDI is opaque here; only byte change is compared against the pre-edit source.
+        let savedMidi = try Data(contentsOf: midiURL)
+        report.expect(savedMidi != originalMidi, cppID: reopenID,
+                      message: "A005 saving edited notes writes different source MIDI bytes")
+        report.expect(!document.isDirty, cppID: reopenID,
+                      message: "A006 saving the edited song establishes its clean identity")
+        let afterSave = try Data(contentsOf: cfgURL)
+        let cfgAfter = afterSave.split(separator: 0x0A, omittingEmptySubsequences: false)
+        report.expect(cfgAfter.count == cfgBefore.count, cppID: reopenID,
+                      message: "A013 save preserves the complete config line count")
+        let targetPrefix = Data("\(songLabel).mid:".utf8)
+        let preservedLines = cfgBefore.enumerated().allSatisfy { index, before in
+            index < cfgAfter.count &&
+                (before.starts(with: targetPrefix) || cfgAfter[index] == before)
+        }
+        report.expect(preservedLines, cppID: reopenID,
+                      message: "A014 every nontarget config line retains its original bytes")
+        let targetIndices = cfgBefore.indices.filter { cfgBefore[$0].starts(with: targetPrefix) }
+        report.expect(targetIndices.count == 1 &&
+                      cfgAfter.filter { $0.starts(with: targetPrefix) }.count == 1 &&
+                      targetIndices.allSatisfy { $0 < cfgAfter.count &&
+                          cfgAfter[$0] != cfgBefore[$0] &&
+                          cfgAfter[$0].starts(with: targetPrefix) },
+                      cppID: reopenID,
+                      message: "save changes only the one target config entry")
+
+        let reopened = try runBlocking {
+            try await DocumentSession.open(service: service, label: songLabel, sampleRate: 48_000)
+        }
+        defer {
+            do {
+                let closed = try runBlocking { await reopened.close() }
+                report.expect(closed, cppID: reopenID,
+                              message: "reopened saved song closes after observing persisted bytes")
+            } catch {
+                report.fail(reopenID, "closing reopened saved song failed: \(error)")
+            }
+        }
+        report.expect(!reopened.document.isDirty, cppID: reopenID,
+                      message: "A007 a newly opened saved song starts clean")
+        let reopenedNotes = (0..<reopened.document.engineTracks.usedTrackCount).flatMap {
+            reopened.document.notes(in: $0).map { note in
+                "\(note.track):\(note.tick):\(note.pitch):\(note.duration):\(note.velocity)"
+            }
+        }.sorted()
+        report.expect(reopenedNotes == expectedNotes, cppID: reopenID,
+                      message: "reopened song matches the complete independently expected note sequence")
+        let inserted = reopened.document.notes(in: track).first {
+            $0.tick == base && $0.pitch == 72
+        }
+        report.expect(inserted != nil, cppID: reopenID,
+                      message: "A008 reopened song locates the saved pitch-72 note at the tail base")
+        report.expect(inserted?.velocity == 93, cppID: reopenID,
+                      message: "A009 reopened tail note retains literal velocity 93")
+        report.expect(inserted?.duration == 24, cppID: reopenID,
+                      message: "A010 reopened tail note retains literal duration 24")
+        report.expect(reopened.document.state.config.masterVolume == 111, cppID: reopenID,
+                      message: "A011 reopened song retains literal master volume 111")
+        report.expect(reopened.timeline.loopStartTick == expectedLoopStart, cppID: reopenID,
+                      message: "A012 reopened loop start equals the original marker advanced by 24")
+        report.expect(document.notes(in: track).contains {
+            $0.tick == base && $0.pitch == 72 && $0.velocity == 93 && $0.duration == 24
+        }, cppID: historyID,
+        message: "A015 saved history journey starts with its exact edited tail note")
+
+        let savedCount = try coreEditHistoryCountAtTip(document, report: report, cppID: historyID)
+        report.expect(!document.isDirty, cppID: historyID,
+                      message: "A019 history traversal returns to the saved clean position")
+        _ = try document.addNotes([
+            NewNote(track: track, tick: base + 480, pitch: 74, duration: 24, velocity: 90),
+        ])
+        report.expect(document.isDirty, cppID: historyID,
+                      message: "A020 first edit after save is dirty")
+        _ = try runBlocking { try await session.undo() }
+        report.expect(!document.isDirty, cppID: historyID,
+                      message: "A021 undo of first post-save edit restores the clean identity")
+        _ = try runBlocking { try await session.redo() }
+        report.expect(document.isDirty, cppID: historyID,
+                      message: "A022 redo of first post-save edit returns to dirty identity")
+        let stale = try document.captureSave()
+        _ = try document.addNotes([
+            NewNote(track: track, tick: base + 504, pitch: 76, duration: 24, velocity: 90),
+        ])
+        document.didSave(stale)
+        report.expect(document.isDirty, cppID: historyID,
+                      message: "A023 stale save completion cannot clean the newer edit")
+        _ = try runBlocking { try await session.undo() }
+        report.expect(document.isDirty, cppID: historyID,
+                      message: "A024 undoing only the newest edit remains away from saved identity")
+        _ = try runBlocking { try await session.undo() }
+        report.expect(!document.isDirty, cppID: historyID,
+                      message: "A025 undoing both later edits reaches the saved clean identity")
+        _ = try runBlocking { try await session.redo() }
+        _ = try runBlocking { try await session.redo() }
+        let finalCount = try coreEditHistoryCountAtTip(document, report: report, cppID: historyID)
+        report.expect(finalCount == savedCount + 2, cppID: historyID,
+                      message: "A026 exactly two additional history entries follow the saved point")
     } catch {
-        report.fail(cppID, "edited DocumentSession save failed: \(error)")
+        report.fail(reopenID, "edited song save/reopen/history journey failed: \(error)")
+        do {
+            try runBlocking { await service.close() }
+        } catch {
+            report.fail(reopenID, "closing failed save fixture service failed: \(error)")
+        }
         return
     }
 
@@ -493,6 +599,6 @@ internal func savedMidiCompilesAfterDocumentSave(_ report: CheckReport, fixtureR
             pdc_check_compile_saved_midi(projectRoot, label)
         }
     }
-    report.expectEqual(expected: Int32(1), actual: compileResult, cppID: cppID,
+    report.expectEqual(expected: Int32(1), actual: compileResult, cppID: compileID,
                        what: "actual mid2agb exit result for the persisted edited MIDI and flags")
 }

@@ -238,6 +238,9 @@ ShellTabsSupport {
                 "Discard wrote no song bytes")
 
         clickSelectTab(otherId)
+        var originalOtherNotes = JSON.parse(summaryOf(otherId)).map(function(note) {
+            return [note.track, note.tick, note.pitch, note.duration, note.velocity]
+        })
         var saved = drawNote(otherId)
         verify(session().documentDirty, "the drawn note dirtied the tab")
         var otherClose = closeButton(otherId)
@@ -266,11 +269,14 @@ ShellTabsSupport {
             return grid !== null && grid.renderedNoteCount > 0
         }, 30000), "the saved song reopens")
         waitForRendering(tabsRoot())
-        var persisted = JSON.parse(summaryOf(reopenedId)).some(function(note) {
-            return note.tick === saved.tick && note.pitch === saved.pitch
-                && note.duration === saved.duration
-        })
-        verify(persisted, "the saved song carries the note the user drew")
+        var expectedNotes = originalOtherNotes.concat([
+            [saved.track, saved.tick, saved.pitch, saved.duration, saved.velocity]
+        ]).map(function(note) { return JSON.stringify(note) }).sort()
+        var reopenedNotes = JSON.parse(summaryOf(reopenedId)).map(function(note) {
+            return JSON.stringify([note.track, note.tick, note.pitch, note.duration, note.velocity])
+        }).sort()
+        compare(JSON.stringify(reopenedNotes), JSON.stringify(expectedNotes),
+                "the saved song reopens with the complete independently expected note sequence")
         verify(!session().documentDirty, "a saved and reopened tab starts clean")
         verify(!session().canUndo, "a saved and reopened tab has no previous undo history")
     }
