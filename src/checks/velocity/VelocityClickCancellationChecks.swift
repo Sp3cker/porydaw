@@ -89,7 +89,38 @@ func drawerVelocityBandCancelRestores(_ report: CheckReport, session: DocumentSe
 
 @MainActor
 func drawerVelocityPrimaryTrackSwitchCancels(_ report: CheckReport, session: DocumentSession, service: ProjectService) {
-    let fixture = drawerVelocityVelocityFixture(session: session, service: service)
+    guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
+        report.fail(drawerVelocityCancellationID, "the staged wave bank fixture is unavailable")
+        return
+    }
+    let scratch = FileManager.default.temporaryDirectory
+        .appendingPathComponent("swiftcore-velocity-switch-\(UUID().uuidString)", isDirectory: true)
+    let waveService = ProjectService()
+    defer {
+        do {
+            try runBlocking { await waveService.close() }
+        } catch {
+            report.fail(drawerVelocityCancellationID, "could not close the wave bank fixture: \(error)")
+        }
+        // Scratch removal is best-effort after the isolated service closes.
+        try? FileManager.default.removeItem(at: scratch)
+    }
+    let waveSession: DocumentSession
+    do {
+        try FileManager.default.copyItem(at: URL(filePath: fixtureRoot), to: scratch)
+        try runBlocking { try await waveService.open(root: scratch.path) }
+        let loaded = try runBlocking { try await waveService.openSong(label: "mus_gym") }
+        let waveDocument = SongDocument(file: drawerVelocityVelocityPageFixture(),
+                                        config: loaded.config, source: loaded.source,
+                                        trackBudget: loaded.trackBudget)
+        waveSession = DocumentSession(document: waveDocument, service: waveService,
+                                      lease: loaded.bank, slots: loaded.bankSlots,
+                                      dirty: loaded.bankDirty, loadName: loaded.bankLoadName)
+    } catch {
+        report.fail(drawerVelocityCancellationID, "could not load the staged wave bank fixture: \(error)")
+        return
+    }
+    let fixture = drawerVelocityVelocityFixture(session: waveSession, service: waveService)
     let notes = fixture.notes
     guard notes.count >= 3 else {
         report.fail(drawerVelocityClickSelectionID, "the synthetic fixture published fewer than three notes")
@@ -97,7 +128,7 @@ func drawerVelocityPrimaryTrackSwitchCancels(_ report: CheckReport, session: Doc
     }
     let page = fixture.page
     let document = fixture.document
-    guard fixture.document.addTrack(voice: 2) == 1 else {
+    guard fixture.document.addTrack(voice: 6) == 1 else {
         report.fail(drawerVelocityCancellationID, "the primary-track replacement needs a second track")
         return
     }
@@ -124,8 +155,14 @@ func drawerVelocityPrimaryTrackSwitchCancels(_ report: CheckReport, session: Doc
                        cppID: drawerVelocityCancellationID, what: "a drag preview holds the timeline projection at the captured velocities")
     fixture.session.adjustTrackScope(track: 1, action: .plain)
     page.refreshFromDocument()
-    report.expectEqual(expected: 2, actual: page.contextSlot, cppID: drawerVelocityCancellationID,
+    report.expectEqual(expected: 6, actual: page.contextSlot, cppID: drawerVelocityCancellationID,
                        what: "the new primary track presents its program")
+    report.expectEqual(expected: VelocityAxisModel.Mode.intrinsic.rawValue, actual: page.axisMode,
+                       cppID: drawerVelocityCancellationID,
+                       what: "the replacement PSG track presents its intrinsic axis")
+    report.expectEqual(expected: 5, actual: page.axisModel.graduations.count,
+                       cppID: drawerVelocityCancellationID,
+                       what: "the replacement PSG axis presents exactly five graduations")
     report.expect(!page.hasGesture, cppID: drawerVelocityCancellationID, message: "a primary-track switch ends the live gesture")
     report.expect(page.frozenPreview.isEmpty, cppID: drawerVelocityCancellationID, message: "a primary-track switch clears every preview")
     report.expect(fixture.session.selectedNoteOrder.isEmpty, cppID: drawerVelocityCancellationID, message: "a primary-track replacement clears rather than revives the old selection")

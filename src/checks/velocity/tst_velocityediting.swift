@@ -71,6 +71,8 @@ func drawerVelocityGestureTransactions(_ report: CheckReport, session: DocumentS
                        cppID: drawerVelocityHistoryID, what: "Undo restores every target of the transaction")
     report.expectEqual(expected: [100, 64, 32], actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
                        cppID: drawerVelocityHistoryID, what: "undo restores the timeline projection")
+    report.expect(undone.canRedo, cppID: drawerVelocityHistoryID,
+                  message: "Undo immediately makes the velocity transaction redoable")
     page.refreshFromDocument()
     report.expectEqual(expected: 3, actual: fixture.handles.count, cppID: drawerVelocityHistoryID,
                        what: "Undo rebuilds the page without losing its handles")
@@ -93,7 +95,24 @@ func drawerVelocityGestureTransactions(_ report: CheckReport, session: DocumentS
     // edit: no preview, no history.
     let pointerBaseline = DocumentSnapshot(document)
     let pointerDepth = document.history.undoCount
-    fixture.drag(notes[0], dy: 0)
+    if let stationaryHandle = fixture.handle(notes[0]) {
+        _ = page.pointerPress(x: stationaryHandle.x, y: stationaryHandle.y,
+                              surface: 1, button: 1, modifiers: 0)
+        report.expectEqual(expected: [100, 64, 32],
+                           actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
+                           cppID: drawerVelocityTransactionID,
+                           what: "the stationary press preserves all three exact playback velocities")
+        _ = page.pointerRelease(x: stationaryHandle.x, y: stationaryHandle.y, button: 1)
+    }
+    report.expectEqual(expected: 100, actual: drawerVelocityTimelineVelocity(fixture.session, notes[0].id),
+                       cppID: drawerVelocityTransactionID,
+                       what: "the stationary release keeps the first playback velocity at 100")
+    report.expectEqual(expected: 64, actual: drawerVelocityTimelineVelocity(fixture.session, notes[1].id),
+                       cppID: drawerVelocityTransactionID,
+                       what: "the stationary release keeps the second playback velocity at 64")
+    report.expectEqual(expected: 32, actual: drawerVelocityTimelineVelocity(fixture.session, notes[2].id),
+                       cppID: drawerVelocityTransactionID,
+                       what: "the stationary release keeps the third playback velocity at 32")
     report.expectEqual(expected: pointerBaseline.revision, actual: DocumentSnapshot(document).revision,
                        cppID: drawerVelocityTransactionID, what: "a stationary click records no history")
     report.expectEqual(expected: pointerDepth, actual: document.history.undoCount,
@@ -235,4 +254,83 @@ func drawerVelocityGestureTransactions(_ report: CheckReport, session: DocumentS
                        what: "a band selection writes nothing")
     report.expectEqual(expected: 3, actual: fixture.session.selectedNotes.count, cppID: drawerVelocityTransactionID,
                        what: "the band selected every note it covered")
+    drawerVelocityContinuousPaintAxis(report)
+}
+
+@MainActor
+private func drawerVelocityContinuousPaintAxis(_ report: CheckReport) {
+    guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
+        report.fail(drawerVelocityTransactionID, "the staged direct-sound bank fixture is unavailable")
+        return
+    }
+    let scratch = FileManager.default.temporaryDirectory
+        .appendingPathComponent("swiftcore-velocity-continuous-\(UUID().uuidString)", isDirectory: true)
+    let paintService = ProjectService()
+    defer {
+        do {
+            try runBlocking { await paintService.close() }
+        } catch {
+            report.fail(drawerVelocityTransactionID, "could not close the direct-sound fixture: \(error)")
+        }
+        // Scratch removal is best-effort after the isolated service closes.
+        try? FileManager.default.removeItem(at: scratch)
+    }
+    let paintSession: DocumentSession
+    do {
+        try FileManager.default.copyItem(at: URL(filePath: fixtureRoot), to: scratch)
+        try runBlocking { try await paintService.open(root: scratch.path) }
+        let loaded = try runBlocking { try await paintService.openSong(label: "mus_gym") }
+        let paintDocument = SongDocument(file: drawerVelocityVelocityPageFixture(),
+                                         config: loaded.config, source: loaded.source,
+                                         trackBudget: loaded.trackBudget)
+        paintSession = DocumentSession(document: paintDocument, service: paintService,
+                                       lease: loaded.bank, slots: loaded.bankSlots,
+                                       dirty: loaded.bankDirty, loadName: loaded.bankLoadName)
+    } catch {
+        report.fail(drawerVelocityTransactionID, "could not load the direct-sound fixture: \(error)")
+        return
+    }
+    let fixture = drawerVelocityVelocityFixture(session: paintSession, service: paintService)
+    guard let originalVoice = fixture.session.bankSlots[0].voice else {
+        report.fail(drawerVelocityTransactionID, "the paint track has no editable program")
+        return
+    }
+    var directSound = originalVoice
+    directSound.macro = BankVoiceMacro.directSound
+    directSound.symbol = "test_sample"
+    do {
+        _ = try runBlocking {
+            try await fixture.session.applyBankEdit(slot: 0, value: directSound, expected: originalVoice)
+        }
+    } catch {
+        report.fail(drawerVelocityTransactionID, "the direct-sound paint program edit failed: \(error)")
+        return
+    }
+    let page = fixture.page
+    page.refreshFromDocument()
+    report.expectEqual(expected: VelocityAxisModel.Mode.continuous.rawValue, actual: page.axisMode,
+                       cppID: drawerVelocityTransactionID,
+                       what: "the unselected direct-sound paint context presents the continuous axis")
+    fixture.session.setSelectedNotes([fixture.notes[0].id, fixture.notes[2].id])
+    page.refreshFromDocument()
+    guard let first = fixture.handle(fixture.notes[0]), let last = fixture.handle(fixture.notes[2]) else {
+        report.fail(drawerVelocityTransactionID, "the direct-sound paint notes have no published handles")
+        return
+    }
+    let startY = page.axisModel.velocityToY(37)
+    let endY = page.axisModel.velocityToY(91)
+    let accepted = page.pointerPress(x: first.x, y: startY, surface: 1, button: 1, modifiers: 0)
+    report.expect(accepted && page.hasGesture, cppID: drawerVelocityTransactionID,
+                  message: "the direct-sound paint starts a real plot gesture")
+    report.expectEqual(expected: VelocityAxisModel.Mode.continuous.rawValue, actual: page.axisMode,
+                       cppID: drawerVelocityTransactionID,
+                       what: "the active direct-sound paint presents the continuous axis")
+    _ = page.pointerMove(x: last.x, y: endY, buttons: 1)
+    _ = page.pointerRelease(x: last.x, y: endY, button: 1)
+    report.expectEqual(expected: 37, actual: Int(fixture.document.note(fixture.notes[0].id)?.velocity ?? 0),
+                       cppID: drawerVelocityTransactionID,
+                       what: "the continuous paint commits the first crossed note's velocity")
+    report.expectEqual(expected: 91, actual: Int(fixture.document.note(fixture.notes[2].id)?.velocity ?? 0),
+                       cppID: drawerVelocityTransactionID,
+                       what: "the continuous paint commits the later crossed note's velocity")
 }

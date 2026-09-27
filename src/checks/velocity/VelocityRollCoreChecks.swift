@@ -232,6 +232,12 @@ func drawerVelocityRollCoreStationaryPressNoop(_ report: CheckReport, session: D
     report.expect(fixture.session.selectedNoteOrder == [notes[0].id], cppID: drawerVelocityRollCoreStillID, message: "the click still selects its own note")
     report.expectEqual(expected: Int(notes[0].velocity), actual: Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreStillID, what: "the pressed literal is untouched")
     report.expectEqual(expected: Int(notes[1].velocity), actual: Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreStillID, what: "the companion literal is untouched")
+    report.expectEqual(expected: 32, actual: Int(document.note(notes[2].id)?.velocity ?? 0),
+                       cppID: drawerVelocityRollCoreStillID, what: "the third stationary literal is untouched")
+    report.expectEqual(expected: [100, 64, 32],
+                       actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
+                       cppID: drawerVelocityRollCoreStillID,
+                       what: "a stationary press leaves all three timeline velocities untouched")
 }
 
 @MainActor
@@ -255,6 +261,9 @@ func drawerVelocityRollCoreRollCommit(_ report: CheckReport, session: DocumentSe
     let publications = drawerVelocityPublicationCounter(session: fixture.session)
     let original = Int(notes[0].velocity)
     grid.beginPointer(x: center.0, y: center.1, modifiers: 0x0400_0000)
+    report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id],
+                  cppID: drawerVelocityRollCoreRollID,
+                  message: "the held roll press retains the selected drag pair")
     grid.updatePointer(x: center.0, y: center.1 - 11)
     report.expectEqual(expected: original + 11, actual: grid.previewVelocity(notes[0].id) ?? -1, cppID: drawerVelocityRollCoreRollID, what: "the roll drag stages the integral pixel delta on the pressed note")
     report.expect(original + 11 > 1 && original + 11 < 127, cppID: drawerVelocityRollCoreRollID, message: "the staged preview stays exact inside the domain")
@@ -315,6 +324,7 @@ func drawerVelocityRollCoreRollEscape(_ report: CheckReport, session: DocumentSe
     let baselineBytes = coreTimeBytes(document)
     let baselineCount = document.history.undoCount
     let original = Int(notes[0].velocity)
+    let publications = drawerVelocityPublicationCounter(session: fixture.session)
     grid.beginPointer(x: center.0, y: center.1, modifiers: 0x0400_0000)
     grid.updatePointer(x: center.0, y: center.1 - 11)
     report.expectEqual(expected: original + 11, actual: grid.previewVelocity(notes[0].id) ?? -1, cppID: drawerVelocityRollCoreRollID, what: "the roll gesture staged before Escape")
@@ -323,6 +333,16 @@ func drawerVelocityRollCoreRollEscape(_ report: CheckReport, session: DocumentSe
     report.expect(DocumentSnapshot(document) == baseline, cppID: drawerVelocityRollCoreRollID, message: "Escape writes no document state")
     report.expect(document.history.undoCount == baselineCount && coreTimeBytes(document) == baselineBytes, cppID: drawerVelocityRollCoreRollID, message: "Escape leaves history depth and song bytes frozen")
     report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id], cppID: drawerVelocityRollCoreRollID, message: "Escape preserves the drag pair selection")
+    report.expectEqual(expected: 0, actual: publications.document, cppID: drawerVelocityRollCoreRollID,
+                       what: "roll Escape publishes no document change")
+    report.expectEqual(expected: 0, actual: publications.dirty, cppID: drawerVelocityRollCoreRollID,
+                       what: "roll Escape publishes no edited change")
+    report.expectEqual(expected: 100, actual: drawerVelocityTimelineVelocity(fixture.session, notes[0].id),
+                       cppID: drawerVelocityRollCoreRollID, what: "roll Escape keeps the first playback velocity at 100")
+    report.expectEqual(expected: 64, actual: drawerVelocityTimelineVelocity(fixture.session, notes[1].id),
+                       cppID: drawerVelocityRollCoreRollID, what: "roll Escape keeps the second playback velocity at 64")
+    report.expectEqual(expected: 32, actual: drawerVelocityTimelineVelocity(fixture.session, notes[2].id),
+                       cppID: drawerVelocityRollCoreRollID, what: "roll Escape keeps the third playback velocity at 32")
     grid.updatePointer(x: center.0, y: center.1 - 11)
     grid.endPointer(x: center.0, y: center.1 - 11)
     report.expect(grid.previewVelocity(notes[0].id) == nil, cppID: drawerVelocityRollCoreRollID, message: "a move and release after the cancel stages nothing")
@@ -351,6 +371,7 @@ func drawerVelocityRollCoreRollControllerCancel(_ report: CheckReport, session: 
     let baselineBytes = coreTimeBytes(document)
     let baselineCount = document.history.undoCount
     let original = Int(notes[0].velocity)
+    let publications = drawerVelocityPublicationCounter(session: fixture.session)
     grid.beginPointer(x: center.0, y: center.1, modifiers: 0x0400_0000)
     grid.updatePointer(x: center.0, y: center.1 - 11)
     report.expectEqual(expected: original + 11, actual: grid.previewVelocity(notes[0].id) ?? -1, cppID: drawerVelocityRollCoreRollID, what: "the roll gesture staged before controller cancellation")
@@ -360,6 +381,16 @@ func drawerVelocityRollCoreRollControllerCancel(_ report: CheckReport, session: 
     report.expect(DocumentSnapshot(document) == baseline, cppID: drawerVelocityRollCoreRollID, message: "controller cancellation writes no document state")
     report.expect(document.history.undoCount == baselineCount && coreTimeBytes(document) == baselineBytes, cppID: drawerVelocityRollCoreRollID, message: "controller cancellation leaves history depth and song bytes frozen")
     report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id], cppID: drawerVelocityRollCoreRollID, message: "controller cancellation preserves the drag pair selection")
+    report.expectEqual(expected: 0, actual: publications.document, cppID: drawerVelocityRollCoreRollID,
+                       what: "controller roll cancellation publishes no document change")
+    report.expectEqual(expected: 0, actual: publications.dirty, cppID: drawerVelocityRollCoreRollID,
+                       what: "controller roll cancellation publishes no edited change")
+    report.expectEqual(expected: 100, actual: drawerVelocityTimelineVelocity(fixture.session, notes[0].id),
+                       cppID: drawerVelocityRollCoreRollID, what: "controller roll cancellation keeps the first playback velocity at 100")
+    report.expectEqual(expected: 64, actual: drawerVelocityTimelineVelocity(fixture.session, notes[1].id),
+                       cppID: drawerVelocityRollCoreRollID, what: "controller roll cancellation keeps the second playback velocity at 64")
+    report.expectEqual(expected: 32, actual: drawerVelocityTimelineVelocity(fixture.session, notes[2].id),
+                       cppID: drawerVelocityRollCoreRollID, what: "controller roll cancellation keeps the third playback velocity at 32")
     grid.updatePointer(x: center.0, y: center.1 - 11)
     grid.endPointer(x: center.0, y: center.1 - 11)
     report.expect(grid.previewVelocity(notes[0].id) == nil, cppID: drawerVelocityRollCoreRollID, message: "a held pointer after cancellation revives nothing")
@@ -408,11 +439,22 @@ func drawerVelocityRollCoreOctaveShortcut(_ report: CheckReport, session: Docume
     let baseline = DocumentSnapshot(document)
     let baselineBytes = coreTimeBytes(document)
     let baselineCount = document.history.undoCount
+    let publications = drawerVelocityPublicationCounter(session: fixture.session)
     grid.performCommand(command: EditCommand.transposeUpOctave.rawValue)
     report.expectEqual(expected: Int(notes[0].pitch) + 12, actual: Int(document.note(notes[0].id)?.pitch ?? 0), cppID: drawerVelocityRollCoreOctaveID, what: "the octave shortcut moves the first selected note up twelve")
     report.expectEqual(expected: Int(notes[1].pitch) + 12, actual: Int(document.note(notes[1].id)?.pitch ?? 0), cppID: drawerVelocityRollCoreOctaveID, what: "the octave shortcut moves every selected note up twelve")
     report.expectEqual(expected: Int(notes[2].pitch), actual: Int(document.note(notes[2].id)?.pitch ?? 0), cppID: drawerVelocityRollCoreOctaveID, what: "the unselected note keeps its pitch")
     report.expectEqual(expected: [100, 64, 32], actual: [document.note(notes[0].id)?.velocity, document.note(notes[1].id)?.velocity, document.note(notes[2].id)?.velocity].map { Int($0 ?? 0) }, cppID: drawerVelocityRollCoreOctaveID, what: "the octave shortcut preserves every velocity")
+    report.expectEqual(expected: 100, actual: drawerVelocityTimelineVelocity(fixture.session, notes[0].id),
+                       cppID: drawerVelocityRollCoreOctaveID, what: "the octave change keeps the first playback velocity at 100")
+    report.expectEqual(expected: 64, actual: drawerVelocityTimelineVelocity(fixture.session, notes[1].id),
+                       cppID: drawerVelocityRollCoreOctaveID, what: "the octave change keeps the second playback velocity at 64")
+    report.expectEqual(expected: 32, actual: drawerVelocityTimelineVelocity(fixture.session, notes[2].id),
+                       cppID: drawerVelocityRollCoreOctaveID, what: "the octave change keeps the third playback velocity at 32")
+    report.expectEqual(expected: 1, actual: publications.document, cppID: drawerVelocityRollCoreOctaveID,
+                       what: "one octave edit publishes one document change")
+    report.expectEqual(expected: 1, actual: publications.dirty, cppID: drawerVelocityRollCoreOctaveID,
+                       what: "one octave edit publishes one edited change")
     report.expectEqual(expected: baseline.revision + 1, actual: document.revision, cppID: drawerVelocityRollCoreOctaveID, what: "the shortcut makes one revision")
     report.expect(document.history.undoCount == baselineCount + 1 && document.history.currentIdentity != baseline.identity, cppID: drawerVelocityRollCoreOctaveID, message: "the shortcut makes exactly one history entry")
     report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id], cppID: drawerVelocityRollCoreOctaveID, message: "the shortcut preserves the selection")

@@ -26,7 +26,7 @@ func drawerVelocityBlankClickDeselects(_ report: CheckReport, session: DocumentS
     report.expectEqual(expected: [100, 64, 32], actual: notes.map { fixture.handle($0)?.value ?? -1 },
                        cppID: drawerVelocityClickSelectionID, what: "the published handles preserve the pre-click fixture values")
     let depth = document.history.undoCount
-    let blankX = page.plotWidth - 1
+    let blankX = page.plotWidth - 1 / page.devicePixelRatio
     let blankY = page.axisModel.velocityToY(40)
     let consumed = page.pointerPress(x: blankX, y: blankY, surface: 1, button: 1, modifiers: 0)
     report.expect(consumed, cppID: drawerVelocityClickSelectionID, message: "a blank plot press is consumed")
@@ -112,7 +112,15 @@ func drawerVelocityClickBelowNodeCommits(_ report: CheckReport, session: Documen
     }
     let page = fixture.page
     let document = fixture.document
-    let later = notes[2]
+    let originalLater = notes[2]
+    _ = document.setVelocities([NoteVelocity(noteID: originalLater.id, velocity: 96)],
+                               expectedRevision: document.revision)
+    page.refreshFromDocument()
+    guard let later = document.note(originalLater.id) else {
+        report.fail(drawerVelocityClickSelectionID, "the reseeded later note is missing")
+        return
+    }
+    page.setUseDetents(enabled: false)
     fixture.session.setSelectedNotes([later.id])
     page.refreshFromDocument()
     guard fixture.session.selectedNoteOrder == [later.id] else {
@@ -126,44 +134,27 @@ func drawerVelocityClickBelowNodeCommits(_ report: CheckReport, session: Documen
     let baseline = DocumentSnapshot(document)
     let depth = document.history.undoCount
     let publications = drawerVelocityPublicationCounter(session: fixture.session)
-    report.expectEqual(expected: [100, 64, 32], actual: notes.map { fixture.handle($0)?.value ?? -1 },
+    report.expectEqual(expected: [100, 64, 96], actual: notes.map { fixture.handle($0)?.value ?? -1 },
                        cppID: drawerVelocityClickSelectionID, what: "the published handles preserve the pre-click fixture values")
     let pressX = laterHandle.x
-    var pressY = 0.0
-    var pressPreview = 0
-    var painted = false
-    for velocity in [40, 80, 120, 20, 100, 60] {
-        let y = page.axisModel.velocityToY(velocity)
-        var clear = true
-        for handle in fixture.handles {
-            let dx = handle.x - pressX
-            let dy = handle.y - y
-            if dx * dx + dy * dy <= handle.hitRadius * handle.hitRadius {
-                clear = false
-            }
-        }
-        if !clear {
-            continue
-        }
-        _ = page.pointerPress(x: pressX, y: y, surface: 1, button: 1, modifiers: 0)
-        if let preview = page.frozenPreview[later.id], preview != later.velocity, fixture.session.selectedNoteOrder == [later.id] {
-            pressY = y
-            pressPreview = Int(preview)
-            painted = true
-            break
-        }
-        page.cancelSectionInteraction()
-    }
-    guard painted else {
-        report.fail(drawerVelocityClickSelectionID, "no off-node press previewed without moving")
-        return
-    }
+    let pressedLiteral = 40
+    let pressY = page.axisModel.velocityToY(pressedLiteral)
+    _ = page.pointerPress(x: pressX, y: pressY, surface: 1, button: 1, modifiers: 0)
+    let pressPreview = Int(page.frozenPreview[later.id] ?? 0)
+    report.expectEqual(expected: pressedLiteral, actual: pressPreview,
+                       cppID: drawerVelocityClickSelectionID,
+                       what: "the off-node preview equals the independently chosen pressed literal")
     report.expect(page.hasGesture, cppID: drawerVelocityClickSelectionID, message: "an off-node press holds a live gesture")
     report.expect(fixture.session.selectedNoteOrder == [later.id], cppID: drawerVelocityClickSelectionID, message: "an off-node press previews without changing the selection")
     _ = page.pointerRelease(x: pressX, y: pressY, button: 1)
     report.expectEqual(expected: baseline.revision + 1, actual: document.revision, cppID: drawerVelocityTransactionID, what: "one off-node click makes one revision")
     report.expect(document.history.currentIdentity != baseline.identity, cppID: drawerVelocityTransactionID, message: "one off-node click makes one history entry")
-    report.expectEqual(expected: pressPreview, actual: Int(document.note(later.id)?.velocity ?? 0), cppID: drawerVelocityClickSelectionID, what: "the release commits the pressed preview")
+    report.expectEqual(expected: pressedLiteral, actual: Int(document.note(later.id)?.velocity ?? 0),
+                       cppID: drawerVelocityClickSelectionID,
+                       what: "the off-node commit equals the independently chosen pressed literal")
+    report.expectEqual(expected: pressPreview, actual: Int(document.note(later.id)?.velocity ?? 0),
+                       cppID: drawerVelocityClickSelectionID,
+                       what: "the release commits the pressed preview")
     report.expectEqual(expected: notes[0].velocity, actual: document.note(notes[0].id)?.velocity, cppID: drawerVelocityClickSelectionID, what: "an off-node click leaves the first note alone")
     report.expectEqual(expected: notes[1].velocity, actual: document.note(notes[1].id)?.velocity, cppID: drawerVelocityClickSelectionID, what: "an off-node click leaves the second note alone")
     report.expect(fixture.session.selectedNoteOrder == [later.id], cppID: drawerVelocityClickSelectionID, message: "an off-node click keeps its own selection")
@@ -174,7 +165,7 @@ func drawerVelocityClickBelowNodeCommits(_ report: CheckReport, session: Documen
                        what: "one release publishes exactly one document change")
     report.expectEqual(expected: 1, actual: publications.dirty, cppID: drawerVelocityClickSelectionID,
                        what: "one release publishes exactly one dirty change")
-    report.expectEqual(expected: [100, 64, pressPreview], actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
+    report.expectEqual(expected: [100, 64, 40], actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
                        cppID: drawerVelocityClickSelectionID, what: "a released drag republishes the staged velocities into the timeline projection")
 }
 

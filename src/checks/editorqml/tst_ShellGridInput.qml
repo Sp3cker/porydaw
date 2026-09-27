@@ -411,6 +411,147 @@ TestCase {
                "subthreshold Ctrl jitter toggles on without another velocity edit")
     }
 
+    function test_modifierVelocityEscapePreservesTimeline() {
+        var session = openRoute101()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var roll = rollInput(surface)
+        var lane = freeLane(grid, surface, 8)
+        verify(lane !== null, "a free lane accepts the cancelled velocity note")
+        var snap = grid.snapTicks
+        var inset = Math.max(1, Math.floor(snap / 4))
+        var first = pointFor(grid, lane.tick + inset, lane.pitch)
+        var last = pointFor(grid, lane.tick + 4 * snap - inset, lane.pitch)
+        dragLeft(roll, first.x, first.y, last.x, last.y)
+        var note = gridNotes(grid).find(function(candidate) {
+            return candidate.tick === lane.tick && candidate.pitch === lane.pitch
+                && candidate.duration === 4 * snap
+        })
+        verify(note !== undefined && note.selected, "the cancelled drag has a selected note")
+        var face = findChild(surface, "gridNote_" + note.id)
+        verify(face !== null, "the cancelled drag targets a rendered note")
+        var center = pointFor(grid, note.tick + 2 * snap, note.pitch)
+        verify(center.x > face.mapToItem(roll, 0, 0).x
+               && center.x < face.mapToItem(roll, face.width, 0).x,
+               "the modifier press lies horizontally inside the painted note rectangle")
+        verify(center.y > face.mapToItem(roll, 0, 0).y
+               && center.y < face.mapToItem(roll, 0, face.height).y,
+               "the modifier press lies vertically inside the painted note rectangle")
+        var before = grid.noteSummary
+        var revision = grid.appliedRevisionText
+        var undo = session.canUndo
+        var redo = session.canRedo
+        var originalFill = face.color.toString()
+        var travel = Math.ceil(grid.dragDistance) + grid.rowHeight
+        mousePress(roll, center.x, center.y, Qt.LeftButton, Qt.ControlModifier)
+        mouseMove(roll, center.x, center.y + travel, -1, Qt.LeftButton, Qt.ControlModifier)
+        tryVerify(function() {
+            var staged = findChild(surface, "gridNote_" + note.id)
+            return staged && staged.color.toString() !== originalFill
+        }, 1000, "the held modifier drag paints a distinct staged velocity")
+        compare(grid.noteSummary, before, "the held modifier drag leaves the document unchanged")
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        keyClick(Qt.Key_Escape)
+        mouseRelease(roll, center.x, center.y + travel, Qt.LeftButton, Qt.ControlModifier)
+        tryVerify(function() {
+            var restored = findChild(surface, "gridNote_" + note.id)
+            return restored && restored.color.toString() === originalFill
+        }, 1000, "mounted Escape removes the staged velocity paint")
+        compare(grid.noteSummary, before, "mounted Escape restores every timeline velocity after a modifier drag")
+        compare(grid.appliedRevisionText, revision, "mounted Escape publishes no velocity revision")
+        compare(session.canUndo, undo, "mounted Escape appends no velocity undo entry")
+        compare(session.canRedo, redo, "mounted Escape leaves velocity redo availability unchanged")
+    }
+
+    function test_velocityBandExpansionAndContraction() {
+        settings.setBool("editorDrawer.velocityVisible", true)
+        settings.setString("editorDrawer.activePage", "velocity")
+        openRoute101()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var page = findChild(surface, "velocityPage")
+        var plot = findChild(page, "velocityPlot")
+        var input = findChild(page, "velocityPlotInput")
+        var transient = findChild(page, "velocityTransient")
+        verify(page && plot && input && transient && input.visible,
+               "the mounted velocity plot accepts real pointer input")
+        var roll = rollInput(surface)
+        var lane = freeLane(grid, surface, 8)
+        verify(lane !== null, "a free lane accepts the velocity-band target")
+        var snap = grid.snapTicks
+        var inset = Math.max(1, Math.floor(snap / 4))
+        var first = pointFor(grid, lane.tick + inset, lane.pitch)
+        var last = pointFor(grid, lane.tick + 4 * snap - inset, lane.pitch)
+        dragLeft(roll, first.x, first.y, last.x, last.y)
+        var target = gridNotes(grid).find(function(note) {
+            return note.tick === lane.tick && note.pitch === lane.pitch
+                && note.duration === 4 * snap
+        })
+        verify(target !== undefined && target.selected, "the band target is a selected document note")
+        var face = findChild(surface, "gridNote_" + target.id)
+        verify(face !== null, "the band target renders a note face")
+        var margin = grid.baseFontPx
+        var noteLeft = face.mapToItem(plot, 0, 0).x
+        var noteRight = face.mapToItem(plot, face.width, 0).x
+        var farX = Math.round(noteLeft - margin)
+        var nearX = Math.round(noteRight + margin)
+        var startX = Math.round(nearX + margin)
+        var farY = Math.round(margin / 2)
+        var startY = Math.round(plot.height - margin)
+        var nearY = Math.round((startY + farY) / 2)
+        verify(farX > 0 && farX < noteLeft && noteLeft < noteRight
+               && noteRight < nearX && nearX < startX && startX < plot.width
+               && farY > 0 && farY < nearY && nearY < startY && startY < plot.height,
+               "the rendered target separates the expanded and contracted band endpoints")
+        var before = gridNotes(grid)
+        mousePress(input, startX, startY, Qt.RightButton)
+        mouseMove(input, farX, farY, -1, Qt.RightButton)
+        tryVerify(function() {
+            var candidate = findChild(transient, "velocityBandFill")
+            return candidate && candidate.visible
+        }, 1000, "the mounted right drag publishes a selection rectangle")
+        var fill = findChild(transient, "velocityBandFill")
+        compare(fill.x, farX, "the expanded velocity band reaches the pointer horizontally")
+        compare(fill.y, farY, "the expanded velocity band reaches the pointer vertically")
+        compare(fill.width, startX - farX, "the expanded velocity band spans the horizontal press distance")
+        compare(fill.height, startY - farY, "the expanded velocity band spans the vertical press distance")
+        var targetNode = null
+        for (var child of plot.children) {
+            if (child.model && child.model.noteIdText === String(target.id)) {
+                targetNode = child.model
+                break
+            }
+        }
+        verify(targetNode && targetNode.x > fill.x && targetNode.x < fill.x + fill.width
+               && targetNode.y > fill.y && targetNode.y < fill.y + fill.height,
+               "the expanded mounted band actually covers the independently located note")
+        mouseMove(input, nearX, nearY, -1, Qt.RightButton)
+        tryVerify(function() {
+            var contracted = findChild(transient, "velocityBandFill")
+            return contracted && Math.abs(contracted.x - nearX) < 0.001
+        }, 1000, "the contracted velocity band retracts horizontally while pressed")
+        fill = findChild(transient, "velocityBandFill")
+        compare(fill.y, nearY, "the contracted velocity band retracts vertically while pressed")
+        compare(fill.width, startX - nearX, "the contracted velocity band narrows before release")
+        compare(fill.height, startY - nearY, "the contracted velocity band shortens before release")
+        verify(targetNode.x < fill.x,
+               "the contracted mounted band excludes the rendered note before release")
+        mouseRelease(input, nearX, nearY, Qt.RightButton)
+        compare(findChild(transient, "velocityBandFill"), null,
+                "releasing the mounted velocity band clears the transient rectangle")
+        var after = gridNotes(grid)
+        compare(after.length, before.length, "velocity band selection keeps the timeline note count")
+        for (var i = 0; i < before.length; ++i) {
+            compare(after[i].id, before[i].id, "velocity band selection keeps timeline identity")
+            compare(after[i].velocity, before[i].velocity,
+                    "velocity band selection keeps the timeline velocity unchanged")
+        }
+        compare(selectedNotes(grid).length, 0,
+                "the contracted velocity band deselects its formerly covered note")
+        verify(!noteById(grid, target.id).selected,
+               "the contracted velocity band excludes the rendered target")
+    }
+
     function test_emptyClickSlopAndDoubleDraw() {
         openRoute101()
         var surface = selectedSurface()
@@ -1162,12 +1303,22 @@ TestCase {
             return raised && raised.tick === target.tick + snap
                 && raised.pitch === target.pitch + 1
         }, 5000), "mounted Up transposes the selected note one semitone after Right")
+        var beforeOctave = gridNotes(grid)
         keyClick(Qt.Key_Down, Qt.ShiftModifier)
         verify(waitForNative(function() {
             var lowered = noteById(grid, target.id)
             return lowered && lowered.pitch === target.pitch - 11
                 && lowered.tick === target.tick + snap
         }, 5000), "mounted Shift+Down moves the selected note down an octave")
+        var afterOctave = gridNotes(grid)
+        compare(afterOctave.length, beforeOctave.length,
+                "mounted octave motion preserves the count of timeline velocities")
+        for (var octaveIndex = 0; octaveIndex < beforeOctave.length; ++octaveIndex) {
+            compare(afterOctave[octaveIndex].id, beforeOctave[octaveIndex].id,
+                    "mounted octave motion preserves timeline note identity")
+            compare(afterOctave[octaveIndex].velocity, beforeOctave[octaveIndex].velocity,
+                    "mounted octave motion republishes each original timeline velocity")
+        }
         keyClick(Qt.Key_Right)
         verify(waitForNative(function() {
             var advanced = noteById(grid, target.id)
