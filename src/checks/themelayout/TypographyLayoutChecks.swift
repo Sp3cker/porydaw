@@ -107,6 +107,11 @@ private func typographyLayoutCheckRoles(_ report: CheckReport) {
         report.expect(typography.fitted(typography.body, availableHeight: 0) == nil,
                       cppID: typographyLayoutFittedID,
                       message: "zero available height rejects the body font at base \(base)")
+        let captionHeight = NativeFontMetrics(typography.caption).extents.height
+        let noteNameHeight = NativeFontMetrics(typography.noteName).extents.height
+        report.expect(noteNameHeight <= captionHeight,
+                      cppID: typographyLayoutFittedID,
+                      message: "the note-name ascent and descent fit the measured caption height")
         let tokens: [(LayoutSpace, Int)] = base == 13
             ? [(.zero, 0), (.half, 2), (.one, 3), (.two, 7),
                (.three, 10), (.four, 13), (.six, 20), (.eight, 26)]
@@ -366,21 +371,36 @@ private func typographyLayoutCheckFittedMaximality(_ report: CheckReport) {
         GridFontSpec(family: "Atkinson Hyperlegible Next", pixelSize: size, weight: 400,
                      letterSpacing: 0)
     }
-    let full = NativeFontMetrics(spec(size: 16))
+    let fullSpec = spec(size: 16)
+    let full = NativeFontMetrics(fullSpec)
     let fullHeight = full.extents.height
+    let typography = Typography(baseFontPx: 16)
+    let minimumHeight = NativeFontMetrics(spec(size: 1)).extents.height
     report.expectEqual(expected:
         16, actual: full.fittedSize(rowHeight: fullHeight), cppID: typographyLayoutFittedID,
         what: "a generous height keeps the full face size")
     for height in 1...(Int(fullHeight.rounded(.up)) + 4) {
-        let fitted = full.fittedSize(rowHeight: Double(height))
+        let available = Double(height)
+        let fitted = full.fittedSize(rowHeight: available)
         report.expect(
             fitted >= 1 && fitted <= 16, cppID: typographyLayoutFittedID,
             message: "the fit at height \(height) stays within the face size")
         if fitted < 16 {
             let larger = NativeFontMetrics(spec(size: fitted + 1))
             report.expect(
-                larger.extents.height > Double(height), cppID: typographyLayoutFittedID,
+                larger.extents.height > available, cppID: typographyLayoutFittedID,
                 message: "one pixel larger overflows height \(height)")
+        }
+        let face = typography.fitted(fullSpec, availableHeight: available)
+        if let face {
+            let occupied = NativeFontMetrics(face).extents.height
+            report.expect(
+                occupied <= available, cppID: typographyLayoutFittedID,
+                message: "every resolved fitted face fits its available height")
+        } else {
+            report.expect(
+                minimumHeight > available, cppID: typographyLayoutFittedID,
+                message: "heights shorter than the smallest face have no fitting face")
         }
     }
     report.expectEqual(expected:

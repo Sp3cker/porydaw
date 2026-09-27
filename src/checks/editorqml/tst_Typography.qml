@@ -27,6 +27,13 @@ TestCase {
             font: Qt.font(observedSession.typographyFonts.caption)
             leftPadding: observedSession.layoutSpaces.two
             text: "caption"
+            Text {
+                objectName: "italicCaptionProbe"
+                y: parent.height
+                font: Qt.font(Object.assign({}, observedSession.typographyFonts.caption,
+                                            { italic: true }))
+                text: "italic caption"
+            }
         }
     }
     FontMetrics { id: normalTitleCheck }
@@ -115,6 +122,46 @@ TestCase {
         tryCompare(observer, "leftPadding", captured.layoutSpaces.two, 3000)
         compare(observer.leftPadding, 6,
                 "the observed two-space inset follows the captured base")
+        var italic = findChild(observer, "italicCaptionProbe")
+        verify(italic !== null && italic.visible,
+               "the transformed italic caption text is visible")
+        compare(italic.font.family, "Atkinson Hyperlegible Next",
+                "the transformed caption resolves the canonical Next family")
+        compare(italic.font.pixelSize, 12,
+                "the transformed caption keeps the captured caption pixel size")
+        compare(italic.font.italic, true,
+                "the transformed caption resolves an italic face")
+        var tableAtSeed = bodyTextComponent.createObject(testCase)
+        verify(tableAtSeed !== null && tableAtSeed.visible,
+               "the tracked table text is visible at the seed size")
+        var seed = capturedSessionComponent.createObject(testCase)
+        tableAtSeed.font = Qt.font(seed.typographyFonts.tableMono)
+        verify(Math.abs(tableAtSeed.font.letterSpacing - (-0.5)) < 1 / 64,
+               "the resolved table face tracks by minus half a pixel at base 13")
+        var enlarged = capturedSessionComponent.createObject(testCase)
+        enlarged.configureTypography(26)
+        var tableAtDouble = bodyTextComponent.createObject(testCase)
+        verify(tableAtDouble !== null && tableAtDouble.visible,
+               "the tracked table text is visible at the doubled size")
+        tableAtDouble.font = Qt.font(enlarged.typographyFonts.tableMono)
+        verify(Math.abs(tableAtDouble.font.letterSpacing - (-1)) < 1 / 64,
+               "the resolved table face tracks by minus one pixel at base 26")
+        var zero = capturedSessionComponent.createObject(testCase)
+        var zeroObserver = captionObserverComponent.createObject(testCase,
+                                                                  {observedSession: zero})
+        verify(zeroObserver !== null && zeroObserver.visible,
+               "the normalized caption text is visible")
+        zero.configureTypography(0)
+        tryCompare(zeroObserver.font, "pixelSize", 1, 3000,
+                   "the zero-base observer resolves a one-pixel caption")
+        compare(zeroObserver.font.family, "Atkinson Hyperlegible Next",
+                "the zero-base capture resolves a positive canonical caption face")
+        zeroObserver.destroy()
+        zero.destroy()
+        tableAtDouble.destroy()
+        enlarged.destroy()
+        tableAtSeed.destroy()
+        seed.destroy()
         observer.destroy()
         captured.destroy()
     }
@@ -161,9 +208,27 @@ TestCase {
                 "window height follows the captured base geometry")
         var label = bodyTextComponent.createObject(shell.contentItem)
         verify(label !== null, "a body-text probe mounts in the real window")
-        label.font = shell.font
+        verify(shell.visible && label.visible,
+               "the canonical body-text probe is visible inside the mounted shell")
+        label.font = Qt.binding(function() { return shell.font })
         compare(label.font.family, "Atkinson Hyperlegible Next",
                 "body text shows the restored Next family")
+        bootstrap.preferences.setString("theme.mode", "dark-neutral-high")
+        shell.shellPresenter.restoreAppearance()
+        tryCompare(shell.shellPresenter, "themeMode", "dark-neutral-high", 3000,
+                   "dark appearance is restored through the production presenter")
+        compare(shell.font.family, "Atkinson Hyperlegible Next",
+                "the mounted shell retains the canonical face after dark appearance restore")
+        compare(label.font.family, "Atkinson Hyperlegible Next",
+                "the bound text retains the canonical face after dark appearance restore")
+        bootstrap.preferences.setString("theme.mode", "vanilla")
+        shell.shellPresenter.restoreAppearance()
+        tryCompare(shell.shellPresenter, "themeMode", "vanilla", 3000,
+                   "vanilla appearance is restored through the production presenter")
+        compare(shell.font.family, "Atkinson Hyperlegible Next",
+                "the mounted shell resolves the canonical face after vanilla appearance restore")
+        compare(label.font.family, "Atkinson Hyperlegible Next",
+                "the bound text resolves the canonical face after vanilla appearance restore")
         label.destroy()
     }
 
