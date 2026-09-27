@@ -2990,7 +2990,39 @@ TestCase {
                    "second resumed automation S turns off intended Solo")
         compare(soloActivatedSpy.count, 2,
                 "second resumed automation S activates window Solo once")
-        volumeTab.forceActiveFocus(Qt.OtherFocusReason)
+        compare(volumeTab.checked, true,
+                "the controller 7 Volume lane remains active before its 48 insertion")
+        verify(model.openInsertionPrompt(96, 48),
+               "the active Volume lane opens its production insertion draft of 48")
+        verify(waitForNative(function() {
+            prompt = page.prompt
+            field = prompt ? findChild(prompt, "automationPromptInput") : null
+            return prompt && prompt.showing && field && field.activeFocus
+        }, 3000), "the Volume insertion draft owns the mounted numeric field")
+        compare(field.text, "48", "the Volume insertion displays the exact 48 draft")
+        compare(field.selectedText, "48", "the Volume insertion selects the exact 48 draft")
+        keySequence(StandardKey.SelectAll)
+        compare(field.selectedText, "48", "Volume Select All selects exactly 48")
+        var copyCountBeforeInsertion = copyActivatedSpy.count
+        keySequence(StandardKey.Copy)
+        var textClipboardProbe = textProbeComponent.createObject(shell.contentItem, { text: "" })
+        verify(textClipboardProbe, "the Volume clipboard probe is mounted in the live window")
+        textClipboardProbe.paste()
+        compare(textClipboardProbe.text, "48",
+                "the native text clipboard contains exactly 48 after Volume Copy")
+        textClipboardProbe.destroy()
+        compare(copyActivatedSpy.count, copyCountBeforeInsertion,
+                "Volume insertion Copy never activates the window note Copy")
+        keyClick(Qt.Key_Delete)
+        compare(field.text, "", "Volume insertion Delete removes the selected 48 draft")
+        keySequence(StandardKey.Paste)
+        compare(field.text, "48", "Volume insertion Paste restores exactly 48")
+        keyClick(Qt.Key_Escape)
+        tryCompare(model, "promptOpen", false, 3000,
+                   "Volume insertion Escape closes its exact 48 draft without a write")
+        compare(grid.appliedRevisionText, revisionBefore,
+                "Volume insertion Escape preserves the document revision")
+        mouseClick(tabPress, tabPress.width / 2, tabPress.height / 2)
         tryCompare(volumeTab, "activeFocus", true, 3000,
                    "the closed value prompt permits refocusing the Volume controller 7 label")
     }

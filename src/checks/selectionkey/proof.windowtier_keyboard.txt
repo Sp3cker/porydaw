@@ -269,24 +269,12 @@ Original expression:
   QVERIFY(prompt)
 
 A047 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:283
-Disposition: PARTIAL
-Mapping/reason: Partial via S096 (:1474, Select All selects the whole drafted text) and S095 (:1472, the draft is non-empty): the mounted prompt drafts from the production insert path rather than the fork's injected fixture value. Unproved as stated: the exact drafted text "48" (the mounted predicate compares against the production draft, not the fixture literal).
-Source context since previous assertion:
-  ;
-      const QString selectedText = prompt->property("selectedText").toString();
-
-Original expression:
-  QCOMPARE(selectedText, QStringLiteral("48"))
+Disposition: MATCHED
+Mapping: S205, S219, S220 - the active Volume/controller 7 lane opens its production insertion prompt with value 48, whose mounted numeric field selects exactly "48".
 
 A048 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:285
-Disposition: PARTIAL
-Mapping/reason: Partial via S099 (:1478, prompt Copy never publishes a song clip) and S098 (:1477, the window Copy shortcut is never activated): the window-action half is exercised. Unproved as stated: the clipboard text bytes — no mounted predicate reads the text clipboard, and S101 (:1482, paste restores the draft) only implies the copy landed.
-Source context since previous assertion:
-  ;
-      selectionkey::deliverKey(quickWindow(), copy->key(), copy->keyboardModifiers());
-
-Original expression:
-  QCOMPARE(QGuiApplication::clipboard()->text(), selectedText)
+Disposition: MATCHED
+Mapping: S219, S221, S222 - real Copy of the selected "48" reaches the native text clipboard, read by an independent mounted TextField; real Paste restores exactly "48".
 
 A049 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:286
 Disposition: MATCHED
@@ -349,13 +337,8 @@ Disposition: MATCHED
 Mapping: S147, S148, S149, S150, S151, S152
 
 A057 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:297
-Disposition: PARTIAL
-Mapping/reason: Related predicate S103 (:1485) in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): the mounted journey closes the prompt on Escape and keeps the staged time range live (S106). Unproved as stated: the focus return to the volume label after the cancellation — the mounted lane's post-Escape assertions read action availability, and its label focus assertions (:1393, :1547) carry no message.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(focusParameter(7))
+Disposition: MATCHED
+Mapping: S103, S205, S223 - after the production Volume insertion prompt closes on Escape, a real click returns active focus to the controller 7 Volume label.
 
 A058 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:299
 Disposition: MATCHED
@@ -1030,4 +1013,19 @@ Anchor: message "a real automation band stages a lane time range before Tap Spac
 
 S218 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "Tap Space preserves the mounted automation lane time range"
+
+S219 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the Volume insertion selects the exact 48 draft"
+
+S220 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the active Volume lane opens its production insertion draft of 48"
+
+S221 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the native text clipboard contains exactly 48 after Volume Copy"
+
+S222 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Volume insertion Paste restores exactly 48"
+
+S223 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the closed value prompt permits refocusing the Volume controller 7 label"
 
