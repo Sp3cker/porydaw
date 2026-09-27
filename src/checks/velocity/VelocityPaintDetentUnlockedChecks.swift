@@ -357,3 +357,59 @@ func drawerVelocityUnlockedRampInterpolates(_ report: CheckReport, session: Docu
     report.expectEqual(expected: 65, actual: Int(waveGesture.preview[NoteID(110)] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked wave middle interpolates raw")
     report.expectEqual(expected: 93, actual: Int(waveGesture.preview[NoteID(111)] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked wave ramp ends raw")
 }
+
+@MainActor
+func drawerVelocityFamilyRuler(_ report: CheckReport, session: DocumentSession,
+                               service: ProjectService, program: UInt8, unlock: Int) {
+    for modifierUnlock in [true, false] {
+        let fixture = drawerVelocityVelocityFixture(session: session, service: service, contextSlot: program)
+        let page = fixture.page
+        let document = fixture.document
+        let notes = fixture.notes
+        drawerVelocityPaintSetOrigins(document, page, notes[0], 33, notes[1], 87)
+        fixture.session.setSelectedNotes([notes[0].id, notes[1].id])
+        page.refreshFromDocument()
+        page.setUseDetents(enabled: modifierUnlock)
+        report.expectEqual(expected: modifierUnlock, actual: page.detentsEnabled,
+                           cppID: drawerVelocityRulerUnlockID, what: "ruler control retains the chosen checked state")
+        report.expectEqual(expected: modifierUnlock, actual: page.detentsEnabled && page.axisGraduationsVisible,
+                           cppID: drawerVelocityRulerUnlockID, what: "ruler page reads back the requested detent policy")
+        let baseline = DocumentSnapshot(document)
+        let depth = document.history.undoCount
+        let publications = drawerVelocityPublicationCounter(session: fixture.session)
+        let y = page.axisModel.velocityToY(73)
+        _ = page.pointerPress(x: 10, y: y, surface: 0, button: 1, modifiers: modifierUnlock ? unlock : 0)
+        report.expectEqual(expected: baseline.revision + 1, actual: document.revision,
+                           cppID: drawerVelocityRulerUnlockID, what: "ruler press commits immediately on every family")
+        report.expectEqual(expected: 1, actual: publications.document, cppID: drawerVelocityRulerUnlockID,
+                           what: "ruler press publishes exactly one document change")
+        report.expectEqual(expected: 1, actual: publications.dirty, cppID: drawerVelocityRulerUnlockID,
+                           what: "ruler press publishes exactly one dirty transition")
+        report.expectEqual(expected: depth + 1, actual: document.history.undoCount,
+                           cppID: drawerVelocityRulerUnlockID, what: "ruler press grows undo depth by one")
+        report.expectEqual(expected: 73, actual: drawerVelocityTimelineVelocity(fixture.session, notes[0].id),
+                           cppID: drawerVelocityRulerUnlockID, what: "ruler press publishes raw 73 for the first timeline note")
+        report.expectEqual(expected: 73, actual: drawerVelocityTimelineVelocity(fixture.session, notes[1].id),
+                           cppID: drawerVelocityRulerUnlockID, what: "ruler press publishes raw 73 for the later timeline note")
+        report.expectEqual(expected: 32, actual: drawerVelocityTimelineVelocity(fixture.session, notes[2].id),
+                           cppID: drawerVelocityRulerUnlockID, what: "ruler press leaves the outside timeline note at 32")
+        report.expectEqual(expected: [73, 73, 32],
+                           actual: notes.map { Int(document.note($0.id)?.velocity ?? 0) },
+                           cppID: drawerVelocityRulerUnlockID, what: "ruler press updates both selected document notes without changing the outside note")
+        _ = page.pointerRelease(x: 10, y: y, button: 1)
+        report.expectEqual(expected: 1, actual: publications.document, cppID: drawerVelocityRulerUnlockID,
+                           what: "ruler release publishes no additional document change")
+        report.expectEqual(expected: 1, actual: publications.dirty, cppID: drawerVelocityRulerUnlockID,
+                           what: "ruler release publishes no additional dirty transition")
+        report.expectEqual(expected: depth + 1, actual: document.history.undoCount,
+                           cppID: drawerVelocityRulerUnlockID, what: "ruler release adds no undo entry")
+        report.expectEqual(expected: 73, actual: drawerVelocityTimelineVelocity(fixture.session, notes[0].id),
+                           cppID: drawerVelocityRulerUnlockID, what: "ruler release retains the first projected raw velocity")
+        report.expectEqual(expected: 73, actual: drawerVelocityTimelineVelocity(fixture.session, notes[1].id),
+                           cppID: drawerVelocityRulerUnlockID, what: "ruler release retains the later projected raw velocity")
+        report.expectEqual(expected: 32, actual: drawerVelocityTimelineVelocity(fixture.session, notes[2].id),
+                           cppID: drawerVelocityRulerUnlockID, what: "ruler release retains the outside projected velocity")
+        report.expectEqual(expected: modifierUnlock, actual: page.detentsEnabled,
+                           cppID: drawerVelocityRulerUnlockID, what: "ruler release preserves the control's checked preference")
+    }
+}

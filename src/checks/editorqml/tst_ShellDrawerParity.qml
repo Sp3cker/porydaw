@@ -614,5 +614,146 @@ TestCase {
                 104, "the outside roll note keeps its literal velocity on release")
         compare(velocityHandleFor(notes[0].id).preview, false,
                 "the mounted release retires its drawn preview")
+        if (unlockAtPress) {
+            mountedVelocityRulerAndPaint(model, detent, input, grid, notes, 76)
+            for (var family of [{ slot: 6, snap: 64 }, { slot: 7, snap: 76 }]) {
+                mouseDoubleClickSequence(voiceInput, insertionX, voiceInput.height / 2,
+                                         Qt.LeftButton)
+                tryCompare(voicePage, "pickerOpen", true)
+                var familySearch = findChild(selectedSurface(), "voicePickerSearch")
+                verify(waitForNative(function() {
+                    return familySearch && familySearch.activeFocus
+                }, 3000), "the real voice picker focuses before a family replacement")
+                familySearch.selectAll()
+                keyClick(Qt.Key_0)
+                keyClick(Qt.Key_0)
+                keyClick(Qt.Key_0 + family.slot)
+                tryCompare(voicePage, "pickerHasMatch", true)
+                keyClick(Qt.Key_Return)
+                tryCompare(voicePage, "pickerOpen", false)
+                tryCompare(model, "contextSlot", family.slot)
+                compare(model.axisMode, 1,
+                        "the selected wave or noise voice presents its intrinsic axis")
+                mountedVelocityRulerAndPaint(model, detent, input, grid, notes, family.snap)
+            }
+        }
+    }
+
+    function mountedVelocityRulerAndPaint(model, detent, input, grid, notes, expectedSnap) {
+        var first = velocityHandleFor(notes[0].id)
+        var later = velocityHandleFor(notes[1].id)
+        var ruler = findChild(velocityPageItem(), "velocityRulerInput")
+        verify(ruler && ruler.visible, "the mounted velocity ruler receives pointer input")
+        var inset = grid.baseFontPx * 0.75
+        var yFor = function(value) {
+            return inset + (ruler.height - 2 * inset) * (127 - value) / 126
+        }
+        var rawY = yFor(73)
+        verify(rawY > 0 && rawY < ruler.height,
+               "raw 73 lies inside the mounted ruler")
+        verify(detent.visible && detent.enabled && model.detentsAvailable,
+               "every family mounts an available and enabled ruler detent control")
+        compare(detent.Accessible.checked, true,
+                "every family's ruler control starts checked before modifier unlock")
+        var before = Number(revision())
+        mousePress(ruler, ruler.width / 2, rawY, Qt.LeftButton, Qt.ControlModifier)
+        tryCompare(grid, "appliedRevisionText", String(before + 1))
+        var current = JSON.parse(grid.noteSummary)
+        compare(current.find(function(note) { return note.id === notes[0].id }).velocity, 73,
+                "the modifier-unlocked ruler writes the first selected roll note on press")
+        compare(current.find(function(note) { return note.id === notes[1].id }).velocity, 73,
+                "the modifier-unlocked ruler writes the later selected roll note on press")
+        compare(detent.Accessible.checked, true,
+                "the held unlock never unchecks the rendered detent control")
+        mouseRelease(ruler, ruler.width / 2, rawY, Qt.LeftButton)
+        compare(Number(revision()), before + 1,
+                "the mounted ruler release writes no second revision")
+        for (var locked of [true, false]) {
+            first = velocityHandleFor(notes[0].id)
+            later = velocityHandleFor(notes[1].id)
+            if (locked) {
+                verify(detent.visible, "each locked family paints with a visible detent control")
+                verify(detent.enabled, "each locked family paints with an enabled detent control")
+                compare(detent.Accessible.checked, true,
+                        "each locked family paints with the rendered checkbox checked")
+            } else {
+                verify(detent.visible, "each unlocked family paints with a visible detent control")
+                verify(detent.enabled, "each unlocked family paints with an enabled detent control")
+                compare(detent.Accessible.checked, true,
+                        "each unlocked family paints with the rendered checkbox checked")
+            }
+            var startY = yFor(locked ? 73 : 37)
+            var endY = yFor(locked ? 73 : 91)
+            var pressX = first.x - first.hitRadius * 2
+            var pressY = startY + (endY - startY) * (pressX - first.x) / (later.x - first.x)
+            var snapshot = grid.noteSummary
+            before = Number(revision())
+            mousePress(input, pressX, pressY, Qt.LeftButton,
+                       locked ? Qt.NoModifier : Qt.ControlModifier)
+            mouseMove(input, first.x, startY, -1, Qt.LeftButton, Qt.NoModifier)
+            mouseMove(input, later.x, endY, -1, Qt.LeftButton, Qt.NoModifier)
+            var expectedFirst = locked ? expectedSnap : 37
+            var expectedLast = locked ? expectedSnap : 91
+            verify(waitForNative(function() {
+                var a = velocityHandleFor(notes[0].id)
+                var b = velocityHandleFor(notes[1].id)
+                return a && b && a.preview && b.preview
+                    && a.value === expectedFirst && b.value === expectedLast
+            }, 3000), "the mounted paint sweep previews the press-latched detent policy: "
+                 + JSON.stringify({ locked: locked, press: [pressX, pressY], start: [first.x, startY],
+                                    selected: model.selectedCount, size: [input.width, input.height],
+                                    firstHandle: [first.y, first.hitRadius, first.selected],
+                                    laterHandle: [later.y, later.selected],
+                                    end: [later.x, endY], current: [
+                                        velocityHandleFor(notes[0].id)
+                                            ? [velocityHandleFor(notes[0].id).value,
+                                               velocityHandleFor(notes[0].id).preview] : null,
+                                        velocityHandleFor(notes[1].id)
+                                            ? [velocityHandleFor(notes[1].id).value,
+                                               velocityHandleFor(notes[1].id).preview] : null
+                                    ], active: model.interactionActive }))
+            compare(grid.noteSummary, snapshot,
+                    "the mounted paint sweep keeps the committed roll unchanged")
+            compare(Number(revision()), before,
+                    "the mounted paint sweep defers its revision until release")
+            mouseRelease(input, later.x, endY, Qt.LeftButton)
+            verify(waitForNative(function() {
+                var values = JSON.parse(grid.noteSummary)
+                return values.some(function(note) {
+                    return note.id === notes[0].id && note.velocity === expectedFirst
+                }) && values.some(function(note) {
+                    return note.id === notes[1].id && note.velocity === expectedLast
+                })
+            }, 5000), "the mounted paint release commits both selected values")
+            compare(Number(revision()), before + 1,
+                    "the mounted paint release commits one revision")
+            compare(velocityHandleFor(notes[0].id).preview, false,
+                    "the mounted paint release clears its first visible preview")
+            compare(velocityHandleFor(notes[2].id).value, 104,
+                    "the mounted paint release retains the outside note")
+            compare(detent.Accessible.checked, true,
+                    "the paint unlock never changes the rendered detent control")
+            if (locked) {
+                mouseClick(detent, detent.width / 2, detent.height / 2)
+                tryCompare(detent.Accessible, "checked", false)
+                before = Number(revision())
+                mousePress(ruler, ruler.width / 2, rawY, Qt.LeftButton)
+                tryCompare(grid, "appliedRevisionText", String(before + 1))
+                current = JSON.parse(grid.noteSummary)
+                compare(current.find(function(note) { return note.id === notes[0].id }).velocity, 73,
+                        "the disabled-detent ruler writes the first selected roll note on press")
+                compare(current.find(function(note) { return note.id === notes[1].id }).velocity, 73,
+                        "the disabled-detent ruler writes the later selected roll note on press")
+                compare(current.find(function(note) { return note.id === notes[2].id }).velocity, 104,
+                        "the disabled-detent ruler preserves the outside roll note")
+                compare(detent.Accessible.checked, false,
+                        "the detents-disabled ruler leaves the rendered checkbox unchecked")
+                mouseRelease(ruler, ruler.width / 2, rawY, Qt.LeftButton)
+                compare(Number(revision()), before + 1,
+                        "the disabled-detent ruler also commits only on press")
+                mouseClick(detent, detent.width / 2, detent.height / 2)
+                tryCompare(detent.Accessible, "checked", true)
+            }
+        }
     }
 }

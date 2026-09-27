@@ -478,6 +478,12 @@ func drawerVelocityProgramFlowChecks(_ report: CheckReport, session: DocumentSes
                           cppID: drawerVelocityUnlockedRampID,
                           message: "the per-program ramp release clears preview and retains selection")
         }
+        drawerVelocityFamilyRuler(report, session: sourceSession, service: sourceService,
+                                  program: program, unlock: unlock)
+        drawerVelocityFamilyPaint(report, session: sourceSession, service: sourceService,
+                                  program: program, unlock: unlock, locked: true)
+        drawerVelocityFamilyPaint(report, session: sourceSession, service: sourceService,
+                                  program: program, unlock: unlock, locked: false)
         if program == 6 {
             for locked in [true, false] {
                 let fixture = drawerVelocityVelocityFixture(session: sourceSession, service: sourceService, contextSlot: program)
@@ -514,4 +520,96 @@ func drawerVelocityProgramFlowChecks(_ report: CheckReport, session: DocumentSes
             }
         }
     }
+}
+
+@MainActor
+private func drawerVelocityFamilyPaint(_ report: CheckReport, session: DocumentSession,
+                                       service: ProjectService, program: UInt8, unlock: Int,
+                                       locked: Bool) {
+    let id = locked ? drawerVelocityLockedPaintID : drawerVelocityUnlockedPaintID
+    let fixture = drawerVelocityVelocityFixture(session: session, service: service, contextSlot: program)
+    let notes = fixture.notes
+    let page = fixture.page
+    let document = fixture.document
+    fixture.session.setSelectedNotes([notes[0].id, notes[1].id])
+    page.refreshFromDocument()
+    let expectedFirst = locked ? (program == 6 ? 64 : 76) : 37
+    let expectedLast = locked ? expectedFirst : 91
+    if locked {
+        report.expect(page.detentsAvailable, cppID: id, message: "paint context exposes the selected family's detent control")
+        report.expect(page.detentsEnabled, cppID: id, message: "locked paint begins with the detent control enabled")
+        report.expect(page.detentsEnabled && page.axisGraduationsVisible, cppID: id, message: "locked paint reads back its checked detent preference")
+    } else {
+        report.expect(page.detentsAvailable, cppID: id, message: "raw paint context exposes the selected family's detent control")
+        report.expect(page.detentsEnabled, cppID: id, message: "raw paint begins with the detent control enabled")
+        report.expect(page.detentsEnabled && page.axisGraduationsVisible, cppID: id, message: "raw paint reads back its checked detent preference")
+    }
+    guard let first = fixture.handle(notes[0]), let last = fixture.handle(notes[1]) else {
+        report.fail(id, "the selected family published no paint columns")
+        return
+    }
+    let startY = page.axisModel.velocityToY(locked ? 73 : 37)
+    let endY = page.axisModel.velocityToY(locked ? 73 : 91)
+    let before = notes.map { Int(document.note($0.id)?.velocity ?? 0) }
+    let timelineBefore = notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) }
+    let baseline = DocumentSnapshot(document)
+    let depth = document.history.undoCount
+    let publications = drawerVelocityPublicationCounter(session: fixture.session)
+    let pressX = first.x + first.hitRadius * 2
+    let startSlope = (endY - startY) / (last.x - first.x)
+    let pressY = startY + startSlope * (pressX - first.x)
+    _ = page.pointerPress(x: pressX, y: pressY, surface: 1, button: 1, modifiers: locked ? 0 : unlock)
+    _ = page.pointerMove(x: first.x, y: startY, buttons: 1)
+    _ = page.pointerMove(x: last.x, y: endY, buttons: 1)
+    if locked {
+        report.expectEqual(expected: depth, actual: document.history.undoCount, cppID: id, what: "locked paint holds exact undo depth until release")
+        report.expectEqual(expected: 0, actual: publications.document, cppID: id, what: "locked paint publishes no document change before release")
+        report.expectEqual(expected: 0, actual: publications.dirty, cppID: id, what: "locked paint publishes no dirty transition before release")
+        report.expectEqual(expected: before[0], actual: Int(document.note(notes[0].id)?.velocity ?? 0), cppID: id, what: "locked paint holds the first document origin")
+        report.expectEqual(expected: before[1], actual: Int(document.note(notes[1].id)?.velocity ?? 0), cppID: id, what: "locked paint holds the later document origin")
+        report.expectEqual(expected: before[2], actual: Int(document.note(notes[2].id)?.velocity ?? 0), cppID: id, what: "locked paint holds the outside document origin")
+        report.expectEqual(expected: timelineBefore[0], actual: drawerVelocityTimelineVelocity(fixture.session, notes[0].id), cppID: id, what: "locked paint holds the first timeline origin")
+        report.expectEqual(expected: timelineBefore[1], actual: drawerVelocityTimelineVelocity(fixture.session, notes[1].id), cppID: id, what: "locked paint holds the later timeline origin")
+        report.expectEqual(expected: timelineBefore[2], actual: drawerVelocityTimelineVelocity(fixture.session, notes[2].id), cppID: id, what: "locked paint holds the outside timeline origin")
+    } else {
+        report.expectEqual(expected: depth, actual: document.history.undoCount, cppID: id, what: "raw paint holds exact undo depth until release")
+        report.expectEqual(expected: 0, actual: publications.document, cppID: id, what: "raw paint publishes no document change before release")
+        report.expectEqual(expected: 0, actual: publications.dirty, cppID: id, what: "raw paint publishes no dirty transition before release")
+        report.expectEqual(expected: before[0], actual: Int(document.note(notes[0].id)?.velocity ?? 0), cppID: id, what: "raw paint holds the first document origin")
+        report.expectEqual(expected: before[1], actual: Int(document.note(notes[1].id)?.velocity ?? 0), cppID: id, what: "raw paint holds the later document origin")
+        report.expectEqual(expected: before[2], actual: Int(document.note(notes[2].id)?.velocity ?? 0), cppID: id, what: "raw paint holds the outside document origin")
+        report.expectEqual(expected: timelineBefore[0], actual: drawerVelocityTimelineVelocity(fixture.session, notes[0].id), cppID: id, what: "raw paint holds the first timeline origin")
+        report.expectEqual(expected: timelineBefore[1], actual: drawerVelocityTimelineVelocity(fixture.session, notes[1].id), cppID: id, what: "raw paint holds the later timeline origin")
+        report.expectEqual(expected: timelineBefore[2], actual: drawerVelocityTimelineVelocity(fixture.session, notes[2].id), cppID: id, what: "raw paint holds the outside timeline origin")
+    }
+    report.expectEqual(expected: baseline.revision, actual: document.revision, cppID: id, what: "family paint stages no revision before release")
+    report.expectEqual(expected: expectedFirst, actual: Int(page.frozenPreview[notes[0].id] ?? 0), cppID: id, what: "family paint previews the first literal detent or raw value")
+    report.expectEqual(expected: expectedLast, actual: Int(page.frozenPreview[notes[1].id] ?? 0), cppID: id, what: "family paint previews the later literal detent or raw value")
+    _ = page.pointerRelease(x: last.x, y: endY, button: 1)
+    if locked {
+        report.expectEqual(expected: 1, actual: publications.document, cppID: id, what: "locked paint release publishes exactly one document change")
+        report.expectEqual(expected: 1, actual: publications.dirty, cppID: id, what: "locked paint release publishes exactly one dirty transition")
+        report.expectEqual(expected: depth + 1, actual: document.history.undoCount, cppID: id, what: "locked paint release grows exact undo depth by one")
+        report.expect(document.history.canUndo, cppID: id, message: "locked paint release enables undo")
+        report.expect(page.frozenPreview[notes[0].id] == nil, cppID: id, message: "locked paint clears its first preview on release")
+        report.expect(page.frozenPreview[notes[1].id] == nil, cppID: id, message: "locked paint clears its later preview on release")
+        report.expect(page.frozenPreview[notes[2].id] == nil, cppID: id, message: "locked paint clears its outside preview on release")
+        report.expectEqual(expected: expectedFirst, actual: drawerVelocityTimelineVelocity(fixture.session, notes[0].id), cppID: id, what: "locked paint publishes the first detent to the timeline")
+        report.expectEqual(expected: expectedLast, actual: drawerVelocityTimelineVelocity(fixture.session, notes[1].id), cppID: id, what: "locked paint publishes the later detent to the timeline")
+        report.expectEqual(expected: timelineBefore[2], actual: drawerVelocityTimelineVelocity(fixture.session, notes[2].id), cppID: id, what: "locked paint preserves the outside timeline velocity")
+    } else {
+        report.expectEqual(expected: 1, actual: publications.document, cppID: id, what: "raw paint release publishes exactly one document change")
+        report.expectEqual(expected: 1, actual: publications.dirty, cppID: id, what: "raw paint release publishes exactly one dirty transition")
+        report.expectEqual(expected: depth + 1, actual: document.history.undoCount, cppID: id, what: "raw paint release grows exact undo depth by one")
+        report.expect(page.frozenPreview[notes[0].id] == nil, cppID: id, message: "raw paint clears its first preview on release")
+        report.expect(page.frozenPreview[notes[1].id] == nil, cppID: id, message: "raw paint clears its later preview on release")
+        report.expect(page.frozenPreview[notes[2].id] == nil, cppID: id, message: "raw paint clears its outside preview on release")
+        report.expectEqual(expected: expectedFirst, actual: drawerVelocityTimelineVelocity(fixture.session, notes[0].id), cppID: id, what: "raw paint publishes the first velocity to the timeline")
+        report.expectEqual(expected: expectedLast, actual: drawerVelocityTimelineVelocity(fixture.session, notes[1].id), cppID: id, what: "raw paint publishes the later velocity to the timeline")
+        report.expectEqual(expected: timelineBefore[2], actual: drawerVelocityTimelineVelocity(fixture.session, notes[2].id), cppID: id, what: "raw paint preserves the outside timeline velocity")
+    }
+    report.expectEqual(expected: baseline.revision + 1, actual: document.revision, cppID: id, what: "family paint release commits one revision")
+    report.expectEqual(expected: [expectedFirst, expectedLast, before[2]],
+                       actual: notes.map { Int(document.note($0.id)?.velocity ?? 0) },
+                       cppID: id, what: "family paint commits exact selected values and preserves the outside note")
 }
