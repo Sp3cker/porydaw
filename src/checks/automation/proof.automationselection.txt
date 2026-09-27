@@ -9,8 +9,8 @@ Additional Swift counterpart: src/checks/automation/presentation/tst_automationp
 Additional Swift counterpart: src/checks/automation/tst_automationediting.swift
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
 Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml
-Command: deno task verify --filter swiftcore-projectsession --verbose. Result: implementer-reported GREEN (same-commit surface evidence for the 18 selected rows).
-Converted-window command: deno task verify:shell --filter shell-grid-input --verbose. Result: implementer-reported GREEN (mounted Automation pointer/selection/Delete/Undo smoke).
+Command: deno task verify --filter swiftcore-projectsession --verbose. Result: GREEN — implementer-reported locked lane (1/36 filtered harnesses PASS) on frozen automationselection.swift SHA-256 3b4363f9a06abdc4ed55f88700f34078061b857a87af4dddb864725da7585c9c. This proof-only writer did not rerun the lane.
+Converted-window command: deno task verify:qml --verbose. Result: GREEN — implementer-reported locked editorqml-drawer (1/1 PASS), frozen tst_EditorDrawer.qml SHA-256 0dfa48f745c7203db3aa184fbc8557595a39c9a5d32c16b801dbd9f89d83edcc. Full verify:shell 26/26 PASS; full verify 36/36 PASS; this proof-only writer did not rerun the suites.
 
 A001 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:189
 Disposition: RETIRED-REPRESENTATION
@@ -22,16 +22,12 @@ A003 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | s
 Disposition: RETIRED-REPRESENTATION
 
 A004 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:196
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationselection.cpp) no longer builds or runs. Previous native note: Retained native obligation: the original reads the painted lane-body rectangle (QRect) from the native canvas. The Swift page publishes plot geometry, not per-row body rectangles, and no converted-window rendering evidence is registered for this retired suite. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(!laneBody(tempoLane).isEmpty())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S036; native `QVERIFY(!laneBody(tempoLane).isEmpty())` at fceecd88 reads an AutomationCanvas QRect prerequisite, not Tempo band behavior.
 
 A005 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:197
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationselection.cpp) no longer builds or runs. Previous native note: Retained native obligation: the original reads the painted lane-body rectangle (QRect) from the native canvas. The Swift page publishes plot geometry, not per-row body rectangles, and no converted-window rendering evidence is registered for this retired suite. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(!laneBody(panLane).isEmpty())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S043; native `QVERIFY(!laneBody(panLane).isEmpty())` at fceecd88 reads an AutomationCanvas QRect prerequisite, not Pan band behavior.
 
 A006 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:200
 Disposition: MATCHED
@@ -310,10 +306,8 @@ Disposition: MATCHED
 Mapping: S046
 
 A077 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:387
-Disposition: GAP
-Mapping/reason: GAP (native focus ingress): the original focuses the native automation band so the Delete key reaches it. The Delete route itself is covered - drawerAutomationSelectionDeleteCommand consumes the selection command (S072-S080) and the arbiter verdict for an armed time selection is asserted at S081 - but EditSurfaceState is a plain host snapshot with no focus or key ingress, and no executing predicate establishes that focusing the band delivers Delete. Missing delivery: the native focus chain and key delivery into the page.
-Original expression:
-  QVERIFY(focusAutomationBand())
+Disposition: MATCHED
+Mapping: S100
 
 A078 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:392
 Disposition: RETIRED-REPRESENTATION
@@ -494,7 +488,7 @@ Mapping/reason: S004, S008
 
 A124 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:528
 Disposition: PARTIAL
-Mapping/reason: Partial: no executing Swift predicate asserts a live CC-drag preview leaves the document unchanged; the multiCc contract asserts the post-drag state only. Unproved condition: mid-drag preview freeze.
+Mapping/reason: S107, S108; the executed CC-only held drag freezes snapshot, revision, history and selected lanes and emits no document publication; the C++ frozen state also counted a separate edited notification which this predicate does not observe. Unproved: absence of an independent edit/dirty notification during the CC-only capture.
 Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == beforeDrag)
 
@@ -524,7 +518,7 @@ Mapping: S046
 
 A131 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:538
 Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the CC time selection itself shifts by the drag delta; no executing Swift predicate reads page.selection after a completed CC drag. Unproved condition: post-drag selection shift.
+Mapping/reason: S101, S109; the executed CC-only Shift drag preserves exactly Pan/Modulation lane scope and excludes Tempo, but uses [0,96) → [48,144), not the original CC-only [96,144) → [144,192) fixture. Unproved: the exact original destination interval for this CC-only gesture.
 Original expression:
   QVERIFY(selectionMatches(tab().view().selectionModel().timeSelection(), kDestinationTick,
                                kDestinationTick + (kDestinationTick - kSelectionTick), false,
@@ -532,13 +526,13 @@ Original expression:
 
 A132 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:544
 Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the playback timeline projects the moved CC lane values. No executing Swift predicate in this lane reads the PlaybackTimeline projection; the document values are asserted at S044. Unproved condition: timeline projection.
+Mapping/reason: S085, S102; a mixed Tempo/Pan/LFO drag projects original ordered Pan [10,20] at tick144, and a CC-only drag projects moved Pan [60] at tick72. Unproved: original ordered Pan [10,20] at tick144 after the CC-only drag.
 Original expression:
   QTRY_VERIFY(timelineValuesAt(tab(), kPanController, kDestinationTick) == movedPan)
 
 A133 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:545
 Disposition: PARTIAL
-Mapping/reason: Partial: same PlaybackTimeline condition for the second selected CC lane; the document values are asserted at S045. Unproved condition: timeline projection.
+Mapping/reason: S086, S103; a mixed Tempo/Pan/LFO drag projects original LFO [96] at tick144, and a CC-only drag projects moved Modulation [70] at tick96. Unproved: original LFO [96] at tick144 after the CC-only drag.
 Original expression:
   QTRY_VERIFY(timelineValuesAt(tab(), kLfoController, kDestinationTick) == movedLfo)
 
@@ -664,10 +658,8 @@ Disposition: MATCHED
 Mapping: S057, S062
 
 A165 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:602
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts out-of-range ghost toggles (-1 and the label count) leave the ghost list empty. Swift asserts an eventless lane cannot be pinned (S065) and an out-of-catalog activation is rejected, but the negative-index toggle variant is not asserted. Unproved condition: out-of-range ghost-toggle no-op.
-Original expression:
-  QVERIFY(canvas->ghostParameters().isEmpty())
+Disposition: MATCHED
+Mapping: S104
 
 A166 | AutomationEditingTest::ghostToggleSkipsEventlessLane | src/checks/automation/automationselection.cpp:608
 Disposition: RETIRED-REPRESENTATION
@@ -680,10 +672,8 @@ A168 | AutomationEditingTest::ghostToggleSkipsEventlessLane | src/checks/automat
 Disposition: RETIRED-REPRESENTATION
 
 A169 | AutomationEditingTest::ghostToggleSkipsEventlessLane | src/checks/automation/automationselection.cpp:616
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the Modulation lane holds no events before the Control press. The Swift eventless-pin rejection (S065) can only hold on an eventless lane, but no predicate asserts that lane emptiness itself. Unproved condition: explicit emptiness assertion.
-Original expression:
-  QVERIFY(tab().document().lanePoints(kTrack, CoreTimeDefaults::kCcModulation).empty())
+Disposition: MATCHED
+Mapping: S105
 
 A170 | AutomationEditingTest::ghostToggleSkipsEventlessLane | src/checks/automation/automationselection.cpp:617
 Disposition: MATCHED
@@ -693,10 +683,8 @@ A171 | AutomationEditingTest::ghostToggleSkipsEventlessLane | src/checks/automat
 Disposition: RETIRED-REPRESENTATION
 
 A172 | AutomationEditingTest::ghostToggleSkipsEventlessLane | src/checks/automation/automationselection.cpp:619
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the rejected Control press leaves the active parameter unchanged. No executing Swift predicate reads the active parameter after a rejected ghost toggle. Unproved condition: active-parameter stability after a rejected pin.
-Original expression:
-  QTRY_COMPARE(canvas->activeParameter(), volumeIndex)
+Disposition: MATCHED
+Mapping: S106
 
 A173 | AutomationEditingTest::ghostToggleSkipsEventlessLane | src/checks/automation/automationselection.cpp:620
 Disposition: MATCHED
@@ -998,3 +986,33 @@ Anchor: message "document rebuild cancels the drag without changing its selected
 
 S099 | drawerAutomationMixedDragRebuildCancellation | src/checks/automation/automationselection.swift
 Anchor: message "release after rebuild retains original Pan LFO and Tempo playback"
+
+S100 | test_mountedAutomationDragDeleteUndoPreservesRoll | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "Delete removes every shifted selected automation point"
+
+S101 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+Anchor: message "horizontal multi-CC drag moves its half-open interval by 48"
+
+S102 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+Anchor: message "shifted Pan reaches playback at tick 72"
+
+S103 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+Anchor: message "shifted Modulation reaches playback at tick 96"
+
+S104 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift
+Anchor: message "negative and upper-bound ghost indices leave every pin empty"
+
+S105 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift
+Anchor: message "unwritten Modulation has no document lane events"
+
+S106 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift
+Anchor: message "rejected Modulation pin preserves active Volume"
+
+S107 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+Anchor: message "held multi-CC preview freezes revision history and both selected lanes"
+
+S108 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+Anchor: message "held multi-CC preview emits no document publication"
+
+S109 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+Anchor: message "shifted CC selection retains only Pan and Modulation scope"

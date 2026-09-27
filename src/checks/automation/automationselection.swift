@@ -264,6 +264,61 @@ func drawerAutomationMultiCcDragExcludesOthers(_ report: CheckReport, suite: Doc
                        cppID: id, what: "the unselected volume lane is excluded")
     report.expectEqual(expected: ["0:120", "144:150"], actual: fixture.tempoValues, cppID: id,
                        what: "tempo is excluded from the CC drag")
+    let horizontal = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                       volume: [(48, 70), (144, 20)],
+                                                       pan: [(24, 60)], modulation: [(48, 70)],
+                                                       tempo: [(0, 500_000), (144, 400_000)])
+    horizontal.activate(horizontal.panLane)
+    horizontal.page.selectRange(from: 0, to: 96,
+                                lanes: [horizontal.panLane, horizontal.modulationLane])
+    let held = horizontal.snapshot
+    let heldIndex = horizontal.document.history.undoIndex
+    let volumeBeforeShift = horizontal.values(horizontal.volumeLane)
+    let tempoBeforeShift = horizontal.tempoValues
+    var publishedDocumentEdits = 0
+    let priorChange = horizontal.session.onChange
+    horizontal.session.onChange = { change in
+        if change.domains.contains(.document) { publishedDocumentEdits += 1 }
+        priorChange?(change)
+    }
+    let sourceX = horizontal.x(24)
+    let sourceY = horizontal.y(horizontal.panLane, 60)
+    let activationX = sourceX + horizontal.page.geometry.nodeDragActivationDistance + 2
+    let endX = activationX + horizontal.x(72) - sourceX
+    _ = horizontal.page.pointerPress(x: sourceX, y: sourceY, surface: 1,
+                                     button: AutomationQtButton.left,
+                                     modifiers: AutomationQtModifier.shift)
+    _ = horizontal.page.pointerMove(x: activationX, y: sourceY,
+                                    buttons: AutomationQtButton.left,
+                                    modifiers: AutomationQtModifier.shift)
+    _ = horizontal.page.pointerMove(x: endX, y: sourceY, buttons: AutomationQtButton.left,
+                                    modifiers: AutomationQtModifier.shift)
+    report.expect(horizontal.snapshot == held
+                  && horizontal.document.history.undoIndex == heldIndex
+                  && horizontal.values(horizontal.panLane) == ["24:60"]
+                  && horizontal.values(horizontal.modulationLane) == ["48:70"],
+                  cppID: id, message: "held multi-CC preview freezes revision history and both selected lanes")
+    report.expectEqual(expected: 0, actual: publishedDocumentEdits, cppID: id,
+                       what: "held multi-CC preview emits no document publication")
+    _ = horizontal.page.pointerRelease(x: endX, y: sourceY, button: AutomationQtButton.left,
+                                       modifiers: AutomationQtModifier.shift)
+    report.expectEqual(expected: TimeRange(startTick: 48, endTick: 144),
+                       actual: horizontal.page.selection?.range, cppID: id,
+                       what: "horizontal multi-CC drag moves its half-open interval by 48")
+    report.expect(horizontal.page.selection?.scope == .lanes
+                  && horizontal.page.selection?.tempo == false
+                  && horizontal.page.selection?.lanes == Set([horizontal.panLane,
+                                                               horizontal.modulationLane]),
+                  cppID: id, message: "shifted CC selection retains only Pan and Modulation scope")
+    report.expectEqual(expected: [60], actual: horizontal.playbackValues(horizontal.panLane, at: 72),
+                       cppID: id, what: "shifted Pan reaches playback at tick 72")
+    report.expectEqual(expected: [70], actual: horizontal.playbackValues(horizontal.modulationLane, at: 96),
+                       cppID: id, what: "shifted Modulation reaches playback at tick 96")
+    report.expect(horizontal.values(horizontal.volumeLane) == volumeBeforeShift
+                  && horizontal.tempoValues == tempoBeforeShift, cppID: id,
+                  message: "horizontal multi-CC release preserves excluded Volume and Tempo points")
+    report.expectEqual(expected: 1, actual: publishedDocumentEdits, cppID: id,
+                       what: "horizontal multi-CC release emits one document publication")
     report.expectEqual(expected: before.revision + 1, actual: fixture.document.revision, cppID: id,
                        what: "the multi-lane drag is one revision")
     report.expect(fixture.undo(), cppID: id, message: "one undo restores all selected lanes")
@@ -288,6 +343,10 @@ func drawerAutomationGhostViewOnlyAndSurvives(_ report: CheckReport, suite: Docu
     fixture.activate(fixture.volumeLane)
     let page = fixture.page
     let before = fixture.snapshot
+    report.expect(!page.toggleGhostParameter(index: -1)
+                  && !page.toggleGhostParameter(index: page.tabCount)
+                  && page.ghostParameters.isEmpty, cppID: id,
+                  message: "negative and upper-bound ghost indices leave every pin empty")
     let panIndex = page.catalogIndex(of: fixture.panLane)
     report.expect(page.toggleGhostParameter(index: panIndex), cppID: id,
                   message: "a lane with events pins as a ghost")
@@ -307,6 +366,16 @@ func drawerAutomationGhostViewOnlyAndSurvives(_ report: CheckReport, suite: Docu
                   message: "the pin toggles off again")
     report.expect(!page.ghostParameters.contains(fixture.panLane), cppID: id,
                   message: "unpinning drops the ghost")
+    let eventless = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                       volume: [(48, 70)])
+    eventless.activate(eventless.volumeLane)
+    report.expect(eventless.values(eventless.modulationLane).isEmpty, cppID: id,
+                  message: "unwritten Modulation has no document lane events")
+    report.expect(!eventless.page.toggleGhostParameter(
+        index: eventless.page.catalogIndex(of: eventless.modulationLane)), cppID: id,
+                  message: "eventless Modulation refuses a ghost pin")
+    report.expectEqual(expected: eventless.volumeLane, actual: eventless.page.activeParameter,
+                       cppID: id, what: "rejected Modulation pin preserves active Volume")
 }
 
 @MainActor

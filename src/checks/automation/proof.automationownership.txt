@@ -8,166 +8,44 @@ Swift counterpart: src/checks/automation/automationselection.swift
 Additional Swift counterpart: src/checks/automation/presentation/painting.swift
 Additional Swift counterpart: src/checks/automation/domain/gestureNodeDrag.swift
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
+Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml
 
-
-Command: deno task verify --filter swiftcore --verbose
-Result: PASS — deno task verify --filter swiftcore --verbose on this worktree at 470231af (1/14 harnesses selected; swiftcore green, including drawerAutomationPencilOwnershipAndShift, drawerAutomationDetailThresholdPrecedence and drawerAutomationInflightDragInvalidation). Evidence supplied by the lane controller for this settled source snapshot; this ledger task did not re-run the suite.
-Delta snapshot: the counterpart hashes and the drawerAutomationDetailThresholdPrecedence anchors were re-pinned because the double-click block moved that function in automationselection.swift, and A045/A055 became GAP for the keybindings-lane shortcut delivery. No execution result for that delta was supplied to this ledger task, so none is claimed.
+Command: deno task verify --filter swiftcore-projectsession --verbose
+Result: GREEN — implementer-reported locked swiftcore-projectsession (1/36 filtered harnesses PASS) on frozen automationcanvasediting.swift SHA-256 f01c950de983755f17834b7c78da8cf88cac872253a6496387bf5e404b5a1dff and automationselection.swift SHA-256 3b4363f9a06abdc4ed55f88700f34078061b857a87af4dddb864725da7585c9c. This proof-only writer did not rerun the lane.
 Converted-window command: deno task verify:qml --verbose
+Converted-window result: GREEN — implementer-reported locked editorqml-drawer (1/1 PASS), frozen tst_EditorDrawer.qml SHA-256 0dfa48f745c7203db3aa184fbc8557595a39c9a5d32c16b801dbd9f89d83edcc. Full verify:shell 26/26 PASS and full verify 36/36 PASS on the same settled sources; this proof-only writer did not rerun the suites.
 
 A001 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:64
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/handle and body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); reaching the paired predicate establishes the row. This is not a native rendering assertion.
-Source context since previous assertion:
-  #include "checks/automation/tst_automationediting.h"
-
-  #include <algorithm>
-  #include <iterator>
-  #include <limits>
-  #include <optional>
-  #include <utility>
-  #include <variant>
-  #include <vector>
-
-  #include <QAction>
-  #include <QKeySequence>
-
-  #include <QColor>
-  #include <QSignalSpy>
-  #include <QtTest>
-
-  #include "checks/support/timelinequickcheck.h"
-  #include "ui/editordrawer/automationcanvas.h"
-  #include "ui/editordrawer/automationpage.h"
-  #include "ui/editordrawer/automationprojection.h"
-  #include "ui/songview.h"
-  #include "ui/songview/editorselectionmodel.h"
-  #include "ui/songview/quick/timelinequickscene.h"
-
-  namespace {
-
-  // The pilot lane nodes the armed drag targets: the grabbed node at
-  // kPilotNodeTick moves value-only, and its independent sibling must never
-  // move with it.
-  constexpr Tick kPilotNodeTick = 48;
-  constexpr int kPilotNodeValue = 40;
-  constexpr int kPilotCommittedValue = 84;
-  constexpr Tick kPilotSiblingTick = 96;
-  constexpr int kPilotSiblingValue = 100;
-
-  constexpr uint8_t kPanController = 10;
-
-  bool heldValueAt(const std::vector<DocLanePoint> &points, Tick tick, int *value)
-  {
-      const auto firstAfterTick = std::upper_bound(
-          points.cbegin(), points.cend(), tick,
-          [](Tick needle, const DocLanePoint &point) { return needle < point.tick; });
-      if (firstAfterTick == points.cbegin())
-          return false;
-      *value = std::prev(firstAfterTick)->value;
-      return true;
-  }
-
-  std::optional<DocLanePoint> pointAt(const SongDocument &document, Tick tick)
-  {
-      DocLanePoint point;
-      if (!document.findLanePoint(0, kPanController, tick, &point))
-          return std::nullopt;
-      return point;
-  }
-
-  } // namespace
-
-  void AutomationEditingTest::tracksSelectionRings()
-  {
-      const EditorAutomationRowId panRow{EditorAutomationRowKind::ControlChange, 0, kPanController};
-      const LaneHandle pan = findRow(panRow);
-
-Original expression:
-  QVERIFY(pan.valid());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S070; native row-handle prerequisite `QVERIFY(pan.valid())` at fceecd88, replaced by the real fixture's Pan activation before selected-ring checks.
 
 A002 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:69
 Disposition: RETIRED-REPRESENTATION
 
 A003 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:78
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: The Quick scene-graph ring/mesh probes (layer revision, ringPaintedAt triangles) observe the native render. A direct presenter check cannot establish this observation; the retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-      const quint64 revisionBefore =
-          scene->layer(songview::TimelineQuickLayer::AutomationNodes).revision;
-      songview::EditorSelectionModel::TimeSelection selection;
-      selection.startTick = 24;
-      selection.endTick = 192;
-      selection.scope = songview::EditorSelectionModel::TimeSelection::Tracks;
-      tab().view().selectionModel().setTimeSelection(selection);
-
-
-Original expression:
-  QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationNodes).revision >
-                  revisionBefore);
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S074; native scene-graph mesh-revision counter `scene->layer(AutomationNodes).revision > revisionBefore` at fceecd88, not the painted ring outcome.
 
 A004 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:91
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: The Quick scene-graph ring/mesh probes (layer revision, ringPaintedAt triangles) observe the native render. A direct presenter check cannot establish this observation; the retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-      const AutomationGeometry geometry = AutomationGeometry::resolve();
-      const QColor color = automationInput().palette().highlight().color();
-      const auto ringPaintedAt = [&](const QPointF &contentPoint) {
-          const QPoint window =
-              automation_test::windowFromContent(page(), automationInput(), contentPoint);
-          const QPointF viewportPoint = automationInput().mapFromScene(QPointF(window));
-          return checks::support::layerHasRingAt(
-              scene->layer(songview::TimelineQuickLayer::AutomationNodes), viewportPoint,
-              geometry.selectedNodeRingRadius, geometry.selectedNodeRingDipWidth, color);
-      };
-
-
-Original expression:
-  QVERIFY(ringPaintedAt(inputPoint(pan, 48, 32)));
+Disposition: MATCHED
+Mapping: S070, S091
 
 A005 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:92
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: The Quick scene-graph ring/mesh probes (layer revision, ringPaintedAt triangles) observe the native render. A direct presenter check cannot establish this observation; the retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(ringPaintedAt(inputPoint(pan, 96, 64)));
+Disposition: MATCHED
+Mapping: S071, S092
 
 A006 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:93
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: The Quick scene-graph ring/mesh probes (layer revision, ringPaintedAt triangles) observe the native render. A direct presenter check cannot establish this observation; the retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(ringPaintedAt(inputPoint(pan, 144, 96)));
+Disposition: MATCHED
+Mapping: S072, S093
 
 A007 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:94
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: The Quick scene-graph ring/mesh probes (layer revision, ringPaintedAt triangles) observe the native render. A direct presenter check cannot establish this observation; the retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!ringPaintedAt(inputPoint(pan, 192, 80)));
+Disposition: MATCHED
+Mapping: S073, S094
 
 A008 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:101
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/handle and body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); reaching the paired predicate establishes the row. This is not a native rendering assertion.
-Source context since previous assertion:
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S075; native row handle prerequisite `QVERIFY(pan.valid())` at fceecd88, replaced by the real Pan fixture used in the selected drag.
 
-  }
-
-  void AutomationEditingTest::tracksSelectionGroupDragUndo()
-  {
-      const EditorAutomationRowId panRow{EditorAutomationRowKind::ControlChange, 0, kPanController};
-      const LaneHandle pan = findRow(panRow);
-
-Original expression:
-  QVERIFY(pan.valid());
 
 A009 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:128
 Disposition: MATCHED
@@ -234,23 +112,12 @@ Disposition: MATCHED
 Mapping: S001
 
 A025 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:155
-Disposition: PARTIAL
-Mapping/reason: The Swift selection contracts assert band ranges produced by banding and by range commands; no predicate asserts the time-selection range produced by dragging an existing track-scoped selection. Unproved: the drag-shifted selection startTick/endTick. [S012]
-Source context since previous assertion:
-
-      const auto &movedSelection = tab().view().selectionModel().timeSelection();
-
-Original expression:
-  QCOMPARE(movedSelection.startTick, uint64_t(48));
+Disposition: MATCHED
+Mapping: S075
 
 A026 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:156
-Disposition: PARTIAL
-Mapping/reason: The Swift selection contracts assert band ranges produced by banding and by range commands; no predicate asserts the time-selection range produced by dragging an existing track-scoped selection. Unproved: the drag-shifted selection startTick/endTick. [S012]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(movedSelection.endTick, uint64_t(216));
+Disposition: MATCHED
+Mapping: S076
 
 A027 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:157
 Disposition: MATCHED
@@ -324,8 +191,8 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: S053
 
 A045 | AutomationEditingTest::pencilModeChangeRetainsPencilGesture | src/checks/automation/automationownership.cpp:186
-Disposition: GAP
-Mapping/reason: Native key delivery: the original decodes the pencil-mode shortcut key from the deleted QAction; the Swift page exposes only a plain isPencilMode flag, no predicate observes that key or its delivery, and the pencil-mode toggle shortcut is owned by the keybindings lane (docs/plans/swift-keybindings). No replacement assertion exists in this counterpart.
+Disposition: PARTIAL
+Mapping/reason: S077; the held pencil survives a direct tool-mode change, but no mounted predicate delivers the physical B key while that stroke is held. Unproved: tool key not delivered during held gesture in a mounted shell journey.
 Source context since previous assertion:
 
       const QKeyCombination shortcut = action->shortcut()[0];
@@ -339,7 +206,7 @@ Mapping/reason: S053
 
 A047 | AutomationEditingTest::pencilModeChangeRetainsPencilGesture | src/checks/automation/automationownership.cpp:200
 Disposition: PARTIAL
-Mapping/reason: drawerAutomationDetailThresholdPrecedence drives a real pencil-mode stroke through the page pointer route and asserts the inserted point; drawerAutomationPencilStrokeFilters asserts stroke points. No predicate re-executes a stroke or node drag across a QAction-driven pencil-mode change. Unproved: gesture retention across the mode transition. [S053]
+Mapping/reason: S077, S078; mode change retains and commits the stroke, but its value-92 endpoint is accepted at ticks 166–168 rather than proved at the original snapped cell and no physical B key is delivered while held. Unproved: exact cell tick and held-key ingress.
 Source context since previous assertion:
 
       mouseMove(automation_test::windowFromContent(page(), automationInput(), end));
@@ -352,7 +219,7 @@ Original expression:
 
 A048 | AutomationEditingTest::pencilModeChangeRetainsPencilGesture | src/checks/automation/automationownership.cpp:202
 Disposition: PARTIAL
-Mapping/reason: drawerAutomationDetailThresholdPrecedence drives a real pencil-mode stroke through the page pointer route and asserts the inserted point; drawerAutomationPencilStrokeFilters asserts stroke points. No predicate re-executes a stroke or node drag across a QAction-driven pencil-mode change. Unproved: gesture retention across the mode transition. [S053]
+Mapping/reason: S078; the committed value-92 endpoint exists near tick 168, but the predicate does not require the original endCell.tickBegin or physical B-key delivery during capture. Unproved: exact snapped cell and held-key ingress.
 Source context since previous assertion:
 
       const std::optional<DocLanePoint> endPoint = pointAt(tab().document(), endCell.tickBegin);
@@ -362,7 +229,7 @@ Original expression:
 
 A049 | AutomationEditingTest::pencilModeChangeRetainsPencilGesture | src/checks/automation/automationownership.cpp:203
 Disposition: PARTIAL
-Mapping/reason: drawerAutomationDetailThresholdPrecedence drives a real pencil-mode stroke through the page pointer route and asserts the inserted point; drawerAutomationPencilStrokeFilters asserts stroke points. No predicate re-executes a stroke or node drag across a QAction-driven pencil-mode change. Unproved: gesture retention across the mode transition. [S053]
+Mapping/reason: S078; the held stroke commits value 92, but the original `endPoint` is at endCell.tickBegin and the check permits ticks 166–168 and switches mode directly rather than through B. Unproved: value at the exact snapped cell after held-key ingress.
 Source context since previous assertion:
 
 
@@ -374,7 +241,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A051 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:235
 Disposition: PARTIAL
-Mapping/reason: drawerAutomationDetailThresholdPrecedence drives a real pencil-mode stroke through the page pointer route and asserts the inserted point; drawerAutomationPencilStrokeFilters asserts stroke points. No predicate re-executes a stroke or node drag across a QAction-driven pencil-mode change. Unproved: gesture retention across the mode transition.
+Mapping/reason: S080; the retained node drag commits at tick 168, but the original probe checks pointer mapping before release; the Swift predicate observes the committed endpoint only. Unproved: pre-release pointer-mapping tick.
 Source context since previous assertion:
 
       setPencilMode(false);
@@ -407,7 +274,7 @@ Original expression:
 
 A052 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:236
 Disposition: PARTIAL
-Mapping/reason: drawerAutomationDetailThresholdPrecedence drives a real pencil-mode stroke through the page pointer route and asserts the inserted point; drawerAutomationPencilStrokeFilters asserts stroke points. No predicate re-executes a stroke or node drag across a QAction-driven pencil-mode change. Unproved: gesture retention across the mode transition.
+Mapping/reason: S080; the retained node drag commits value 96, but the original probe checks pointer mapping before release; the Swift predicate observes the committed endpoint only. Unproved: pre-release pointer-mapping value.
 Source context since previous assertion:
 
 
@@ -423,8 +290,8 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: S053
 
 A055 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:242
-Disposition: GAP
-Mapping/reason: Native key delivery: the original decodes the pencil-mode shortcut key from the deleted QAction; the Swift page exposes only a plain isPencilMode flag, no predicate observes that key or its delivery, and the pencil-mode toggle shortcut is owned by the keybindings lane (docs/plans/swift-keybindings). No replacement assertion exists in this counterpart.
+Disposition: PARTIAL
+Mapping/reason: S079; the captured node remains a drag after a direct mode change, but no mounted predicate delivers physical B while the node is held. Unproved: tool key not delivered during held gesture in a mounted shell journey.
 Source context since previous assertion:
 
       const QKeyCombination shortcut = action->shortcut()[0];
@@ -438,7 +305,7 @@ Mapping/reason: S053
 
 A057 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:251
 Disposition: PARTIAL
-Mapping/reason: drawerAutomationDetailThresholdPrecedence drives a real pencil-mode stroke through the page pointer route and asserts the inserted point; drawerAutomationPencilStrokeFilters asserts stroke points. No predicate re-executes a stroke or node drag across a QAction-driven pencil-mode change. Unproved: gesture retention across the mode transition.
+Mapping/reason: S079, S080; the node drag survives direct mode change and commits at 168/value96, but no physical B key is delivered during that captured drag. Unproved: held-key ingress.
 Source context since previous assertion:
 
       mouseMove(activationWindow);
@@ -451,7 +318,7 @@ Original expression:
 
 A058 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:253
 Disposition: PARTIAL
-Mapping/reason: drawerAutomationDetailThresholdPrecedence drives a real pencil-mode stroke through the page pointer route and asserts the inserted point; drawerAutomationPencilStrokeFilters asserts stroke points. No predicate re-executes a stroke or node drag across a QAction-driven pencil-mode change. Unproved: gesture retention across the mode transition.
+Mapping/reason: S080; tick-168/value96 node is committed after direct mode change, without a mounted B-key transition while captured. Unproved: held-key ingress.
 Source context since previous assertion:
 
       const std::optional<DocLanePoint> movedPoint = pointAt(tab().document(), 168);
@@ -461,7 +328,7 @@ Original expression:
 
 A059 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:254
 Disposition: PARTIAL
-Mapping/reason: drawerAutomationDetailThresholdPrecedence drives a real pencil-mode stroke through the page pointer route and asserts the inserted point; drawerAutomationPencilStrokeFilters asserts stroke points. No predicate re-executes a stroke or node drag across a QAction-driven pencil-mode change. Unproved: gesture retention across the mode transition.
+Mapping/reason: S080; value96 is committed at tick168 after direct mode change, without a mounted B-key transition while captured. Unproved: held-key ingress.
 Source context since previous assertion:
 
 
@@ -470,7 +337,7 @@ Original expression:
 
 A060 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:255
 Disposition: PARTIAL
-Mapping/reason: drawerAutomationDetailThresholdPrecedence drives a real pencil-mode stroke through the page pointer route and asserts the inserted point; drawerAutomationPencilStrokeFilters asserts stroke points. No predicate re-executes a stroke or node drag across a QAction-driven pencil-mode change. Unproved: gesture retention across the mode transition.
+Mapping/reason: S081; old tick-72 source disappears after direct mode change, without a mounted B-key transition while captured. Unproved: held-key ingress.
 Source context since previous assertion:
 
 
@@ -479,7 +346,7 @@ Original expression:
 
 A061 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:257
 Disposition: PARTIAL
-Mapping/reason: The Swift selection contracts assert band ranges produced by banding and by range commands; no predicate asserts the time-selection range produced by dragging an existing track-scoped selection. Unproved: the drag-shifted selection startTick/endTick. [S012]
+Mapping/reason: S082; retained selected node drag starts its shifted range at tick168, without a mounted B-key transition while captured. Unproved: held-key ingress.
 Source context since previous assertion:
 
       const auto &movedSelection = tab().view().selectionModel().timeSelection();
@@ -489,7 +356,7 @@ Original expression:
 
 A062 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:258
 Disposition: PARTIAL
-Mapping/reason: The Swift selection contracts assert band ranges produced by banding and by range commands; no predicate asserts the time-selection range produced by dragging an existing track-scoped selection. Unproved: the drag-shifted selection startTick/endTick. [S012]
+Mapping/reason: S083; retained selected node drag ends its shifted range at tick192, without a mounted B-key transition while captured. Unproved: held-key ingress.
 Source context since previous assertion:
 
 
@@ -523,40 +390,16 @@ Disposition: MATCHED
 Mapping: S050
 
 A070 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:321
-Disposition: PARTIAL
-Mapping/reason: The original asserts the harness probe cell/point arithmetic that places the press inside the hidden or visible cell. The Swift predicate asserts the same scenario's markersVisible state and inserted point, but no predicate asserts the probe's cell membership. Unproved: the probe-cell arithmetic. [S050,S053]
-Source context since previous assertion:
-
-      setPencilMode(true);
-      const AutomationProjection hiddenProjection(geometry, &page());
-      const AutomationGridCell hiddenSourceCell = hiddenProjection.snapCellAt(72.0);
-
-Original expression:
-  QCOMPARE(hiddenSourceCell.tickBegin, uint64_t{72});
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S050, S053; native `hiddenProjection.snapCellAt(72.0).tickBegin == 72` at fceecd88 validates a harness probe position, not the hidden-marker pencil outcome.
 
 A071 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:323
-Disposition: PARTIAL
-Mapping/reason: The original asserts the harness probe cell/point arithmetic that places the press inside the hidden or visible cell. The Swift predicate asserts the same scenario's markersVisible state and inserted point, but no predicate asserts the probe's cell membership. Unproved: the probe-cell arithmetic. [S050,S053]
-Source context since previous assertion:
-
-      const DeliveredPoint hiddenSource = deliveredPoint(72.0, 40, hiddenSourceCell.tickBegin);
-
-Original expression:
-  QCOMPARE(hiddenSource.second.point.tick, uint64_t{72});
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S050, S053; native `hiddenSource.second.point.tick == 72` at fceecd88 validates a synthesized harness pointer before the pencil press.
 
 A072 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:329
-Disposition: PARTIAL
-Mapping/reason: The original asserts the harness probe cell/point arithmetic that places the press inside the hidden or visible cell. The Swift predicate asserts the same scenario's markersVisible state and inserted point, but no predicate asserts the probe's cell membership. Unproved: the probe-cell arithmetic. [S050,S053]
-Source context since previous assertion:
-
-      tab().document().writeLanePoints(
-          0, kPanController, 0, CoreTimeDefaults::kNoTick,
-          {{Tick(hiddenSource.second.point.tick), hiddenSource.second.point.value}});
-      const AutomationGridCell hiddenEndCell = hiddenProjection.snapCellAt(192.0);
-      const DeliveredPoint hiddenEnd = deliveredPoint(192.0, 96, hiddenEndCell.tickBegin);
-
-Original expression:
-  QCOMPARE(hiddenEnd.second.point.tick, hiddenEndCell.tickBegin);
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S050, S053; native `hiddenEnd.second.point.tick == hiddenEndCell.tickBegin` at fceecd88 validates synthesized probe-cell arithmetic.
 
 A073 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:335
 Disposition: MATCHED
@@ -583,65 +426,24 @@ Disposition: MATCHED
 Mapping: S054
 
 A079 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:351
-Disposition: PARTIAL
-Mapping/reason: The original asserts the harness probe cell/point arithmetic that places the press inside the hidden or visible cell. The Swift predicate asserts the same scenario's markersVisible state and inserted point, but no predicate asserts the probe's cell membership. Unproved: the probe-cell arithmetic. [S054,S056]
-Source context since previous assertion:
-
-      setPencilMode(true);
-      const AutomationProjection visibleProjection(geometry, &page());
-      const AutomationGridCell visibleSourceCell = visibleProjection.snapCellAt(72.0);
-
-Original expression:
-  QCOMPARE(visibleSourceCell.tickBegin, uint64_t{72});
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S054, S056; native `visibleProjection.snapCellAt(72.0).tickBegin == 72` at fceecd88 validates harness probe-cell arithmetic.
 
 A080 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:353
-Disposition: PARTIAL
-Mapping/reason: The original asserts the harness probe cell/point arithmetic that places the press inside the hidden or visible cell. The Swift predicate asserts the same scenario's markersVisible state and inserted point, but no predicate asserts the probe's cell membership. Unproved: the probe-cell arithmetic. [S054,S056]
-Source context since previous assertion:
-
-      const DeliveredPoint visibleSource = deliveredPoint(72.0, 40, visibleSourceCell.tickBegin);
-
-Original expression:
-  QCOMPARE(visibleSource.second.point.tick, uint64_t{72});
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S054, S056; native `visibleSource.second.point.tick == 72` at fceecd88 validates a synthesized harness pointer.
 
 A081 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:359
-Disposition: PARTIAL
-Mapping/reason: The original asserts the harness probe cell/point arithmetic that places the press inside the hidden or visible cell. The Swift predicate asserts the same scenario's markersVisible state and inserted point, but no predicate asserts the probe's cell membership. Unproved: the probe-cell arithmetic. [S054,S056]
-Source context since previous assertion:
-
-      tab().document().writeLanePoints(
-          0, kPanController, 0, CoreTimeDefaults::kNoTick,
-          {{Tick(visibleSource.second.point.tick), visibleSource.second.point.value}});
-      const AutomationGridCell visibleTargetCell = visibleProjection.snapCellAt(168.0);
-      const DeliveredPoint visibleTarget = deliveredPoint(168.0, 96, visibleTargetCell.tickBegin);
-
-Original expression:
-  QCOMPARE(visibleTarget.second.point.tick, visibleTargetCell.tickBegin);
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S054, S056; native `visibleTarget.second.point.tick == visibleTargetCell.tickBegin` at fceecd88 validates synthesized probe-cell arithmetic.
 
 A082 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:367
-Disposition: PARTIAL
-Mapping/reason: The original asserts the harness probe cell/point arithmetic that places the press inside the hidden or visible cell. The Swift predicate asserts the same scenario's markersVisible state and inserted point, but no predicate asserts the probe's cell membership. Unproved: the probe-cell arithmetic. [S054,S056]
-Source context since previous assertion:
-
-      const int activationDistance = geometry.nodeDragActivationDistance + 2;
-      const QPoint activationWindow = visibleSource.first + QPoint(activationDistance, 0);
-      const QPoint endWindow = activationWindow + (visibleTarget.first - visibleSource.first);
-      const QPointF effectiveTarget = automation_test::effectiveDragContent(
-          page(), automationInput(), visibleSource.first, activationWindow, endWindow);
-      const AutomationProjection::PointerMapping effectiveTargetMapping =
-          pointerMapping(pan, effectiveTarget);
-
-Original expression:
-  QCOMPARE(effectiveTargetMapping.point.tick, visibleTarget.second.point.tick);
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S054, S056; native `effectiveTargetMapping.point.tick == visibleTarget.second.point.tick` at fceecd88 validates harness-computed probe alignment.
 
 A083 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:368
-Disposition: PARTIAL
-Mapping/reason: The original asserts the harness probe cell/point arithmetic that places the press inside the hidden or visible cell. The Swift predicate asserts the same scenario's markersVisible state and inserted point, but no predicate asserts the probe's cell membership. Unproved: the probe-cell arithmetic. [S054,S056]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(effectiveTargetMapping.point.value, visibleTarget.second.point.value);
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S054, S056; native `effectiveTargetMapping.point.value == visibleTarget.second.point.value` at fceecd88 validates harness-computed probe alignment.
 
 A084 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:375
 Disposition: MATCHED
@@ -679,17 +481,8 @@ Disposition: MATCHED
 Mapping: S061
 
 A093 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:406
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationTransient layer revision/rects/triangles observe the native mesh. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-
-
-      // The provisional preview is live: the retained transient layer carries
-      // the grabbed node while the document stays frozen.
-
-Original expression:
-  QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).revision >
-                  arm->transientRevisionBefore);
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S088; native `AutomationTransient.revision > arm->transientRevisionBefore` at fceecd88 is a mesh revision counter, not the visible captured preview.
 
 A094 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:408
 Disposition: MATCHED
@@ -700,13 +493,8 @@ Disposition: MATCHED
 Mapping: S061
 
 A096 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:410
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: Native pointer grab delivery (QQuickWindow mouseGrabberItem) is owned by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-
-Original expression:
-  QTRY_VERIFY(quickWindow().mouseGrabberItem() == &automationInput());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S086; native `quickWindow().mouseGrabberItem() == &automationInput()` at fceecd88 is pointer identity, not the captured outside-plot gesture whose painted preview remains visible.
 
 A097 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:418
 Disposition: MATCHED
@@ -717,13 +505,8 @@ Disposition: MATCHED
 Mapping: S063
 
 A099 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:421
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: Native pointer grab delivery (QQuickWindow mouseGrabberItem) is owned by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-
-Original expression:
-  QTRY_VERIFY(!quickWindow().mouseGrabberItem());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S089; native `!quickWindow().mouseGrabberItem()` at fceecd88 is pointer identity, not cancellation of the visible captured preview.
 
 A100 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:422
 Disposition: MATCHED
@@ -738,17 +521,14 @@ Disposition: MATCHED
 Mapping: S057, S058
 
 A103 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:425
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationTransient layer revision/rects/triangles observe the native mesh. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-
-
+Disposition: PARTIAL
+Mapping/reason: S084, S087; parameter switch empties preview rectangle publication and mounted Escape cancellation erases painted pixels, but no mounted pixel probe asserts that a parameter switch itself erases the transient marker. Unproved: switch-triggered painted rectangle disappearance.
 Original expression:
   QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).rects.empty());
 
 A104 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:426
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationTransient layer revision/rects/triangles observe the native mesh. A direct presenter check cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: S085, S089; switching parameters removes preview readout, band and hover publications; mounted Escape cancellation clears captured transient pixels, but switch-triggered disappearance of triangle pixels is not independently sampled. Unproved: actual transient triangle paint after a parameter switch.
 Source context since previous assertion:
 
 
@@ -788,17 +568,8 @@ Disposition: MATCHED
 Mapping: S060
 
 A113 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:445
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/handle and body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); reaching the paired predicate establishes the row. This is not a native rendering assertion.
-Source context since previous assertion:
-
-
-      // Reactivating the pilot parameter through its rendered label restores
-      // its plot, and an ordinary drag commits exactly once again.
-      const EditorAutomationRowId pilotRow{EditorAutomationRowKind::ControlChange, 0, kPanController};
-
-Original expression:
-  QVERIFY(activateParameter(pilotRow));
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S062; native rendered-row `QVERIFY(activateParameter(pilotRow))` at fceecd88 is an AutomationCanvas activation prerequisite, replaced by the real page's fresh Pan activation and accepted drag.
 
 A114 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:446
 Disposition: MATCHED
@@ -815,14 +586,8 @@ Disposition: MATCHED
 Mapping: S062
 
 A118 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:452
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationTransient layer revision/rects/triangles observe the native mesh. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-
-
-Original expression:
-  QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).revision >
-                  rearmed->transientRevisionBefore);
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S090; native `AutomationTransient.revision > rearmed->transientRevisionBefore` at fceecd88 is a mesh revision counter, not the resumed visible gesture.
 
 A119 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:456
 Disposition: MATCHED
@@ -1075,3 +840,78 @@ Anchor: message "awaited undo completes"
 
 S069 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "redo restores the node value move"
+
+S070 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "track range paints the tick-48 Pan selected ring"
+
+S071 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "track range paints the tick-96 Pan selected ring"
+
+S072 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "track range paints the tick-144 Pan selected ring"
+
+S073 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "half-open track range excludes the tick-192 Pan ring"
+
+S074 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the selected node ring paints the selection tint in the captured drawer"
+
+S075 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "track-scoped selected drag starts at tick 48"
+
+S076 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "track-scoped selected drag ends at tick 216"
+
+S077 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "switching away from pencil retains the held stroke"
+
+S078 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "retained pencil commits its value-92 endpoint near tick 168"
+
+S079 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "switching to pencil retains the captured node drag"
+
+S080 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "retained node drag commits tick-168 value-96"
+
+S081 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "retained node drag removes the tick-72 source"
+
+S082 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "single-node selected drag starts at tick 168"
+
+S083 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "single-node selected drag ends at tick 192"
+
+S084 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "parameter switch removes every provisional node marker rectangle"
+
+S085 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "parameter switch removes the preview readout band and hover overlays"
+
+S086 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "leaving the plot retains the captured node and its visible preview"
+
+S087 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "cancelled transient pixels disappear from the captured drawer"
+
+S088 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the held transient marker paints real pixels before cancellation"
+
+S089 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "cancel outside the plot retires every visible transient"
+
+S090 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "a fresh node press captures after parameter switch"
+
+S091 | test_productionAutomationPanSelectedRingPixels | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the tick-48 Pan ring paints the selection tint"
+
+S092 | test_productionAutomationPanSelectedRingPixels | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the tick-96 Pan ring paints the selection tint"
+
+S093 | test_productionAutomationPanSelectedRingPixels | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the tick-144 Pan ring paints the selection tint"
+
+S094 | test_productionAutomationPanSelectedRingPixels | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the excluded tick-192 Pan ring paints no selection tint"

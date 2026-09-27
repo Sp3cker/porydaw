@@ -26,8 +26,21 @@ func drawerAutomationCancellationAndNoOps(_ report: CheckReport, suite: Document
                   message: "cancelling ends the gesture synchronously")
     report.expectEqual(expected: before, actual: fixture.snapshot, cppID: drawerAutomationCancelID,
                        what: "a cancelled gesture mutates nothing")
+    report.expect(fixture.page.previewRects.isEmpty && !fixture.page.previewLabelVisible
+                  && !fixture.page.bandVisible && !fixture.page.hoverVisible,
+                  cppID: drawerAutomationCancelID,
+                  message: "cancel clears every published node preview label band and hover primitive")
     report.expect(!fixture.page.handleEscape(), cppID: drawerAutomationCancelID,
                   message: "Escape with nothing to claim stays unhandled")
+    report.expect(fixture.page.pointerPress(x: fixture.x(24),
+                                            y: fixture.y(fixture.panLane, 64),
+                                            surface: 1, button: 1),
+                  cppID: drawerAutomationCancelID,
+                  message: "the cancelled lane accepts a fresh node press")
+    fixture.page.cancelSectionInteraction()
+    report.expect(!fixture.page.interactionActive && fixture.page.previewRects.isEmpty,
+                  cppID: drawerAutomationCancelID,
+                  message: "second cancellation retires the new capture without a transient")
 
     // A stroke that never travelled commits nothing.
     report.expect(fixture.page.pointerPress(x: fixture.x(24), y: fixture.y(fixture.panLane, 64), surface: 1, button: 1),
@@ -300,6 +313,11 @@ func drawerAutomationInflightDragInvalidation(_ report: CheckReport, suite: Docu
                                    buttons: 1)
     report.expect(switched.page.hasGesture, cppID: switchID, message: "the drag is live")
     switched.activate(switched.volumeLane)
+    report.expect(switched.page.previewRects.isEmpty, cppID: switchID,
+                  message: "parameter switch removes every provisional node marker rectangle")
+    report.expect(!switched.page.previewLabelVisible && !switched.page.bandVisible
+                  && !switched.page.hoverVisible, cppID: switchID,
+                  message: "parameter switch removes the preview readout band and hover overlays")
     report.expect(!switched.page.hasGesture, cppID: switchID,
                   message: "switching parameters cancels the drag")
     report.expectEqual(expected: switchedBefore, actual: switched.snapshot, cppID: switchID,
@@ -320,8 +338,78 @@ func drawerAutomationInflightDragInvalidation(_ report: CheckReport, suite: Docu
                                       button: 1)
     report.expectEqual(expected: ["24:90", "120:40"], actual: switched.values(switched.panLane), cppID: switchID,
                        what: "the recovery drag commits normally")
-}
 
+    let ownerID = "automation/AutomationEditingTest::tracksSelectionRings"
+    let rings = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                  pan: [(48, 32), (96, 64), (144, 96), (192, 80)])
+    rings.activate(rings.panLane)
+    rings.page.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 24, endTick: 192), scope: .tracks([0])))
+    let ringNodes = rings.page.publishedNodes.map { ($0.tick, $0.selected) }
+    report.expect(ringNodes.contains { $0.0 == 48 && $0.1 }, cppID: ownerID,
+                  message: "track range paints the tick-48 Pan selected ring")
+    report.expect(ringNodes.contains { $0.0 == 96 && $0.1 }, cppID: ownerID,
+                  message: "track range paints the tick-96 Pan selected ring")
+    report.expect(ringNodes.contains { $0.0 == 144 && $0.1 }, cppID: ownerID,
+                  message: "track range paints the tick-144 Pan selected ring")
+    report.expect(ringNodes.contains { $0.0 == 192 && !$0.1 }, cppID: ownerID,
+                  message: "half-open track range excludes the tick-192 Pan ring")
+    let firstX = rings.x(48)
+    let firstY = rings.y(rings.panLane, 32)
+    let armedX = firstX + rings.page.geometry.nodeDragActivationDistance + 2
+    let lastX = armedX + rings.x(72) - firstX
+    _ = rings.page.pointerPress(x: firstX, y: firstY, surface: 1, button: 1)
+    _ = rings.page.pointerMove(x: armedX, y: firstY, buttons: 1)
+    _ = rings.page.pointerMove(x: lastX, y: firstY, buttons: 1)
+    _ = rings.page.pointerRelease(x: lastX, y: firstY, button: 1)
+    report.expectEqual(expected: Tick(48), actual: rings.page.selection?.range.startTick,
+                       cppID: ownerID, what: "track-scoped selected drag starts at tick 48")
+    report.expectEqual(expected: Tick(216), actual: rings.page.selection?.range.endTick,
+                       cppID: ownerID, what: "track-scoped selected drag ends at tick 216")
+
+    let pencilID = "automation/AutomationEditingTest::pencilModeChangeRetainsPencilGesture"
+    let pencil = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [])
+    pencil.activate(pencil.panLane)
+    pencil.page.isPencilMode = true
+    _ = pencil.page.pointerPress(x: pencil.x(72), y: pencil.y(pencil.panLane, 40),
+                                 surface: 1, button: 1)
+    _ = pencil.page.pointerMove(x: pencil.x(120), y: pencil.y(pencil.panLane, 70), buttons: 1)
+    pencil.page.isPencilMode = false
+    report.expect(pencil.page.isPainting && pencil.page.hasGesture, cppID: pencilID,
+                  message: "switching away from pencil retains the held stroke")
+    _ = pencil.page.pointerMove(x: pencil.x(168), y: pencil.y(pencil.panLane, 92),
+                                buttons: 1, modifiers: AutomationQtModifier.control)
+    _ = pencil.page.pointerRelease(x: pencil.x(168), y: pencil.y(pencil.panLane, 92),
+                                   button: 1, modifiers: AutomationQtModifier.control)
+    report.expect(pencil.lanePoints(pencil.panLane).contains {
+        $0.tick >= 166 && $0.tick <= 168 && $0.value == 92
+    }, cppID: pencilID, message: "retained pencil commits its value-92 endpoint near tick 168")
+
+    let nodeID = "automation/AutomationEditingTest::pencilModeChangeRetainsNodeGesture"
+    let node = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(72, 64)])
+    node.activate(node.panLane)
+    node.page.selectRange(from: 72, to: 96, lanes: [node.panLane])
+    let startX = node.x(72)
+    let startY = node.y(node.panLane, 64)
+    let activationX = startX + node.page.geometry.nodeDragActivationDistance + 2
+    let targetX = activationX + node.x(168) - startX
+    _ = node.page.pointerPress(x: startX, y: startY, surface: 1, button: 1)
+    _ = node.page.pointerMove(x: activationX, y: startY, buttons: 1)
+    node.page.isPencilMode = true
+    report.expect(node.page.hasGesture && !node.page.isPainting, cppID: nodeID,
+                  message: "switching to pencil retains the captured node drag")
+    _ = node.page.pointerMove(x: targetX, y: node.y(node.panLane, 96), buttons: 1)
+    _ = node.page.pointerRelease(x: targetX, y: node.y(node.panLane, 96), button: 1)
+    report.expect(node.lanePoints(node.panLane).contains { $0.tick == 168 && $0.value == 96 },
+                  cppID: nodeID, message: "retained node drag commits tick-168 value-96")
+    report.expect(!node.lanePoints(node.panLane).contains { $0.tick == 72 },
+                  cppID: nodeID, message: "retained node drag removes the tick-72 source")
+    report.expectEqual(expected: Tick(168), actual: node.page.selection?.range.startTick,
+                       cppID: nodeID, what: "single-node selected drag starts at tick 168")
+    report.expectEqual(expected: Tick(192), actual: node.page.selection?.range.endTick,
+                       cppID: nodeID, what: "single-node selected drag ends at tick 192")
+
+}
 @MainActor
 func drawerAutomationKeyboardIngress(_ report: CheckReport, suite: DocumentSession,
                                      service: ProjectService) {

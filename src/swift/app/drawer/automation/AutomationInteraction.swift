@@ -385,7 +385,8 @@ extension AutomationPage {
         let locking = modifiers.shift
         let continuous = transaction.sampleValue(
             logicalX: x, logicalY: y, locking: locking, freehand: freehand,
-            verticalSlopDistance: geometry.nodeDragActivationDistance, plotHeight: plotHeight,
+            verticalSlopDistance: geometry.nodeDragActivationDistance,
+            plotHeight: max(1, plotHeight - 2 * geometry.valuePlotPadding),
             displaySpan: (projection.displayMaximum ?? facts.metadata.maximum) - facts.metadata.minimum)
         let sample = AutomationPencilTransaction.Sample(
             rawTick: projection.rawTick(atX: x), logicalX: x, logicalY: y,

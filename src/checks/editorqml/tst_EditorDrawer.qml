@@ -7824,6 +7824,65 @@ TestCase {
             mouseRelease(input, target.x, target.y, Qt.LeftButton)
             tryVerify(function() { return testCase.automationPreviewItems().length === 0 },
                       1000, "the node preview retires on release")
+            nodes = testCase.automationLaneNodes()
+            node = nodes[testCase.automationWrittenNodeIndex()]
+            start = testCase.automationNodePoint(node)
+            revision = bootstrap.automationDocumentRevision()
+            mousePress(input, start.x, start.y, Qt.LeftButton)
+            mouseMove(input, start.x + 16, start.y, -1, Qt.LeftButton)
+            tryVerify(function() { return testCase.automationPreviewItems().length > 0 },
+                      1000, "the second held node publishes a painted transient marker")
+            waitForRendering(testCase.surface)
+            var transientMarker = testCase.automationPreviewItems()[0]
+            var capturedImage = grabImage(testCase.surface)
+            var transientRegion = testCase.regionOf(capturedImage, testCase.surface, transientMarker)
+            var transientInk = testCase.channelsOf(testCase.drawerPalette().selectionEdge)
+            verify(testCase.nearestPixel(capturedImage, transientRegion, transientInk).distance < 30,
+                   "the held transient marker paints real pixels before cancellation")
+            mouseMove(input, input.width + 24, start.y, -1, Qt.LeftButton)
+            tryVerify(function() { return model.interactionActive
+                                    && testCase.automationPreviewItems().length > 0 },
+                      1000, "leaving the plot retains the captured node and its visible preview")
+            compare(bootstrap.automationDocumentRevision(), revision,
+                    "the captured outside-plot node preview never writes early")
+            keyClick(Qt.Key_Escape)
+            tryVerify(function() {
+                return !model.interactionActive && testCase.automationPreviewItems().length === 0
+                       && !model.previewLabelVisible && !model.bandVisible && !model.hoverVisible
+            }, 1000, "cancel outside the plot retires every visible transient")
+            waitForRendering(testCase.surface)
+            var clearedImage = grabImage(testCase.surface)
+            verify(testCase.nearestPixel(clearedImage, transientRegion, transientInk).distance > 30,
+                   "cancelled transient pixels disappear from the captured drawer")
+            mouseRelease(input, input.width + 24, start.y, Qt.LeftButton)
+            compare(bootstrap.automationDocumentRevision(), revision,
+                    "the cancelled captured node commits nothing on release")
+            var nextLane = lanes[(lane + 1) % lanes.length]
+            testCase.clickAutomationTab(nextLane)
+            tryVerify(function() { return bootstrap.automationActiveParameterIndex() === nextLane },
+                      1000, "a new parameter accepts activation after cancelled capture")
+            var freshOnNextLane = testCase.automationFreePoint()
+            verify(freshOnNextLane, "the newly activated parameter has a valid plot press")
+            mousePress(input, freshOnNextLane.x, freshOnNextLane.y, Qt.LeftButton)
+            tryCompare(model, "interactionActive", true, 1000,
+                       "the newly activated parameter captures its own fresh plot gesture")
+            keyClick(Qt.Key_Escape)
+            mouseRelease(input, freshOnNextLane.x, freshOnNextLane.y, Qt.LeftButton)
+            compare(bootstrap.automationDocumentRevision(), revision,
+                    "cancelling the new parameter gesture leaves the document untouched")
+            testCase.clickAutomationTab(lanes[lane])
+            tryVerify(function() { return bootstrap.automationActiveParameterIndex() === lanes[lane] },
+                      1000, "the original parameter accepts a fresh gesture after cancellation")
+            nodes = testCase.automationLaneNodes()
+            node = nodes[testCase.automationWrittenNodeIndex()]
+            start = testCase.automationNodePoint(node)
+            mousePress(input, start.x, start.y, Qt.LeftButton)
+            tryCompare(model, "interactionActive", true, 1000,
+                       "a fresh node press captures after parameter switch")
+            keyClick(Qt.Key_Escape)
+            mouseRelease(input, start.x, start.y, Qt.LeftButton)
+            compare(bootstrap.automationDocumentRevision(), revision,
+                    "the fresh cancelled capture changes no document state")
 
             nodes = testCase.automationLaneNodes()
             var written = nodes.filter(function(item) { return !item.model.projected })
@@ -7845,6 +7904,15 @@ TestCase {
                 return !item.model.projected && item.model.selected
             })
             verify(selected.length >= 2, "the real band selects multiple written nodes")
+            waitForRendering(testCase.surface)
+            var selectedImage = grabImage(testCase.surface)
+            var ring = findChild(selected[0], "automationNodeRing")
+            verify(ring && ring.visible && ring.width > 0,
+                   "selected node exposes its mounted ring")
+            var ringRegion = testCase.regionOf(selectedImage, testCase.surface, ring)
+            var ringColor = testCase.channelsOf(testCase.drawerPalette().selectionRing)
+            verify(testCase.nearestPixel(selectedImage, ringRegion, ringColor).distance < 30,
+                   "the selected node ring paints the selection tint in the captured drawer")
             var first = testCase.automationNodePoint(selected[0])
             var second = null
             for (var n = 1; n < selected.length; ++n) {
@@ -7908,6 +7976,85 @@ TestCase {
                     "the live preview writes nothing")
             mouseRelease(input, finish, endY, Qt.LeftButton, Qt.ShiftModifier)
         }
+    }
+
+    function test_productionAutomationPanSelectedRingPixels() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionAutomation("automation-pan-selected-ring-pixels")
+        testCase.clickAutomationTab(bootstrap.automationPanIndex())
+        var input = testCase.automationPlotInput()
+        var model = testCase.automationModel()
+        var anchors = testCase.automationLaneNodes().filter(function(item) {
+            return !item.model.projected
+        }).sort(function(a, b) { return a.model.tick - b.model.tick })
+        verify(anchors.length >= 2, "Pan fixture draws two written calibration markers")
+        var first = anchors[0]
+        var last = anchors[anchors.length - 1]
+        var firstTick = first.model.tick
+        var lastTick = last.model.tick
+        var firstX = testCase.automationNodePoint(first).x
+        var lastX = testCase.automationNodePoint(last).x
+        verify(lastTick > firstTick,
+               "distinct written Pan markers calibrate separate plot ticks")
+        var pixelsPerTick = (lastX - firstX) / (lastTick - firstTick)
+        function xAt(tick) { return firstX + (tick - firstTick) * pixelsPerTick }
+        verify(pixelsPerTick > 0 && xAt(48) > 8 && xAt(192) < input.width - 16,
+               "four Pan tick positions fit the rendered marker projection")
+        var ticks = [48, 96, 144, 192]
+        model.isPencilMode = true
+        wait(0)
+        for (var i = 0; i < ticks.length; ++i) {
+            var tick = ticks[i]
+            if (testCase.automationNodesAtTick(tick).length === 0) {
+                var x = xAt(tick) + 1
+                var ys = [input.height / 4, input.height / 2, input.height * 3 / 4]
+                var y = -1
+                for (var j = 0; j < ys.length; ++j) {
+                    if (!testCase.automationNodeUnderPoint(x, ys[j])) {
+                        y = ys[j]
+                        break
+                    }
+                }
+                verify(y >= 0, "the exact Pan tick leaves a writable marker row: " + tick)
+                compare(model.hoverTick, tick,
+                        "the real pencil hover maps the Pan press to its target tick")
+                mousePress(input, x, y, Qt.LeftButton, Qt.ControlModifier)
+                mouseMove(input, x + 3, y + 4, -1, Qt.LeftButton, Qt.ControlModifier)
+                mouseRelease(input, x + 3, y + 4, Qt.LeftButton, Qt.ControlModifier)
+            }
+            tryVerify(function() { return testCase.automationNodesAtTick(tick).length > 0 },
+                      1000, "real pencil stroke writes the exact Pan tick: " + tick)
+        }
+        model.isPencilMode = false
+        var bandY = testCase.automationFreePoint().y
+        mousePress(input, xAt(24) + 1, bandY, Qt.RightButton)
+        mouseMove(input, xAt(192) + 1, bandY, -1, Qt.RightButton)
+        mouseRelease(input, xAt(192) + 1, bandY, Qt.RightButton)
+        compare(bootstrap.automationSelectionRange(), "24:192",
+                "the real right-button Pan band selects the half-open tick range")
+        waitForRendering(testCase.surface)
+        var image = grabImage(testCase.surface)
+        var ringColor = testCase.channelsOf(testCase.drawerPalette().selectionRing)
+        function selectedRingPixel(tick) {
+            var nodes = testCase.automationNodesAtTick(tick)
+            var ring = nodes.length ? findChild(nodes[0], "automationNodeRing") : null
+            verify(ring && ring.width > 0, "the Pan marker has a drawable ring at tick " + tick)
+            var area = testCase.regionOf(image, testCase.surface, ring)
+            return { "visible": ring.visible,
+                     "distance": testCase.nearestPixel(image, area, ringColor).distance }
+        }
+        var at48 = selectedRingPixel(48)
+        var at96 = selectedRingPixel(96)
+        var at144 = selectedRingPixel(144)
+        var at192 = selectedRingPixel(192)
+        verify(at48.visible && at48.distance < 30,
+               "the tick-48 Pan ring paints the selection tint")
+        verify(at96.visible && at96.distance < 30,
+               "the tick-96 Pan ring paints the selection tint")
+        verify(at144.visible && at144.distance < 30,
+               "the tick-144 Pan ring paints the selection tint")
+        verify(!at192.visible && at192.distance >= 30,
+               "the excluded tick-192 Pan ring paints no selection tint")
     }
 
     function test_productionAutomationPencilPreviewAndLabel() {
