@@ -18,12 +18,6 @@
 // `modalHost` property, so a page's picker or menu is never clipped by the body
 // loader that hosts its content. The layer draws nothing and takes no input of
 // its own.
-//
-// Input: a focused toggle activates with Return/Enter, a focused grip resizes
-// with Up/Down and consumes Left/Right. Bare Space is never claimed, so the
-// window's transport shortcut outranks incidental focus here. Every visibility
-// call passes this scope's live activeFocus as the focus observation for that
-// call; no focus value is remembered.
 pragma ComponentBehavior: Bound
 
 import QtQuick
@@ -245,6 +239,15 @@ FocusScope {
                 drawerScope.presenter.toggleSection(section.kind, drawerScope.activeFocus)
             }
 
+            function activateFromPointer() {
+                const hadVisibleSection = drawerScope.presenter.automationSection.visible
+                                          || drawerScope.presenter.velocitySection.visible
+                                          || drawerScope.presenter.voiceChangesSection.visible
+                drawerScope.presenter.toggleSection(section.kind,
+                                                    drawerScope.activeFocus
+                                                    && (toggle.activeFocus || hadVisibleSection))
+            }
+
             function activateFromKeyboard(event) {
                 activate()
                 event.accepted = true
@@ -312,7 +315,12 @@ FocusScope {
 
                 anchors.fill: parent
                 acceptedButtons: Qt.LeftButton
-                onClicked: toggle.activate()
+                onPressed: (mouse) => {
+                    if (!toggle.activeFocus)
+                        bar.forceActiveFocus(Qt.MouseFocusReason)
+                    mouse.accepted = true
+                }
+                onClicked: toggle.activateFromPointer()
             }
         }
 

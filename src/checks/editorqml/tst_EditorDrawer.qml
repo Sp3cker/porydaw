@@ -7793,4 +7793,55 @@ TestCase {
                 "lane paste restores every copied absolute tick")
     }
 
+    function test_mountedDrawerFocusFallbackWalk() {
+        if (testCase.productionPhase) skip("the container cases run in the lane's container child")
+
+        var automation = testCase.automationKind
+        var velocity = testCase.velocityKind
+        var voiceChanges = testCase.voiceChangesKind
+        verify(testCase.attachPage(automation))
+        verify(testCase.attachPage(velocity))
+        verify(testCase.attachPage(voiceChanges))
+        testCase.resetChrome("focus-fallback-walk")
+        testCase.focusControl(testCase.rollInput())
+        testCase.clickToggle(automation)
+        tryVerify(function() {
+            return testCase.section(automation).visible
+                   && testCase.bar().activeFocus
+                   && !testCase.rollInput().activeFocus
+        }, 1000, "showing a section from blank chrome lands focus in the bar")
+
+        testCase.clickToggle(velocity)
+        var velocityPage = testCase.pageItem(velocity)
+        verify(velocityPage)
+        tryCompare(velocityPage, "activeFocus", true, 1000,
+                   "showing a section while the bar holds focus lands focus in that section's page")
+
+        var request = testCase.presenter().focusRequest
+        testCase.clickToggle(voiceChanges)
+        var voicePage = testCase.pageItem(voiceChanges)
+        verify(voicePage)
+        tryVerify(function() {
+            return testCase.presenter().focusRequest > request
+                   && testCase.presenter().focusTarget === voiceChanges
+                   && voicePage.activeFocus
+        }, 1000, "an explicit section focus request lands in that section's page")
+
+        var fallbacks = [
+            { hidden: voiceChanges, remaining: velocity },
+            { hidden: velocity, remaining: automation }
+        ]
+        for (var i = 0; i < fallbacks.length; ++i) {
+            var step = fallbacks[i]
+            testCase.clickToggle(step.hidden)
+            var page = testCase.pageItem(step.remaining)
+            verify(page)
+            tryCompare(page, "activeFocus", true, 1000,
+                       "hiding a section lands focus in the first remaining visible section")
+        }
+
+        testCase.clickToggle(automation)
+        tryCompare(testCase.rollInput(), "activeFocus", true)
+    }
+
 }

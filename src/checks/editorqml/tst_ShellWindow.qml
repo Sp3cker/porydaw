@@ -1575,6 +1575,11 @@ TestCase {
         mouseClick(toggle, toggle.width / 2, toggle.height / 2)
         tryCompare(surface.drawerPresenter.automationSection, "visible", true, 3000)
         var section = surface.drawerPresenter.automationSection
+        var automationPage = null
+        tryVerify(function() {
+            automationPage = findChild(drawer, "automationPage")
+            return automationPage && automationPage.activeFocus
+        }, 3000, "the automation page receives drawer focus before grip focus")
         grip.forceActiveFocus(Qt.TabFocusReason)
         tryCompare(grip, "activeFocus", true, 3000)
         var beforeHeight = section.bodyHeight
