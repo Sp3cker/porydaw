@@ -158,6 +158,56 @@ public final class GridScene {
     @QtIgnored public var boxesProjected = 0
     @QtIgnored public var fillWrites = 0
 
+
+    struct ContentWindow: Equatable {
+        static let cullingChunkPixels = 1024.0
+        var left: Double
+        var right: Double
+        var extentLeft: Double
+        var extentRight: Double
+
+        init(camera: EditorCamera, contentEndTick: Int, previous: ContentWindow?) {
+            let snapshot = camera.snapshot
+            let chunk = Self.cullingChunkPixels
+            extentLeft = floor(snapshot.minHScroll / chunk) * chunk
+            let end = max(snapshot.maxHScroll, Double(contentEndTick) * snapshot.pixelsPerTick)
+            extentRight = (ceil(end / chunk) + ceil(snapshot.viewportWidth / chunk) + 1) * chunk
+            let visibleRight = snapshot.scrollX + snapshot.viewportWidth
+            if let previous, previous.extentLeft == extentLeft,
+               previous.extentRight == extentRight,
+               (previous.left == extentLeft || snapshot.scrollX >= previous.left + chunk),
+               (previous.right == extentRight || visibleRight <= previous.right - chunk) {
+                self = previous
+                return
+            }
+            let padding = 2 * max(1, ceil(snapshot.viewportWidth / chunk)) * chunk
+            left = max(extentLeft, floor((snapshot.scrollX - padding) / chunk) * chunk)
+            right = min(extentRight, max(left + 3 * chunk,
+                ceil((visibleRight + padding) / chunk) * chunk))
+            left = max(extentLeft, min(left, right - 3 * chunk))
+        }
+    }
+
+    private struct StaticKey: Equatable {
+        var pixelsPerTick: Double
+        var keyHeight: Double
+        var projection: PitchProjection
+        var dpr: Double
+        var baseFontPx: Double
+        var keyboardWidth: Double
+        var contentEndTick: Int
+        var timeAxis: TimeAxis
+        var palette: ObjectIdentifier
+        var window: ContentWindow
+    }
+
+    private var staticKey: StaticKey?
+    private(set) var contentWindow: ContentWindow?
+
+    @QtIgnored
+    func invalidateStatic() {
+        staticKey = nil
+    }
     private struct NoteFillKey: Equatable {
         var notes: [GridNote]
         var snapshot: EditorCamera.Snapshot
@@ -363,15 +413,12 @@ public final class GridScene {
     }
 
     private func visibleTicks(_ input: GridSceneInput) -> (begin: Tick, end: Tick) {
-        let snapshot = input.camera.snapshot
-        let left = max(0, snapshot.scrollX - snapshot.viewportWidth)
-        let contentRight = Double(input.contentEndTick) * snapshot.pixelsPerTick
-            + snapshot.viewportWidth
-        let right = min(contentRight, snapshot.scrollX + 2 * snapshot.viewportWidth)
-        let begin = TimeDefaults.tick(from: left / snapshot.pixelsPerTick)
+        guard let window = contentWindow else { return (0, 0) }
+        let pixelsPerTick = input.camera.pixelsPerTick
+        let begin = TimeDefaults.tick(from: max(0, window.left) / pixelsPerTick)
         let end = UInt32(min(
             Double(TimeDefaults.noTick),
-            max(0, ceil(right / snapshot.pixelsPerTick) + 1)))
+            max(0, ceil(window.right / pixelsPerTick) + 1)))
         return (begin, end)
     }
 
@@ -381,48 +428,53 @@ public final class GridScene {
         let p = input.palette
         let camera = input.camera
         let snapshot = camera.snapshot
-        let gridW = snapshot.viewportWidth
-        let gridH = snapshot.rollHeight
+        let window = ContentWindow(
+            camera: camera, contentEndTick: input.contentEndTick, previous: contentWindow)
+        let key = StaticKey(
+            pixelsPerTick: snapshot.pixelsPerTick, keyHeight: snapshot.keyHeight,
+            projection: camera.projection, dpr: m.dpr, baseFontPx: m.baseFontPx,
+            keyboardWidth: m.keyboardWidth, contentEndTick: input.contentEndTick,
+            timeAxis: m.timeAxis, palette: ObjectIdentifier(p), window: window)
+        guard key != staticKey else { return }
+        staticKey = key
+        contentWindow = window
+        let gridW = window.extentRight - window.extentLeft
+        let gridH = camera.projection.totalHeight(keyHeight: snapshot.keyHeight)
 
         var rows: [SceneRect] = []
         for row in 0..<camera.projection.visibleRowCount {
             guard let key = camera.projection.visiblePitch(at: row),
-                  let top = camera.projection.rowTop(
-                    row, keyHeight: snapshot.keyHeight,
-                    scrollY: snapshot.scrollY, dpr: m.dpr),
-                  let bottom = camera.projection.rowBottom(
-                    row, keyHeight: snapshot.keyHeight,
-                    scrollY: snapshot.scrollY, dpr: m.dpr)
+                  let top = camera.projection.contentRowTop(
+                    row, keyHeight: snapshot.keyHeight, dpr: m.dpr),
+                  let bottom = camera.projection.contentRowBottom(
+                    row, keyHeight: snapshot.keyHeight, dpr: m.dpr)
             else { continue }
             if GridScene.isBlackKey(key) {
                 rows.append(SceneRect(
-                    x: 0, y: top, width: gridW, height: bottom - top,
+                    x: window.extentLeft, y: top, width: gridW, height: bottom - top,
                     fillColor: p.accidentalLane))
             }
             if input.scale.highlight && input.scale.contains(key) {
                 rows.append(SceneRect(
-                    x: 0, y: top, width: gridW, height: bottom - top,
+                    x: window.extentLeft, y: top, width: gridW, height: bottom - top,
                     fillColor: p.scaleHighlight))
             }
             rows.append(
                 SceneRect(
-                    x: 0, y: bottom - m.gridLineStroke / 2, width: gridW,
+                    x: window.extentLeft, y: bottom - m.gridLineStroke / 2, width: gridW,
                     height: m.gridLineStroke,
                     fillColor: key % 12 == 0 ? p.keyboardSeparator : p.rowLine))
         }
         sync(pianoGridRows, rows)
 
-        var time: [SceneRect] = []
-        let tickZero = camera.displayX(tick: 0, origin: 0, dpr: m.dpr)
-        if tickZero > 0 {
-            time.append(
-                SceneRect(
-                    x: 0, y: 0, width: tickZero, height: gridH,
-                    fillColor: p.preRollMask))
-        }
+        var time: [SceneRect] = [
+            SceneRect(
+                x: window.extentLeft, y: 0, width: -window.extentLeft, height: gridH,
+                fillColor: p.preRollMask)
+        ]
         let range = visibleTicks(input)
         input.grid.forEachSubdivision(from: range.begin, to: range.end, camera: camera) { tick, level in
-            let x = camera.displayX(tick: Double(tick), origin: 0, dpr: m.dpr)
+            let x = camera.contentTickX(tick: Double(tick), dpr: m.dpr)
             let color = level == 1 ? p.gridLineSub1
                 : level == 2 ? p.gridLineSub2 : p.gridLineSub3
             time.append(SceneRect(
@@ -432,7 +484,7 @@ public final class GridScene {
         var segment = m.timeAxis.segmentAt(range.begin)
         var finest = input.grid.gridTicksAt(range.begin, camera: camera) == 1
         m.timeAxis.forEachGridLine(from: range.begin, to: range.end) { tick, isBar, _, _ in
-            let x = camera.displayX(tick: Double(tick), origin: 0, dpr: m.dpr)
+            let x = camera.contentTickX(tick: Double(tick), dpr: m.dpr)
             if tick >= segment.next {
                 segment = m.timeAxis.segmentAt(tick)
                 finest = input.grid.gridTicksAt(tick, camera: camera) == 1
@@ -451,12 +503,10 @@ public final class GridScene {
         ]
         for row in 0..<camera.projection.visibleRowCount {
             guard let key = camera.projection.visiblePitch(at: row),
-                  let top = camera.projection.rowTop(
-                    row, keyHeight: snapshot.keyHeight,
-                    scrollY: snapshot.scrollY, dpr: m.dpr),
-                  let bottom = camera.projection.rowBottom(
-                    row, keyHeight: snapshot.keyHeight,
-                    scrollY: snapshot.scrollY, dpr: m.dpr)
+                  let top = camera.projection.contentRowTop(
+                    row, keyHeight: snapshot.keyHeight, dpr: m.dpr),
+                  let bottom = camera.projection.contentRowBottom(
+                    row, keyHeight: snapshot.keyHeight, dpr: m.dpr)
             else { continue }
             if GridScene.isBlackKey(key) {
                 keys.append(SceneRect(
@@ -481,7 +531,8 @@ public final class GridScene {
         let p = input.palette
         let camera = input.camera
         let rulerH = input.rulerHeight
-        let gridW = camera.snapshot.viewportWidth
+        guard let window = contentWindow else { return }
+        let gridW = window.extentRight - window.extentLeft
         let gutter: [SceneRect] = [
             SceneRect(
                 x: 0, y: 0, width: m.keyboardWidth, height: rulerH,
@@ -492,7 +543,7 @@ public final class GridScene {
         ]
         sync(rulerGutterChrome, gutter)
 
-        var chrome: [SceneRect] = [
+        let chrome: [SceneRect] = [
             SceneRect(
                 x: 0, y: 0, width: gridW, height: rulerH,
                 fillColor: p.chromeBackground),
@@ -500,13 +551,6 @@ public final class GridScene {
                 x: 0, y: rulerH - 0.5, width: gridW, height: 1,
                 fillColor: p.separator),
         ]
-        let tickZero = camera.displayX(tick: 0, origin: 0, dpr: m.dpr)
-        if tickZero > 0 {
-            chrome.append(
-                SceneRect(
-                    x: 0, y: 0, width: tickZero, height: rulerH,
-                    fillColor: p.rulerPreRollMask))
-        }
         sync(rulerChrome, chrome)
 
         guard let t = input.typography else {
@@ -522,21 +566,22 @@ public final class GridScene {
         let labelGap = 1.0
         let reserve = m.spaceTwo
         let indicator = p.gridLine
-        var marks: [SceneRect] = []
+        var marks: [SceneRect] = [
+            SceneRect(
+                x: window.extentLeft, y: 0, width: -window.extentLeft,
+                height: rulerH, fillColor: p.rulerPreRollMask)
+        ]
         var labels: [SceneText] = []
         let range = visibleTicks(input)
         input.grid.forEachSubdivision(from: range.begin, to: range.end, camera: camera) { tick, level in
             let h = level == 1 ? m.spaceHalf : 1.0
-            let x = camera.displayX(tick: Double(tick), origin: 0, dpr: m.dpr)
+            let x = camera.contentTickX(tick: Double(tick), dpr: m.dpr)
             marks.append(SceneRect(
                 x: x - 0.5, y: tickBottom - h + 1,
                 width: 1, height: h, fillColor: indicator))
         }
 
-        // The ruler font is monospaced. Measure only the longest bar/beat
-        // spelling instead of allocating width tables for every song bar.
-        let visibleEnd = TimeDefaults.tick(from: camera.tickAtContentX(gridW))
-        let maxBar = maxRulerBar(input, end: visibleEnd)
+        let maxBar = maxRulerBar(input, end: range.end)
         var segment = m.timeAxis.segmentAt(range.begin)
         var drawBeatTicks = false
         var showBeatLabels = false
@@ -548,14 +593,14 @@ public final class GridScene {
                     + t.beatAdvance(bar: maxBar, beat: Int(segment.beatsPerBar)))
         }
         updateBeatDetail()
-        var lastLabelRight = -labelGap
+        var lastLabelRight = window.left - labelGap
         m.timeAxis.forEachGridLine(from: range.begin, to: range.end) {
             tick, isBar, barNumber, beatNumber in
             if tick >= segment.next {
                 segment = m.timeAxis.segmentAt(tick)
                 updateBeatDetail()
             }
-            let x = camera.displayX(tick: Double(tick), origin: 0, dpr: m.dpr)
+            let x = camera.contentTickX(tick: Double(tick), dpr: m.dpr)
             if !isBar && !showBeatLabels {
                 if drawBeatTicks {
                     marks.append(
@@ -615,7 +660,7 @@ public final class GridScene {
 
         func appendLoopMarker(_ tick: Tick, glyph: String, name: String) {
             guard tick != TimeDefaults.noTick && tick >= range.begin && tick < range.end else { return }
-            let x = camera.displayX(tick: Double(tick), origin: 0, dpr: m.dpr)
+            let x = camera.contentTickX(tick: Double(tick), dpr: m.dpr)
             marks.append(SceneRect(x: x - 0.5, y: 0, width: 1,
                                    height: markerHeight - 1, fillColor: p.primaryText,
                                    primitiveName: name))
@@ -628,17 +673,15 @@ public final class GridScene {
         func appendSignature(at tick: Tick, next: Tick) {
             guard tick >= range.begin && tick < range.end else { return }
             let signature = m.timeAxis.signatureAt(tick)
-            let sigX = camera.displayX(tick: Double(tick), origin: 0, dpr: m.dpr)
+            let sigX = camera.contentTickX(tick: Double(tick), dpr: m.dpr)
             let color = signature.implicit ? p.implicitSignature : p.primaryText
             marks.append(SceneRect(
                 x: sigX - 0.5, y: 0, width: 1, height: markerHeight - 1, fillColor: color))
-            // Match production detail::timeSigLabel presentation, while the
-            // TimeAxis retains the original exponent for timing interpretation.
             let label = "\(signature.numerator)/\(1 << min(signature.denomPow2, 6))"
             let width = t.signatureAdvance(label)
             if next != TimeDefaults.noTick
                 && sigX + 2 * m.spaceHalf + width
-                    > camera.displayX(tick: Double(next), origin: 0, dpr: m.dpr) {
+                    > camera.contentTickX(tick: Double(next), dpr: m.dpr) {
                 return
             }
             let y = (markerHeight - t.boldHeight) / 2
@@ -684,12 +727,10 @@ public final class GridScene {
         for row in 0..<camera.projection.visibleRowCount {
             guard let key = camera.projection.visiblePitch(at: row),
                   !GridScene.isBlackKey(key), key % 12 == 0,
-                  let top = camera.projection.rowTop(
-                    row, keyHeight: snapshot.keyHeight,
-                    scrollY: snapshot.scrollY, dpr: m.dpr),
-                  let bottom = camera.projection.rowBottom(
-                    row, keyHeight: snapshot.keyHeight,
-                    scrollY: snapshot.scrollY, dpr: m.dpr)
+                  let top = camera.projection.contentRowTop(
+                    row, keyHeight: snapshot.keyHeight, dpr: m.dpr),
+                  let bottom = camera.projection.contentRowBottom(
+                    row, keyHeight: snapshot.keyHeight, dpr: m.dpr)
             else { continue }
             records.append(SceneText(
                 rect: (0, top, m.keyboardWidth - m.keyLabelRightInset, bottom - top),
@@ -983,12 +1024,10 @@ public final class GridScene {
             let key = input.hoverKey
             let row = camera.projection.row(forPitch: key)
             if row != PitchProjection.hiddenRow,
-               let top = camera.projection.rowTop(
-                    row, keyHeight: snapshot.keyHeight,
-                    scrollY: snapshot.scrollY, dpr: m.dpr),
-               let bottom = camera.projection.rowBottom(
-                    row, keyHeight: snapshot.keyHeight,
-                    scrollY: snapshot.scrollY, dpr: m.dpr) {
+               let top = camera.projection.contentRowTop(
+                    row, keyHeight: snapshot.keyHeight, dpr: m.dpr),
+               let bottom = camera.projection.contentRowBottom(
+                    row, keyHeight: snapshot.keyHeight, dpr: m.dpr) {
                 highlights.append(SceneRect(
                     x: 0, y: top, width: m.keyboardWidth,
                     height: bottom - top, fillColor: p.keyboardHover))
@@ -1002,8 +1041,14 @@ public final class GridScene {
                 let name = GridScene.keyName(key)
                 let chipW = t.chipAdvance(pitch: key) + m.chipHPadding
                 let chipH = t.chipHeight + m.chipVPadding
+                let viewportTop = camera.projection.rowTop(
+                    row, keyHeight: snapshot.keyHeight,
+                    scrollY: snapshot.scrollY, dpr: m.dpr) ?? 0
+                let viewportBottom = camera.projection.rowBottom(
+                    row, keyHeight: snapshot.keyHeight,
+                    scrollY: snapshot.scrollY, dpr: m.dpr) ?? 0
                 let chipY = min(
-                    max(0, (top + bottom) / 2 - chipH / 2),
+                    max(0, (viewportTop + viewportBottom) / 2 - chipH / 2),
                     max(0, snapshot.rollHeight - chipH))
                 let chipX = max(0.0, m.keyboardWidth - m.chipRightInset - chipW)
                 hoverChipRect = [
@@ -1016,7 +1061,8 @@ public final class GridScene {
 
         highlights.append(SceneRect(
             x: -m.pixel / 2, y: 0, width: m.pixel,
-            height: snapshot.rollHeight, fillColor: p.separator))
+            height: camera.projection.totalHeight(keyHeight: snapshot.keyHeight),
+            fillColor: p.separator))
         sync(pianoKeyboardHighlights, highlights)
         hoverChipVisible = chipVisible
         hoverChipFill = p.hoverChipFill

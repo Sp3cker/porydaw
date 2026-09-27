@@ -61,6 +61,14 @@ public struct PitchProjection: Equatable, Sendable {
         return Self.snappedEdge(row + 1, keyHeight: keyHeight, scrollY: scrollY, dpr: dpr)
     }
 
+    public func contentRowTop(_ row: Int, keyHeight: Double, dpr: Double) -> Double? {
+        rowTop(row, keyHeight: keyHeight, scrollY: 0, dpr: dpr)
+    }
+
+    public func contentRowBottom(_ row: Int, keyHeight: Double, dpr: Double) -> Double? {
+        rowBottom(row, keyHeight: keyHeight, scrollY: 0, dpr: dpr)
+    }
+
     public func row(atY y: Double, keyHeight: Double, scrollY: Double, dpr: Double) -> Int {
         guard visibleRowCount > 0, y.isFinite, keyHeight.isFinite, keyHeight > 0,
               let top = rowTop(0, keyHeight: keyHeight, scrollY: scrollY, dpr: dpr),
@@ -225,6 +233,10 @@ public struct EditorCamera: Sendable {
     public func displayX(tick: Double, origin: Double, dpr: Double) -> Double {
         let x = origin + contentX(tick: tick)
         return dpr.isFinite && dpr > 0 ? (x * dpr).rounded() / dpr : x
+    }
+
+    public func contentTickX(tick: Double, dpr: Double) -> Double {
+        (tick * pixelsPerTick * dpr).rounded() / dpr
     }
 
     public mutating func updateLimits(_ limits: Limits) {

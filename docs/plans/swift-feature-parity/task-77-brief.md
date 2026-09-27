@@ -309,3 +309,69 @@ devicePixelRatio`.
    physical px on hairlines).
 4. Confirm serialization: task 75/76 files show no diff from this task
    beyond the regions named above.
+
+# 77a implementation evidence
+
+77a publishes the static roll, keyboard, and ruler layers in content
+coordinates, with the existing camera scroll applied by clipped QML
+containers. Static publication now skips before rect allocation while the
+recorded content window and inputs remain unchanged. Ruler chrome remains
+viewport-local and uses the provisioned extent width.
+
+Review fix 1 widened the provisioned window to two chunk-rounded viewport
+widths of padding on each side, retaining the one-chunk eviction margin.
+Clipped extent edges do not impose an unreachable margin. This replaces the
+initial one-chunk padding, which thrashed at chunk-boundary reversals.
+The permanent `contentWindowBoundaryReversal` check proves six 1023↔1025
+reversals retain published time marks, monotonic travel provisions no more
+often than every two viewports, and a reverse step immediately after
+reprovision retains that new window. Its first two predicates failed before
+the fix. RED/green evidence is `/tmp/task77a-window-reversal-red.log` and
+`/tmp/task77a-window-reversal-green.json`.
+
+Coordinate-only check helpers in `tst_TimelinePan.qml`,
+`tst_ShellGridMenu.qml`, `tst_ShellMenus.qml`, and `tst_TextContrast.qml` map
+realized content delegates into their viewport before making the original
+assertions. These helper adaptations were authorized after the lanes exposed
+their old direct-parent coordinate assumptions. Assertion messages remain
+unchanged.
+
+The native fixture was `decompproject` / `mus_littleroot_test`, launched from
+`build/porydaw.app`. Resize used `/tmp/resize_sweep.scpt` and a 10-second,
+1-ms `sample`; scroll used `/tmp/task77a-scroll.swift` (32 alternating
+two-axis middle-button drags after the same wheel-zoom preparation) and a
+12-second, 1-ms `sample`. Inclusive main-thread sample counts:
+
+| Path | Before | After |
+| --- | --- | --- |
+| Resize: `configureViewport` | 5,719 / 6,222 (91.92%) | 1,724 / 6,425 (26.83%) |
+| Resize: `rebuildStatic` | 5,320 / 6,222 (85.50%) | 1,264 / 6,425 (19.67%) |
+| Scroll: `rebuildStatic` | 6,835 / 7,688 (88.90%) | 14 / 8,163 (0.17%) |
+
+Resize sweep elapsed time fell from 9.91 s to 3.99 s. The fixed sampling
+interval includes the additional idle time after the faster sweep; occasional
+chunk/extent changes still rebuild static models. Profiles are
+`/tmp/sample_resize_before_77a.txt`, `/tmp/sample_resize_after_77a_round1.txt`,
+`/tmp/sample_scroll_before.txt`, and `/tmp/sample_scroll_after_77a_round1.txt`;
+the numeric summary is `/tmp/task77a-round1-profile-summary.json`.
+
+The temporary RED/green checks proved unchanged static model record identities
+for in-window resize and two-axis scroll, including mounted keyboard/ruler
+text, then were removed. Evidence is `/tmp/task77a-red.log` and
+`/tmp/task77a-static-proof.json`.
+
+All named verification lanes passed, including all 26 shell entries.
+After the review fix, `swiftcore`, `verify:qml-roll`, `shell-grid-menu`,
+and `shell-grid-input` passed again; the native app was rebuilt and profiled.
+The repository format gate passed using Xcode's `clang-format` through
+`CLANG_FORMAT`; it warns that version 21 differs from CI's version 22.
+Explicit changed-file formatting is unsupported by the repository runner for
+Swift, QML, and Markdown, so those files have no applicable formatter gate.
+The proof reader resolved all 8,088 anchors; no ledger edits were needed.
+The separately authorized task-73 follow-up in `tst_ShellEventList.qml` waits
+for the pointer toggle's queued visible-page focus landing before explicitly
+focusing the toggle; its existing Delete/focus assertions are unchanged.
+
+77b remains necessary for note fills, previews, borders, overlays, and note
+text, which still publish viewport coordinates. It also owns the reduced
+note-fill key, window-based note culling, and scroll-while-hover chip refresh.

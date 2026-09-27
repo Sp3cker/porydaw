@@ -277,9 +277,6 @@ Item {
             height: parent.height
             clip: true
 
-            // The same GridScene ruler chrome, marks and chip labels as the
-            // timeline canvas. Its input occupies its own top band rather
-            // than letting roll gestures intercept signature-chip clicks.
             Item {
                 id: rulerBand
                 objectName: "timelineQuickRuler"
@@ -305,12 +302,21 @@ Item {
                         objectName: "timelineQuickRulerChrome"
                         rects: root.gridModel.scene.rulerChrome
                     }
+                    Item {
+                        id: rulerContent
+                        x: -Math.round(root.gridModel.cameraScrollX * root.gridModel.devicePixelRatio)
+                           / root.gridModel.devicePixelRatio
+                        width: parent.width
+                        height: parent.height
+                    }
                     TimelineQuickItem {
+                        parent: rulerContent
                         anchors.fill: parent
                         objectName: "timelineQuickRulerMarks"
                         rects: root.gridModel.scene.rulerMarks
                     }
                     Repeater {
+                        parent: rulerContent
                         model: root.gridModel.scene.rulerTextModel
                         delegate: Text {
                             required property var labelRect
@@ -388,6 +394,14 @@ Item {
                 height: Math.max(parent.height - y, 0)
                 clip: true
 
+                Item {
+                    id: gutterContent
+                    y: -Math.round(root.gridModel.cameraScrollY * root.gridModel.devicePixelRatio)
+                       / root.gridModel.devicePixelRatio
+                    width: parent.width
+                    height: parent.height
+                }
+
                 MouseArea {
                     id: gutterInput
                     anchors.fill: parent
@@ -438,13 +452,21 @@ Item {
                 x: root.gridModel.keyboardWidth
                 y: root.gridModel.rulerHeight
                 width: Math.max(parent.width - x, 0)
-                // The band carries only the height the drawer leaves, so the plot
-                // and the viewport push follow the band rather than the surface.
                 height: Math.max(parent.height - y, 0)
                 clip: true
 
                 onWidthChanged: root.configureViewport()
                 onHeightChanged: root.configureViewport()
+
+                Item {
+                    id: plotContent
+                    x: -Math.round(root.gridModel.cameraScrollX * root.gridModel.devicePixelRatio)
+                       / root.gridModel.devicePixelRatio
+                    y: -Math.round(root.gridModel.cameraScrollY * root.gridModel.devicePixelRatio)
+                       / root.gridModel.devicePixelRatio
+                    width: parent.width
+                    height: parent.height
+                }
 
                 Item {
                     id: pianoGridSurface
@@ -453,7 +475,8 @@ Item {
 
                     PianoRollCanvas {
                         bandSide: rollContentBand
-                        gutterSide: rollGutterSide
+                        gutterContentSide: gutterContent
+                        plotContentSide: plotContent
                         plotSide: pianoGridSurface
                         timelineScene: root.gridModel.scene
                     }
@@ -575,9 +598,6 @@ Item {
                     }
                 }
             }
-            // Keyboard labels and hover chips are band-local in GridScene.
-            // Move their shared parent with the plot, not just the gutter,
-            // so adding the ruler does not displace these overlays.
             Item {
                 id: rollContentBand
                 objectName: "rollContentBand"

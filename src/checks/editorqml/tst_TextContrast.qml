@@ -183,11 +183,11 @@ TestCase {
                 const texts = []
                 Audit.collect([gutter], texts, [])
                 label = texts.find(function(item) { return item.text === "C5" })
-                return label !== undefined
-                    && (edge === "top" ? label.parent.y < 0
-                                       : label.parent.y + label.height > gutter.height)
-                    && label.parent.y < gutter.height
-                    && label.parent.y + label.height > 0
+                if (label === undefined)
+                    return false
+                const y = label.parent.mapToItem(gutter, 0, 0).y
+                return (edge === "top" ? y < 0 : y + label.height > gutter.height)
+                    && y < gutter.height && y + label.height > 0
             }, 3000, "C5 straddles the scrolled keyboard's " + edge + " edge")
             const root = Audit.sceneRoot(gutter)
             const box = Audit.glyphBox(label, root)

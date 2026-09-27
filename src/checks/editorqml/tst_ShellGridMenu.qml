@@ -607,7 +607,9 @@ TestCase {
 
     function loopMarkerAt(name, tick) {
         var marker = findChild(surface(), name)
-        return marker !== null && Math.abs(marker.x + 0.5 - rulerTickX(tick)) <= 0.75
+        return marker !== null
+            && Math.abs(marker.mapToItem(control("timelineRulerInput"), 0, 0).x
+                        + 0.5 - rulerTickX(tick)) <= 0.75
     }
 
     function loopMarkerAbsent(name) {
@@ -616,12 +618,13 @@ TestCase {
 
     function rulerLabelAt(text, tick) {
         var ruler = control("timelineRulerInput")
-        var labels = ruler.parent.children
+        var labels = control("timelineQuickRulerMarks").parent.children
         var x = rulerTickX(tick)
         for (var index = 0; index < labels.length; ++index) {
             var label = labels[index]
-            if (label.labelText === text && label.x >= x - 1
-                && label.x <= x + surface().gridModel.baseFontPx)
+            var labelX = label.mapToItem(ruler, 0, 0).x
+            if (label.labelText === text && labelX >= x - 1
+                && labelX <= x + surface().gridModel.baseFontPx)
                 return true
         }
         return false

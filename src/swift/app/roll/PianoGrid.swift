@@ -76,11 +76,6 @@ public final class PianoGrid {
     private var didApplyInitialHome = false
     private var contentEndTick = GridMetrics.songLengthTicks
     private var staticSceneDirty = true
-    private var staticCameraSnapshot: EditorCamera.Snapshot?
-    private var staticProjection: PitchProjection?
-    private var staticBaseFontPx = 0.0
-    private var staticDevicePixelRatio = 0.0
-    private var staticContentEndTick = GridMetrics.songLengthTicks
     /// Last note/selection state baked into `noteSummary`. The summary string
     /// is a check-facing probe: rebuilding it per pointer sample serialized
     /// the whole document, so it is only re-encoded when its inputs change.
@@ -1207,8 +1202,8 @@ public final class PianoGrid {
     @QtIgnored
     private func rebuildScene() {
         let input = sceneInput()
+        scene.invalidateStatic()
         scene.rebuildStatic(input)
-        recordStaticInputs()
         staticSceneDirty = false
         scene.rebuildNotes(input)
     }
@@ -1218,35 +1213,17 @@ public final class PianoGrid {
         recomputeContentEndTick()
         let typographyChanged = updateTypography()
         if typographyChanged { staticSceneDirty = true }
-        if staticInputsChanged() { staticSceneDirty = true }
         let input = sceneInput()
         if staticSceneDirty {
-            scene.rebuildStatic(input)
-            recordStaticInputs()
+            scene.invalidateStatic()
             staticSceneDirty = false
         }
+        scene.rebuildStatic(input)
         scene.rebuildNotes(input)
         if typographyChanged { scene.rebuildHover(input) }
         publishOutputs()
     }
 
-    @QtIgnored
-    private func staticInputsChanged() -> Bool {
-        staticCameraSnapshot != session.camera.snapshot
-            || staticProjection != session.camera.projection
-            || staticBaseFontPx != metrics.baseFontPx
-            || staticDevicePixelRatio != metrics.dpr
-            || staticContentEndTick != contentEndTick
-    }
-
-    @QtIgnored
-    private func recordStaticInputs() {
-        staticCameraSnapshot = session.camera.snapshot
-        staticProjection = session.camera.projection
-        staticBaseFontPx = metrics.baseFontPx
-        staticDevicePixelRatio = metrics.dpr
-        staticContentEndTick = contentEndTick
-    }
 
     @QtIgnored
     private func recomputeContentEndTick() {

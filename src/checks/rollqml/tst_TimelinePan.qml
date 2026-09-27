@@ -165,17 +165,16 @@ TestCase {
         return input
     }
 
-    // The realized keyboard-label delegates: SceneText rows carry labelText and
-    // labelRect; the keyboard repeater's delegates are the only band children
-    // with a labelBackgroundRect role.
     function keyboardLabels() {
         var labels = []
         var stack = [surface()]
         while (stack.length > 0) {
             var item = stack.pop()
-            if (item.labelText !== undefined && item.labelBackgroundRect !== undefined)
-                labels.push({ text: item.labelText, x: item.x, y: item.y,
+            if (item.labelText !== undefined && item.labelBackgroundRect !== undefined) {
+                var position = item.mapToItem(gutterBox(), 0, 0)
+                labels.push({ text: item.labelText, x: position.x, y: position.y,
                               width: item.width, height: item.height })
+            }
             for (var c = 0; c < item.children.length; ++c)
                 stack.push(item.children[c])
         }

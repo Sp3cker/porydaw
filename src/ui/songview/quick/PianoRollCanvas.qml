@@ -4,14 +4,14 @@ import Porydaw.Ui
 Item {
     id: root
 
-    required property Item gutterSide
+    required property Item gutterContentSide
     required property Item bandSide
     required property Item plotSide
+    required property Item plotContentSide
     required property QtObject timelineScene
 
-    // Keep pitch rows below pre-roll shading and time marks.
     TimelineQuickItem {
-        parent: root.plotSide
+        parent: root.plotContentSide
         objectName: "timelineQuickPianoGridRows"
         anchors.fill: parent
         rects: root.timelineScene.pianoGridRows
@@ -20,7 +20,7 @@ Item {
     }
 
     TimelineQuickItem {
-        parent: root.plotSide
+        parent: root.plotContentSide
         objectName: "timelineQuickPianoGridTime"
         anchors.fill: parent
         rects: root.timelineScene.pianoGridTime
@@ -98,7 +98,7 @@ Item {
     }
 
     TimelineQuickItem {
-        parent: root.gutterSide
+        parent: root.gutterContentSide
         objectName: "timelineQuickPianoKeyboardKeys"
         anchors.fill: parent
         rects: root.timelineScene.pianoKeyboardKeys
@@ -106,7 +106,7 @@ Item {
     }
 
     TimelineQuickItem {
-        parent: root.gutterSide
+        parent: root.gutterContentSide
         objectName: "timelineQuickPianoKeyboardHighlights"
         anchors.fill: parent
         rects: root.timelineScene.pianoKeyboardHighlights
@@ -127,7 +127,7 @@ Item {
     }
 
     Item {
-        parent: root.gutterSide
+        parent: root.gutterContentSide
         anchors.fill: parent
         z: 3
 

@@ -8,6 +8,7 @@ let gridCameraWheelID = "swiftcore/EditorGridCamera::wheelPolicy"
 private let projectionID = "swiftcore/EditorGridCamera::projectionAndHitTesting"
 private let isolationID = "swiftcore/EditorGridCamera::navigationIsolationAndReveal"
 private let latticeID = "rollcheck/PianoRollStaticTest::tickRangeWalksFractionalLattice"
+private let contentWindowID = "swiftcore/EditorGridCamera::contentWindowBoundaryReversal"
 @MainActor
 final class GridCameraIntegrationCounters {
     var camera = 0
@@ -56,6 +57,7 @@ func runEditorGridCameraChecks(_ report: CheckReport, session: DocumentSession) 
     checkIsolation(report, session: session, grid: grid, counters: counters)
     checkTrackOwnerRemap(report, session: session)
     checkFractionalGridLattice(report)
+    checkContentWindowBoundaryReversal(report)
 }
 
 @MainActor
@@ -103,6 +105,68 @@ private func checkFractionalGridLattice(_ report: CheckReport) {
         && grid.nextSubdivisionTickAfter(101, camera: camera) == 102
         && grid.nextSubdivisionTickAfter(102, camera: camera) == 102 + drawn,
                   cppID: latticeID, message: "sub-grid restarts at the signature seam")
+}
+
+@MainActor
+private func checkContentWindowBoundaryReversal(_ report: CheckReport) {
+    let axis = TimeAxis(map: TimeMap(ticksPerBeat: 24, lengthTicks: 32_768))
+    let metrics = GridMetrics(baseFontPx: 13, dpr: 2, width: 1024, height: 320,
+                              timeAxis: axis)
+    var camera = EditorCamera(ticksPerBeat: 24, lengthTicks: 32_768,
+                              viewportWidth: 1024, rollHeight: 320,
+                              limits: GridCameraPolicy.limits(baseFontPx: 13))
+    _ = camera.setTimeZoom(24)
+    _ = camera.setHScroll(1023)
+    var input = GridSceneInput(
+        metrics: metrics, grid: RollGrid(axis: axis, clockTicks: 1, metrics: metrics),
+        palette: GridPalette(), camera: camera, contentEndTick: 32_768,
+        rulerHeight: metrics.baseFontPx * 2, fontSpec: { _ in [:] })
+    let scene = GridScene()
+    scene.rebuildStatic(input)
+    let initialWindow = scene.contentWindow
+    let initialMarks = (0..<scene.pianoGridTime.count).map { scene.pianoGridTime[$0] }
+    var retained = true
+    for scroll in [1025.0, 1023, 1025, 1023, 1025, 1023] {
+        _ = input.camera.setHScroll(scroll)
+        scene.rebuildStatic(input)
+        retained = retained && scene.contentWindow == initialWindow
+            && scene.pianoGridTime.count == initialMarks.count
+            && initialMarks.indices.allSatisfy { scene.pianoGridTime[$0] === initialMarks[$0] }
+    }
+    report.expect(retained, cppID: contentWindowID,
+                  message: "two-pixel reversals across a chunk boundary retain the published time marks")
+
+    var previousWindow = scene.contentWindow
+    var lastReprovision: Double?
+    var reprovisions = 0
+    var spaced = true
+    var covered = true
+    var reversalRetained = true
+    for scroll in stride(from: 1025.0, through: 16_383, by: 128) {
+        _ = input.camera.setHScroll(scroll)
+        scene.rebuildStatic(input)
+        if let window = scene.contentWindow {
+            covered = covered && window.left <= scroll && window.right >= scroll + 1024
+        } else {
+            covered = false
+        }
+        if scene.contentWindow != previousWindow {
+            if let lastReprovision {
+                spaced = spaced && scroll - lastReprovision >= 2 * camera.snapshot.viewportWidth
+            }
+            lastReprovision = scroll
+            reprovisions += 1
+            previousWindow = scene.contentWindow
+            _ = input.camera.setHScroll(scroll - 2)
+            scene.rebuildStatic(input)
+            reversalRetained = reversalRetained && scene.contentWindow == previousWindow
+        }
+    }
+    report.expect(covered && spaced && reprovisions > 0 && reprovisions <= 8,
+                  cppID: contentWindowID,
+                  message: "monotonic scroll keeps visible coverage and reprovisions no more often than two viewports")
+    report.expect(reversalRetained, cppID: contentWindowID,
+                  message: "a reverse step after reprovision retains the newly published content window")
 }
 
 @MainActor
@@ -222,14 +286,18 @@ private func checkProjection(
         _ = $0.setTimeZoom(140)
         _ = $0.setHScroll($0.snapshot.maxHScroll / 2)
     }
-    let cullingWidth = session.camera.snapshot.viewportWidth
+    let snapshotAtMarks = session.camera.snapshot
+    let window = grid.scene.contentWindow
     let timeRects = (0..<grid.scene.pianoGridTime.count).map { grid.scene.pianoGridTime[$0] }
     let markXs = timeRects.filter { $0.width <= 4 }.map(\.x)
     report.expect(
-        !markXs.isEmpty && markXs.allSatisfy { $0 >= -cullingWidth - 2 && $0 <= 2 * cullingWidth + 2 },
+        !markXs.isEmpty && window.map { window in
+            markXs.allSatisfy { $0 >= window.left - 2 && $0 <= window.right + 2 }
+        } == true,
         cppID: projectionID, message: "generated time marks stay inside the one-viewport culling window")
     report.expect(
-        (markXs.min() ?? 1) <= 0 && (markXs.max() ?? -1) >= cullingWidth,
+        (markXs.min() ?? .infinity) <= max(0, snapshotAtMarks.scrollX)
+            && (markXs.max() ?? -.infinity) >= snapshotAtMarks.scrollX + snapshotAtMarks.viewportWidth,
         cppID: projectionID, message: "generated time marks cover the visible plot")
 
     let summaryBeforeCameraMove = grid.noteSummary

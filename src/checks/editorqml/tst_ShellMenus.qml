@@ -515,7 +515,7 @@ TestCase {
         verify(loopItem !== null && undoItem !== null, "the Edit menu owns loop and undo")
         function markerX(name) {
             var marker = findChild(page, name)
-            return marker === null ? null : marker.x
+            return marker === null ? null : marker.mapToItem(ruler, 0, 0).x
         }
         var originalStart = markerX("loopStartMarker")
         var originalEnd = markerX("loopEndMarker")
@@ -576,8 +576,14 @@ TestCase {
         tryVerify(function() { return start.enabled && end.enabled }, 3000,
                   "the open song enables both cursor loop rows")
         start.triggered()
-        var markerStart = function() { return findChild(page, "loopStartMarker") }
-        var markerEnd = function() { return findChild(page, "loopEndMarker") }
+        var markerStart = function() {
+            var marker = findChild(page, "loopStartMarker")
+            return marker === null ? null : marker.mapToItem(findChild(page, "timelineRulerInput"), 0, 0)
+        }
+        var markerEnd = function() {
+            var marker = findChild(page, "loopEndMarker")
+            return marker === null ? null : marker.mapToItem(findChild(page, "timelineRulerInput"), 0, 0)
+        }
         var xAt = function(tick) {
             return tick * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX
         }
