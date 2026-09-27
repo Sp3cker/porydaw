@@ -1034,6 +1034,10 @@ TestCase {
         const toggle = drawer ? findChild(drawer, "drawerToggle_velocity") : null
         verify(toggle && toggle.visible, "the drawer has a focusable velocity toggle")
         mouseClick(toggle, toggle.width / 2, toggle.height / 2)
+        verify(waitForNative(function() {
+            const loader = drawer.sectionLoader(drawer.presenter.focusTarget)
+            return loader && loader.item && loader.item.activeFocus
+        }, 3000), "the pointer toggle lands on the visible drawer page before explicit control focus")
         toggle.forceActiveFocus(Qt.MouseFocusReason)
         tryCompare(toggle, "activeFocus", true, 3000,
                    "the focused velocity drawer control owns active focus")
