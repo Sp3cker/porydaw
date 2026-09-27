@@ -244,7 +244,7 @@ ShellWindowSupport {
                + clipProbe.readClipJson() + "; activations=" + copyActivatedSpy.count)
         compare(grid.appliedRevisionText, revisionBeforeSelection,
                 "window Copy over label focus never writes the document")
-        compare(volumeTab.activeFocus, true, "A066 label retains active focus across range Copy")
+        compare(volumeTab.activeFocus, true, "label retains active focus across range Copy")
         function writtenTicks(item, result) {
             if (item.objectName === "automationNode" && item.model
                     && !item.model.projected && !item.model.phantom)
@@ -305,7 +305,7 @@ ShellWindowSupport {
         tryVerify(function() {
             return page.pageModel.nodeCount > 0 && grid.editCursorTick > 7680
         }, 3000, "Paste over label focus writes the copied Volume lane at the edit cursor")
-        compare(volumeTab.activeFocus, true, "A066 label retains active focus after Paste")
+        compare(volumeTab.activeFocus, true, "label retains active focus after Paste")
         verify(pair.every(function(previous) {
             var retained = JSON.parse(grid.noteSummary).find(function(note) {
                 return note.id === previous.id

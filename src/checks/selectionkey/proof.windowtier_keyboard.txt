@@ -909,10 +909,10 @@ S180 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFoc
 Anchor: message "A010 F24 never activates window Copy"
 
 S181 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
-Anchor: message "A010 F24 never activates window Solo"
+Anchor: message "F24 never activates window Solo"
 
 S182 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
-Anchor: message "A014 automation resize grip owns active focus before arrows"
+Anchor: message "automation resize grip owns active focus before arrows"
 
 S183 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "A017 grip Up leaves both reserved notes byte-identical"
@@ -924,7 +924,7 @@ S185 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFoc
 Anchor: message "A018 grip arrows never activate window Copy"
 
 S186 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
-Anchor: message "A018 grip arrows never activate window Solo"
+Anchor: message "grip arrows never activate window Solo"
 
 S187 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "grip Left leaves both reserved notes byte-identical"
@@ -933,7 +933,7 @@ S188 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFoc
 Anchor: message "A020 grip Right leaves both reserved notes byte-identical"
 
 S189 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
-Anchor: message "A108 automation toggle owns active focus before arrows"
+Anchor: message "automation toggle owns active focus before arrows"
 
 S190 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "A113 bare Space on the focused toggle retains both note IDs"
@@ -942,7 +942,7 @@ S191 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFoc
 Anchor: message "A116 toggle Return leaves both reserved notes byte-identical"
 
 S192 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
-Anchor: message "A077 label owns focus before routed arrows"
+Anchor: message "label owns focus before routed arrows"
 
 S193 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
 Anchor: message "label-focus arrows advance the selected note one grid step"
@@ -984,7 +984,7 @@ S205 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_Shel
 Anchor: message "the focused Volume label represents controller 7"
 
 S206 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
-Anchor: message "A031 the Volume label owns active focus before commands"
+Anchor: message "the Volume label owns active focus before commands"
 
 S207 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "real Tab traversal reaches the automation drawer toggle"

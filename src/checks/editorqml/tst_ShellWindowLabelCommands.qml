@@ -41,16 +41,16 @@ ShellWindowSupport {
         tryCompare(volumeTab, "checked", true, 3000)
         volumeTab.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(volumeTab, "activeFocus", true, 3000,
-                   "A031 the Volume label owns active focus before commands")
+                   "the Volume label owns active focus before commands")
         var labelRevision = grid.appliedRevisionText
         var labelNotes = grid.noteSummary
         keyClick(Qt.Key_Enter)
         keyClick(Qt.Key_Return)
         compare(grid.appliedRevisionText, labelRevision,
-                "A038 label Enter and Return never edit the document")
+                "label Enter and Return never edit the document")
         compare(grid.noteSummary, labelNotes,
-                "A038 label activation preserves both selected note identities")
-        compare(volumeTab.activeFocus, true, "A038 label retains focus after Enter and Return")
+                "label activation preserves both selected note identities")
+        compare(volumeTab.activeFocus, true, "label retains focus after Enter and Return")
         var shortcut = windowShortcut("shellShortcut_roll.copy")
         verify(shortcut, "the window Copy shortcut is mounted")
         copyActivatedSpy.target = shortcut
@@ -61,7 +61,7 @@ ShellWindowSupport {
         compare(JSON.parse(clipProbe.readClipJson()).tracks[0].notes[0].key, selected.pitch,
                 "window Copy over label focus preserves the selected note")
         var copiedNotes = JSON.parse(clipProbe.readClipJson()).tracks[0].notes
-        compare(copiedNotes.length, 2, "A061 label-focus Copy captures the two selected notes")
+        compare(copiedNotes.length, 2, "label-focus Copy captures the two selected notes")
         var firstTick = Math.min(pair[0].tick, pair[1].tick)
         verify(pair.every(function(previous) {
             return copiedNotes.some(function(copied) {
@@ -70,8 +70,8 @@ ShellWindowSupport {
                        && copied.duration === previous.duration
                        && copied.velocity === previous.velocity
             })
-        }), "A061 the copied clip retains both note pitches")
-        compare(volumeTab.activeFocus, true, "A066 label keeps active focus after Copy")
+        }), "the copied clip retains both note pitches")
+        compare(volumeTab.activeFocus, true, "label keeps active focus after Copy")
         keyClick(Qt.Key_Right)
         verify(pair.every(function(previous) {
             var moved = note(previous.id)
@@ -81,7 +81,7 @@ ShellWindowSupport {
                    && moved.velocity === previous.velocity && moved.track === previous.track
                    && moved.ghost === previous.ghost
         }), "label-focus arrows advance the selected note one grid step")
-        compare(volumeTab.activeFocus, true, "A077 label owns focus before routed arrows")
+        compare(volumeTab.activeFocus, true, "label owns focus before routed arrows")
         keyPress(Qt.Key_Up)
         verify(pair.every(function(previous) {
             var moved = note(previous.id)

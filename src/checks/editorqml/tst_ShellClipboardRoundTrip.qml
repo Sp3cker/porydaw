@@ -333,7 +333,7 @@ ShellClipboardSupport {
         replacementRoll.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(replacementRoll, "activeFocus", true, 3000)
         verify(clipProbe.writeClipJson("not json at all"),
-               "A017 malformed custom-MIME bytes are staged for mounted Paste")
+               "malformed custom-MIME bytes are staged for mounted Paste")
         compare(clipProbe.readClipJson(), "not json at all", "native clipboard retains invalid bytes")
         compare(clipProbe.clipSummary(), "[]", "the production decoder rejects invalid custom MIME")
         var refusedBytes = clipProbe.readClipJson()
@@ -342,23 +342,23 @@ ShellClipboardSupport {
         var refusedRedo = shell.shellPresenter.actionEnabled("edit.redo")
         keySequence(StandardKey.Paste)
         compare(clipProbe.readClipJson(), refusedBytes,
-                "A017 mounted malformed-MIME refusal preserves native clipboard bytes")
+                "mounted malformed-MIME refusal preserves native clipboard bytes")
         compare(replacementGrid.noteSummary, replacementSummary,
                 "invalid custom MIME cannot change pasted notes")
         compare(replacementGrid.appliedRevisionText, refusedRevision,
-                "A017 mounted malformed-MIME refusal preserves document revision")
+                "mounted malformed-MIME refusal preserves document revision")
         compare(replacementGrid.editCursorTick, replacementCursor,
                 "invalid custom MIME cannot advance the cursor")
         compare(session.documentDirty, replacementDirty,
                 "invalid custom MIME cannot change dirty state")
         compare(shell.shellPresenter.actionEnabled("edit.undo"), refusedUndo,
-                "A017 mounted malformed-MIME refusal preserves Undo")
+                "mounted malformed-MIME refusal preserves Undo")
         compare(shell.shellPresenter.actionEnabled("edit.redo"), refusedRedo,
-                "A017 mounted malformed-MIME refusal preserves Redo")
+                "mounted malformed-MIME refusal preserves Redo")
         verify(clipProbe.writeClipJson(copiedPayload),
-               "A017 valid copied MIME is restored after malformed refusal")
+               "valid copied MIME is restored after malformed refusal")
         compare(clipProbe.readClipJson(), copiedPayload,
-                "A017 restored valid clipboard bytes match the original copy")
+                "restored valid clipboard bytes match the original copy")
         tryCompare(replacementRoll, "activeFocus", true, 3000)
         verify(waitForNative(function() {
             return shell.shellPresenter.actionEnabled("roll.paste")

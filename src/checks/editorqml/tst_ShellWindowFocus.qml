@@ -153,7 +153,7 @@ ShellWindowSupport {
         tryCompare(grip, "activeFocus", true, 3000,
                    "real Tab traversal reaches the automation resize grip")
         compare(grip.activeFocus, true,
-                "A014 automation resize grip owns active focus before arrows")
+                "automation resize grip owns active focus before arrows")
         var beforeHeight = section.bodyHeight
         var beforeNote = pair.map(function(item) { return note(item.id) })
         var beforeRevision = grid.appliedRevisionText
@@ -170,7 +170,7 @@ ShellWindowSupport {
                && grid.appliedRevisionText === beforeRevision && session.canUndo === beforeUndo,
                "an unrecognized key changes nothing")
         compare(copyActivatedSpy.count, 0, "A010 F24 never activates window Copy")
-        compare(soloActivatedSpy.count, 0, "A010 F24 never activates window Solo")
+        compare(soloActivatedSpy.count, 0, "F24 never activates window Solo")
         verify(pairUnchanged(beforeNote), "F24 retains both selected notes by ID")
         keyClick(Qt.Key_Up)
         compare(section.bodyHeight, beforeHeight + shell.chromeSpacing.two,
@@ -189,14 +189,14 @@ ShellWindowSupport {
                 "grip arrows never trigger window actions")
         verify(pairUnchanged(beforeNote), "the automation grip keeps the selected note unchanged")
         compare(copyActivatedSpy.count, 0, "A018 grip arrows never activate window Copy")
-        compare(soloActivatedSpy.count, 0, "A018 grip arrows never activate window Solo")
+        compare(soloActivatedSpy.count, 0, "grip arrows never activate window Solo")
 
         for (var toggleStep = 0; toggleStep < 96 && !toggle.activeFocus; ++toggleStep)
             keyClick(Qt.Key_Tab)
         tryCompare(toggle, "activeFocus", true, 3000,
                    "real Tab traversal reaches the automation drawer toggle")
         compare(toggle.activeFocus, true,
-                "A108 automation toggle owns active focus before arrows")
+                "automation toggle owns active focus before arrows")
         var snap = grid.snapTicks
         keyClick(Qt.Key_Right)
         verify(pair.every(function(previous) {
@@ -222,8 +222,8 @@ ShellWindowSupport {
         var sectionVisible = section.visible
         keyClick(Qt.Key_Space)
         tryCompare(playhead, "playing", true, 3000,
-                   "A113 toggle Space activates window transport rather than local chrome")
-        compare(section.visible, sectionVisible, "A113 toggle Space leaves the section visible")
+                   "toggle Space activates window transport rather than local chrome")
+        compare(section.visible, sectionVisible, "toggle Space leaves the section visible")
         verify(pairUnchanged(beforeActivation),
                "A113 bare Space on the focused toggle retains both note IDs")
         keyClick(Qt.Key_Space)

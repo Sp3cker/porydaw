@@ -216,7 +216,7 @@ Mapping/reason: S019 (ThemeColorChecks.swift:572-574) takes the base-luminance-n
 A038 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:205
 Disposition: PARTIAL
 Mapping: S005, S020
-Mapping/reason: S020 (ThemeColorChecks.swift:576-578) is the original's else branch - contrast-100 grid luminance above the default when the default sits above the roll surface - but no shipped preset reaches it: the executing themecolor lane carries only the darkens row for vanilla, dark-neutral-high and immaterial, so this clause has a counterpart predicate and no executed observation of its own.
+Mapping/reason: S020 (ThemeColorChecks.swift:368-372) is the original's else branch - contrast-100 grid luminance above the default when the default sits above the roll surface - but no shipped preset reaches it: the executing themecolor lane carries only the darkens row for vanilla, dark-neutral-high and immaterial, so this clause has a counterpart predicate and no executed observation of its own.
 
 A039 | ThemeLayoutTest::laneAndWaveformLegibility | src/checks/themelayout/tst_themelayout_color.cpp:245
 Disposition: PARTIAL
@@ -381,5 +381,5 @@ Anchor: message "\(tag): contrast 100 darkens away from the surface"
   ThemeColorChecks.swift:571-574 in the baseLuminance <= rollLuminance branch: report.expect(themeRefLuminance(strengthened.gridLine) < themeRefLuminance(base.gridLine)) - one row per preset.
 
 S020 | themeGridContrastChecks | src/checks/themecolor/ThemeColorChecks.swift
-Anchor: message "\(tag): contrast 100 lightens away from the surface"
-  ThemeColorChecks.swift:575-578 in the baseLuminance > rollLuminance branch: report.expect(themeRefLuminance(strengthened.gridLine) > themeRefLuminance(base.gridLine)) - one row per preset.
+Anchor: function
+  ThemeColorChecks.swift:368-372 in the baseLuminance > rollLuminance branch: report.expect(themeRefLuminance(strengthened.gridLine) > themeRefLuminance(base.gridLine)) - one row per preset.
