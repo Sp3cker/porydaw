@@ -342,3 +342,124 @@ Open user decisions stay out: `voicegroupsave/proof.savecore.txt` A016–A026
 retaining the last valid catalog), and reserved `proof.switching.txt` A030–A046
 (whether blank materialization tokens rebase across unrelated same-section
 external edits or retain E10 blanket expiry). No brief resolves either policy.
+
+## 9. Wave 83+
+
+Planning baseline: HEAD `e334b318ecf391e3d4fac512c4a613303aff01e3`; fork oracle
+`fceecd88`. This wave starts **after 79–82 land**. Counts are exact selected
+GAP/PARTIAL A-sites queried with `deno task proof list|sites|show`, not the stale
+§2 census or §6 estimates. Each brief records its selected IDs, existing mounted
+owner, fork laws, closed write set and executing evidence lane. Rebase the
+specific shared files named below after their earlier writer lands; do not
+claim the 86 rows already assigned to 79–82 again.
+
+### Tasks and selected census
+
+| Task | Mounted surface and bounded change | GAP | PARTIAL | Target MATCHED / RETIRED |
+|---|---|---:|---:|---:|
+| [83](task-83-brief.md) | Cross-tab A/V/P drawer state and complete chrome/lane preference reload/poison boundaries | 25 | 6 | 29 / 2 |
+| [84](task-84-brief.md) | Startup/legacy recipe restore, Opened status, real close/restart, fresh reopen versus in-place reload | 27 | 7 | 32 / 2 |
+| [85](task-85-brief.md) | Drawer routing isolation, voice drag/cancel feedback, physical held-B pencil and rendered point-menu Delete | 14 | 25 | 35 / 4 |
+| [86](task-86-brief.md) | Ruler/time/note command menus, exact history/clipboard clauses, latched pencil velocity and press-to-focus | 7 | 30 | 37 / 0 |
+| [87](task-87-brief.md) | Physical two-note keyboard routing, chrome exclusion/focus retention, lane Copy/Delete/Paste and platform bindings | 0 | 50 | 38 / 12 |
+| [88](task-88-brief.md) | Atomic range/note/track scope payloads and native clipboard displacement through the production song filter | 17 | 22 | 32 / 7 |
+| [89](task-89-brief.md) | Voicegroup dock edit/save/reopen, completed-save receipts, engine-byte convergence, picker/synth residuals | 18 | 20 | 35 / 3 |
+| [90](task-90-brief.md) | Camera/grid lattice and signature laws, mounted remap/resize survival, native ingress/order retirement | 14 | 41 | 28 / 27 |
+| **Total** | **323 selected open rows; 266 behavior predicates and 57 bounded representation retirements** | **122** | **201** | **266 / 57** |
+
+These are selected A-sites, not promises to close every ledger in each family.
+Every representation retirement cites its exact fork expression and the fresh
+owning-surface journey; counts never justify retiring an observable failure.
+
+### Two parallel write groups
+
+1. **Group A: 83, 85, 88, 90** — 164 selected rows. Their complete exact write
+   sets, including conditional production repairs, are pairwise disjoint.
+2. **Checkpoint A:** all four task evidence/review gates pass on the settled
+   tree; make one accepted group checkpoint before any shared-file reuse.
+3. **Group B: 84, 86, 87, 89** — 159 selected rows. Their complete exact write
+   sets are also pairwise disjoint. 84 consumes 83; 86 consumes 85's QML-file
+   handoff; 87 consumes 83's file plus 85/88's behavior contracts.
+4. **Checkpoint B:** settle, build/verify once, finish each task's review gate
+   and make the final group checkpoint. No per-task commit churn.
+
+The controller owns integration. Per-task before/after structural inspection,
+evidence/review gates and bounded fix loops follow `sdd-execution-loop`; no
+writer silently enlarges its closed write set.
+
+| Hot file | Group A owner | Group B owner |
+|---|---|---|
+| `ShellWindow.qml` | — | 84 |
+| `ShellPresenter.swift` | — | 84 |
+| `ApplicationSession.swift` | 83 | 84 |
+| `DocumentWorkspace.swift` | — | 84 |
+| `EditorSurface.qml` | — | 86 |
+| `PianoGrid.swift` | unchanged | unchanged |
+| `tst_ShellWindow.qml` | 83 | 87 |
+| `tst_EditorDrawer.qml` | 85 | — |
+| `EditorCommandRouter.swift` | unchanged | unchanged |
+| `DocumentSession.swift` | — | 89, selected defect only |
+
+Additional exact-file handoffs: **83 → 84**
+`EditorViewStateCodec.swift` and `workspace/session_view_state.swift`;
+**85 → 86** `tst_ShellGridMenu.qml`. There are no other cross-group write
+intersections and no shared ledger writers.
+
+Earlier-wave rebases are explicit in the briefs: **81 → 83/87**
+`tst_ShellWindow.qml`; **81 → 86** `rollcheck/note_commands.swift`;
+**82 → 84** `DocumentWorkspace.swift`; **79 → 85**
+`AutomationInteraction.swift` if its selected-law repair is needed. Read
+dependencies also rebase: 88 consumes 79/81 routing, 89 consumes 82's
+`ProjectService.swift` engine boundary, and 90 consumes 82's
+`GridScene+Rebuild.swift`. Preserve every 79–82 selected row and message.
+
+**Execution contract.** All tasks are SDD-track, `sdd-implementer`: each crosses
+the production/check/ledger boundary for one mounted behavior family. That
+cohesive acceptance surface justifies exceeding the three-file default; no
+task is a standalone ledger reconciliation. The exact write sets are closed.
+Rows move only with the surface code and executed checks in the same change.
+Retirement is limited to fork-proven representation inside its owning surface.
+
+The §8 Wave constraints remain mandatory, including no new C++, Swift 6.4
+idioms on touched Swift, two-line comments, base-font geometry and WCAG AA over
+pixel parity; the sole window shortcut authority, no synthetic forwarding,
+focus memory or bare Space capture in chrome; no `Qt.callLater` coalescing or
+idempotence guards; real fixtures, no test-only seams, one message-anchored
+predicate per fork clause and existing messages verbatim. Workarounds need
+user approval.
+
+**Verification policy for this wave supersedes §8's no-aggregate-shell sentence.**
+The controller builds the settled write group once and deduplicates its named
+lanes. All shell lanes run together in about 40 s through
+`deno task verify:shell --verbose`; a single lane uses
+`deno task verify:shell --filter <entry> --verbose`. Both modes emit each lane's
+`build/proof-evidence/<entry>.json`. Every invocation has a **180 s ceiling**.
+Reuse the briefs' exact Swift/roll/shell commands without rediscovery unless
+scope or registration changes. Parallel writers do not run shared builds,
+checks or formatters against each other's partial edits. Read-only inspection
+and proof queries remain available. Fresh mounted journey evidence is required,
+then `deno task proof check --executed`; a green related test does not close an
+unexecuted clause. No builds, checks, formatting or commits were run to author
+this plan.
+
+**Unchanged boundaries.** `project`, `samplecheck`, `onboardcheck`, and
+`midi/tst_midiexport` remain parked (P3 WAV export still awaits the user).
+Deferred menu rows stay out: New Song, Import MIDI, Export WAV, Register Song,
+Import Sample and Theme. Sidecar-directory snapshot rows remain blocked on the
+parked project-store boundary, not retired as representation.
+
+The outstanding user-decision rows are
+`voicegroupsave/proof.savecore.txt` **A016–A026**, especially A017: whether a
+catalog outage must publish a production status/error path saying the sound
+directory is unavailable while retaining the last valid catalog. They remain
+unchanged. §8's blank-token decision wording is stale: task 78 records the
+user's fork-matching ruling and `proof.switching.txt` A030 is now MATCHED.
+Keep A030–A046 outside this wave and preserve the settled token-rebase contract;
+do not present that policy as another unresolved user decision.
+
+Other explicitly unselected technical work is not another user decision:
+voicegroupsave savecore A003/A004/A015 (cohesive failed-rebind cfg/status/undo)
+and A075 (deterministic mounted stale-save receipt), clipboard clipmime A017
+(decode-failure announcement), the 19 laneselection rows, and unselected
+camera/draw/remap/prompt rows. Tasks 85/86/83–84 do not implicitly own those
+residuals merely because their surfaces are adjacent.
