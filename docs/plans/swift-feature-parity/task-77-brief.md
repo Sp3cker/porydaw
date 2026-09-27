@@ -372,6 +372,94 @@ The separately authorized task-73 follow-up in `tst_ShellEventList.qml` waits
 for the pointer toggle's queued visible-page focus landing before explicitly
 focusing the toggle; its existing Delete/focus assertions are unchanged.
 
-77b remains necessary for note fills, previews, borders, overlays, and note
-text, which still publish viewport coordinates. It also owns the reduced
-note-fill key, window-based note culling, and scroll-while-hover chip refresh.
+# 77b implementation evidence
+
+Note fills, previews, borders, selection/time bands, loop overlays, and note
+text now publish content coordinates and render under `plotContentSide`.
+Notes use the shared provisioned window for horizontal culling and retain all
+projected pitch rows. The fill key excludes camera scroll and viewport
+dimensions; pan and non-geometric gestures reuse cached note geometry.
+The hover chip stays viewport-local and refreshes when its camera or viewport
+height changes; unchanged chip geometry is not republished.
+
+Coordinate-only Swift/QML check helpers now map note models and delegates
+into the correct space. Mounted checks wait for the camera transform to
+render before reading delegate-to-input coordinates. The small-font raster
+fixture captures its font through a fresh shell's typography authority
+instead of temporarily overriding the mounted grid's viewport font.
+Behavioral messages remain unchanged except the authorized retirement of
+“a camera move still reprojects the note boxes.” Its replacements verify the
+camera-translated viewport position and zero note-box/fill work on an
+in-window scroll. No proof anchor references the retired message.
+
+All named gates passed: `build:checks`, `swiftcore`, `verify:qml-roll`,
+`verify:qml`, all 26 shell entries as bounded per-entry commands,
+`verify:bridge`, and `format --check`. The proof reader resolved all 8,088
+anchors without errors or ledger edits. Formatting used Xcode's
+`clang-format` 21 and retained the CI-version-22 warning. SourceKit semantic
+diagnostics were unavailable because its standard-library load failed;
+declaration inspection and the covering builds supplied structural evidence.
+Temporary smoke checks proved record identity retention for fills, borders,
+overlays and note text across resize/two-axis scroll, stationary-hover chip
+movement, and offscreen-pitch note retention, then were removed.
+Evidence is `/tmp/task77b-swiftcore-smoke.log` and
+`/tmp/task77b-shell-results.json`; final gate logs use `/tmp/task77b-*.log`.
+
+Native profiling used the same fixture and 40-step resize / 32-drag scroll
+protocol, with 10-second / 12-second samples at 1 ms. Resize targeted only
+the owned PID through System Events. The scroll sweep checked ownership
+before every mouse event and aborted on any foreground-PID change. Direct
+PID-posted mouse trials delivered no pan events and are excluded; the valid
+existing 77a scroll captures supply the before baseline. The owned instances
+exited, foreground focus was restored, and the preference plist was restored
+exactly. Inclusive main-thread sample counts:
+
+| Path | Before 77 | Before 77b | After 77b |
+| --- | --- | --- | --- |
+| Resize: `rebuildStatic` | 5,320 / 6,222 (85.50%) | 0 / 6,241 (0.00%) | 1,244 / 5,812 (21.40%) |
+| Resize: `rebuildNotes` | 276 / 6,222 (4.44%) | 768 / 6,241 (12.31%) | 9 / 5,812 (0.15%) |
+| Scroll: `rebuildStatic` | 6,835 / 7,688 (88.90%) | 14 / 8,163 (0.17%) | 115 / 6,647 (1.73%) |
+| Scroll: `rebuildNotes` | 6 / 7,688 (0.08%) | 15 / 8,163 (0.18%) | 29 / 6,647 (0.44%) |
+
+Resize elapsed time was 3.69 s before 77b and 4.66 s after; sampled static
+chunk/extent changes vary between sweeps, so these are not a claim of a
+77b end-to-end speedup. Roll scene rebuilding no longer dominates either
+workload. Profiles are `/tmp/sample_resize_before_77b.txt`,
+`/tmp/sample_resize_after_77b.txt`, and
+`/tmp/sample_scroll_after_77b_focused.txt`, with the earlier baselines named
+above. `/tmp/task77b-profile-summary.json` records the comparison. The home
+roll crop `(980,238)-(2370,810)` in `/tmp/task77b-after-home.png` is
+pixel-identical to `/tmp/task77a-round1-before-sweep.png`;
+`/tmp/task77b-after-scroll.png` records the exercised scrolled surface.
+
+## 77b review fix 1
+
+The focused `EditorGridCameraChecks` regressions first failed for a stationary
+hover chip on a height-only shrink and for static records on repeated
+1,023/1,025-wide reversals. The chip now considers every effective layout
+dependency without adding camera state or rebuilding static models.
+Content-window extents retain padded capacity across width-only changes;
+the snapped content end invalidates that capacity when the domain changes.
+The existing window-eviction margin still controls horizontal reprovisioning.
+Both regressions then passed, including bottom-clamp restoration on growth
+and static-record identity retention. RED/GREEN logs are
+`/tmp/task77b-round1-red.log` and `/tmp/task77b-round1-swiftcore.log`.
+
+The identical 40-step native resize sweep was sampled twice after the fix:
+
+| Path | Initial 77b | Review fix, run 1 | Review fix, run 2 |
+| --- | --- | --- | --- |
+| Elapsed resize | 4.66 s | 2.13 s | 1.54 s |
+| `configureViewport` | 1,382 / 5,812 (23.78%) | 151 / 6,448 (2.34%) | 150 / 6,942 (2.16%) |
+| `rebuildStatic` | 1,244 / 5,812 (21.40%) | 1 / 6,448 (0.02%) | 0 / 6,942 (0.00%) |
+| `rebuildNotes` | 9 / 5,812 (0.15%) | 12 / 6,448 (0.19%) | 13 / 6,942 (0.19%) |
+
+Profiles are `/tmp/sample_resize_after_77b_round1_1.txt` and
+`/tmp/sample_resize_after_77b_round1_2.txt`. The repeated guarded scroll
+sweep in `/tmp/sample_scroll_after_77b_round1.txt` sampled static rebuilding
+at 71 / 5,667 (1.25%) and note rebuilding at 37 / 5,667 (0.65%).
+The owned PID exited normally, focus was restored, and preferences were
+restored. `build:checks`, `swiftcore`, both QML suites, all 26 shell entries,
+the bridge gate, and proof-anchor resolution passed again; logs use
+`/tmp/task77b-round1-*.log` and shell results are
+`/tmp/task77b-round1-shell-results.json`. No ledger was edited.

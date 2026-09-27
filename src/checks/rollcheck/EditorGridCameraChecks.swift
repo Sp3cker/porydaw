@@ -52,6 +52,7 @@ func runEditorGridCameraChecks(_ report: CheckReport, session: DocumentSession) 
     }
 
     checkViewport(report, session: session, grid: grid, counters: counters)
+    checkHoverChipResize(report, session: session, grid: grid)
     checkGridCameraWheel(report, session: session, grid: grid, counters: counters)
     checkProjection(report, session: session, grid: grid)
     checkIsolation(report, session: session, grid: grid, counters: counters)
@@ -167,6 +168,61 @@ private func checkContentWindowBoundaryReversal(_ report: CheckReport) {
                   message: "monotonic scroll keeps visible coverage and reprovisions no more often than two viewports")
     report.expect(reversalRetained, cppID: contentWindowID,
                   message: "a reverse step after reprovision retains the newly published content window")
+    var resizeInput = input
+    resizeInput.camera = camera
+    resizeInput.camera.updateViewport(width: 1023, rollHeight: 320)
+    scene.rebuildStatic(resizeInput)
+    let resizeWindow = scene.contentWindow
+    let rows = scene.pianoGridRows.asArray
+    let marks = scene.pianoGridTime.asArray
+    var resizeRetained = true
+    for width in [1025.0, 1023, 1025, 1023, 1025, 1023] {
+        resizeInput.camera.updateViewport(width: width, rollHeight: 320)
+        scene.rebuildStatic(resizeInput)
+        resizeRetained = resizeRetained && scene.contentWindow == resizeWindow
+            && scene.pianoGridRows.count == rows.count && scene.pianoGridTime.count == marks.count
+            && rows.indices.allSatisfy { scene.pianoGridRows[$0] === rows[$0] }
+            && marks.indices.allSatisfy { scene.pianoGridTime[$0] === marks[$0] }
+    }
+    report.expect(resizeRetained, cppID: contentWindowID,
+                  message: "width reversals across a chunk boundary retain provisioned rows and time marks")
+}
+
+@MainActor
+private func checkHoverChipResize(
+    _ report: CheckReport, session: DocumentSession, grid: PianoGrid
+) {
+    let id = "swiftcore/EditorGridCamera::hoverChipViewportHeight"
+    let originalCamera = session.camera
+    let font = grid.baseFontPx
+    let dpr = grid.devicePixelRatio
+    defer {
+        grid.clearKeyboardHover()
+        grid.configureViewport(width: originalCamera.snapshot.viewportWidth,
+                               height: originalCamera.snapshot.rollHeight, fontPx: font, dpr: dpr)
+        session.mutateCamera { $0 = originalCamera }
+    }
+    grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
+    grid.resetCameraScroll()
+    grid.updateHover(x: 0, y: 319)
+    let key = grid.hoverKey
+    let scroll = session.camera.snapshot.scrollY
+    let chipHeight = grid.scene.hoverChipRect["height"] as? Double ?? .nan
+    let rows = grid.scene.pianoGridRows.asArray
+    report.expect(key >= 0 && grid.scene.hoverChipVisible
+        && gridCameraNear(grid.scene.hoverChipRect["y"] as? Double ?? .nan, 320 - chipHeight),
+        cppID: id, message: "the stationary hover chip begins clamped to the viewport bottom")
+    grid.configureViewport(width: 640, height: 315, fontPx: 13, dpr: 2)
+    report.expect(grid.hoverKey == key && session.camera.snapshot.scrollY == scroll
+        && gridCameraNear(grid.scene.hoverChipRect["y"] as? Double ?? .nan, 315 - chipHeight),
+        cppID: id, message: "height-only shrink reclamps the stationary hover chip without scrolling")
+    grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
+    report.expect(grid.hoverKey == key && session.camera.snapshot.scrollY == scroll
+        && gridCameraNear(grid.scene.hoverChipRect["y"] as? Double ?? .nan, 320 - chipHeight),
+        cppID: id, message: "height-only growth restores the stationary hover chip bottom clamp")
+    report.expect(grid.scene.pianoGridRows.count == rows.count
+        && rows.indices.allSatisfy { grid.scene.pianoGridRows[$0] === rows[$0] },
+        cppID: id, message: "hover-chip height reclamping does not republish static rows")
 }
 
 @MainActor
@@ -314,6 +370,10 @@ private func checkProjection(
     var knownRect: SceneRect?
     for index in 0..<grid.scene.pianoNoteFills.count {
         let rect = grid.scene.pianoNoteFills[index]
+        let scrollX = (snapshot.scrollX * grid.devicePixelRatio).rounded() / grid.devicePixelRatio
+        let scrollY = (snapshot.scrollY * grid.devicePixelRatio).rounded() / grid.devicePixelRatio
+        guard rect.x + rect.width > scrollX, rect.x < scrollX + snapshot.viewportWidth,
+              rect.y + rect.height > scrollY, rect.y < scrollY + snapshot.rollHeight else { continue }
         if let note = notes.first(where: { rect.primitiveName == "gridNote_\($0.id.rawValue)" }) {
             knownNote = note
             knownRect = rect
@@ -323,11 +383,10 @@ private func checkProjection(
     let projected = knownNote.flatMap { note -> Bool? in
         guard let rect = knownRect else { return nil }
         let row = session.camera.projection.row(forPitch: Int(note.pitch))
-        let expectedY = session.camera.projection.rowTop(
-            row, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY,
-            dpr: grid.devicePixelRatio) ?? .nan
-        return gridCameraNear(rect.x, session.camera.displayX(
-            tick: Double(note.tick), origin: 0, dpr: grid.devicePixelRatio))
+        let expectedY = session.camera.projection.contentRowTop(
+            row, keyHeight: snapshot.keyHeight, dpr: grid.devicePixelRatio) ?? .nan
+        return gridCameraNear(rect.x, session.camera.contentTickX(
+            tick: Double(note.tick), dpr: grid.devicePixelRatio))
             && gridCameraNear(rect.y, expectedY + 1 / grid.devicePixelRatio)
     } ?? false
     report.expect(
@@ -347,9 +406,12 @@ private func checkProjection(
         return
     }
     let originalRevision = session.document.revision
+    let scrollX = (snapshot.scrollX * grid.devicePixelRatio).rounded() / grid.devicePixelRatio
+    let scrollY = (snapshot.scrollY * grid.devicePixelRatio).rounded() / grid.devicePixelRatio
+    let pointerX = originalRect.x - scrollX + originalRect.width / 2
+    let pointerY = originalRect.y - scrollY + originalRect.height / 2
     grid.beginPointer(
-        x: originalRect.x + originalRect.width / 2,
-        y: originalRect.y + originalRect.height / 2, modifiers: 0)
+        x: pointerX, y: pointerY, modifiers: 0)
     report.expect(
         session.selectedNotes.contains(originalNote.id),
         cppID: projectionID, message: "beginPointer selects the note under the projected rectangle")
@@ -358,26 +420,24 @@ private func checkProjection(
     let dragY = pitchDelta > 0 ? -grid.rowHeight : grid.rowHeight
     let dragX = Double(snap) * session.camera.snapshot.pixelsPerTick
     grid.updatePointer(
-        x: originalRect.x + originalRect.width / 2 + dragX,
-        y: originalRect.y + originalRect.height / 2 + dragY)
+        x: pointerX + dragX, y: pointerY + dragY)
     let previewName = "gridNote_\(originalNote.id.rawValue)"
     let previewRect = firstRect(named: previewName, in: grid.scene.pianoNoteFills)
     let expectedTick = Int(originalNote.tick) + snap
     let expectedPitch = Int(originalNote.pitch) + pitchDelta
     let previewRow = session.camera.projection.row(forPitch: expectedPitch)
-    let expectedPreviewY = session.camera.projection.rowTop(
+    let expectedPreviewY = session.camera.projection.contentRowTop(
         previewRow, keyHeight: session.camera.snapshot.keyHeight,
-        scrollY: session.camera.snapshot.scrollY, dpr: grid.devicePixelRatio) ?? .nan
+        dpr: grid.devicePixelRatio) ?? .nan
     report.expect(
         previewRect.map {
-            gridCameraNear($0.x, session.camera.displayX(
-                tick: Double(expectedTick), origin: 0, dpr: grid.devicePixelRatio))
+            gridCameraNear($0.x, session.camera.contentTickX(
+                tick: Double(expectedTick), dpr: grid.devicePixelRatio))
                 && gridCameraNear($0.y, expectedPreviewY + 1 / grid.devicePixelRatio)
         } ?? false,
         cppID: projectionID, message: "one-cell drag publishes the snapped tick and pitch preview")
     grid.endPointer(
-        x: originalRect.x + originalRect.width / 2 + dragX,
-        y: originalRect.y + originalRect.height / 2 + dragY)
+        x: pointerX + dragX, y: pointerY + dragY)
     let moved = session.document.note(originalNote.id)
     report.expect(
         session.document.revision == originalRevision + 1
@@ -401,8 +461,8 @@ private func checkProjection(
                 tick: Double(tick), origin: 0, dpr: grid.devicePixelRatio)
             let occupied = (0..<grid.scene.pianoNoteFills.count).contains { index in
                 let rect = grid.scene.pianoNoteFills[index]
-                return rect.x < x + 20 && rect.x + rect.width > x
-                    && rect.y <= candidateY && rect.y + rect.height >= candidateY
+                return rect.x - scrollX < x + 20 && rect.x + rect.width - scrollX > x
+                    && rect.y - scrollY <= candidateY && rect.y + rect.height - scrollY >= candidateY
             }
             if !occupied {
                 drawX = x
@@ -430,7 +490,10 @@ private func checkProjection(
 
     session.clearSelectedNotes()
     let visibleIDs = Set((0..<grid.scene.pianoNoteFills.count).compactMap { index -> NoteID? in
-        let name = grid.scene.pianoNoteFills[index].primitiveName
+        let rect = grid.scene.pianoNoteFills[index]
+        guard rect.x + rect.width > scrollX, rect.x < scrollX + snapshot.viewportWidth,
+              rect.y + rect.height > scrollY, rect.y < scrollY + snapshot.rollHeight else { return nil }
+        let name = rect.primitiveName
         return session.document.notes(in: grid.trackIndex)
             .first(where: { name == "gridNote_\($0.id.rawValue)" })?.id
     })
@@ -600,3 +663,4 @@ private func checkIsolation(
 func gridCameraNear(_ lhs: Double, _ rhs: Double, tolerance: Double = 1e-9) -> Bool {
     abs(lhs - rhs) <= tolerance
 }
+

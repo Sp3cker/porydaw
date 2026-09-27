@@ -538,12 +538,16 @@ private func checkTimeSelectionHighlights(_ report: CheckReport, session: Docume
         }
         defer { session.document.deleteNotes([ghostID]) }
         grid.refreshFromSession()
-        guard let plainBox = grid.projectedNoteBox(tick: Int(seed.tick),
-                                                   end: Int(seed.tick + seed.duration),
-                                                   pitch: seed.pitch),
-              let ghostBox = grid.projectedNoteBox(tick: Int(seed.tick),
-                                                   end: Int(seed.tick + seed.duration),
-                                                   pitch: ghostPitch) else {
+        let metrics = GridMetrics(baseFontPx: grid.baseFontPx, dpr: grid.devicePixelRatio,
+                                  width: snapshot.viewportWidth, height: snapshot.rollHeight)
+        let x0 = session.camera.contentTickX(tick: Double(seed.tick), dpr: grid.devicePixelRatio)
+        let x1 = session.camera.contentTickX(tick: Double(seed.tick + seed.duration),
+                                            dpr: grid.devicePixelRatio)
+        let plainBox = metrics.noteContentBox(
+            camera: session.camera, x0: x0, x1: x1, pitch: seed.pitch)
+        let ghostBox = metrics.noteContentBox(
+            camera: session.camera, x0: x0, x1: x1, pitch: ghostPitch)
+        guard plainBox.w > 0, plainBox.h > 0, ghostBox.w > 0, ghostBox.h > 0 else {
             report.fail(id, "time-scoped fixtures have no projected boxes")
             return
         }
@@ -564,15 +568,11 @@ private func checkTimeSelectionHighlights(_ report: CheckReport, session: Docume
                       message: "A053/A029 covered notes ring, including the time-scoped ghost")
         report.expect(session.selectedNotes.isEmpty, cppID: id,
                       message: "A054 time-covered notes never leak into the note selection")
-        let x0 = session.camera.displayX(tick: Double(seed.tick), origin: 0,
-                                         dpr: grid.devicePixelRatio)
-        let x1 = session.camera.displayX(tick: Double(seed.tick + seed.duration), origin: 0,
-                                         dpr: grid.devicePixelRatio)
         let overlay = grid.scene.pianoOverlay.asArray
         report.expect(overlay.contains { rect in
             rect.fillColor == grid.palette.selectionFill && renderingNear(rect.x, x0)
                 && renderingNear(rect.y, 0) && renderingNear(rect.width, x1 - x0)
-                && renderingNear(rect.height, session.camera.snapshot.rollHeight)
+                && renderingNear(rect.height, projection.totalHeight(keyHeight: snapshot.keyHeight))
         } && overlay.filter { $0.fillColor == grid.palette.selectionEdge }.count >= 2,
         cppID: id, message: "the covered selected track publishes its range band and edges")
         let bandEnd = seed.tick + seed.duration

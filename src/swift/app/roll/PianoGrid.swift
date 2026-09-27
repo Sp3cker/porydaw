@@ -1181,6 +1181,11 @@ public final class PianoGrid {
         default:
             showVelocityValues = false
         }
+        let geometryStable: Bool
+        switch gesture {
+        case .move, .resize: geometryStable = false
+        default: geometryStable = true
+        }
         return GridSceneInput(
             metrics: metrics, grid: session.grid, palette: palette, camera: session.camera,
             contentEndTick: contentEndTick, scale: session.scaleProjection,
@@ -1196,7 +1201,7 @@ public final class PianoGrid {
             noteNameOccupiedHeight: typography?.noteNameOccupiedHeight ?? 0,
             timeSelection: session.timeSelection,
             usedTrackCount: session.document.engineTracks.usedTrackCount,
-            selectedTrack: trackIndex, geometryStable: !interactionActive)
+            selectedTrack: trackIndex, geometryStable: geometryStable)
     }
 
     @QtIgnored
@@ -1220,7 +1225,11 @@ public final class PianoGrid {
         }
         scene.rebuildStatic(input)
         scene.rebuildNotes(input)
-        if typographyChanged { scene.rebuildHover(input) }
+        if typographyChanged {
+            scene.rebuildHover(input)
+        } else if hoverKey >= 0 {
+            scene.refreshHoverChip(input)
+        }
         publishOutputs()
     }
 

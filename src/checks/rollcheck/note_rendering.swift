@@ -73,8 +73,22 @@ private func renderingSeed(_ report: CheckReport, id: String,
 @MainActor
 private func noteBox(_ grid: PianoGrid, session: DocumentSession, note: Note)
     -> (x: Double, y: Double, w: Double, h: Double)? {
-    grid.projectedNoteBox(tick: Int(note.tick), end: Int(note.tick + note.duration),
-                          pitch: Int(note.pitch))
+    let camera = session.camera
+    guard camera.projection.row(forPitch: Int(note.pitch)) != PitchProjection.hiddenRow
+    else { return nil }
+    return grid.metrics.noteContentBox(
+        camera: camera,
+        x0: camera.contentTickX(tick: Double(note.tick), dpr: grid.devicePixelRatio),
+        x1: camera.contentTickX(tick: Double(note.tick + note.duration),
+                                dpr: grid.devicePixelRatio),
+        pitch: Int(note.pitch))
+}
+
+@MainActor
+private func viewportPoint(_ grid: PianoGrid, x: Double, y: Double) -> (x: Double, y: Double) {
+    let dpr = grid.devicePixelRatio
+    return (x - (grid.cameraScrollX * dpr).rounded() / dpr,
+            y - (grid.cameraScrollY * dpr).rounded() / dpr)
 }
 
 func renderingNear(_ lhs: Double, _ rhs: Double) -> Bool {
@@ -700,7 +714,8 @@ private func checkVelocityValues(_ report: CheckReport, session: DocumentSession
             report.fail(id, "velocity-value fixture has no visible pair of note boxes")
             return
         }
-        let x = box.x + box.w / 2, y = box.y + box.h / 2
+        let press = viewportPoint(grid, x: box.x + box.w / 2, y: box.y + box.h / 2)
+        let x = press.x, y = press.y
         grid.setVelocityColorMode(enabled: height == 9.0)
         grid.beginPointer(x: x, y: y, modifiers: 0x0400_0000)
         grid.updatePointer(x: x, y: y - grid.dragDistance - 2, modifiers: 0x0400_0000)
@@ -962,10 +977,10 @@ private func checkGhostNotes(_ report: CheckReport, session: DocumentSession) {
     }
     report.expect(projected(plain.id)?.ghost == false && projected(ghost.id)?.ghost == true,
                   cppID: id, message: "A016 both fixture notes project, other-track note as ghost")
-    guard let ghostBox = grid.projectedNoteBox(tick: ghost.tick, end: ghost.tick + ghost.duration,
-                                               pitch: ghost.pitch),
-          let plainBox = grid.projectedNoteBox(tick: plain.tick, end: plain.tick + plain.duration,
-                                               pitch: plain.pitch) else {
+    guard let ghostNote = document.note(ghost.id),
+          let plainNote = document.note(plain.id),
+          let ghostBox = noteBox(grid, session: session, note: ghostNote),
+          let plainBox = noteBox(grid, session: session, note: plainNote) else {
         report.fail(id, "ghost fixture has no projected scene box")
         return
     }
@@ -1031,8 +1046,9 @@ private func checkGhostNotes(_ report: CheckReport, session: DocumentSession) {
     report.expect(ghostVelocityFill == expectedGhost
                       && ghostFill(named: "gridNote_\(ghost.id.rawValue)") == expectedGhost,
                   cppID: id, message: "A031 velocity-color mode leaves the ghost fill byte-identical")
-    let pressX = ghostBox.x + ghostBox.w / 2
-    let pressY = ghostBox.y + ghostBox.h / 2
+    let ghostOrigin = viewportPoint(grid, x: ghostBox.x, y: ghostBox.y)
+    let pressX = ghostOrigin.x + ghostBox.w / 2
+    let pressY = ghostOrigin.y + ghostBox.h / 2
     let revision = session.document.revision
     grid.beginPointer(x: pressX, y: pressY, modifiers: 0)
     report.expect(!session.selectedNotes.contains(ghost.id)
@@ -1042,9 +1058,11 @@ private func checkGhostNotes(_ report: CheckReport, session: DocumentSession) {
     report.expect(!session.selectedNotes.contains(ghost.id) && !grid.interactionActive
                       && session.document.revision == revision,
                   cppID: id, message: "cancelling a ghost press leaves no gesture or edit")
-    grid.beginRightPointer(x: ghostBox.x - 4, y: ghostBox.y - 4)
-    grid.updateRightPointer(x: ghostBox.x + ghostBox.w + 4, y: ghostBox.y + ghostBox.h + 4)
-    grid.endRightPointer(x: ghostBox.x + ghostBox.w + 4, y: ghostBox.y + ghostBox.h + 4)
+    grid.beginRightPointer(x: ghostOrigin.x - 4, y: ghostOrigin.y - 4)
+    grid.updateRightPointer(x: ghostOrigin.x + ghostBox.w + 4,
+                            y: ghostOrigin.y + ghostBox.h + 4)
+    grid.endRightPointer(x: ghostOrigin.x + ghostBox.w + 4,
+                         y: ghostOrigin.y + ghostBox.h + 4)
     report.expect(!session.selectedNotes.contains(ghost.id),
                   cppID: id, message: "a band over a ghost never selects it")
     session.clearSelectedNotes()
@@ -1094,9 +1112,7 @@ private func checkProjectionEconomy(_ report: CheckReport, session: DocumentSess
     guard let noteID = renderingSeed(report, id: id, session: session, grid: grid) else { return }
     defer { session.document.deleteNotes([noteID]) }
     guard let note = session.document.note(noteID),
-          let box = grid.projectedNoteBox(
-              tick: Int(note.tick), end: Int(note.tick + note.duration),
-              pitch: Int(note.pitch)) else {
+          let box = noteBox(grid, session: session, note: note) else {
         report.fail(id, "projection economy fixture has no projected box")
         return
     }
@@ -1133,7 +1149,8 @@ private func checkProjectionEconomy(_ report: CheckReport, session: DocumentSess
     grid.noteSummaryRebuilds = 0
     let fillsSelected = fillSnapshot()
     let summarySelected = grid.noteSummary
-    grid.updateHover(x: 4, y: box.y + box.h / 2)
+    let hoverPoint = viewportPoint(grid, x: box.x, y: box.y + box.h / 2)
+    grid.updateHover(x: 4, y: hoverPoint.y)
     grid.refreshCamera()
     report.expect(fillSnapshot() == fillsSelected
                       && grid.scene.boxesProjected == 0 && grid.scene.fillWrites == 0,
@@ -1168,7 +1185,10 @@ private func checkProjectionEconomy(_ report: CheckReport, session: DocumentSess
                   cppID: id,
                   message: "a highlight-only refresh still rings the time-covered note")
     session.clearTimeSelection()
+    grid.scene.boxesProjected = 0
+    grid.scene.fillWrites = 0
     grid.noteSummaryRebuilds = 0
+    let fillsBeforeScroll = fillSnapshot()
     let summaryBeforeScroll = grid.noteSummary
     let scrolledX = session.camera.snapshot.scrollX
     session.mutateCamera { _ = $0.scrollByPx(10) }
@@ -1177,9 +1197,25 @@ private func checkProjectionEconomy(_ report: CheckReport, session: DocumentSess
         return
     }
     grid.refreshCamera()
-    report.expect(grid.scene.boxesProjected > 0,
+    let publishedNote = firstNoteRect(named: "gridNote_\(noteID.rawValue)",
+                                      in: grid.scene.pianoNoteFills)
+    let cameraBox = grid.projectedNoteBox(
+        tick: Int(note.tick), end: Int(note.tick + note.duration),
+        pitch: Int(note.pitch))
+    let matchesCamera: Bool
+    if let publishedNote, let cameraBox {
+        let viewport = viewportPoint(grid, x: publishedNote.x, y: publishedNote.y)
+        matchesCamera = renderingNear(viewport.x, cameraBox.x)
+            && renderingNear(viewport.y, cameraBox.y)
+    } else {
+        matchesCamera = false
+    }
+    report.expect(matchesCamera, cppID: id,
+                  message: "the camera-translated note position matches the projected viewport position")
+    report.expect(fillSnapshot() == fillsBeforeScroll
+                      && grid.scene.boxesProjected == 0 && grid.scene.fillWrites == 0,
                   cppID: id,
-                  message: "a camera move still reprojects the note boxes")
+                  message: "an in-window camera scroll republishes no note boxes or fills")
     report.expect(grid.noteSummary == summaryBeforeScroll && grid.noteSummaryRebuilds == 0,
                   cppID: id,
                   message: "a camera-only refresh leaves the note summary byte-identical with no rebuild")

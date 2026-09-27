@@ -71,7 +71,12 @@ private func resizeHandle(_ id: NoteID, grid: PianoGrid) -> SceneRect? {
     let name = "gridNote_\(id.rawValue)"
     for index in 0..<grid.scene.pianoNoteFills.count
     where grid.scene.pianoNoteFills[index].primitiveName == name {
-        return grid.scene.pianoNoteFills[index]
+        let rect = grid.scene.pianoNoteFills[index]
+        let dpr = grid.devicePixelRatio
+        return SceneRect(x: rect.x - floor(grid.cameraScrollX * dpr + 0.5) / dpr,
+                         y: rect.y - floor(grid.cameraScrollY * dpr + 0.5) / dpr,
+                         width: rect.width, height: rect.height,
+                         fillColor: rect.fillColor, primitiveName: rect.primitiveName)
     }
     return nil
 }
@@ -409,7 +414,7 @@ private func checkEdgeResize(_ report: CheckReport, session: DocumentSession) {
     let grid = makeCameraGrid(session: session)
     let a = added[0], b = added[1]
     func rect(_ id: NoteID) -> SceneRect? {
-        firstRect(named: "gridNote_\(id.rawValue)", in: grid.scene.pianoNoteFills)
+        resizeHandle(id, grid: grid)
     }
     guard let aRect = rect(a) else {
         report.fail(id, "edge-resize fixture note is not projected")
@@ -498,8 +503,7 @@ private func checkEdgeResize(_ report: CheckReport, session: DocumentSession) {
     }
     let abuttingGrid = PianoGrid(session: session)
     abuttingGrid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
-    guard let leftRect = firstRect(
-        named: "gridNote_\(cPair[0].rawValue)", in: abuttingGrid.scene.pianoNoteFills)
+    guard let leftRect = resizeHandle(cPair[0], grid: abuttingGrid)
     else {
         report.fail(id, "abutting fixture notes are not projected")
         return

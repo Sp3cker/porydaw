@@ -194,11 +194,11 @@ TestCase {
     function gridPointFor(tick, pitch) {
         var grid = gridModel()
         var surface = selectedSurface()
-        var fills = findChild(surface, "timelineQuickPianoNoteFills")
+        var plot = findChild(surface, "timelineQuickRollPlot")
         var pixelsPerTick = grid.beatWidth / grid.ticksPerBeat
         var x = tick * pixelsPerTick - grid.cameraScrollX
         var y = (127.0 - pitch + 0.5) * grid.rowHeight - grid.cameraScrollY
-        return fills.mapToItem(rollInput(), x, y)
+        return plot.mapToItem(rollInput(), x, y)
     }
 
     function clickFirstGridNote() {

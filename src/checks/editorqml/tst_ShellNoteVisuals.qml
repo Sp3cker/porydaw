@@ -67,6 +67,7 @@ TestCase {
     }
 
     function grabShell() {
+        waitForRendering(shell.contentItem)
         var image = grabImage(shell.contentItem)
         if (image.width <= 0 || image.height <= 0)
             return null
@@ -165,8 +166,10 @@ TestCase {
         return ""
     }
 
-    function openNotes() {
-        shell = shellComponent.createObject(null)
+    function openNotes(captureFontPx) {
+        var properties = captureFontPx === undefined
+                ? {} : { typographyCaptureFont: Qt.font({ pixelSize: captureFontPx }) }
+        shell = shellComponent.createObject(null, properties)
         verify(shell !== null, "the production ShellWindow loads")
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
@@ -648,7 +651,12 @@ TestCase {
                 "the selection frame preserves the note face")
 
         var smallFontPx = borderRequest > 1 ? 4.0 : 7.0
-        grid.configureViewport(plot.width, plot.height, smallFontPx, dpr)
+        cleanup()
+        var smallContext = openNotes(smallFontPx)
+        grid = smallContext.grid
+        plot = smallContext.plot
+        fills = smallContext.fills
+        grid.performCommand(4)
         verify(waitForNative(function() { return grid.baseFontPx === smallFontPx }, 5000),
                "the small-font viewport is published")
         grid.resetCameraScroll()

@@ -396,6 +396,7 @@ TestCase {
         tryCompare(g, "visibleRowCount", rowsWithDestination + 1)
         verify(g.visibleRowCount >= initialRows + 2,
                "fold gains the occupied off-scale row")
+        waitForRendering(roll)
         var note = noteItem(surf, exception.id)
         verify(note !== null && note.width > 0, "the folded exception renders")
         var center = note.mapToItem(roll, note.width / 2, note.height / 2)

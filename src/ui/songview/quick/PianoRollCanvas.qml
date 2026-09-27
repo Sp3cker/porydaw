@@ -29,7 +29,7 @@ Item {
     }
 
     TimelineQuickItem {
-        parent: root.plotSide
+        parent: root.plotContentSide
         objectName: "timelineQuickPianoNoteFills"
         anchors.fill: parent
         rects: root.timelineScene.pianoNoteFills
@@ -37,7 +37,7 @@ Item {
     }
 
     TimelineQuickItem {
-        parent: root.plotSide
+        parent: root.plotContentSide
         objectName: "timelineQuickPianoDrawPreviewFill"
         anchors.fill: parent
         rects: root.timelineScene.pianoDrawPreviewFill
@@ -46,7 +46,7 @@ Item {
     }
 
     Item {
-        parent: root.plotSide
+        parent: root.plotContentSide
         anchors.fill: parent
         z: 4
 
@@ -80,7 +80,7 @@ Item {
     }
 
     TimelineQuickItem {
-        parent: root.plotSide
+        parent: root.plotContentSide
         objectName: "timelineQuickPianoNoteBordersAndSelection"
         anchors.fill: parent
         rects: root.timelineScene.pianoNoteBordersAndSelection
@@ -89,7 +89,7 @@ Item {
     }
 
     TimelineQuickItem {
-        parent: root.plotSide
+        parent: root.plotContentSide
         objectName: "timelineQuickPianoOverlay"
         anchors.fill: parent
         rects: root.timelineScene.pianoOverlay

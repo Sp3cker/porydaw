@@ -56,12 +56,15 @@ TestCase {
         return page ? findChild(page, "swiftRollOverlay") : null
     }
 
-    function noteDelegates(fills) {
+    function noteDelegates(fills, plot) {
         var items = []
         for (var i = 0; i < fills.children.length; ++i) {
             var c = fills.children[i]
-            if (c && c.fillColor !== undefined && c.fillColor && c.visible)
-                items.push(c)
+            if (c && c.fillColor !== undefined && c.fillColor && c.visible) {
+                var at = c.mapToItem(plot, 0, 0)
+                items.push({ x: at.x, y: at.y, width: c.width, height: c.height,
+                             fillColor: c.fillColor })
+            }
         }
         return items
     }
@@ -106,7 +109,7 @@ TestCase {
         verify(input !== null, "the roll input is mounted")
         verify(fills !== null, "the note fill layer is mounted")
         verify(overlay !== null, "the overlay layer is mounted")
-        verify(waitForNative(function() { return noteDelegates(fills).length > 0 }, 5000),
+        verify(waitForNative(function() { return noteDelegates(fills, plot).length > 0 }, 5000),
                "the fill layer draws note delegates")
 
         var sx = plot.width * 0.15
@@ -162,7 +165,7 @@ TestCase {
             }
         verify(probes.length === 2, "two distinct flat pixels sit under the reticle")
 
-        var delegates = noteDelegates(fills)
+        var delegates = noteDelegates(fills, plot)
         var noteProbe = null
         for (var d = 0; d < delegates.length && noteProbe === null; ++d) {
             var nc = delegates[d]
@@ -211,8 +214,9 @@ TestCase {
                 var c = overlay.children[i]
                 if (!c || c.fillColor === undefined || !c.fillColor || !c.visible)
                     continue
-                if (c.x + c.width > reticle.x && c.x < reticle.x + reticle.w
-                        && c.y + c.height > reticle.y && c.y < reticle.y + reticle.h) {
+                var at = c.mapToItem(plot, 0, 0)
+                if (at.x + c.width > reticle.x && at.x < reticle.x + reticle.w
+                        && at.y + c.height > reticle.y && at.y < reticle.y + reticle.h) {
                     ++total
                     if (String(c.fillColor).toUpperCase() === selectionFill.toUpperCase())
                         ++fill

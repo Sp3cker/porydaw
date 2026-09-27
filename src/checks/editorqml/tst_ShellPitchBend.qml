@@ -113,6 +113,7 @@ TestCase {
             face = findChild(view, "gridNote_" + target.id)
             return face !== null && face.visible && face.width > 0 && face.height > 0
         }, 5000)
+        waitForRendering(roll)
         const rect = face ? face.mapToItem(roll, 0, 0) : null
         const left = rect ? Math.max(2, rect.x) : 0
         const right = rect ? Math.min(plot.width - 2, rect.x + face.width) : 0
@@ -518,6 +519,7 @@ TestCase {
         const initialFace = findChild(view, "gridNote_" + note.id)
         const faceY = initialFace.mapToItem(roll, 0, 0).y
         grid.setCameraVScroll(grid.cameraScrollY + faceY - plot.height * 0.1)
+        waitForRendering(roll)
         const anchoredFace = findChild(view, "gridNote_" + note.id)
         const center = anchoredFace.mapToItem(roll, anchoredFace.width / 2,
                                              anchoredFace.height / 2)

@@ -50,8 +50,8 @@ private func checkSelectionBandSweep(_ report: CheckReport, session: DocumentSes
     }
     let roll = PianoGrid(session: session)
     roll.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
-    guard let a = selectionRect(added[0], in: roll.scene.pianoNoteFills),
-          let b = selectionRect(added[1], in: roll.scene.pianoNoteFills) else {
+    guard let a = selectionRect(added[0], grid: roll),
+          let b = selectionRect(added[1], grid: roll) else {
         report.fail(id, "selection-band notes were not projected")
         return
     }
@@ -113,7 +113,7 @@ private func checkSelectionNonScaleMove(_ report: CheckReport, session: Document
     }
     let roll = PianoGrid(session: session)
     roll.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
-    guard let rect = selectionRect(noteID, in: roll.scene.pianoNoteFills) else {
+    guard let rect = selectionRect(noteID, grid: roll) else {
         report.fail(id, "wide move note was not projected")
         return
     }
@@ -192,9 +192,15 @@ private func checkDeferredModifierSelection(
 }
 
 @MainActor
-private func selectionRect(_ id: NoteID, in model: QListModel<SceneRect>) -> SceneRect? {
+private func selectionRect(_ id: NoteID, grid: PianoGrid) -> SceneRect? {
+    let model = grid.scene.pianoNoteFills
     for index in 0..<model.count where model[index].primitiveName == "gridNote_\(id.rawValue)" {
-        return model[index]
+        let rect = model[index]
+        let dpr = grid.devicePixelRatio
+        return SceneRect(x: rect.x - floor(grid.cameraScrollX * dpr + 0.5) / dpr,
+                         y: rect.y - floor(grid.cameraScrollY * dpr + 0.5) / dpr,
+                         width: rect.width, height: rect.height,
+                         fillColor: rect.fillColor, primitiveName: rect.primitiveName)
     }
     return nil
 }
@@ -227,7 +233,7 @@ private func velocityPairSeed(session: DocumentSession, grid: PianoGrid)
         ]), added.count == 2
     else { return nil }
     grid.refreshFromSession()
-    let rects = added.compactMap { selectionRect($0, in: grid.scene.pianoNoteFills) }
+    let rects = added.compactMap { selectionRect($0, grid: grid) }
     guard rects.count == 2 else { return nil }
     return (added, rects)
 }
@@ -717,8 +723,8 @@ private func checkOrderedSelection(_ report: CheckReport, session: DocumentSessi
     defer { session.document.deleteNotes(added) }
     let grid = makeCameraGrid(session: session)
     let a = added[0], b = added[1], c = added[2]
-    guard let aRect = firstRect(named: "gridNote_\(a.rawValue)", in: grid.scene.pianoNoteFills),
-          let bRect = firstRect(named: "gridNote_\(b.rawValue)", in: grid.scene.pianoNoteFills)
+    guard let aRect = selectionRect(a, grid: grid),
+          let bRect = selectionRect(b, grid: grid)
     else {
         report.fail(id, "ordered-selection fixture notes are not projected")
         return

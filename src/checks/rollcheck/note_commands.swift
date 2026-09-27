@@ -603,8 +603,9 @@ private func checkCommandRouting(_ report: CheckReport, session: DocumentSession
         report.fail(id, "command-routing fixture note is not projected")
         return
     }
-    let pressX = aRect.x + aRect.width / 2
-    let pressY = aRect.y + aRect.height / 2
+    let dpr = grid.devicePixelRatio
+    let pressX = aRect.x - floor(grid.cameraScrollX * dpr + 0.5) / dpr + aRect.width / 2
+    let pressY = aRect.y - floor(grid.cameraScrollY * dpr + 0.5) / dpr + aRect.height / 2
     let revisionBeforePress = session.document.revision
     grid.beginPointer(x: pressX, y: pressY, modifiers: 0)
     let midGestureSummary = grid.noteSummary

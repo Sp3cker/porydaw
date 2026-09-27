@@ -325,13 +325,12 @@ TestCase {
         }
     }
 
-    // Published SceneRect coordinates are plot-local; the production
-    // TimelineQuickItem delegate must retain those projected note bounds.
     function test_noteRectReachesPlotDelegate() {
         var s = surface()
         var grid = s.gridModel
         var plot = findChild(s, "timelineQuickPianoNoteFills")
         verify(plot, "the production note-fill layer is mounted")
+        var viewport = rollInput()
         tryVerify(function() { return grid.renderedNoteCount > 0 }, 5000,
                   "the staged song publishes notes")
         var notes = JSON.parse(grid.noteSummary)
@@ -342,18 +341,21 @@ TestCase {
             var item = findChild(plot, "gridNote_" + note.id)
             if (!item)
                 continue
-            var left = Math.round((note.tick * grid.beatWidth / grid.ticksPerBeat
-                                   - grid.cameraScrollX) * dpr) / dpr
-            var right = Math.round(((note.tick + note.duration)
-                                    * grid.beatWidth / grid.ticksPerBeat
-                                    - grid.cameraScrollX) * dpr) / dpr
-            verify(Math.abs(item.x - left) < 0.01,
+            var position = item.mapToItem(viewport, 0, 0)
+            if (position.y + item.height <= 0 || position.y >= viewport.height
+                    || position.x + item.width <= 0 || position.x >= viewport.width)
+                continue
+            var scrollX = Math.round(grid.cameraScrollX * dpr) / dpr
+            var left = Math.round(note.tick * grid.beatWidth / grid.ticksPerBeat * dpr) / dpr - scrollX
+            var right = Math.round((note.tick + note.duration)
+                                   * grid.beatWidth / grid.ticksPerBeat * dpr) / dpr - scrollX
+            verify(Math.abs(position.x - left) < 0.01,
                    "note delegate uses the camera-projected left edge")
             verify(Math.abs(item.width - Math.max(Math.max(1, Math.round(grid.baseFontPx / 6)),
                                                   right - left)) < 0.01,
                    "note delegate uses the camera-projected note width")
-            verify(item.height > 0 && item.y + item.height > 0
-                   && item.y < plot.height,
+            verify(item.height > 0 && position.y + item.height > 0
+                   && position.y < viewport.height,
                    "the note's published row bounds meet the mounted plot")
             verify(item.color.a === 1, "the note's published fill is opaque")
             observed = true
@@ -397,8 +399,9 @@ TestCase {
         var reference = null
         for (var i = 0; i < notes.length; ++i) {
             var item = findChild(fill, "gridNote_" + notes[i].id)
+            var position = item ? item.mapToItem(plot, 0, 0) : null
             if ([0, 2, 4, 5, 7, 9, 11].indexOf(notes[i].pitch % 12) >= 0
-                    && item && item.y > 0 && item.y < plot.height - item.height) {
+                    && item && position.y > 0 && position.y < plot.height - item.height) {
                 reference = item
                 break
             }

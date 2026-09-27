@@ -2997,6 +2997,7 @@ TestCase {
         mouseClick(input, point.x, point.y, Qt.LeftButton)
         tryVerify(function() { return testCase.selectedNoteId() === pair[1].id },
                   1000, "equal unselected velocity nodes retain later-model-order priority")
+        waitForRendering(roll)
         var selectedEarlier = findChild(testCase.surface, "gridNote_" + pair[0].id)
         verify(selectedEarlier, "the staged earlier sibling has a rendered roll note")
         var firstPoint = selectedEarlier.mapToItem(roll, selectedEarlier.width / 2,

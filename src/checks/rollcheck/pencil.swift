@@ -415,6 +415,9 @@ private func checkDrawLatchAndCancel(_ report: CheckReport, session: DocumentSes
     let id = "swiftcore/EditorGridCamera::drawLatchAndCancel"
     let grid = makeCameraGrid(session: session)
     let snap = max(1, grid.snapTicks)
+    let dpr = grid.devicePixelRatio
+    let scrollX = floor(grid.cameraScrollX * dpr + 0.5) / dpr
+    let scrollY = floor(grid.cameraScrollY * dpr + 0.5) / dpr
     func emptyCell() -> (x: Double, y: Double, tick: Int, pitch: Int)? {
         for candidateY in [250.0, 200.0, 150.0, 100.0, 50.0] {
             guard let pitch = session.camera.projection.pitch(
@@ -427,8 +430,9 @@ private func checkDrawLatchAndCancel(_ report: CheckReport, session: DocumentSes
                     tick: Double(tick), origin: 0, dpr: grid.devicePixelRatio)
                 let occupied = (0..<grid.scene.pianoNoteFills.count).contains { index in
                     let rect = grid.scene.pianoNoteFills[index]
-                    return rect.x < x + 20 && rect.x + rect.width > x
-                        && rect.y <= candidateY && rect.y + rect.height >= candidateY
+                    return rect.x - scrollX < x + 20 && rect.x - scrollX + rect.width > x
+                        && rect.y - scrollY <= candidateY
+                        && rect.y - scrollY + rect.height >= candidateY
                 }
                 if !occupied { return (x, candidateY, tick, pitch) }
             }
@@ -479,8 +483,8 @@ private func checkDrawLatchAndCancel(_ report: CheckReport, session: DocumentSes
         report.fail(id, "cancel fixture exposes no projected note")
         return
     }
-    let pressX = targetRect.x + targetRect.width / 2
-    let pressY = targetRect.y + targetRect.height / 2
+    let pressX = targetRect.x - scrollX + targetRect.width / 2
+    let pressY = targetRect.y - scrollY + targetRect.height / 2
     let dragX = Double(snap) * session.camera.snapshot.pixelsPerTick
     for reason in [GridCancelReason.pointerUngrabbed, .focusLost,
                    .windowDeactivated, .hidden] {

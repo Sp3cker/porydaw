@@ -341,6 +341,7 @@ TestCase {
             var face = findChild(surface, "gridNote_" + note.id)
             return face && face.visible && face.width > 0 && face.height > 0
         }, 5000, "the selected note face appears in the roll")
+        waitForRendering(input)
         var face = findChild(surface, "gridNote_" + note.id)
         var point = face.mapToItem(input, face.width / 2, face.height / 2)
         mouseClick(input, point.x, point.y, Qt.LeftButton)

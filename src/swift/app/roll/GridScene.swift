@@ -165,22 +165,30 @@ public final class GridScene {
         var right: Double
         var extentLeft: Double
         var extentRight: Double
+        private var contentRight: Double
 
         init(camera: EditorCamera, contentEndTick: Int, previous: ContentWindow?) {
             let snapshot = camera.snapshot
             let chunk = Self.cullingChunkPixels
             extentLeft = floor(snapshot.minHScroll / chunk) * chunk
             let end = max(snapshot.maxHScroll, Double(contentEndTick) * snapshot.pixelsPerTick)
-            extentRight = (ceil(end / chunk) + ceil(snapshot.viewportWidth / chunk) + 1) * chunk
+            contentRight = ceil(end / chunk) * chunk
+            let padding = 2 * max(1, ceil(snapshot.viewportWidth / chunk)) * chunk
+            let requiredRight = contentRight + (ceil(snapshot.viewportWidth / chunk) + 1) * chunk
+            if let previous, previous.contentRight == contentRight,
+               previous.extentRight >= requiredRight {
+                extentRight = previous.extentRight
+            } else {
+                extentRight = requiredRight + padding
+            }
             let visibleRight = snapshot.scrollX + snapshot.viewportWidth
             if let previous, previous.extentLeft == extentLeft,
-               previous.extentRight == extentRight,
+               previous.extentRight == extentRight, previous.contentRight == contentRight,
                (previous.left == extentLeft || snapshot.scrollX >= previous.left + chunk),
                (previous.right == extentRight || visibleRight <= previous.right - chunk) {
                 self = previous
                 return
             }
-            let padding = 2 * max(1, ceil(snapshot.viewportWidth / chunk)) * chunk
             left = max(extentLeft, floor((snapshot.scrollX - padding) / chunk) * chunk)
             right = min(extentRight, max(left + 3 * chunk,
                 ceil((visibleRight + padding) / chunk) * chunk))
@@ -210,7 +218,10 @@ public final class GridScene {
     }
     private struct NoteFillKey: Equatable {
         var notes: [GridNote]
-        var snapshot: EditorCamera.Snapshot
+        var pixelsPerTick: Double
+        var keyHeight: Double
+        var windowLeft: Double
+        var windowRight: Double
         var projection: PitchProjection
         var scale: ScaleProjection
         var dpr: Double
@@ -742,8 +753,12 @@ public final class GridScene {
 
     @QtIgnored
     func rebuildNotes(_ input: GridSceneInput) {
+        let window = ContentWindow(
+            camera: input.camera, contentEndTick: input.contentEndTick, previous: contentWindow)
         let key = NoteFillKey(
-            notes: input.notes, snapshot: input.camera.snapshot,
+            notes: input.notes, pixelsPerTick: input.camera.snapshot.pixelsPerTick,
+            keyHeight: input.camera.snapshot.keyHeight,
+            windowLeft: window.left, windowRight: window.right,
             projection: input.camera.projection, scale: input.scale,
             dpr: input.metrics.dpr, noteMinWidth: input.metrics.noteMinWidth,
             noteMinHeight: input.metrics.noteMinHeight, pixel: input.metrics.pixel,
@@ -752,14 +767,14 @@ public final class GridScene {
             rollBackground: input.palette.rollBackground,
             accidentalLane: input.palette.accidentalLane)
         if !input.geometryStable || key != noteFillKey {
-            let built = buildNoteFills(input)
+            let built = buildNoteFills(input, window: window)
             cachedNoteFills = built.fills
             cachedNoteGeometries = built.geometries
             cachedNoteFaces = built.faces
             noteFillKey = input.geometryStable ? key : nil
         }
         emitNoteSelection(input)
-        emitNoteRemainder(input)
+        emitNoteRemainder(input, window: window)
     }
 
     @QtIgnored
@@ -784,32 +799,27 @@ public final class GridScene {
     }
 
     @QtIgnored
-    private func buildNoteFills(_ input: GridSceneInput)
+    private func buildNoteFills(_ input: GridSceneInput, window: ContentWindow)
         -> (fills: [SceneRect], geometries: [CachedNoteGeometry], faces: [NoteNameFace]) {
         let m = input.metrics
         let p = input.palette
         let camera = input.camera
-        let snapshot = camera.snapshot
+        let projection = camera.projection
         var fills: [SceneRect] = []
         var geometries: [CachedNoteGeometry] = []
         var faces: [NoteNameFace] = []
         for ghostPass in [true, false] {
             for note in input.notes where note.ghost == ghostPass {
                 let (tick, end, pitch) = input.displayedNote(note)
-                let x0 = camera.displayX(tick: Double(tick), origin: 0, dpr: m.dpr)
-                let x1 = camera.displayX(tick: Double(end), origin: 0, dpr: m.dpr)
-                guard x1 + m.noteMinWidth > 0, x0 < snapshot.viewportWidth else { continue }
+                let x0 = camera.contentTickX(tick: Double(tick), dpr: m.dpr)
+                let x1 = camera.contentTickX(tick: Double(end), dpr: m.dpr)
+                guard max(x1, x0 + m.noteMinWidth) > window.left, x0 < window.right else { continue }
                 if (0..<128).contains(pitch),
-                    camera.projection.row(forPitch: pitch) == PitchProjection.hiddenRow { continue }
-                let box = m.noteBox(camera: camera, x0: x0, x1: x1, pitch: pitch)
+                    projection.row(forPitch: pitch) == PitchProjection.hiddenRow { continue }
+                let box = m.noteContentBox(camera: camera, x0: x0, x1: x1, pitch: pitch)
                 boxesProjected += 1
-                guard box.w > 0, box.h > 0,
-                      box.x + box.w > 0, box.x < snapshot.viewportWidth,
-                      box.y + box.h > 0, box.y < snapshot.rollHeight
-                else { continue }
+                guard box.w > 0, box.h > 0 else { continue }
                 let name = "gridNote_\(note.noteId.rawValue)"
-                // Velocity mode re-hues non-ghost fills and the draw preview
-                // (old noteFillColor covered both); ghost fills are untouched.
                 let fillColor: String
                 if ghostPass {
                     fillColor = PaletteMath.ghostFill(
@@ -848,21 +858,21 @@ public final class GridScene {
     }
 
     @QtIgnored
-    private func emitNoteRemainder(_ input: GridSceneInput) {
+    private func emitNoteRemainder(_ input: GridSceneInput, window: ContentWindow) {
         let m = input.metrics
         let p = input.palette
         let camera = input.camera
         let snapshot = camera.snapshot
+        let contentHeight = camera.projection.totalHeight(keyHeight: snapshot.keyHeight)
 
         var preview: [SceneRect] = []
         var previewFace: NoteNameFace?
         var overlay: [SceneRect] = []
         if let drawn = input.drawPreview {
-            let box = m.noteBox(
+            let box = m.noteContentBox(
                 camera: camera,
-                x0: camera.displayX(tick: Double(drawn.tick), origin: 0, dpr: m.dpr),
-                x1: camera.displayX(
-                    tick: Double(drawn.tick + drawn.duration), origin: 0, dpr: m.dpr),
+                x0: camera.contentTickX(tick: Double(drawn.tick), dpr: m.dpr),
+                x1: camera.contentTickX(tick: Double(drawn.tick + drawn.duration), dpr: m.dpr),
                 pitch: drawn.pitch)
             let fill = input.velocityColorMode
                 ? PaletteMath.velocityNoteColor(
@@ -879,12 +889,14 @@ public final class GridScene {
         }
         if let band = input.selectionBand {
             let clip = (
-                x: 0.0, y: 0.0,
-                w: snapshot.viewportWidth, h: snapshot.rollHeight)
-            let x0 = max(band.x, clip.x)
-            let y0 = max(band.y, clip.y)
-            let x1 = min(band.x + band.w, clip.x + clip.w)
-            let y1 = min(band.y + band.h, clip.y + clip.h)
+                x: window.left, y: 0.0,
+                w: window.right - window.left, h: contentHeight)
+            let scrollX = floor(snapshot.scrollX * m.dpr + 0.5) / m.dpr
+            let scrollY = floor(snapshot.scrollY * m.dpr + 0.5) / m.dpr
+            let x0 = max(band.x + scrollX, clip.x)
+            let y0 = max(band.y + scrollY, clip.y)
+            let x1 = min(band.x + band.w + scrollX, clip.x + clip.w)
+            let y1 = min(band.y + band.h + scrollY, clip.y + clip.h)
             if x1 > x0, y1 > y0 {
                 overlay.append(
                     SceneRect(
@@ -900,37 +912,36 @@ public final class GridScene {
             case let .tracks(scope) = selection.scope,
             scope.contains(input.selectedTrack), input.selectedTrack >= 0,
             input.selectedTrack < input.usedTrackCount {
-            let x0 = camera.displayX(tick: Double(selection.range.startTick), origin: 0, dpr: m.dpr)
-            let x1 = camera.displayX(tick: Double(selection.range.endTick), origin: 0, dpr: m.dpr)
+            let x0 = camera.contentTickX(tick: Double(selection.range.startTick), dpr: m.dpr)
+            let x1 = camera.contentTickX(tick: Double(selection.range.endTick), dpr: m.dpr)
             overlay.append(SceneRect(
-                x: x0, y: 0, width: x1 - x0, height: snapshot.rollHeight,
+                x: x0, y: 0, width: x1 - x0, height: contentHeight,
                 fillColor: p.selectionFill))
             overlay.append(SceneRect(
-                x: x0 - m.pixel / 2, y: 0, width: m.pixel, height: snapshot.rollHeight,
+                x: x0 - m.pixel / 2, y: 0, width: m.pixel, height: contentHeight,
                 fillColor: p.selectionEdge))
             overlay.append(SceneRect(
-                x: x1 - m.pixel / 2, y: 0, width: m.pixel, height: snapshot.rollHeight,
+                x: x1 - m.pixel / 2, y: 0, width: m.pixel, height: contentHeight,
                 fillColor: p.selectionEdge))
         }
         let startTick = m.timeAxis.loopStartTick
         let endTick = m.timeAxis.loopEndTick
         let hasStart = startTick != TimeDefaults.noTick
         let hasEnd = endTick != TimeDefaults.noTick
-        if (hasStart || hasEnd), snapshot.viewportWidth > 0, snapshot.rollHeight > 0 {
+        if (hasStart || hasEnd), window.right > window.left, contentHeight > 0 {
             let x0 = hasStart
-                ? camera.displayX(tick: Double(startTick), origin: 0, dpr: m.dpr) : 0
+                ? camera.contentTickX(tick: Double(startTick), dpr: m.dpr) : window.extentLeft
             let x1 = hasEnd
-                ? camera.displayX(tick: Double(endTick), origin: 0, dpr: m.dpr)
-                : snapshot.viewportWidth
-            if x1 > 0, x0 < snapshot.viewportWidth {
+                ? camera.contentTickX(tick: Double(endTick), dpr: m.dpr) : window.extentRight
+            if x1 > window.left, x0 < window.right {
                 let glowWidth = min(2 * m.baseFontPx, x1 - x0)
                 let ink = PaletteMath.channels(p.selectionRing)
                 let bandWidth = max(1, m.spaceHalf)
                 func appendGlow(at left: Double, fadesRight: Bool, name: String) {
                     guard glowWidth > 0 else { return }
-                    let firstBand = max(0, Int(floor(-left / bandWidth)))
+                    let firstBand = max(0, Int(floor((window.left - left) / bandWidth)))
                     var band = firstBand
-                    while left + Double(band) * bandWidth < min(left + glowWidth, snapshot.viewportWidth) {
+                    while left + Double(band) * bandWidth < min(left + glowWidth, window.right) {
                         let bandLeft = left + Double(band) * bandWidth
                         let bandRight = min(left + Double(band + 1) * bandWidth, left + glowWidth)
                         let midpoint = (bandLeft + bandRight) / 2
@@ -940,12 +951,12 @@ public final class GridScene {
                         let alpha = fraction <= 0.2
                             ? 150 + (18 - 150) * fraction / 0.2
                             : 18 * (1 - fraction) / 0.8
-                        let visibleLeft = max(0, bandLeft)
-                        let visibleRight = min(snapshot.viewportWidth, bandRight)
+                        let visibleLeft = max(window.left, bandLeft)
+                        let visibleRight = min(window.right, bandRight)
                         if visibleRight > visibleLeft {
                             overlay.append(SceneRect(
                                 x: visibleLeft, y: 0, width: visibleRight - visibleLeft,
-                                height: snapshot.rollHeight,
+                                height: contentHeight,
                                 fillColor: PaletteMath.hex(
                                     r: ink.r, g: ink.g, b: ink.b,
                                     a: Int(alpha.rounded(.toNearestOrAwayFromZero))),
@@ -961,20 +972,20 @@ public final class GridScene {
                     appendGlow(at: x1 - glowWidth, fadesRight: false, name: "loopGlowEnd")
                 }
                 if hasStart {
-                    let left = max(0, x0 - m.pixel / 2)
-                    let right = min(snapshot.viewportWidth, x0 + m.pixel / 2)
+                    let left = max(window.left, x0 - m.pixel / 2)
+                    let right = min(window.right, x0 + m.pixel / 2)
                     if right > left {
                         overlay.append(SceneRect(
-                            x: left, y: 0, width: right - left, height: snapshot.rollHeight,
+                            x: left, y: 0, width: right - left, height: contentHeight,
                             fillColor: p.selectionRing, primitiveName: "loopEdgeStart"))
                     }
                 }
                 if hasEnd {
-                    let left = max(0, x1 - m.pixel / 2)
-                    let right = min(snapshot.viewportWidth, x1 + m.pixel / 2)
+                    let left = max(window.left, x1 - m.pixel / 2)
+                    let right = min(window.right, x1 + m.pixel / 2)
                     if right > left {
                         overlay.append(SceneRect(
-                            x: left, y: 0, width: right - left, height: snapshot.rollHeight,
+                            x: left, y: 0, width: right - left, height: contentHeight,
                             fillColor: p.selectionRing, primitiveName: "loopEdgeEnd"))
                     }
                 }
@@ -1020,7 +1031,7 @@ public final class GridScene {
         var highlights: [SceneRect] = []
         var chipVisible = false
 
-        if input.hoverKey >= 0, let t = input.typography {
+        if input.hoverKey >= 0, input.typography != nil {
             let key = input.hoverKey
             let row = camera.projection.row(forPitch: key)
             if row != PitchProjection.hiddenRow,
@@ -1038,23 +1049,8 @@ public final class GridScene {
                         fillColor: p.keyboardSeparator))
                 }
 
-                let name = GridScene.keyName(key)
-                let chipW = t.chipAdvance(pitch: key) + m.chipHPadding
-                let chipH = t.chipHeight + m.chipVPadding
-                let viewportTop = camera.projection.rowTop(
-                    row, keyHeight: snapshot.keyHeight,
-                    scrollY: snapshot.scrollY, dpr: m.dpr) ?? 0
-                let viewportBottom = camera.projection.rowBottom(
-                    row, keyHeight: snapshot.keyHeight,
-                    scrollY: snapshot.scrollY, dpr: m.dpr) ?? 0
-                let chipY = min(
-                    max(0, (viewportTop + viewportBottom) / 2 - chipH / 2),
-                    max(0, snapshot.rollHeight - chipH))
-                let chipX = max(0.0, m.keyboardWidth - m.chipRightInset - chipW)
-                hoverChipRect = [
-                    "x": chipX, "y": chipY, "width": chipW, "height": chipH
-                ]
-                hoverChipText = name
+                refreshHoverChip(input)
+                hoverChipText = GridScene.keyName(key)
                 chipVisible = true
             }
         }
@@ -1068,6 +1064,29 @@ public final class GridScene {
         hoverChipFill = p.hoverChipFill
         hoverChipTextColor = p.hoverChipText
         hoverChipRadius = m.chipRadius
+    }
+
+    @QtIgnored
+    func refreshHoverChip(_ input: GridSceneInput) {
+        guard input.hoverKey >= 0, let t = input.typography else { return }
+        let m = input.metrics
+        let camera = input.camera
+        let snapshot = camera.snapshot
+        let row = camera.projection.row(forPitch: input.hoverKey)
+        guard let top = camera.projection.rowTop(
+                row, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY, dpr: m.dpr),
+              let bottom = camera.projection.rowBottom(
+                row, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY, dpr: m.dpr)
+        else { return }
+        let width = t.chipAdvance(pitch: input.hoverKey) + m.chipHPadding
+        let height = t.chipHeight + m.chipVPadding
+        let y = min(max(0, (top + bottom) / 2 - height / 2),
+                    max(0, snapshot.rollHeight - height))
+        let x = max(0, m.keyboardWidth - m.chipRightInset - width)
+        guard hoverChipRect["x"] as? Double != x || hoverChipRect["y"] as? Double != y
+            || hoverChipRect["width"] as? Double != width
+            || hoverChipRect["height"] as? Double != height else { return }
+        hoverChipRect = ["x": x, "y": y, "width": width, "height": height]
     }
 
     static func isBlackKey(_ key: Int) -> Bool {

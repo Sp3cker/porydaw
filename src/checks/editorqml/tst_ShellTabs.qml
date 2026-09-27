@@ -258,11 +258,11 @@ TestCase {
     function pointFor(tabId, tick, pitch) {
         var grid = gridOf(tabId)
         var surface = surfaceOf(tabId)
-        var fills = findChild(surface, "timelineQuickPianoNoteFills")
+        var plot = findChild(surface, "timelineQuickRollPlot")
         var pixelsPerTick = grid.beatWidth / grid.ticksPerBeat
         var x = tick * pixelsPerTick - grid.cameraScrollX
         var y = (127.0 - pitch + 0.5) * grid.rowHeight - grid.cameraScrollY
-        return fills.mapToItem(findChild(surface, "swiftRollInput"), x, y)
+        return plot.mapToItem(findChild(surface, "swiftRollInput"), x, y)
     }
 
     function drawNote(tabId) {

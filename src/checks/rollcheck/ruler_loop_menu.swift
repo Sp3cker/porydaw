@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 import PorydawAppCommands
 
@@ -368,15 +368,17 @@ private func checkRenderedRulerMenuCommands(_ report: CheckReport, session: Docu
                   cppID: id, message: "loop end publishes its full-alpha edge line")
     let startGlow = loopOverlay.filter { $0.primitiveName == "loopGlowStart" }
     let endGlow = loopOverlay.filter { $0.primitiveName == "loopGlowEnd" }
-    let height = session.camera.snapshot.rollHeight
-    let width = session.camera.snapshot.viewportWidth
+    let height = session.camera.projection.totalHeight(keyHeight: session.camera.snapshot.keyHeight)
+    let window = grid.scene.contentWindow
+    let left = window?.left ?? .infinity
+    let right = window?.right ?? -.infinity
     report.expect(!startGlow.isEmpty && startGlow.allSatisfy {
         $0.y == 0 && $0.height == height && $0.width > 0
-            && $0.x >= 0 && $0.x + $0.width <= width
+            && $0.x >= left && $0.x + $0.width <= right
     }, cppID: id, message: "start glow is banded and clipped to the complete roll body")
     report.expect(!endGlow.isEmpty && endGlow.allSatisfy {
         $0.y == 0 && $0.height == height && $0.width > 0
-            && $0.x >= 0 && $0.x + $0.width <= width
+            && $0.x >= left && $0.x + $0.width <= right
     }, cppID: id, message: "end glow is banded and clipped to the complete roll body")
     report.expect((startGlow.first.map { PaletteMath.channels($0.fillColor).a } ?? 0)
                       > (startGlow.last.map { PaletteMath.channels($0.fillColor).a } ?? 255)

@@ -17,7 +17,9 @@ private func drawerVelocityRollCoreNoteCenter(_ grid: PianoGrid, _ id: NoteID) -
     for index in 0..<grid.scene.pianoNoteFills.count {
         let rect = grid.scene.pianoNoteFills[index]
         if rect.primitiveName == "gridNote_\(id.rawValue)" {
-            return (rect.x + rect.width / 2, rect.y + rect.height / 2)
+            let dpr = grid.devicePixelRatio
+            return (rect.x - floor(grid.cameraScrollX * dpr + 0.5) / dpr + rect.width / 2,
+                    rect.y - floor(grid.cameraScrollY * dpr + 0.5) / dpr + rect.height / 2)
         }
     }
     return nil
