@@ -69,6 +69,7 @@ internal func runTrackHeadersChecks(_ report: CheckReport, session: DocumentSess
     headerReconciliationUnchanged(report, suite: session, service: service)
     headerReconciliationStructural(report, suite: session, service: service)
     commandMixStatePublishesImmediately(report, suite: session, service: service)
+    hostDrawerSoloAndRemap(report, suite: session, service: service)
     do {
         try runBlocking {
             try await coreHeaderVoiceUndoRegression(report, suite: session, service: service)
@@ -191,4 +192,69 @@ private func commandMixStatePublishesImmediately(
                        what: "mix commands do not dirty the document")
     report.expectEqual(expected: 0, actual: playbackPublications, cppID: trackHeadersMixPublicationID,
                        what: "mix commands do not publish a playback timeline")
+}
+
+@MainActor
+private func hostDrawerSoloAndRemap(_ report: CheckReport, suite: DocumentSession,
+                                    service: ProjectService) {
+    let id = "host/HostAdapterTest::drawerSoloAndTrackRemapReachTheHost"
+    let registry = KeybindingRegistry()
+    report.expect(registry.matches(0x53, 0, "roll.solo_tracks"),
+                  cppID: id, message: "the production window Solo command binds the unmodified S key")
+    guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
+        report.fail(id, "the project-session fixture root is unavailable for the Solo command")
+        return
+    }
+    let root = stageTestProject(in: fixtureRoot, projectName: "swiftcore-host-drawer-solo")
+    let shell = ShellPresenter()
+    let app = shell.session
+    defer {
+        app.hostClosing()
+        app.acknowledgeGridDetached()
+    }
+    app.openProjectAndSong(path: root, label: "mus_session_test")
+    let deadline = Date().addingTimeInterval(25)
+    while !app.songOpen && app.lastSaveError.isEmpty && Date() < deadline {
+        _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+    }
+    guard app.songOpen, let selected = app.selectedDocument else {
+        report.fail(id, "the copied project did not open a song for the Solo command")
+        return
+    }
+    selected.selectPrimaryTrack(0)
+    guard shell.actionEnabled(id: "roll.solo_tracks"),
+          selected.soloedTracks.isEmpty else {
+        report.fail(id, "the selected primary track is not ready with Solo initially off")
+        return
+    }
+    let priorChange = selected.onChange
+    var mixPublication = false
+    selected.onChange = { change in
+        priorChange?(change)
+        if change.domains.contains(.mixState) && selected.soloedTracks.contains(0) {
+            mixPublication = true
+        }
+    }
+    shell.activate(id: "roll.solo_tracks")
+    report.expect(selected.soloedTracks.contains(0) && mixPublication, cppID: id,
+                  message: "A172 the S-bound Solo action solos the primary track and publishes mix state")
+
+    let fixture = TrackHeadersFixture(suite: suite, service: service)
+    let oldLane = EditorLaneState.Lane(track: 0, controller: 74)
+    let movedLane = EditorLaneState.Lane(track: 1, controller: 74)
+    var state = fixture.session.editorViewState
+    state.lanes.emptyLanes.insert(oldLane)
+    guard fixture.session.setEditorViewState(state),
+          fixture.session.editorViewState.lanes.emptyLanes.contains(oldLane) else {
+        report.fail(id, "the copied track fixture did not seed the controller-74 empty lane")
+        return
+    }
+    report.expect(fixture.document.moveTrack(0, to: 1), cppID: id,
+                  message: "A173 moving the primary track into the second slot succeeds")
+    report.expect(fixture.session.editorViewState.lanes.emptyLanes.contains(movedLane),
+                  cppID: id,
+                  message: "A174 the moved track retains its controller-74 empty-lane flag at slot one")
+    report.expect(!fixture.session.editorViewState.lanes.emptyLanes.contains(oldLane),
+                  cppID: id,
+                  message: "A175 the former slot no longer carries the controller-74 empty-lane flag")
 }

@@ -4,6 +4,7 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Original: src/checks/host/tst_hostseams.cpp
 Original SHA-256: 2d0d99c86a6373c9d97b973ef41ea654cbe0bd22e9e6ecb02e454047c6004a50
 Swift counterpart: src/checks/host/HostBehaviorChecks.swift :: hostAutomationTempo + hostBandGeometry + hostCameraEndpoints + hostCosmeticOnly
+Additional Swift counterpart: src/checks/automation/automationselection.swift :: hostTempoRangeAndBandRows (SHA-256 3b1854346596713dc5a14302792285923980fa443daae2b8f342c57d03b74d41)
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 
@@ -15,6 +16,8 @@ Command: deno task proof check
 Result: PASS - structure, entry IDs, metadata, and present tallies only; not source freshness, execution, or parity.
 Command: deno task verify --filter swiftcore-projectsession
 Result: PASS 1/36 ok (task-67 locked run on the frozen tree, quoted from the implementer handoff; ledger writer ran no lane). Execution evidence: build/proof-evidence/swiftcore-projectsession.json lists every HostBehaviorChecks predicate message anchored as S001-S007 below.
+Command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-projectsession --verbose
+Result: The implementer handoff reports the selected A006 and A010 predicates PASS (artifact://7611 lines 6192–6203), while the aggregate lane FAILED on unrelated project-workspace failedOpenRetainsLiveProject and HostBehaviorChecks playheadFollowing (Noise expected, Square 2 observed). Evidence provenance: Task143 handoff; this ledger writer ran no verification lane. The final counterpart source SHA-256 is recorded above.
 
 A001 | automationPlotFillsHostViewport | src/checks/host/tst_hostseams.cpp:41
 Disposition: RETIRED-REPRESENTATION
@@ -40,8 +43,8 @@ Original expression:
   QVERIFY(tempoIndex >= 0)
 
 A006 | automationPlotFillsHostViewport | src/checks/host/tst_hostseams.cpp:58
-Disposition: GAP
-Mapping/reason: Swift AutomationPage/AutomationLaneProjection owns automation band geometry presence (verified under src/swift/app/drawer/automation); no executed predicate asserts the C++ TimelineBand::Automation geometry presence: tst_SwiftRollTrackHeaders.qml asserts ruler/roll/velocity rects non-empty, never the automation band, and tst_SwiftRollAutomation.qml asserts body/band visible without the plot-geometry presence predicate (automation lane owned elsewhere). Open obligation.
+Disposition: MATCHED
+Mapping: S008
 Source context since previous assertion:
   ;
           canvas->activateParameter(tempoIndex);
@@ -80,8 +83,8 @@ Original expression:
   QVERIFY(!page->automationViewportSize().isEmpty())
 
 A010 | automationPlotFillsHostViewport | src/checks/host/tst_hostseams.cpp:62
-Disposition: GAP
-Mapping/reason: Swift AutomationPage/AutomationLaneProjection owns the automation lane body (verified under src/swift/app/drawer/automation); no executed predicate asserts the lane-body-equals-viewport rect: tst_SwiftRollAutomation.qml asserts the hover point is inside the lane body without a rect-equality predicate (automation lane owned elsewhere). Open obligation.
+Disposition: MATCHED
+Mapping: S009
 Source context since previous assertion:
   ;
 
@@ -388,3 +391,15 @@ Anchor: message "context-tick rounding splits at the half tick"
 
 S007 | hostCosmeticOnly | src/checks/host/HostBehaviorChecks.swift
 Anchor: message "editor view-state round-trips without advancing revision or history"
+
+S008 | hostTempoRangeAndBandRows | src/checks/automation/automationselection.swift
+Source line: 206
+cppID: host/HostSeamsTest::automationPlotFillsHostViewport
+Predicate: report.expect(automation.available && automation.visible && automation.bodyWidth > 0 && automation.bodyHeight > 0, cppID: seamsID, message: "A006 the visible automation band publishes nonempty geometry")
+Anchor: message "A006 the visible automation band publishes nonempty geometry"
+
+S009 | hostTempoRangeAndBandRows | src/checks/automation/automationselection.swift
+Source line: 232
+cppID: host/HostSeamsTest::automationPlotFillsHostViewport
+Predicate: report.expect(page.plotOrigin == Double(gutter) && page.plotWidth == expectedWidth && page.plotHeight == expectedHeight && bothAutomation.bodyWidth == width && bothAutomation.bodyHeight == 180, cppID: seamsID, message: "A010 the tempo lane body fills the font-derived plot from its local origin at section height 180")
+Anchor: message "A010 the tempo lane body fills the font-derived plot from its local origin at section height 180"

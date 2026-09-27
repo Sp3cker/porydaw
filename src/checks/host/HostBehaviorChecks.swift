@@ -45,6 +45,9 @@ private func hostNoteDiscovery(_ report: CheckReport, fixtureRoot: String,
     report.expect(twoNotes.document.notes(in: 0).count == 2
                   && twoNotes.timeline.events.filter { $0.type == 0x9 }.count == 2,
                   cppID: id, message: "track zero projects two seeded notes")
+    twoNotes.setSelectedNotes(twoNotes.document.notes(in: 0).prefix(2).map(\.id))
+    report.expect(twoNotes.selectedNotes.count == 2, cppID: id,
+                  message: "A004: the ready two-note seed selects exactly two notes")
     let routeService = ProjectService()
     do {
         try runBlocking { try await routeService.open(root: fixtureRoot) }
@@ -58,6 +61,8 @@ private func hostNoteDiscovery(_ report: CheckReport, fixtureRoot: String,
             $0.type == 0x9 && $0.noteID == note?.id
         }, cppID: id,
         message: "route101 fixture notes resolve from the loaded document with timeline note-on events")
+        report.expect(session.document.source.label == "mus_route101", cppID: id,
+                      message: "A013: the opened route101 document retains the mus_route101 label")
         guard session.document.source.label == "mus_route101" else {
             report.fail(id, "opened fixture did not retain its route101 label")
             return nil
@@ -90,6 +95,10 @@ private func hostVelocityMarker(_ report: CheckReport, route: DocumentSession?) 
         report.fail(id, "fixture note selection could not attach to the primary track")
         return
     }
+    report.expect(route.selectedTrack == 0, cppID: id,
+                  message: "A015: the first note-bearing route101 engine track is track zero")
+    report.expect(route.selectedNotes == [NoteID(1)], cppID: id,
+                  message: "A016: the front note on route101 track zero has note id one")
     let markers = page.axisModel.markers
     report.expect(markers.count == 1, cppID: id,
                   message: "the selected note publishes one axis marker")
@@ -102,8 +111,15 @@ private func hostVelocityGestureContracts(_ report: CheckReport, session: Docume
                                           service: ProjectService) {
     let id = "swiftcore/HostBehaviorChecks::velocityGestureContracts"
     let fixture = drawerVelocityVelocityFixture(session: session, service: service)
-    guard let note = fixture.notes.first, let handle = fixture.handle(note) else {
-        report.fail(id, "fixture note has no velocity node")
+    guard let note = fixture.notes.first,
+          fixture.document.setVelocities([NoteVelocity(noteID: note.id, velocity: 127)],
+                                         expectedRevision: fixture.document.revision) != nil else {
+        report.fail(id, "fixture first note could not be seeded to velocity 127")
+        return
+    }
+    fixture.page.refreshFromDocument()
+    guard let handle = fixture.handle(note) else {
+        report.fail(id, "seeded fixture note has no velocity node")
         return
     }
     let page = fixture.page
@@ -113,27 +129,211 @@ private func hostVelocityGestureContracts(_ report: CheckReport, session: Docume
     let before = DocumentSnapshot(document)
     let depth = document.history.undoCount
     let originalBytes = try? document.state.file.encoded()
-    let pressed = page.pointerPress(x: handle.x, y: handle.y, surface: 1, button: 1,
-                                    modifiers: 0)
-    _ = page.pointerMove(x: handle.x, y: handle.y - page.dragDistance * 2, buttons: 1)
+    let pressY = page.axisModel.velocityToY(127)
+    let targetY = page.axisModel.velocityToY(1)
+    let pressed = page.pointerPress(x: handle.x, y: pressY, surface: 1, button: 1,
+                                    modifiers: VelocityModifier.control)
+    _ = page.pointerMove(x: handle.x, y: targetY, buttons: 1)
     report.expect(pressed && !page.frozenPreview.isEmpty && DocumentSnapshot(document) == before
                   && document.history.undoCount == depth && (try? document.state.file.encoded()) == originalBytes,
                   cppID: id, message: "a drag move stages a preview without advancing revision or history")
-    _ = page.pointerRelease(x: handle.x, y: handle.y - page.dragDistance * 2, button: 1)
+    _ = page.pointerRelease(x: handle.x, y: targetY, button: 1)
     report.expect(document.revision == before.revision + 1
                   && document.history.undoCount == depth + 1
                   && document.note(note.id)?.velocity != note.velocity
                   && page.frozenPreview.isEmpty && fixture.handle(note)?.y != handle.y,
                   cppID: id, message: "committing advances revision once and invalidates")
+    report.expect(document.note(note.id)?.velocity == 1
+                  && document.revision == before.revision + 1, cppID: id,
+                  message: "A028: the first pointer gesture commits velocity one in one revision")
     let after = DocumentSnapshot(document)
     let afterBytes = try? document.state.file.encoded()
-    guard let moved = fixture.handle(note) else { return }
+    guard let moved = fixture.handle(note) else {
+        report.fail(id, "committed first note has no clickable velocity handle")
+        return
+    }
     _ = page.pointerPress(x: moved.x, y: moved.y, surface: 1, button: 1, modifiers: 0)
     _ = page.pointerRelease(x: moved.x, y: moved.y, button: 1)
     report.expect(fixture.session.selectedNotes == [note.id] && DocumentSnapshot(document) == after
                   && document.history.undoCount == depth + 1
                   && (try? document.state.file.encoded()) == afterBytes,
                   cppID: id, message: "a click press selects one note without touching song bytes")
+    hostVelocityExactGestures(report, session: session, service: service)
+}
+
+@MainActor
+private func hostVelocityExactGestures(_ report: CheckReport, session: DocumentSession,
+                                       service: ProjectService) {
+    let id = "swiftcore/HostBehaviorChecks::velocityGestureContracts"
+    let fixture = drawerVelocityVelocityFixture(session: session, service: service)
+    guard fixture.notes.count >= 2 else {
+        report.fail(id, "the exact gesture fixture lacks two notes")
+        return
+    }
+    let document = fixture.document
+    let firstID = fixture.notes[0].id
+    let secondID = fixture.notes[1].id
+    guard document.setVelocities([NoteVelocity(noteID: firstID, velocity: 127),
+                                  NoteVelocity(noteID: secondID, velocity: 64)],
+                                 expectedRevision: document.revision) != nil,
+          let first = document.note(firstID), let second = document.note(secondID),
+          first.velocity == 127, second.velocity == 64 else {
+        report.fail(id, "the exact 127 and 64 gesture seed did not land")
+        return
+    }
+    let selected = [firstID, secondID]
+    fixture.session.setSelectedNotes(selected)
+    fixture.page.refreshFromDocument()
+    let baseline = DocumentSnapshot(document)
+    let undoIndex = document.history.undoIndex
+    let baselineBytes = try? document.state.file.encoded()
+    guard baselineBytes != nil else {
+        report.fail(id, "the gesture seed could not encode its song bytes")
+        return
+    }
+    let map = VelocityMap(voiceKind: .unresolved)
+    let axis = VelocityAxisModel(map: map, geometry: VelocityAxisGeometry())
+    let frozen = [
+        VelocityFrozenNote(noteID: firstID, tick: first.tick, duration: first.duration,
+                           pitch: first.pitch, velocity: 127, map: map, exactOrigin: 127),
+        VelocityFrozenNote(noteID: secondID, tick: second.tick, duration: second.duration,
+                           pitch: second.pitch, velocity: 64, map: map, exactOrigin: 64),
+    ]
+    func begin(_ notes: [VelocityFrozenNote]) -> VelocityGestureState? {
+        VelocityGestureState(kind: .relative, revision: document.revision, track: 0,
+                             notes: notes, axis: axis, detentUnlock: true,
+                             activationDistance: 0, pressX: 0, pressY: 0)
+    }
+    guard var noop = begin(frozen),
+          noop.updatePreview([NoteVelocity(noteID: firstID, velocity: 127),
+                              NoteVelocity(noteID: secondID, velocity: 64)]) else {
+        report.fail(id, "the unchanged two-note gesture could not stage its preview")
+        return
+    }
+    let noopResult = document.setVelocities(VelocityGesturePolicy.updates(noop),
+                                             expectedRevision: noop.revision)
+    report.expect(noopResult == baseline.revision && DocumentSnapshot(document) == baseline
+                      && fixture.session.selectedNotes == Set(selected)
+                      && (try? document.state.file.encoded()) == baselineBytes
+                      && noop.previewVelocity(firstID) == 127
+                      && noop.previewVelocity(secondID) == 64,
+                  cppID: id, message: "A044: an unchanged gesture leaves revision, notes, selection and previews intact")
+    report.expect(document.history.undoIndex == undoIndex, cppID: id,
+                  message: "A045: an unchanged gesture does not advance the history index")
+    guard let handle = fixture.handle(first) else {
+        report.fail(id, "the seeded first note has no clickable velocity handle")
+        return
+    }
+    let pressed = fixture.page.pointerPress(x: handle.x, y: handle.y, surface: 1,
+                                            button: 1, modifiers: 0)
+    let released = fixture.page.pointerRelease(x: handle.x, y: handle.y, button: 1)
+    report.expect(pressed && released && fixture.session.selectedNotes == Set([firstID])
+                      && DocumentSnapshot(document) == baseline
+                      && document.history.undoIndex == undoIndex
+                      && (try? document.state.file.encoded()) == baselineBytes,
+                  cppID: id, message: "clicking the first node selects it without editing song bytes or history")
+    fixture.session.setSelectedNotes(selected)
+    fixture.page.refreshFromDocument()
+    guard var gesture = begin(frozen),
+          gesture.updatePreview([NoteVelocity(noteID: firstID, velocity: 1),
+                                 NoteVelocity(noteID: secondID, velocity: 65)]) else {
+        report.fail(id, "the exact two-note gesture could not stage its targets")
+        return
+    }
+    report.expect(gesture.previewVelocity(firstID) == 1, cppID: id,
+                  message: "A053: the first frozen preview has exact velocity one")
+    report.expect(gesture.previewVelocity(secondID) == 65, cppID: id,
+                  message: "A054: the second frozen preview has exact velocity sixty-five")
+    report.expect(document.note(firstID)?.velocity == 127
+                      && document.revision == baseline.revision
+                      && document.history.undoIndex == undoIndex, cppID: id,
+                  message: "the two exact previews leave the seeded first velocity and history held")
+    let committed = document.setVelocities(VelocityGesturePolicy.updates(gesture),
+                                            expectedRevision: gesture.revision)
+    fixture.page.refreshFromDocument()
+    report.expect(committed == baseline.revision + 1, cppID: id,
+                  message: "the exact two-note commit advances the document revision once")
+    report.expect(document.note(firstID)?.velocity == 1, cppID: id,
+                  message: "A063: the held first note lands at exact velocity one")
+    report.expect(document.note(secondID)?.velocity == 65, cppID: id,
+                  message: "the second committed target lands at exact velocity sixty-five")
+    report.expect(document.history.undoIndex == undoIndex + 1
+                      && fixture.session.selectedNotes == Set(selected), cppID: id,
+                  message: "A065: the exact commit retains both selected notes at the next history index")
+    do {
+        guard try runBlocking({ try await fixture.session.undo() }) else {
+            report.fail(id, "the exact velocity commit was not undoable")
+            return
+        }
+    } catch {
+        report.fail(id, "the exact velocity undo failed")
+        return
+    }
+    report.expect(fixture.session.selectedNotes == Set(selected)
+                      && document.note(firstID)?.velocity == 127
+                      && document.note(secondID)?.velocity == 64, cppID: id,
+                  message: "A066: undo restores both selected notes and their seeded velocities")
+    do {
+        guard try runBlocking({ try await fixture.session.redo() }) else {
+            report.fail(id, "the exact velocity commit was not redoable")
+            return
+        }
+    } catch {
+        report.fail(id, "the exact velocity redo failed")
+        return
+    }
+    guard let staleFirst = document.note(firstID), let staleSecond = document.note(secondID),
+          var stale = begin([
+              VelocityFrozenNote(noteID: firstID, tick: staleFirst.tick,
+                                 duration: staleFirst.duration, pitch: staleFirst.pitch,
+                                 velocity: 1, map: map, exactOrigin: 1),
+              VelocityFrozenNote(noteID: secondID, tick: staleSecond.tick,
+                                 duration: staleSecond.duration, pitch: staleSecond.pitch,
+                                 velocity: 65, map: map, exactOrigin: 65),
+          ]), stale.updatePreview([NoteVelocity(noteID: firstID, velocity: 2)]) else {
+        report.fail(id, "the stale velocity fixture could not stage its preview")
+        return
+    }
+    guard let staleHandle = fixture.handle(staleFirst),
+          fixture.page.pointerPress(x: staleHandle.x, y: staleHandle.y, surface: 1,
+                                    button: 1, modifiers: 0),
+          fixture.page.pointerMove(x: staleHandle.x,
+                                   y: staleHandle.y - fixture.page.dragDistance * 2,
+                                   buttons: 1),
+          fixture.page.frozenPreview[firstID] != nil,
+          fixture.page.frozenPreview[secondID] != nil else {
+        report.fail(id, "the stale pointer drag did not preview both selected notes")
+        return
+    }
+    let staleRevision = document.revision
+    guard document.setVelocities([NoteVelocity(noteID: secondID, velocity: 66)],
+                                 expectedRevision: staleRevision) == staleRevision + 1 else {
+        report.fail(id, "the external velocity edit did not land")
+        return
+    }
+    let rejected = document.setVelocities(VelocityGesturePolicy.updates(stale),
+                                           expectedRevision: stale.revision)
+    fixture.page.refreshFromDocument()
+    report.expect(rejected == nil, cppID: id,
+                  message: "the stale model payload rejects the captured revision")
+    report.expect(document.revision == staleRevision + 1, cppID: id,
+                  message: "A070: only the external edit advances the stale revision")
+    report.expect(document.history.undoIndex == undoIndex + 2, cppID: id,
+                  message: "A071: the stale rejection adds no history entry after the external edit")
+    report.expect(document.note(firstID) != nil, cppID: id,
+                  message: "A072: the stale first note remains findable after rejection")
+    report.expect(document.note(secondID) != nil, cppID: id,
+                  message: "A073: the externally edited second note remains findable after rejection")
+    report.expect(document.note(firstID)?.velocity == 1, cppID: id,
+                  message: "A074: stale rejection leaves the first note at velocity one")
+    report.expect(document.note(secondID)?.velocity == 66, cppID: id,
+                  message: "A075: the external edit lands velocity sixty-six on the second note")
+    report.expect(fixture.page.frozenPreview[firstID] == nil, cppID: id,
+                  message: "A076: rejection clears the first stale preview")
+    report.expect(fixture.page.frozenPreview[secondID] == nil, cppID: id,
+                  message: "A077: rejection clears the second stale preview")
+    report.expect(fixture.session.selectedNotes == Set(selected), cppID: id,
+                  message: "A078: rejection preserves the restored two-note selection")
 }
 
 @MainActor
@@ -213,6 +413,54 @@ private func hostPlayheadFollowing(_ report: CheckReport, session: DocumentSessi
                   message: "the playhead tick follows the played sample")
     report.expect(fixture.page.context.slot != bankSlot, cppID: id,
                   message: "steady context resolves through presentation voice, not the bank")
+    hostVelocityAxisVoice(report, session: session)
+}
+
+@MainActor
+private func hostVelocityAxisVoice(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/HostBehaviorChecks::playheadFollowing"
+    let file = MidiFile(division: 24, chunks: [
+        MidiChunk(events: [], endTick: 48),
+        MidiChunk(events: [
+            .channel(tick: 0, status: 0xC0, data0: 0),
+            .channel(tick: 0, status: 0x90, data0: 60, data1: 100),
+            .channel(tick: 24, status: 0xC0, data0: 1),
+            .channel(tick: 48, status: 0x80, data0: 60),
+        ], endTick: 48),
+    ])
+    let document = SongDocument(file: file, config: session.document.state.config,
+                                source: session.document.source,
+                                trackBudget: session.document.trackBudget)
+    let slots = [
+        BankSlotView(kind: BankSlotKind.editable, voice: BankVoice(macro: BankVoiceMacro.square1)),
+        BankSlotView(kind: BankSlotKind.editable, voice: BankVoice(macro: BankVoiceMacro.noise)),
+    ]
+    let played = DocumentSession(document: document, service: ProjectService(),
+                                 lease: session.bankLease, slots: slots, dirty: false,
+                                 loadName: session.bankLoadName, sampleRate: 48_000)
+    played.selectedTrack = 0
+    played.clearSelectedNotes()
+    played.editCursor = 0
+    let page = VelocityPage(baseFontPx: GridCameraPolicy.seedBaseFontPx)
+    page.attach(session: played, palette: GridPalette())
+    let font = GridCameraPolicy.seedBaseFontPx
+    page.configureBody(width: fontPx(font, 30), height: fontPx(font, 9),
+                       rulerWidth: fontPx(font, 4), devicePixelRatio: 1,
+                       baseFontPx: font, dragDistance: page.dragDistance)
+    page.refreshEditCursor()
+    report.expect(page.axisModel.map.voiceName == "Square 1", cppID: id,
+                  message: "A164: the stopped axis names Square 1 at the steady cursor")
+    let at24 = played.timeline.sample(for: 24)
+    page.refreshPlayhead(tick: played.timeline.tick(for: at24), playing: true)
+    report.expect(page.axisModel.map.voiceName == "Noise", cppID: id,
+                  message: "A165: the followed sample at tick twenty-four names Noise")
+    let at25 = played.timeline.sample(for: 25)
+    let at26 = played.timeline.sample(for: 26)
+    page.refreshPlayhead(tick: played.timeline.tick(for: at25), playing: true)
+    page.refreshPlayhead(tick: played.timeline.tick(for: at26), playing: true)
+    page.refreshPlayhead(tick: played.timeline.tick(for: at26), playing: false)
+    report.expect(page.axisModel.map.voiceName == "Square 1", cppID: id,
+                  message: "A168: the non-following sample at tick twenty-six restores Square 1")
 }
 
 @MainActor

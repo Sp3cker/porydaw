@@ -5,7 +5,7 @@ Original: src/checks/host/tst_hostintegration.cpp
 Original SHA-256: 4083b59bbb5e88019ed164c1296e3f8ea36e3a6fe6673d8b0ef74316dbdbae10
 Swift counterpart: src/checks/velocity/VelocityClickSelectionChecks.swift (drawerVelocityPrimaryTrackSwitchCancels :267-312; drawerVelocityLifecycleCancellation :315-383 plus bank route :384-461); src/checks/velocity/VelocityPageChecks.swift call-list entry; src/checks/editorqml/tst_ShellWindow.qml test_kVelocityGestureTermination plus data (:976-1083)
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
-Additional Swift counterpart: src/checks/host/HostBehaviorChecks.swift :: hostNoteDiscovery + hostVelocityGestureContracts + hostLifecycleTermination + hostPlayheadFollowing + hostCosmeticOnly
+Additional Swift counterpart: src/checks/host/HostBehaviorChecks.swift :: hostNoteDiscovery + hostVelocityGestureContracts + hostVelocityExactGestures + hostLifecycleTermination + hostPlayheadFollowing + hostVelocityAxisVoice + hostCosmeticOnly (SHA-256 e310f9ed4cefe927cfdbe7ffae749e4ae2c82f9029a1f72e69c6ce498e4f7336)
 
 
 NATIVE is no longer used: every site that observed a native-window, embedding, delivery, framebuffer, settings, popup, or harness obligation is RETIRED-REPRESENTATION, because the mechanism that carried it is gone (this C++ file was deleted at 31ea635f, appears in no CMake target, and checkcatalog.cpp registers no host entry; re-verified 2026-09-24). GAP sites are behavior assertions whose Swift owners exist but whose original predicates have no executed Swift equivalent; each mapping names the owner verified under src/swift/app. The Reference revision and Original SHA-256 below were re-verified against each other (git show <revision>:<path> | shasum -a 256) before any retirement claim.
@@ -14,6 +14,9 @@ Command: deno task proof check
 Result: PASS - structure, entry IDs, metadata, and present tallies only; not source freshness, execution, or parity. Quoted post-merge verification (not re-executed here): deno task verify --filter swiftcore PASS 1/6; deno task verify:shell --filter shellwindow PASS 1/12; deno task verify:qml PASS editorqml-drawer 1/1. No lane executes the deleted harness itself.
 Command: deno task verify --filter swiftcore-projectsession
 Result: PASS 1/36 ok (task-67 locked run on the frozen tree, quoted from the implementer handoff; ledger writer ran no lane). Execution evidence: build/proof-evidence/swiftcore-projectsession.json lists every HostBehaviorChecks predicate message anchored as S001-S010 below.
+
+Task 142 verification command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-projectsession --verbose
+Task 142 verification result: PASS 1/36 ok (Task142 implementer handoff; ledger writer ran no lane). Execution evidence: the frozen HostBehaviorChecks.swift SHA-256 e310f9ed4cefe927cfdbe7ffae749e4ae2c82f9029a1f72e69c6ce498e4f7336; the handoff reports the selected task predicates passed, including integration anchors A004, A028, A044, A045, A053, A054, A063, A065, A066, and A070–A078.
 
 A001 | twoTabReadySessionWithTwoNoteSeed | src/checks/host/tst_hostintegration.cpp:145
 Disposition: RETIRED-REPRESENTATION
@@ -31,8 +34,8 @@ Original expression:
   QVERIFY(twoNoteTrack(session->active->document()) >= 0)
 
 A004 | twoTabReadySessionWithTwoNoteSeed | src/checks/host/tst_hostintegration.cpp:148
-Disposition: GAP
-Mapping/reason: Swift DocumentSession note selection owns the note selection size after the two-note seed; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S011 proves exactly two selected notes after constructing and seeding the Swift two-note session; the original ready two-tab route fixture and its active-tab context are not exercised, so fixture parity remains unproved.
 Source context since previous assertion:
   ;
 
@@ -211,8 +214,8 @@ Original expression:
   QVERIFY(document.findNote(notes[0].noteId, &landed))
 
 A028 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:239
-Disposition: PARTIAL
-Mapping/reason: The commit advancing revision once with the preview cleared and the handle invalidated is asserted by the executed velocityGestureContracts predicate (S003); the landed velocity equaling the exact gesture target has no Swift counterpart and stays unproved.
+Disposition: MATCHED
+Mapping: S028
 Source context since previous assertion:
   ;
 
@@ -287,8 +290,8 @@ A043 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/che
 Disposition: RETIRED-REPRESENTATION
 
 A044 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:279
-Disposition: GAP
-Mapping/reason: Swift DocumentSession.revision owns the revision unchanged by the no-op commit; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S012
 Source context since previous assertion:
   ;
 
@@ -296,8 +299,8 @@ Original expression:
   QCOMPARE(document.revision(), revision)
 
 A045 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:280
-Disposition: GAP
-Mapping/reason: Swift DocumentSession history owns the history cursor unchanged by the no-op commit; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S013
 Source context since previous assertion:
   ;
 
@@ -356,8 +359,8 @@ A052 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:305
 Disposition: RETIRED-REPRESENTATION
 
 A053 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:306
-Disposition: PARTIAL
-Mapping/reason: The drag staging a preview is asserted by the executed velocityGestureContracts predicate (S002); the exact per-note preview values (first/second) have no Swift counterpart and stay unproved.
+Disposition: MATCHED
+Mapping: S014
 Source context since previous assertion:
   ;
 
@@ -365,8 +368,8 @@ Original expression:
   QCOMPARE(view.previewVelocity(notes[0].noteId), std::optional<uint8_t>{first})
 
 A054 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:307
-Disposition: PARTIAL
-Mapping/reason: The drag staging a preview is asserted by the executed velocityGestureContracts predicate (S002); the exact per-note preview values (first/second) have no Swift counterpart and stay unproved.
+Disposition: MATCHED
+Mapping: S015
 Source context since previous assertion:
   ;
 
@@ -441,8 +444,8 @@ Original expression:
   QVERIFY(document.findNote(notes[0].noteId, &held))
 
 A063 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:317
-Disposition: PARTIAL
-Mapping/reason: The commit advancing revision once with the preview cleared is asserted by the executed velocityGestureContracts predicate (S003); the committed velocity equaling the exact drag target has no Swift counterpart and stays unproved.
+Disposition: MATCHED
+Mapping: S016
 Source context since previous assertion:
   ;
 
@@ -459,8 +462,8 @@ Original expression:
   QVERIFY(!view.previewVelocity(notes[0].noteId))
 
 A065 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:319
-Disposition: GAP
-Mapping/reason: Swift note selection owns the selection preserved across the committed drag; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S017
 Source context since previous assertion:
   ;
 
@@ -468,8 +471,8 @@ Original expression:
   QCOMPARE(view.selectionModel().noteSelection(), selected)
 
 A066 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:321
-Disposition: GAP
-Mapping/reason: Swift note selection owns the selection preserved across undo; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S018
 Source context since previous assertion:
   ;
           document.undoStack()->undo();
@@ -487,8 +490,8 @@ A069 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:335
 Disposition: RETIRED-REPRESENTATION
 
 A070 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:336
-Disposition: GAP
-Mapping/reason: Swift DocumentSession.revision owns the revision advanced by the external mutation; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S019
 Source context since previous assertion:
   ;
 
@@ -496,8 +499,8 @@ Original expression:
   QCOMPARE(document.revision(), staleRevision + 1)
 
 A071 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:337
-Disposition: GAP
-Mapping/reason: Swift DocumentSession history owns the history cursor advanced by the external mutation; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S020
 Source context since previous assertion:
   ;
 
@@ -505,8 +508,8 @@ Original expression:
   QCOMPARE(document.undoStack()->index(), undo + 2)
 
 A072 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:340
-Disposition: GAP
-Mapping/reason: Swift SongDocument note lookup owns the stale note velocity found after the rejection; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S021
 Source context since previous assertion:
   ;
           DocNote staleFirst;
@@ -516,8 +519,8 @@ Original expression:
   QVERIFY(document.findNote(notes[0].noteId, &staleFirst))
 
 A073 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:341
-Disposition: GAP
-Mapping/reason: Swift SongDocument note lookup owns the externally edited note velocity found after the rejection; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S022
 Source context since previous assertion:
   ;
 
@@ -525,8 +528,8 @@ Original expression:
   QVERIFY(document.findNote(notes[1].noteId, &externalSecond))
 
 A074 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:342
-Disposition: GAP
-Mapping/reason: Swift VelocityPage commit policy owns the stale target leaving the stale note unchanged; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S023
 Source context since previous assertion:
   ;
 
@@ -534,8 +537,8 @@ Original expression:
   QCOMPARE(staleFirst.velocity, notes[0].velocity)
 
 A075 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:343
-Disposition: GAP
-Mapping/reason: Swift VelocityPage/SongDocument owns the external target retained on the second note; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S024
 Source context since previous assertion:
   ;
 
@@ -543,8 +546,8 @@ Original expression:
   QCOMPARE(externalSecond.velocity, externalTarget)
 
 A076 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:344
-Disposition: GAP
-Mapping/reason: Swift VelocityPage owns the preview cleared on the stale note after rejection; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S025
 Source context since previous assertion:
   ;
 
@@ -552,8 +555,8 @@ Original expression:
   QVERIFY(!view.previewVelocity(notes[0].noteId))
 
 A077 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:345
-Disposition: GAP
-Mapping/reason: Swift VelocityPage owns the preview cleared on the second note after rejection; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S026
 Source context since previous assertion:
   ;
 
@@ -561,8 +564,8 @@ Original expression:
   QVERIFY(!view.previewVelocity(notes[1].noteId))
 
 A078 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:346
-Disposition: GAP
-Mapping/reason: Swift note selection owns the selection preserved across the rejected gesture; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S027
 Source context since previous assertion:
   ;
 
@@ -1403,3 +1406,111 @@ Anchor: message "song null ends the held preview without mutating its song"
 
 S010 | hostCosmeticOnly | src/checks/host/HostBehaviorChecks.swift
 Anchor: message "pan attempts leave song bytes, revision and undo depth untouched"
+
+S011 | hostNoteDiscovery | src/checks/host/HostBehaviorChecks.swift
+Source line: 50
+cppID: swiftcore/HostBehaviorChecks::noteDiscovery
+Predicate: report.expect(twoNotes.selectedNotes.count == 2, cppID: id, message: "A004: the ready two-note seed selects exactly two notes")
+Anchor: message "A004: the ready two-note seed selects exactly two notes"
+
+S012 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
+Source line: 215
+cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
+Predicate: report.expect(noopResult == baseline.revision && DocumentSnapshot(document) == baseline && fixture.session.selectedNotes == Set(selected) && (try? document.state.file.encoded()) == baselineBytes && noop.previewVelocity(firstID) == 127 && noop.previewVelocity(secondID) == 64, cppID: id, message: "A044: an unchanged gesture leaves revision, notes, selection and previews intact")
+Anchor: message "A044: an unchanged gesture leaves revision, notes, selection and previews intact"
+
+S013 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
+Source line: 221
+cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
+Predicate: report.expect(document.history.undoIndex == undoIndex, cppID: id, message: "A045: an unchanged gesture does not advance the history index")
+Anchor: message "A045: an unchanged gesture does not advance the history index"
+
+S014 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
+Source line: 243
+cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
+Predicate: report.expect(gesture.previewVelocity(firstID) == 1, cppID: id, message: "A053: the first frozen preview has exact velocity one")
+Anchor: message "A053: the first frozen preview has exact velocity one"
+
+S015 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
+Source line: 245
+cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
+Predicate: report.expect(gesture.previewVelocity(secondID) == 65, cppID: id, message: "A054: the second frozen preview has exact velocity sixty-five")
+Anchor: message "A054: the second frozen preview has exact velocity sixty-five"
+
+S016 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
+Source line: 256
+cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
+Predicate: report.expect(document.note(firstID)?.velocity == 1, cppID: id, message: "A063: the held first note lands at exact velocity one")
+Anchor: message "A063: the held first note lands at exact velocity one"
+
+S017 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
+Source line: 260
+cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
+Predicate: report.expect(document.history.undoIndex == undoIndex + 1 && fixture.session.selectedNotes == Set(selected), cppID: id, message: "A065: the exact commit retains both selected notes at the next history index")
+Anchor: message "A065: the exact commit retains both selected notes at the next history index"
+
+S018 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
+Source line: 272
+cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
+Predicate: report.expect(fixture.session.selectedNotes == Set(selected) && document.note(firstID)?.velocity == 127 && document.note(secondID)?.velocity == 64, cppID: id, message: "A066: undo restores both selected notes and their seeded velocities")
+Anchor: message "A066: undo restores both selected notes and their seeded velocities"
+
+S019 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
+Source line: 319
+cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
+Predicate: report.expect(document.revision == staleRevision + 1, cppID: id, message: "A070: only the external edit advances the stale revision")
+Anchor: message "A070: only the external edit advances the stale revision"
+
+S020 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
+Source line: 321
+cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
+Predicate: report.expect(document.history.undoIndex == undoIndex + 2, cppID: id, message: "A071: the stale rejection adds no history entry after the external edit")
+Anchor: message "A071: the stale rejection adds no history entry after the external edit"
+
+S021 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
+Source line: 323
+cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
+Predicate: report.expect(document.note(firstID) != nil, cppID: id, message: "A072: the stale first note remains findable after rejection")
+Anchor: message "A072: the stale first note remains findable after rejection"
+
+S022 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
+Source line: 325
+cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
+Predicate: report.expect(document.note(secondID) != nil, cppID: id, message: "A073: the externally edited second note remains findable after rejection")
+Anchor: message "A073: the externally edited second note remains findable after rejection"
+
+S023 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
+Source line: 327
+cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
+Predicate: report.expect(document.note(firstID)?.velocity == 1, cppID: id, message: "A074: stale rejection leaves the first note at velocity one")
+Anchor: message "A074: stale rejection leaves the first note at velocity one"
+
+S024 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
+Source line: 329
+cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
+Predicate: report.expect(document.note(secondID)?.velocity == 66, cppID: id, message: "A075: the external edit lands velocity sixty-six on the second note")
+Anchor: message "A075: the external edit lands velocity sixty-six on the second note"
+
+S025 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
+Source line: 331
+cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
+Predicate: report.expect(fixture.page.frozenPreview[firstID] == nil, cppID: id, message: "A076: rejection clears the first stale preview")
+Anchor: message "A076: rejection clears the first stale preview"
+
+S026 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
+Source line: 333
+cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
+Predicate: report.expect(fixture.page.frozenPreview[secondID] == nil, cppID: id, message: "A077: rejection clears the second stale preview")
+Anchor: message "A077: rejection clears the second stale preview"
+
+S027 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
+Source line: 335
+cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
+Predicate: report.expect(fixture.session.selectedNotes == Set(selected), cppID: id, message: "A078: rejection preserves the restored two-note selection")
+Anchor: message "A078: rejection preserves the restored two-note selection"
+
+S028 | hostVelocityGestureContracts | src/checks/host/HostBehaviorChecks.swift
+Source line: 146
+cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
+Predicate: report.expect(document.note(note.id)?.velocity == 1 && document.revision == before.revision + 1, cppID: id, message: "A028: the first pointer gesture commits velocity one in one revision")
+Anchor: message "A028: the first pointer gesture commits velocity one in one revision"

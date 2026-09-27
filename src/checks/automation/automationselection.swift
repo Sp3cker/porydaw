@@ -9,6 +9,7 @@ import PorydawCore
 func drawerAutomationRestoredInteractionContracts(_ report: CheckReport, suite: DocumentSession,
                                           service: ProjectService) {
     let id = "swiftcore/AutomationPage::restoredInteractionContracts"
+    hostTempoRangeAndBandRows(report, suite: suite, service: service)
     let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
                                     volume: [(48, 70)], pan: [(24, 60)],
                                     tempo: [(0, 500_000), (36, 400_000)])
@@ -177,4 +178,111 @@ func drawerAutomationRestoredInteractionContracts(_ report: CheckReport, suite: 
                   message: "duplicate remains one undo entry")
     report.expectEqual(expected: ["24:30"], actual: duplicate.values(duplicate.panLane), cppID: id,
                        what: "undo restores the original range contents")
+}
+
+@MainActor
+private func hostTempoRangeAndBandRows(_ report: CheckReport, suite: DocumentSession,
+                                      service: ProjectService) {
+    let tempoID = "host/HostAdapterTest::automationTempoRangeDelegatesTheSelectionScope"
+    let seamsID = "host/HostSeamsTest::automationPlotFillsHostViewport"
+    let voiceID = "host/HostAdapterTest::voiceChangesRefreshWithoutInvalidatingAutomationRaster"
+    let fixture = drawerAutomationAutomationFixture(
+        suite: suite, service: service, volume: [(48, 70)], pan: [(24, 60)],
+        tempo: [(0, 500_000), (36, 400_000)])
+    let page = fixture.page
+    let font = GridCameraPolicy.seedBaseFontPx
+    let width = Int(fontPx(font, 70))
+    let gutter = Int(fontPx(font, 8))
+    let drawer = EditorDrawerPresenter()
+    let voice = VoiceChangesPage(baseFontPx: font)
+    voice.attach(session: fixture.session, palette: GridPalette())
+    drawer.attachSection(page)
+    drawer.attachSection(voice)
+    drawer.configureLayout(hostWidth: width, hostHeight: Int(fontPx(font, 60)),
+                           gutterWidth: gutter, fontPx: font,
+                           appFontLineSpacing: fontPx(font, 1))
+    drawer.setSectionBodyHeight(kind: DrawerSectionKind.automation.rawValue, height: 180)
+    let automation = drawer.automationSection
+    report.expect(automation.available && automation.visible
+                  && automation.bodyWidth > 0 && automation.bodyHeight > 0,
+                  cppID: seamsID,
+                  message: "A006 the visible automation band publishes nonempty geometry")
+    drawer.setSectionVisible(kind: DrawerSectionKind.voiceChanges.rawValue,
+                             visible: true, drawerOwnsFocus: false)
+    let bothAutomation = drawer.automationSection
+    let voiceBand = drawer.voiceChangesSection
+    report.expect(bothAutomation.available && bothAutomation.visible
+                  && bothAutomation.bodyWidth > 0 && bothAutomation.bodyHeight > 0,
+                  cppID: voiceID,
+                  message: "A177 the automation band remains present beside voice changes")
+    report.expect(voiceBand.available && voiceBand.visible
+                  && voiceBand.bodyWidth > 0 && voiceBand.bodyHeight > 0,
+                  cppID: voiceID,
+                  message: "A178 the voice-change band remains present beside automation")
+
+    let expectedWidth = Double(width - gutter)
+    let expectedHeight = 180.0
+    page.configureBody(width: Double(drawer.plotWidth), height: Double(bothAutomation.bodyHeight),
+                       gutter: Double(drawer.plotOrigin), devicePixelRatio: 1,
+                       baseFontPx: font, dragDistance: AutomationPagePolicy.dragDistance)
+    guard page.activateParameter(.tempo) else {
+        report.fail(tempoID, "the tempo parameter did not activate for the host range drag")
+        return
+    }
+    report.expect(page.plotOrigin == Double(gutter)
+                  && page.plotWidth == expectedWidth && page.plotHeight == expectedHeight
+                  && bothAutomation.bodyWidth == width && bothAutomation.bodyHeight == 180,
+                  cppID: seamsID,
+                  message: "A010 the tempo lane body fills the font-derived plot from its local origin at section height 180")
+    report.expect(page.plotWidth > 0 && page.plotHeight > 0, cppID: tempoID,
+                  message: "A147 the activated tempo lane body has nonempty bounds")
+    let y = page.plotHeight / 2
+    let startX = fontPx(font, 1)
+    let endX = startX + fontPx(font, 12)
+    _ = page.pointerPress(x: startX, y: y, surface: AutomationInputSurface.plot.rawValue,
+                          button: AutomationQtButton.right)
+    _ = page.pointerMove(x: endX, y: y, buttons: AutomationQtButton.right)
+    _ = page.pointerRelease(x: endX, y: y, button: AutomationQtButton.right)
+    report.expect(fixture.session.timeSelection?.isActive == true, cppID: tempoID,
+                  message: "A148 the right-button tempo drag publishes an active time selection")
+    report.expect(fixture.session.timeSelection?.scope == .lanes, cppID: tempoID,
+                  message: "A149 the right-button tempo drag selects lane scope")
+    report.expect(fixture.session.timeSelection?.tempo == true, cppID: tempoID,
+                  message: "A150 the right-button tempo drag includes tempo")
+    report.expect(fixture.session.timeSelection?.lanes == [], cppID: tempoID,
+                  message: "A151 the right-button tempo drag includes no controller lanes")
+
+    page.clearTimeSelection()
+    func row(_ parameter: AutomationParameter, count: Int) -> AutomationRow {
+        AutomationRow(parameter: parameter, eventCount: count,
+                      coversNodes: false, coversLane: false, selectionHasEvents: false)
+    }
+    let expectedRows: [AutomationRow] = [
+        row(.tempo, count: 2),
+        row(.controlChange(track: 0, controller: TimeDefaults.ccVolume), count: 1),
+        row(.controlChange(track: 0, controller: TimeDefaults.ccPan), count: 1),
+        row(.controlChange(track: 0, controller: TimeDefaults.ccModulation), count: 0),
+        row(.pitchBend(track: 0), count: 0),
+        row(.controlChange(track: 0, controller: TimeDefaults.ccLFOSpeed), count: 0),
+        row(.controlChange(track: 0, controller: TimeDefaults.ccBendRange), count: 0),
+        row(.controlChange(track: 0, controller: Xcmd.echoVolumeLane), count: 0),
+        row(.controlChange(track: 0, controller: Xcmd.echoLengthLane), count: 0),
+        row(.controlChange(track: 0, controller: TimeDefaults.ccModulationType), count: 0),
+        row(.controlChange(track: 0, controller: TimeDefaults.ccFineTune), count: 0),
+        row(.controlChange(track: 0, controller: TimeDefaults.ccLFODelay), count: 0),
+    ]
+    fixture.document.writeLane(track: 0, lane: .voice, from: 24, through: 24,
+                               points: [LaneWrite(tick: 24, value: 1)])
+    let before = page.rows
+    report.expect(before == expectedRows, cppID: voiceID,
+                  message: "the seeded automation canvas rows match all twelve expected lane identities and counts")
+    let playedSample = fixture.session.timeline.sample(for: 24)
+    let playedTick = fixture.session.timeline.tick(for: playedSample)
+    voice.refreshPlayhead(tick: playedTick, playing: true)
+    report.expect(voice.presentedContextSlot == 1 && voice.presentedContextTick == 24,
+                  cppID: voiceID,
+                  message: "the played sample reaches the seeded tick-24 voice change")
+    page.refreshPlayhead(tick: playedTick, playing: true)
+    report.expect(page.rows == expectedRows && page.rows == before, cppID: voiceID,
+                  message: "A182 the tick-24 voice presentation preserves every seeded automation canvas row")
 }

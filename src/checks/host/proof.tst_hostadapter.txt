@@ -8,7 +8,9 @@ Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml (convert
 Additional Swift counterpart: src/checks/rollqml/tst_SwiftRollPlots.qml (converted QML roll lane)
 Additional Swift counterpart: src/checks/drawerpresentation/other_events_band.swift
 Additional Swift counterpart: src/checks/rollcheck/ruler_loop_menu.swift
-Additional Swift counterpart: src/checks/host/HostBehaviorChecks.swift :: hostNoteDiscovery + hostVelocityMarker + hostCosmeticOnly + hostAutomationTempo
+Additional Swift counterpart: src/checks/host/HostBehaviorChecks.swift :: hostNoteDiscovery + hostVelocityMarker + hostCosmeticOnly + hostAutomationTempo + hostPlayheadFollowing + hostVelocityAxisVoice (SHA-256 e310f9ed4cefe927cfdbe7ffae749e4ae2c82f9029a1f72e69c6ce498e4f7336)
+Additional Swift counterpart: src/checks/automation/automationselection.swift :: hostTempoRangeAndBandRows (SHA-256 3b1854346596713dc5a14302792285923980fa443daae2b8f342c57d03b74d41)
+Additional Swift counterpart: src/checks/trackheaders/TrackHeadersChecks.swift :: hostDrawerSoloAndRemap (SHA-256 26dca6c03e329fa782b976bc3e871fc1f80d55ff41938c1fe3dc9ab6fb8fc5ca)
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 
@@ -20,6 +22,11 @@ Command: deno task verify --filter swiftcore --verbose; deno task verify:qml --v
 Result: PASS — swiftcore 12 of 37 ok (25 filtered skips), editorqml-drawer 1/1 ok, verify:qml-roll 1/1 ok. Lane-owner observations on the task-27 other-events band revision; this bookkeeping pass ran no lane. build/proof-evidence/swiftcore-projectsession.json, editorqml-drawer.json and swiftroll-window.json record the predicate messages and test functions anchored as S001-S022 below.
 Command: deno task verify --filter swiftcore-projectsession; PORYDAW_ROLL_QML_SUITE=tst_SwiftRollPlots.qml deno task verify:qml-roll --filter swiftroll-window; PORYDAW_ROLL_QML_SUITE=tst_SwiftRollAutomation.qml deno task verify:qml-roll --filter swiftroll-window
 Result: PASS 1/36 swiftcore-projectsession ok plus 1/1 on each roll lane (task-67 locked runs on the frozen tree, quoted from the implementer handoff; ledger writer ran no lane). Execution evidence: build/proof-evidence/swiftcore-projectsession.json lists the HostBehaviorChecks messages anchored as S023-S026/S035-S036 below, and build/proof-evidence/swiftroll-window.json lists the executed QML functions anchored as S027-S034 below.
+Command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-projectsession --verbose
+Result: The implementer handoff reports all 14 selected A predicates PASS (artifact://7611 lines 6192–6203, 7462–7465), while the aggregate lane FAILED on unrelated project-workspace failedOpenRetainsLiveProject and HostBehaviorChecks playheadFollowing (Noise expected, Square 2 observed). Evidence provenance: Task143 handoff; this ledger writer ran no verification lane. The final counterpart source SHA-256 values are recorded above.
+
+Command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-projectsession --verbose
+Result: PASS 1/36 ok (Task142 implementer handoff; ledger writer ran no lane). Execution evidence: the frozen HostBehaviorChecks.swift SHA-256 e310f9ed4cefe927cfdbe7ffae749e4ae2c82f9029a1f72e69c6ce498e4f7336 and the handoff predicate report anchor A013/A015/A016/A164/A165/A168 in the HostBehaviorChecks message set; no Task142 failures reported.
 
 A001 | syntheticFixtureConstructsHost | src/checks/host/tst_hostadapter.cpp:63
 Disposition: RETIRED-REPRESENTATION
@@ -87,8 +94,8 @@ A012 | route101FixtureAttachesHostedVelocityMarker | src/checks/host/tst_hostada
 Disposition: RETIRED-REPRESENTATION
 
 A013 | route101FixtureAttachesHostedVelocityMarker | src/checks/host/tst_hostadapter.cpp:101
-Disposition: GAP
-Mapping/reason: The route101-label message was removed from hostNoteDiscovery in the frozen sources; only a setup fail guard ("opened fixture did not retain its route101 label") remains, with no passing predicate, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S107
 Source context since previous assertion:
   ;
 
@@ -99,8 +106,8 @@ A014 | route101FixtureAttachesHostedVelocityMarker | src/checks/host/tst_hostada
 Disposition: RETIRED-REPRESENTATION
 
 A015 | route101FixtureAttachesHostedVelocityMarker | src/checks/host/tst_hostadapter.cpp:103
-Disposition: GAP
-Mapping/reason: The primary-track message was removed from hostVelocityMarker in the frozen sources; only a setup fail guard ("fixture note selection could not attach to the primary track") remains, with no passing predicate, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S108
 Source context since previous assertion:
   ;
 
@@ -108,8 +115,8 @@ Original expression:
   QCOMPARE(view.selectionModel().primaryTrack(), fixtureNote->engineTrack)
 
 A016 | route101FixtureAttachesHostedVelocityMarker | src/checks/host/tst_hostadapter.cpp:104
-Disposition: GAP
-Mapping/reason: The note-selection message was removed from hostVelocityMarker in the frozen sources; only a setup fail guard ("fixture note selection could not attach to the primary track") remains, with no passing predicate, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S109
 Source context since previous assertion:
   ;
 
@@ -1018,8 +1025,8 @@ Original expression:
   QVERIFY(tempoIndex >= 0)
 
 A147 | automationTempoRangeDelegatesTheSelectionScope | src/checks/host/tst_hostadapter.cpp:538
-Disposition: GAP
-Mapping/reason: Swift AutomationPage/AutomationLaneProjection owns the activated automation lane body rect; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S094
 Source context since previous assertion:
   ;
           canvas->activateParameter(tempoIndex);
@@ -1030,8 +1037,8 @@ Original expression:
   QVERIFY(!tempo.isEmpty())
 
 A148 | events::sendMouse | src/checks/host/tst_hostadapter.cpp:549
-Disposition: GAP
-Mapping/reason: Swift AutomationPage/AutomationSelectionCommands owns the time selection active state after the tempo-range drag; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S095
 Source context since previous assertion:
   ;
           const qreal y = tempo.center().y();
@@ -1049,8 +1056,8 @@ Original expression:
   QVERIFY(selection.active())
 
 A149 | events::sendMouse | src/checks/host/tst_hostadapter.cpp:550
-Disposition: GAP
-Mapping/reason: Swift AutomationPage/AutomationSelectionCommands owns the time selection scope after the tempo-range drag; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S096
 Source context since previous assertion:
   ;
 
@@ -1058,8 +1065,8 @@ Original expression:
   QCOMPARE(selection.scope, songview::EditorSelectionModel::TimeSelection::Lanes)
 
 A150 | events::sendMouse | src/checks/host/tst_hostadapter.cpp:551
-Disposition: GAP
-Mapping/reason: Swift AutomationPage/AutomationSelectionCommands owns the tempo flag on the time selection; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S097
 Source context since previous assertion:
   ;
 
@@ -1067,8 +1074,8 @@ Original expression:
   QVERIFY(selection.tempo)
 
 A151 | events::sendMouse | src/checks/host/tst_hostadapter.cpp:552
-Disposition: GAP
-Mapping/reason: Swift AutomationPage/AutomationSelectionCommands owns the empty lane list on a tempo-scoped time selection; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S098
 Source context since previous assertion:
   ;
 
@@ -1124,8 +1131,8 @@ A163 | velocityVoiceRoutingUsesPresentationOnlyForSteadyContext | src/checks/hos
 Disposition: RETIRED-REPRESENTATION
 
 A164 | velocityVoiceRoutingUsesPresentationOnlyForSteadyContext | src/checks/host/tst_hostadapter.cpp:602
-Disposition: GAP
-Mapping/reason: Swift VelocityPage/VelocityAxisModel owns the velocity axis voice name at the steady cursor; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S110
 Source context since previous assertion:
   ;
           view.selectionModel().clearNoteSelection();
@@ -1135,8 +1142,8 @@ Original expression:
   QCOMPARE(QString::fromLatin1(area->axis().map().voiceName()), QStringLiteral("Square 1"))
 
 A165 | velocityVoiceRoutingUsesPresentationOnlyForSteadyContext | src/checks/host/tst_hostadapter.cpp:605
-Disposition: GAP
-Mapping/reason: Swift VelocityPage/VelocityAxisModel owns the velocity axis voice name after the voice change; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S111
 Source context since previous assertion:
   ;
           view.setPlayheadSample(host.timeline().sampleForTick(24), true);
@@ -1152,8 +1159,8 @@ A167 | velocityVoiceRoutingUsesPresentationOnlyForSteadyContext | src/checks/hos
 Disposition: RETIRED-REPRESENTATION
 
 A168 | velocityVoiceRoutingUsesPresentationOnlyForSteadyContext | src/checks/host/tst_hostadapter.cpp:615
-Disposition: GAP
-Mapping/reason: Swift VelocityPage/VelocityAxisModel owns the velocity axis voice name after the second voice change; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S112
 Source context since previous assertion:
   ;
           view.setPlayheadSample(host.timeline().sampleForTick(26), false);
@@ -1172,8 +1179,8 @@ A171 | drawerSoloAndTrackRemapReachTheHost | src/checks/host/tst_hostadapter.cpp
 Disposition: RETIRED-REPRESENTATION
 
 A172 | drawerSoloAndTrackRemapReachTheHost | src/checks/host/tst_hostadapter.cpp:635
-Disposition: GAP
-Mapping/reason: Swift DocumentSession soloed tracks/TrackHeadersPresenter owns the track solo state after the drawer solo toggle; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S099, S106
 Source context since previous assertion:
   ;
           const int selectedTrack = view.selectionModel().primaryTrack();
@@ -1187,8 +1194,8 @@ Original expression:
   QVERIFY(view.trackSoloed(selectedTrack))
 
 A173 | drawerSoloAndTrackRemapReachTheHost | src/checks/host/tst_hostadapter.cpp:642
-Disposition: GAP
-Mapping/reason: Swift SongDocument moveTrack/DocumentWorkspace owns the track move acceptance (moveTrack(0, 1)); no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S100
 Source context since previous assertion:
   ;
           view.setTrackSolo(selectedTrack, false);
@@ -1202,8 +1209,8 @@ Original expression:
   QVERIFY(host.document().moveTrack(0, 1))
 
 A174 | drawerSoloAndTrackRemapReachTheHost | src/checks/host/tst_hostadapter.cpp:643
-Disposition: GAP
-Mapping/reason: Swift DocumentSession/DocumentWorkspace empty-lane state owns the moved lane flagged empty in the editor view state; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S101
 Source context since previous assertion:
   ;
 
@@ -1211,8 +1218,8 @@ Original expression:
   QVERIFY(view.editorViewState().emptyLanes.contains(movedLane))
 
 A175 | drawerSoloAndTrackRemapReachTheHost | src/checks/host/tst_hostadapter.cpp:644
-Disposition: GAP
-Mapping/reason: Swift DocumentSession/DocumentWorkspace empty-lane state owns the old lane no longer flagged empty in the editor view state; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S102
 Source context since previous assertion:
   ;
 
@@ -1223,8 +1230,8 @@ A176 | voiceChangesRefreshWithoutInvalidatingAutomationRaster | src/checks/host/
 Disposition: RETIRED-REPRESENTATION
 
 A177 | voiceChangesRefreshWithoutInvalidatingAutomationRaster | src/checks/host/tst_hostadapter.cpp:660
-Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the automation band layout geometry presence; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S103
 Source context since previous assertion:
   ;
           SongView &view = host.view();
@@ -1240,8 +1247,8 @@ Original expression:
   QVERIFY(automation.has_value())
 
 A178 | voiceChangesRefreshWithoutInvalidatingAutomationRaster | src/checks/host/tst_hostadapter.cpp:661
-Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the voice-changes band layout geometry presence; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S104
 Source context since previous assertion:
   ;
 
@@ -1258,8 +1265,8 @@ A181 | voiceChangesRefreshWithoutInvalidatingAutomationRaster | src/checks/host/
 Disposition: RETIRED-REPRESENTATION
 
 A182 | voiceChangesRefreshWithoutInvalidatingAutomationRaster | src/checks/host/tst_hostadapter.cpp:674
-Disposition: GAP
-Mapping/reason: Swift AutomationPage/AutomationProjection owns the automation canvas rows unchanged across a voice change; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S105
 Source context since previous assertion:
   ;
           view.setPlayheadSample(host.timeline().sampleForTick(24), true);
@@ -1615,3 +1622,117 @@ Anchor: message "roll keyboard input ends exactly at the shared plot split"
 
 S093 | hostBandGeometry | src/checks/rollqml/tst_SwiftRollPlots.qml
 Anchor: message "all mounted host bands expose their physical input surfaces"
+
+S094 | hostTempoRangeAndBandRows | src/checks/automation/automationselection.swift
+Source line: 237
+cppID: host/HostAdapterTest::automationTempoRangeDelegatesTheSelectionScope
+Predicate: report.expect(page.plotWidth > 0 && page.plotHeight > 0, cppID: tempoID, message: "A147 the activated tempo lane body has nonempty bounds")
+Anchor: message "A147 the activated tempo lane body has nonempty bounds"
+
+S095 | hostTempoRangeAndBandRows | src/checks/automation/automationselection.swift
+Source line: 246
+cppID: host/HostAdapterTest::automationTempoRangeDelegatesTheSelectionScope
+Predicate: report.expect(fixture.session.timeSelection?.isActive == true, cppID: tempoID, message: "A148 the right-button tempo drag publishes an active time selection")
+Anchor: message "A148 the right-button tempo drag publishes an active time selection"
+
+S096 | hostTempoRangeAndBandRows | src/checks/automation/automationselection.swift
+Source line: 248
+cppID: host/HostAdapterTest::automationTempoRangeDelegatesTheSelectionScope
+Predicate: report.expect(fixture.session.timeSelection?.scope == .lanes, cppID: tempoID, message: "A149 the right-button tempo drag selects lane scope")
+Anchor: message "A149 the right-button tempo drag selects lane scope"
+
+S097 | hostTempoRangeAndBandRows | src/checks/automation/automationselection.swift
+Source line: 250
+cppID: host/HostAdapterTest::automationTempoRangeDelegatesTheSelectionScope
+Predicate: report.expect(fixture.session.timeSelection?.tempo == true, cppID: tempoID, message: "A150 the right-button tempo drag includes tempo")
+Anchor: message "A150 the right-button tempo drag includes tempo"
+
+S098 | hostTempoRangeAndBandRows | src/checks/automation/automationselection.swift
+Source line: 252
+cppID: host/HostAdapterTest::automationTempoRangeDelegatesTheSelectionScope
+Predicate: report.expect(fixture.session.timeSelection?.lanes == [], cppID: tempoID, message: "A151 the right-button tempo drag includes no controller lanes")
+Anchor: message "A151 the right-button tempo drag includes no controller lanes"
+
+S099 | hostDrawerSoloAndRemap | src/checks/trackheaders/TrackHeadersChecks.swift
+Source line: 239
+cppID: host/HostAdapterTest::drawerSoloAndTrackRemapReachTheHost
+Predicate: report.expect(selected.soloedTracks.contains(0) && mixPublication, cppID: id, message: "A172 the S-bound Solo action solos the primary track and publishes mix state")
+Anchor: message "A172 the S-bound Solo action solos the primary track and publishes mix state"
+
+S100 | hostDrawerSoloAndRemap | src/checks/trackheaders/TrackHeadersChecks.swift
+Source line: 252
+cppID: host/HostAdapterTest::drawerSoloAndTrackRemapReachTheHost
+Predicate: report.expect(fixture.document.moveTrack(0, to: 1), cppID: id, message: "A173 moving the primary track into the second slot succeeds")
+Anchor: message "A173 moving the primary track into the second slot succeeds"
+
+S101 | hostDrawerSoloAndRemap | src/checks/trackheaders/TrackHeadersChecks.swift
+Source line: 254
+cppID: host/HostAdapterTest::drawerSoloAndTrackRemapReachTheHost
+Predicate: report.expect(fixture.session.editorViewState.lanes.emptyLanes.contains(movedLane), cppID: id, message: "A174 the moved track retains its controller-74 empty-lane flag at slot one")
+Anchor: message "A174 the moved track retains its controller-74 empty-lane flag at slot one"
+
+S102 | hostDrawerSoloAndRemap | src/checks/trackheaders/TrackHeadersChecks.swift
+Source line: 257
+cppID: host/HostAdapterTest::drawerSoloAndTrackRemapReachTheHost
+Predicate: report.expect(!fixture.session.editorViewState.lanes.emptyLanes.contains(oldLane), cppID: id, message: "A175 the former slot no longer carries the controller-74 empty-lane flag")
+Anchor: message "A175 the former slot no longer carries the controller-74 empty-lane flag"
+
+S103 | hostTempoRangeAndBandRows | src/checks/automation/automationselection.swift
+Source line: 214
+cppID: host/HostAdapterTest::voiceChangesRefreshWithoutInvalidatingAutomationRaster
+Predicate: report.expect(bothAutomation.available && bothAutomation.visible && bothAutomation.bodyWidth > 0 && bothAutomation.bodyHeight > 0, cppID: voiceID, message: "A177 the automation band remains present beside voice changes")
+Anchor: message "A177 the automation band remains present beside voice changes"
+
+S104 | hostTempoRangeAndBandRows | src/checks/automation/automationselection.swift
+Source line: 218
+cppID: host/HostAdapterTest::voiceChangesRefreshWithoutInvalidatingAutomationRaster
+Predicate: report.expect(voiceBand.available && voiceBand.visible && voiceBand.bodyWidth > 0 && voiceBand.bodyHeight > 0, cppID: voiceID, message: "A178 the voice-change band remains present beside automation")
+Anchor: message "A178 the voice-change band remains present beside automation"
+
+S105 | hostTempoRangeAndBandRows | src/checks/automation/automationselection.swift
+Source line: 286
+cppID: host/HostAdapterTest::voiceChangesRefreshWithoutInvalidatingAutomationRaster
+Predicate: report.expect(page.rows == expectedRows && page.rows == before, cppID: voiceID, message: "A182 the tick-24 voice presentation preserves every seeded automation canvas row")
+Anchor: message "A182 the tick-24 voice presentation preserves every seeded automation canvas row"
+
+S106 | hostDrawerSoloAndRemap | src/checks/trackheaders/TrackHeadersChecks.swift
+Source line: 202
+cppID: host/HostAdapterTest::drawerSoloAndTrackRemapReachTheHost
+Predicate: report.expect(registry.matches(0x53, 0, "roll.solo_tracks"), cppID: id, message: "the production window Solo command binds the unmodified S key")
+Anchor: message "the production window Solo command binds the unmodified S key"
+
+S107 | hostNoteDiscovery | src/checks/host/HostBehaviorChecks.swift
+Source line: 64
+cppID: swiftcore/HostBehaviorChecks::noteDiscovery
+Predicate: report.expect(session.document.source.label == "mus_route101", cppID: id, message: "A013: the opened route101 document retains the mus_route101 label")
+Anchor: message "A013: the opened route101 document retains the mus_route101 label"
+
+S108 | hostVelocityMarker | src/checks/host/HostBehaviorChecks.swift
+Source line: 98
+cppID: swiftcore/HostBehaviorChecks::velocityMarker
+Predicate: report.expect(route.selectedTrack == 0, cppID: id, message: "A015: the first note-bearing route101 engine track is track zero")
+Anchor: message "A015: the first note-bearing route101 engine track is track zero"
+
+S109 | hostVelocityMarker | src/checks/host/HostBehaviorChecks.swift
+Source line: 100
+cppID: swiftcore/HostBehaviorChecks::velocityMarker
+Predicate: report.expect(route.selectedNotes == [NoteID(1)], cppID: id, message: "A016: the front note on route101 track zero has note id one")
+Anchor: message "A016: the front note on route101 track zero has note id one"
+
+S110 | hostVelocityAxisVoice | src/checks/host/HostBehaviorChecks.swift
+Source line: 451
+cppID: swiftcore/HostBehaviorChecks::playheadFollowing
+Predicate: report.expect(page.axisModel.map.voiceName == "Square 1", cppID: id, message: "A164: the stopped axis names Square 1 at the steady cursor")
+Anchor: message "A164: the stopped axis names Square 1 at the steady cursor"
+
+S111 | hostVelocityAxisVoice | src/checks/host/HostBehaviorChecks.swift
+Source line: 455
+cppID: swiftcore/HostBehaviorChecks::playheadFollowing
+Predicate: report.expect(page.axisModel.map.voiceName == "Noise", cppID: id, message: "A165: the followed sample at tick twenty-four names Noise")
+Anchor: message "A165: the followed sample at tick twenty-four names Noise"
+
+S112 | hostVelocityAxisVoice | src/checks/host/HostBehaviorChecks.swift
+Source line: 462
+cppID: swiftcore/HostBehaviorChecks::playheadFollowing
+Predicate: report.expect(page.axisModel.map.voiceName == "Square 1", cppID: id, message: "A168: the non-following sample at tick twenty-six restores Square 1")
+Anchor: message "A168: the non-following sample at tick twenty-six restores Square 1"
