@@ -38,7 +38,7 @@ func drawerVelocityFrozenGesturePolicy(_ report: CheckReport, session: DocumentS
 
     var axisGeometry = page.axisModel.geometry
     let axis = VelocityAxisModel(map: VelocityMap(voiceKind: .unresolved), geometry: axisGeometry)
-    var gesture = VelocityGestureState(
+    guard var gesture = VelocityGestureState(
         kind: .relative, revision: fixture.document.revision, track: 0,
         notes: [
             VelocityFrozenNote(noteID: NoteID(1), tick: 0, duration: 24, pitch: 60, velocity: 10,
@@ -47,7 +47,10 @@ func drawerVelocityFrozenGesturePolicy(_ report: CheckReport, session: DocumentS
                                map: VelocityMap(voiceKind: .unresolved), exactOrigin: 120),
         ],
         axis: axis, detentUnlock: false, activationDistance: 1, pressX: 0,
-        pressY: axis.velocityToY(10))
+        pressY: axis.velocityToY(10)) else {
+        report.fail(drawerVelocityGestureID, "valid relative fixture did not freeze")
+        return
+    }
     VelocityGesturePolicy.applyRelative(&gesture, y: axis.velocityToY(10) - 0.5)
     report.expect(!gesture.relativeActivated && gesture.preview.isEmpty, cppID: drawerVelocityGestureID,
                   message: "a drag inside the activation distance previews nothing")
@@ -64,7 +67,7 @@ func drawerVelocityFrozenGesturePolicy(_ report: CheckReport, session: DocumentS
     let psgMap = VelocityMap(voiceKind: .square1)
     axisGeometry.height = 120
     let psgAxis = VelocityAxisModel(map: psgMap, geometry: axisGeometry, activeValues: [60, 76])
-    var psgGesture = VelocityGestureState(
+    guard var psgGesture = VelocityGestureState(
         kind: .relative, revision: 1, track: 0,
         notes: [
             VelocityFrozenNote(noteID: NoteID(3), tick: 0, duration: 24, pitch: 60, velocity: 60,
@@ -73,7 +76,10 @@ func drawerVelocityFrozenGesturePolicy(_ report: CheckReport, session: DocumentS
                                map: psgMap, exactOrigin: 76),
         ],
         axis: psgAxis, detentUnlock: false, activationDistance: 1, pressX: 0,
-        pressY: psgAxis.levelToY(7))
+        pressY: psgAxis.levelToY(7)) else {
+        report.fail(drawerVelocityGestureID, "valid PSG fixture did not freeze")
+        return
+    }
     VelocityGesturePolicy.applyRelative(&psgGesture, y: psgAxis.levelToY(9))
     report.expectEqual(expected: Int(psgMap.representative(9)), actual: Int(psgGesture.preview[NoteID(3)] ?? 0),
                        cppID: drawerVelocityGestureID, what: "the first level follows the level delta")
@@ -119,9 +125,13 @@ func drawerVelocityFrozenGesturePolicy(_ report: CheckReport, session: DocumentS
     let midpoint = VelocityFrozenNote(noteID: NoteID(7), tick: 24, duration: 24, pitch: 60,
                                       velocity: 40,
                                       map: VelocityMap(voiceKind: .unresolved), exactOrigin: 40)
-    var ramp = VelocityGestureState(
+    guard var ramp = VelocityGestureState(
         kind: .ramp, revision: 1, track: 0, notes: frozen + [midpoint], axis: axis,
-        detentUnlock: false, activationDistance: 1, pressX: 10, pressY: axis.velocityToY(100))
+        detentUnlock: false, activationDistance: 1, pressX: 10,
+        pressY: axis.velocityToY(100)) else {
+        report.fail(drawerVelocityGestureID, "valid ramp fixture did not freeze")
+        return
+    }
     VelocityGesturePolicy.applyRamp(&ramp, x: 50, y: axis.velocityToY(50), hitRadius: 5) { note in
         note.tick == 0 ? 10 : note.tick == 24 ? 30 : 90
     }
@@ -135,15 +145,26 @@ func drawerVelocityFrozenGesturePolicy(_ report: CheckReport, session: DocumentS
     // preview resolves every note back to the value frozen at gesture start
     // makes no history entry, and a preview that moves one note commits exactly
     // that note.
-    var flatState = VelocityGestureState(
+    guard var flatState = VelocityGestureState(
         kind: .ramp, revision: 1, track: 0, notes: frozen, axis: axis, detentUnlock: false,
-        activationDistance: 1, pressX: 10, pressY: axis.velocityToY(40))
-    flatState.preview = Dictionary(uniqueKeysWithValues: frozen.map { ($0.noteID, $0.velocity) })
+        activationDistance: 1, pressX: 10, pressY: axis.velocityToY(40)) else {
+        report.fail(drawerVelocityGestureID, "valid flat ramp fixture did not freeze")
+        return
+    }
+    guard flatState.updatePreview(frozen.map { NoteVelocity(noteID: $0.noteID, velocity: Int($0.velocity)) })
+    else {
+        report.fail(drawerVelocityGestureID, "valid flat ramp preview did not apply")
+        return
+    }
     report.expect(VelocityGesturePolicy.updates(flatState).isEmpty, cppID: drawerVelocityGestureID,
                   message: "a preview that matches the captured values commits nothing")
     var movedState = flatState
     let movedNote = frozen[0]
-    movedState.preview[movedNote.noteID] = movedNote.velocity + 7
+    guard movedState.updatePreview([NoteVelocity(noteID: movedNote.noteID,
+                                                 velocity: Int(movedNote.velocity) + 7)]) else {
+        report.fail(drawerVelocityGestureID, "valid moved ramp preview did not apply")
+        return
+    }
     let moved = VelocityGesturePolicy.updates(movedState)
     report.expect(moved.count == 1 && moved[0].noteID == movedNote.noteID
                   && moved[0].velocity == Int(movedNote.velocity) + 7,

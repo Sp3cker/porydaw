@@ -38,8 +38,8 @@ extension VelocityPage {
     func dispatchPointerPress(x: Double, y: Double, surface: Int, button: Int,
                               modifiers: Int) -> Bool {
         guard let session, let input = VelocityInputSurface(rawValue: surface) else { return false }
+        guard gesture == nil else { return false }
         if prompt != nil { cancelPrompt() }
-        if gesture != nil { cancelGesture() }
         selectionBeforePress = session.selectedNoteOrder
         pressedNote = nil
         switch input {
@@ -54,9 +54,10 @@ extension VelocityPage {
             guard velocity >= 1 else { return true }
             beginGesture(kind: .relative, x: x, y: y, detentUnlock: unlock,
                          notes: VelocityScene.selectedTrackNotes(session), modifiers: modifiers)
-            guard gesture != nil else { return true }
-            for note in gesture!.notes { gesture?.preview[note.noteID] = UInt8(velocity) }
-            finishGesture(commit: !gesture!.preview.isEmpty)
+            guard var live = gesture else { return true }
+            _ = live.updatePreview(live.notes.map { NoteVelocity(noteID: $0.noteID, velocity: velocity) })
+            gesture = live
+            finishGesture(commit: !live.preview.isEmpty)
         case .plot:
             if button == VelocityQtButton.middle {
                 // The shared camera's pan, requested from the band that renders
@@ -160,6 +161,11 @@ extension VelocityPage {
     @discardableResult
     func dispatchPointerRelease(x: Double, y: Double, button: Int) -> Bool {
         guard session != nil, let live = gesture else { return false }
+        guard (button == VelocityQtButton.middle && live.kind == .pan)
+                || (button == VelocityQtButton.right && (live.kind == .band || live.kind == .pendingBand))
+                || (button == VelocityQtButton.left && live.kind != .pan
+                    && live.kind != .band && live.kind != .pendingBand)
+        else { return false }
         if button == VelocityQtButton.middle {
             finishGesture(commit: false)
             return true
@@ -356,12 +362,14 @@ extension VelocityPage {
 
     private func beginGesture(kind: VelocityGestureKind, x: Double, y: Double,
                               detentUnlock: Bool, notes: [Note], modifiers: Int) {
-        paintCandidates = kind == .paint ? VelocityScene.selectedTrackNotes(session) : []
-        gesture = VelocityGestureState(
+        let candidates = kind == .paint ? VelocityScene.selectedTrackNotes(session) : []
+        guard let frozen = VelocityGestureState(
             kind: kind, revision: session?.document.revision ?? 0,
             track: session?.selectedTrack ?? -1, notes: freeze(notes), axis: axis,
             detentUnlock: detentUnlock, activationDistance: geometry.dragActivationDistance,
-            pressX: x, pressY: y, controlPress: isControl(modifiers))
+            pressX: x, pressY: y, controlPress: isControl(modifiers)) else { return }
+        paintCandidates = candidates
+        gesture = frozen
         refreshInteractionPublished()
         publishHandles(projectHandles())
     }
@@ -460,7 +468,7 @@ extension VelocityPage {
             },
             from: (fromX, fromY), to: (toX, toY), hitRadius: radius)
         guard !updates.isEmpty else { return }
-        for update in updates { gesture?.preview[update.noteID] = UInt8(update.velocity) }
+        _ = gesture?.updatePreview(updates)
         publishHandles(projectHandles())
     }
 

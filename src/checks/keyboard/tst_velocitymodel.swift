@@ -1,3 +1,4 @@
+import PorydawApp
 import PorydawCore
 
 private let velocityResolutionID = "velocity-model/VelocityModelTest::resolvesVoiceKinds"
@@ -57,5 +58,27 @@ internal func runVelocityMapOracleChecks(_ report: CheckReport) {
     }
     runVelocityAxisParityChecks(report)
     runVelocityGestureParityChecks(report)
+    var childMacros = Array(repeating: Int32(-1), count: 128)
+    childMacros[60] = BankVoiceMacro.keysplit
+    childMacros[67] = BankVoiceMacro.programmableWave
+    let nested = BankSlotView(kind: BankSlotKind.editable,
+                              voice: BankVoice(macro: BankVoiceMacro.keysplitAll),
+                              subvoiceMacros: childMacros)
+    let slots = [BankSlotView(kind: BankSlotKind.editable,
+                              voice: BankVoice(macro: BankVoiceMacro.keysplitAll)), nested]
+    let invalid = VelocityContextPolicy.resolve(slot: 0, endTick: nil, slots: slots, key: 60)
+    report.expect(!invalid.map.isPSG && invalid.status == .invalidSubvoice,
+                  cppID: velocityResolutionID, message: "A067 invalid split child is not PSG")
+    let nestedChild = VelocityContextPolicy.resolve(slot: 1, endTick: nil, slots: slots, key: 60)
+    report.expect(!nestedChild.map.isPSG && nestedChild.status == .invalidSubvoice,
+                  cppID: velocityResolutionID, message: "A068 nested split child is not PSG")
+    let keyless = VelocityContextPolicy.resolve(slot: 1, endTick: nil, slots: slots)
+    report.expect(!keyless.map.isPSG && keyless.status == .keysplitSubvoice,
+                  cppID: velocityResolutionID, message: "A069 keyless split is not PSG")
+    let wave = VelocityContextPolicy.resolve(slot: 1, endTick: nil, slots: slots, key: 67)
+    report.expect(wave.map.isPSG && wave.status == .resolved,
+                  cppID: velocityResolutionID, message: "A070 split wave child resolves PSG")
+    report.expectEqual(expected: "Programmable Wave", actual: wave.map.voiceName,
+                       cppID: velocityResolutionID, what: "A071 split child names Programmable Wave")
 
 }

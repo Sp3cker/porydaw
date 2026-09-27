@@ -197,7 +197,19 @@ func drawerVelocityLateUnlockKeepsSnapped(_ report: CheckReport, session: Docume
     report.expectEqual(expected: 92, actual: Int(document.note(secondNoise.id)?.velocity ?? 0), cppID: drawerVelocityLateUnlockID, what: "the release commits the snapped second noise level")
     let waveMap = VelocityMap(voiceKind: .wave)
     let waveAxis = VelocityAxisModel(map: waveMap, geometry: page.axisModel.geometry)
-    var waveGesture = VelocityGestureState(kind: .relative, revision: 1, track: 0, notes: [VelocityFrozenNote(noteID: NoteID(105), tick: 0, duration: 24, pitch: 60, velocity: 33, map: waveMap, exactOrigin: 33), VelocityFrozenNote(noteID: NoteID(106), tick: 24, duration: 24, pitch: 67, velocity: 87, map: waveMap, exactOrigin: 87)], axis: waveAxis, detentUnlock: false, activationDistance: 1, pressX: 10, pressY: waveAxis.levelToY(1))
+    guard var waveGesture = VelocityGestureState(
+        kind: .relative, revision: 1, track: 0,
+        notes: [
+            VelocityFrozenNote(noteID: NoteID(105), tick: 0, duration: 24, pitch: 60, velocity: 33,
+                               map: waveMap, exactOrigin: 33),
+            VelocityFrozenNote(noteID: NoteID(106), tick: 24, duration: 24, pitch: 67, velocity: 87,
+                               map: waveMap, exactOrigin: 87),
+        ],
+        axis: waveAxis, detentUnlock: false, activationDistance: 1, pressX: 10,
+        pressY: waveAxis.levelToY(1)) else {
+        report.fail(drawerVelocityLateUnlockID, "valid locked wave fixture did not freeze")
+        return
+    }
     VelocityGesturePolicy.applyRelative(&waveGesture, y: waveAxis.levelToY(2))
     report.expectEqual(expected: 64, actual: Int(waveGesture.preview[NoteID(105)] ?? 0), cppID: drawerVelocityLateUnlockID, what: "the press-locked wave quiet note previews its snapped level")
     report.expectEqual(expected: 127, actual: Int(waveGesture.preview[NoteID(106)] ?? 0), cppID: drawerVelocityLateUnlockID, what: "the press-locked wave later note keeps its own snapped offset")
@@ -273,7 +285,19 @@ func drawerVelocityUnlockedRelativeKeepsOffsets(_ report: CheckReport, session: 
     let waveMap = VelocityMap(voiceKind: .wave)
     let waveAxis = VelocityAxisModel(map: waveMap, geometry: page.axisModel.geometry)
     let pressWaveY = waveAxis.velocityToY(40)
-    var waveGesture = VelocityGestureState(kind: .relative, revision: 1, track: 0, notes: [VelocityFrozenNote(noteID: NoteID(107), tick: 0, duration: 24, pitch: 60, velocity: 33, map: waveMap, exactOrigin: 33), VelocityFrozenNote(noteID: NoteID(108), tick: 24, duration: 24, pitch: 67, velocity: 87, map: waveMap, exactOrigin: 87)], axis: waveAxis, detentUnlock: true, activationDistance: 1, pressX: 10, pressY: pressWaveY)
+    guard var waveGesture = VelocityGestureState(
+        kind: .relative, revision: 1, track: 0,
+        notes: [
+            VelocityFrozenNote(noteID: NoteID(107), tick: 0, duration: 24, pitch: 60, velocity: 33,
+                               map: waveMap, exactOrigin: 33),
+            VelocityFrozenNote(noteID: NoteID(108), tick: 24, duration: 24, pitch: 67, velocity: 87,
+                               map: waveMap, exactOrigin: 87),
+        ],
+        axis: waveAxis, detentUnlock: true, activationDistance: 1, pressX: 10,
+        pressY: pressWaveY) else {
+        report.fail(drawerVelocityUnlockedRelativeID, "valid unlocked wave fixture did not freeze")
+        return
+    }
     VelocityGesturePolicy.applyRelative(&waveGesture, y: waveAxis.velocityToY(47))
     report.expectEqual(expected: 40, actual: Int(waveGesture.preview[NoteID(107)] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked wave quiet note previews its raw offset")
     report.expectEqual(expected: 94, actual: Int(waveGesture.preview[NoteID(108)] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked wave later note keeps its own raw offset")
@@ -359,7 +383,21 @@ func drawerVelocityUnlockedRampInterpolates(_ report: CheckReport, session: Docu
     report.expectEqual(expected: 93, actual: Int(document.note(noiseLast.id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the release commits the last noise raw velocity")
     let waveMap = VelocityMap(voiceKind: .wave)
     let waveAxis = VelocityAxisModel(map: waveMap, geometry: page.axisModel.geometry)
-    var waveGesture = VelocityGestureState(kind: .ramp, revision: 1, track: 0, notes: [VelocityFrozenNote(noteID: NoteID(109), tick: 0, duration: 24, pitch: 60, velocity: 42, map: waveMap, exactOrigin: 42), VelocityFrozenNote(noteID: NoteID(110), tick: 24, duration: 24, pitch: 60, velocity: 56, map: waveMap, exactOrigin: 56), VelocityFrozenNote(noteID: NoteID(111), tick: 48, duration: 24, pitch: 60, velocity: 80, map: waveMap, exactOrigin: 80)], axis: waveAxis, detentUnlock: true, activationDistance: 1, pressX: 10, pressY: waveAxis.velocityToY(37))
+    guard var waveGesture = VelocityGestureState(
+        kind: .ramp, revision: 1, track: 0,
+        notes: [
+            VelocityFrozenNote(noteID: NoteID(109), tick: 0, duration: 24, pitch: 60, velocity: 42,
+                               map: waveMap, exactOrigin: 42),
+            VelocityFrozenNote(noteID: NoteID(110), tick: 24, duration: 24, pitch: 60, velocity: 56,
+                               map: waveMap, exactOrigin: 56),
+            VelocityFrozenNote(noteID: NoteID(111), tick: 48, duration: 24, pitch: 60, velocity: 80,
+                               map: waveMap, exactOrigin: 80),
+        ],
+        axis: waveAxis, detentUnlock: true, activationDistance: 1, pressX: 10,
+        pressY: waveAxis.velocityToY(37)) else {
+        report.fail(drawerVelocityUnlockedRampID, "valid unlocked wave ramp fixture did not freeze")
+        return
+    }
     VelocityGesturePolicy.applyRamp(&waveGesture, x: 90, y: waveAxis.velocityToY(93), hitRadius: 5) { note in
         note.tick == 0 ? 10 : note.tick == 24 ? 50 : 90
     }

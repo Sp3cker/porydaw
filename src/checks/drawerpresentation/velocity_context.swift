@@ -161,6 +161,125 @@ func drawerVelocityProjectionRefresh(_ report: CheckReport, session: DocumentSes
         message: "the live preview marker aligns with the independently requested raw velocity")
         page.cancelSectionInteraction()
     }
+    guard fixture.document.setVelocities(
+        [NoteVelocity(noteID: fixture.notes[0].id, velocity: 40)],
+        expectedRevision: fixture.document.revision) != nil else {
+        report.fail(drawerVelocityProjectionID, "the copied drawer fixture cannot seed its original velocity 40")
+        page.detach()
+        return
+    }
+    fixture.session.setSelectedNotes([fixture.notes[0].id])
+    page.refreshFromDocument()
+    if let first = fixture.handle(fixture.notes[0]),
+       let second = fixture.handle(fixture.notes[1]) {
+        let origin = DocumentSnapshot(fixture.document)
+        let originBytes = coreTimeBytes(fixture.document)
+        let originCount = fixture.document.history.undoCount
+        let originIndex = fixture.document.history.undoIndex
+        report.expect(!page.hasGesture && page.frozenPreview.isEmpty,
+                      cppID: drawerVelocityProjectionID,
+                      message: "A001 fresh drawer page owns no gesture or preview")
+        _ = page.pointerMove(x: first.x, y: first.y - 25, buttons: 0)
+        report.expect(!page.hasGesture && page.frozenPreview.isEmpty,
+                      cppID: drawerVelocityProjectionID,
+                      message: "A003 idle pointer motion cannot publish an editing preview")
+        page.cancelSectionInteraction()
+        report.expect(!page.hasGesture && DocumentSnapshot(fixture.document) == origin
+                          && coreTimeBytes(fixture.document) == originBytes
+                          && fixture.document.history.undoCount == originCount
+                          && fixture.document.history.undoIndex == originIndex,
+                      cppID: drawerVelocityProjectionID,
+                      message: "A005 idle cancellation leaves document bytes and history untouched")
+        _ = page.pointerPress(x: first.x, y: first.y, surface: 1, button: 1, modifiers: 0)
+        report.expect(page.hasGesture && page.frozenPreview.isEmpty
+                          && DocumentSnapshot(fixture.document) == origin
+                          && coreTimeBytes(fixture.document) == originBytes
+                          && fixture.document.history.undoCount == originCount
+                          && fixture.document.history.undoIndex == originIndex,
+                      cppID: drawerVelocityProjectionID,
+                      message: "first editing press freezes without changing document bytes or history")
+        _ = page.pointerMove(x: first.x, y: first.y - 25, buttons: 1)
+        let staged = page.frozenPreview
+        report.expect(staged[fixture.notes[0].id] != nil
+                          && DocumentSnapshot(fixture.document) == origin
+                          && coreTimeBytes(fixture.document) == originBytes
+                          && fixture.document.history.undoCount == originCount
+                          && fixture.document.history.undoIndex == originIndex,
+                      cppID: drawerVelocityProjectionID,
+                      message: "A002 held motion stages a velocity before document mutation")
+        let replaced = page.pointerPress(x: second.x, y: second.y, surface: 1,
+                                         button: 1, modifiers: 0)
+        report.expect(!replaced && page.frozenPreview == staged
+                          && DocumentSnapshot(fixture.document) == origin
+                          && fixture.document.history.undoIndex == originIndex,
+                      cppID: drawerVelocityProjectionID,
+                      message: "A017 second editing press cannot replace the held frozen preview")
+        report.expect(page.frozenNotes.first(where: { $0.noteID == fixture.notes[0].id })?.velocity == 40,
+                      cppID: drawerVelocityProjectionID,
+                      message: "A018 rejected second press preserves the first frozen original 40")
+        _ = page.pointerRelease(x: first.x, y: first.y - 25, button: 1)
+        let committed = DocumentSnapshot(fixture.document)
+        let committedBytes = coreTimeBytes(fixture.document)
+        let committedCount = fixture.document.history.undoCount
+        let committedIndex = fixture.document.history.undoIndex
+        report.expect(committed.revision == origin.revision + 1
+                          && committedBytes != originBytes && committedIndex == originIndex + 1
+                          && committedCount == committedIndex && page.frozenPreview.isEmpty,
+                      cppID: drawerVelocityProjectionID,
+                      message: "A041 release consumes the held preview in exactly one history entry")
+        _ = page.pointerRelease(x: second.x, y: second.y, button: 1)
+        _ = page.pointerMove(x: second.x, y: second.y - 15, buttons: 0)
+        report.expect(DocumentSnapshot(fixture.document) == committed
+                          && coreTimeBytes(fixture.document) == committedBytes
+                          && fixture.document.history.undoCount == committedCount
+                          && fixture.document.history.undoIndex == committedIndex,
+                      cppID: drawerVelocityProjectionID,
+                      message: "A043 inactive motion and second release preserve committed bytes and history")
+        if let recovered = fixture.handle(fixture.notes[0]) {
+            _ = page.pointerPress(x: recovered.x, y: recovered.y, surface: 1,
+                                  button: 1, modifiers: 0)
+            _ = page.pointerMove(x: recovered.x, y: recovered.y + 20, buttons: 1)
+            let cancelDraft = page.frozenPreview
+            report.expect(!cancelDraft.isEmpty && DocumentSnapshot(fixture.document) == committed
+                              && coreTimeBytes(fixture.document) == committedBytes
+                              && fixture.document.history.undoCount == committedCount
+                              && fixture.document.history.undoIndex == committedIndex,
+                          cppID: drawerVelocityProjectionID,
+                          message: "A052 cancellation first stages a genuine later editing draft")
+            page.cancelSectionInteraction()
+            _ = page.pointerRelease(x: recovered.x, y: recovered.y + 20, button: 1)
+            report.expect(!page.hasGesture && page.frozenPreview.isEmpty
+                              && DocumentSnapshot(fixture.document) == committed
+                              && coreTimeBytes(fixture.document) == committedBytes
+                              && fixture.document.history.undoCount == committedCount
+                              && fixture.document.history.undoIndex == committedIndex,
+                          cppID: drawerVelocityProjectionID,
+                          message: "A055 stale release after cancellation cannot complete the draft")
+            page.cancelSectionInteraction()
+            _ = page.pointerRelease(x: recovered.x, y: recovered.y + 20, button: 1)
+            report.expect(!page.hasGesture && page.frozenPreview.isEmpty
+                              && DocumentSnapshot(fixture.document) == committed
+                              && coreTimeBytes(fixture.document) == committedBytes
+                              && fixture.document.history.undoCount == committedCount
+                              && fixture.document.history.undoIndex == committedIndex,
+                          cppID: drawerVelocityProjectionID,
+                          message: "A056 repeated cancel and stale release preserve exact committed state")
+            if let fresh = fixture.handle(fixture.notes[0]) {
+                _ = page.pointerPress(x: fresh.x, y: fresh.y, surface: 1,
+                                      button: 1, modifiers: 0)
+                _ = page.pointerMove(x: fresh.x, y: fresh.y + 20, buttons: 1)
+                let freshDraft = page.frozenPreview[fixture.notes[0].id]
+                _ = page.pointerRelease(x: fresh.x, y: fresh.y + 20, button: 1)
+                report.expect(freshDraft != nil
+                                  && fixture.document.note(fixture.notes[0].id)?.velocity == freshDraft
+                                  && fixture.document.history.undoCount == committedCount + 1
+                                  && fixture.document.history.undoIndex == committedIndex + 1
+                                  && fixture.document.revision == committed.revision + 1,
+                              cppID: drawerVelocityProjectionID,
+                              message: "a fresh press after cancelled stale release commits only its new draft")
+            }
+        }
+    }
     page.detach()
 }
 
@@ -234,6 +353,80 @@ func drawerVelocityPlayheadDiagnostics(_ report: CheckReport, session: DocumentS
     report.expectEqual(expected: [0, 0, 0, 0], actual: boundarySlots,
                        cppID: drawerVelocityDiagnosticsID,
                        what: "each rounded playhead boundary resolves the real opening bank program")
+    let contextService = ProjectService()
+    let contextDocument = SongDocument(file: MidiFile(division: 24, chunks: [
+        MidiChunk(events: [], endTick: 96),
+        MidiChunk(events: [.channel(status: 0xC0, data0: 0)], endTick: 96),
+    ]), config: fixture.document.state.config, source: fixture.document.source)
+    let voiceKinds: [(Int32, VoiceKind)] = [
+        (BankVoiceMacro.directSound, .directSound),
+        (BankVoiceMacro.square1, .square1),
+        (BankVoiceMacro.programmableWave, .wave),
+        (BankVoiceMacro.noise, .noise),
+    ]
+    for (macro, kind) in voiceKinds {
+        var slots = fixture.session.bankSlots
+        slots[0] = BankSlotView(kind: BankSlotKind.editable, voice: BankVoice(macro: macro))
+        let voiceSession = DocumentSession(document: contextDocument, service: contextService,
+                                           lease: fixture.session.bankLease, slots: slots,
+                                           dirty: false, loadName: fixture.session.bankLoadName,
+                                           sampleRate: 48_000)
+        voiceSession.selectedTrack = 0
+        let voicePage = VelocityPage()
+        voicePage.attach(session: voiceSession, palette: GridPalette())
+        voicePage.configureBody(width: page.plotWidth, height: page.plotHeight,
+                                rulerWidth: page.rulerWidth, devicePixelRatio: page.devicePixelRatio,
+                                baseFontPx: page.baseFontPx, dragDistance: 0)
+        let positions = [-1.0, 0.49, 0.5, 0.51]
+        let expectedTicks: [Tick] = [0, 0, 1, 1]
+        var observations: [Bool] = []
+        for index in positions.indices {
+            voicePage.refreshPlayhead(tick: positions[index], playing: true)
+            observations.append(voicePage.presentedContextTick == expectedTicks[index]
+                                && voicePage.context.map == VelocityMap(voiceKind: kind))
+        }
+        switch kind {
+        case .directSound:
+            report.expect(observations[0], cppID: drawerVelocityDiagnosticsID,
+                          message: "A088 direct sound retains voice at negative playhead")
+            report.expect(observations[1], cppID: drawerVelocityDiagnosticsID,
+                          message: "A088 direct sound retains voice below half tick")
+            report.expect(observations[2], cppID: drawerVelocityDiagnosticsID,
+                          message: "A088 direct sound retains voice at half tick")
+            report.expect(observations[3], cppID: drawerVelocityDiagnosticsID,
+                          message: "A088 direct sound retains voice above half tick")
+        case .square1:
+            report.expect(observations[0], cppID: drawerVelocityDiagnosticsID,
+                          message: "A088 square retains voice at negative playhead")
+            report.expect(observations[1], cppID: drawerVelocityDiagnosticsID,
+                          message: "A088 square retains voice below half tick")
+            report.expect(observations[2], cppID: drawerVelocityDiagnosticsID,
+                          message: "A088 square retains voice at half tick")
+            report.expect(observations[3], cppID: drawerVelocityDiagnosticsID,
+                          message: "A088 square retains voice above half tick")
+        case .wave:
+            report.expect(observations[0], cppID: drawerVelocityDiagnosticsID,
+                          message: "A088 wave retains voice at negative playhead")
+            report.expect(observations[1], cppID: drawerVelocityDiagnosticsID,
+                          message: "A088 wave retains voice below half tick")
+            report.expect(observations[2], cppID: drawerVelocityDiagnosticsID,
+                          message: "A088 wave retains voice at half tick")
+            report.expect(observations[3], cppID: drawerVelocityDiagnosticsID,
+                          message: "A088 wave retains voice above half tick")
+        case .noise:
+            report.expect(observations[0], cppID: drawerVelocityDiagnosticsID,
+                          message: "A088 noise retains voice at negative playhead")
+            report.expect(observations[1], cppID: drawerVelocityDiagnosticsID,
+                          message: "A088 noise retains voice below half tick")
+            report.expect(observations[2], cppID: drawerVelocityDiagnosticsID,
+                          message: "A088 noise retains voice at half tick")
+            report.expect(observations[3], cppID: drawerVelocityDiagnosticsID,
+                          message: "A088 noise retains voice above half tick")
+        default:
+            break
+        }
+        voicePage.detach()
+    }
     report.expectEqual(expected: handleCount, actual: fixture.handles.count, cppID: drawerVelocityDiagnosticsID,
                        what: "playhead movement preserves the displayed note count")
 

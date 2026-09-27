@@ -4,6 +4,7 @@ import PorydawApp
 import EditorQmlCheck 1.0
 import Porydaw.Ui
 import "EditorDrawerPageSupport.js" as PageSupport
+import "EditorDrawerPixelSupport.js" as PixelSupport
 import "EditorDrawerVelocitySupport.js" as VelocitySupport
 import "EditorDrawerAutomationMenuSupport.js" as AutomationMenuSupport
 import "EditorDrawerVoiceSupport.js" as VoiceSupport
@@ -98,6 +99,27 @@ EditorDrawerTestSupport {
                && outsider.border.width > 0
                && String(outsider.color).toLowerCase() === outsiderRow.fillColor.toLowerCase(),
                "the unselected node paints its base fill and outline")
+        waitForRendering(testCase.surface)
+        var outlineImage = grabImage(testCase.surface)
+        var plotRegion = PixelSupport.regionOf(testCase, outlineImage, testCase.surface, plot)
+        var outsiderNote = VelocitySupport.primaryGridNotes(testCase).find(function(note) {
+            return String(note.id) === outsiderRow.noteIdText
+        })
+        verify(outsiderNote !== undefined, "the outsider probe has a staged source note")
+        var scale = outlineImage.width / testCase.surface.width
+        var inset = Math.round(gridModel.baseFontPx * 3 / 4)
+        var bottom = plot.height - inset
+        var outsiderY = bottom - (outsiderNote.velocity - 1) * (bottom - inset) / 126
+        var radius = Math.round(gridModel.baseFontPx * 7 / 26)
+        var probeX = Math.round(plotRegion.x0
+                                + (outsiderNote.tick * gridModel.beatWidth / gridModel.ticksPerBeat
+                                   - gridModel.cameraScrollX + radius * 3 / 4) * scale)
+        var probeY = Math.round(plotRegion.y0 + outsiderY * scale)
+        var blackDistance = Math.max(outlineImage.red(probeX, probeY),
+                                     outlineImage.green(probeX, probeY),
+                                     outlineImage.blue(probeX, probeY))
+        verify(blackDistance <= 16,
+               "A064 outsider outline paints literal black at the independently projected border")
         var selectedId = firstRow.noteIdText
         var outsiderId = outsiderRow.noteIdText
         VelocitySupport.clickNode(testCase, first)
@@ -134,12 +156,12 @@ EditorDrawerTestSupport {
                 && String(outsider.color).toLowerCase()
                    === String(page.gridPalette.outline).toLowerCase()
         }, 3000, "the unselected node paints the dimmed ink")
-        var latestTick = VelocitySupport.primaryGridNotes(testCase).reduce(function(latest, note) {
-            return Math.max(latest, note.tick + note.duration)
-        }, 0)
-        gridModel.setCameraHScroll(latestTick * gridModel.beatWidth / gridModel.ticksPerBeat
-                                   - plot.width / 2)
-        var lastX = latestTick * gridModel.beatWidth / gridModel.ticksPerBeat
+        gridModel.setCameraHScroll(gridModel.cameraMaxHScroll)
+        // Route 101's MIDI tracks end at tick 384; the next 4-beat bar is beyond that end.
+        var fixtureTimelineLengthTicks = 384
+        var barTicks = gridModel.ticksPerBeat * 4
+        var firstPastEnd = (Math.floor(fixtureTimelineLengthTicks / barTicks) + 1) * barTicks
+        var lastX = firstPastEnd * gridModel.beatWidth / gridModel.ticksPerBeat
                     - gridModel.cameraScrollX
         var grid = findChild(plot, "velocityGridLines")
         var gridRect = PageSupport.collectByName(testCase, grid, "velocityGrid", [])
@@ -147,8 +169,8 @@ EditorDrawerTestSupport {
                    return item.x > lastX && item.x < plot.width && item.visible
                        && item.height === plot.height
                        && String(item.color).toLowerCase()
-                          === String(item.model.fillColor).toLowerCase()
-               }), "the grid paints the past-end point")
+                          === String(page.gridPalette.gridLineBar).toLowerCase()
+               }), "A041 the grid paints bar ink beyond the authoritative timeline end")
         verify(session.handleGridEscape(), "the mounted ink journey clears its note selection")
         tryCompare(model, "selectedCount", 0)
         gridModel.setCameraHScroll(0)
@@ -172,6 +194,17 @@ EditorDrawerTestSupport {
         var margin = testCase.surface.gridModel.baseFontPx
         var startX = plot.width - margin
         var startY = plot.height - margin
+        waitForRendering(testCase.surface)
+        var before = grabImage(testCase.surface)
+        var captureRegion = PixelSupport.regionOf(testCase, before, testCase.surface, input)
+        var probeX = Math.round(captureRegion.x0
+                                + (startX - plot.width / 6) * before.width / testCase.surface.width)
+        var probeY = Math.round(captureRegion.y0
+                                + (startY - plot.height / 6) * before.height / testCase.surface.height)
+        function channels(image) {
+            return [image.red(probeX, probeY), image.green(probeX, probeY), image.blue(probeX, probeY)]
+        }
+        var original = channels(before)
         mousePress(input, startX, startY, Qt.RightButton)
         mouseMove(input, startX - plot.width / 3, startY - plot.height / 3,
                   -1, Qt.RightButton)
@@ -191,11 +224,42 @@ EditorDrawerTestSupport {
                        && String(item.color).toLowerCase()
                           === String(page.gridPalette.selectionEdge).toLowerCase()
                }), "the transient band paints its edge over the dragged selector")
+        waitForRendering(testCase.surface)
+        var staged = channels(grabImage(testCase.surface))
+        verify(staged.some(function(value, index) { return Math.abs(value - original[index]) > 1 }),
+               "the staged band changes the actual fill pixel before release")
         mouseRelease(input, startX - plot.width / 3, startY - plot.height / 3,
                      Qt.RightButton)
-        verify(PageSupport.collectByName(testCase, transient, "velocityBandFill", []).length === 0
+        verify(VelocitySupport.velocityModel(testCase).transientRects.rowCount() === 0
+               && !VelocitySupport.velocityModel(testCase).rampVisible
+               && PageSupport.collectByName(testCase, transient, "velocityBandFill", []).length === 0
                && PageSupport.collectByName(testCase, transient, "velocityBandEdge", []).length === 0,
-               "the transient band empties after the band release")
+               "A091 all velocity transient geometry empties after release")
+        waitForRendering(testCase.surface)
+        var restored = channels(grabImage(testCase.surface))
+        verify(restored.every(function(value, index) { return Math.abs(value - original[index]) <= 1 }),
+               "release restores the pre-gesture fill pixel")
+        mousePress(input, startX, startY, Qt.RightButton)
+        mouseMove(input, startX - plot.width / 3, startY - plot.height / 3,
+                  -1, Qt.RightButton)
+        verify(VelocitySupport.velocityModel(testCase).transientRects.rowCount() > 0,
+               "the second held band publishes geometry before cancellation")
+        waitForRendering(testCase.surface)
+        var cancelling = channels(grabImage(testCase.surface))
+        verify(cancelling.some(function(value, index) { return Math.abs(value - original[index]) > 1 }),
+               "the second held band paints the fill pixel before cancellation")
+        verify(session.handleGridEscape(), "Escape cancels the staged band")
+        mouseRelease(input, startX - plot.width / 3, startY - plot.height / 3,
+                     Qt.RightButton)
+        verify(VelocitySupport.velocityModel(testCase).transientRects.rowCount() === 0
+               && !VelocitySupport.velocityModel(testCase).rampVisible
+               && PageSupport.collectByName(testCase, transient, "velocityBandFill", []).length === 0
+               && PageSupport.collectByName(testCase, transient, "velocityBandEdge", []).length === 0,
+               "cancellation and stale release clear all transient geometry")
+        waitForRendering(testCase.surface)
+        var cancelled = channels(grabImage(testCase.surface))
+        verify(cancelled.every(function(value, index) { return Math.abs(value - original[index]) <= 1 }),
+               "cancellation restores the pre-gesture fill pixel")
     }
 
     function test_productionVelocityDetentRepaint() {

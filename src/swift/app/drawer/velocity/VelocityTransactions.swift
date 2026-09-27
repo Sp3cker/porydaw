@@ -61,8 +61,36 @@ public struct VelocityGestureState: Sendable {
     }
 
     public mutating func append(_ note: VelocityFrozenNote) {
+        guard note.noteID.isAssigned, (1...127).contains(Int(note.velocity)),
+              noteIndices[note.noteID] == nil else { return }
         noteIndices[note.noteID] = notes.count
         notes.append(note)
+    }
+
+    /// The original is visible immediately; only changed targets enter the draft.
+    public func previewVelocity(_ id: NoteID) -> UInt8? {
+        guard let index = noteIndices[id] else { return nil }
+        return preview[id] ?? notes[index].velocity
+    }
+
+    @discardableResult
+    public mutating func updatePreview(_ updates: [NoteVelocity]) -> Bool {
+        guard !updates.isEmpty else { return false }
+        if updates.count == 1 {
+            let update = updates[0]
+            guard noteIndices[update.noteID] != nil else { return false }
+            preview[update.noteID] = UInt8(min(max(update.velocity, 1), 127))
+            return true
+        }
+        var seen: Set<NoteID> = []
+        for update in updates {
+            guard noteIndices[update.noteID] != nil,
+                  seen.insert(update.noteID).inserted else { return false }
+        }
+        for update in updates {
+            preview[update.noteID] = UInt8(min(max(update.velocity, 1), 127))
+        }
+        return true
     }
     public var axis: VelocityAxisModel
     public var detentUnlock: Bool
@@ -74,19 +102,26 @@ public struct VelocityGestureState: Sendable {
     public var previousY: Double
     public var bandX: Double
     public var bandY: Double
-    public var preview: [NoteID: UInt8] = [:]
+    public private(set) var preview: [NoteID: UInt8] = [:]
     public var bandPreview: [NoteID] = []
     public var controlPress: Bool = false
 
-    public init(kind: VelocityGestureKind, revision: UInt64, track: Int,
-                notes: [VelocityFrozenNote], axis: VelocityAxisModel, detentUnlock: Bool,
-                activationDistance: Double, pressX: Double, pressY: Double,
-                controlPress: Bool = false) {
+    public init?(kind: VelocityGestureKind, revision: UInt64, track: Int,
+                 notes: [VelocityFrozenNote], axis: VelocityAxisModel, detentUnlock: Bool,
+                 activationDistance: Double, pressX: Double, pressY: Double,
+                 controlPress: Bool = false) {
+        if (kind == .relative || kind == .ramp) && notes.isEmpty { return nil }
+        var indices: [NoteID: Int] = [:]
+        indices.reserveCapacity(notes.count)
+        for (index, note) in notes.enumerated() {
+            guard note.noteID.isAssigned, (1...127).contains(Int(note.velocity)),
+                  indices.updateValue(index, forKey: note.noteID) == nil else { return nil }
+        }
         self.kind = kind
         self.revision = revision
         self.track = track
         self.notes = notes
-        noteIndices = Dictionary(uniqueKeysWithValues: notes.enumerated().map { ($0.element.noteID, $0.offset) })
+        noteIndices = indices
         self.axis = axis
         self.detentUnlock = detentUnlock
         self.activationDistance = activationDistance
@@ -126,21 +161,25 @@ public enum VelocityGesturePolicy {
             }
             gesture.relativeActivated = true
         }
-        gesture.preview.reserveCapacity(gesture.notes.count)
+        var updates: [NoteVelocity] = []
+        updates.reserveCapacity(gesture.notes.count)
         if gesture.detentUnlock || gesture.axis.mode == .continuous {
             let delta = gesture.axis.yToVelocity(y) - gesture.axis.yToVelocity(gesture.pressY)
             for note in gesture.notes {
                 let proposal = Int(note.velocity) + delta
-                gesture.preview[note.noteID] = gesture.detentUnlock
+                let velocity = gesture.detentUnlock
                     ? clampVelocity(proposal)
                     : note.map.canonicalize(proposal)
+                updates.append(NoteVelocity(noteID: note.noteID, velocity: Int(velocity)))
             }
         } else {
             let levelDelta = gesture.axis.yToLevel(y) - gesture.axis.yToLevel(gesture.pressY)
             for note in gesture.notes {
-                gesture.preview[note.noteID] = note.map.moveLevels(from: note.exactOrigin, by: levelDelta)
+                updates.append(NoteVelocity(noteID: note.noteID,
+                                            velocity: Int(note.map.moveLevels(from: note.exactOrigin, by: levelDelta))))
             }
         }
+        gesture.updatePreview(updates)
     }
 
     /// One ramp step: a straight line from the press position to the pointer,
@@ -151,7 +190,8 @@ public enum VelocityGesturePolicy {
         guard !gesture.notes.isEmpty else { return }
         let first = min(gesture.pressX, x) - hitRadius
         let last = max(gesture.pressX, x) + hitRadius
-        gesture.preview.reserveCapacity(gesture.notes.count)
+        var updates: [NoteVelocity] = []
+        updates.reserveCapacity(gesture.notes.count)
         for note in gesture.notes {
             let noteX = xForNote(note)
             var velocity = note.velocity
@@ -161,8 +201,9 @@ public enum VelocityGesturePolicy {
                 velocity = resolvedVelocity(axis: gesture.axis, noteMap: note.map,
                                             detentUnlock: gesture.detentUnlock, y: rampedY)
             }
-            gesture.preview[note.noteID] = velocity
+            updates.append(NoteVelocity(noteID: note.noteID, velocity: Int(velocity)))
         }
+        gesture.updatePreview(updates)
     }
 
     /// One paint step: the frozen notes whose x falls in the swept column (or

@@ -70,11 +70,19 @@ EditorDrawerTestSupport {
         var targetId = VelocitySupport.selectedNoteId(testCase)
         verify(targetId >= 0, "the click left one primary note selected")
         var before = VelocitySupport.noteVelocity(testCase, targetId)
+        var originalNotes = testCase.surface.gridModel.noteSummary
         var raised = center.y - 24
         mousePress(input, center.x, center.y, Qt.LeftButton)
         mouseMove(input, center.x, raised, -1, Qt.LeftButton)
         compare(VelocitySupport.velocityModel(testCase).interactionActive, true,
                 "a live drag reports an active interaction to the container")
+        compare(testCase.surface.gridModel.noteSummary, originalNotes,
+                "A001 real pointer press and motion leave published document notes unchanged")
+        tryVerify(function() {
+            return VelocitySupport.velocityNodes(testCase).some(function(item) {
+                return item.parent.model.noteIdText === String(targetId) && item.parent.model.preview
+            })
+        }, 1000, "A002 the mounted node draws a staged preview before release")
         mouseRelease(input, center.x, raised, Qt.LeftButton)
         tryVerify(function() {
             return VelocitySupport.noteVelocity(testCase, targetId) !== before
@@ -156,12 +164,20 @@ EditorDrawerTestSupport {
         var nodes = VelocitySupport.velocityNodes(testCase)
         verify(nodes.length > 0, "the page drew at least one node")
         var input = VelocitySupport.velocityPlotInput(testCase)
+        function songNotes() {
+            return JSON.stringify(JSON.parse(testCase.surface.gridModel.noteSummary).map(function(note) {
+                return [note.id, note.tick, note.duration, note.pitch, note.track, note.velocity]
+            }))
+        }
+        var originalNotes = songNotes()
         var node = nodes[0]
         var center = node.mapToItem(input, node.width / 2, node.height / 2)
         mousePress(input, center.x, center.y, Qt.LeftButton)
         mouseMove(input, center.x, center.y - 24, -1, Qt.LeftButton)
         var model = VelocitySupport.velocityModel(testCase)
         compare(model.interactionActive, true, "the gesture is live before the hide")
+        compare(songNotes(), originalNotes,
+                "A052 a staged cancellation has not changed the song notes")
         var selected = model.selectedCount
         compare(selected > 0, true, "the gesture owns a selection")
 
@@ -171,6 +187,8 @@ EditorDrawerTestSupport {
                   "the section hid")
         compare(model.interactionActive, false, "hiding the section cancelled the gesture")
         mouseRelease(input, center.x, center.y - 24, Qt.LeftButton)
+        compare(songNotes(), originalNotes,
+                "A056 hiding and stale release retain every original note")
         compare(model.interactionActive, false, "the released pointer committed nothing")
         LayoutSupport.clickToggle(testCase, testCase.velocityKind)
         tryVerify(function() { return testCase.section(testCase.velocityKind).visible }, 1000,
