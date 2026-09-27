@@ -29,6 +29,8 @@ func runClipboardSelectionChecks(_ report: CheckReport, suite: DocumentSession,
     clipboardTrackSelectionChecks(report, session: session)
     clipboardUnifiedTimeSelectionChecks(report, suite: suite, service: service)
     clipboardUnifiedModelChecks(report, suite: suite, service: service)
+    clipboardSelectionTransitionChecks(report, suite: suite, service: service)
+
 
 }
 
@@ -595,4 +597,183 @@ private func clipboardUnifiedTimeSelectionChecks(_ report: CheckReport, suite: D
     document.deleteTrack(1)
     report.expect(session.timeSelection == nil, cppID: remap,
                   message: "a deleted primary clears the track-scoped time selection")
+}
+
+@MainActor
+private func clipboardSelectionTransitionChecks(_ report: CheckReport, suite: DocumentSession,
+                                                service: ProjectService) {
+    let file = MidiFile(division: 24, chunks: [
+        MidiChunk(events: [
+            .channel(tick: 40, status: 0x90, data0: 60, data1: 90),
+            .channel(tick: 52, status: 0x80, data0: 60),
+        ], endTick: 96),
+    ])
+    let document = SongDocument(file: file, config: suite.document.state.config,
+                                source: suite.document.source, trackBudget: suite.document.trackBudget)
+    for _ in document.engineTracks.usedTrackCount..<6 {
+        guard document.addTrack(voice: 0) != nil else {
+            report.fail("clipboard/SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary",
+                        "selection payload fixture needs six tracks")
+            return
+        }
+    }
+    let session = DocumentSession(document: document, service: service, lease: suite.bankLease,
+                                  slots: suite.bankSlots, dirty: false, loadName: suite.bankLoadName)
+    let core = "clipboard/SelectionCheckTest::timeSelectionAndScopeCommitAtomically"
+    let notes = "clipboard/SelectionCheckTest::noteSelectionSanitizesAndExcludesTime"
+    let gestures = "clipboard/SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary"
+    let coverage = "clipboard/SelectionCheckTest::coverageQueriesAndLaneScopeSanitization"
+    guard let note = document.notes(in: 0).first?.id else {
+        report.fail(notes, "selection payload fixture needs a note")
+        return
+    }
+    session.selectPrimaryTrack(3)
+    var transitions: [SelectionTransition] = []
+    let observer = session.addSelectionTransitionObserver { transitions.append($0) }
+    defer { session.removeSelectionTransitionObserver(observer) }
+    let empty = TrackTimeSelection()
+    let first = TrackTimeSelection(startTick: 40, endTick: 80, trackScope: [1, 3])
+    let second = TrackTimeSelection(startTick: 50, endTick: 90, trackScope: [2, 3])
+    var before = transitions.count
+    session.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 40, endTick: 80), scope: .tracks([1, 20])))
+    report.expect(session.timeSelection?.scope == .tracks([1, 3])
+                  && session.selectedTracks == [1, 3], cppID: core,
+                  message: "primary three joins valid track one while out-of-range twenty is dropped")
+    report.expect(transitions.count == before + 1
+                  && transitions.last?.previousTrackTime.trackScope.isEmpty == true
+                  && selectionPayloadMatches(transitions.last, previous: empty, current: first),
+                  cppID: core, message: "first commit publishes empty previous endpoints and scope")
+    report.expect(transitions.last?.trackTime.trackScope == [1, 3]
+                  && selectionPayloadMatches(transitions.last, previous: empty, current: first),
+                  cppID: core, message: "first commit payload carries primary three and track one")
+    before = transitions.count
+    session.setSelectedNotes([note])
+    report.expect(session.selectedNoteOrder == [note] && session.selectedNotes == [note],
+                  cppID: notes, message: "note preemption stores exactly the requested assigned note")
+    report.expect(session.timeSelection == nil && transitions.count == before + 1
+                  && selectionPayloadMatches(transitions.last, previous: first, current: empty),
+                  cppID: notes, message: "note preemption publishes one cleared-time transition")
+    before = transitions.count
+    session.clearTimeSelection()
+    report.expect(transitions.count == before && session.selectedNoteOrder == [note]
+                  && session.timeSelection == nil, cppID: notes,
+                  message: "inactive time commit preserves notes and inactive time without publication")
+    session.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 50, endTick: 90), scope: .tracks([2])))
+    report.expect(session.selectedNoteOrder.isEmpty && transitions.count == before + 1,
+                  cppID: core, message: "competing notes clear inside the second commit publication")
+    report.expect(session.timeSelection?.scope == .tracks([2, 3])
+                  && session.selectedTracks == [2, 3], cppID: core,
+                  message: "second commit stores primary three with track two")
+    report.expect(transitions.last?.previousTrackTime.trackScope.isEmpty == true
+                  && selectionPayloadMatches(transitions.last, previous: empty, current: second),
+                  cppID: core, message: "second commit sees the note-cleared empty previous scope")
+    report.expect(transitions.last?.trackTime.trackScope == [2, 3]
+                  && selectionPayloadMatches(transitions.last, previous: empty, current: second),
+                  cppID: core, message: "second commit payload carries primary three and track two")
+
+    session.clearTimeSelection()
+    session.selectPrimaryTrack(1)
+    session.adjustTrackScope(track: 3, action: .toggle)
+    session.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 30, endTick: 60), scope: .tracks([1, 3])))
+    let both = TrackTimeSelection(startTick: 30, endTick: 60, trackScope: [1, 3])
+    let three = TrackTimeSelection(startTick: 30, endTick: 60, trackScope: [3])
+    before = transitions.count
+    session.adjustTrackScope(track: 1, action: .toggle)
+    let handoff = transitions.last
+    report.expect(transitions.count == before + 1
+                  && handoff?.previousTrackTime.startTick == 30
+                  && selectionPayloadMatches(handoff, previous: both, current: three),
+                  cppID: gestures, message: "toggle handoff publishes previous start thirty once")
+    report.expect(handoff?.previousTrackTime.endTick == 60
+                  && selectionPayloadMatches(handoff, previous: both, current: three),
+                  cppID: gestures, message: "toggle handoff carries previous end sixty")
+    report.expect(handoff?.trackTime.startTick == 30
+                  && selectionPayloadMatches(handoff, previous: both, current: three),
+                  cppID: gestures, message: "toggle handoff retains current start thirty")
+    report.expect(handoff?.trackTime.endTick == 60
+                  && selectionPayloadMatches(handoff, previous: both, current: three),
+                  cppID: gestures, message: "toggle handoff retains current end sixty")
+
+    session.adjustTrackScope(track: 4, action: .toggle)
+    let threeFour = TrackTimeSelection(startTick: 30, endTick: 60, trackScope: [3, 4])
+    before = transitions.count
+    session.adjustTrackScope(track: 3, action: .plain)
+    report.expect(transitions.count == before + 1
+                  && selectionPayloadMatches(transitions.last, previous: threeFour, current: three),
+                  cppID: gestures, message: "plain collapse publishes tracks three-four to three once")
+    report.expect(transitions.last?.trackTime.trackScope == [3]
+                  && selectionPayloadMatches(transitions.last, previous: threeFour, current: three),
+                  cppID: gestures, message: "collapse payload narrows current scope to track three")
+    let threeToFive = TrackTimeSelection(startTick: 30, endTick: 60, trackScope: [3, 4, 5])
+    before = transitions.count
+    session.adjustTrackScope(track: 5, action: .range)
+    report.expect(transitions.count == before + 1
+                  && transitions.last?.previousTrackTime.trackScope == [3]
+                  && selectionPayloadMatches(transitions.last, previous: three, current: threeToFive),
+                  cppID: gestures, message: "inclusive range starts from track three in one publication")
+    report.expect(transitions.last?.trackTime.trackScope == [3, 4, 5]
+                  && selectionPayloadMatches(transitions.last, previous: three, current: threeToFive),
+                  cppID: gestures, message: "range payload expands current scope through track five")
+
+    session.selectPrimaryTrack(1)
+    session.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 30, endTick: 60), scope: .tracks([1])))
+    let one = TrackTimeSelection(startTick: 30, endTick: 60, trackScope: [1])
+    before = transitions.count
+    session.adjustTrackScope(track: 3, action: .plain)
+    report.expect(session.selectedTrack == 3 && transitions.count == before + 1,
+                  cppID: gestures, message: "plain elsewhere chooses track three in one publication")
+    report.expect(session.selectedTracks == [3], cppID: gestures,
+                  message: "plain elsewhere stores only the new primary scope")
+    report.expect(transitions.last?.previousTrackTime.startTick == 30
+                  && transitions.last?.previousTrackTime.endTick == 60
+                  && selectionPayloadMatches(transitions.last, previous: one, current: empty),
+                  cppID: gestures, message: "plain elsewhere payload remembers previous thirty-to-sixty endpoints")
+    report.expect(transitions.last?.previousTrackTime.trackScope == [1]
+                  && selectionPayloadMatches(transitions.last, previous: one, current: empty),
+                  cppID: gestures, message: "plain elsewhere payload remembers previous track one")
+    report.expect(transitions.last?.trackTime.startTick == 0
+                  && transitions.last?.trackTime.endTick == 0
+                  && selectionPayloadMatches(transitions.last, previous: one, current: empty),
+                  cppID: gestures, message: "plain elsewhere clears current endpoints")
+    report.expect(transitions.last?.trackTime.trackScope.isEmpty == true
+                  && selectionPayloadMatches(transitions.last, previous: one, current: empty),
+                  cppID: gestures, message: "plain elsewhere clears current track scope")
+
+    session.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 100, endTick: 200), scope: .tracks([2, 3])))
+    report.expect(session.timeSelection?.covers(.pitchBend(track: 2),
+                                                usedTracks: Set(0..<document.engineTracks.usedTrackCount)) == true,
+                  cppID: coverage, message: "track-scoped selection covers the pitch-bend lane on track two")
+    let valid = AutomationParameter.controlChange(track: 2, controller: 7)
+    session.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 300, endTick: 400), scope: .lanes,
+        lanes: [valid, valid, .controlChange(track: -2, controller: 8),
+                .controlChange(track: 16, controller: 9)], tempo: true))
+    report.expect(session.timeSelection?.lanes == [valid], cppID: coverage,
+                  message: "lane sanitize retains only the valid track-two controller-seven survivor")
+    report.expect(session.timeSelection?.tempo == true, cppID: coverage,
+                  message: "lane sanitize preserves the song-global tempo flag")
+    session.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 300, endTick: 400), scope: .lanes,
+        lanes: [.controlChange(track: -2, controller: 8),
+                .controlChange(track: 16, controller: 9)]))
+    report.expect(session.timeSelection?.lanes.isEmpty ?? true, cppID: coverage,
+                  message: "dropping every invalid lane leaves no selected lanes")
+    report.expect(session.timeSelection?.tempo != true, cppID: coverage,
+                  message: "dropping every invalid lane leaves no observable tempo flag")
+}
+
+private func selectionPayloadMatches(_ transition: SelectionTransition?,
+                                     previous: TrackTimeSelection, current: TrackTimeSelection) -> Bool {
+    guard let transition else { return false }
+    return transition.previousTrackTime.startTick == previous.startTick
+        && transition.previousTrackTime.endTick == previous.endTick
+        && transition.previousTrackTime.trackScope == previous.trackScope
+        && transition.trackTime.startTick == current.startTick
+        && transition.trackTime.endTick == current.endTick
+        && transition.trackTime.trackScope == current.trackScope
 }

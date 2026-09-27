@@ -79,12 +79,8 @@ Disposition: MATCHED
 Mapping: S017
 
 A010 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:53
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S018 asserts the commit publishes exactly one coalesced session selection change, and S019 asserts the page rebuilds its selection once for it; the note-clearing and the time commit land in that one publication. Unproved: the native notification's combined kNoteSelection | kTimeSelection mask identity, since Swift's unified owner publishes a single .selection domain with no separate note/time bits and its SelectionTransition payload carries only previousTrackTime/trackTime, never a note half.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(received(notifications, beforeEquivalent, kNoteSelection | kTimeSelection));
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: the fork expression is the pure combined-mask identity received(notifications, beforeEquivalent, kNoteSelection | kTimeSelection) on NotificationLog; Swift's single coalesced .selection domain publication plus SelectionTransition payload (previousTrackTime/trackTime, no note half) supersedes it, and the carried one-publication behavior is proven by S018/S019 and the new S043 preemption count-and-payload predicate. No check re-creates a mask.
 
 A011 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:57
 Disposition: MATCHED
@@ -99,12 +95,8 @@ Disposition: MATCHED
 Mapping: S022
 
 A014 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:62
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: the preemption this row feeds now exists and S041 asserts it (a note selection clears the active time selection), while the stored note-selection content is pinned at the sibling A001 site (S001); this site's own stored note selection after the preemption has no predicate. Unproved: the exact {NoteId 19}-equivalent note selection at this site.
-Source context since previous assertion:
-      model.setNoteSelection({NoteId{19}});
-Original expression:
-  QVERIFY((model.noteSelection() == std::vector<NoteId>{NoteId{19}}));
+Disposition: MATCHED
+Mapping: S042
 
 A015 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:63
 Disposition: MATCHED
@@ -115,20 +107,16 @@ Original expression:
   QVERIFY(!model.timeSelection().active());
 
 A016 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:64
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S041 proves the preemption itself (the session's active time selection is cleared by the non-empty note selection); no predicate counts the preemption's transitions or pins the native combined kNoteSelection | kTimeSelection mask, which Swift's single .selection domain cannot express. Unproved: this site's single-transition mask expression.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(received(notifications, afterTime, kNoteSelection | kTimeSelection));
+Disposition: MATCHED
+Mapping: S043
 
 A017 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:69
 Disposition: MATCHED
 Mapping: S024
 
 A018 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:70
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S024 asserts the inactive commit preserves the note selection and S026 asserts it publishes nothing; no predicate re-asserts the time selection's inactive state at that site (S029 and S025 assert the deactivation and the inactive payload at the earlier clear). Unproved: this row's own inactive-state expression.
+Disposition: MATCHED
+Mapping: S044
 
 A019 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:71
 Disposition: MATCHED
@@ -177,28 +165,16 @@ Disposition: MATCHED
 Mapping: S032
 
 A027 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:100
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S033 asserts the committed selection resolves to exactly .tracks([0]), so the out-of-range track 20 is dropped exactly as the fork drops it. Unproved: the native stored bitmask expression trackBit(1) | trackBit(3) — the forced primary bit and the mask representation — since Swift stores Tracks scope as given (the fixture primary is track 0) and exposes it as Set<Int>.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(model.storedTrackScope(), trackBit(1) | trackBit(3));
+Disposition: MATCHED
+Mapping: S045
 
 A028 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:101
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S034 asserts the commit's SelectionTransition carries trackTime {startTick 40, endTick 80, trackScope [0]}. Unproved: the native single-transition count and the kTrackScope | kTimeSelection mask identity (Swift publishes one .selection domain with no per-bit mask).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(received(notifications, 0, kTrackScope | kTimeSelection));
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: the fork expression is the pure combined-mask identity received(notifications, 0, kTrackScope | kTimeSelection) on NotificationLog; Swift's single coalesced .selection domain publication plus SelectionTransition payload supersedes it, and the carried one-publication-plus-payload behavior is proven by the new S045 stored-scope and S046 first-commit count-and-payload predicates. No check re-creates a mask.
 
 A029 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:103
-Disposition: GAP
-Mapping/reason: GAP: the track-time payload is now published and asserted, but only for the state after a commit; no predicate reads a first commit's previousTrackTime, the empty payload before any commit that this expression pins (S035 asserts the second commit's previous payload instead).
-Source context since previous assertion:
-      const auto &first = notifications.transitions.back();
-Original expression:
-  QCOMPARE(first.previousTrackTime.trackScope, uint32_t{0});
+Disposition: MATCHED
+Mapping: S046
 
 A030 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:104
 Disposition: MATCHED
@@ -217,28 +193,16 @@ Original expression:
   QCOMPARE(first.trackTime.endTick, uint64_t{80});
 
 A032 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:106
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S035 asserts the first commit's payload scope as [0]; the native value trackBit(1) | trackBit(3) carries the forced primary bit (fixture primary 3) and the bitmask representation. Unproved: the primary-bit OR into the payload scope.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(first.trackTime.trackScope, trackBit(1) | trackBit(3));
+Disposition: MATCHED
+Mapping: S047
 
 A033 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:113
-Disposition: GAP
-Mapping/reason: GAP: the unified note/time co-motion now exists and is asserted for the lane-scope commit (S040), but this track-scope commit site commits no competing note selection in the Swift fixture (the notes were cleared before it), so its noteSelection().empty() expression has no executing predicate.
-Source context since previous assertion:
-      model.setNoteSelection({NoteId{23}});
-      notifications.clear();
-      selection.startTick = 50;
-      selection.endTick = 90;
-      model.setTimeSelectionAndTrackScope(selection, trackBit(2));
-Original expression:
-  QVERIFY(model.noteSelection().empty());
+Disposition: MATCHED
+Mapping: S048
 
 A034 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:114
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S036 asserts the second commit's trackTime payload scope as [0]; no predicate asserts the stored selection scope after that commit, and the native value trackBit(2) | trackBit(3) carries the forced primary bit (fixture primary 3) and the bitmask representation. Unproved: this row's stored-scope expression.
+Disposition: MATCHED
+Mapping: S049
 
 A035 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:115
 Disposition: MATCHED
@@ -249,20 +213,12 @@ Disposition: MATCHED
 Mapping: S036
 
 A037 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:117
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: the second commit's payload and publication count — S036 pins its tick endpoints and scope, and S037 asserts exactly one selection publication for it (the page publishes once per selection transition). Unproved: the combined kTrackScope | kNoteSelection | kTimeSelection mask identity — this site's native commit clears a competing note selection inside that same publication, while the Swift fixture commits with no competing note selection (see the A033 GAP), so the mask's note half has no counterpart here.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(received(notifications, 0, kTrackScope | kNoteSelection | kTimeSelection));
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: the fork expression is the pure combined-mask identity received(notifications, 0, kTrackScope | kNoteSelection | kTimeSelection) on NotificationLog; Swift's single coalesced .selection domain publication plus SelectionTransition payload supersedes it, and the carried one-publication-plus-note-clearing behavior is proven by the new S048 competing-note count predicate with the S049/S051 second-commit stored-scope and payload predicates. No check re-creates a mask.
 
 A038 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:119
-Disposition: GAP
-Mapping/reason: GAP: S035 asserts the second commit's previousTrackTime, but as [0] — the first commit's scope — where the fork's value is 0 because its intervening note selection had already cleared the time selection, a sequence the Swift fixture does not reproduce. Unproved: this row's cleared previous scope.
-Source context since previous assertion:
-      const auto &second = notifications.transitions.back();
-Original expression:
-  QCOMPARE(second.previousTrackTime.trackScope, uint32_t{0});
+Disposition: MATCHED
+Mapping: S050
 
 A039 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:120
 Disposition: MATCHED
@@ -281,12 +237,8 @@ Original expression:
   QCOMPARE(second.trackTime.endTick, uint64_t{90});
 
 A041 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:122
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S036 asserts the second commit's payload scope as [0]; the native value trackBit(2) | trackBit(3) carries the forced primary bit (fixture primary 3) and the bitmask representation. Unproved: the primary-bit OR into the payload scope.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(second.trackTime.trackScope, trackBit(2) | trackBit(3));
+Disposition: MATCHED
+Mapping: S051
 
 A042 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:126
 Disposition: MATCHED
@@ -480,6 +432,36 @@ Anchor: message "A008 committing an active range clears the competing note selec
 
 S041 | clipboardUnifiedModelChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "a note selection clears the active time selection"
+
+S042 | clipboardSelectionTransitionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "note preemption stores exactly the requested assigned note"
+
+S043 | clipboardSelectionTransitionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "note preemption publishes one cleared-time transition"
+
+S044 | clipboardSelectionTransitionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "inactive time commit preserves notes and inactive time without publication"
+
+S045 | clipboardSelectionTransitionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "primary three joins valid track one while out-of-range twenty is dropped"
+
+S046 | clipboardSelectionTransitionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "first commit publishes empty previous endpoints and scope"
+
+S047 | clipboardSelectionTransitionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "first commit payload carries primary three and track one"
+
+S048 | clipboardSelectionTransitionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "competing notes clear inside the second commit publication"
+
+S049 | clipboardSelectionTransitionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "second commit stores primary three with track two"
+
+S050 | clipboardSelectionTransitionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "second commit sees the note-cleared empty previous scope"
+
+S051 | clipboardSelectionTransitionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "second commit payload carries primary three and track two"
 
 Shared helpers
 None: the fixture above is local to the counterpart function and carries no

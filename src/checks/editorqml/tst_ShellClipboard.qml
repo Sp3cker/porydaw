@@ -126,6 +126,140 @@ TestCase {
         return null
     }
 
+    function test_nativeMimeDisplacedBySongFilterCopy() {
+        openRoute101()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var roll = findChild(surface, "swiftRollInput")
+        var source = editableNotes(grid).find(function(note) {
+            var center = noteCenter(roll, surface, note.id)
+            return center && center.x > 1 && center.y > 1
+                && center.x < roll.width - 1 && center.y < roll.height - 1
+        })
+        verify(source !== undefined, "a mounted note accepts native Copy")
+        grid.setTrack(source.track)
+        var center = noteCenter(roll, surface, source.id)
+        mouseClick(roll, center.x, center.y, Qt.LeftButton)
+        verify(waitForNative(function() {
+            return noteById(grid, source.id).selected
+                && shell.shellPresenter.actionEnabled("roll.copy")
+        }, 5000), "pointer selection enables production Copy")
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true, 3000)
+        keySequence(StandardKey.Copy)
+        verify(waitForNative(function() {
+            return clipProbe.readClipJson().length > 0 && clipProbe.clipSummary() !== "[]"
+        }, 5000), "mounted Copy leaves readable and decodable native clip MIME")
+
+        var search = findChild(shell, "songListSearch")
+        verify(search && search.visible, "the production song filter is mounted")
+        mouseClick(search, search.width / 2, search.height / 2)
+        tryCompare(search, "activeFocus", true, 3000)
+        keyClick(Qt.Key_R)
+        keyClick(Qt.Key_O)
+        keyClick(Qt.Key_U)
+        keyClick(Qt.Key_T)
+        keyClick(Qt.Key_E)
+        tryCompare(search, "text", "route")
+        search.selectAll()
+        keySequence(StandardKey.Copy)
+        verify(waitForNative(function() {
+            return clipProbe.readClipJson() === ""
+        }, 5000), "foreign text Copy displaces the native clip MIME")
+        compare(clipProbe.clipSummary(), "[]",
+                "foreign text clipboard decodes to no song clip")
+        keyClick(Qt.Key_Backspace)
+        tryCompare(search, "text", "")
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true, 3000)
+        compare(shell.shellPresenter.actionEnabled("roll.paste"), false,
+                "song Paste is unavailable after foreign text Copy")
+    }
+
+    function test_headerScopeChangesMountedRangeCopy() {
+        openRoute101()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var roll = findChild(surface, "swiftRollInput")
+        var headers = findChild(surface, "timelineTrackHeadersInput")
+        var rows = findChild(surface, "timelineTrackHeaderRows")
+        verify(roll && headers && rows, "the roll and production track headers mount")
+        var notes = gridNotes(grid)
+        var pair = null
+        var fromTick = 0
+        var toTick = 0
+        var snap = grid.snapTicks
+        for (var i = 0; i < notes.length && !pair; ++i) {
+            for (var j = i + 1; j < notes.length; ++j) {
+                if (notes[i].track === notes[j].track)
+                    continue
+                var from = Math.floor(Math.min(notes[i].tick, notes[j].tick) / snap) * snap
+                var to = Math.ceil(Math.max(notes[i].tick + notes[i].duration,
+                                            notes[j].tick + notes[j].duration) / snap) * snap + snap
+                var left = from * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX
+                var right = to * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX
+                if (left > 1 && right < roll.width - 1 && right - left > grid.dragDistance) {
+                    pair = [notes[i], notes[j]]
+                    fromTick = from
+                    toTick = to
+                    break
+                }
+            }
+        }
+        verify(pair !== null, "two tracks have visible notes in a mounted range")
+        function clickHeader(track, modifiers) {
+            var row = rows.itemAt(track)
+            verify(row && !row.isAddTrack, "the selected track has a real header row")
+            mouseClick(headers, row.titleRect.x + row.titleRect.width / 2,
+                       track * surface.headersModel.rowHeight
+                           + row.titleRect.y + row.titleRect.height / 2,
+                       Qt.LeftButton, modifiers)
+        }
+        function sweep() {
+            var left = fromTick * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX
+            var right = toTick * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX
+            mousePress(roll, left, roll.height / 2, Qt.RightButton, Qt.ShiftModifier)
+            mouseMove(roll, right, roll.height / 2, -1, Qt.RightButton, Qt.ShiftModifier)
+            mouseRelease(roll, right, roll.height / 2, Qt.RightButton, Qt.ShiftModifier)
+        }
+        clickHeader(pair[0].track, Qt.NoModifier)
+        sweep()
+        compare(shell.shellPresenter.actionEnabled("roll.copy"), true,
+                "the mounted sweep enables Copy")
+        clickHeader(pair[1].track, Qt.NoModifier)
+        compare(shell.shellPresenter.actionEnabled("roll.copy"), false,
+                "plain header click elsewhere clears the mounted time selection")
+        clickHeader(pair[0].track, Qt.NoModifier)
+        sweep()
+        clickHeader(pair[1].track, Qt.ControlModifier)
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true, 3000)
+        keySequence(StandardKey.Copy)
+        var copied = null
+        verify(waitForNative(function() {
+            var bytes = clipProbe.readClipJson()
+            if (!bytes.length)
+                return false
+            copied = JSON.parse(bytes)
+            return copied.span === toTick - fromTick
+        }, 5000), "toggled header scope reaches production Copy")
+        compare(copied.tracks.map(function(track) { return track.track }).sort().join(","),
+                [pair[0].track, pair[1].track].sort().join(","),
+                "toggled range Copy carries exactly the selected tracks")
+        clickHeader(pair[1].track, Qt.ShiftModifier)
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true, 3000)
+        keySequence(StandardKey.Copy)
+        verify(waitForNative(function() {
+            var bytes = clipProbe.readClipJson()
+            return bytes.length > 0 && JSON.parse(bytes).span === toTick - fromTick
+        }, 5000), "range-clicked header scope remains copyable")
+        compare(JSON.parse(clipProbe.readClipJson()).tracks.map(function(track) {
+            return track.track
+        }).sort().join(","), [pair[0].track, pair[1].track].sort().join(","),
+                "range-clicked scope publishes the inclusive mounted tracks")
+    }
+
     function test_roundTripReplacement() {
         var session = openRoute101()
         var surface = selectedSurface()
