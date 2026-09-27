@@ -5,15 +5,18 @@ Status: **in execution.** Landed: 52 (32aa160d), 53 (e7c58e06) + 53b (342dc379),
 60 (df33f77e), 61 (089652fc), 62 (d4fd8b3b), 63 (83af818e), 64 (74134e8d), 65 (79c8d90e +
 044bc3a6), 66 (8a6f2e21), 66b (f8b4dc68), 67 (1cbfa737), 68 (2c77b0de), 69 (6a963cb3),
 71 (dcf6fdf3), 72 (62f58c98), 73 (62b12d40), 74 (ba09af7b), 75 (917dd499), 76 (dcad437b),
-77a (4451e20a), 77b (2348b0b8); native Edit-menu titles (5481df9f). Resize sweep 9.9 s →
-1.5–2.1 s with no per-resize or per-scroll scene rebuild. Next: pick from §6. Proof files:
-155 → 129.
+77a (4451e20a), 77b (2348b0b8); native Edit-menu titles (5481df9f); 600-line split merged
+(9963c029); 78 (54c7f97a), 79 (64d1ec73), 80 (0d976b08), 81 (a23312fc + 4b3e72eb), 82
+(436fb910), 83 (ad4acc9e), 84 (c96c7cc3), 85 (e13dd126), 86 (2eef29d9), 87 (43143ec6), 88
+(7e87ae82), 89 (bec04d0f), 90 (85f5a931). Resize sweep 9.9 s → 1.5–2.1 s with no per-resize
+or per-scroll scene rebuild. Next: wave 91–98 (§10). Proof files: 155 → 112 (17 closed
+ledgers deleted after wave 83–90); open GAP+PARTIAL rows 3703 → 3297.
 User rulings this sprint: insert-cursor commits never seek or move the playhead in any
 transport state (8f6d41d2, deliberate deviation from fork `mainwindow.cpp:520-528`; Go to
-Start still rewinds); the ~115 ms anti-click settle hold on resume stays. Open decisions:
-blank-token rebase across external same-section source edits (conflicts with tested E10
-blanket token expiry); catalog-outage status path (Swift scan has none). Fork oracle:
-`fceecd88` (`git show fceecd88:<path>`).
+Start still rewinds); the ~115 ms anti-click settle hold on resume stays; blank-slot undo
+tokens survive an external source refresh, matching the fork (78). Open decision:
+catalog-outage status path (Swift scan has none). Fork oracle: `fceecd88`
+(`git show fceecd88:<path>`).
 
 ## 1. Objective and success criteria
 
@@ -463,3 +466,177 @@ and A075 (deterministic mounted stale-save receipt), clipboard clipmime A017
 (decode-failure announcement), the 19 laneselection rows, and unselected
 camera/draw/remap/prompt rows. Tasks 85/86/83–84 do not implicitly own those
 residuals merely because their surfaces are adjacent.
+
+## 10. Wave 91+
+
+This wave starts **after 84/86/87/89 land**, not alongside the current Group B.
+It builds eight bounded user-visible surfaces, using their open proof rows as
+acceptance specifications. `deno task proof sites` GAP/PARTIAL queries verified
+**342 selected open rows: 134 GAP + 208 PARTIAL**, with 35–57 rows per task.
+These are selected-row counts, not predictions that every row becomes MATCHED:
+native representation retirements are explicitly bounded inside their owning
+surface briefs. No dispositions changed while authoring this plan.
+
+| Task | Surface and brief | Selected GAP / PARTIAL | Group | Route and sizing reason |
+| --- | --- | ---: | --- | --- |
+| 91 | [Active-tab range Insert/Delete Time during playback](task-91-brief.md) | 52: 7 / 45 | A | SDD-track: playback, selection scope, undo and inactive-document isolation cross the router and mounted shell. |
+| 92 | [Mixed automation range drag/Delete and exact raw events](task-92-brief.md) | 45: 2 / 43 | A | SDD-track: one transaction spans Tempo, CC and logical XCMD occurrences; pure and mounted evidence are both required. |
+| 93 | [Painted note frames and pre-roll/ruler raster](task-93-brief.md) | 41: 23 / 18 | A | SDD-track: scene values do not prove DPR/font-dependent pixels; representation retirements need sibling raster evidence. |
+| 94 | [Velocity ruler/paint detents across instrument families](task-94-brief.md) | 57: 2 / 55 | A | SDD-track: square/wave/noise share press/move/release laws and one real program-flow verification surface. |
+| 95 | [Local capture and routing after tab replacement](task-95-brief.md) | 35: 25 / 10 | B | SDD-track: captured input target, modal repeat, cancellation and document lifetime share keyboard authority. |
+| 96 | [Automation hover topology and hint recovery](task-96-brief.md) | 36: 17 / 19 | B | SDD-track: pointer/render/hint ownership transitions need real mounted input and raster evidence. |
+| 97 | [Roll band/modifier velocity/resize commit boundaries](task-97-brief.md) | 35: 20 / 15 | B | SDD-track: provisional presentation versus committed selection/history spans the same roll gesture surface. |
+| 98 | [Transport toolbar volume isolation, raster and key priority](task-98-brief.md) | 41: 38 / 3 | B | SDD-track: persisted global output, per-song state and chrome input must agree in the mounted toolbar. |
+
+All seats are `sdd-implementer`. The >3-file exceptions above are cohesive
+surface/verification boundaries, not permission to expand scope. Exact A-row
+lists, source provenance, symbol preservation and **closed write sets** live
+in the linked briefs. Conditional production files count as owned files even
+when existing behavior already passes. RED may be absent when production
+already matches; then the new consumer-visible check is the deliverable.
+
+### Two parallel write groups and hot-file ownership
+
+**Group A: 91 + 92 + 93 + 94 — 195 rows (34 GAP + 161 PARTIAL).**
+The four exact write sets are pairwise disjoint:
+
+- **91** owns `EditorCommandRouter.swift`, `session_time_routing.swift`,
+  `tst_ShellWindow.qml` and the selected mainwindowrouting input rows.
+- **92** owns automation `AutomationEdits.swift`,
+  `AutomationInteraction.swift`, `AutomationSelectionCommands.swift`;
+  `gestureNodeDrag.swift`, `xcmd.swift`, `automationselection.swift`,
+  `tst_ShellGridInput.qml`, and the contract/crosslane ledgers.
+- **93** owns `GridScene+Notes.swift`, `GridScene+Primitives.swift`,
+  `GridScene+Rebuild.swift`, the note border/ghost checks,
+  `tst_ShellNoteVisuals.qml`, and its note-rendering/resize/camera/geometry rows.
+- **94** owns `VelocityInteraction.swift`, `VelocityTransactions.swift`,
+  both existing VelocityPaintDetent check files, `tst_ShellDrawerParity.qml`
+  and the selected detent-painting rows.
+
+Task 91 consumes the existing range transform but cannot edit task 92's
+selection-command owner. No task in A writes `ApplicationSession.swift`,
+`DocumentWorkspace.swift`, `ShellWindow.qml`, `EditorSurface.qml` or fixtures.
+Task 93's camera/geometry ledger edits rebase over accepted task 90.
+
+**Group B: 95 + 96 + 97 + 98 — 147 rows (100 GAP + 47 PARTIAL).**
+Start only after the accepted Group A checkpoint. Its exact write sets are
+also pairwise disjoint:
+
+- **95** exclusively owns `EditKeyArbiter.swift`, `ShellWindow.qml`,
+  `VelocityInteraction.swift`, `localinputtier_text.swift`,
+  `tst_ShellWindow.qml`, `tst_ShellTabs.qml`, `tst_ShellPitchBend.qml`,
+  and the selected lifetime/pitch-bend/gesturevelocity ledgers.
+- **96** exclusively owns automation `AutomationInteraction.swift`,
+  `AutomationLifecycle.swift`, `AutomationOverlayPublication.swift`,
+  `AutomationPage.qml`, the canvas-hover/phantom checks,
+  `tst_EditorDrawer.qml` and the three selected hover/parity ledgers.
+- **97** exclusively owns `PianoGrid.swift`, `PianoGrid+Gestures.swift`,
+  `GridScene+Notes.swift`, `EditorSurface.qml`, the selection-band/audition/
+  editing and resize checks, `tst_SwiftRollSelection.qml`,
+  `tst_ShellGridInput.qml` and the selected selection/resize ledger rows.
+- **98** exclusively owns `TransportBarPresenter.swift`,
+  `src/ui/shell/TransportBar.qml`, `src/ui/shell/TransportOutputDial.qml`,
+  `transport_checks.swift`, `tst_ShellTransport.qml` and selected
+  `workspace/proof.tabs_transport.txt` rows.
+
+The only cross-group file reuse is explicit:
+
+| Earlier owner → later owner | Files requiring accepted checkpoint/rebase |
+| --- | --- |
+| 91 → 95 | `src/checks/editorqml/tst_ShellWindow.qml` |
+| 92 → 96 | `src/swift/app/drawer/automation/AutomationInteraction.swift` |
+| 92 → 97 | `src/checks/editorqml/tst_ShellGridInput.qml` |
+| 93 → 97 | `src/swift/app/roll/GridScene+Notes.swift`, `src/checks/rollcheck/proof.resize.txt` |
+| 94 → 95 | `src/swift/app/drawer/velocity/VelocityInteraction.swift` |
+
+Incoming rebase boundaries from the active wave are equally binding:
+84's `ShellWindow.qml`/`tst_ShellTabs.qml` → 95; 86's
+`EditorSurface.qml`/`selection_editing.swift` → 97; 87's
+`tst_ShellWindow.qml` → 91/95 and `localinputtier_text.swift` → 95.
+Every brief names read dependencies on 84's workspace/session binding,
+86's press-focus ingress, 87's key priority and 89's document/voice binding.
+Task 89's write set and selected rows are not reused concurrently.
+
+Checkpoint accepted 83–90 work before this wave; checkpoint accepted Group A
+before B reuses its files; checkpoint remaining accepted work at final handoff.
+There are no per-task commit milestones. A failing/unreviewed task is repaired
+before its files pass to the next owner. A root-cause repair outside a closed
+set requires revising ownership and checking disjointness, not a workaround
+or a silent file-set expansion.
+
+### Wave constraints and verification
+
+Preserve §6/§8/§9 boundaries. No new C++; touched Swift follows Swift 6.4
+idioms, with no avoidable hot-path allocation/copy/computation. Comments are
+at most two lines; geometry derives from the base font; WCAG AA through
+GridPalette beats pixel parity. Keep a single keyboard authority: no second
+dispatcher, synthetic forwarding or focus memory; persistent chrome never
+claims bare Space. `Qt.callLater` coalescing and new idempotence guards are
+banned. Workarounds need user approval, not an implementer's local exception.
+
+One literal message-anchored predicate per fork clause; preserve existing
+messages verbatim. Prove real behavior using the real staged project and
+existing production interfaces, never mock echoes, source-text assertions,
+test-only probes or a new observation API just to close a row. Retire only
+the specifically named native prerequisites alongside their executing sibling
+surface laws. Delete obsolete implementation/wording checks rather than
+re-pinning them. Rows change only with their proving code/checks; no standalone
+ledger reconciliation, broad re-anchoring or ledger deletion.
+
+**Fixture and preferences lessons are mandatory.** Checked-in fixture content
+is outside all eight closed write sets. Existing runtime fixture builders may
+stage notes/events through real document APIs. If an approved repair genuinely
+requires a fixture edit, first grep/read every consumer asserting its exact
+contents and put **all** those checks in the revised write set; reschedule
+owners before editing. Task 81 demonstrated why a locally green lane is not
+enough. Preferences are CFPreferences/UserDefaults-backed: stage poisoned or
+persisted state through that domain and synchronize it, never by plist bytes.
+
+The controller owns settled-group builds/checks/formatting; parallel writers
+perform read-only inspection and proof queries, not mid-flight shared checks.
+Reuse the exact commands in each brief; reassess only for a concrete scope or
+registration change. Deduplicate identical commands across accepted tasks in
+a settled group, not their predicates. Every task's acceptance includes both:
+
+- **Full `deno task verify:shell --verbose`**, all 26 lanes (~40 s warm).
+- **Full `deno task verify`** (~10 s warm).
+
+Narrow `swiftcore-projectsession` and mounted shell/editor/roll lanes still
+establish the task's actual surface. A passing full suite does not excuse a
+missing mounted journey. All builds and verification serialize as:
+
+```sh
+/usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task ...
+```
+
+The lock may wait for another owner; the invoked verification process has a
+175 s alarm and must complete within **180 s**. Never launch competing builds
+or silently narrow a timed-out full suite. Require fresh per-lane function
+evidence under `build/proof-evidence`, then serialized
+`deno task proof check --executed`. Use `deno task proof sites` GAP/PARTIAL to
+confirm only the selected rows moved. Offscreen raster/focus and null-backend
+audio observations do not establish physical macOS host/cursor/audio behavior.
+No builds, test suites, formatters or commits were run to author this wave.
+
+### Explicit exclusions and unresolved decisions
+
+`project`, `samplecheck`, `onboardcheck` and `midi/tst_midiexport` remain
+parked; P3 WAV export awaits the user. Deferred menu rows remain out: New Song,
+Import MIDI, Export WAV, Register Song, Import Sample and Theme. Native `host`
+rows requiring physical macOS observation stay out unless a mounted QML lane
+can actually observe the selected behavior.
+
+The unresolved catalog-outage policy is still
+`voicegroupsave/proof.savecore.txt` **A016–A026**: whether a production
+status/error must report unavailable sound-directory state while retaining
+the last valid catalog. This wave does not decide it. Switching A030–A046
+were settled by task 78; blank-token rebasing is not a new user decision.
+
+Technical residuals, not new policy questions: roll custom left/right
+cursor-image rows (resize A002–A004/A027/A028); unselected camera/geometry and
+raw-event conductor-remap rows; velocity's six native geometry prerequisites;
+unselected prompt/clipboard/lane-selection and native-host rows; and
+workspace tabs_transport A062, whose applied-song-volume engine readback
+cannot be replaced by a cfg-value check or a test-only getter. Other
+`selftest_transport` seek/cursor rows are not implicitly owned by toolbar 98.
+No task absorbs these residuals merely because it edits an adjacent surface.
