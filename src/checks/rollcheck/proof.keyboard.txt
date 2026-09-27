@@ -39,6 +39,11 @@ Task 66 ledger pass (no lane re-run): A022/A023 close on the ruler-scope guard a
 Task 58 ledger pass (implementer-recorded lanes; this bookkeeping pass ran no lane, rebuilt nothing and re-ran no check):
 Command: deno task verify --filter swiftcore --verbose; deno task verify:shell --filter shellwindow --verbose
 Result: PASS — implementer-reported swiftcore 12 of 36 ok and shellwindow 1/26 selected ok on the frozen task-58 tree. build/proof-evidence/swiftcore-projectsession.json (5877 pass rows, mtime 2026-09-26 16:31 at handoff) records the hardened insert anchors S121–S127 and the seed-unwind row S091; build/proof-evidence/shellwindow.json (31 test functions, mtime 16:31) records test_jTimeSelectionInsertAndDeleteMutatesDocument and test_oEmptySelectionLabelUpEditsNothing, so the S113–S120, S128/S129 predicates classify executed under `deno task proof check --executed`. S119/S120 come from note_commands.swift (cppID swiftcore/PianoRoll::keyboardDuplicatePrefersTimeSelection, recorded in build/proof-evidence/swiftcore.json); that file's rows were produced before the 2026-09-26 note_commands.swift fixture refactor, so their execution on the final tree is the controller's lane re-run to establish.
+Command: deno task verify:shell --filter shell-grid-input
+Result: PASS — controller-recorded task-102 mounted keyboard/ruler journey at the default device-pixel ratio; no DPR2 run or lane rerun claimed here.
+Command: deno task verify --filter swiftcore-projectsession
+Result: PASS — controller-recorded task-102 keyboard/ruler/domain checks; no lane rerun during proof reconciliation.
+
 
 A001 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:38
 Disposition: MATCHED
@@ -53,26 +58,16 @@ Disposition: MATCHED
 Mapping: S045
 
 A004 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:59
-Disposition: PARTIAL
-Mapping/reason: S046 keyboard.swift checks the one-snap Right nudge after the same semitone/octave transpose sequence; PARTIAL remains because native key-event delivery and the original rollcheck song and fixture are not established.
-Source context since previous assertion:
-      sendKeyStroke(roll, Qt::Key_Right, Qt::NoModifier, false);
-Original expression:
-  QVERIFY2(doc.findNote(check.track(), d.tick + snapCell, uint8_t(d.key - 11), &note),
-               "Right did not nudge one snap cell right");
+Disposition: MATCHED
+Mapping: S046, S130 (mounted Right after Up and Shift+Down nudges exactly one snap cell)
 
 A005 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:64
 Disposition: MATCHED
 Mapping: S047
 
 A006 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:68
-Disposition: GAP
-Mapping/reason: Swift S048 keyboard.swift restores the pre-seed document, whereas this original comparison restores the post-seed snapshot; that transaction boundary remains unproved.
-Source context since previous assertion:
-      while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
-          doc.undoStack()->undo();
-Original expression:
-  QCOMPARE(doc.smf().write(), before);
+Disposition: MATCHED
+Mapping: S091 (inner seed-scoped unwind returns to post-seed bytes before the outer pre-seed restoration)
 
 A007 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:75
 Disposition: MATCHED
@@ -123,44 +118,16 @@ Disposition: MATCHED
 Mapping: S070
 
 A019 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:140
-Disposition: GAP
-Mapping/reason: GAP: harness fixture guard (makeResizeSeed) — the ruler-scope counterpart (checkRulerSweepScope/checkRulerTapAndCancel in ruler_loop_menu.swift) builds its fixture from the session document and asserts no seeded-note predicate; S043/S048 guard the transpose slot's seed instead.
-Source context since previous assertion:
-  }
-
-  void PianoRollTest::timelineRulerScope()
-  {
-      PianoRollFixture &check = *m_fixture;
-      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
-Original expression:
-  QVERIFY(seed.has_value());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S043, S137; native makeResizeSeed fixture guard QVERIFY(seed.has_value()) is not behavioral acceptance; the seeded Swift ruler scenario and post-seed unwind execute through the real session.
 
 A020 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:151
-Disposition: GAP
-Mapping/reason: GAP: harness fixture guard — the seed-note lookup for the ruler-scope slot has no counterpart predicate; the transpose behavior it stages is proved by S044/S045 in the transpose slot.
-Source context since previous assertion:
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      songview::TimelineInputItem &roll = check.rollInput();
-      const int track = check.track();
-      const int pianoKeyboardWidth = check.pianoKeyboardWidth();
-      const Cell &d = seed->cell;
-      const Tick snapCell = seed->snapCell;
-      const QByteArray before = doc.smf().write();
-      const int undo = doc.undoStack()->index();
-      DocNote transposed;
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &transposed),
-               "timeline scope seed note was not found");
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S043, S044; native setup lookup QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &transposed), "timeline scope seed note was not found") only guards the fixture; seed/transpose have separate predicates.
 
 A021 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:154
-Disposition: GAP
-Mapping/reason: GAP: harness fixture guard — the post-transpose seed state of the ruler-scope slot has no counterpart predicate; the transpose behaviors are proved by S044/S045 in the transpose slot.
-Source context since previous assertion:
-      doc.moveNotes({transposed}, int64_t(snapCell), -11);
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed),
-               "timeline scope seed did not reach the expected post-transpose state");
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S044, S045, S137; native setup lookup QVERIFY2(doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed), "timeline scope seed did not reach the expected post-transpose state") only guards the seeded state; transpose and ruler unwind have separate predicates.
 
 A022 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:166
 Disposition: MATCHED
@@ -188,87 +155,29 @@ Original expression:
                "Quick header records did not match the current timeline");
 
 A024 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:169
-Disposition: GAP
-Mapping/reason: GAP: harness existence guard — the mounted lanes fetch the ruler input and band by objectName (control() in tst_ShellGridMenu.qml) with no message argument, so no predicate observes the lookup.
-Source context since previous assertion:
-  (adjacent to previous assertion; no intervening source lines)
-Original expression:
-  QVERIFY2(rulerInput && rulerBand, "could not find the time ruler");
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S131, S132; native QWidget ruler-input/band existence guard QVERIFY2(rulerInput && rulerBand, "could not find the time ruler") is superseded by the mounted QML ruler and its real sweep.
 
 A025 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:197
 Disposition: MATCHED
 Mapping: S072 (exact swept range with primary-only scope), S096
 
 A026 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:232
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S073 asserts the modified sweep's exact range with a scope containing the primary and the intersecting track and S101 the mounted Control drag's added track.
-Unproved: the original exact track-bitmask equality, which the predicates replace with scope containment.
-Source context since previous assertion:
-      uint32_t expectedScope = uint32_t{1} << track;
-      const ViewNote *scopedGhost = nullptr;
-      for (const ViewNote &note : view.model().notes) {
-          if (note.startTick >= endTick)
-              break;
-          if (startTick < note.endTick()) {
-              expectedScope |= uint32_t{1} << note.track;
-              if (note.track != track && !scopedGhost)
-                  scopedGhost = &note;
-          }
-      }
-      const std::optional<int> secondaryRecord =
-          scopedGhost ? trackheaders_test::rowForTrack(*headers, scopedGhost->track) : std::nullopt;
-      const QColor plainOverlay = secondaryRecord
-                                      ? headers
-                                            ->data(headers->index(*secondaryRecord, 0),
-                                                   songview::TrackHeaderModel::OverlayColorRole)
-                                            .value<QColor>()
-                                      : QColor{};
-      const QImage plainHeaderFrame =
-          secondaryRecord ? headercheck::captureBand(check, view) : QImage{};
-      checks::events::sendMouse(*rulerInput, QEvent::MouseButtonPress, start, Qt::LeftButton,
-                                Qt::LeftButton, Qt::ControlModifier);
-      checks::events::sendMouse(*rulerInput, QEvent::MouseMove, activate, Qt::NoButton,
-                                Qt::LeftButton, Qt::ControlModifier);
-      checks::events::sendMouse(*rulerInput, QEvent::MouseMove, end, Qt::NoButton, Qt::LeftButton,
-                                Qt::ControlModifier);
-      checks::events::sendMouse(*rulerInput, QEvent::MouseButtonRelease, end, Qt::LeftButton,
-                                Qt::NoButton, Qt::ControlModifier);
-Original expression:
-  QVERIFY2(view.selectionModel().timeSelection().startTick == startTick &&
-                   view.selectionModel().timeSelection().endTick == endTick &&
-                   view.selectionModel().storedTrackScope() == expectedScope,
-               "modified ruler drag did not derive the overlapping note-track scope");
+Disposition: MATCHED
+Mapping: S132 (exact interval and complete scope computed from every intersecting track), S134, S135 (mounted Control sweep paints every overlapping visible track)
 
 A027 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:236
 Disposition: MATCHED
 Mapping: S103 (the mounted fixture presents an overlapping secondary-track note inside the ruler viewport)
 
 A028 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:251
-Disposition: GAP
-Mapping/reason: GAP — ghost-note viewport placement has no executing counterpart predicate; the Swift predicates assert the projected boxes, never their visibility in the roll viewport.
-Source context since previous assertion:
-      const SongView::ViewState priorViewState = view.viewState();
-      SongView::ViewState ghostViewState = priorViewState;
-      ghostViewState.scrollY = std::max(
-          0.0, (127.5 - double(scopedGhost->key)) * ghostViewState.keyHeight - roll.height() / 2.0);
-      view.applyViewState(ghostViewState);
-      const SnappedRows ghostRows{view, roll};
-      const QRectF ghostPlotBox = ghostRows.noteBox(ghostRows.noteRect(
-          view.camera().displayX(double(scopedGhost->startTick), 0.0, ghostRows.dpr()),
-          view.camera().displayX(double(scopedGhost->endTick()), 0.0, ghostRows.dpr()),
-          scopedGhost->key));
-      const QRectF ghostBandBox = ghostPlotBox.translated(pianoKeyboardWidth, 0.0);
-      const QRectF visibleGhostBox = ghostBandBox.intersected(
-          QRectF(pianoKeyboardWidth, 0.0, qreal(roll.width()), qreal(roll.height())));
-      const QImage scopedImage = check.captureQuickFramebuffer();
-Original expression:
-  QVERIFY2(!visibleGhostBox.isEmpty(),
-               "time-scoped ghost note is outside the horizontal viewport");
+Disposition: MATCHED
+Mapping: S133 (rendered secondary note lies within the roll plot viewport in both axes)
 
 A029 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:256
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: S076 rings the covered note and its time-scoped ghost at dpr 2 through the same track-scoped provider the roll reads.
-Unproved: the framebuffer ring pixels this row samples at device pixels; the predicate asserts published scene frames.
+Mapping/reason: S076 proves selection-ring scene frames at DPR2; S134, S135 prove actual mounted framebuffer ghost-ring pixels at the default DPR. Unproved: the DPR2 framebuffer was not exercised in the controller-recorded mounted run.
+
 Source context since previous assertion:
       const qreal scopedDpr = scopedImage.devicePixelRatio();
       const int centerX = qRound(visibleGhostBox.center().x() * scopedDpr);
@@ -314,14 +223,8 @@ Disposition: MATCHED
 Mapping: S100
 
 A039 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:310
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S089 asserts the sweep scenario restores its fixture bytes after undoing the intersecting-note insertion.
-Unproved: the slot-level unwind to the post-seed snapshot (the ruler-scope slot is not driven through withKeyboardSeed).
-Source context since previous assertion:
-      while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
-          doc.undoStack()->undo();
-Original expression:
-  QCOMPARE(doc.smf().write(), before);
+Disposition: MATCHED
+Mapping: S137 (the seeded ruler/transpose scenario unwinds to post-seed bytes and history identity)
 
 A040 | PianoRollTest::timelineOtherEventsStrip | src/checks/rollcheck/keyboard.cpp:317
 Disposition: RETIRED-REPRESENTATION
@@ -412,8 +315,8 @@ Mapping: S093
 
 A053 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:447
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: S076 asserts the time-covered note and its time-scoped ghost publish the selection ring frame.
-Unproved: the framebuffer ring pixel this row samples; the predicate asserts published scene frames.
+Mapping/reason: S076 proves selected primary's scene frame at DPR2; S136 proves the mounted primary ring's framebuffer pixels after Up at the default DPR. Unproved: the DPR2 framebuffer was not exercised in the controller-recorded mounted run.
+
 Source context since previous assertion:
       songview::EditorSelectionModel::TimeSelection band;
       band.startTick = d.tick + snapCell;
@@ -548,19 +451,8 @@ Original expression:
                "first duplicated range was not made visible");
 
 A066 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:536
-Disposition: PARTIAL
-Mapping/reason: S118 (the mounted second Ctrl+D grows the copied set and advances the cursor) executes the repeat and S119/S120 the single-duplicate routing law. Unproved: the second copy's exact span (firstEnd to secondEnd), the cursor at the second end, the note at the second start and the undo-index +2 — no predicate repeats the time-range duplicate through the swiftcore router (checkKeyboardDuplicatePrefersTimeSelection duplicates once).
-Source context since previous assertion:
-      sendKeyStroke(roll, Qt::Key_D, Qt::ControlModifier, false);
-      const Tick secondStart = firstEnd;
-      const Tick secondEnd = secondStart + duplicateSpan;
-      const songview::EditorSelectionModel::TimeSelection secondSelection =
-          view.selectionModel().timeSelection();
-Original expression:
-  QVERIFY2(doc.undoStack()->index() == duplicateUndoIndex + 2 && secondSelection.active() &&
-                   secondSelection.startTick == secondStart && secondSelection.endTick == secondEnd &&
-                   view.editCursorTick() == secondEnd && hasNoteAt(secondStart),
-               "repeating Ctrl+D did not duplicate the newest copy");
+Disposition: MATCHED
+Mapping: S118, S138 (second routed Duplicate selects the exact next span, places the note, advances cursor, and increments history by two)
 
 A067 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:542
 Disposition: MATCHED
@@ -845,33 +737,12 @@ Disposition: MATCHED
 Mapping: S043
 
 A091 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:762
-Disposition: GAP
-Mapping/reason: GAP — the free-row search for the second resize note is guard-only in Swift (keyboard.swift report.fail, no report.expect).
-Source context since previous assertion:
-      // A second selected note starts strictly after the seed's onset and
-      // carries a different duration: the batch delta must come from the grid
-      // snap at the earliest onset and apply uniformly to both.
-      const Tick laterTick = d.tick + 2 * d.dur + snapCell;
-      const uint32_t laterDur = uint32_t(snapCell) + (d.dur == snapCell + 1 ? 2 : 1);
-      int laterKey = -1;
-      for (int key = 115; key >= 24 && laterKey < 0; --key) {
-          if (key == d.key)
-              continue;
-          if (!check.isOccupied(laterTick, laterDur, key, true))
-              laterKey = key;
-      }
-Original expression:
-  QVERIFY2(laterKey >= 0, "could not find a free row for the second resize note");
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S139; native fixture free-row guard QVERIFY2(laterKey >= 0, "could not find a free row for the second resize note") does not prove behavior; the second real note's track, tick and pitch are checked separately.
 
 A092 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:765
-Disposition: PARTIAL
-Mapping/reason: PARTIAL — S049 (keyboard.swift) proves the second note exists with its intended different duration. Unproved: the laterTick/key placement asserted here (S049 addresses the note by ID, not by tick and key).
-Source context since previous assertion:
-      doc.addNote(track, laterTick, uint8_t(laterKey), laterDur, 100);
-      DocNote noteB;
-Original expression:
-  QVERIFY2(doc.findNote(track, laterTick, uint8_t(laterKey), &noteB),
-               "could not create the second resize note");
+Disposition: MATCHED
+Mapping: S139 (the second note has the chosen track, later onset and distinct pitch)
 
 A093 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:767
 Disposition: MATCHED
@@ -882,14 +753,8 @@ Disposition: MATCHED
 Mapping: S050
 
 A095 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:782
-Disposition: PARTIAL
-Mapping/reason: PARTIAL — S050 (keyboard.swift) proves the merged two-snap delta and S051 (keyboard.swift) proves one undo restores the baseline. Unproved: the exact undo index +1 and count +1 arithmetic asserted here.
-Source context since previous assertion:
-  (adjacent to previous assertion; no intervening source lines)
-Original expression:
-  QVERIFY2(doc.undoStack()->index() == resizeUndo + 1 &&
-                   doc.undoStack()->count() == resizeUndoCount + 1,
-               "repeated Shift+Right presses did not merge into one undo entry");
+Disposition: MATCHED
+Mapping: S140 (two lengthen presses add exactly one undo index and count)
 
 A096 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:786
 Disposition: MATCHED
@@ -900,46 +765,20 @@ Disposition: MATCHED
 Mapping: S051
 
 A098 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:800
-Disposition: GAP
-Mapping/reason: GAP — per-press note survival is guard/fail-only in Swift (keyboard.swift); no report.expect pins it (S052 asserts the shrink deltas, not survival). Re-executes once per Shift+Left press in the shrink loop.
-Source context since previous assertion:
-      view.selectionModel().setNoteSelection({noteA.noteId, noteB.noteId});
-      const int floorUndo = doc.undoStack()->index();
-      for (int press = 0; press < 256 && std::min(noteA.duration, noteB.duration) > 1; ++press) {
-          const uint32_t previousA = noteA.duration;
-          const uint32_t previousB = noteB.duration;
-          const uint32_t previousMin = std::min(previousA, previousB);
-          sendKeyStroke(roll, Qt::Key_Left, Qt::ShiftModifier, false);
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &noteA) &&
-                       doc.findNote(track, laterTick, uint8_t(laterKey), &noteB),
-                   "Shift+Left lost a resized note");
+Disposition: MATCHED
+Mapping: S141 (every Shift+Left retains both identities, tracks, ticks and pitches)
 
 A099 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:804
 Disposition: MATCHED
 Mapping: S052
 
 A100 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:808
-Disposition: PARTIAL
-Mapping/reason: S052 (keyboard.swift) verifies every uniform Shift+Left delta and S053 (keyboard.swift) verifies the one-tick floor. PARTIAL remains: host key-event delivery is unproved (Swift drives grid.performCommand directly).
-Source context since previous assertion:
-      }
-Original expression:
-  QVERIFY2(std::min(noteA.duration, noteB.duration) == 1,
-               "Shift+Left did not stop at the one-tick duration floor");
+Disposition: MATCHED
+Mapping: S142, S143 (both selected notes reach the one-tick floor, including mounted Shift+Left delivery)
 
 A101 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:814
-Disposition: PARTIAL
-Mapping/reason: S054 (keyboard.swift) asserts the extra Shift+Left at the floor leaves document, history identity, and revision unchanged. PARTIAL remains: host key-event delivery and the exact undo-count arithmetic are unproved.
-Source context since previous assertion:
-      const QByteArray floorBytes = doc.smf().write();
-      const int floorIndex = doc.undoStack()->index();
-      const int floorCount = doc.undoStack()->count();
-      sendKeyStroke(roll, Qt::Key_Left, Qt::ShiftModifier, false);
-Original expression:
-  QVERIFY2(doc.smf().write() == floorBytes && doc.undoStack()->index() == floorIndex &&
-                   doc.undoStack()->count() == floorCount,
-               "Shift+Left at the duration floor changed the document or history");
+Disposition: MATCHED
+Mapping: S144, S145 (extra Shift+Left at floor preserves document bytes, revision, history index and count; mounted key changes no note or revision)
 
 A102 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:819
 Disposition: MATCHED
@@ -950,34 +789,12 @@ Disposition: MATCHED
 Mapping: S055
 
 A104 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:835
-Disposition: GAP
-Mapping/reason: GAP — the active-time-selection block refusing Shift+Right/Shift+Left is unmodelled: the session owns the time selection since task 38a, but no Swift predicate drives a shift-nudge while a range is active.
-Source context since previous assertion:
-      view.selectionModel().setNoteSelection({noteA.noteId, noteB.noteId});
-      view.selectionModel().setTimeSelection(
-          {d.tick, d.tick + snapCell, songview::EditorSelectionModel::TimeSelection::Tracks, {}});
-      const QByteArray blockedBytes = doc.smf().write();
-      const int blockedIndex = doc.undoStack()->index();
-      const int blockedCount = doc.undoStack()->count();
-      const uint64_t blockedRevision = doc.revision();
-      sendKeyStroke(roll, Qt::Key_Right, Qt::ShiftModifier, false);
-      sendKeyStroke(roll, Qt::Key_Left, Qt::ShiftModifier, false);
-Original expression:
-  QVERIFY2(doc.smf().write() == blockedBytes && doc.revision() == blockedRevision &&
-                   doc.undoStack()->index() == blockedIndex &&
-                   doc.undoStack()->count() == blockedCount &&
-                   view.selectionModel().timeSelection().active(),
-               "an active time selection did not block the note resize keys");
+Disposition: MATCHED
+Mapping: S146, S147 (active time scope refuses both resize keys without document, selection, cursor or history changes; mounted keys are blocked)
 
 A105 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:843
-Disposition: GAP
-Mapping/reason: GAP — S048 (keyboard.swift) restores the pre-seed document, camera, and history identity, whereas this final unwind targets the post-seed snapshot; the slot SMF restoration is unproved.
-Source context since previous assertion:
-      view.selectionModel().clearTimeSelection();
-      while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
-          doc.undoStack()->undo();
-Original expression:
-  QCOMPARE(doc.smf().write(), before);
+Disposition: MATCHED
+Mapping: S091 (seed-scoped unwind restores the post-seed document before the outer pre-seed restoration)
 
 Remaining original source (closing sequence and helper bodies):
   }
@@ -1375,5 +1192,59 @@ Anchor: message "Insert Time shifts all later events by the same range span"
 
 S129 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "a Volume-only selection does not move notes"
+
+S130 | test_focusedRouting | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "mounted Right after Up and Shift+Down advances exactly one snap cell"
+
+S131 | test_modifiedRulerSweepPaintsExactNoteScope | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "the mounted roll and ruler accept a scope sweep"
+
+S132 | checkRulerSelectedKeyboardScope | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A026 modified ruler sweep selects exactly every overlapping note track and span"
+
+S133 | test_modifiedRulerSweepPaintsExactNoteScope | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "a rendered secondary note anchors the modified sweep"
+
+S134 | test_modifiedRulerSweepPaintsExactNoteScope | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "modified ruler scope paints the selection-ring pixels of every overlapping track"
+
+S135 | test_modifiedRulerSweepPaintsExactNoteScope | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "the mounted sweep paints primary and secondary note rings"
+
+S136 | test_modifiedRulerSweepPaintsExactNoteScope | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "time-scoped Up leaves the edited note's selection ring painted"
+
+S137 | checkRulerSelectedKeyboardScope | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A039 ruler transpose and sweep unwind to post-seed bytes"
+
+S138 | checkKeyboardDuplicatePrefersTimeSelection | src/checks/rollcheck/note_commands.swift
+Anchor: message "second time-range Duplicate occupies the next exact span and commits a second undo step"
+
+S139 | checkKeyboardResizeNotes | src/checks/rollcheck/keyboard.swift
+Anchor: message "second resize note occupies the chosen later tick and distinct pitch"
+
+S140 | checkKeyboardResizeNotes | src/checks/rollcheck/keyboard.swift
+Anchor: message "two Shift+Right presses merge into exactly one history entry"
+
+S141 | checkKeyboardResizeNotes | src/checks/rollcheck/keyboard.swift
+Anchor: message "each Shift+Left preserves both note identities and positions"
+
+S142 | checkKeyboardResizeNotes | src/checks/rollcheck/keyboard.swift
+Anchor: message "repeated Shift+Left reaches the one-tick floor"
+
+S143 | test_focusedRouting | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "mounted Shift+Left reaches the one-tick duration floor"
+
+S144 | checkKeyboardResizeNotes | src/checks/rollcheck/keyboard.swift
+Anchor: message "an extra Shift+Left at the floor is a document and history no-op"
+
+S145 | test_focusedRouting | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "mounted Shift+Left at the floor writes no document revision"
+
+S146 | checkKeyboardResizeNotes | src/checks/rollcheck/keyboard.swift
+Anchor: message "active time range blocks both resize keys without changing song selection cursor or history"
+
+S147 | test_modifiedRulerSweepPaintsExactNoteScope | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "mounted time selection blocks both resize keys without changing notes"
 
 S113–S118 and S128/S129 are the task-58 additions from the mounted shellwindow journey test_jTimeSelectionInsertAndDeleteMutatesDocument (the duplicate-time and Insert Time rows A061–A067, A075, A087); S119/S120 are the swiftcore duplicate-routing and single-undo predicates of note_commands.swift (checkKeyboardDuplicatePrefersTimeSelection and its expectOneUndo helper); S121–S127 are the converted insert fixture guards and the hardened track/lane Insert Time anchors of keyboard.swift (checkTimelineInsertBlankTimeTracks, checkTimelineInsertBlankTimeLanes). S091 remains the shared seed helper's post-seed unwind anchor (swiftcore/PianoRoll::withKeyboardSeed) that closes A049, A067, A076, A081 and A088.

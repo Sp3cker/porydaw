@@ -214,6 +214,20 @@ private func checkKeyboardDuplicatePrefersTimeSelection(
         report.expect(session.document.history.undoIndex == index + 1
                       && session.document.history.undoCount == count + 1,
                       cppID: id, message: "time-range Duplicate commits exactly one undo step")
+        router.perform(.duplicate)
+        let secondStart = source.tick + 2 * fixture.step
+        let secondEnd = source.tick + 3 * fixture.step
+        report.expect(page.selection?.range == TimeRange(startTick: secondStart, endTick: secondEnd)
+                      && fixture.note(at: secondStart) != nil
+                      && session.editCursor == secondEnd
+                      && session.document.history.undoIndex == index + 2
+                      && session.document.history.undoCount == count + 2,
+                      cppID: id,
+                      message: "second time-range Duplicate occupies the next exact span and commits a second undo step")
+        report.expect(session.document.history.undoDocument()
+                      && fixture.note(at: secondStart) == nil
+                      && fixture.note(at: source.tick + fixture.step) != nil, cppID: id,
+                      message: "undoing the second Duplicate preserves the first copied span")
         fixture.expectOneUndo(report, id: id)
     }
 }

@@ -4,6 +4,7 @@ import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
 import "NativeWait.js" as NativeWait
+import "GatedVisualsHelpers.js" as Helpers
 
 TestCase {
     id: testCase
@@ -746,6 +747,168 @@ TestCase {
         }, 5000), "the replacement grid publishes notes")
     }
 
+    function test_modifiedRulerSweepPaintsExactNoteScope() {
+        openRoute101()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var ruler = findChild(surface, "timelineRulerInput")
+        var plot = findChild(surface, "timelineQuickRollPlot")
+        verify(ruler !== null && plot !== null, "the mounted roll and ruler accept a scope sweep")
+        function rasterBottom(item) {
+            if (!item || !item.visible || item.width < 5 || item.height < 5)
+                return null
+            var inPlot = item.mapToItem(plot, item.width / 2, 0)
+            var bottom = item.mapToItem(plot, item.width / 2, item.height)
+            if (inPlot.x < 2 || inPlot.x >= plot.width - 2
+                    || inPlot.y < 2 || bottom.y >= plot.height - 2)
+                return null
+            return item.mapToItem(shell.contentItem, item.width / 2, item.height)
+        }
+        var scale = grid.beatWidth / grid.ticksPerBeat
+        var notes = gridNotes(grid)
+        var secondary = null
+        for (var i = 0; i < notes.length; ++i) {
+            var candidate = notes[i]
+            var item = findChild(surface, "gridNote_" + candidate.id)
+            var left = candidate.tick * scale - grid.cameraScrollX
+            var right = (candidate.tick + candidate.duration) * scale - grid.cameraScrollX
+            var primaryOverlap = notes.some(function(other) {
+                var primaryItem = findChild(surface, "gridNote_" + other.id)
+                return other.track === grid.trackIndex && !other.ghost
+                    && other.tick >= candidate.tick
+                    && other.tick < candidate.tick + candidate.duration
+                    && rasterBottom(primaryItem) !== null
+            })
+            if (candidate.ghost && rasterBottom(item) !== null && primaryOverlap
+                    && left > ruler.width * 0.15 && right < ruler.width * 0.6) {
+                secondary = candidate
+                break
+            }
+        }
+        verify(secondary !== null, "a rendered secondary note anchors the modified sweep")
+        var startX = (secondary.tick - grid.snapTicks) * scale - grid.cameraScrollX
+        var endX = (secondary.tick + secondary.duration + grid.snapTicks) * scale
+                   - grid.cameraScrollX
+        var y = ruler.height * 0.75
+        mousePress(ruler, startX, y, Qt.LeftButton, Qt.ControlModifier)
+        mouseMove(ruler, endX, y, -1, Qt.LeftButton, Qt.ControlModifier)
+        mouseRelease(ruler, endX, y, Qt.LeftButton, Qt.ControlModifier)
+        verify(shell.shellPresenter.session.gridCommandAvailable(17),
+               "the mounted modified sweep publishes an active time selection")
+        waitForRendering(shell.contentItem)
+        var image = grabImage(shell.contentItem)
+        verify(image.width > 0 && image.height > 0, "the modified selection renders pixels")
+        var dpr = image.width / shell.contentItem.width
+        var ring = Helpers.channels(grid.palette.selectionRing)
+        var selectedTracks = {}
+        selectedTracks[grid.trackIndex] = true
+        var startTick = secondary.tick - grid.snapTicks
+        var endTick = secondary.tick + secondary.duration + grid.snapTicks
+        var probed = 0
+        for (var index = 0; index < notes.length; ++index) {
+            var note = notes[index]
+            var rendered = findChild(surface, "gridNote_" + note.id)
+            if (rasterBottom(rendered) === null)
+                continue
+            if (note.tick < endTick && note.tick + note.duration > startTick)
+                selectedTracks[note.track] = true
+        }
+        verify(selectedTracks[secondary.track] === true && secondary.track !== grid.trackIndex,
+               "the fixture includes a distinct secondary track")
+        for (var track in selectedTracks) {
+            var found = false
+            for (var n = 0; n < notes.length; ++n) {
+                var visible = notes[n]
+                if (visible.track !== Number(track) || visible.tick >= endTick
+                        || visible.tick + visible.duration <= startTick)
+                    continue
+                var rect = findChild(surface, "gridNote_" + visible.id)
+                var bottom = rasterBottom(rect)
+                if (bottom === null)
+                    continue
+                var px = Math.round(bottom.x * dpr)
+                var py = Math.round(bottom.y * dpr) - 1
+                if (px < 0 || px >= image.width || py < 0 || py >= image.height)
+                    continue
+                var actual = [image.red(px, py), image.green(px, py), image.blue(px, py)]
+                verify(Helpers.colorsNear(actual, ring),
+                       "modified ruler scope paints the selection-ring pixels of every overlapping track")
+                found = true
+                ++probed
+                break
+            }
+            verify(found, "every selected overlap track retains a visible raster witness")
+        }
+        verify(probed >= 2, "the mounted sweep paints primary and secondary note rings")
+        var coveredPrimary = notes.find(function(note) {
+            if (note.track !== grid.trackIndex || note.ghost
+                    || note.tick < startTick || note.tick >= endTick)
+                return false
+            var item = findChild(surface, "gridNote_" + note.id)
+            if (rasterBottom(item) === null)
+                return false
+            return item.mapToItem(plot, 0, 0).y > grid.rowHeight + 2
+        })
+        verify(coveredPrimary !== undefined, "the selected span contains a primary note for key delivery")
+        var roll = rollInput(surface)
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        keyClick(Qt.Key_Up)
+        verify(waitForNative(function() {
+            var transposed = noteById(grid, coveredPrimary.id)
+            return transposed && transposed.pitch === coveredPrimary.pitch + 1
+                && shell.shellPresenter.session.gridCommandAvailable(17)
+        }, 5000), "mounted Up edits the covered primary while retaining the time range")
+        waitForRendering(shell.contentItem)
+        var keyedImage = grabImage(shell.contentItem)
+        var keyedNote = findChild(surface, "gridNote_" + coveredPrimary.id)
+        var keyedBottom = rasterBottom(keyedNote)
+        verify(keyedBottom !== null,
+               "the time-scoped keyboard edit leaves its primary note inside the rendered plot")
+        var keyedX = Math.round(keyedBottom.x * dpr)
+        var keyedY = Math.round(keyedBottom.y * dpr) - 1
+        verify(keyedX >= 0 && keyedX < keyedImage.width
+               && keyedY >= 0 && keyedY < keyedImage.height
+               && Helpers.colorsNear([keyedImage.red(keyedX, keyedY),
+                                      keyedImage.green(keyedX, keyedY),
+                                      keyedImage.blue(keyedX, keyedY)], ring),
+               "time-scoped Up leaves the edited note's selection ring painted")
+        var session = shell.shellPresenter.session
+        var blockedSummary = grid.noteSummary
+        var blockedRevision = grid.appliedRevisionText
+        var blockedCursor = grid.editCursorTick
+        var blockedUndo = session.canUndo
+        var blockedRedo = session.canRedo
+        keyClick(Qt.Key_Right, Qt.ShiftModifier)
+        keyClick(Qt.Key_Left, Qt.ShiftModifier)
+        compare(grid.noteSummary, blockedSummary,
+                "mounted time selection blocks both resize keys without changing notes")
+        compare(grid.appliedRevisionText, blockedRevision,
+                "mounted time selection blocks resize without changing revision")
+        compare(grid.editCursorTick, blockedCursor,
+                "mounted time selection blocks resize without changing cursor")
+        compare(session.canUndo, blockedUndo,
+                "mounted time selection blocks resize without adding undo")
+        compare(session.canRedo, blockedRedo,
+                "mounted time selection blocks resize without changing redo")
+        compare(session.gridCommandAvailable(17), true,
+                "mounted blocked resize keys preserve the active time selection")
+        session.openSong("mus_route101")
+        verify(waitForNative(function() {
+            var current = selectedSurface()
+            return session.songTabs.pendingCloseId >= 0
+                || (current && current.gridModel !== grid)
+        }, 15000), "the reload either requests discard or installs the replacement")
+        if (session.songTabs.pendingCloseId >= 0)
+            session.songTabs.confirmDiscard()
+        verify(waitForNative(function() {
+            var replacement = selectedSurface()
+            return replacement && replacement.gridModel !== grid
+                && replacement.gridModel.renderedNoteCount > 0
+        }, 15000), "the selected song reload replaces the grid after the active ruler range")
+        compare(session.gridCommandAvailable(17), false,
+                "reloading the selected song clears the old active time selection")
+    }
+
     function test_focusedRouting() {
         var session = openRoute101()
         var surface = selectedSurface()
@@ -795,6 +958,62 @@ TestCase {
         compare(grid.noteSummary, beforeGesture, "restoring Pencil never edits notes")
         mouseRelease(roll, movedCenter.x, movedCenter.y, Qt.LeftButton)
         compare(grid.noteSummary, beforeGesture, "releasing the held press commits no edit")
+        keyClick(Qt.Key_B)
+        tryCompare(grid, "pencilMode", false, 3000)
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        keyClick(Qt.Key_Up)
+        verify(waitForNative(function() {
+            var raised = noteById(grid, target.id)
+            return raised && raised.tick === target.tick + snap
+                && raised.pitch === target.pitch + 1
+        }, 5000), "mounted Up transposes the selected note one semitone after Right")
+        keyClick(Qt.Key_Down, Qt.ShiftModifier)
+        verify(waitForNative(function() {
+            var lowered = noteById(grid, target.id)
+            return lowered && lowered.pitch === target.pitch - 11
+                && lowered.tick === target.tick + snap
+        }, 5000), "mounted Shift+Down moves the selected note down an octave")
+        keyClick(Qt.Key_Right)
+        verify(waitForNative(function() {
+            var advanced = noteById(grid, target.id)
+            return advanced && advanced.tick === target.tick + 2 * snap
+                && advanced.pitch === target.pitch - 11
+        }, 5000), "mounted Right after Up and Shift+Down advances exactly one snap cell")
+        keyClick(Qt.Key_Right, Qt.ShiftModifier)
+        verify(waitForNative(function() {
+            var extended = noteById(grid, target.id)
+            return extended && extended.duration === target.duration + snap
+                && extended.tick === target.tick + 2 * snap
+        }, 5000), "mounted Shift+Right extends the selected note by one snap cell")
+        keyClick(Qt.Key_Left, Qt.ShiftModifier)
+        verify(waitForNative(function() {
+            var restored = noteById(grid, target.id)
+            return restored && restored.duration === target.duration
+                && restored.tick === target.tick + 2 * snap
+        }, 5000), "mounted Shift+Left shrinks the selected note without moving its start")
+        for (var press = 0; press < 64 && noteById(grid, target.id).duration > 1; ++press) {
+            var previousDuration = noteById(grid, target.id).duration
+            keyClick(Qt.Key_Left, Qt.ShiftModifier)
+            verify(waitForNative(function() {
+                var shortened = noteById(grid, target.id)
+                return shortened && shortened.duration < previousDuration
+                    && shortened.tick === target.tick + 2 * snap
+            }, 5000), "mounted Shift+Left repeatedly shortens without moving the selected note")
+        }
+        compare(noteById(grid, target.id).duration, 1,
+                "mounted Shift+Left reaches the one-tick duration floor")
+        var floorSummary = grid.noteSummary
+        var floorRevision = grid.appliedRevisionText
+        var floorUndo = session.canUndo
+        var floorRedo = session.canRedo
+        var floorCursor = grid.editCursorTick
+        keyClick(Qt.Key_Left, Qt.ShiftModifier)
+        compare(grid.noteSummary, floorSummary, "mounted Shift+Left at the floor changes no note")
+        compare(grid.appliedRevisionText, floorRevision,
+                "mounted Shift+Left at the floor writes no document revision")
+        compare(session.canUndo, floorUndo, "mounted Shift+Left at the floor adds no undo")
+        compare(session.canRedo, floorRedo, "mounted Shift+Left at the floor changes no redo")
+        compare(grid.editCursorTick, floorCursor, "mounted Shift+Left at the floor keeps the cursor")
     }
 
     function test_bareSpace() {

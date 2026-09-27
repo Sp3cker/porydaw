@@ -267,6 +267,11 @@ private func checkKeyboardResizeNotes(_ report: CheckReport, session: DocumentSe
         report.expect(seed.duration != laterDuration
             && session.document.note(second)?.duration == laterDuration,
             cppID: id, message: "the batch fixture has two different durations")
+        report.expect(session.document.note(second).map {
+            $0.id == second && $0.track == seed.track && $0.tick == laterTick
+                && Int($0.pitch) == laterPitch
+        } == true, cppID: id,
+        message: "second resize note occupies the chosen later tick and distinct pitch")
         session.setSelectedNotes([seed.id, second])
         let surface = EditSurfaceState(pointerGestureActive: false, timeSelectionActive: false,
                                        noteSelectionEmpty: false, origin: .timeline,
@@ -276,11 +281,16 @@ private func checkKeyboardResizeNotes(_ report: CheckReport, session: DocumentSe
             cppID: id, message: "both normalized resize keys target the selected notes")
         let baseline = session.document.state
         let resizeIdentity = session.document.history.currentIdentity
+        let resizeIndex = session.document.history.undoIndex
+        let resizeCount = session.document.history.undoCount
         grid.performCommand(command: EditCommand.lengthenNote.rawValue)
         grid.performCommand(command: EditCommand.lengthenNote.rawValue)
         report.expect(session.document.note(seed.id)?.duration == seed.duration + 2 * seed.snap
             && session.document.note(second)?.duration == laterDuration + 2 * seed.snap,
             cppID: id, message: "two Shift+Right presses extend both notes by two snap cells")
+        report.expect(session.document.history.undoIndex == resizeIndex + 1
+                      && session.document.history.undoCount == resizeCount + 1,
+                      cppID: id, message: "two Shift+Right presses merge into exactly one history entry")
         report.expect(session.document.history.undoDocument(), cppID: id,
                       message: "two compatible resize presses merge into one undo step")
         report.expect(session.document.state == baseline
@@ -297,6 +307,11 @@ private func checkKeyboardResizeNotes(_ report: CheckReport, session: DocumentSe
                 return
             }
             let shrink = min(a.duration, b.duration) - min(nextA.duration, nextB.duration)
+            report.expect(nextA.id == seed.id && nextB.id == second
+                          && nextA.track == seed.track && nextB.track == seed.track
+                          && nextA.tick == seed.tick && nextB.tick == laterTick
+                          && Int(nextA.pitch) == seed.pitch && Int(nextB.pitch) == laterPitch,
+                          cppID: id, message: "each Shift+Left preserves both note identities and positions")
             report.expect(shrink > 0 && nextA.duration == a.duration - shrink
                 && nextB.duration == b.duration - shrink,
                 cppID: id, message: "Shift+Left shortens both notes by the same step")
@@ -305,16 +320,48 @@ private func checkKeyboardResizeNotes(_ report: CheckReport, session: DocumentSe
                           session.document.note(second)?.duration ?? 0) == 1,
                       cppID: id, message: "repeated Shift+Left reaches the one-tick floor")
         let atFloor = session.document.state
+        let floorBytes = coreTimeBytes(session.document)
+        let floorIndex = session.document.history.undoIndex
+        let floorCount = session.document.history.undoCount
         let floorIdentity = session.document.history.currentIdentity
         let floorRevision = session.document.revision
         grid.performCommand(command: EditCommand.shortenNote.rawValue)
-        report.expect(session.document.state == atFloor
+        report.expect(coreTimeBytes(session.document) == floorBytes
+            && session.document.state == atFloor
             && session.document.history.currentIdentity == floorIdentity
+            && session.document.history.undoIndex == floorIndex
+            && session.document.history.undoCount == floorCount
             && session.document.revision == floorRevision,
             cppID: id, message: "an extra Shift+Left at the floor is a document and history no-op")
         report.expect(session.document.history.undoDocument()
             && session.document.state == baseline, cppID: id,
             message: "the shrink sequence merges and one undo restores the fixture")
+        let blockedBytes = coreTimeBytes(session.document)
+        let blockedRevision = session.document.revision
+        let blockedIndex = session.document.history.undoIndex
+        let blockedCount = session.document.history.undoCount
+        let blockedCursor = session.editCursor
+        let blockedTrack = session.selectedTrack
+        let blockedScope = session.selectedTracks
+        session.applyTimeSelection(AutomationTimeSelection(
+            range: TimeRange(startTick: seed.tick, endTick: seed.tick + seed.snap),
+            scope: .tracks([seed.track])))
+        let blockedSelection = session.timeSelection
+        let blockedNotes = session.selectedNoteOrder
+        grid.performCommand(command: EditCommand.lengthenNote.rawValue)
+        grid.performCommand(command: EditCommand.shortenNote.rawValue)
+        report.expect(coreTimeBytes(session.document) == blockedBytes
+                      && session.document.revision == blockedRevision
+                      && session.document.history.undoIndex == blockedIndex
+                      && session.document.history.undoCount == blockedCount
+                      && session.timeSelection == blockedSelection
+                      && session.selectedNoteOrder == blockedNotes
+                      && session.selectedTrack == blockedTrack
+                      && session.selectedTracks == blockedScope
+                      && session.editCursor == blockedCursor,
+                      cppID: id,
+                      message: "active time range blocks both resize keys without changing song selection cursor or history")
+        session.clearTimeSelection()
     }
 }
 

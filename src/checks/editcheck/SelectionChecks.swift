@@ -30,8 +30,8 @@ func runClipboardSelectionChecks(_ report: CheckReport, suite: DocumentSession,
     clipboardUnifiedTimeSelectionChecks(report, suite: suite, service: service)
     clipboardUnifiedModelChecks(report, suite: suite, service: service)
     clipboardSelectionTransitionChecks(report, suite: suite, service: service)
-
-
+    clipboardRemapBoundaryChecks(report, suite: suite, service: service)
+    clipboardEmptyAndReplacementChecks(report, suite: suite, service: service)
 }
 
 @MainActor
@@ -244,6 +244,11 @@ private func clipboardTrackSelectionChecks(_ report: CheckReport, session: Docum
     session.selectedTrack = 1
     session.adjustTrackScope(track: 0, action: .toggle)
     session.setSelectedNotes([note])
+    var remapTransitions: [SelectionTransition] = []
+    let remapObserver = session.addSelectionTransitionObserver {
+        remapTransitions.append($0)
+    }
+    defer { session.removeSelectionTransitionObserver(remapObserver) }
     changes.removeAll()
     guard session.withStateChanges({
         document.moveTrack(1, to: 4) && document.moveTrack(0, to: 2)
@@ -260,6 +265,12 @@ private func clipboardTrackSelectionChecks(_ report: CheckReport, session: Docum
     report.expect(changes.count == 1 && changes[0].contains(.document)
                   && changes[0].contains(.selection), cppID: remapID,
                   message: "A083 remap and selected scope publish one coalesced change")
+    report.expect(remapTransitions.last?.previousTrackTime == TrackTimeSelection(),
+                  cppID: remapID,
+                  message: "A084 moved note scope has an empty previous track-time payload")
+    report.expect(remapTransitions.last?.trackTime == TrackTimeSelection(),
+                  cppID: remapID,
+                  message: "A085 moved note scope has an empty current track-time payload")
 
     session.clearSelectedNotes()
     session.selectedTrack = 2
@@ -765,6 +776,135 @@ private func clipboardSelectionTransitionChecks(_ report: CheckReport, suite: Do
                   message: "dropping every invalid lane leaves no selected lanes")
     report.expect(session.timeSelection?.tempo != true, cppID: coverage,
                   message: "dropping every invalid lane leaves no observable tempo flag")
+}
+
+@MainActor
+private func clipboardEmptyAndReplacementChecks(_ report: CheckReport, suite: DocumentSession,
+                                                 service: ProjectService) {
+    let coverage = "clipboard/SelectionCheckTest::coverageQueriesAndLaneScopeSanitization"
+    let replacement = "clipboard/SelectionCheckTest::resetForSongSwapNotifiesExactState"
+    let file = MidiFile(division: 24, chunks: [MidiChunk(events: [], endTick: 96)])
+    let document = SongDocument(file: file, config: suite.document.state.config,
+                                source: suite.document.source, trackBudget: suite.document.trackBudget)
+    let previous = DocumentSession(document: document, service: service,
+                                   lease: suite.bankLease, slots: suite.bankSlots,
+                                   dirty: false, loadName: suite.bankLoadName)
+    previous.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 1, endTick: 2), scope: .tracks([0])))
+    report.expect(document.engineTracks.usedTrackCount == 0
+                  && previous.timeSelection?.isActive == true
+                  && !previous.timeSelectionCoversTempo(),
+                  cppID: coverage,
+                  message: "A047 empty used-track document never grants global Tempo track coverage")
+    let replacementDocument = SongDocument(file: file, config: suite.document.state.config,
+                                           source: suite.document.source,
+                                           trackBudget: suite.document.trackBudget)
+    let next = DocumentSession(document: replacementDocument, service: service,
+                               lease: suite.bankLease, slots: suite.bankSlots,
+                               dirty: false, loadName: suite.bankLoadName)
+    report.expect(previous.timeSelection?.isActive == true && next.timeSelection == nil,
+                  cppID: replacement,
+                  message: "A074 replacing a selected document installs an inactive new-session selection")
+}
+
+@MainActor
+private func clipboardRemapBoundaryChecks(_ report: CheckReport, suite: DocumentSession,
+                                          service: ProjectService) {
+    let id = "clipboard/SelectionCheckTest::remapPreservesMeaningfulSelection"
+    let file = MidiFile(division: 24, chunks: [MidiChunk(events: [], endTick: 96)])
+    func makeSession() -> DocumentSession? {
+        let document = SongDocument(file: file, config: suite.document.state.config,
+                                    source: suite.document.source,
+                                    trackBudget: suite.document.trackBudget)
+        for _ in document.engineTracks.usedTrackCount..<5 {
+            guard document.addTrack(voice: 0) != nil else { return nil }
+        }
+        return DocumentSession(document: document, service: service, lease: suite.bankLease,
+                               slots: suite.bankSlots, dirty: false, loadName: suite.bankLoadName)
+    }
+    guard let laneSession = makeSession(), let deletedSession = makeSession() else {
+        report.fail(id, "cannot provision structural selection remap fixtures")
+        return
+    }
+    let laneDocument = laneSession.document
+    laneSession.selectPrimaryTrack(1)
+    laneSession.adjustTrackScope(track: 0, action: .toggle)
+    let first = AutomationParameter.controlChange(track: 0, controller: 7)
+    let second = AutomationParameter.controlChange(track: 1, controller: 8)
+    laneSession.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 8, endTick: 18), scope: .lanes,
+        lanes: [first, second, second, .tempo], tempo: true))
+    var laneTransitions: [SelectionTransition] = []
+    let laneObserver = laneSession.addSelectionTransitionObserver {
+        laneTransitions.append($0)
+    }
+    defer { laneSession.removeSelectionTransitionObserver(laneObserver) }
+    guard laneSession.withStateChanges({
+        laneDocument.moveTrack(1, to: 4) && laneDocument.moveTrack(0, to: 2)
+    }) else {
+        report.fail(id, "cannot move the lane selection tracks")
+        return
+    }
+    let mappedFirst = AutomationParameter.controlChange(track: 2, controller: 7)
+    let mappedSecond = AutomationParameter.controlChange(track: 4, controller: 8)
+    report.expect(laneSession.timeSelection?.lanes == [mappedFirst, mappedSecond],
+                  cppID: id, message: "A088 duplicate lanes collapse to controller seven on two and eight on four")
+    report.expect(laneSession.timeSelection?.tempo == true, cppID: id,
+                  message: "A089 structural lane remap retains the global Tempo selection")
+    report.expect(laneTransitions.last?.previousTrackTime == TrackTimeSelection(),
+                  cppID: id, message: "A091 lane remap reports an empty previous track-time payload")
+    report.expect(laneTransitions.last?.trackTime == TrackTimeSelection(),
+                  cppID: id, message: "A092 lane remap reports an empty current track-time payload")
+
+    let document = deletedSession.document
+    deletedSession.selectPrimaryTrack(2)
+    deletedSession.adjustTrackScope(track: 0, action: .toggle)
+    deletedSession.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 20, endTick: 30), scope: .tracks([0, 2])))
+    var transitions: [SelectionTransition] = []
+    let observer = deletedSession.addSelectionTransitionObserver {
+        transitions.append($0)
+    }
+    defer { deletedSession.removeSelectionTransitionObserver(observer) }
+    deletedSession.withStateChanges {
+        document.deleteTrack(4)
+        document.deleteTrack(3)
+        document.deleteTrack(2)
+        document.deleteTrack(1)
+    }
+    let before = TrackTimeSelection(startTick: 20, endTick: 30, trackScope: [0, 2])
+    let empty = TrackTimeSelection()
+    report.expect(transitions.count == 1
+                  && transitions.last?.previousTrackTime.startTick == 20
+                  && selectionPayloadMatches(transitions.last, previous: before, current: empty),
+                  cppID: id, message: "A097 deleted primary transition remembers start tick twenty")
+    report.expect(transitions.last?.previousTrackTime.endTick == 30
+                  && selectionPayloadMatches(transitions.last, previous: before, current: empty),
+                  cppID: id, message: "A098 deleted primary transition remembers end tick thirty")
+    report.expect(transitions.last?.previousTrackTime.trackScope == [0, 2]
+                  && selectionPayloadMatches(transitions.last, previous: before, current: empty),
+                  cppID: id, message: "A099 deleted primary transition remembers both selected tracks")
+    report.expect(transitions.last?.trackTime.trackScope.isEmpty == true
+                  && selectionPayloadMatches(transitions.last, previous: before, current: empty),
+                  cppID: id, message: "A100 deleted primary transition clears the current scope")
+
+    guard let droppedSession = makeSession() else {
+        report.fail(id, "cannot provision deleted lane fixture")
+        return
+    }
+    droppedSession.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 40, endTick: 50), scope: .lanes,
+        lanes: [.controlChange(track: 1, controller: 7)]))
+    var droppedTransitions: [SelectionTransition] = []
+    let droppedObserver = droppedSession.addSelectionTransitionObserver {
+        droppedTransitions.append($0)
+    }
+    defer { droppedSession.removeSelectionTransitionObserver(droppedObserver) }
+    droppedSession.document.deleteTrack(1)
+    report.expect(droppedTransitions.last?.previousTrackTime == TrackTimeSelection(),
+                  cppID: id, message: "A104 deleted final lane publishes an empty previous track-time payload")
+    report.expect(droppedTransitions.last?.trackTime == TrackTimeSelection(),
+                  cppID: id, message: "A105 deleted final lane publishes an empty current track-time payload")
 }
 
 private func selectionPayloadMatches(_ transition: SelectionTransition?,
