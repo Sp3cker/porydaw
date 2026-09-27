@@ -28,6 +28,7 @@ internal func runTransportBarChecks(_ report: CheckReport) {
     report.expectEqual(expected: "4:1", actual: TransportBarPresenter.measure(at: 264, timeline: timeline),
                        cppID: id, what: "new 3/4 segment advances after three beats")
     checkRestoredOutputVolumeAfterAttachment(report)
+    checkTransportVolumeIsolation(report, fixtureRoot: CheckEnvironment.fixtureRoot)
     checkTransportTogglePreferences(report)
 
     guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
@@ -74,11 +75,112 @@ private func checkTransportTogglePreferences(_ report: CheckReport) {
 }
 
 @MainActor
+private func checkTransportVolumeIsolation(_ report: CheckReport, fixtureRoot: String?) {
+    let id = "swiftcore/TransportBar::volumeIsolation"
+    guard let fixtureRoot else { report.fail(id, "missing transport fixture root"); return }
+    let store = PreferencesStore()
+    let original = store.hasValue(key: "outputVolume") ? store.int(key: "outputVolume", fallback: 100) : nil
+    defer {
+        if let original { store.setInt(key: "outputVolume", value: original) }
+        else { store.remove(key: "outputVolume") }
+        store.synchronize()
+    }
+    store.setInt(key: "outputVolume", value: 37)
+    store.synchronize()
+    let project = stageTestProject(in: fixtureRoot, projectName: "swiftcore-transport-volume")
+    let app = ApplicationSession()
+    defer {
+        app.hostClosing()
+        app.acknowledgeGridDetached()
+    }
+    guard let audio = app.transportAudio else {
+        report.fail(id, "native audio failed to initialize: \(app.lastSaveError)")
+        return
+    }
+    let bar = app.transportBarPresenter()
+    bar.restoreOutputVolume()
+    report.expectEqual(expected: 37, actual: bar.outputVolume, cppID: id,
+                       what: "staged 37 output preference restores into selected toolbar")
+    report.expectEqual(expected: 37, actual: audio.outputVolume, cppID: id,
+                       what: "restored 37 output preference reaches real native audio")
+    app.openProjectAndSong(path: project, label: "mus_session_test")
+    guard pollCheckUntil({ app.songOpen || !app.lastSaveError.isEmpty }, seconds: 25),
+          let first = app.songTabs.selectedPage else {
+        report.fail(id, "first transport song did not open: \(app.lastSaveError)")
+        return
+    }
+    bar.refresh()
+    let firstDocument = first.workspace.session.document
+    let initialMaster = firstDocument.state.config.masterVolume
+    let initialCount = firstDocument.history.undoCount
+    let initialIndex = firstDocument.history.undoIndex
+    report.expectEqual(expected: initialMaster, actual: bar.masterVolume, cppID: id,
+                       what: "loaded master field projection reads the first song cfg")
+    bar.commitOutputVolume(percent: 42)
+    report.expectEqual(expected: 42, actual: audio.outputVolume, cppID: id,
+                       what: "edited 42 application output reaches real native audio")
+    report.expectEqual(expected: 42, actual: PreferencesStore().int(key: "outputVolume", fallback: -1),
+                       cppID: id, what: "edited 42 output persists in the isolated preference domain")
+    report.expectEqual(expected: initialMaster, actual: firstDocument.state.config.masterVolume,
+                       cppID: id, what: "output edit leaves first song master cfg unchanged")
+    report.expect(firstDocument.history.undoCount == initialCount &&
+                  firstDocument.history.undoIndex == initialIndex, cppID: id,
+                  message: "output edit records no song history count or index")
+    report.expect(!firstDocument.isDirty, cppID: id,
+                  message: "output edit leaves the first song clean")
+    bar.commitOutputVolume(percent: 37)
+    let editedMaster = initialMaster == 100 ? 101 : 100
+    bar.setMasterVolume(value: editedMaster)
+    report.expectEqual(expected: editedMaster, actual: firstDocument.state.config.masterVolume,
+                       cppID: id, what: "song master edit changes the first song cfg")
+    report.expect(firstDocument.history.undoCount == initialCount + 1 &&
+                  firstDocument.history.undoIndex == initialIndex + 1 &&
+                  firstDocument.history.canUndo, cppID: id,
+                  message: "song master edit creates one reachable undo entry")
+    report.expect(firstDocument.isDirty, cppID: id,
+                  message: "song master edit dirties its owning document")
+    let firstID = first.tabId
+    app.openSong(label: "mus_session_test2")
+    guard pollCheckUntil({ app.songTabs.tabCount == 2 &&
+                          app.songTabs.selectedId != firstID || !app.lastSaveError.isEmpty },
+                         seconds: 25), let second = app.songTabs.selectedPage,
+          second.tabId != firstID else {
+        report.fail(id, "second transport song did not open: \(app.lastSaveError)")
+        return
+    }
+    bar.refresh()
+    report.expectEqual(expected: second.workspace.session.document.state.config.masterVolume, actual: bar.masterVolume,
+                       cppID: id, what: "tab switch projects the second song's own master cfg")
+    report.expectEqual(expected: 37, actual: audio.outputVolume, cppID: id,
+                       what: "global 37 output remains applied to audio after tab switch")
+    report.expect(!second.workspace.session.document.isDirty, cppID: id,
+                  message: "switching away from master edit leaves the second song clean")
+    app.songTabs.selectTab(tabId: firstID)
+    bar.refresh()
+    report.expectEqual(expected: editedMaster, actual: bar.masterVolume, cppID: id,
+                       what: "return to first tab restores its edited master field")
+    app.requestUndo()
+    guard pollCheckUntil({ firstDocument.history.undoIndex == initialIndex }, seconds: 5) else {
+        report.fail(id, "first song master undo did not complete")
+        return
+    }
+    bar.refresh()
+    report.expectEqual(expected: initialMaster, actual: firstDocument.state.config.masterVolume,
+                       cppID: id, what: "undo restores first song master cfg")
+    report.expectEqual(expected: initialMaster, actual: bar.masterVolume, cppID: id,
+                       what: "undo restores first song master field")
+    report.expect(!firstDocument.isDirty, cppID: id,
+                  message: "undo returns the first song to its clean saved state")
+}
+
+@MainActor
 private func checkRestoredOutputVolumeAfterAttachment(_ report: CheckReport) {
     let id = "swiftcore/TransportBar::lateOutputVolumeAttachment"
     let store = PreferencesStore()
+    let original = store.hasValue(key: "outputVolume") ? store.int(key: "outputVolume", fallback: 100) : nil
     defer {
-        store.remove(key: "outputVolume")
+        if let original { store.setInt(key: "outputVolume", value: original) }
+        else { store.remove(key: "outputVolume") }
         store.synchronize()
     }
     store.setInt(key: "outputVolume", value: 37)

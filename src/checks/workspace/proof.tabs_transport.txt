@@ -24,7 +24,7 @@ Shared SHA-256: 79d2a5010d685bd2a2ec6547db1c7430319c5006b18827f97fed1d49239ac306
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 WorkspaceTabsTest::transportVolumesAndRaster covers the transport bar before any project is open (disabled scale controls, reserved time-strip geometry, dial raster ticks) and with two tabs (toolbar order, output-volume dial versus song master-volume spin, mouse-drag dial behavior, shortcut-override filtering).
-tabs_transport.cpp contributes 73 sites: 12 MATCHED, 3 PARTIAL, 39 GAP, 19 RETIRED-REPRESENTATION. The
+tabs_transport.cpp contributes 73 sites: 40 MATCHED, 1 PARTIAL, 1 GAP, 31 RETIRED-REPRESENTATION. The
 shell-transport TestCase mounts ShellWindow with a live project and two tabs;
 
 Command: deno task verify --filter projectstore --filter swiftcore --verbose
@@ -32,6 +32,12 @@ Result: PASS — 24 applicable entries, 7 filtered skips (controller-run final r
 sources pinned above; the ledger agent did not run it).
 Command: deno task verify:shell --filter shell-transport --verbose
 Result: PASS — shell-transport 1/1 applicable (4.78s).
+Command: deno task verify --filter swiftcore-projectsession --verbose
+Result: PASS — swiftcore-projectsession 1/36 ok, 35 skipped (implementer-run on this tree; the ledger agent did not run it).
+Command: deno task verify:shell --filter shell-transport --verbose
+Result: PASS — shell-transport 1/26 ok, 25 skipped, 13.25s (implementer-run rerun after the final focused-digit assertion; the ledger agent did not run it).
+Command: deno task verify --verbose
+Result: PASS — 36/36 ok (implementer-run full verify on this tree; the ledger agent did not run it).
 
 Task 44 note (SH06 preference remainder): the preference behaviors this task added have no original
 site in tabs_transport.cpp, so they enter this index only as predicates S190-S209 — followPlayhead
@@ -39,8 +45,8 @@ and dsp.resonanceSuppression restore plus persist-on-change, the output dial's i
 accumulator law, the mounted dial tooltip, the windowGeometry and windowState frame restore
 (Polyphony debugger visibility rides windowState) with its offscreen guard, and the songFilterText,
 songFilterSort and songFilterCategory restore with the missing-category fallback. A043 (dial tooltip)
-and A049 (press without a drag) move from GAP to MATCHED on S202 and S197; A058 stays PARTIAL
-(nothing indexed here asserts the SongDocument master-volume config), and A051/A052 keep their
+and A049 (press without a drag) move from GAP to MATCHED on S202 and S197; A058's PARTIAL residue
+(no indexed SongDocument master-volume config assertion at the time) is closed by Task 98's S216, and A051/A052 keep their
 earlier MATCHED disposition because the new dial predicate asserts the accumulator law rather than
 the drag direction those two sites assert. The tally line above is reconciled to the file's actual
 dispositions; its earlier "9 MATCHED, 42 GAP" predated A024's MATCHED flip.
@@ -51,6 +57,13 @@ Verification reused for this revision (implementer-run on this tree; the ledger 
 it): deno task build:checks ok; deno task verify --filter swiftcore-projectsession --verbose 1/37 ok;
 deno task verify:shell --filter shell-transport / shell-songs / shellwindow --verbose 1/26 ok each;
 deno task verify:bridge 0 baselined findings.
+Task 98 note (transport volume isolation, raster and key priority): 41 selected rows reconciled to fresh
+predicates in this tree — S210-S223 (checkTransportVolumeIsolation) and S224-S252
+(tst_ShellTransport.qml). 28 MATCHED, 12 RETIRED-REPRESENTATION (A007-A010 QWidget focusPolicy,
+A016-A023 QWidget sizeHint/min/max width) with same-task behavioral proof cited, 1 PARTIAL (A050 exact
+count/index from the stationary click itself). A062 stays GAP: no audio-engine readback proof. This
+deviates from the brief's planned 29 MATCHED by one (A050) because the mounted stationary-click
+predicate observes canUndo false rather than the exact undo count/index.
 
 No native execution remains: the QtTest suites declared in
 src/checks/workspace/tst_workspacesessions.h
@@ -72,45 +85,24 @@ A005 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_
 Disposition: RETIRED-REPRESENTATION
 
 A006 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:81
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!root->isEnabled() && !scale->isEnabled() && !highlight->isEnabled() &&
-              !fold->isEnabled())
+Disposition: MATCHED
+Mapping: S224 (test_scaleControlsFollowSelectedTab verifies all four scale controls disabled before a song opens; message "scale selector is unavailable before a song opens"). Same song-less combined-disabled clause as the fork.
 
 A007 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:83
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(root->focusPolicy(), Qt::NoFocus)
+Disposition: RETIRED-REPRESENTATION
+Mapping: QWidget focusPolicy() has no QML counterpart. Behavioral law (scale chrome never captures bare Space) proven by S252 (message "scale chrome leaves bare Space to window transport") with unloaded-disabled scale S224.
 
 A008 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:84
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(scale->focusPolicy(), Qt::NoFocus)
+Disposition: RETIRED-REPRESENTATION
+Mapping: QWidget focusPolicy() has no QML counterpart. Behavioral law (scale chrome never captures bare Space) proven by S252 (message "scale chrome leaves bare Space to window transport") with unloaded-disabled scale S224.
 
 A009 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:85
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(highlight->focusPolicy(), Qt::NoFocus)
+Disposition: RETIRED-REPRESENTATION
+Mapping: QWidget focusPolicy() has no QML counterpart. Behavioral law (scale chrome never captures bare Space) proven by S252 (message "scale chrome leaves bare Space to window transport") with unloaded-disabled scale S224.
 
 A010 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:86
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(fold->focusPolicy(), Qt::NoFocus)
+Disposition: RETIRED-REPRESENTATION
+Mapping: QWidget focusPolicy() has no QML counterpart. Behavioral law (scale chrome never captures bare Space) proven by S252 (message "scale chrome leaves bare Space to window transport") with unloaded-disabled scale S224.
 
 A011 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:92
 Disposition: RETIRED-REPRESENTATION
@@ -119,12 +111,8 @@ A012 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_
 Disposition: RETIRED-REPRESENTATION
 
 A013 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:94
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: tst_ShellTransport.qml test_transportControlTransitionsAndSettings compares the mounted unloaded clock to 0:00.0 / 0:00.0 and passed; the original also constructed a separate standalone QWidget FastLabel instance absent from the QML surface.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(time->text(), QStringLiteral("0:00.0 / 0:00.0"))
+Disposition: MATCHED
+Mapping: S239 (test_transportClockAndSpacerSurviveTextAndResize compares the empty mounted clock to 0:00.0 / 0:00.0; message "empty toolbar keeps the combined clock zeroed"). Same song-less combined-readout clause; the fork's standalone TransportBar instance is fixture scaffolding.
 
 A014 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:96
 Disposition: RETIRED-REPRESENTATION
@@ -133,98 +121,51 @@ A015 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_
 Disposition: MATCHED
 
 A016 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:100
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the transport time label reserved size hint (src/ui/transportbar.cpp owns the native transport chrome and is compiled into no target; src/ui/shell/ShellWindow.qml exposes transport menu actions only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-      const QSize reservedHint = time->sizeHint();
-Original expression:
-  QVERIFY(reservedHint.width() > 0)
+Disposition: RETIRED-REPRESENTATION
+Mapping: QWidget sizeHint()/minimumSizeHint()/setMinimumWidth()/setMaximumWidth() have no QML counterpart. Behavioral law (clock text never moves adjacent toolbar geometry) proven by S240/S241/S242 (worst-case width, scale position, loaded width).
 
 A017 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:101
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the transport time label minimum size hint (src/ui/transportbar.cpp owns the native transport chrome and is compiled into no target; src/ui/shell/ShellWindow.qml exposes transport menu actions only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(time->minimumSizeHint(), reservedHint)
+Disposition: RETIRED-REPRESENTATION
+Mapping: QWidget sizeHint()/minimumSizeHint()/setMinimumWidth()/setMaximumWidth() have no QML counterpart. Behavioral law (clock text never moves adjacent toolbar geometry) proven by S240/S241/S242 (worst-case width, scale position, loaded width).
 
 A018 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:102
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the transport time label fixed minimum width (src/ui/transportbar.cpp owns the native transport chrome and is compiled into no target; src/ui/shell/ShellWindow.qml exposes transport menu actions only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(time->minimumWidth(), reservedHint.width())
+Disposition: RETIRED-REPRESENTATION
+Mapping: QWidget sizeHint()/minimumSizeHint()/setMinimumWidth()/setMaximumWidth() have no QML counterpart. Behavioral law (clock text never moves adjacent toolbar geometry) proven by S240/S241/S242 (worst-case width, scale position, loaded width).
 
 A019 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:103
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the transport time label fixed maximum width (src/ui/transportbar.cpp owns the native transport chrome and is compiled into no target; src/ui/shell/ShellWindow.qml exposes transport menu actions only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(time->maximumWidth(), reservedHint.width())
+Disposition: RETIRED-REPRESENTATION
+Mapping: QWidget sizeHint()/minimumSizeHint()/setMinimumWidth()/setMaximumWidth() have no QML counterpart. Behavioral law (clock text never moves adjacent toolbar geometry) proven by S240/S241/S242 (worst-case width, scale position, loaded width).
 
 A020 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:106
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the transport time label size hint under changed text (src/ui/transportbar.cpp owns the native transport chrome and is compiled into no target; src/ui/shell/ShellWindow.qml exposes transport menu actions only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-      defaultTransport.setTimeText(QStringLiteral("99:59.9 / 99:59.9"));
-      // Text changes must never move the hardcoded reserved strip.
-Original expression:
-  QCOMPARE(time->sizeHint(), reservedHint)
+Disposition: RETIRED-REPRESENTATION
+Mapping: QWidget sizeHint()/minimumSizeHint()/setMinimumWidth()/setMaximumWidth() have no QML counterpart. Behavioral law (clock text never moves adjacent toolbar geometry) proven by S240/S241/S242 (worst-case width, scale position, loaded width).
 
 A021 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:107
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the transport time label minimum size hint under changed text (src/ui/transportbar.cpp owns the native transport chrome and is compiled into no target; src/ui/shell/ShellWindow.qml exposes transport menu actions only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(time->minimumSizeHint(), reservedHint)
+Disposition: RETIRED-REPRESENTATION
+Mapping: QWidget sizeHint()/minimumSizeHint()/setMinimumWidth()/setMaximumWidth() have no QML counterpart. Behavioral law (clock text never moves adjacent toolbar geometry) proven by S240/S241/S242 (worst-case width, scale position, loaded width).
 
 A022 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:108
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the transport time label fixed minimum width under changed text (src/ui/transportbar.cpp owns the native transport chrome and is compiled into no target; src/ui/shell/ShellWindow.qml exposes transport menu actions only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(time->minimumWidth(), reservedHint.width())
+Disposition: RETIRED-REPRESENTATION
+Mapping: QWidget sizeHint()/minimumSizeHint()/setMinimumWidth()/setMaximumWidth() have no QML counterpart. Behavioral law (clock text never moves adjacent toolbar geometry) proven by S240/S241/S242 (worst-case width, scale position, loaded width).
 
 A023 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:109
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the transport time label fixed maximum width under changed text (src/ui/transportbar.cpp owns the native transport chrome and is compiled into no target; src/ui/shell/ShellWindow.qml exposes transport menu actions only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(time->maximumWidth(), reservedHint.width())
+Disposition: RETIRED-REPRESENTATION
+Mapping: QWidget sizeHint()/minimumSizeHint()/setMinimumWidth()/setMaximumWidth() have no QML counterpart. Behavioral law (clock text never moves adjacent toolbar geometry) proven by S240/S241/S242 (worst-case width, scale position, loaded width).
 
 A024 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:110
 Disposition: MATCHED
 
 A025 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:111
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the native output-volume dial tick rendering at 240 degrees (src/ui/transportbar.cpp owns the native transport chrome and is compiled into no target; src/ui/shell/ShellWindow.qml exposes transport menu actions only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(hasTickAt(*defaultDial, 240.0))
+Disposition: MATCHED
+Mapping: S245 (image-sampled mounted dial tick; message "painted dial has a tick at 240 degrees"). Same endpoint-tick clause on the production TransportOutputDial.
 
 A026 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:112
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the native output-volume dial tick rendering at -60 degrees (src/ui/transportbar.cpp owns the native transport chrome and is compiled into no target; src/ui/shell/ShellWindow.qml exposes transport menu actions only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(hasTickAt(*defaultDial, -60.0))
+Disposition: MATCHED
+Mapping: S246 (image-sampled mounted dial tick; message "painted dial has a tick at minus 60 degrees"). Same endpoint-tick clause on the production TransportOutputDial.
 
 A027 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:113
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the native output-volume dial tick rendering at 270 degrees (src/ui/transportbar.cpp owns the native transport chrome and is compiled into no target; src/ui/shell/ShellWindow.qml exposes transport menu actions only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!hasTickAt(*defaultDial, 270.0))
+Disposition: MATCHED
+Mapping: S247 (image-sampled mounted dial leaves the gap unpainted; message "painted dial leaves 270 degrees without a tick"). Same absent-tick clause on the production TransportOutputDial.
 
 A028 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:116
 Disposition: RETIRED-REPRESENTATION
@@ -254,71 +195,28 @@ A036 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_
 Disposition: RETIRED-REPRESENTATION
 
 A037 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:149
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the native transport toolbar action order (src/ui/transportbar.cpp owns the native transport chrome and is compiled into no target; src/ui/shell/ShellWindow.qml exposes transport menu actions only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-      const QList<QAction *> actions = toolbar->actions();
-      const auto indexOf = [toolbar, &actions](QWidget *widget) {
-          for (int index = 0; index < actions.size(); ++index) {
-              if (toolbar->widgetForAction(actions[index]) == widget)
-                  return index;
-          }
-          return -1;
-      };
-      const int spacerIndex = indexOf(spacer);
-      const int captionIndex = indexOf(caption);
-      const int spinIndex = indexOf(spin);
-      const int outputCaptionIndex = indexOf(outputCaption);
-      const int dialIndex = indexOf(dial);
-Original expression:
-  QVERIFY(spacerIndex >= 0 && spacerIndex < captionIndex && captionIndex + 1 == spinIndex &&
-              spinIndex < outputCaptionIndex && outputCaptionIndex < dialIndex &&
-              dialIndex == actions.size() - 1)
+Disposition: MATCHED
+Mapping: S244 (resized mounted toolbar verifies strict x-order spacer, Volume caption, field, Output caption, dial; message "volume chrome retains expanding spacer, Volume, field, Output, dial order "). Same visible-order clause without QWidget action indices.
 
 A038 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:152
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the native transport volume spacer expanding size policy (src/ui/transportbar.cpp owns the native transport chrome and is compiled into no target; src/ui/shell/ShellWindow.qml exposes transport menu actions only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(spacer->sizePolicy().horizontalPolicy(), QSizePolicy::Expanding)
+Disposition: MATCHED
+Mapping: S243 (1200-to-1000 toolbar resize shows the spacer absorbing width; message "volume spacer absorbs additional width when toolbar grows"). Expanding behavior proven across width changes, not via QSizePolicy.
 
 A039 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:153
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the native transport master-volume control enabled state (src/ui/transportbar.cpp owns the native transport chrome and is compiled into no target; src/ui/shell/ShellWindow.qml exposes transport menu actions only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(spin->isEnabled())
+Disposition: MATCHED
+Mapping: S225 (mounted master field enabled after openSong; message "loaded song master volume editor accepts input"). Same loaded-enabled clause.
 
 A040 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:154
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner DocumentSession config masterVolume projected into the master-volume control exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(spin->value(), first->document().cfg().masterVolume)
+Disposition: MATCHED
+Mapping: S210 (first-song cfg projected into bar.masterVolume; message "loaded master field projection reads the first song cfg") with S226 (mounted-field agreement; message "loaded master field reflects the selected song"). Same loaded-projection clause.
 
 A041 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:159
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.setOutputVolume lower bound exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-      const int volumeBeforeOutput = first->document().cfg().masterVolume;
-      const int undoBeforeOutput = first->document().undoStack()->count();
-      dial->setValue(37);
-      QSettings settings;
-Original expression:
-  QCOMPARE(dial->minimum(), 0)
+Disposition: MATCHED
+Mapping: S248/S249 (real wheel input clamps the mounted dial to 0 and rejects further reduction; messages "mounted output dial input clamps to zero" / "lower output bound rejects further pointer reduction"). Same 0 lower-bound law proven by input.
 
 A042 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:160
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.setOutputVolume upper bound exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(dial->maximum(), 100)
+Disposition: MATCHED
+Mapping: S250/S251 (real wheel input clamps the mounted dial to 100 and rejects further increase; messages "mounted output dial input clamps to one hundred" / "upper output bound rejects further pointer increase"). Same 100 upper-bound law proven by input.
 
 A043 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:161
 Disposition: MATCHED
@@ -329,12 +227,8 @@ Original expression:
   QVERIFY(dial->toolTip().contains(QStringLiteral("Does not change the song volume")))
 
 A044 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:162
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.setOutputVolume exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(window.m_audio.outputVolume(), 37)
+Disposition: MATCHED
+Mapping: S211 (staged 37 preference restored through the presenter reaches real NativeAudio; message "restored 37 output preference reaches real native audio"). Same applied-output clause.
 
 A045 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:163
 Disposition: MATCHED
@@ -345,20 +239,12 @@ Original expression:
   QCOMPARE(settings.value(QStringLiteral("outputVolume")).toInt(), 37)
 
 A046 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:164
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner SongDocument config masterVolume (unchanged by an output-volume change) exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(first->document().cfg().masterVolume, volumeBeforeOutput)
+Disposition: MATCHED
+Mapping: S212 (output commit leaves the first song cfg at its initial value; message "output edit leaves first song master cfg unchanged"). Same isolation clause.
 
 A047 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:165
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner SongHistory depth (an output-volume change must not commit an entry) exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(first->document().undoStack()->count(), undoBeforeOutput)
+Disposition: MATCHED
+Mapping: S213 (output-volume journey records no history count/index change; message "output edit records no song history count or index") with S227 (staged-37 mounted journey creates no undo; message "stationary output click creates no song undo"). Same no-history clause.
 
 A048 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:166
 Disposition: MATCHED
@@ -379,12 +265,8 @@ Original expression:
   QCOMPARE(dial->value(), 50)
 
 A050 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:175
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner SongHistory depth under dial input exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(first->document().undoStack()->count(), undoBeforeOutput)
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S227 (stationary mounted click creates no song undo; message "stationary output click creates no song undo") and S197 (press without drag leaves the value); residue: exact undo count/index equality from that same stationary pointer event (the exact count/index predicate S213 covers the 42 commit, not the stationary click).
 
 A051 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:182
 Disposition: MATCHED
@@ -393,21 +275,12 @@ A052 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_
 Disposition: MATCHED
 
 A053 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:192
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the native output-volume dial value projection (src/ui/transportbar.cpp owns the native transport chrome and is compiled into no target; src/ui/shell/ShellWindow.qml exposes transport menu actions only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-      dial->setValue(42);
-Original expression:
-  QCOMPARE(dial->value(), 42)
+Disposition: MATCHED
+Mapping: S228 (real pointer drag drives the mounted dial to 42; message "pointer drag to 42 updates the output dial"). Same value-projection clause via input.
 
 A054 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:193
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.setOutputVolume exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(window.m_audio.outputVolume(), 42)
+Disposition: MATCHED
+Mapping: S214 (committed 42 reaches real NativeAudio; message "edited 42 application output reaches real native audio"). Same applied-output clause.
 
 A055 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:194
 Disposition: MATCHED
@@ -418,44 +291,23 @@ Original expression:
   QCOMPARE(settings.value(QStringLiteral("outputVolume")).toInt(), 42)
 
 A056 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:195
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner SongHistory depth under dial input exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(first->document().undoStack()->count(), undoBeforeOutput)
+Disposition: MATCHED
+Mapping: S213 (exact history count/index unchanged by the output edit; message "output edit records no song history count or index") with S229 (mounted drag creates no undo; message "output drag to 42 creates no song undo"). Same no-history clause.
 
 A057 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:196
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner DocumentSession dirty flag under dial input exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!first->document().isDirty())
+Disposition: MATCHED
+Mapping: S215 (output edit leaves the first song clean; message "output edit leaves the first song clean") with S230 (mounted drag cannot dirty; message "output drag to 42 cannot dirty the song"). Same clean clause.
 
 A058 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:202
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: tst_ShellTransport.qml test_transportControlTransitionsAndSettings passed master-volume editing to 87 in the mounted song and presenter, but does not directly assert the underlying SongDocument config.
-Source context since previous assertion:
-  ;
-      dial->setValue(37);
-
-      const int beforeSongVolume = first->document().cfg().masterVolume;
-      const int editedSongVolume = beforeSongVolume == 100 ? 101 : 100;
-      spin->setValue(editedSongVolume);
-Original expression:
-  QCOMPARE(first->document().cfg().masterVolume, editedSongVolume)
+Disposition: MATCHED
+Mapping: S216 (setMasterVolume reaches the first song cfg; message "song master edit changes the first song cfg"). Same edited-cfg clause; closes the former PARTIAL residue.
 
 A059 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:203
 Disposition: MATCHED
 
 A060 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:204
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner SongHistory.canUndo after a master-volume edit exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(first->history().canUndo())
+Disposition: MATCHED
+Mapping: S217 (master edit yields count+1/index+1/canUndo; message "song master edit creates one reachable undo entry"). Same canUndo clause.
 
 A061 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:205
 Disposition: RETIRED-REPRESENTATION
@@ -469,13 +321,8 @@ Original expression:
   QCOMPARE(window.m_appliedSettings->songVolume, uint8_t(editedSongVolume))
 
 A063 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:208
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner DocumentSession config masterVolume with SongTabsController tab selection exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-      workspace->selectSongTab(second);
-Original expression:
-  QCOMPARE(spin->value(), second->document().cfg().masterVolume)
+Disposition: MATCHED
+Mapping: S218 (second tab projects its own cfg; message "tab switch projects the second song's own master cfg") with S231 (mounted second-tab field agreement; message "second tab field displays its selected song volume"). Same per-tab projection clause.
 
 A064 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:209
 Disposition: MATCHED
@@ -486,73 +333,38 @@ Original expression:
   QCOMPARE(dial->value(), 37)
 
 A065 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:210
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.setOutputVolume exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(window.m_audio.outputVolume(), 37)
+Disposition: MATCHED
+Mapping: S219 (audio still at 37 after tab switch; message "global 37 output remains applied to audio after tab switch") with S232 (mounted dial at 37; message "global output 37 survives tab selection"). Same global-output-retained clause.
 
 A066 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:211
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner DocumentSession dirty flag for the unedited tab exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!second->document().isDirty())
+Disposition: MATCHED
+Mapping: S220 (second document stays clean; message "switching away from master edit leaves the second song clean") with S233 (mounted clean; message "second song remains clean after first song edit"). Same untouched-tab clause.
 
 A067 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:213
 Disposition: MATCHED
 
 A068 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:215
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner DocumentSession.undo of the master-volume edit exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-      workspace->requestUndo();
-Original expression:
-  QCOMPARE(first->document().cfg().masterVolume, beforeSongVolume)
+Disposition: MATCHED
+Mapping: S221 (undo restores the first song cfg; message "undo restores first song master cfg") with S234 (mounted field returns to its first value; message "undo restores first song volume in mounted field"). Same undo-restores-cfg clause.
 
 A069 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:216
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner DocumentSession dirty flag after undo exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!first->document().isDirty())
+Disposition: MATCHED
+Mapping: S223 (undo returns the first song clean; message "undo returns the first song to its clean saved state") with S235 (mounted clean after undo; message "undo returns first song to its clean state"). Same undo-cleans clause.
 
 A070 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:217
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner the master-volume projection after undo exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(spin->value(), beforeSongVolume)
+Disposition: MATCHED
+Mapping: S222 (undo restores bar.masterVolume; message "undo restores first song master field") with S234 (mounted field returns to its first value; message "undo restores first song volume in mounted field"). Same undo-restores-field clause.
 
 A071 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:220
 Disposition: RETIRED-REPRESENTATION
 
 A072 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:224
-Disposition: PARTIAL
-Mapping/reason: Related predicates S186, S187, S188 (mounted shell-transport: with the song master-volume field focused, Space starts and then pauses the audio transport while the field keeps its edited value 87); unproved: the original's direct native QLineEdit ShortcutOverride accept/ignore state, which the mounted QML surface does not expose.
-Source context since previous assertion:
-  ;
-      QKeyEvent space(QEvent::ShortcutOverride, Qt::Key_Space, Qt::NoModifier, QStringLiteral(" "));
-      space.ignore();
-      QApplication::sendEvent(lineEdit, &space);
-Original expression:
-  QVERIFY(!space.isAccepted())
+Disposition: MATCHED
+Mapping: S236 (bare Space from the focused numeric field starts window transport; message "bare Space from numeric chrome starts the window transport"). Physical-key-effect proof of the ShortcutOverride routing per task 98 brief; the QKeyEvent accept flag has no QML exposure.
 
 A073 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:228
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner the Swift KeybindingRegistry shortcut-override routing (digit) exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-      QKeyEvent digit(QEvent::ShortcutOverride, Qt::Key_5, Qt::NoModifier, QStringLiteral("5"));
-      digit.ignore();
-      QApplication::sendEvent(lineEdit, &digit);
-Original expression:
-  QVERIFY(digit.isAccepted())
+Disposition: MATCHED
+Mapping: S237/S238 (a digit keeps transport stopped and appears only in the focused draft; messages "numeric-field digit stays local and never starts transport" / "numeric-field digit appears only in the focused draft"). Physical-key-effect proof that digits are consumed locally.
 
 Remaining original source (closing sequence and helper bodies):
   ;
@@ -1183,3 +995,132 @@ Anchor: message "debugger visibility restores with the window state"
 
 S209 | test_sessionPreferencesRetainForkKeySpellings | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "preferences keep the fork's on-disk key spellings"
+
+S210 | checkTransportVolumeIsolation | src/checks/workspace/transport_checks.swift
+Anchor: message "loaded master field projection reads the first song cfg"
+
+S211 | checkTransportVolumeIsolation | src/checks/workspace/transport_checks.swift
+Anchor: message "restored 37 output preference reaches real native audio"
+
+S212 | checkTransportVolumeIsolation | src/checks/workspace/transport_checks.swift
+Anchor: message "output edit leaves first song master cfg unchanged"
+
+S213 | checkTransportVolumeIsolation | src/checks/workspace/transport_checks.swift
+Anchor: message "output edit records no song history count or index"
+
+S214 | checkTransportVolumeIsolation | src/checks/workspace/transport_checks.swift
+Anchor: message "edited 42 application output reaches real native audio"
+
+S215 | checkTransportVolumeIsolation | src/checks/workspace/transport_checks.swift
+Anchor: message "output edit leaves the first song clean"
+
+S216 | checkTransportVolumeIsolation | src/checks/workspace/transport_checks.swift
+Anchor: message "song master edit changes the first song cfg"
+
+S217 | checkTransportVolumeIsolation | src/checks/workspace/transport_checks.swift
+Anchor: message "song master edit creates one reachable undo entry"
+
+S218 | checkTransportVolumeIsolation | src/checks/workspace/transport_checks.swift
+Anchor: message "tab switch projects the second song's own master cfg"
+
+S219 | checkTransportVolumeIsolation | src/checks/workspace/transport_checks.swift
+Anchor: message "global 37 output remains applied to audio after tab switch"
+
+S220 | checkTransportVolumeIsolation | src/checks/workspace/transport_checks.swift
+Anchor: message "switching away from master edit leaves the second song clean"
+
+S221 | checkTransportVolumeIsolation | src/checks/workspace/transport_checks.swift
+Anchor: message "undo restores first song master cfg"
+
+S222 | checkTransportVolumeIsolation | src/checks/workspace/transport_checks.swift
+Anchor: message "undo restores first song master field"
+
+S223 | checkTransportVolumeIsolation | src/checks/workspace/transport_checks.swift
+Anchor: message "undo returns the first song to its clean saved state"
+
+S224 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "scale selector is unavailable before a song opens"
+
+S225 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "loaded song master volume editor accepts input"
+
+S226 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "loaded master field reflects the selected song"
+
+S227 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "stationary output click creates no song undo"
+
+S228 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "pointer drag to 42 updates the output dial"
+
+S229 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "output drag to 42 creates no song undo"
+
+S230 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "output drag to 42 cannot dirty the song"
+
+S231 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "second tab field displays its selected song volume"
+
+S232 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "global output 37 survives tab selection"
+
+S233 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "second song remains clean after first song edit"
+
+S234 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "undo restores first song volume in mounted field"
+
+S235 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "undo returns first song to its clean state"
+
+S236 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "bare Space from numeric chrome starts the window transport"
+
+S237 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "numeric-field digit stays local and never starts transport"
+
+S238 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "numeric-field digit appears only in the focused draft"
+
+S239 | test_transportClockAndSpacerSurviveTextAndResize | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "empty toolbar keeps the combined clock zeroed"
+
+S240 | test_transportClockAndSpacerSurviveTextAndResize | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "worst-case clock text keeps the font-sized reserved strip width"
+
+S241 | test_transportClockAndSpacerSurviveTextAndResize | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "clock text cannot displace the adjacent scale controls"
+
+S242 | test_transportClockAndSpacerSurviveTextAndResize | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "loaded clock keeps the same reserved strip width"
+
+S243 | test_transportClockAndSpacerSurviveTextAndResize | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "volume spacer absorbs additional width when toolbar grows"
+
+S244 | test_transportClockAndSpacerSurviveTextAndResize | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "volume chrome retains expanding spacer, Volume, field, Output, dial order "
+
+S245 | test_outputDialEndpointPixels | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "painted dial has a tick at 240 degrees"
+
+S246 | test_outputDialEndpointPixels | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "painted dial has a tick at minus 60 degrees"
+
+S247 | test_outputDialEndpointPixels | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "painted dial leaves 270 degrees without a tick"
+
+S248 | test_outputDialIncrementalDrag | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "mounted output dial input clamps to zero"
+
+S249 | test_outputDialIncrementalDrag | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "lower output bound rejects further pointer reduction"
+
+S250 | test_outputDialIncrementalDrag | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "mounted output dial input clamps to one hundred"
+
+S251 | test_outputDialIncrementalDrag | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "upper output bound rejects further pointer increase"
+
+S252 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "scale chrome leaves bare Space to window transport"
