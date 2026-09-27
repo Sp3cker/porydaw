@@ -183,6 +183,7 @@ if(APPLE)
         eventviews/EventListPageCellCommitChecks.swift
         songlist/songlist_checks.swift
         songlist/songlist_service.swift
+        songlist/SongRegistrationChecks.swift
         voicelist/VoiceListChecks.swift
         voicelist/VoiceListIntentChecks.swift
         voicelist/voicelist_session.swift

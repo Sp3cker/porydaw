@@ -16,6 +16,7 @@ TestCase {
 
     property var shell: null
     ShellQmlBootstrap { id: bootstrap }
+    TabsDrawerProbe { id: fileProbe }
     Component { id: shellComponent; ShellWindow { width: 1100; height: 550; visible: true } }
 
     function init() {
@@ -90,6 +91,13 @@ TestCase {
         const button = dialog.standardButton(Dialog.Ok)
         verify(button !== null, "the confirmation exposes its action")
         mouseClick(button)
+    }
+
+    function registrationBytes() {
+        return ["sound/song_table.inc", "include/constants/songs.h",
+                "sound/songs/midi/midi.cfg"].map(function(relative) {
+            return fileProbe.fileFingerprint(bootstrap.projectRoot + "/" + relative)
+        })
     }
 
     function compareRegion(reference, name, item, tolerance) {
@@ -299,6 +307,7 @@ TestCase {
         tryCompare(presenter(), "rowCount", 10)
         const stray = row(strayId)
         verify(stray !== null && stray.song.warning, "unregistered song wears the warning badge")
+        const beforeRegistration = registrationBytes()
         mouseClick(stray, 4, 4, Qt.RightButton)
         compare(presenter().selectedSongId, strayId,
                 "right-click on the recovered stray row selects it")
@@ -318,18 +327,33 @@ TestCase {
         }
         compare(confirmation.contentItem.spacing, session.layoutSpaces.four,
                 "confirmation content uses the Four spacing token")
-        controller().cancelConfirmation()
+        compare(JSON.stringify(registrationBytes()), JSON.stringify(beforeRegistration),
+                "opening Register stages a plan without changing table, header or config bytes")
+        const cancelButton = confirmation.standardButton(Dialog.Cancel)
+        verify(cancelButton !== null, "the mounted Register confirmation offers Cancel")
+        mouseClick(cancelButton)
         compare(controller().confirmation, "", "Cancel leaves the staged project unchanged")
+        compare(JSON.stringify(registrationBytes()), JSON.stringify(beforeRegistration),
+                "clicking Cancel preserves the exact table, header and config bytes")
         tryCompare(findChild(shell, "songConfirmationLoader"), "status", Loader.Null, 3000)
         compare(presenter().canRegister(strayId), true, "cancel leaves Register enabled")
         mouseClick(row(strayId), 4, 4, Qt.RightButton)
         menuAction("register")
         verify(waitForNative(function() { return controller().confirmation === "register" }, 5000),
                "a second registration plan is prepared")
+        compare(JSON.stringify(registrationBytes()), JSON.stringify(beforeRegistration),
+                "reopening Register still leaves project bytes untouched before acceptance")
         clickConfirmation()
         verify(waitForNative(function() {
             return !controller().busy && !presenter().canRegister(strayId)
         }, 30000), "confirmed registration refreshes the badge")
+        const afterRegistration = registrationBytes()
+        verify(afterRegistration[0] !== beforeRegistration[0],
+               "Accept changes the song table after the mounted confirmation")
+        compare(afterRegistration[2], beforeRegistration[2],
+                "Accept leaves the MIDI config byte-identical")
+        verify(afterRegistration[1] !== beforeRegistration[1],
+               "Accept changes songs.h after the mounted confirmation")
         mouseClick(row(strayId), 4, 4, Qt.RightButton)
         menuAction("delete")
         verify(waitForNative(function() { return controller().confirmation === "delete" }, 5000),
