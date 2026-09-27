@@ -19,6 +19,11 @@ tst_SwiftRollSelection.qml including the edge-hover cursor probe.
 Command: deno task verify:shell --verbose
 Result: PASS — 11/11 ok (controller-recorded post-change run); the shell lanes ran
 the real-pointer minimum resize (S025) and the note-raster probes (S026).
+Command: deno task verify --filter swiftcore-projectsession --verbose (task-93 implementer run)
+Result: PASS; 1/36 ok (implementer-reported GREEN on frozen checks; this proof-only pass ran no lane).
+Command: deno task verify:shell --filter shell-note-visuals --verbose (task-93 implementer run)
+Result: PASS; 1/26 ok including physical DPR2 ring/border/face pixel readback (implementer-reported GREEN; this proof-only pass ran no lane).
+Verified note-visuals QML SHA-256: 7996c1fcb13cc466741d6c41a92f10ceba34573221fd4fa58dd18069ddae78b9 (src/checks/editorqml/tst_ShellNoteVisuals.qml).
 
 A001 | PianoRollTest::resizeOffGrid | src/checks/rollcheck/resize.cpp:35
 Disposition: GAP
@@ -264,42 +269,16 @@ Disposition: MATCHED
 Mapping: S011
 
 A022 | PianoRollTest::resizeMinimum | src/checks/rollcheck/resize.cpp:207
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/resize.cpp) no longer builds or runs. Previous native note: Original native window/rendering/harness observation: the sample is a pixel of captureQuickFramebuffer() on the legacy Quick surface at its narrow zoom, so the outcome depends on that surface's rasterization. Retained native obligation. The live shell note-visuals lane samples the same small-note pixel family (S026), but not at this slot's four-pixels-per-beat zoom.
-Source context since previous assertion:
-;
-    const QRectF narrowBox =
-        narrowRows.noteBox(narrowRows.noteRect(narrowLeft, narrowRight, d.key));
-    const QImage image = check.captureQuickFramebuffer();
-    const qreal rasterDpr = image.devicePixelRatio();
-    const int sampleX = qRound((check.pianoKeyboardWidth() + narrowBox.center().x()) * rasterDpr);
-    const QRgb topPixel = image.pixel(sampleX, qRound(narrowBox.top() * rasterDpr));
-    const QRgb centerPixel = image.pixel(sampleX, qRound(narrowBox.center().y() * rasterDpr));
-    const QColor top(topPixel);
-    const QColor face = SongView::noteColor(track, 100);
-
-Original expression:
-QVERIFY2(qAlpha(topPixel) != 0, "narrow note missing at minimum zoom")
+Disposition: MATCHED
+Mapping: S032, S035
 
 A023 | PianoRollTest::resizeMinimum | src/checks/rollcheck/resize.cpp:208
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/resize.cpp) no longer builds or runs. Previous native note: Original native window/rendering/harness observation: the sample is a pixel of captureQuickFramebuffer() on the legacy Quick surface at its narrow zoom, so the outcome depends on that surface's rasterization. Retained native obligation. The live shell note-visuals lane samples the same small-note pixel family (S026), but not at this slot's four-pixels-per-beat zoom.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(top != face, "narrow note shed its outline at minimum zoom")
+Disposition: MATCHED
+Mapping: S033
 
 A024 | PianoRollTest::resizeMinimum | src/checks/rollcheck/resize.cpp:211
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/resize.cpp) no longer builds or runs. Previous native note: Original native window/rendering/harness observation: the sample is a pixel of captureQuickFramebuffer() on the legacy Quick surface at its narrow zoom, so the outcome depends on that surface's rasterization. Retained native obligation. The live shell note-visuals lane samples the same small-note pixel family (S026), but not at this slot's four-pixels-per-beat zoom.
-Source context since previous assertion:
-;
-    const bool centerSwallowed = qAlpha(centerPixel) > 240 && qRed(centerPixel) < 16 &&
-                                 qGreen(centerPixel) < 16 && qBlue(centerPixel) < 16;
-
-Original expression:
-QVERIFY2(!centerSwallowed, "narrow note outline clouded the face into a black bar")
+Disposition: MATCHED
+Mapping: S034
 
 A025 | PianoRollTest::resizeMinimum | src/checks/rollcheck/resize.cpp:215
 Disposition: MATCHED
@@ -490,3 +469,15 @@ Anchor: message "boundary-right drag resizes the right note's start only"
 
 S031 | checkEdgeResize | src/checks/rollcheck/resize.swift
 Anchor: message "stationary Ctrl+edge click joins the note without resizing"
+
+S032 | test_ghostEdgesAndMinimumZoomFace | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "a snap-cell narrow note remains visible at minimum time zoom: "
+
+S033 | test_ghostEdgesAndMinimumZoomFace | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "the minimum-zoom note outline differs visibly from its face"
+
+S034 | test_ghostEdgesAndMinimumZoomFace | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "the minimum-zoom narrow note retains its painted face"
+
+S035 | test_ghostEdgesAndMinimumZoomFace | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "the minimum-zoom narrow note paints its top outline in the border role"

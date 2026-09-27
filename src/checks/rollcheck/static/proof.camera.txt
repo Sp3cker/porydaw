@@ -35,6 +35,11 @@ Command: deno task verify --verbose (task-90 implementer full-tree run)
 Result: PASS; 36/36 ok (implementer-reported GREEN; this ledger pass ran no lane).
 Verified roll-windowing QML SHA-256: 07f3bee2b55fd7960c0b7409c0815c6b861bcb5be3608bae4f79cc08fd940a3f (src/checks/rollqml/tst_SwiftRollWindowing.qml, re-pinned for task 90: test_zCameraSurvivesMountedRemapsAndResize with the A091 goToStart cursor predicate)
 Narrow form used while iterating: deno task verify --filter swiftcore --qt projectSession.
+Command: deno task verify --filter swiftcore-projectsession --verbose (task-93 implementer run)
+Result: PASS; 1/36 ok (implementer-reported GREEN on frozen checks; this proof-only pass ran no lane).
+Command: deno task verify:shell --filter shell-note-visuals --verbose (task-93 implementer run)
+Result: PASS; 1/26 ok including physical DPR2 ring/border/face pixel readback (implementer-reported GREEN; this proof-only pass ran no lane).
+Verified note-visuals QML SHA-256: 7996c1fcb13cc466741d6c41a92f10ceba34573221fd4fa58dd18069ddae78b9 (src/checks/editorqml/tst_ShellNoteVisuals.qml).
 
 A001 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:70
 Disposition: RETIRED-REPRESENTATION
@@ -781,17 +786,8 @@ Original expression:
   QCOMPARE(view.editCursorTick(), uint64_t(0))
 
 A092 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:391
-Disposition: PARTIAL
-Mapping/reason: Related predicate: the mounted roll band lifecycle and canonical rect are asserted by src/checks/rollqml/tst_SwiftRollPlots.qml; no Swift predicate observes view.timelineBandLayout().geometry(Roll). Unproved: the roll band layout exists for the pre-roll-bound view.
-Source context since previous assertion:
-  ;
-      state.scrollPx = 0.0;
-      view.applyViewState(state);
-      state.scrollPx = -pad;
-      view.applyViewState(state);
-      const auto rollBand = view.timelineBandLayout().geometry(songview::TimelineBand::Roll);
-Original expression:
-  QVERIFY(rollBand.has_value())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S089 — `QVERIFY(rollBand.has_value())` is a deleted songview::TimelineBand::Roll layout precondition; the mounted ruler/roll-band predicate S089 feeds the pad-pixel outcomes S093/S094.
 
 A093 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:393
 Disposition: GAP
@@ -803,73 +799,24 @@ Original expression:
   QVERIFY(!raster.isNull())
 
 A094 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:395
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane reads the raster device pixel ratio; the band raster capture itself is NATIVE (A093). Unproved: the captured roll-band raster reports a positive device pixel ratio.
-Source context since previous assertion:
-  ;
-      const qreal dpr = raster.devicePixelRatio();
-Original expression:
-  QVERIFY(dpr > 0.0)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S090 — `QVERIFY(dpr > 0.0)` guards devicePixelRatio of the native captureQuickBand raster; mounted physical-DPR sampling S090 feeds the pad-pixel outcomes S093/S094.
 
 A095 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:417
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane probes raster key rows; the row/pitch projection is exercised by S019 (src/checks/rollcheck/static/camera.swift) and S020 (:119-124). Unproved: a natural key row lies fully inside the roll band for the raster probe.
-Source context since previous assertion:
-  ;
-      const auto isBlackKey = [](int key) {
-          switch (key % 12) {
-          case 1:
-          case 3:
-          case 6:
-          case 8:
-          case 10:
-              return true;
-          default:
-              return false;
-          }
-      };
-      const int midKey = keyAt(view, roll.bounds().height() / 2.0);
-      int naturalKey = -1;
-      int accidentalKey = -1;
-      for (int key = midKey - 4; key <= midKey + 4; ++key) {
-          if (key < 0 || key > 127 || rowCenter(view, key) < 0 ||
-              rowCenter(view, key) >= roll.bounds().height())
-              continue;
-          (isBlackKey(key) ? accidentalKey : naturalKey) = key;
-      }
-Original expression:
-  QVERIFY(naturalKey >= 0)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S091 — `QVERIFY(naturalKey >= 0)` guards the native rowCenter raster probe; mounted natural-row S091 feeds the row-comparison outcome S093.
 
 A096 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:418
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane probes raster key rows; the row/pitch projection is exercised by S019 (src/checks/rollcheck/static/camera.swift) and S020 (:119-124). Unproved: an accidental key row lies fully inside the roll band for the raster probe.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(accidentalKey >= 0)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S092 — `QVERIFY(accidentalKey >= 0)` guards the native rowCenter raster probe; mounted accidental-row S092 feeds the row-comparison outcome S093.
 
 A097 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:426
-Disposition: PARTIAL
-Mapping/reason: Related predicate: the mounted pre-roll pad is observed by src/checks/rollqml/tst_TimelinePan.qml (positive pad, tick-zero home); no predicate compares pad pixels across key rows. Unproved: the pre-roll pad paints natural and accidental rows identically.
-Source context since previous assertion:
-  ;
-      const qreal plotOffset = rollBand->plotRect.x() - rollBand->rect.x();
-      const auto pixel = [&raster, dpr](qreal x, qreal y) {
-          return raster.pixel(qRound(x * dpr), qRound(y * dpr));
-      };
-      const QRgb padNatural = pixel(plotOffset + pad / 2.0, rowCenter(view, naturalKey));
-      const QRgb padAccidental = pixel(plotOffset + pad / 2.0, rowCenter(view, accidentalKey));
-      const QRgb plainNatural = pixel(plotOffset + pad + 20.0, rowCenter(view, naturalKey));
-Original expression:
-  QCOMPARE(padNatural, padAccidental)
+Disposition: MATCHED
+Mapping: S093
 
 A098 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:427
-Disposition: PARTIAL
-Mapping/reason: Related predicate: the mounted pre-roll pad position is observed by src/checks/rollqml/tst_TimelinePan.qml; no predicate compares pre-roll pad pixels with plot pixels. Unproved: the pre-roll pad pixel differs from the plain plot pixel.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(padNatural != plainNatural)
+Disposition: MATCHED
+Mapping: S094
 
 A099 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:431
 Disposition: MATCHED
@@ -1250,3 +1197,21 @@ Anchor: message "A099 eight-pixel wheel pan from bound zero reaches negative eig
 
 S088 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "A100 fractional pre-roll scroll reads back exactly after a bound domain update"
+
+S089 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "the pre-roll has a mounted ruler and roll band"
+
+S090 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "the mounted roll capture has positive physical DPR"
+
+S091 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "a natural key row is visible inside the mounted roll"
+
+S092 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "an accidental key row is visible inside the mounted roll"
+
+S093 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "natural and accidental rows paint identical pre-roll pad pixels"
+
+S094 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "the pre-roll pad differs from the natural-key plot"

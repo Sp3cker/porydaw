@@ -30,6 +30,11 @@ Result: PASS; 26/26 ok (implementer-reported GREEN; this ledger pass ran no lane
 Command: deno task verify --verbose (task-90 implementer full-tree run)
 Result: PASS; 36/36 ok (implementer-reported GREEN; this ledger pass ran no lane).
 Verified fallback-bind Swift SHA-256: 592a4673506dff51f75345ee87ee5e3173a10408fd1edd4f1192652781c813dd (src/checks/rollcheck/static/geometry.swift, re-pinned for task 90: checkFallbackAndSignatureBind S067-S080)
+Command: deno task verify --filter swiftcore-projectsession --verbose (task-93 implementer run)
+Result: PASS; 1/36 ok (implementer-reported GREEN on frozen checks; this proof-only pass ran no lane).
+Command: deno task verify:shell --filter shell-note-visuals --verbose (task-93 implementer run)
+Result: PASS; 1/26 ok including physical DPR2 ring/border/face pixel readback (implementer-reported GREEN; this proof-only pass ran no lane).
+Verified note-visuals QML SHA-256: 7996c1fcb13cc466741d6c41a92f10ceba34573221fd4fa58dd18069ddae78b9 (src/checks/editorqml/tst_ShellNoteVisuals.qml).
 
 A001 | PianoRollStaticTest::fallbackCamera | src/checks/rollcheck/static/geometry.cpp:117
 Disposition: RETIRED-REPRESENTATION
@@ -211,99 +216,32 @@ Original expression:
   QVERIFY(ticks.empty() || ticks.front() >= CoreTimeDefaults::kMaxTick - kTicksPerBeat)
 
 A020 | PianoRollStaticTest::preRollRulerShade | src/checks/rollcheck/static/geometry.cpp:185
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-  ;
-  }
-
-  void PianoRollStaticTest::preRollRulerShade()
-  {
-      BareView fixture;
-      const Raster raster = captureRuler(fixture.view);
-Original expression:
-  QVERIFY2(raster.valid(), "fresh ruler raster could not be captured")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S081 — `QVERIFY2(raster.valid(), "fresh ruler raster could not be captured")` guards the retired BareView/captureRuler probe; the mounted ruler capture executes and its shade/chrome laws execute at S082/S083.
 
 A021 | PianoRollStaticTest::preRollRulerShade | src/checks/rollcheck/static/geometry.cpp:192
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      const qreal plotOffset = rulerPlotOffset(fixture.view);
-      const qreal tickZero = plotOffset + fixture.view.camera().contentX(0.0);
-      const QRgb padUpper = raster.at(plotOffset + 4.0, raster.image.height() / raster.dpr * 0.5);
-      const QRgb padLower = raster.at(plotOffset + 4.0 + (tickZero - plotOffset) * 0.5,
-                                      raster.image.height() / raster.dpr - 4.0);
-      const QRgb chrome = raster.at(tickZero + 80.0, 2.0);
-Original expression:
-  QVERIFY(channelDelta(padUpper, padLower) <= 2)
+Disposition: MATCHED
+Mapping: S082
 
 A022 | PianoRollStaticTest::preRollRulerShade | src/checks/rollcheck/static/geometry.cpp:193
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(channelDelta(padUpper, chrome) > 1)
+Disposition: MATCHED
+Mapping: S083
 
 A023 | PianoRollStaticTest::fallbackRulerStemAndBars | src/checks/rollcheck/static/geometry.cpp:200
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-  ;
-  }
-
-  void PianoRollStaticTest::fallbackRulerStemAndBars()
-  {
-      BareView fixture;
-      const Raster raster = captureRuler(fixture.view);
-Original expression:
-  QVERIFY2(raster.valid(), "fresh ruler raster could not be captured")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S081 — `QVERIFY2(raster.valid(), "fresh ruler raster could not be captured")` guards the retired BareView/captureRuler probe; mounted capture S081 feeds the stem and caption raster laws S084/S086.
 
 A024 | PianoRollStaticTest::fallbackRulerStemAndBars | src/checks/rollcheck/static/geometry.cpp:214
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      const qreal offset = rulerPlotOffset(fixture.view);
-      const int tickZero = raster.deviceX(offset + fixture.view.camera().contentX(0.0));
-      const QRgb placeholder = QGuiApplication::palette().color(QPalette::PlaceholderText).rgb();
-      const int top = int(raster.image.height() * 0.05);
-      const int bottom = int(raster.image.height() * 0.45);
-      int longestStem = 0;
-      for (int x = tickZero - 1; x <= tickZero + 1; ++x) {
-          int matching = 0;
-          for (int y = top; y <= bottom; ++y)
-              if (channelDelta(raster.image.pixel(x, y), placeholder) <= 12)
-                  ++matching;
-          longestStem = std::max(longestStem, matching);
-      }
-Original expression:
-  QVERIFY(longestStem >= (bottom - top) * 7 / 10)
+Disposition: MATCHED
+Mapping: S084
 
 A025 | PianoRollStaticTest::fallbackRulerStemAndBars | src/checks/rollcheck/static/geometry.cpp:218
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      const int captionLeft = std::clamp(raster.deviceX(offset + 4.0), 0, raster.image.width());
-      const int captionRight =
-          std::clamp(tickZero - qRound(4.0 * raster.dpr), 0, raster.image.width());
-Original expression:
-  QVERIFY(captionRight > captionLeft)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S085 — `QVERIFY(captionRight > captionLeft)` guards only the native raster's caption-scan room; mounted font/DPR-derived room S085 and absence-of-caption raster S086 execute.
 
 A026 | PianoRollStaticTest::fallbackRulerStemAndBars | src/checks/rollcheck/static/geometry.cpp:224
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      int captionPixels = 0;
-      for (int y = 0; y < raster.image.height(); ++y)
-          for (int x = captionLeft; x < captionRight; ++x)
-              if (channelDelta(raster.image.pixel(x, y), placeholder) <= 12)
-                  ++captionPixels;
-Original expression:
-  QCOMPARE(captionPixels, 0)
+Disposition: MATCHED
+Mapping: S086
 
 A027 | PianoRollStaticTest::fallbackRulerStemAndBars | src/checks/rollcheck/static/geometry.cpp:233
 Disposition: GAP
@@ -746,3 +684,21 @@ Anchor: message "A047 bound 3/4 segment has three beats per bar"
 
 S080 | checkFallbackAndSignatureBind | src/checks/rollcheck/static/geometry.swift
 Anchor: message "A050 binding 3/4 preserves beat content positions"
+
+S081 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "the mounted roll and ruler produce a raster"
+
+S082 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "the ruler pre-roll shade is uniform across upper and lower samples"
+
+S083 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "the ruler pad is distinct from adjacent chrome"
+
+S084 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "tick zero paints a continuous upper ruler stem"
+
+S085 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "the pre-zero ruler has room for a caption probe"
+
+S086 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "no placeholder caption paints before tick zero"

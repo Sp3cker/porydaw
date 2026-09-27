@@ -9,6 +9,10 @@ func checkGhostNotes(_ report: CheckReport, session: DocumentSession) {
     let document = session.document
     let initialState = document.state
     let initialIdentity = document.history.currentIdentity
+    guard let originalBytes = try? document.state.file.encoded() else {
+        report.fail(id, "ghost fixture cannot encode the original song")
+        return
+    }
     let oldCamera = session.camera
     let priorSelection = session.selectedNoteOrder
     let priorTrack = session.selectedTrack
@@ -26,6 +30,8 @@ func checkGhostNotes(_ report: CheckReport, session: DocumentSession) {
         report.expect(document.state == initialState
                           && document.history.currentIdentity == initialIdentity,
                       cppID: id, message: "undo restores the ghost fixture and its track")
+        report.expect((try? document.state.file.encoded()) == originalBytes,
+                      cppID: id, message: "A018 undoing the ghost fixture restores original song bytes")
     }
     let grid = PianoGrid(session: session)
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)

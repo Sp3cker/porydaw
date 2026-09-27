@@ -9,6 +9,12 @@ func checkNoteBorders(_ report: CheckReport, session: DocumentSession) {
     let tinyID = "swiftcore/PianoRoll::tinyNoteBorderRaster"
     let oldCamera = session.camera
     let priorSelection = session.selectedNoteOrder
+    let document = session.document
+    let initialIdentity = document.history.currentIdentity
+    guard let originalBytes = try? document.state.file.encoded() else {
+        report.fail(id, "note rendering fixture cannot encode the original song")
+        return
+    }
     let grid = PianoGrid(session: session)
     defer {
         session.clearSelectedNotes()
@@ -20,7 +26,13 @@ func checkNoteBorders(_ report: CheckReport, session: DocumentSession) {
     _ = session.mutateCamera { _ = $0.setTimeZoom(35) }
     grid.refreshCamera()
     guard let noteID = renderingSeed(report, id: id, session: session, grid: grid) else { return }
-    defer { session.document.deleteNotes([noteID]) }
+    defer {
+        while document.history.currentIdentity != initialIdentity && document.history.canUndo {
+            guard document.history.undoDocument() else { break }
+        }
+        report.expect((try? document.state.file.encoded()) == originalBytes,
+                      cppID: id, message: "A015 undoing the selected frame fixture restores original song bytes")
+    }
     guard let note = session.document.note(noteID) else {
         report.fail(id, "note rendering seed disappeared")
         return
@@ -57,14 +69,26 @@ func checkNoteBorders(_ report: CheckReport, session: DocumentSession) {
                            color: grid.palette.noteBorder),
                   cppID: id, message: "A013/A014 unselected bottom border bounds the face")
 
+    let seededIdentity = document.history.currentIdentity
+    guard let seededBytes = try? document.state.file.encoded(),
+          let tinyIDNote = try? document.addNotes([
+              NewNote(track: grid.trackIndex, tick: note.tick + note.duration,
+                      pitch: note.pitch, duration: note.duration, velocity: 100)
+          ]).first,
+          let tinyNote = document.note(tinyIDNote) else {
+        report.fail(tinyID, "tiny note fixture cannot seed the adjacent face")
+        return
+    }
+    grid.refreshFromSession()
+
     grid.configureViewport(width: 640, height: 320, fontPx: 5, dpr: 1)
     session.mutateCamera { camera in
         _ = camera.setKeyHeight(5.0)
         _ = camera.setVScroll(max(0, (127.5 - Double(note.pitch)) * 5.0 - 160))
     }
     grid.refreshCamera()
-    guard let tiny = noteBox(grid, session: session, note: note),
-          let tinyFill = firstNoteRect(named: "gridNote_\(noteID.rawValue)",
+    guard let tiny = noteBox(grid, session: session, note: tinyNote),
+          let tinyFill = firstNoteRect(named: "gridNote_\(tinyIDNote.rawValue)",
                                        in: grid.scene.pianoNoteFills) else {
         report.fail(tinyID, "5.0-key-height note has no published scene box")
         return
@@ -78,6 +102,11 @@ func checkNoteBorders(_ report: CheckReport, session: DocumentSession) {
     report.expect(tinyFill.fillColor == grid.palette.noteFill(track: grid.trackIndex, velocity: 100)
                       && tiny.w > 2 * Double(fitted) && tiny.h > 2 * Double(fitted),
                   cppID: tinyID, message: "A004 tiny note face survives inside its border")
+    while document.history.currentIdentity != seededIdentity && document.history.canUndo {
+        guard document.history.undoDocument() else { break }
+    }
+    report.expect((try? document.state.file.encoded()) == seededBytes,
+                  cppID: tinyID, message: "A005 undoing the tiny frame fixture restores seeded song bytes")
 }
 
 @MainActor

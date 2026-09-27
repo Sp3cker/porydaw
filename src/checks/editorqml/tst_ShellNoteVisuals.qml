@@ -30,7 +30,7 @@ TestCase {
             typographyCaptureFont: Qt.font({ pixelSize: 4 })
         }
     }
-
+    Component { id: physicalCaptureReader; Canvas { width: 1; height: 1 } }
 
     function waitForNative(predicate, timeoutMs) {
         return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
@@ -164,6 +164,45 @@ TestCase {
             }
         }
         return ""
+    }
+
+    function sideFrameFailure(image, rect, inset, thickness, expected, label) {
+        var cy = rect.y + Math.floor(rect.h / 2)
+        for (var pixel = 0; pixel < thickness; ++pixel) {
+            var left = rgb(image, rect.x + inset + pixel, cy)
+            var right = rgb(image, rect.x + rect.w - 1 - inset - pixel, cy)
+            if (!Helpers.colorsNear(left, expected) || !Helpers.colorsNear(right, expected))
+                return label + " at physical side offset " + pixel
+                    + ": left " + Helpers.hexOf(left) + ", right " + Helpers.hexOf(right)
+                    + ", left-1 " + Helpers.hexOf(rgb(image, rect.x + inset + pixel - 1, cy))
+                    + ", left+1 " + Helpers.hexOf(rgb(image, rect.x + inset + pixel + 1, cy))
+        }
+        return ""
+    }
+
+    function edgeFrameFailure(image, rect, inset, thickness, expected, edge) {
+        for (var pixel = 0; pixel < thickness; ++pixel) {
+            var x = rect.x + Math.floor(rect.w / 2)
+            var y = rect.y + Math.floor(rect.h / 2)
+            if (edge === "top")
+                y = rect.y + inset + pixel
+            else if (edge === "bottom")
+                y = rect.y + rect.h - 1 - inset - pixel
+            else if (edge === "left")
+                x = rect.x + inset + pixel
+            else
+                x = rect.x + rect.w - 1 - inset - pixel
+            var actual = rgb(image, x, y)
+            if (!Helpers.colorsNear(actual, expected))
+                return edge + " physical frame pixel (" + x + "," + y
+                    + ") is " + Helpers.hexOf(actual)
+        }
+        return ""
+    }
+
+    function channelDelta(a, b) {
+        return Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1]),
+                        Math.abs(a[2] - b[2]))
     }
 
     function openNotes(captureFontPx) {
@@ -555,6 +594,206 @@ TestCase {
         }, 5000), "undo restores the original note document")
     }
 
+    function test_tinyNoteFrameRaster() {
+        var context = openNotes(5)
+        var grid = context.grid
+        var plot = context.plot
+        var zoomDelta = Math.round(1200 * Math.log(grid.baseFontPx / grid.rowHeight) / Math.LN2)
+        grid.handleWheel(0, zoomDelta, 0, 0, Qt.ControlModifier, 0,
+                         false, plot.width / 2, plot.height / 2)
+        verify(waitForNative(function() {
+            return grid.baseFontPx === 5 && Math.abs(grid.rowHeight - grid.baseFontPx) < 0.01
+        }, 5000), "the mounted five-pixel key height matches the small font: "
+               + grid.baseFontPx + "/" + grid.rowHeight)
+        var notes = publishedNotes(grid)
+        var target = notes.find(function(note) {
+            var x = note.tick * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX
+            return !note.ghost && !note.selected && note.tick > grid.ticksPerBeat
+                && x > grid.baseFontPx * 2 && x < plot.width - grid.baseFontPx * 3
+        })
+        verify(target !== undefined, "a painted tiny note has a visible time cell")
+        var scrollY = Math.max(0, Math.min(grid.cameraMaxVScroll,
+                (127 - target.pitch + 0.5) * grid.rowHeight - plot.height / 2))
+        grid.setCameraVScroll(scrollY)
+        var image = grabShell()
+        verify(image !== null, "the five-pixel-key roll renders a frame")
+        var item = noteItem(context.fills, target.id)
+        verify(item !== null && item.visible, "the tiny note is mounted in the roll")
+        var rect = deviceRect(item, plot, image, shellDpr(image))
+        verify(rect.h >= 3 && rect.h <= grid.baseFontPx * shellDpr(image),
+               "the mounted tiny note spans a border and a face: rect=" + JSON.stringify(rect)
+               + ", row=" + grid.rowHeight + ", font=" + grid.baseFontPx
+               + ", dpr=" + shellDpr(image))
+        var fitted = Helpers.fittedFrameThickness(rect.w, rect.h,
+                                                  Math.max(1, Math.round(shellDpr(image))), 0)
+        verify(fitted > 0 && rect.h > 2 * fitted,
+               "the tiny raster has room inside its fitted border")
+        var border = frameFailure(image, rect, 0, fitted,
+                                  Helpers.channels(grid.palette.noteBorder), "tiny frame")
+        verify(border === "", "the tiny note paints its fitted top and bottom border: " + border)
+        var cx = rect.x + Math.floor(rect.w / 2)
+        var cy = rect.y + Math.floor(rect.h / 2)
+        verify(Helpers.colorsNear(rgb(image, cx, cy), Helpers.channels(probe.noteFace(
+                   target.track, target.velocity, grid.palette.noteVelocityZero))),
+               "the tiny note paints its face between the thin borders")
+    }
+
+    function test_preRollPadAndRulerRaster() {
+        var context = openNotes()
+        var grid = context.grid
+        grid.setCameraHScroll(grid.cameraMinHScroll)
+        var image = grabShell()
+        verify(image !== null, "the mounted roll and ruler produce a raster")
+        var dpr = shellDpr(image)
+        verify(dpr > 0, "the mounted roll capture has positive physical DPR")
+        var plot = context.plot
+        var ruler = findChild(context.surface, "timelineQuickRuler")
+        verify(ruler && plot.width > 0 && plot.height > 0,
+               "the pre-roll has a mounted ruler and roll band")
+        var tickZero = -grid.cameraScrollX
+        verify(tickZero > grid.baseFontPx && tickZero < plot.width - grid.baseFontPx,
+               "tick zero leaves a font-scaled visible pre-roll pad")
+        var row = Math.floor((grid.cameraScrollY + plot.height / 2) / grid.rowHeight)
+        var natural = -1, accidental = -1
+        for (var i = Math.max(0, row - 6); i <= Math.min(127, row + 6); ++i) {
+            var pitch = 127 - i
+            var y = (i + 0.5) * grid.rowHeight - grid.cameraScrollY
+            if (y <= grid.rowHeight || y >= plot.height - grid.rowHeight)
+                continue
+            if ([1, 3, 6, 8, 10].indexOf(pitch % 12) >= 0)
+                accidental = y
+            else
+                natural = y
+        }
+        verify(natural > 0, "a natural key row is visible inside the mounted roll")
+        verify(accidental > 0, "an accidental key row is visible inside the mounted roll")
+        var padX = tickZero / 2
+        function plotPixel(x, y) {
+            var p = win(plot, x, y)
+            return rgb(image, Math.round(p.x * dpr), Math.round(p.y * dpr))
+        }
+        var naturalPad = plotPixel(padX, natural)
+        var accidentalPad = plotPixel(padX, accidental)
+        compare(naturalPad, accidentalPad,
+                "natural and accidental rows paint identical pre-roll pad pixels")
+        var naturalPlot = plotPixel(tickZero + grid.baseFontPx, natural)
+        verify(channelDelta(naturalPlot,
+                            Helpers.channels(grid.palette.rollBackground)) <= 2,
+               "the adjacent natural-key plot sample is unoccupied background: "
+               + Helpers.hexOf(naturalPlot))
+        verify(channelDelta(naturalPad, naturalPlot) > 1,
+               "the pre-roll pad differs from the natural-key plot")
+        function rulerPixel(x, y) {
+            var p = win(ruler, grid.keyboardWidth + x, y)
+            return rgb(image, Math.round(p.x * dpr), Math.round(p.y * dpr))
+        }
+        var upper = rulerPixel(padX * 0.5, ruler.height * 0.5)
+        var lower = rulerPixel(padX, ruler.height * 0.85)
+        verify(channelDelta(upper, lower) <= 2,
+               "the ruler pre-roll shade is uniform across upper and lower samples")
+        var adjacentChrome = rulerPixel(tickZero + grid.baseFontPx, ruler.height * 0.08)
+        verify(channelDelta(adjacentChrome,
+                            Helpers.channels(grid.palette.chromeBackground)) <= 2,
+               "the adjacent ruler sample paints unmarked chrome: "
+               + Helpers.hexOf(adjacentChrome))
+        verify(channelDelta(upper, adjacentChrome) > 1,
+               "the ruler pad is distinct from adjacent chrome")
+        var ink = Helpers.channels(grid.palette.primaryText)
+        var chrome = rulerPixel(tickZero + grid.baseFontPx, ruler.height * 0.2)
+        verify(channelDelta(ink, chrome) > 12,
+               "the tick-zero stem ink differs from adjacent ruler chrome")
+        var top = Math.floor(ruler.height * 0.05 * dpr)
+        var bottom = Math.floor(ruler.height * 0.45 * dpr)
+        var zero = win(ruler, grid.keyboardWidth + tickZero, 0)
+        var rulerTop = Math.round(win(ruler, 0, 0).y * dpr)
+        var longest = 0
+        for (var dx = -1; dx <= 1; ++dx) {
+            var count = 0
+            for (var py = top; py <= bottom; ++py) {
+                var pixel = rgb(image, Math.round(zero.x * dpr) + dx, rulerTop + py)
+                if (channelDelta(pixel, ink) <= 12)
+                    ++count
+            }
+            longest = Math.max(longest, count)
+        }
+        verify(longest >= (bottom - top) * 0.7,
+               "tick zero paints a continuous upper ruler stem")
+        var captionLeft = Math.round(win(ruler, grid.keyboardWidth + grid.baseFontPx * 0.3, 0).x * dpr)
+        var captionRight = Math.round(win(ruler, grid.keyboardWidth + tickZero
+                                          - grid.baseFontPx * 0.3, 0).x * dpr)
+        verify(captionRight > captionLeft, "the pre-zero ruler has room for a caption probe")
+        var captionInk = 0
+        for (var cy = rulerTop; cy < rulerTop + Math.floor(ruler.height * dpr) - 1; ++cy)
+            for (var cx = captionLeft; cx < captionRight; ++cx)
+                if (channelDelta(rgb(image, cx, cy), upper) > 12)
+                    ++captionInk
+        compare(captionInk, 0, "no placeholder caption paints before tick zero")
+    }
+
+    function test_ghostEdgesAndMinimumZoomFace() {
+        var context = openNotes()
+        var grid = context.grid
+        var image = grabShell()
+        verify(image !== null, "the ghost roll produces a raster")
+        var ghost = trackFace(context, image, true)
+        verify(ghost !== null && ghost.rect.h >= 6,
+               "an other-track note has room for edge and adjacent interior probes")
+        var cx = ghost.rect.x + Math.floor(ghost.rect.w / 2)
+        var top = ghost.rect.y, bottom = top + ghost.rect.h - 1
+        verify(Helpers.colorsNear(rgb(image, cx, top), rgb(image, cx, top + 2), 0),
+               "the ghost top edge matches its adjacent interior pixel")
+        verify(Helpers.colorsNear(rgb(image, cx, bottom), rgb(image, cx, bottom - 2), 0),
+               "the ghost bottom edge matches its adjacent interior pixel")
+        var cy = top + Math.floor(ghost.rect.h / 2)
+        verify(Helpers.colorsNear(rgb(image, ghost.rect.x, cy),
+                                  rgb(image, ghost.rect.x + 2, cy), 0),
+               "the ghost left edge has no plain-note border or selected ring")
+        verify(Helpers.colorsNear(rgb(image, ghost.rect.x + ghost.rect.w - 1, cy),
+                                  rgb(image, ghost.rect.x + ghost.rect.w - 3, cy), 0),
+               "the ghost right edge has no plain-note border or selected ring")
+        grid.handleWheel(0, -5000, 0, 0, 0, 0, false,
+                         context.plot.width / 2, context.plot.height / 2)
+        grid.setCameraHScroll(grid.cameraMinHScroll)
+        verify(waitForNative(function() {
+            return grid.beatWidth <= grid.baseFontPx / 3 + 0.01
+        }, 5000), "the mounted note reaches the minimum time zoom")
+        var zoom = grabShell()
+        verify(zoom !== null, "the minimum-time-zoom roll produces a raster")
+        var notes = publishedNotes(grid)
+        var narrow = null
+        for (var i = 0; i < notes.length; ++i) {
+            if (notes[i].ghost)
+                continue
+            var item = noteItem(context.fills, notes[i].id)
+            if (!item || !item.visible)
+                continue
+            var point = item.mapToItem(context.plot, 0, 0)
+            if (point.x < 2 || point.y < 2
+                    || point.x + item.width > context.plot.width - 2
+                    || point.y + item.height > context.plot.height - 2)
+                continue
+            var rect = deviceRect(item, context.plot, zoom, shellDpr(zoom))
+            if (rect.w >= 3 && rect.h >= 3 && (!narrow || rect.w < narrow.rect.w))
+                narrow = { note: notes[i], rect: rect }
+        }
+        verify(narrow !== null && narrow.rect.w <= 3 * shellDpr(zoom),
+               "a snap-cell narrow note remains visible at minimum time zoom: "
+               + (narrow ? JSON.stringify(narrow.rect) : "no visible note"))
+        var box = narrow.rect
+        var centerX = box.x + Math.floor(box.w / 2)
+        var centerY = box.y + Math.floor(box.h / 2)
+        var face = rgb(zoom, centerX, centerY)
+        var topOutline = rgb(zoom, centerX, box.y)
+        verify(channelDelta(topOutline, Helpers.channels(grid.palette.noteBorder)) <= 16
+               && zoom.alpha(centerX, box.y) > 0,
+               "the minimum-zoom narrow note paints its top outline in the border role")
+        verify(channelDelta(topOutline, face) > 16,
+               "the minimum-zoom note outline differs visibly from its face")
+        verify(Helpers.colorsNear(face, Helpers.channels(probe.noteFace(
+                   narrow.note.track, narrow.note.velocity, grid.palette.noteVelocityZero))),
+               "the minimum-zoom narrow note retains its painted face")
+    }
+
     function test_noteRasterParity() {
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production ShellWindow loads")
@@ -576,12 +815,23 @@ TestCase {
         verify(plot !== null, "the roll plot is mounted")
         verify(fills !== null, "the note fill layer is mounted")
 
+        grid.handleWheel(0, -120, 0, 0, Qt.ControlModifier, 0,
+                         false, plot.width / 2, plot.height / 2)
+        verify(waitForNative(function() {
+            return Math.abs(grid.rowHeight - Math.round(grid.rowHeight)) > 0.1
+        }, 5000), "the mounted note frame uses a fractional key height")
+
         var unselectedImage = grabShell()
         verify(unselectedImage !== null, "the unselected roll renders a frame")
         var dpr = shellDpr(unselectedImage)
         var notes = publishedNotes(grid)
         verify(notes !== null, "the note summary parses as note entries")
-        var unselected = visibleNote(fills, plot, unselectedImage, dpr, notes, false)
+        var frameNotes = notes.filter(function(note) {
+            return note.tick > grid.ticksPerBeat
+                && note.tick * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX
+                    > -grid.cameraScrollX + grid.baseFontPx * 2
+        })
+        var unselected = visibleNote(fills, plot, unselectedImage, dpr, frameNotes, false)
         verify(unselected !== null, "a fully visible unselected note is available for probing")
 
         var expectedFace = Helpers.channels(
@@ -608,6 +858,16 @@ TestCase {
                                  "unselected note " + unselected.note.id
                                  + " lost its display-scaled black border") === "",
                 "the unselected black border renders")
+        var unselectedSides = sideFrameFailure(
+                    unselectedImage, unselected.rect, 0, unselectedBorder,
+                    Helpers.channels(grid.palette.noteBorder), "unselected side borders")
+        verify(unselectedSides === "",
+               "the unselected note bounds its face on both sides: " + unselectedSides)
+        var below = rgb(unselectedImage,
+                        unselected.rect.x + Math.floor(unselected.rect.w / 2),
+                        unselected.rect.y + unselected.rect.h)
+        verify(!Helpers.colorsNear(below, expectedFace),
+               "the unselected note face stops below its bottom border")
 
         grid.performCommand(4)
         verify(waitForNative(function() {
@@ -630,6 +890,10 @@ TestCase {
         verify(frameFailure(selectedImage, selectedRect, 0, ring, expectedRing,
                             "selected note " + unselected.note.id + " outer ring") === "",
                 "the selection ring uses the selection role color")
+        var ringSides = sideFrameFailure(selectedImage, selectedRect, 0, ring,
+                                         expectedRing, "selected side ring")
+        verify(ringSides === "", "the selection ring continues around both side edges: "
+               + ringSides)
         var selectedBorder = Helpers.fittedFrameThickness(
                     selectedRect.w, selectedRect.h, borderRequest, ring)
         verify(selectedBorder > 0, "the selected note keeps room for its inset black border")
@@ -637,6 +901,28 @@ TestCase {
                                  "selected note " + unselected.note.id
                                  + " lost its inset black border") === "",
                 "the inset black border renders inside the ring")
+        var insetSides = sideFrameFailure(
+                    selectedImage, selectedRect, ring, selectedBorder,
+                    Helpers.channels(grid.palette.noteBorder), "selected inset sides")
+        verify(insetSides === "", "the selected inset border paints both left and right edges: "
+               + insetSides)
+        var darkFrame = Helpers.channels(grid.palette.noteBorder)
+        var topInset = edgeFrameFailure(selectedImage, selectedRect, ring,
+                                        selectedBorder, darkFrame, "top")
+        verify(topInset === "", "the selected inset top border paints: " + topInset)
+        var bottomInset = edgeFrameFailure(selectedImage, selectedRect, ring,
+                                           selectedBorder, darkFrame, "bottom")
+        verify(bottomInset === "", "the selected inset bottom border paints: " + bottomInset)
+        var leftInset = edgeFrameFailure(selectedImage, selectedRect, ring,
+                                         selectedBorder, darkFrame, "left")
+        verify(leftInset === "", "the selected inset left border paints: " + leftInset)
+        var rightInset = edgeFrameFailure(selectedImage, selectedRect, ring,
+                                          selectedBorder, darkFrame, "right")
+        verify(rightInset === "", "the selected inset right border paints: " + rightInset)
+        verify(!Helpers.colorsNear(rgb(selectedImage,
+                                       selectedRect.x + Math.floor(selectedRect.w / 2),
+                                       selectedRect.y + ring), expectedRing),
+               "the selection ring stops at its display-scaled inset")
         var selectedFace = [selectedImage.red(
                     selectedRect.x + Math.floor(selectedRect.w / 2),
                     selectedRect.y + Math.floor(selectedRect.h / 2)),
@@ -815,5 +1101,64 @@ TestCase {
         tryVerify(function() { return capture !== null }, 3000)
         verify(capture.saveToFile(bootstrap.projectRoot + "/notevisuals-dpr2-small-font.png"),
                "the dpr2 selected note frame is saved")
+        var selectedItem = noteItem(fills, small.note.id)
+        var noteOrigin = selectedItem.mapToItem(plot, 0, 0)
+        var physical = { x: Math.floor(noteOrigin.x * dpr),
+                         y: Math.floor(noteOrigin.y * dpr),
+                         w: Math.ceil((noteOrigin.x + selectedItem.width) * dpr)
+                            - Math.floor(noteOrigin.x * dpr),
+                         h: Math.ceil((noteOrigin.y + selectedItem.height) * dpr)
+                            - Math.floor(noteOrigin.y * dpr) }
+        var reader = physicalCaptureReader.createObject(plot)
+        verify(reader !== null, "the physical DPR2 capture has an image reader")
+        tryCompare(reader, "available", true, 3000)
+        var imageUrl = "file://" + bootstrap.projectRoot + "/notevisuals-dpr2-small-font.png"
+        reader.loadImage(imageUrl)
+        tryVerify(function() { return reader.isImageLoaded(imageUrl) }, 3000)
+        var pixels = reader.getContext("2d").createImageData(imageUrl)
+        verify(pixels !== null && Math.abs(pixels.width - plot.width * dpr) <= 1
+               && Math.abs(pixels.height - plot.height * dpr) <= 1,
+               "the DPR2 note capture retains physical-sized image data: "
+               + (pixels ? pixels.width + "x" + pixels.height : "null")
+               + " expected " + Math.round(plot.width * dpr)
+               + "x" + Math.round(plot.height * dpr))
+        var capturedPixels = {
+            red: function(x, y) { return pixels.data[(y * pixels.width + x) * 4] },
+            green: function(x, y) { return pixels.data[(y * pixels.width + x) * 4 + 1] },
+            blue: function(x, y) { return pixels.data[(y * pixels.width + x) * 4 + 2] }
+        }
+        var physicalRect = physical
+        var ringInk = Helpers.channels(grid.palette.selectionRing)
+        var borderInk = Helpers.channels(grid.palette.noteBorder)
+        var centerX = physicalRect.x + Math.floor(physicalRect.w / 2)
+        var topEdge = -1, bottomEdge = -1
+        for (var offset = -1; offset <= 1; ++offset) {
+            var topY = physicalRect.y + offset
+            var bottomY = physicalRect.y + physicalRect.h - 1 + offset
+            if (topEdge < 0 && Helpers.colorsNear(rgb(capturedPixels, centerX, topY), ringInk))
+                topEdge = topY
+            if (Helpers.colorsNear(rgb(capturedPixels, centerX, bottomY), ringInk))
+                bottomEdge = bottomY
+        }
+        verify(topEdge >= 0 && bottomEdge > topEdge,
+               "the captured DPR2 selected ring brackets the note's physical bounds")
+        physicalRect.y = topEdge
+        physicalRect.h = bottomEdge - topEdge + 1
+        var ringFailure = frameFailure(capturedPixels, physicalRect, 0,
+                                       small.ring, ringInk, "DPR2 outer ring")
+        verify(ringFailure === "",
+               "the captured small-font DPR2 note paints its selected ring: " + ringFailure)
+        var borderFailure = frameFailure(capturedPixels, physicalRect, small.ring,
+                                         small.border, borderInk, "DPR2 inset border")
+        verify(borderFailure === "",
+               "the captured small-font DPR2 note paints its fitted inset border: "
+               + borderFailure)
+        var face = rgb(capturedPixels,
+                       physicalRect.x + Math.floor(physicalRect.w / 2),
+                       physicalRect.y + Math.floor(physicalRect.h / 2))
+        verify(Helpers.colorsNear(face, Helpers.channels(probe.noteFace(
+                   small.note.track, small.note.velocity, grid.palette.noteVelocityZero))),
+               "the captured small-font DPR2 note keeps a face inside the thinned border")
+        reader.destroy()
     }
 }
