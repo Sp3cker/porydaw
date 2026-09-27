@@ -30,26 +30,59 @@ internal func sessionOpenAndRecovery(report: CheckReport, projectDir: String) ->
         return nil
     }
 
-    // Failed open keeps worker project intact.
+    // Failed open keeps the prior project and its entire listing usable.
+    let failedOpenID = "project-io-flow/ProjectIoFlowTest::failedOpenKeepsWorkerProject"
     do {
-        try runBlocking {
-            try await service.open(root: projectDir + "/nonexistent_subfolder")
+        let before = try runBlocking {
+            let listing = try await service.songs()
+            let song = try await service.openSong(label: "mus_session_test")
+            return (listing, song)
         }
-        report.fail("project-io-flow/ProjectIoFlowTest::failedOpenKeepsWorkerProject",
-                    "failed open was expected to throw")
-    } catch {
         do {
-            let retained = try runBlocking {
-                try await service.openSong(label: "mus_session_test")
+            try runBlocking {
+                try await service.open(root: projectDir + "/nonexistent_subfolder")
             }
-            report.expectEqual(expected: "mus_session_test", actual: retained.source.label,
-                               cppID: "project-io-flow/ProjectIoFlowTest::failedOpenKeepsWorkerProject",
-                               what: "failed replacement open retains the worker's prior project")
-        } catch {
-            report.fail("project-io-flow/ProjectIoFlowTest::failedOpenKeepsWorkerProject",
-                        "prior worker project was lost after failed open: \(error)")
+            report.fail(failedOpenID, "failed open was expected to throw")
             return nil
+        } catch let error as ProjectServiceError {
+            if case let .operationFailed(message) = error {
+                report.expect(!message.isEmpty, cppID: failedOpenID,
+                              message: "failed replacement returns a nonempty project-open failure")
+            } else {
+                report.fail(failedOpenID, "failed replacement returned a non-project-open failure: \(error)")
+                return nil
+            }
         }
+        let after = try runBlocking {
+            let listing = try await service.songs()
+            let song = try await service.openSong(label: "mus_session_test")
+            return (listing, song)
+        }
+        report.expectEqual(expected: before.0, actual: after.0, cppID: failedOpenID,
+                           what: "failed replacement retains the complete prior playable-song listing")
+        report.expectEqual(expected: before.1.source, actual: after.1.source, cppID: failedOpenID,
+                           what: "failed replacement retains the original selected song source")
+        report.expect(before.1.label == after.1.label &&
+                      before.1.midiPath == after.1.midiPath &&
+                      before.1.constant == after.1.constant &&
+                      before.1.player == after.1.player &&
+                      before.1.trackBudget == after.1.trackBudget &&
+                      before.1.hasMid == after.1.hasMid &&
+                      before.1.hasCfg == after.1.hasCfg &&
+                      before.1.registered == after.1.registered &&
+                      before.1.config == after.1.config &&
+                      before.1.bankLoadName == after.1.bankLoadName &&
+                      before.1.bankDirty == after.1.bankDirty &&
+                      before.1.midiBytes == after.1.midiBytes &&
+                      before.1.bankSlots == after.1.bankSlots,
+                      cppID: failedOpenID,
+                      message: "failed replacement still opens the original song with identical complete metadata")
+        report.expectEqual(expected: "mus_session_test", actual: after.1.source.label,
+                           cppID: failedOpenID,
+                           what: "failed replacement open retains the worker's prior project")
+    } catch {
+        report.fail(failedOpenID, "prior worker project was lost after failed open: \(error)")
+        return nil
     }
 
     // Only labels published as playable resolve.

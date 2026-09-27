@@ -48,6 +48,32 @@ internal func runProjectStoreOpenSuite(_ report: CheckReport) {
         actual: snapshot.trackBudgets, cppID: "\(id)/A02a",
         what: "staged music player table supplies the expected per-player track budgets")
 
+    let flowID = "project-io-flow/ProjectIoFlowTest::openPublishesSnapshotDetached"
+    report.expectEqual(expected: rootURL.path, actual: snapshot.root,
+                       cppID: flowID, what: "opened value carries the normalized staged-project root")
+    report.expectEqual(expected: expectedLabels, actual: snapshot.songs.map(\.label),
+                       cppID: flowID, what: "opened value retains every fixture song in table order")
+    report.expect(snapshot.players.map(\.name) == [
+        "MUSIC_PLAYER_BGM", "MUSIC_PLAYER_SE1", "MUSIC_PLAYER_SE2",
+        "MUSIC_PLAYER_SE3", "MUSIC_PLAYER_SE_1TRK",
+    ] && snapshot.players.map(\.number) == [0, 1, 2, 3, 4]
+        && snapshot.players.map(\.trackCount) == [16, 3, 3, 3, 1],
+        cppID: flowID, message: "opened value retains all five fixture players, indices and track limits")
+    let oneTrack = snapshot.songs.first { $0.label == "se_fanfare_1trk" }
+    report.expect(oneTrack?.player == "MUSIC_PLAYER_SE_1TRK",
+                  cppID: flowID, message: "one-track fixture effect selects the one-track player")
+    report.expectEqual(expected: 1, actual: oneTrack.map { snapshot.trackBudgetFor(song: $0) },
+                       cppID: flowID, what: "one-track fixture effect receives exactly one playable track")
+    let selected = snapshot.songs.first {
+        $0.isPlayable && $0.midPath.map { FileManager.default.fileExists(atPath: $0) } == true
+    }
+    report.expect(selected?.isPlayable == true,
+                  cppID: flowID, message: "first fixture song with a MIDI source is playable")
+    report.expect(selected?.hasCfg == true,
+                  cppID: flowID, message: "first playable fixture song has parsed configuration")
+    report.expectEqual(expected: "mus_dummy", actual: selected?.label,
+                       cppID: flowID, what: "selected song identity matches the first playable fixture label")
+
     let midiURL = rootURL.appendingPathComponent("sound/songs/midi", isDirectory: true)
     if let route = snapshot.songs.first(where: { $0.label == "mus_route101" }),
        let effect = snapshot.songs.first(where: { $0.label == "se_use_item" }) {
@@ -82,6 +108,55 @@ internal func runProjectStoreOpenSuite(_ report: CheckReport) {
                       cppID: "\(id)/A05", message: "sequential opens return equal song and player snapshots")
     } else {
         report.fail("\(id)/A05", "second open failed or timed out: \(String(describing: repeated))")
+    }
+
+    let detachedRoot = FileManager.default.temporaryDirectory.appendingPathComponent(
+        "projectstore-detached-\(UUID().uuidString)", isDirectory: true)
+    do {
+        try FileManager.default.copyItem(at: rootURL, to: detachedRoot)
+        defer { try? FileManager.default.removeItem(at: detachedRoot) }
+        let detachedStore = ProjectStore(projectRoot: detachedRoot)
+        guard let firstOutcome = awaitValue({ try await detachedStore.open() }) else {
+            report.fail(flowID, "copied project first open timed out")
+            return
+        }
+        let first = try firstOutcome.get()
+        let original = (root: first.root, songs: first.songs,
+                        players: first.players, budgets: first.trackBudgets)
+        let copiedTable = detachedRoot.appendingPathComponent("sound/song_table.inc")
+        let source = try String(contentsOf: copiedTable, encoding: .utf8)
+        let originalRow = "song mus_dummy, MUSIC_PLAYER_BGM, 0"
+        guard source.contains(originalRow) else {
+            report.fail(flowID, "copied fixture registry lacks the expected first song row")
+            return
+        }
+        let replacement = source.replacingOccurrences(
+            of: originalRow, with: "song mus_dummy, MUSIC_PLAYER_SE_1TRK, 0")
+        try replacement.write(to: copiedTable, atomically: true, encoding: .utf8)
+        guard let secondOutcome = awaitValue({ try await detachedStore.open() }) else {
+            report.fail(flowID, "copied project replacement open timed out")
+            return
+        }
+        let second = try secondOutcome.get()
+        report.expect(first.root == original.root && first.root == detachedRoot.path &&
+                      first.songs == original.songs &&
+                      first.songs.map(\.label) == expectedLabels &&
+                      first.songs.first?.player == "MUSIC_PLAYER_BGM" &&
+                      first.players == original.players &&
+                      first.trackBudgets == original.budgets,
+                      cppID: flowID,
+                      message: "returned copied-project value keeps its original root, songs, configuration and players after registry replacement")
+        report.expect(second.root == detachedRoot.path &&
+                      second.songs.map(\.label) == expectedLabels &&
+                      second.songs.first?.player == "MUSIC_PLAYER_SE_1TRK" &&
+                      second.songs != original.songs &&
+                      second.players == original.players &&
+                      second.trackBudgets == original.budgets &&
+                      second.songs.first.map { second.trackBudgetFor(song: $0) } == 1,
+                      cppID: flowID,
+                      message: "reopening the copied project publishes the replaced song player and one-track limit")
+    } catch {
+        report.fail(flowID, "copied-project registry replacement or reopen failed: \(error)")
     }
 
     let missingTable = FileManager.default.temporaryDirectory.appendingPathComponent(

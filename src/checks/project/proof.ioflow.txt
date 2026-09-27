@@ -2,17 +2,20 @@ Assertion correspondence: project/ioflow.cpp
 
 Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Deleted in: S6 flip cutover (feature/swift-project-store, base 2d1c92d0)
-Retirement: historical deletion record only; the deleted C++ source above is recoverable from the Reference revision and Original SHA-256, never from HEAD. The dispositions and S citations below were established while the file was live and were not re-verified in this cutover; no execution or parity claim is made by this record.
+Retirement: historical deletion record only; the deleted C++ source above is recoverable from the Reference revision and Original SHA-256, never from HEAD. Task 134 reconciles A003–A012 and A033–A038 against the final Swift predicates and supplied lane results; other rows retain their historical disposition records.
 Original: src/checks/project/ioflow.cpp
 Original SHA-256: 570a3612014e502fd553f04d90f4124ae6aa71a923324e4015b7a3d6e0d552bd
+Swift counterpart: src/checks/projectstore/ProjectStoreOpenChecks.swift
+Swift counterpart SHA-256: 9b8d6b57436dc3fdac03f0da3c591acac64ed3aa45aa15a9fa68eccf6b292ae2
 Swift counterpart: src/checks/workspace/SessionChecks.swift
 Swift counterpart: src/checks/workspace/session_io.swift
+Swift counterpart SHA-256: c26d5ee7f1f0b19e0664c5e914c736972a9548398b1384f2b541a6f133d3de19
 Swift counterpart: src/checks/workspace/session_playback.swift
 Swift counterpart: src/checks/workspace/session_save.swift
 
 
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run.
+Command: Task 134 prescribed lanes: projectstore-open, swiftcore-projectsession, shell-open-failure. Exact executed invocations were not provided in the handoff.
+Result: Implementer handoff reports projectstore-open PASS; Task 134 predicates PASS in swiftcore-projectsession, while the full lane fails on sibling Task 127/128 registration tests; shell-open-failure PASS. This ledger agent did not rerun these lanes.
 
 A001 | ProjectIoFlowTest::init | src/checks/project/ioflow.cpp:49
 Disposition: GAP
@@ -85,7 +88,7 @@ Original expression:
 
 A003 | ProjectIoFlowTest::openPublishesSnapshotDetached | src/checks/project/ioflow.cpp:64
 Disposition: PARTIAL
-Mapping/reason: Related predicate S001 in session_io.swift; the detached label survives source-registry replacement, but the snapshot root/song-list/player-count/track-budget/playable/hasCfg/label conjunctions below are unproved (Swift has no snapshot/player model).
+Mapping/reason: S001 in session_io.swift covers the user-facing detached source label after registry replacement; `completedInline` is backend completion-timing representation with no Swift predicate, so that detail remains unproved.
 Source context since previous assertion:
   ;
       m_fixture.reset();
@@ -103,7 +106,7 @@ Original expression:
 
 A004 | ProjectIoFlowTest::openPublishesSnapshotDetached | src/checks/project/ioflow.cpp:65
 Disposition: PARTIAL
-Mapping/reason: Related predicate S001 in session_io.swift; the detached label survives source-registry replacement, but the snapshot root/song-list/player-count/track-budget/playable/hasCfg/label conjunctions below are unproved (Swift has no snapshot/player model).
+Mapping/reason: S013 in ProjectStoreOpenChecks.swift runs only after the staged open succeeds and checks its resulting root; the Swift failure guard is setup/control flow, not a standalone equivalent predicate for this C++ open-result guard.
 Source context since previous assertion:
   ;
 
@@ -111,8 +114,8 @@ Original expression:
   QVERIFY2(opened, qPrintable(error))
 
 A005 | ProjectIoFlowTest::openPublishesSnapshotDetached | src/checks/project/ioflow.cpp:69
-Disposition: PARTIAL
-Mapping/reason: Related predicate S001 in session_io.swift; the detached label survives source-registry replacement, but the snapshot root/song-list/player-count/track-budget/playable/hasCfg/label conjunctions below are unproved (Swift has no snapshot/player model).
+Disposition: MATCHED
+Mapping/reason: S013 in ProjectStoreOpenChecks.swift checks the opened snapshot root against the standardized staged-project root.
 Source context since previous assertion:
   ;
       if (!opened)
@@ -123,8 +126,8 @@ Original expression:
   QCOMPARE(opened->snapshot.root(), QDir(m_fixture->root()).absolutePath())
 
 A006 | ProjectIoFlowTest::openPublishesSnapshotDetached | src/checks/project/ioflow.cpp:70
-Disposition: PARTIAL
-Mapping/reason: Related predicate S001 in session_io.swift; the detached label survives source-registry replacement, but the snapshot root/song-list/player-count/track-budget/playable/hasCfg/label conjunctions below are unproved (Swift has no snapshot/player model).
+Disposition: MATCHED
+Mapping/reason: S014 in ProjectStoreOpenChecks.swift checks the exact fixture song-label sequence retained by the opened snapshot.
 Source context since previous assertion:
   ;
 
@@ -132,8 +135,8 @@ Original expression:
   QVERIFY(!opened->snapshot.songs().isEmpty())
 
 A007 | ProjectIoFlowTest::openPublishesSnapshotDetached | src/checks/project/ioflow.cpp:71
-Disposition: PARTIAL
-Mapping/reason: Related predicate S001 in session_io.swift; the detached label survives source-registry replacement, but the snapshot root/song-list/player-count/track-budget/playable/hasCfg/label conjunctions below are unproved (Swift has no snapshot/player model).
+Disposition: MATCHED
+Mapping/reason: S015 in ProjectStoreOpenChecks.swift checks all five fixture players by name, index and track count, including the five-player count.
 Source context since previous assertion:
   ;
 
@@ -141,8 +144,8 @@ Original expression:
   QCOMPARE(opened->snapshot.players().size(), 5)
 
 A008 | ProjectIoFlowTest::openPublishesSnapshotDetached | src/checks/project/ioflow.cpp:72
-Disposition: PARTIAL
-Mapping/reason: Related predicate S001 in session_io.swift; the detached label survives source-registry replacement, but the snapshot root/song-list/player-count/track-budget/playable/hasCfg/label conjunctions below are unproved (Swift has no snapshot/player model).
+Disposition: MATCHED
+Mapping/reason: S016 in ProjectStoreOpenChecks.swift checks that the looked-up one-track fixture effect selects MUSIC_PLAYER_SE_1TRK, proving the fixture effect is present.
 Source context since previous assertion:
   ;
 
@@ -150,8 +153,8 @@ Original expression:
   QVERIFY(opened->oneTrackSong)
 
 A009 | ProjectIoFlowTest::openPublishesSnapshotDetached | src/checks/project/ioflow.cpp:74
-Disposition: PARTIAL
-Mapping/reason: Related predicate S001 in session_io.swift; the detached label survives source-registry replacement, but the snapshot root/song-list/player-count/track-budget/playable/hasCfg/label conjunctions below are unproved (Swift has no snapshot/player model).
+Disposition: MATCHED
+Mapping/reason: S017 in ProjectStoreOpenChecks.swift checks the one-track fixture effect receives exactly one playable track.
 Source context since previous assertion:
   ;
       if (opened->oneTrackSong)
@@ -160,8 +163,8 @@ Original expression:
   QCOMPARE(opened->snapshot.trackBudgetFor(*opened->oneTrackSong), 1)
 
 A010 | ProjectIoFlowTest::openPublishesSnapshotDetached | src/checks/project/ioflow.cpp:75
-Disposition: PARTIAL
-Mapping/reason: Related predicate S001 in session_io.swift; the detached label survives source-registry replacement, but the snapshot root/song-list/player-count/track-budget/playable/hasCfg/label conjunctions below are unproved (Swift has no snapshot/player model).
+Disposition: MATCHED
+Mapping/reason: S018 in ProjectStoreOpenChecks.swift checks the selected first fixture song with a MIDI source is playable.
 Source context since previous assertion:
   ;
 
@@ -169,8 +172,8 @@ Original expression:
   QVERIFY(opened->playableSong.isPlayable())
 
 A011 | ProjectIoFlowTest::openPublishesSnapshotDetached | src/checks/project/ioflow.cpp:76
-Disposition: PARTIAL
-Mapping/reason: Related predicate S001 in session_io.swift; the detached label survives source-registry replacement, but the snapshot root/song-list/player-count/track-budget/playable/hasCfg/label conjunctions below are unproved (Swift has no snapshot/player model).
+Disposition: MATCHED
+Mapping/reason: S019 in ProjectStoreOpenChecks.swift checks the selected first playable fixture song has parsed configuration.
 Source context since previous assertion:
   ;
 
@@ -179,7 +182,7 @@ Original expression:
 
 A012 | ProjectIoFlowTest::openPublishesSnapshotDetached | src/checks/project/ioflow.cpp:77
 Disposition: PARTIAL
-Mapping/reason: Related predicate S001 in session_io.swift; the detached label survives source-registry replacement, but the snapshot root/song-list/player-count/track-budget/playable/hasCfg/label conjunctions below are unproved (Swift has no snapshot/player model).
+Mapping/reason: S020 in ProjectStoreOpenChecks.swift checks the selected fixture label is `mus_dummy`, but does not compare the opened song value with that selected song's label as this C++ assertion does.
 Source context since previous assertion:
   ;
 
@@ -392,7 +395,7 @@ Original expression:
 
 A033 | ProjectIoFlowTest::failedOpenKeepsWorkerProject | src/checks/project/ioflow.cpp:128
 Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in session_io.swift; a failed replacement open retains the prior project, but the CommandFailure message and post-failure SamplesProbed below are unproved.
+Mapping/reason: S022 and S024 establish that the prior project remains accessible after replacement failure; the Swift check does not separately assert the initial open-result guard, which is setup for the failure scenario.
 Source context since previous assertion:
   ;
   }
@@ -407,7 +410,7 @@ Original expression:
 
 A034 | ProjectIoFlowTest::failedOpenKeepsWorkerProject | src/checks/project/ioflow.cpp:135
 Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in session_io.swift; a failed replacement open retains the prior project, but the CommandFailure message and post-failure SamplesProbed below are unproved.
+Mapping/reason: S021 checks the failed replacement yields a nonempty operationFailed message; Swift exposes the failure directly rather than waiting for the C++ asynchronous command-result event, so the event wait itself remains unproved.
 Source context since previous assertion:
   ;
       if (!opened)
@@ -422,7 +425,7 @@ Original expression:
 
 A035 | ProjectIoFlowTest::failedOpenKeepsWorkerProject | src/checks/project/ioflow.cpp:137
 Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in session_io.swift; a failed replacement open retains the prior project, but the CommandFailure message and post-failure SamplesProbed below are unproved.
+Mapping/reason: S021 checks a ProjectServiceError.operationFailed failure, not the C++ CommandFailure result variant; failure is observable but backend envelope identity remains unproved.
 Source context since previous assertion:
   ;
       const auto *const failure = std::get_if<CommandFailure>(&m_fixture->results().back());
@@ -431,8 +434,8 @@ Original expression:
   QVERIFY(failure)
 
 A036 | ProjectIoFlowTest::failedOpenKeepsWorkerProject | src/checks/project/ioflow.cpp:139
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in session_io.swift; a failed replacement open retains the prior project, but the CommandFailure message and post-failure SamplesProbed below are unproved.
+Disposition: MATCHED
+Mapping/reason: S021 in session_io.swift asserts the failed replacement produces an operationFailed message with nonempty text, matching this observable nonempty failure-message condition.
 Source context since previous assertion:
   ;
       if (failure)
@@ -442,7 +445,7 @@ Original expression:
 
 A037 | ProjectIoFlowTest::failedOpenKeepsWorkerProject | src/checks/project/ioflow.cpp:143
 Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in session_io.swift; a failed replacement open retains the prior project, but the CommandFailure message and post-failure SamplesProbed below are unproved.
+Mapping/reason: S022 and S024 check the consumer obligation that the original project remains usable after failure. `waitFor` on the subsequent SamplesProbed backend event has no Swift counterpart and is not inferred from that consumer check.
 Source context since previous assertion:
   ;
 
@@ -454,7 +457,7 @@ Original expression:
 
 A038 | ProjectIoFlowTest::failedOpenKeepsWorkerProject | src/checks/project/ioflow.cpp:144
 Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in session_io.swift; a failed replacement open retains the prior project, but the CommandFailure message and post-failure SamplesProbed below are unproved.
+Mapping/reason: S022 and S024 check the consumer obligation that the original project remains usable after failure. `SamplesProbed` is backend event representation with no Swift predicate; no event check is inferred from project retention.
 Source context since previous assertion:
   ;
 
@@ -795,10 +798,10 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | sessionOpenAndRecovery | src/checks/workspace/session_io.swift
+S001 | sessionOpenAndRecovery (line 24: report.expectEqual(expected: "mus_session_test", actual: detached.source.label)) | src/checks/workspace/session_io.swift
 Anchor: message "published project snapshot survives source registry replacement"
 
-S002 | sessionOpenAndRecovery | src/checks/workspace/session_io.swift
+S002 | sessionOpenAndRecovery (lines 80-82: report.expectEqual(expected: "mus_session_test", actual: after.1.source.label)) | src/checks/workspace/session_io.swift
 Anchor: message "failed replacement open retains the worker's prior project"
 
 S003 | sessionOpenAndRecovery | src/checks/workspace/session_io.swift
@@ -830,3 +833,39 @@ Anchor: message "exact-gate setting survives save/reopen"
 
 S012 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "extended-clock setting survives save/reopen"
+S013 | runProjectStoreOpenSuite (line 52: report.expectEqual(expected: rootURL.path, actual: snapshot.root)) | src/checks/projectstore/ProjectStoreOpenChecks.swift
+Anchor: message "opened value carries the normalized staged-project root"
+
+S014 | runProjectStoreOpenSuite (line 54: report.expectEqual(expected: expectedLabels, actual: snapshot.songs.map(\.label))) | src/checks/projectstore/ProjectStoreOpenChecks.swift
+Anchor: message "opened value retains every fixture song in table order"
+
+S015 | runProjectStoreOpenSuite (lines 56-61: snapshot.players.map(\.name) == ["MUSIC_PLAYER_BGM", "MUSIC_PLAYER_SE1", "MUSIC_PLAYER_SE2", "MUSIC_PLAYER_SE3", "MUSIC_PLAYER_SE_1TRK"] && snapshot.players.map(\.number) == [0, 1, 2, 3, 4] && snapshot.players.map(\.trackCount) == [16, 3, 3, 3, 1]) | src/checks/projectstore/ProjectStoreOpenChecks.swift
+Anchor: message "opened value retains all five fixture players, indices and track limits"
+
+S016 | runProjectStoreOpenSuite (lines 62-64: report.expect(oneTrack?.player == "MUSIC_PLAYER_SE_1TRK")) | src/checks/projectstore/ProjectStoreOpenChecks.swift
+Anchor: message "one-track fixture effect selects the one-track player"
+
+S017 | runProjectStoreOpenSuite (lines 65-66: report.expectEqual(expected: 1, actual: oneTrack.map { snapshot.trackBudgetFor(song: $0) })) | src/checks/projectstore/ProjectStoreOpenChecks.swift
+Anchor: message "one-track fixture effect receives exactly one playable track"
+
+S018 | runProjectStoreOpenSuite (lines 67-71: report.expect(selected?.isPlayable == true)) | src/checks/projectstore/ProjectStoreOpenChecks.swift
+Anchor: message "first fixture song with a MIDI source is playable"
+
+S019 | runProjectStoreOpenSuite (lines 67-73: report.expect(selected?.hasCfg == true)) | src/checks/projectstore/ProjectStoreOpenChecks.swift
+Anchor: message "first playable fixture song has parsed configuration"
+
+S020 | runProjectStoreOpenSuite (lines 67-75: report.expectEqual(expected: "mus_dummy", actual: selected?.label)) | src/checks/projectstore/ProjectStoreOpenChecks.swift
+Anchor: message "selected song identity matches the first playable fixture label"
+
+S021 | sessionOpenAndRecovery (lines 47-50: report.expect(!message.isEmpty, cppID: failedOpenID)) | src/checks/workspace/session_io.swift
+Anchor: message "failed replacement returns a nonempty project-open failure"
+
+S022 | sessionOpenAndRecovery (lines 56-62: report.expectEqual(expected: before.0, actual: after.0, cppID: failedOpenID)) | src/checks/workspace/session_io.swift
+Anchor: message "failed replacement retains the complete prior playable-song listing"
+
+S023 | sessionOpenAndRecovery (lines 56-64: report.expectEqual(expected: before.1.source, actual: after.1.source, cppID: failedOpenID)) | src/checks/workspace/session_io.swift
+Anchor: message "failed replacement retains the original selected song source"
+
+S024 | sessionOpenAndRecovery (lines 65-79: report.expect(before.1.label == after.1.label && before.1.midiPath == after.1.midiPath && before.1.constant == after.1.constant && before.1.player == after.1.player && before.1.trackBudget == after.1.trackBudget && before.1.hasMid == after.1.hasMid && before.1.hasCfg == after.1.hasCfg && before.1.registered == after.1.registered && before.1.config == after.1.config && before.1.bankLoadName == after.1.bankLoadName && before.1.bankDirty == after.1.bankDirty && before.1.midiBytes == after.1.midiBytes && before.1.bankSlots == after.1.bankSlots)) | src/checks/workspace/session_io.swift
+Anchor: message "failed replacement still opens the original song with identical complete metadata"
+
