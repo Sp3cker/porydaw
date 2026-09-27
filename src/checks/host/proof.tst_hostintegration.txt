@@ -5,7 +5,7 @@ Original: src/checks/host/tst_hostintegration.cpp
 Original SHA-256: 4083b59bbb5e88019ed164c1296e3f8ea36e3a6fe6673d8b0ef74316dbdbae10
 Swift counterpart: src/checks/velocity/VelocityClickSelectionChecks.swift (drawerVelocityPrimaryTrackSwitchCancels :267-312; drawerVelocityLifecycleCancellation :315-383 plus bank route :384-461); src/checks/velocity/VelocityPageChecks.swift call-list entry; src/checks/editorqml/tst_ShellWindow.qml test_kVelocityGestureTermination plus data (:976-1083)
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
-Additional Swift counterpart: src/checks/host/HostBehaviorChecks.swift :: hostNoteDiscovery + hostVelocityGestureContracts + hostVelocityExactGestures + hostLifecycleTermination + hostPlayheadFollowing + hostVelocityAxisVoice + hostCosmeticOnly (SHA-256 e310f9ed4cefe927cfdbe7ffae749e4ae2c82f9029a1f72e69c6ce498e4f7336)
+Additional Swift counterpart: src/checks/host/HostBehaviorChecks.swift :: hostNoteDiscovery + hostVelocityGestureContracts + hostVelocityExactGestures + hostLifecycleTermination + hostPlayheadFollowing + hostVelocityAxisVoice + hostCosmeticOnly + hostDocumentMutationUndoRedo (SHA-256 a1111c650e15f0e9fbbaac9c335e567f83311324bc34b9366a8686495f92c0f1)
 Additional Swift counterpart: src/checks/workspace/session_view_state_fanout.swift (SHA-256 a856e21e1f145a33665fd7776a3b89635677e316ac21e3c6ca3249339c587523)
 Additional QML counterpart: src/checks/editorqml/tst_ShellTabsClose.qml (SHA-256 d4d05854ffc009768dc7c56f0e6c90bf6beb53d7f3fac5d8f9a8ac4dc08df736)
 
@@ -25,6 +25,8 @@ Task 144 verification result: PASS 1/36 ok (Task144 implementer handoff; ledger 
 Task 144 verification command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify:shell --filter shell-tabs-close --verbose
 Task 144 verification result: PASS 1/75 ok (Task144 implementer handoff; ledger writer ran no lane). The frozen tst_ShellTabsClose.qml SHA-256 is d4d05854ffc009768dc7c56f0e6c90bf6beb53d7f3fac5d8f9a8ac4dc08df736; handoff reports the mounted shell lane passed.
 Execution evidence: Task144 handoff predicates correspond to S029-S042 below; ShellTabsClose predicate corresponds to S031. No missing or ambiguous assertions among assigned sites.
+Task 161 verification command: deno task verify --filter swiftcore-projectsession
+Task 161 verification result: PASS (Task161 implementer handoff; ledger writer ran no lane). The final HostBehaviorChecks.swift SHA-256 is a1111c650e15f0e9fbbaac9c335e567f83311324bc34b9366a8686495f92c0f1; execution evidence covers predicates S043-S049.
 
 A001 | twoTabReadySessionWithTwoNoteSeed | src/checks/host/tst_hostintegration.cpp:145
 Disposition: RETIRED-REPRESENTATION
@@ -892,8 +894,8 @@ A126 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hos
 Disposition: RETIRED-REPRESENTATION
 
 A127 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:564
-Disposition: GAP
-Mapping/reason: Swift DocumentSession.revision owns the revision advanced by the mutation event; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S043
 Source context since previous assertion:
   ;
           uint64_t revision = document.revision();
@@ -907,8 +909,8 @@ Original expression:
   QCOMPARE(document.revision(), revision + 1)
 
 A128 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:565
-Disposition: GAP
-Mapping/reason: Swift DocumentSession history owns the history cursor advanced by the mutation event; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S044
 Source context since previous assertion:
   ;
 
@@ -916,8 +918,8 @@ Original expression:
   QCOMPARE(document.undoStack()->index(), undoIndex + 1)
 
 A129 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:566
-Disposition: GAP
-Mapping/reason: Swift DocumentSession history owns the history depth advanced by the mutation event; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S045
 Source context since previous assertion:
   ;
 
@@ -925,8 +927,8 @@ Original expression:
   QCOMPARE(document.undoStack()->count(), undoCount + 1)
 
 A130 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:572
-Disposition: GAP
-Mapping/reason: Swift DocumentSession.revision owns the revision advanced by undo; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S046
 Source context since previous assertion:
   ;
           } else if (event == QStringLiteral("undo")) {
@@ -939,8 +941,8 @@ Original expression:
   QCOMPARE(document.revision(), revision + 1)
 
 A131 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:573
-Disposition: GAP
-Mapping/reason: Swift DocumentSession history owns the history cursor moved back by undo; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S047
 Source context since previous assertion:
   ;
 
@@ -948,8 +950,8 @@ Original expression:
   QCOMPARE(document.undoStack()->index(), undoIndex - 1)
 
 A132 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:580
-Disposition: GAP
-Mapping/reason: Swift DocumentSession.revision owns the revision advanced by redo; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S048
 Source context since previous assertion:
   ;
           } else if (event == QStringLiteral("redo")) {
@@ -963,8 +965,8 @@ Original expression:
   QCOMPARE(document.revision(), revision + 1)
 
 A133 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:581
-Disposition: GAP
-Mapping/reason: Swift DocumentSession history owns the history cursor moved forward by redo; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S049
 Source context since previous assertion:
   ;
 
@@ -1512,3 +1514,45 @@ Source line: 408
 cppID: host/HostIntegrationTest::projectSwitchAndClosePreserveProjectBoundaries
 Predicate: report.expect(reopened.document.history.undoCount == freshSecondDepth, cppID: depthID, message: "A172 second song fresh open restores its independently recorded history depth")
 Anchor: message "A172 second song fresh open restores its independently recorded history depth"
+
+S043 | hostDocumentMutationUndoRedo | src/checks/host/HostBehaviorChecks.swift
+Source line: 382
+cppID: swiftcore/HostBehaviorChecks::documentMutationUndoRedo
+Predicate: report.expect(document.revision == revision + 1, cppID: id, message: "A127: live-preview document mutation advances the revision by one")
+Anchor: message "A127: live-preview document mutation advances the revision by one"
+
+S044 | hostDocumentMutationUndoRedo | src/checks/host/HostBehaviorChecks.swift
+Source line: 384
+cppID: swiftcore/HostBehaviorChecks::documentMutationUndoRedo
+Predicate: report.expect(document.history.undoIndex == undoIndex + 1, cppID: id, message: "A128: live-preview document mutation advances the undo index by one")
+Anchor: message "A128: live-preview document mutation advances the undo index by one"
+
+S045 | hostDocumentMutationUndoRedo | src/checks/host/HostBehaviorChecks.swift
+Source line: 386
+cppID: swiftcore/HostBehaviorChecks::documentMutationUndoRedo
+Predicate: report.expect(document.history.undoCount == undoCount + 1, cppID: id, message: "A129: live-preview document mutation appends one undo entry")
+Anchor: message "A129: live-preview document mutation appends one undo entry"
+
+S046 | hostDocumentMutationUndoRedo | src/checks/host/HostBehaviorChecks.swift
+Source line: 404
+cppID: swiftcore/HostBehaviorChecks::documentMutationUndoRedo
+Predicate: report.expect(undone && document.revision == beforeUndoRevision + 1, cppID: id, message: "A130: undo during a live velocity preview advances the revision by one")
+Anchor: message "A130: undo during a live velocity preview advances the revision by one"
+
+S047 | hostDocumentMutationUndoRedo | src/checks/host/HostBehaviorChecks.swift
+Source line: 406
+cppID: swiftcore/HostBehaviorChecks::documentMutationUndoRedo
+Predicate: report.expect(undone && document.history.undoIndex == beforeUndoIndex - 1, cppID: id, message: "A131: undo during a live velocity preview moves the index back by one")
+Anchor: message "A131: undo during a live velocity preview moves the index back by one"
+
+S048 | hostDocumentMutationUndoRedo | src/checks/host/HostBehaviorChecks.swift
+Source line: 422
+cppID: swiftcore/HostBehaviorChecks::documentMutationUndoRedo
+Predicate: report.expect(redone && document.revision == beforeRedoRevision + 1, cppID: id, message: "A132: redo during a live velocity preview advances the revision by one")
+Anchor: message "A132: redo during a live velocity preview advances the revision by one"
+
+S049 | hostDocumentMutationUndoRedo | src/checks/host/HostBehaviorChecks.swift
+Source line: 424
+cppID: swiftcore/HostBehaviorChecks::documentMutationUndoRedo
+Predicate: report.expect(redone && document.history.undoIndex == beforeRedoIndex + 1, cppID: id, message: "A133: redo during a live velocity preview moves the index forward by one")
+Anchor: message "A133: redo during a live velocity preview moves the index forward by one"

@@ -9,6 +9,7 @@ internal func runHostBehaviorChecks(_ report: CheckReport, session: DocumentSess
     let route = hostNoteDiscovery(report, fixtureRoot: fixtureRoot, suite: session, service: service)
     hostVelocityMarker(report, route: route)
     hostVelocityGestureContracts(report, session: session, service: service)
+    hostDocumentMutationUndoRedo(report, session: session, service: service)
     hostLifecycleTermination(report, session: session, service: service)
     hostPlayheadFollowing(report, session: session, service: service)
     hostBandGeometry(report, session: session, service: service)
@@ -334,6 +335,95 @@ private func hostVelocityExactGestures(_ report: CheckReport, session: DocumentS
                   message: "A077: rejection clears the second stale preview")
     report.expect(fixture.session.selectedNotes == Set(selected), cppID: id,
                   message: "A078: rejection preserves the restored two-note selection")
+}
+
+@MainActor
+private func hostDocumentMutationUndoRedo(_ report: CheckReport, session: DocumentSession,
+                                          service: ProjectService) {
+    let id = "swiftcore/HostBehaviorChecks::documentMutationUndoRedo"
+    enum Branch: CaseIterable, Equatable {
+        case mutation, undo, redo
+    }
+    for branch in Branch.allCases {
+        let fixture = drawerVelocityVelocityFixture(session: session, service: service)
+        let document = fixture.document
+        guard let note = fixture.notes.first, note.velocity == 100 else {
+            report.fail(id, "the document-history fixture lacks its first velocity-100 note")
+            continue
+        }
+        fixture.session.setSelectedNotes([note.id])
+        let page = fixture.page
+        func beginPreview() -> Bool {
+            page.refreshFromDocument()
+            guard let current = document.note(note.id), let handle = fixture.handle(current) else {
+                return false
+            }
+            return page.pointerPress(x: handle.x, y: handle.y, surface: 1,
+                                     button: 1, modifiers: 0)
+                && page.pointerMove(x: handle.x, y: handle.y - page.dragDistance * 2, buttons: 1)
+                && page.hasGesture && page.frozenPreview[note.id] != nil
+        }
+        guard beginPreview() else {
+            report.fail(id, "the document-history fixture could not stage a live velocity preview")
+            continue
+        }
+        let revision = document.revision
+        let undoIndex = document.history.undoIndex
+        let undoCount = document.history.undoCount
+        let originalIdentity = document.history.currentIdentity
+        let target = branch == .mutation ? 101 : 95
+        let mutation = document.setVelocities([NoteVelocity(noteID: note.id, velocity: target)],
+                                              expectedRevision: revision)
+        guard mutation != nil else {
+            report.fail(id, "the document-history velocity mutation was rejected")
+            continue
+        }
+        if branch == .mutation {
+            report.expect(document.revision == revision + 1, cppID: id,
+                          message: "A127: live-preview document mutation advances the revision by one")
+            report.expect(document.history.undoIndex == undoIndex + 1, cppID: id,
+                          message: "A128: live-preview document mutation advances the undo index by one")
+            report.expect(document.history.undoCount == undoCount + 1, cppID: id,
+                          message: "A129: live-preview document mutation appends one undo entry")
+            continue
+        }
+        guard mutation == revision + 1,
+              document.history.undoIndex == undoIndex + 1,
+              document.history.currentIdentity != originalIdentity else {
+            report.fail(id, "the history branch could not stage its independent velocity mutation")
+            continue
+        }
+        guard beginPreview() else {
+            report.fail(id, "the history branch could not stage its undo preview")
+            continue
+        }
+        if branch == .undo {
+            let beforeUndoRevision = document.revision
+            let beforeUndoIndex = document.history.undoIndex
+            let undone = document.history.undoDocument()
+            report.expect(undone && document.revision == beforeUndoRevision + 1, cppID: id,
+                          message: "A130: undo during a live velocity preview advances the revision by one")
+            report.expect(undone && document.history.undoIndex == beforeUndoIndex - 1, cppID: id,
+                          message: "A131: undo during a live velocity preview moves the index back by one")
+            continue
+        }
+        guard document.history.undoDocument(),
+              document.history.currentIdentity == originalIdentity else {
+            report.fail(id, "the redo branch could not return to its pre-mutation identity")
+            continue
+        }
+        guard beginPreview() else {
+            report.fail(id, "the redo branch could not stage its live velocity preview")
+            continue
+        }
+        let beforeRedoRevision = document.revision
+        let beforeRedoIndex = document.history.undoIndex
+        let redone = document.history.redoDocument()
+        report.expect(redone && document.revision == beforeRedoRevision + 1, cppID: id,
+                      message: "A132: redo during a live velocity preview advances the revision by one")
+        report.expect(redone && document.history.undoIndex == beforeRedoIndex + 1, cppID: id,
+                      message: "A133: redo during a live velocity preview moves the index forward by one")
+    }
 }
 
 @MainActor
