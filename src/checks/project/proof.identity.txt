@@ -495,8 +495,8 @@ Original expression:
   QVERIFY(!empty.selected)
 
 A037 | ProjectIdentityTest::songHistory_startsClean | src/checks/project/identity.cpp:193
-Disposition: PARTIAL
-Mapping/reason: Related predicate S004 in session_io.swift; an opened DocumentSession starts clean (isDirty), but SongHistory current==saved identity equality is unproved.
+Disposition: MATCHED
+Mapping: S010 — fresh SongDocument is not dirty; this is the documented current-versus-saved identity state.
 Source context since previous assertion:
   ;
   }
@@ -510,8 +510,8 @@ Original expression:
   QVERIFY(history.currentDocumentIdentity() == history.savedDocumentIdentity())
 
 A038 | ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter | src/checks/project/identity.cpp:205
-Disposition: PARTIAL
-Mapping/reason: Related predicate S001 in NoteChecks.swift; HistoryGroup merge/undo/redo on SongDocument is exercised, but QUndoStack count==1, value==3, and oldest-origin/latest-result identity conjunctions are unproved (different merge machinery: HistoryCountCommand.mergeWith vs HistoryGroup).
+Disposition: MATCHED
+Mapping: S011 — from the fixture depth, two same-group moves add exactly one document history entry.
 Source context since previous assertion:
   ;
   }
@@ -530,8 +530,8 @@ Original expression:
   QCOMPARE(stack.count(), 1)
 
 A039 | ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter | src/checks/project/identity.cpp:206
-Disposition: PARTIAL
-Mapping/reason: Related predicate S001 in NoteChecks.swift; HistoryGroup merge/undo/redo on SongDocument is exercised, but QUndoStack count==1, value==3, and oldest-origin/latest-result identity conjunctions are unproved (different merge machinery: HistoryCountCommand.mergeWith vs HistoryGroup).
+Disposition: MATCHED
+Mapping: S012 — after the two same-group moves, the note has latest tick three.
 Source context since previous assertion:
   ;
 
@@ -539,8 +539,8 @@ Original expression:
   QCOMPARE(value, 3)
 
 A040 | ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter | src/checks/project/identity.cpp:207
-Disposition: PARTIAL
-Mapping/reason: Related predicate S001 in NoteChecks.swift; HistoryGroup merge/undo/redo on SongDocument is exercised, but QUndoStack count==1, value==3, and oldest-origin/latest-result identity conjunctions are unproved (different merge machinery: HistoryCountCommand.mergeWith vs HistoryGroup).
+Disposition: MATCHED
+Mapping: S013 — the merged document gesture advances to an identity different from its pre-gesture identity.
 Source context since previous assertion:
   ;
 
@@ -548,8 +548,8 @@ Original expression:
   QVERIFY(merged != base)
 
 A041 | ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter | src/checks/project/identity.cpp:210
-Disposition: PARTIAL
-Mapping/reason: Related predicate S001 in NoteChecks.swift; HistoryGroup merge/undo/redo on SongDocument is exercised, but QUndoStack count==1, value==3, and oldest-origin/latest-result identity conjunctions are unproved (different merge machinery: HistoryCountCommand.mergeWith vs HistoryGroup).
+Disposition: MATCHED
+Mapping: S019 — after undoing the two same-group moves, the note tick is zero.
 Source context since previous assertion:
   ;
 
@@ -559,8 +559,8 @@ Original expression:
   QCOMPARE(value, 0)
 
 A042 | ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter | src/checks/project/identity.cpp:211
-Disposition: PARTIAL
-Mapping/reason: Related predicate S001 in NoteChecks.swift; HistoryGroup merge/undo/redo on SongDocument is exercised, but QUndoStack count==1, value==3, and oldest-origin/latest-result identity conjunctions are unproved (different merge machinery: HistoryCountCommand.mergeWith vs HistoryGroup).
+Disposition: MATCHED
+Mapping: S020 — following undo, current identity equals the exact captured pre-gesture identity.
 Source context since previous assertion:
   ;
 
@@ -568,8 +568,8 @@ Original expression:
   QVERIFY(history.currentDocumentIdentity() == base)
 
 A043 | ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter | src/checks/project/identity.cpp:213
-Disposition: PARTIAL
-Mapping/reason: Related predicate S001 in NoteChecks.swift; HistoryGroup merge/undo/redo on SongDocument is exercised, but QUndoStack count==1, value==3, and oldest-origin/latest-result identity conjunctions are unproved (different merge machinery: HistoryCountCommand.mergeWith vs HistoryGroup).
+Disposition: MATCHED
+Mapping: S021 — after redo, the note tick is restored to the merged gesture value three.
 Source context since previous assertion:
   ;
       stack.redo();
@@ -578,8 +578,8 @@ Original expression:
   QCOMPARE(value, 3)
 
 A044 | ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter | src/checks/project/identity.cpp:214
-Disposition: PARTIAL
-Mapping/reason: Related predicate S001 in NoteChecks.swift; HistoryGroup merge/undo/redo on SongDocument is exercised, but QUndoStack count==1, value==3, and oldest-origin/latest-result identity conjunctions are unproved (different merge machinery: HistoryCountCommand.mergeWith vs HistoryGroup).
+Disposition: MATCHED
+Mapping: S001 — after redo, current identity equals the exact captured merged identity; A041 and A043 independently prove the undo and redo tick values in this sequence.
 Source context since previous assertion:
   ;
 
@@ -587,8 +587,8 @@ Original expression:
   QVERIFY(history.currentDocumentIdentity() == merged)
 
 A045 | ProjectIdentityTest::songHistory_savedBoundaryRefusesMerge | src/checks/project/identity.cpp:228
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in NoteChecks.swift; the saved-boundary refusal is exercised on SongDocument, but count==2, value==7, and saved-identity restoration conjunctions are unproved.
+Disposition: MATCHED
+Mapping: S014 — after two pre-save moves and one post-save move, relative history depth increases by two entries.
 Source context since previous assertion:
   ;
   }
@@ -609,8 +609,8 @@ Original expression:
   QCOMPARE(stack.count(), 2)
 
 A046 | ProjectIdentityTest::songHistory_savedBoundaryRefusesMerge | src/checks/project/identity.cpp:229
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in NoteChecks.swift; the saved-boundary refusal is exercised on SongDocument, but count==2, value==7, and saved-identity restoration conjunctions are unproved.
+Disposition: MATCHED
+Mapping: S015 — the post-save same-group edit reaches latest tick seven.
 Source context since previous assertion:
   ;
 
@@ -618,8 +618,8 @@ Original expression:
   QCOMPARE(value, 7)
 
 A047 | ProjectIdentityTest::songHistory_savedBoundaryRefusesMerge | src/checks/project/identity.cpp:230
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in NoteChecks.swift; the saved-boundary refusal is exercised on SongDocument, but count==2, value==7, and saved-identity restoration conjunctions are unproved.
+Disposition: MATCHED
+Mapping: S016 — the post-save edit identity is distinct from the saved snapshot identity.
 Source context since previous assertion:
   ;
 
@@ -627,8 +627,8 @@ Original expression:
   QVERIFY(afterRefusal != merged)
 
 A048 | ProjectIdentityTest::songHistory_savedBoundaryRefusesMerge | src/checks/project/identity.cpp:233
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in NoteChecks.swift; the saved-boundary refusal is exercised on SongDocument, but count==2, value==7, and saved-identity restoration conjunctions are unproved.
+Disposition: MATCHED
+Mapping: S022 — the single post-boundary undo returns the note to its saved tick three.
 Source context since previous assertion:
   ;
 
@@ -638,8 +638,8 @@ Original expression:
   QCOMPARE(value, 3)
 
 A049 | ProjectIdentityTest::songHistory_savedBoundaryRefusesMerge | src/checks/project/identity.cpp:234
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in NoteChecks.swift; the saved-boundary refusal is exercised on SongDocument, but count==2, value==7, and saved-identity restoration conjunctions are unproved.
+Disposition: MATCHED
+Mapping: S002 — after the boundary undo, current identity equals the captured saved identity; A045–A048 independently prove depth and note tick in this sequence.
 Source context since previous assertion:
   ;
 
@@ -647,8 +647,8 @@ Original expression:
   QVERIFY(history.currentDocumentIdentity() == merged)
 
 A050 | ProjectIdentityTest::songHistory_cancellingMergeRemovesEntry | src/checks/project/identity.cpp:250
-Disposition: PARTIAL
-Mapping/reason: Related predicate S003 in NoteChecks.swift; the self-cancelling gesture is exercised on SongDocument, but count/value/identity conjunctions are unproved.
+Disposition: MATCHED
+Mapping: S017 — after cancellation, history depth is exactly the two prior entries.
 Source context since previous assertion:
   ;
   }
@@ -671,8 +671,8 @@ Original expression:
   QCOMPARE(stack.count(), 2)
 
 A051 | ProjectIdentityTest::songHistory_cancellingMergeRemovesEntry | src/checks/project/identity.cpp:251
-Disposition: PARTIAL
-Mapping/reason: Related predicate S003 in NoteChecks.swift; the self-cancelling gesture is exercised on SongDocument, but count/value/identity conjunctions are unproved.
+Disposition: MATCHED
+Mapping: S018 — cancellation leaves the preexisting post-save note value at tick seven.
 Source context since previous assertion:
   ;
 
@@ -680,8 +680,8 @@ Original expression:
   QCOMPARE(value, 7)
 
 A052 | ProjectIdentityTest::songHistory_cancellingMergeRemovesEntry | src/checks/project/identity.cpp:252
-Disposition: PARTIAL
-Mapping/reason: Related predicate S003 in NoteChecks.swift; the self-cancelling gesture is exercised on SongDocument, but count/value/identity conjunctions are unproved.
+Disposition: MATCHED
+Mapping: S003 — the cancellation predicate confirms the prior post-save identity survives and undo crosses that edit; A050–A051 prove retained depth and tick seven.
 Source context since previous assertion:
   ;
 
@@ -732,3 +732,42 @@ Anchor: message "native service publishes a project-relative normalized bank ide
 
 S009 | sessionFailureStages | src/checks/workspace/session_io.swift
 Anchor: message "native service round-trips the accepted playable song label"
+
+S010 | saveIdentity | src/checks/editcheck/NoteHistoryChecks.swift
+Anchor: message "A037 new document starts with equal current and saved identities"
+
+S011 | historyMergeContracts | src/checks/editcheck/NoteHistoryChecks.swift
+Anchor: message "A038 two moves retain one document entry"
+
+S012 | historyMergeContracts | src/checks/editcheck/NoteHistoryChecks.swift
+Anchor: message "A039 merged move retains latest tick three"
+
+S013 | historyMergeContracts | src/checks/editcheck/NoteHistoryChecks.swift
+Anchor: message "A040 merged gesture has a fresh document identity"
+
+S014 | historyMergeContracts | src/checks/editcheck/NoteHistoryChecks.swift
+Anchor: message "A045 save seals merge and retains two document entries"
+
+S015 | historyMergeContracts | src/checks/editcheck/NoteHistoryChecks.swift
+Anchor: message "A046 post-save gesture reaches tick seven"
+
+S016 | historyMergeContracts | src/checks/editcheck/NoteHistoryChecks.swift
+Anchor: message "A047 post-save edit mints identity distinct from saved identity"
+
+S017 | historyMergeContracts | src/checks/editcheck/NoteHistoryChecks.swift
+Anchor: message "A050 cancelling its own gesture retains two prior entries"
+
+S018 | historyMergeContracts | src/checks/editcheck/NoteHistoryChecks.swift
+Anchor: message "A051 cancelling gesture retains tick seven"
+
+S019 | historyMergeContracts | src/checks/editcheck/NoteHistoryChecks.swift
+Anchor: message "A041 undo restores oldest tick zero"
+
+S020 | historyMergeContracts | src/checks/editcheck/NoteHistoryChecks.swift
+Anchor: message "A042 undo restores the exact pre-gesture identity"
+
+S021 | historyMergeContracts | src/checks/editcheck/NoteHistoryChecks.swift
+Anchor: message "A043 redo restores latest tick three"
+
+S022 | historyMergeContracts | src/checks/editcheck/NoteHistoryChecks.swift
+Anchor: message "A048 undo returns to saved tick three"

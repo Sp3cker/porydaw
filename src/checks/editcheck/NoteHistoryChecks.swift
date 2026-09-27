@@ -44,80 +44,167 @@ func gestureAndIdentityHistory(_ report: CheckReport) {
                   message: "note-only mutations publish without a track remap")
 }
 
+private func historyNoteBytes(pitch: UInt8, tick: Tick) throws -> [UInt8] {
+    try baseFile(events: [
+        .channel(tick: tick, status: 0x90, data0: pitch, data1: 90),
+        .channel(tick: tick + 8, status: 0x90, data0: pitch, data1: 0),
+    ]).encoded()
+}
+
 @MainActor
 func historyMergeContracts(_ report: CheckReport) {
+    let mergedID = "project-identity/ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter"
     let merged = SongDocument(file: baseFile(events: []))
-    guard let mergedID = try? merged.addNotes([
+    guard let noteID = try? merged.addNotes([
         NewNote(track: 0, tick: 0, pitch: 60, duration: 8, velocity: 90),
-    ]).first else { return }
+    ]).first,
+        let baseBytes = try? historyNoteBytes(pitch: 60, tick: 0),
+        let mergedBytes = try? historyNoteBytes(pitch: 60, tick: 3),
+        let baseDepth = try? coreEditHistoryCountAtTip(merged, report: report, cppID: mergedID)
+    else {
+        report.fail(mergedID, "merged history note fixture or literal MIDI expectation could not be constructed")
+        return
+    }
     let baseIdentity = merged.history.currentIdentity
     let firstGesture = HistoryGroup()
-    merged.moveNotes([mergedID], byTicks: 1, byKeys: 0, group: firstGesture)
-    merged.moveNotes([mergedID], byTicks: 3, byKeys: 0, group: firstGesture)
+    merged.moveNotes([noteID], byTicks: 1, byKeys: 0, group: firstGesture)
+    merged.moveNotes([noteID], byTicks: 3, byKeys: 0, group: firstGesture)
     let mergedIdentity = merged.history.currentIdentity
-    let mergedAtLatestResult = merged.note(mergedID)?.tick == 3
+    report.expectEqual(expected: baseDepth + 1,
+                       actual: try? coreEditHistoryCountAtTip(merged, report: report, cppID: mergedID),
+                       cppID: mergedID, what: "A038 two moves retain one document entry")
+    report.expectEqual(expected: Tick(3), actual: merged.note(noteID)?.tick,
+                       cppID: mergedID, what: "A039 merged move retains latest tick three")
+    report.expect(mergedIdentity != baseIdentity, cppID: mergedID,
+                  message: "A040 merged gesture has a fresh document identity")
     _ = merged.history.undoDocument()
-    let restoredOldestOrigin = merged.note(mergedID)?.tick == 0
-        && merged.history.currentIdentity == baseIdentity
+    report.expectEqual(expected: Tick(0), actual: merged.note(noteID)?.tick,
+                       cppID: mergedID, what: "A041 undo restores oldest tick zero")
+    report.expect(merged.history.currentIdentity == baseIdentity, cppID: mergedID,
+                  message: "A042 undo restores the exact pre-gesture identity")
+    report.expectEqual(expected: baseBytes, actual: try? merged.state.file.encoded(),
+                       cppID: mergedID, what: "merged undo restores complete original MIDI bytes")
     _ = merged.history.redoDocument()
-    report.expect(mergedAtLatestResult && restoredOldestOrigin
-        && merged.note(mergedID)?.tick == 3
-        && merged.history.currentIdentity == mergedIdentity,
-        cppID: "project-identity/ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter",
-        message: "one merged document gesture undoes to its oldest origin and redoes to its latest result")
+    report.expectEqual(expected: Tick(3), actual: merged.note(noteID)?.tick,
+                       cppID: mergedID, what: "A043 redo restores latest tick three")
+    report.expect(merged.history.currentIdentity == mergedIdentity, cppID: mergedID,
+                  message: "one merged document gesture undoes to its oldest origin and redoes to its latest result")
+    report.expectEqual(expected: mergedBytes, actual: try? merged.state.file.encoded(),
+                       cppID: mergedID, what: "merged redo restores complete latest MIDI bytes")
 
+    let boundaryID = "project-identity/ProjectIdentityTest::songHistory_savedBoundaryRefusesMerge"
     let boundary = SongDocument(file: baseFile(events: []))
-    guard let boundaryID = try? boundary.addNotes([
+    guard let boundaryNote = try? boundary.addNotes([
         NewNote(track: 0, tick: 0, pitch: 61, duration: 8, velocity: 90),
-    ]).first else { return }
+    ]).first,
+        let boundarySavedBytes = try? historyNoteBytes(pitch: 61, tick: 3),
+        let postBoundaryBytes = try? historyNoteBytes(pitch: 61, tick: 7),
+        let beforeBoundary = try? coreEditHistoryCountAtTip(boundary, report: report, cppID: boundaryID)
+    else {
+        report.fail(boundaryID, "saved-boundary note fixture or literal MIDI expectation could not be constructed")
+        return
+    }
     let boundaryGesture = HistoryGroup()
-    boundary.moveNotes([boundaryID], byTicks: 1, byKeys: 0, group: boundaryGesture)
-    boundary.moveNotes([boundaryID], byTicks: 3, byKeys: 0, group: boundaryGesture)
-    guard let saved = try? boundary.captureSave() else { return }
+    boundary.moveNotes([boundaryNote], byTicks: 1, byKeys: 0, group: boundaryGesture)
+    boundary.moveNotes([boundaryNote], byTicks: 3, byKeys: 0, group: boundaryGesture)
+    guard let saved = try? boundary.captureSave() else {
+        report.fail(boundaryID, "saved-boundary MIDI snapshot could not be captured")
+        return
+    }
     boundary.didSave(saved)
-    boundary.moveNotes([boundaryID], byTicks: 4, byKeys: 0, group: boundaryGesture)
+    boundary.moveNotes([boundaryNote], byTicks: 4, byKeys: 0, group: boundaryGesture)
     let postBoundaryIdentity = boundary.history.currentIdentity
-    let postBoundaryValue = boundary.note(boundaryID)?.tick == 7
+    report.expectEqual(expected: beforeBoundary + 2,
+                       actual: try? coreEditHistoryCountAtTip(boundary, report: report, cppID: boundaryID),
+                       cppID: boundaryID, what: "A045 save seals merge and retains two document entries")
+    report.expectEqual(expected: Tick(7), actual: boundary.note(boundaryNote)?.tick,
+                       cppID: boundaryID, what: "A046 post-save gesture reaches tick seven")
+    report.expect(postBoundaryIdentity != saved.identity, cppID: boundaryID,
+                  message: "A047 post-save edit mints identity distinct from saved identity")
     _ = boundary.history.undoDocument()
-    report.expect(postBoundaryValue
-        && postBoundaryIdentity != saved.identity
-        && boundary.note(boundaryID)?.tick == 3
-        && boundary.history.currentIdentity == saved.identity,
-        cppID: "project-identity/ProjectIdentityTest::songHistory_savedBoundaryRefusesMerge",
-        message: "a saved boundary seals the document gesture so one undo restores the saved result")
+    report.expectEqual(expected: Tick(3), actual: boundary.note(boundaryNote)?.tick,
+                       cppID: boundaryID, what: "A048 undo returns to saved tick three")
+    report.expect(boundary.history.currentIdentity == saved.identity, cppID: boundaryID,
+                  message: "a saved boundary seals the document gesture so one undo restores the saved result")
+    report.expectEqual(expected: boundarySavedBytes,
+                       actual: try? boundary.state.file.encoded(),
+                       cppID: boundaryID, what: "post-save undo restores complete saved MIDI bytes")
+    _ = boundary.history.redoDocument()
+    report.expectEqual(expected: postBoundaryBytes, actual: try? boundary.state.file.encoded(),
+                       cppID: boundaryID, what: "post-save redo restores complete tick-seven MIDI bytes")
+    report.expect(boundary.history.currentIdentity == postBoundaryIdentity, cppID: boundaryID,
+                  message: "post-save redo restores exact post-boundary identity")
 
+    let cancellingID = "project-identity/ProjectIdentityTest::songHistory_cancellingMergeRemovesEntry"
     let cancelling = SongDocument(file: baseFile(events: []))
-    guard let cancellingID = try? cancelling.addNotes([
+    guard let cancellingNote = try? cancelling.addNotes([
         NewNote(track: 0, tick: 0, pitch: 62, duration: 8, velocity: 90),
-    ]).first else { return }
+    ]).first,
+        let cancellationSavedBytes = try? historyNoteBytes(pitch: 62, tick: 3),
+        let afterRefusalBytes = try? historyNoteBytes(pitch: 62, tick: 7),
+        let beforeCancellation = try? coreEditHistoryCountAtTip(cancelling, report: report,
+                                                                 cppID: cancellingID)
+    else {
+        report.fail(cancellingID, "cancellation note fixture or literal MIDI expectation could not be constructed")
+        return
+    }
     let sealedGesture = HistoryGroup()
-    cancelling.moveNotes([cancellingID], byTicks: 1, byKeys: 0, group: sealedGesture)
-    cancelling.moveNotes([cancellingID], byTicks: 3, byKeys: 0, group: sealedGesture)
-    guard let cancellingSaved = try? cancelling.captureSave() else { return }
+    cancelling.moveNotes([cancellingNote], byTicks: 1, byKeys: 0, group: sealedGesture)
+    cancelling.moveNotes([cancellingNote], byTicks: 3, byKeys: 0, group: sealedGesture)
+    guard let cancellingSaved = try? cancelling.captureSave() else {
+        report.fail(cancellingID, "cancellation MIDI snapshot could not be captured")
+        return
+    }
     cancelling.didSave(cancellingSaved)
-    cancelling.moveNotes([cancellingID], byTicks: 4, byKeys: 0, group: sealedGesture)
+    cancelling.moveNotes([cancellingNote], byTicks: 4, byKeys: 0, group: sealedGesture)
     let afterRefusal = cancelling.history.currentIdentity
     let secondGesture = HistoryGroup()
-    cancelling.moveNotes([cancellingID], byTicks: 1, byKeys: 0, group: secondGesture)
-    cancelling.moveNotes([cancellingID], byTicks: 0, byKeys: 0, group: secondGesture)
-    let redundantGestureRemoved = cancelling.note(cancellingID)?.tick == 7
-        && cancelling.history.currentIdentity == afterRefusal
+    cancelling.moveNotes([cancellingNote], byTicks: 1, byKeys: 0, group: secondGesture)
+    cancelling.moveNotes([cancellingNote], byTicks: 0, byKeys: 0, group: secondGesture)
+    report.expectEqual(expected: beforeCancellation + 2,
+                       actual: try? coreEditHistoryCountAtTip(cancelling, report: report,
+                                                              cppID: cancellingID),
+                       cppID: cancellingID, what: "A050 cancelling its own gesture retains two prior entries")
+    report.expectEqual(expected: Tick(7), actual: cancelling.note(cancellingNote)?.tick,
+                       cppID: cancellingID, what: "A051 cancelling gesture retains tick seven")
+    report.expect(cancelling.history.currentIdentity == afterRefusal, cppID: cancellingID,
+                  message: "a self-cancelling document gesture disappears so undo crosses the prior post-save edit")
+    report.expectEqual(expected: afterRefusalBytes, actual: try? cancelling.state.file.encoded(),
+                       cppID: cancellingID, what: "cancelled gesture restores complete post-boundary MIDI bytes")
     _ = cancelling.history.undoDocument()
-    report.expect(redundantGestureRemoved
-        && cancelling.note(cancellingID)?.tick == 3
-        && cancelling.history.currentIdentity == cancellingSaved.identity,
-        cppID: "project-identity/ProjectIdentityTest::songHistory_cancellingMergeRemovesEntry",
-        message: "a self-cancelling document gesture disappears so undo crosses the prior post-save edit")
+    report.expectEqual(expected: Tick(3), actual: cancelling.note(cancellingNote)?.tick,
+                       cppID: cancellingID, what: "cancellation undo restores saved tick three")
+    report.expect(cancelling.history.currentIdentity == cancellingSaved.identity, cppID: cancellingID,
+                  message: "undo after cancellation returns to saved identity")
+    report.expectEqual(expected: cancellationSavedBytes,
+                       actual: try? cancelling.state.file.encoded(),
+                       cppID: cancellingID, what: "undo after cancellation restores complete saved MIDI bytes")
+    _ = cancelling.history.redoDocument()
+    report.expect(cancelling.history.currentIdentity == afterRefusal, cppID: cancellingID,
+                  message: "redo after cancellation returns to post-boundary identity")
+    report.expectEqual(expected: afterRefusalBytes, actual: try? cancelling.state.file.encoded(),
+                       cppID: cancellingID, what: "redo after cancellation restores complete tick-seven MIDI bytes")
 }
 
 @MainActor
 func saveIdentity(_ report: CheckReport) {
     let document = SongDocument(file: baseFile(events: []),
                                 source: SongSource(label: "save", midiPath: "/tmp/save.mid"))
+    report.expect(!document.isDirty,
+                  cppID: "project-identity/ProjectIdentityTest::songHistory_startsClean",
+                  message: "A037 new document starts with equal current and saved identities")
     guard let ids = try? document.addNotes([
         NewNote(track: 0, tick: 0, pitch: 60, duration: 8, velocity: 90),
-    ]), let id = ids.first else { return }
-    guard let saved = try? document.captureSave() else { return }
+    ]), let id = ids.first else {
+        report.fail("editcheck/EditCheckTest::documentSavedIdentity",
+                    "saved identity note fixture could not be constructed")
+        return
+    }
+    guard let saved = try? document.captureSave() else {
+        report.fail("editcheck/EditCheckTest::documentSavedIdentity",
+                    "saved identity MIDI snapshot could not be captured")
+        return
+    }
     document.didSave(saved)
     report.expect(!document.isDirty,
                   cppID: "editcheck/EditCheckTest::documentSavedIdentity",
