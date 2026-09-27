@@ -21,6 +21,9 @@ Negative control: Task 119's DPR1 substitution for the DPR2 hover check failed a
 Evidence provenance: agent://Task119; this ledger pass did not rerun implementation verification.
 QML execution paths: EditorQmlTests.swift:178-180 registers `tst_EditorDrawerAutomationCurves.qml`; ShellQmlEntries.swift:135-136 registers `tst_ShellDrawerParity.qml`, and ShellQmlTests.swift:114-140 launches the DPR2 child.
 Task 119 frozen source SHA-256: 1965b43c184f327836118cd71fda0db6eab6335b278593530865de1d964782bf (src/checks/automation/presentation/painting_raster.swift)
+Task 162 settled source SHA-256: 9cd6bc6f4d29ec371b8f98eb3c1846598947ac1f7fa87051692025ff683481da (src/checks/automation/presentation/painting_raster.swift)
+Task 162 verification: deno task verify --filter swiftcore-projectsession --verbose
+Result: PASS — swiftcore-projectsession 1/36; 35 skipped (agent://Task162 implementer-reported). This ledger pass reused the provided verification and did not rerun it.
 Task 119 frozen source SHA-256: c3569d9307ee6ae8ef0a2c3ba27554642a1bb9236f5c73aea768de7d4faf9f93 (src/checks/automation/AutomationPageChecks.swift)
 Swift execution path: SessionChecks.swift:84 calls `runAutomationPageChecks`; AutomationPageChecks.swift:339 invokes `drawerAutomationRasterScrolledPhantom` with its C++ proof ID.
 Task 119 frozen source SHA-256: 85645d72d5fa964e8911dfbb441f6aeea55b46616c886ad1ece3dafe84e565ad (src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml)
@@ -197,8 +200,8 @@ Original expression:
   QVERIFY(isClear(transitioned));
 
 A023 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:394
-Disposition: GAP
-Mapping/reason: GAP: the mounted lane checks leave the plot once; no predicate repeats the leave and proves this second clear-state observation.
+Disposition: MATCHED
+Mapping: S025 — a repeated plot leave keeps the scrolled phantom hover state clear.
 Source context since previous assertion:
 
 
@@ -226,8 +229,8 @@ Original expression:
                                  insertionCenter + framebufferOffset));
 
 A026 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:410
-Disposition: GAP
-Mapping/reason: GAP: the mounted drag proves a moved node preview, but no predicate checks that this fixture's vertical target exceeds the original node-drag activation distance.
+Disposition: NATIVE-SETUP
+Mapping: NATIVE-SETUP — the Swift fixture asserts that the staged scrolled phantom drag distance exceeds the production activation threshold; this is a precondition, not a user-visible behavior claim.
 Source context since previous assertion:
 
 
@@ -380,8 +383,8 @@ A042 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation
 Disposition: RETIRED-REPRESENTATION
 
 A043 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:481
-Disposition: GAP
-Mapping/reason: GAP: the mounted phantom case releases the drag without a subsequent pointer-leave assertion; no predicate proves this post-commit hover-clear state.
+Disposition: MATCHED
+Mapping: S026 — the committed phantom drag clears hover before any plot leave.
 Source context since previous assertion:
 
 
@@ -401,8 +404,8 @@ A045 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation
 Disposition: RETIRED-REPRESENTATION
 
 A046 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:487
-Disposition: GAP
-Mapping/reason: GAP: no mounted predicate checks that a pointer leave after commit clears hover state in this fixture.
+Disposition: MATCHED
+Mapping: S027 — leaving the plot after the phantom commit keeps hover clear.
 Source context since previous assertion:
 
       fixture().automationPointerLeave();
@@ -456,8 +459,8 @@ A056 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation
 Disposition: RETIRED-REPRESENTATION
 
 A057 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:523
-Disposition: GAP
-Mapping/reason: GAP: the mounted Voice preview preserves physical pixels and bounds, but no predicate compares the voice cursor's exact model value with the original `cursorValue`.
+Disposition: MATCHED
+Mapping: S028 — the committed phantom publishes the exact staged cursor value.
 Source context since previous assertion:
 
 
@@ -545,27 +548,27 @@ Swift assertion predicates
 S entries identify literal-anchored predicates in the final Swift or QML test sources. QML shell helper predicates are reached by `test_aAutomationHoverRaster`; DPR2 Voice helper predicates are called by the registered DPR2 raster test.
 
 S001 | drawerAutomationRasterScrolledPhantom | src/checks/automation/presentation/painting_raster.swift
-Source line: 41
+Source line: 42
 Predicate: AutomationParameterMetadata(parameter: parameter).valueText(nodeValue) == page.hoverText
 Anchor: message "the fork phantom hover has exactly its original source-value text"
 
 S002 | drawerAutomationRasterScrolledPhantom | src/checks/automation/presentation/painting_raster.swift
-Source line: 47
+Source line: 55
 Predicate: pressed && page.hasGesture
 Anchor: message "a real plot press captures the scrolled source phantom"
 
 S003 | drawerAutomationRasterScrolledPhantom | src/checks/automation/presentation/painting_raster.swift
-Source line: 57
+Source line: 60
 Predicate: page.previewPoints.contains { $0.tick == 144 && $0.value == cursorValue } && page.previewRects.contains { $0.primitiveName == "automationPreviewNode" && $0.fillColor == page.palette.selectionEdge && abs($0.y + $0.height / 2 - targetY) <= 1 }
 Anchor: message "the held phantom paints the exact tick-144 cursor-value preview"
 
 S004 | drawerAutomationRasterScrolledPhantom | src/checks/automation/presentation/painting_raster.swift
-Source line: 59
+Source line: 67
 Predicate: fixture.snapshot == original
 Anchor: message "the scrolled phantom hover and drag do not commit"
 
 S005 | drawerAutomationRasterScrolledPhantom | src/checks/automation/presentation/painting_raster.swift
-Source line: 84
+Source line: 95
 Predicate: rearmed && committed && values == ["0:\(heldValue)", "144:\(cursorValue)"] && fixture.document.revision == original.revision + 1 && fixture.document.history.undoIndex == originalIndex + 1
 Anchor: message "the fork phantom release changes the original tick-144 cursor value once without an edge duplicate"
 
@@ -663,6 +666,27 @@ S024 | checkDpr2VoicePreviewRaster (called by test_dpr2AutomationHoverRaster) | 
 Source line: 194
 Predicate: draft.height == idle.height
 Anchor: message "the DPR2 Voice moved preview preserves its physical framebuffer height"
+
+S025 | drawerAutomationRasterScrolledPhantom | src/checks/automation/presentation/painting_raster.swift
+Source line: 49
+Predicate: !page.hoverVisible && page.hoverText.isEmpty && !page.publishedNodes.contains(where: \.hovered)
+Anchor: message "a repeated plot leave keeps the phantom hover state clear"
+
+S026 | drawerAutomationRasterScrolledPhantom | src/checks/automation/presentation/painting_raster.swift
+Source line: 87
+Predicate: !page.hoverVisible && page.hoverText.isEmpty && !page.publishedNodes.contains(where: \.hovered)
+Anchor: message "the committed phantom drag clears hover before any plot leave"
+
+S027 | drawerAutomationRasterScrolledPhantom | src/checks/automation/presentation/painting_raster.swift
+Source line: 91
+Predicate: !page.hoverVisible && page.hoverText.isEmpty && !page.publishedNodes.contains(where: \.hovered)
+Anchor: message "leaving the plot after the phantom commit keeps hover clear"
+
+S028 | drawerAutomationRasterScrolledPhantom | src/checks/automation/presentation/painting_raster.swift
+Source line: 101
+Predicate: page.publishedNodes.first(where: \.phantom)?.value == cursorValue
+Anchor: message "the committed phantom publishes the exact staged cursor value"
+
 
 Shared helpers
 The historical supplemental native adaptation below is separate from these indexed Swift and QML predicates.

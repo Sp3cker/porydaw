@@ -23,6 +23,9 @@ func drawerAutomationRasterScrolledPhantom(_ report: CheckReport, suite: Documen
         let page = fixture.page
         let sourceY = fixture.y(parameter, nodeValue)
         let targetY = fixture.y(parameter, cursorValue)
+        report.expect(abs(targetY - sourceY) > page.geometry.nodeDragActivationDistance,
+                      cppID: id,
+                      message: "the scrolled phantom drag target exceeds the production activation distance")
         guard let source = page.projection?.originPhantom,
               let phantom = page.publishedNodes.first(where: \.phantom) else {
             report.fail(id, "the fork tick-144 source is not drawn as a scrolled origin phantom")
@@ -41,6 +44,12 @@ func drawerAutomationRasterScrolledPhantom(_ report: CheckReport, suite: Documen
                            what: "the fork phantom hover has exactly its original source-value text")
         report.expect(page.hoverVisible && page.publishedNodes.filter(\.hovered).count == 1,
                       cppID: id, message: "exactly one scrolled phantom shows the hover ring")
+        page.pointerLeave()
+        page.pointerLeave()
+        report.expect(!page.hoverVisible && page.hoverText.isEmpty
+                      && !page.publishedNodes.contains(where: \.hovered),
+                      cppID: id, message: "a repeated plot leave keeps the phantom hover state clear")
+        _ = page.pointerMove(x: 0, y: sourceY, buttons: 0)
         let pressed = page.pointerPress(x: 0, y: sourceY, surface: 1,
                                         button: AutomationQtButton.left)
         report.expect(pressed && page.hasGesture,
@@ -75,6 +84,13 @@ func drawerAutomationRasterScrolledPhantom(_ report: CheckReport, suite: Documen
         _ = page.pointerMove(x: 0, y: targetY, buttons: AutomationQtButton.left)
         _ = page.pointerMove(x: 0, y: dragAnchor, buttons: AutomationQtButton.left)
         let committed = page.pointerRelease(x: 0, y: dragAnchor, button: AutomationQtButton.left)
+        report.expect(!page.hoverVisible && page.hoverText.isEmpty
+                      && !page.publishedNodes.contains(where: \.hovered),
+                      cppID: id, message: "the committed phantom drag clears hover before any plot leave")
+        page.pointerLeave()
+        report.expect(!page.hoverVisible && page.hoverText.isEmpty
+                      && !page.publishedNodes.contains(where: \.hovered),
+                      cppID: id, message: "leaving the plot after the phantom commit keeps hover clear")
         let values = isTempo ? fixture.tempoValues : fixture.values(fixture.panLane)
         report.expect(rearmed && committed
                       && values == ["0:\(heldValue)", "144:\(cursorValue)"]
@@ -82,6 +98,8 @@ func drawerAutomationRasterScrolledPhantom(_ report: CheckReport, suite: Documen
                       && fixture.document.history.undoIndex == originalIndex + 1,
                       cppID: id,
                       message: "the fork phantom release changes the original tick-144 cursor value once without an edge duplicate")
+        report.expect(page.publishedNodes.first(where: \.phantom)?.value == cursorValue,
+                      cppID: id, message: "the committed phantom publishes the exact staged cursor value")
         report.expect(originalBytes != nil
                       && originalBytes != (try? fixture.document.captureSave().bytes),
                       cppID: id, message: "the committed fork phantom changes exact document bytes")
