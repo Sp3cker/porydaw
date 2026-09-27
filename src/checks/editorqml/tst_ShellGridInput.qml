@@ -47,8 +47,10 @@ TestCase {
     }
 
     function openRoute101() {
-        settings.setString("lastProjectDir", "")
-        shell = shellComponent.createObject(null)
+        if (!shell) {
+            settings.setString("lastProjectDir", "")
+            shell = shellComponent.createObject(null)
+        }
         verify(shell !== null, "the production ShellWindow loads")
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
@@ -164,6 +166,157 @@ TestCase {
     }
 
     function rollInput(surface) { return findChild(surface, "swiftRollInput") }
+
+    function test_loadedRulerAndFixedInputSurfaces() {
+        settings.setString("lastProjectDir", "")
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "the empty shell mounts")
+        shell.requestActivate()
+        tryCompare(shell, "active", true, 3000)
+        var session = shell.shellPresenter.session
+        compare(session.songTabs.tabCount, 0, "no song has no editable tab")
+        compare(selectedSurface(), null, "no song exposes no roll, ruler or drawer input")
+        openRoute101()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        compare(session.songTabs.selectedPage.songOpen, true,
+                "the published editor belongs to a loaded document")
+        var fixedNames = ["swiftRollInput", "timelineRulerInput",
+                          "timelineHorizontalScrollBar", "timelineRollScrollBar",
+                          "timelineTrackHeadersInput", "timelineOtherEventsInput",
+                          "timelineRulerControls", "timelineRulerDivisionControl",
+                          "timelineRulerFeelControl", "drawerBarInput",
+                          "drawerToggle_velocity", "drawerToggle_voiceChanges",
+                          "drawerToggle_automation"]
+        var fixedInputsLive = true
+        for (var i = 0; i < fixedNames.length; ++i) {
+            var input = findChild(surface, fixedNames[i])
+            fixedInputsLive = fixedInputsLive && input !== null && input.enabled
+                && input.width > 0 && input.height > 0
+        }
+        verify(fixedInputsLive,
+               "the loaded roll, ruler, scrollbars, headers, other events and drawer controls accept input")
+        var division = findChild(surface, "timelineRulerDivisionControl")
+        var feel = findChild(surface, "timelineRulerFeelControl")
+        verify(findChild(division, "gridControlLabel").text === grid.gridDivisionControlText
+               && findChild(feel, "gridControlLabel").text === grid.gridFeelControlText
+               && division.controlToolTip ===
+                   "Editing snap grid. Auto follows the zoom one step finer than the drawn grid; a fixed division snaps to that note value; Clock snaps to the mid2agb clock grid."
+               && feel.controlToolTip === "Straight or triplet beat subdivisions.",
+               "the loaded division and feel labels and help match the live ruler")
+        var ruler = findChild(surface, "timelineRulerInput")
+        var clickX = Math.min(ruler.width - grid.baseFontPx, 4 * grid.beatWidth)
+        var guide = session.playheadGuidesPresenter().edit
+        var beforeCursorX = guide.contentX
+        mouseClick(ruler, clickX, ruler.height * 3 / 4)
+        verify(waitForNative(function() {
+            return guide.contentX > beforeCursorX
+        }, 3000), "a ready ruler click moves the document edit-cursor guide")
+        verify(!session.gridCommandAvailable(17),
+               "the released ruler click leaves no active time selection")
+        var bar = findChild(surface, "timelineHorizontalScrollBar")
+        grid.setCameraHScroll(0)
+        var beforeScroll = grid.cameraScrollX
+        mouseWheel(bar, bar.width / 2, bar.height / 2, 0, -120)
+        verify(waitForNative(function() { return grid.cameraScrollX > beforeScroll }, 3000),
+               "a ready horizontal scrollbar wheel moves the camera")
+        var vertical = findChild(surface, "timelineRollScrollBar")
+        var beforeVertical = grid.cameraScrollY
+        var wheelAngle = beforeVertical < grid.cameraMaxVScroll / 2 ? -120 : 120
+        mouseWheel(vertical, vertical.width / 2, vertical.height / 2, 0, wheelAngle)
+        verify(waitForNative(function() { return grid.cameraScrollY !== beforeVertical }, 3000),
+               "a ready vertical scrollbar wheel moves the roll")
+        var drawerKinds = ["velocity", "voiceChanges", "automation"]
+        for (var section = 0; section < drawerKinds.length; ++section) {
+            var toggle = findChild(surface, "drawerToggle_" + drawerKinds[section])
+            var handle = findChild(surface, "drawerHandle_" + drawerKinds[section])
+            verify(toggle && handle && toggle.enabled && toggle.visible,
+                   "the loaded drawer section exposes its live toggle and resize grip")
+            if (!handle.visible)
+                mouseClick(toggle, toggle.width / 2, toggle.height / 2)
+            tryCompare(handle, "visible", true, 3000,
+                       "the drawer resize grip becomes live when its section opens")
+            verify(handle.enabled && handle.width > 0 && handle.height > 0,
+                   "the expanded drawer section exposes its usable resize grip")
+        }
+        var detent = findChild(surface, "drawerDetentInput")
+        verify(detent !== null && detent.enabled && detent.width > 0
+               && detent.height > 0
+               && detent.parent.visible === (surface.velocityModel.detentsAvailable
+                   && surface.drawerPresenter.velocitySection.visible),
+               "the loaded velocity detent input follows its real section availability")
+        shell.shellPresenter.activate("view.event_list")
+        tryCompare(session.songTabs, "selectedTabShowsEvents", true, 3000)
+        var eventPage = null
+        tryVerify(function() {
+            eventPage = findChild(surface, "eventListPage")
+            return eventPage !== null && eventPage.visible && eventPage.enabled
+        }, 3000, "a loaded song exposes the live Event List")
+        var eventInputs = ["eventListChunk", "eventListFilter", "eventListAdd"]
+        var eventInputsLive = true
+        for (var eventIndex = 0; eventIndex < eventInputs.length; ++eventIndex) {
+            var eventInput = findChild(eventPage, eventInputs[eventIndex])
+            eventInputsLive = eventInputsLive && eventInput !== null && eventInput.enabled
+                && eventInput.visible && eventInput.width > 0 && eventInput.height > 0
+        }
+        verify(eventInputsLive, "the loaded Event List exposes its live chunk, filter and add controls")
+        shell.shellPresenter.activate("view.event_list")
+        tryCompare(session.songTabs, "selectedTabShowsEvents", false, 3000)
+    }
+
+    function test_readyRulerControlHoverHelp() {
+        openRoute101()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        compare(shell.shellPresenter.session.songTabs.selectedPage.songOpen, true,
+                "ruler control styling is inspected only after the song becomes ready")
+        var tip = findChild(surface, "timelineRulerToolTip")
+        var row = findChild(surface, "timelineRulerControls")
+        verify(tip !== null && row !== null && !tip.visible,
+               "ruler help starts hidden outside the clipped control row")
+        var entries = [
+            ["timelineRulerDivisionControl", "gridDivisionControlText",
+             "Editing snap grid. Auto follows the zoom one step finer than the drawn grid; a fixed division snaps to that note value; Clock snaps to the mid2agb clock grid."],
+            ["timelineRulerFeelControl", "gridFeelControlText",
+             "Straight or triplet beat subdivisions."]
+        ]
+        for (var i = 0; i < entries.length; ++i) {
+            var control = findChild(surface, entries[i][0])
+            var label = findChild(control, "gridControlLabel")
+            verify(control && control.enabled && control.width > 0 && control.height > 0,
+                   "the ready ruler help target is live")
+            if (i === 0) {
+                compare(label.text, grid.gridDivisionControlText,
+                        "the ready division control shows its canonical state")
+                compare(control.controlToolTip, entries[i][2],
+                        "the ready division control exposes its canonical help text")
+            } else {
+                compare(label.text, grid.gridFeelControlText,
+                        "the ready feel control shows its canonical state")
+                compare(control.controlToolTip, entries[i][2],
+                        "the ready feel control exposes its canonical help text")
+            }
+            mouseMove(control, control.width / 2, control.height / 2)
+            tryCompare(tip, "visible", true, 3000,
+                       "hovering a ready ruler control shows its mounted help")
+            compare(tip.toolTipText, entries[i][2],
+                    "the hovered help belongs to the actual control")
+            var origin = tip.mapToItem(surface, 0, 0)
+            var rowBottom = row.mapToItem(surface, 0, row.height).y
+            verify(tip.parent === surface && tip.width > 0 && tip.height > 0
+                   && rowBottom + tip.height <= surface.height,
+                   "the hovered help has space below the real ruler row")
+            verify(origin.y >= rowBottom,
+                   "hover help floats below rather than covering the ruler row")
+            verify(origin.y + tip.height <= surface.height,
+                   "hover help remains inside the bottom of the real canvas")
+            verify(origin.x >= 0 && origin.x + tip.width <= surface.width,
+                   "hover help remains inside both sides of the real canvas")
+            mouseMove(surface, surface.width / 2, surface.height / 2)
+            tryCompare(tip, "visible", false, 3000,
+                       "leaving either ruler control hides its help")
+        }
+    }
 
     function test_exactDrawThreshold() {
         var session = openRoute101()

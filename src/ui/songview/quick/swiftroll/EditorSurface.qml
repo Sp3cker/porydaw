@@ -667,6 +667,8 @@ Item {
                 id: gridControl
                 required property string controlText
                 required property int menuKind
+                required property string controlToolTip
+                readonly property bool controlHovered: gridArea.containsMouse
                 readonly property bool controlPressed: gridArea.pressed
                 activeFocusOnTab: true
                 Keys.onReturnPressed: openMenu()
@@ -745,6 +747,7 @@ Item {
                 maximumLineCount: 1
             }
             GridRowControl {
+                id: divisionControl
                 objectName: "timelineRulerDivisionControl"
                 x: rulerControls.controlsInset + rulerControls.gridLabelWidth
                     + rulerControls.controlsGap
@@ -754,8 +757,10 @@ Item {
                     gridLabel.implicitHeight + rulerControls.controlsInset)
                 controlText: root.gridModel.gridDivisionControlText
                 menuKind: 1
+                controlToolTip: qsTr("Editing snap grid. Auto follows the zoom one step finer than the drawn grid; a fixed division snaps to that note value; Clock snaps to the mid2agb clock grid.")
             }
             GridRowControl {
+                id: feelControl
                 objectName: "timelineRulerFeelControl"
                 x: rulerControls.controlsInset + rulerControls.gridLabelWidth
                     + rulerControls.controlsGap + rulerControls.controlWidth
@@ -766,8 +771,27 @@ Item {
                     gridLabel.implicitHeight + rulerControls.controlsInset)
                 controlText: root.gridModel.gridFeelControlText
                 menuKind: 2
+                controlToolTip: qsTr("Straight or triplet beat subdivisions.")
             }
         }
+    }
+    RulerToolTip {
+        objectName: "timelineRulerToolTip"
+        z: 4
+        overlayRoot: root
+        anchorRect: {
+            const control = divisionControl.controlHovered ? divisionControl : feelControl
+            const point = control.mapToItem(root, 0, 0)
+            const row = rulerControls.mapToItem(root, 0, 0)
+            return Qt.rect(point.x, row.y, control.width, rulerControls.height)
+        }
+        toolTipText: divisionControl.controlHovered
+            ? divisionControl.controlToolTip : feelControl.controlToolTip
+        visibleForControl: divisionControl.controlHovered || feelControl.controlHovered
+        controlFont: rulerControls.controlsFont
+        backgroundColor: root.gridModel.palette.chromeBackground
+        textColor: root.gridModel.palette.windowText
+        outlineColor: root.gridModel.palette.outline
     }
 
     // Keep the timeline row below the drawer; its value is owned by the Swift
