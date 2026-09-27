@@ -45,7 +45,10 @@ branch, and one commit series close one surface.
 - A code change broke an anchor. Repair the anchor in the commit that broke
   it.
 - Every row of a ledger is `MATCHED` or `RETIRED-*`. Delete that ledger and
-  its C++ source together.
+  its C++ source together, in the same commit. Also delete every unbuilt C++
+  production unit (`.cpp`/`.h` under `src/core`, `src/audio`, `src/ui`,
+  `src/mainwindow.*`) that no remaining open ledger exercises, directly or
+  through another remaining unbuilt unit's includes.
 
 ## Compact ledger form
 
