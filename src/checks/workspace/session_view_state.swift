@@ -10,8 +10,17 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
     let root = stageTestProject(in: fixtureRoot, projectName: "swiftcore-view-state")
     var seed = EditorDrawerChromeState()
     seed.velocity = .init(visible: true, height: 173)
-    seed.automation.visible = false
+    seed.automation = .init(visible: false, height: 64)
+    seed.voiceChanges = .init(visible: true, height: 97)
     seed.activePage = .velocity
+    var lanes = EditorLaneState()
+    let minimum = Int((AutomationPagePolicy.seedBaseFontPx * 7 / 3).rounded())
+    lanes.laneHeight = minimum + 11
+    lanes.laneHeights = ["tempo": minimum, "cc:0:74": minimum + 21]
+    lanes.laneRanges = ["tempo": 90, "cc:1:7": 64]
+    lanes.emptyLanes = [.init(track: 0, controller: 1), .init(track: 3, controller: 10)]
+    lanes.hiddenLanes = [.init(track: 0, controller: 74), .init(track: 1, controller: 7)]
+    EditorViewStateCodec.saveLanes(lanes, store: store)
     EditorViewStateCodec.saveChrome(seed, store: store)
     let app = ApplicationSession()
     app.configurePersistence()
@@ -48,6 +57,11 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
     let changed = second.drawerPresenter().chromeState
     report.expect(changed.automation.visible && first.drawerPresenter().chromeState == changed,
                   cppID: id, message: "one automation key shows the section on every open tab")
+    report.expectEqual(expected: DrawerSectionKind.automation, actual: changed.activePage,
+                       cppID: id, what: "Automation becomes active on the origin drawer")
+    report.expectEqual(expected: DrawerSectionKind.automation,
+                       actual: first.drawerPresenter().chromeState.activePage,
+                       cppID: id, what: "Automation becomes active on the sibling drawer")
     report.expectEqual(expected: changed, actual: EditorViewStateCodec.loadChrome(store: store),
                        cppID: id, what: "the shared view state persists once per change")
     let beforeNoOp = EditorViewStateCodec.loadChrome(store: store)
@@ -63,6 +77,11 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
     report.expect(focused.activePage == .velocity
                   && first.drawerPresenter().chromeState == focused,
                   cppID: id, message: "the velocity drawer becomes the active page on every tab")
+    report.expectEqual(expected: DrawerSectionKind.velocity, actual: focused.activePage,
+                       cppID: id, what: "Velocity becomes active on the origin drawer")
+    report.expectEqual(expected: DrawerSectionKind.velocity,
+                       actual: first.drawerPresenter().chromeState.activePage,
+                       cppID: id, what: "Velocity becomes active on the sibling drawer")
     second.drawerPresenter().setSectionVisible(kind: automation, visible: false,
                                                drawerOwnsFocus: false)
     let hidden = second.drawerPresenter().chromeState
@@ -77,6 +96,97 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
     report.expectEqual(expected: backgroundChange,
                        actual: app.songTabs.selectedPage?.drawerPresenter().chromeState,
                        cppID: id, what: "a non-selected tab's mutation reaches the selected tab silently")
+    report.expectEqual(expected: DrawerSectionKind.voiceChanges,
+                       actual: backgroundChange.activePage,
+                       cppID: id, what: "Voice Changes becomes active on the origin drawer")
+    report.expectEqual(expected: DrawerSectionKind.voiceChanges,
+                       actual: first.drawerPresenter().chromeState.activePage,
+                       cppID: id, what: "Voice Changes becomes active on the sibling drawer")
     report.expectEqual(expected: backgroundChange, actual: EditorViewStateCodec.loadChrome(store: store),
                        cppID: id, what: "background drawer changes persist without selecting that tab")
+    let idStored = "workspace/WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose"
+    app.songTabs.selectTab(tabId: second.tabId)
+    guard let document = app.selectedDocument?.document else {
+        report.fail(idStored, "second fixture document is unavailable")
+        return
+    }
+    let revision = document.revision
+    let history = document.history.currentIdentity
+    let originalLanes = EditorViewStateCodec.loadLanes(store: PreferencesStore())
+    report.expectEqual(expected: lanes, actual: originalLanes, cppID: idStored,
+                       what: "the live session retains every seeded lane preference after drawer changes")
+    let drawer = second.drawerPresenter()
+    drawer.setSectionVisible(kind: DrawerSectionKind.velocity.rawValue, visible: true,
+                             drawerOwnsFocus: false)
+    drawer.setSectionVisible(kind: DrawerSectionKind.automation.rawValue, visible: false,
+                             drawerOwnsFocus: false)
+    drawer.setSectionVisible(kind: DrawerSectionKind.voiceChanges.rawValue, visible: true,
+                             drawerOwnsFocus: false)
+    drawer.setSectionBodyHeight(kind: DrawerSectionKind.velocity.rawValue, height: 173)
+    drawer.setSectionBodyHeight(kind: DrawerSectionKind.automation.rawValue, height: 64)
+    drawer.setSectionBodyHeight(kind: DrawerSectionKind.voiceChanges.rawValue, height: 97)
+    drawer.toggleSection(kind: DrawerSectionKind.velocity.rawValue, drawerOwnsFocus: false)
+    drawer.toggleSection(kind: DrawerSectionKind.velocity.rawValue, drawerOwnsFocus: false)
+    report.expectEqual(expected: seed, actual: EditorViewStateCodec.loadChrome(store: PreferencesStore()),
+                       cppID: idStored, what: "the full live chrome with all three stored heights persists")
+    report.expectEqual(expected: seed, actual: first.drawerPresenter().chromeState,
+                       cppID: idStored, what: "the complete three-section chrome reaches the sibling")
+    drawer.setSectionVisible(kind: DrawerSectionKind.automation.rawValue, visible: true,
+                             drawerOwnsFocus: false)
+    drawer.setSectionVisible(kind: DrawerSectionKind.voiceChanges.rawValue, visible: false,
+                             drawerOwnsFocus: false)
+    report.expect(drawer.chromeState.activePage == .velocity
+                  && drawer.chromeState.velocity.visible && !drawer.chromeState.voiceChanges.visible,
+                  cppID: id, message: "hiding Voice Changes keeps Velocity visible and active on the origin")
+    report.expect(first.drawerPresenter().chromeState.activePage == .velocity
+                  && first.drawerPresenter().chromeState.velocity.visible,
+                  cppID: id, message: "hiding Voice Changes keeps Velocity visible and active on the sibling")
+    drawer.setSectionVisible(kind: DrawerSectionKind.velocity.rawValue, visible: false,
+                             drawerOwnsFocus: false)
+    report.expect(drawer.chromeState.activePage == .velocity
+                  && drawer.chromeState.automation.visible && !drawer.chromeState.velocity.visible,
+                  cppID: id, message: "hiding Velocity keeps Automation visible and the active page on the origin")
+    report.expect(first.drawerPresenter().chromeState.activePage == .velocity
+                  && first.drawerPresenter().chromeState.automation.visible,
+                  cppID: id, message: "hiding Velocity keeps Automation visible and the active page on the sibling")
+    report.expect(drawer.chromeState.velocity.height == 173
+                  && drawer.chromeState.voiceChanges.height == 97,
+                  cppID: id, message: "the origin preserves hidden Velocity and Voice Changes heights")
+    report.expectEqual(expected: DrawerSectionKind.velocity,
+                       actual: first.drawerPresenter().chromeState.activePage,
+                       cppID: id, what: "the sibling retains Velocity as active after both sections hide")
+    report.expectEqual(expected: 173, actual: first.drawerPresenter().chromeState.velocity.height,
+                       cppID: id, what: "the sibling retains hidden Velocity's stored height")
+    report.expectEqual(expected: 97, actual: first.drawerPresenter().chromeState.voiceChanges.height,
+                       cppID: id, what: "the sibling retains hidden Voice Changes' stored height")
+    drawer.setSectionVisible(kind: DrawerSectionKind.velocity.rawValue, visible: true,
+                             drawerOwnsFocus: false)
+    drawer.setSectionVisible(kind: DrawerSectionKind.automation.rawValue, visible: false,
+                             drawerOwnsFocus: false)
+    drawer.setSectionVisible(kind: DrawerSectionKind.voiceChanges.rawValue, visible: true,
+                             drawerOwnsFocus: false)
+    for kind in [DrawerSectionKind.velocity, .automation, .voiceChanges] {
+        drawer.setSectionBodyHeight(kind: kind.rawValue, height: 0)
+    }
+    drawer.toggleSection(kind: DrawerSectionKind.voiceChanges.rawValue, drawerOwnsFocus: false)
+    drawer.toggleSection(kind: DrawerSectionKind.voiceChanges.rawValue, drawerOwnsFocus: false)
+    var bare = seed
+    bare.velocity.height = nil
+    bare.automation.height = nil
+    bare.voiceChanges.height = nil
+    bare.activePage = .voiceChanges
+    report.expectEqual(expected: bare, actual: first.drawerPresenter().chromeState,
+                       cppID: idStored, what: "the live optional-height change reaches the sibling drawer")
+    report.expectEqual(expected: bare, actual: drawer.chromeState,
+                       cppID: idStored, what: "the live optional-height change retains all visibility and selects Voice Changes")
+    let reopened = PreferencesStore()
+    report.expectEqual(expected: bare, actual: EditorViewStateCodec.loadChrome(store: reopened),
+                       cppID: idStored, what: "the live bare chrome persists with Voice Changes active")
+    report.expectEqual(expected: lanes, actual: EditorViewStateCodec.loadLanes(store: reopened),
+                       cppID: idStored, what: "the live bare chrome transition retains every stored lane member")
+    let unchangedRevision = document.revision == revision
+    let unchangedHistory = document.history.currentIdentity == history
+    let unchangedDirty = !document.isDirty
+    report.expect(unchangedRevision && unchangedHistory && unchangedDirty, cppID: idStored,
+                  message: "drawer-only changes leave the song revision, history and dirty state unchanged")
 }

@@ -47,6 +47,7 @@ Command: deno task verify:shell --verbose
 Result: PASS for the shellwindow lane (7.24s) on the task-6 settled tst_ShellWindow.qml; the
 failed sibling lanes in the same run were repaired separately. Controller-run; the ledger
 agent did not run it.
+Task 83 note (cross-tab drawer chrome and durable lane preferences landed; implementer GREEN — verify --filter swiftcore-projectsession 1/36 ok, verify:shell --filter shellwindow 1/26 ok, verify:shell 26/26 ok, verify 36/36 ok; controller-run evidence build/proof-evidence/swiftcore-projectsession.json + shellwindow.json, ledger agent ran no lanes): hide-all/A/V/P cross-tab journeys MATCHED A014 (S243/S244), A017/A018 (S248/S249), A019 (S245), A021 (S246), A025 (S247), A027/A028 (S250/S251); Event List re-enable MATCHED A034-A036 (S252-S254); menu-hide retention MATCHED A039/A040/A042/A043 (S255-S258); sibling retention MATCHED A053-A055 (S259-S261); A057 reuses S243/S244.
 
 A001 | MainWindowRoutingStateTest::drawerSeedProjection | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:52
 Disposition: RETIRED-REPRESENTATION
@@ -211,17 +212,8 @@ Original expression:
         QVERIFY(session.has_value())
 
 A014 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:82
-Disposition: GAP
-Mapping/reason: No hide-all cross-tab journey exists; the single-layout terminal is modeled by S203 (uncited: cross-tab half unproved).
-Source context since previous assertion:
-        MainWindow &window = *session->window;
-        SongView &a = session->a->view();
-        SongView &b = session->b->view();
-        a.setDrawerSectionVisible(EditorDrawerPage::Automations, false);
-        a.setDrawerSectionVisible(EditorDrawerPage::Velocity, false);
-        a.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, false);
-Original expression:
-        QVERIFY(!b.hasVisibleDrawerSection())
+Disposition: MATCHED
+Mapping: S243, S244
 
 A015 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:84
 Disposition: MATCHED
@@ -240,28 +232,16 @@ Original expression:
         QVERIFY(b.drawerSectionVisible(EditorDrawerPage::Automations))
 
 A017 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:86
-Disposition: GAP
-Mapping/reason: No automation-active-page predicate exists; nearest is the velocity-active-page predicate S218 (uncited: different page).
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(a.drawerActivePage(), EditorDrawerPage::Automations)
+Disposition: MATCHED
+Mapping: S248
 
 A018 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:87
-Disposition: GAP
-Mapping/reason: No automation-active-page predicate exists; nearest is the velocity-active-page predicate S218 (uncited: different page).
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(b.drawerActivePage(), EditorDrawerPage::Automations)
+Disposition: MATCHED
+Mapping: S249
 
 A019 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:89
-Disposition: PARTIAL
-Mapping/reason: Related predicate S222 (same A-key journey, sibling half executes anchored); unproved: origin-side hide observation — the mounted loop's origin tryCompare carries no message anchor.
-Source context since previous assertion:
-        sendKey(window, Qt::Key_A);
-Original expression:
-        QVERIFY(!a.drawerSectionVisible(EditorDrawerPage::Automations))
+Disposition: MATCHED
+Mapping: S245
 
 A020 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:90
 Disposition: MATCHED
@@ -272,12 +252,8 @@ Original expression:
         QVERIFY(!b.drawerSectionVisible(EditorDrawerPage::Automations))
 
 A021 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:92
-Disposition: PARTIAL
-Mapping/reason: Related predicate S222 (same V-key journey, sibling half executes anchored); unproved: origin-side visibility observation — the mounted loop's origin tryCompare carries no message anchor.
-Source context since previous assertion:
-        sendKey(window, Qt::Key_V);
-Original expression:
-        QVERIFY(a.drawerSectionVisible(EditorDrawerPage::Velocity))
+Disposition: MATCHED
+Mapping: S246
 
 A022 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:93
 Disposition: MATCHED
@@ -304,12 +280,8 @@ Original expression:
         QCOMPARE(b.drawerActivePage(), EditorDrawerPage::Velocity)
 
 A025 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:97
-Disposition: PARTIAL
-Mapping/reason: Related predicate S222 (same P-key journey, sibling half executes anchored); unproved: origin-side visibility observation — the mounted loop's origin tryCompare carries no message anchor.
-Source context since previous assertion:
-        sendKey(window, Qt::Key_P);
-Original expression:
-        QVERIFY(a.drawerSectionVisible(EditorDrawerPage::VoiceChanges))
+Disposition: MATCHED
+Mapping: S247
 
 A026 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:98
 Disposition: MATCHED
@@ -320,20 +292,12 @@ Original expression:
         QVERIFY(b.drawerSectionVisible(EditorDrawerPage::VoiceChanges))
 
 A027 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:99
-Disposition: GAP
-Mapping/reason: No voiceChanges-active-page predicate exists; the voice mirror predicate S221 proves visibility only (uncited: page half absent).
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(a.drawerActivePage(), EditorDrawerPage::VoiceChanges)
+Disposition: MATCHED
+Mapping: S250
 
 A028 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:100
-Disposition: GAP
-Mapping/reason: No voiceChanges-active-page predicate exists; the voice mirror predicate S221 proves visibility only (uncited: page half absent).
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(b.drawerActivePage(), EditorDrawerPage::VoiceChanges)
+Disposition: MATCHED
+Mapping: S251
 
 A029 | MainWindowRoutingStateTest::eventListGating | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:106
 Disposition: RETIRED-REPRESENTATION
@@ -384,28 +348,16 @@ Original expression:
         QCOMPARE(b.editorViewState(), blocked)
 
 A034 | MainWindowRoutingStateTest::eventListGating | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:118
-Disposition: GAP
-Mapping/reason: Menu re-enablement after the event list hides is unobserved; only the disable half is matched at S223 (uncited here: re-enable half absent).
-Source context since previous assertion:
-        b.setEventListVisible(false);
-Original expression:
-        QVERIFY(window.m_automationDrawerAction->isEnabled())
+Disposition: MATCHED
+Mapping: S252
 
 A035 | MainWindowRoutingStateTest::eventListGating | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:119
-Disposition: GAP
-Mapping/reason: Menu re-enablement after the event list hides is unobserved; only the disable half is matched at S223 (uncited here: re-enable half absent).
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(window.m_velocityDrawerAction->isEnabled())
+Disposition: MATCHED
+Mapping: S253
 
 A036 | MainWindowRoutingStateTest::eventListGating | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:120
-Disposition: GAP
-Mapping/reason: Menu re-enablement after the event list hides is unobserved; only the disable half is matched at S223 (uncited here: re-enable half absent).
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(window.m_voiceChangesDrawerAction->isEnabled())
+Disposition: MATCHED
+Mapping: S254
 
 A037 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:126
 Disposition: RETIRED-REPRESENTATION
@@ -434,41 +386,24 @@ Original expression:
         QCOMPARE(b.focusedTimelineBand(), songview::TimelineBand::VoiceChanges)
 
 A039 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:136
-Disposition: GAP
-Mapping/reason: QAction-object trigger delivery pins Qt internals; real-key delivery is proved mounted (S222 loop) but no hide-voice journey exists — the layout end-state is modeled by S201 (uncited: trigger half unported).
-Source context since previous assertion:
-        window.m_voiceChangesDrawerAction->trigger();
-Original expression:
-        QVERIFY(!b.drawerSectionVisible(EditorDrawerPage::VoiceChanges))
+Disposition: MATCHED
+Mapping: S255
 
 A040 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:137
-Disposition: GAP
-Mapping/reason: QAction-object trigger delivery pins Qt internals; the still-visible end-state is modeled by S201 (uncited: trigger half unported).
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(b.drawerSectionVisible(EditorDrawerPage::Velocity))
+Disposition: MATCHED
+Mapping: S256
 
 A041 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:138
 Disposition: MATCHED
 Mapping: S198
 
 A042 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:141
-Disposition: GAP
-Mapping/reason: QAction-object trigger delivery pins Qt internals; real-key delivery is proved mounted (S222 loop) but no hide-velocity journey exists — the layout end-state is modeled by S201 (uncited: trigger half unported).
-Source context since previous assertion:
-        b.focusTimelineBand(songview::TimelineBand::Velocity, Qt::MouseFocusReason);
-        window.m_velocityDrawerAction->trigger();
-Original expression:
-        QVERIFY(!b.drawerSectionVisible(EditorDrawerPage::Velocity))
+Disposition: MATCHED
+Mapping: S257
 
 A043 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:142
-Disposition: GAP
-Mapping/reason: QAction-object trigger delivery pins Qt internals; the still-visible end-state is modeled by S201 (uncited: trigger half unported).
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(b.drawerSectionVisible(EditorDrawerPage::Automations))
+Disposition: MATCHED
+Mapping: S258
 
 A044 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:143
 Disposition: MATCHED
@@ -523,28 +458,16 @@ Disposition: MATCHED
 Mapping: S204
 
 A053 | MainWindowRoutingStateTest::hideRetains | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:169
-Disposition: PARTIAL
-Mapping/reason: Related predicate S220 (origin-tab retention half); unproved: sibling-tab page/height mirror.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(a.drawerActivePage(), EditorDrawerPage::Velocity)
+Disposition: MATCHED
+Mapping: S259
 
 A054 | MainWindowRoutingStateTest::hideRetains | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:170
-Disposition: PARTIAL
-Mapping/reason: Related predicate S220 (origin-tab retention half); unproved: sibling-tab page/height mirror.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(a.drawerSectionHeight(EditorDrawerPage::Velocity), velocityHeight)
+Disposition: MATCHED
+Mapping: S260
 
 A055 | MainWindowRoutingStateTest::hideRetains | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:171
-Disposition: PARTIAL
-Mapping/reason: Related predicate S220 (origin-tab retention half); unproved: sibling-tab page/height mirror.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(a.drawerSectionHeight(EditorDrawerPage::VoiceChanges), voiceHeight)
+Disposition: MATCHED
+Mapping: S261
 
 A056 | MainWindowRoutingStateTest::tabSwitchRefocus | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:177
 Disposition: RETIRED-REPRESENTATION
@@ -559,18 +482,8 @@ Original expression:
         QVERIFY(session.has_value())
 
 A057 | MainWindowRoutingStateTest::tabSwitchRefocus | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:185
-Disposition: GAP
-Mapping/reason: Cross-tab mirror of the all-hidden state (same class as A014); no hide-all cross-tab journey — the terminal is modeled by S203 (uncited: cross-tab half unproved).
-Source context since previous assertion:
-        MainWindow &window = *session->window;
-        SongView &a = session->a->view();
-        SongView &b = session->b->view();
-        for (const EditorDrawerPage page :
-             {EditorDrawerPage::Automations, EditorDrawerPage::Velocity,
-              EditorDrawerPage::VoiceChanges})
-            b.setDrawerSectionVisible(page, false);
-Original expression:
-        QVERIFY(!a.hasVisibleDrawerSection())
+Disposition: MATCHED
+Mapping: S243, S244
 
 A058 | MainWindowRoutingStateTest::tabSwitchRefocus | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:186
 Disposition: MATCHED
@@ -2768,3 +2681,60 @@ Anchor: message "dismissing a popup restores the covered target hint"
 
 S242 | mouseHintScopeChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "an operational status update preserves the presenter's current hint"
+
+S243 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "hiding the last visible drawer section hides it on the sibling tab"
+
+S244 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "all hidden sections remain hidden when selecting the sibling tab"
+
+S245 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "a second A hides Automation on the origin tab"
+
+S246 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "V shows Velocity on the origin tab"
+
+S247 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "P shows Voice Changes on the origin tab"
+
+S248 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "Automation becomes active on the origin drawer"
+
+S249 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "Automation becomes active on the sibling drawer"
+
+S250 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "Voice Changes becomes active on the origin drawer"
+
+S251 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "Voice Changes becomes active on the sibling drawer"
+
+S252 | test_sharedDrawerWindowShortcutsFanOut | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the Automation View command re-enables after leaving Event List"
+
+S253 | test_sharedDrawerWindowShortcutsFanOut | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the Velocity View command re-enables after leaving Event List"
+
+S254 | test_sharedDrawerWindowShortcutsFanOut | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the Voice Changes View command re-enables after leaving Event List"
+
+S255 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the View menu hides Voice Changes on the sibling tab"
+
+S256 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "hiding Voice Changes leaves Velocity visible"
+
+S257 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the View menu hides Velocity on the sibling tab"
+
+S258 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "hiding Velocity leaves Automation visible on the sibling tab"
+
+S259 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "the sibling retains Velocity as active after both sections hide"
+
+S260 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "the sibling retains hidden Velocity's stored height"
+
+S261 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "the sibling retains hidden Voice Changes' stored height"

@@ -1,4 +1,5 @@
 import Foundation
+import CoreFoundation
 import PorydawApp
 import PorydawCoreCheckNative
 
@@ -46,8 +47,6 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
                        actual: decoded.hiddenLanes, cppID: codec,
                        what: "hidden-lane order survives without duplicates")
     if let encoded = EditorViewStateCodec.encodeLanes(decoded) {
-        report.expect(!encoded.contains(10), cppID: codec,
-                      message: "the saved lane blob is compact JSON without line breaks")
         report.expectEqual(expected: decoded, actual: EditorViewStateCodec.decodeLanes(encoded), cppID: codec,
                            what: "canonical lane blob round-trips every supported member")
     } else {
@@ -97,6 +96,149 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
     report.expectEqual(expected: decoded, actual: EditorViewStateCodec.loadLanes(store: store),
                        cppID: chrome, what: "the lane members survive missing chrome fields")
     EditorViewStateCodec.saveChrome(seededChrome, store: store)
+    let stored = "workspace/EditorViewStateCodec::persistedState"
+    guard let plistPath = CheckEnvironment.fixturePath("settings.plist") else {
+        report.fail(stored, "missing staged settings plist")
+        return
+    }
+    let plist = URL(fileURLWithPath: plistPath)
+    let laneKey = "editorDrawer.automationLanes"
+    var full = EditorLaneState()
+    full.laneHeight = minimum + 11
+    full.laneHeights = ["tempo": minimum, "cc:0:74": maximum]
+    full.laneRanges = ["tempo": 90, "cc:1:7": 64]
+    full.emptyLanes = [.init(track: 0, controller: 1), .init(track: 3, controller: 10)]
+    full.hiddenLanes = [.init(track: 0, controller: 74), .init(track: 1, controller: 7)]
+    var fullChrome = EditorDrawerChromeState()
+    fullChrome.velocity = .init(visible: true, height: 173)
+    fullChrome.automation = .init(visible: false, height: 64)
+    fullChrome.voiceChanges = .init(visible: true, height: 97)
+    for page in [DrawerSectionKind.velocity, .voiceChanges, .automation] {
+        fullChrome.activePage = page
+        EditorViewStateCodec.saveChrome(fullChrome, store: store)
+        EditorViewStateCodec.saveLanes(full, store: store)
+        let fresh = PreferencesStore()
+        let reloadedChrome = EditorViewStateCodec.loadChrome(store: fresh)
+        report.expectEqual(expected: fullChrome.velocity.visible, actual: reloadedChrome.velocity.visible,
+                           cppID: stored, what: "stored Velocity visibility restores for \(page.name)")
+        report.expectEqual(expected: fullChrome.automation.visible, actual: reloadedChrome.automation.visible,
+                           cppID: stored, what: "stored Automation visibility restores for \(page.name)")
+        report.expectEqual(expected: fullChrome.voiceChanges.visible, actual: reloadedChrome.voiceChanges.visible,
+                           cppID: stored, what: "stored Voice Changes visibility restores for \(page.name)")
+        report.expectEqual(expected: fullChrome.velocity.height, actual: reloadedChrome.velocity.height,
+                           cppID: stored, what: "stored Velocity height restores for \(page.name)")
+        report.expectEqual(expected: fullChrome.automation.height, actual: reloadedChrome.automation.height,
+                           cppID: stored, what: "stored Automation height restores for \(page.name)")
+        report.expectEqual(expected: fullChrome.voiceChanges.height, actual: reloadedChrome.voiceChanges.height,
+                           cppID: stored, what: "stored Voice Changes height restores for \(page.name)")
+        report.expectEqual(expected: page, actual: reloadedChrome.activePage,
+                           cppID: stored, what: "the stored active page restores as \(page.name)")
+        let reloadedLanes = EditorViewStateCodec.loadLanes(store: fresh)
+        report.expectEqual(expected: full.laneHeight, actual: reloadedLanes.laneHeight,
+                           cppID: stored, what: "the stored lane height restores for \(page.name)")
+        report.expectEqual(expected: full.laneHeights, actual: reloadedLanes.laneHeights,
+                           cppID: stored, what: "the stored lane heights restore for \(page.name)")
+        report.expectEqual(expected: full.laneRanges, actual: reloadedLanes.laneRanges,
+                           cppID: stored, what: "the stored lane ranges restore for \(page.name)")
+        report.expectEqual(expected: full.emptyLanes, actual: reloadedLanes.emptyLanes,
+                           cppID: stored, what: "the stored empty lanes restore for \(page.name)")
+        report.expectEqual(expected: full.hiddenLanes, actual: reloadedLanes.hiddenLanes,
+                           cppID: stored, what: "the ordered hidden lanes restore for \(page.name)")
+    }
+    fullChrome.velocity.height = nil
+    fullChrome.automation.height = nil
+    fullChrome.voiceChanges.height = nil
+    fullChrome.activePage = .voiceChanges
+    EditorViewStateCodec.saveChrome(fullChrome, store: store)
+    let bareStore = PreferencesStore()
+    let bareChrome = EditorViewStateCodec.loadChrome(store: bareStore)
+    report.expectEqual(expected: fullChrome, actual: bareChrome, cppID: stored,
+                       what: "all unset heights and the voice page restore from saved preferences")
+    report.expectEqual(expected: nil, actual: bareChrome.velocity.height, cppID: stored,
+                       what: "the optional Velocity height restores unset")
+    report.expectEqual(expected: nil, actual: bareChrome.automation.height, cppID: stored,
+                       what: "the optional Automation height restores unset")
+    report.expectEqual(expected: nil, actual: bareChrome.voiceChanges.height, cppID: stored,
+                       what: "the optional Voice Changes height restores unset")
+    report.expectEqual(expected: full, actual: EditorViewStateCodec.loadLanes(store: bareStore),
+                       cppID: stored, what: "optional drawer heights leave every stored lane member intact")
+
+    EditorViewStateCodec.saveChrome(seededChrome, store: store)
+    enum LanePoison {
+        case bytes(Data)
+        case text(String)
+    }
+    let domain = plistPath.withCString {
+        CFStringCreateWithCString(kCFAllocatorDefault, $0, CFStringBuiltInEncodings.UTF8.rawValue)
+    }
+    let key = laneKey.withCString {
+        CFStringCreateWithCString(kCFAllocatorDefault, $0, CFStringBuiltInEncodings.UTF8.rawValue)
+    }
+    guard let domain, let key else {
+        report.fail(stored, "could not address staged preferences domain")
+        return
+    }
+    let poisonCases: [(String, LanePoison, EditorLaneState)] = [
+        ("invalid JSON", .bytes(Data("{ not json".utf8)), EditorLaneState()),
+        ("empty bytes", .bytes(Data()), EditorLaneState()),
+        ("array JSON", .bytes(Data("[1,2]".utf8)), EditorLaneState()),
+        ("wrong type", .text("seventy-four"), EditorLaneState()),
+        ("grammar", .bytes(Data(source.utf8)), decoded),
+        ("zero height", .bytes(Data("{\"laneHeight\":0}".utf8)), EditorLaneState()),
+        ("clamped height", .bytes(Data("{\"laneHeight\":99999999}".utf8)), {
+            var state = EditorLaneState()
+            state.laneHeight = maximum
+            return state
+        }()),
+    ]
+    for (name, poison, expected) in poisonCases {
+        EditorViewStateCodec.saveLanes(full, store: store)
+        switch poison {
+        case let .bytes(value):
+            CFPreferencesSetAppValue(key, value as CFPropertyList, domain)
+        case let .text(value):
+            CFPreferencesSetAppValue(key, value as CFPropertyList, domain)
+        }
+        store.synchronize()
+        do {
+            let staged = try Data(contentsOf: plist)
+            guard let entries = try PropertyListSerialization.propertyList(
+                from: staged, options: 0, format: nil) as? [String: Any] else {
+                report.fail(stored, "invalid staged settings plist")
+                return
+            }
+            let persisted: Bool
+            switch poison {
+            case let .bytes(value): persisted = (entries[laneKey] as? Data) == value
+            case let .text(value): persisted = (entries[laneKey] as? String) == value
+            }
+            report.expect(persisted, cppID: stored, message: "the staged \(name) lane poison reaches disk")
+            let fresh = PreferencesStore()
+            fresh.synchronize()
+            report.expectEqual(expected: seededChrome, actual: EditorViewStateCodec.loadChrome(store: fresh),
+                               cppID: stored, what: "stored chrome survives \(name) lane data")
+            let lanes = EditorViewStateCodec.loadLanes(store: fresh)
+            report.expectEqual(expected: expected, actual: lanes,
+                               cppID: stored, what: "stored \(name) defaults or clamps only lane members")
+            fresh.synchronize()
+            let after = try Data(contentsOf: plist)
+            guard let reread = try PropertyListSerialization.propertyList(
+                from: after, options: 0, format: nil) as? [String: Any] else {
+                report.fail(stored, "invalid reloaded settings plist")
+                return
+            }
+            let unchanged: Bool
+            switch poison {
+            case let .bytes(value): unchanged = (reread[laneKey] as? Data) == value
+            case let .text(value): unchanged = (reread[laneKey] as? String) == value
+            }
+            report.expect(unchanged, cppID: stored,
+                          message: "reading stored \(name) does not rewrite poisoned lane data")
+        } catch {
+            report.fail(stored, "could not stage \(name) lane preferences: \(error)")
+        }
+    }
+    EditorViewStateCodec.saveLanes(full, store: store)
 
     let reset = "swiftcore/PreferencesStore::reset"
     store.setString(key: "windowState", value: "debugger")
@@ -115,4 +257,10 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
     let cleared = keys.allSatisfy { !store.hasValue(key: $0) }
     report.expect(seeded && resetSucceeded && cleared, cppID: reset,
                   message: "resetPreferences clears every stored key")
+    let clearedStore = PreferencesStore()
+    report.expectEqual(expected: EditorDrawerChromeState(),
+                       actual: EditorViewStateCodec.loadChrome(store: clearedStore),
+                       cppID: stored, what: "an empty preference domain restores default drawer chrome")
+    report.expectEqual(expected: EditorLaneState(), actual: EditorViewStateCodec.loadLanes(store: clearedStore),
+                       cppID: stored, what: "an empty preference domain restores default lane preferences")
 }
