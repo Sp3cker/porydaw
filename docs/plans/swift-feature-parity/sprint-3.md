@@ -276,3 +276,69 @@ parked for the swift-project-store worktree.
   `src/project/` C++ or ProjectService.
 - No new C++; comments at most 2 lines; one message-anchored predicate per fork clause; WCAG AA beats
   parity where they conflict; visual parity with `fceecd88`; base-font sizing only.
+
+## 8. Wave 79+
+
+Freeze: after the 600-line split and S-path repair (9963c029, 344b711b).
+Counts below are exact selected GAP/PARTIAL sites from `deno task proof sites`,
+not the stale §2 estimates. Oracle remains `fceecd88`.
+
+| Task | Mounted surface and outcome | Selected open rows | Dependencies / group |
+| --- | --- | ---: | --- |
+| [79](task-79-brief.md) | Automation selected drag/Delete and single-node commit reach the playback timeline; preserve raw Tempo and same-tick CC order through undo/redo | 24 PARTIAL | Group A |
+| [80](task-80-brief.md) | Velocity locked/unlocked relative drag proves square, wave and noise preview isolation, press-time latch and exact release values | 20 PARTIAL | Group A |
+| [81](task-81-brief.md) | Window Insert Time opens the already-mounted bars/beats prompt without a range; active-song, zero/cancel/stale and undo laws | 7 PARTIAL + 20 GAP | Group A |
+| [82](task-82-brief.md) | Roll keyboard shows real drum-pad names/fallbacks and preserves initial-program classification across cursor/playhead changes | 15 GAP | Group A |
+
+All four are SDD-track, `sdd-implementer`: each is one behavior surface with
+multiple production/check seams (the justified exception to the three-file
+sizing default). **79 ∥ 80 ∥ 81 ∥ 82**: closed write sets are pairwise disjoint,
+including ledgers and check files. No task consumes another wave task's new
+interface. Land the settled split first; no task writes task-78's reserved
+files or `voicegroupsave/proof.switching.txt` A030–A046.
+
+Hot-file ownership: 81 alone owns `tst_ShellWindow.qml`; 82 alone owns
+`DocumentWorkspace.swift`. `ShellWindow.qml`, `ShellPresenter.swift`,
+`ApplicationSession.swift`, `EditorSurface.qml`, `PianoGrid.swift` and
+`tst_EditorDrawer.qml` have **no writer in this wave**. 79 owns
+`tst_ShellGridInput.qml`, 80 owns `tst_ShellDrawerParity.qml`, and 82 owns
+`tst_TimelinePan.qml`. Do not silently grow
+a write set; any later same-file writer waits for accepted work to be checkpointed.
+One integration milestone follows Group A; shared builds/checks run after writers
+settle, never concurrently with half-landed edits.
+
+**Wave constraints (incorporated by every brief).** No new C++ outside native
+boundaries; these four tasks require none. Touched Swift uses Swift 6.4 idioms:
+Span/MutableSpan/RawSpan, InlineArray, ~Copyable and borrowing/consuming where
+appropriate, typed throws and strict concurrency; no hot-path temporary
+collections, copies or repeated font measurement. Comments are at most two lines.
+All new geometry derives from the base font; WCAG AA with real GridPalette
+surface/text pairs outranks pixel parity. Window shortcuts outrank incidental
+chrome focus; no second dispatcher, synthetic forwarding or focus memory, and
+persistent chrome never claims bare Space. One message-anchored predicate per
+fork clause, existing messages verbatim, real fixtures and no test-only seams.
+Delete an obsolete implementation-pinning assertion rather than rewording it;
+repair its affected ledger anchor in that same surface change.
+`Qt.callLater` coalescing and idempotence-guard workarounds are banned; any
+workaround needs user approval. Deferred menu rows stay absent: New Song,
+Import MIDI, Export WAV, Register Song, Import Sample, Theme. `project`,
+`samplecheck`, `onboardcheck`, and `midi/tst_midiexport` remain parked.
+
+Use each brief's recorded commands without rediscovery. Each verification
+invocation has a 180 s ceiling, on the controller's settled, built tree; shell
+lanes are separate `deno task verify:shell --filter <entry> --verbose` calls.
+No unfiltered shell aggregate. The controller builds once, executes the listed
+lanes and mounted smoke journeys, then runs `deno task proof check --executed`.
+Missing execution evidence leaves a row open; a green pre-change behavioral
+baseline is reported honestly, never manufactured into RED.
+
+Rejected for this wave: the remaining editor/picker voicegroupsave sample has
+only seven coherent behavioral PARTIALs (editor A010/A021/A023; picker
+A004/A017/A024/A038), not a 15-row task; do not pad it with pointer/file-staging
+checks. Clipboard's combined Qt notification masks are not new behavior;
+selection-owner work also collides with task 78's `DocumentSession.swift`.
+Open user decisions stay out: `voicegroupsave/proof.savecore.txt` A016–A026
+(especially A017: whether catalog outage gains a status/error path while
+retaining the last valid catalog), and reserved `proof.switching.txt` A030–A046
+(whether blank materialization tokens rebase across unrelated same-section
+external edits or retain E10 blanket expiry). No brief resolves either policy.
