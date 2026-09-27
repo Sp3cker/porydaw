@@ -467,6 +467,7 @@ Item {
                 }
                 onReleased: (mouse) => {
                     headerMoves.flush()
+                    headerHint.settleRelease(headerInput.mapToItem(null, mouse.x, mouse.y))
                     mouse.accepted = root.headersModel.endPointer(mouse.x, mouse.y,
                                                                   mouse.button, mouse.modifiers)
                 }
@@ -477,6 +478,8 @@ Item {
                 }
                 onCanceled: {
                     headerMoves.flush()
+                    headerHint.settleRelease(headerInput.mapToItem(null,
+                        headerInput.mouseX, headerInput.mouseY))
                     root.headersModel.inputCancelled(1) // PointerUngrabbed
                 }
                 onExited: {

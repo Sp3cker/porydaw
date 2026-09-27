@@ -44,6 +44,25 @@ internal func mouseHintOwnershipChecks(_ report: CheckReport) {
     hints.claim(sourceToken: first, profile: -1)
     report.expectEqual(expected: "", actual: hints.text, cppID: id,
                        what: "unknown profile clears rather than retaining unrelated instructions")
+    hints.claim(sourceToken: first, profile: 14)
+    let headerHint = hints.text
+    hints.claim(sourceToken: second, profile: 10)
+    let rollHint = hints.text
+    hints.clear(sourceToken: first)
+    report.expect(!headerHint.isEmpty && !rollHint.isEmpty && headerHint != rollHint
+                  && hints.text == rollHint, cppID: id,
+                  message: "hidden header owner cannot clear the surviving roll profile")
+    hints.claim(sourceToken: first, profile: 0)
+    hints.claim(sourceToken: second, profile: 10)
+    hints.clear(sourceToken: first)
+    report.expectEqual(expected: rollHint, actual: hints.text, cppID: id,
+                       what: "released empty scrollbar owner cannot erase the roll release target")
+    hints.claim(sourceToken: first, profile: 14)
+    hints.clear(sourceToken: first)
+    hints.claim(sourceToken: second, profile: 10)
+    hints.clear(sourceToken: first)
+    report.expectEqual(expected: rollHint, actual: hints.text, cppID: id,
+                       what: "destroyed tab owner cannot clear the newly claimed sibling hint")
     mouseHintScopeChecks(report)
 }
 

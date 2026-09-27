@@ -118,11 +118,21 @@ HoverHandler {
         sync()
     }
 
-    // The one claim path. Hover changes, profile changes, gesture
-    // starts and completions, both session transitions and native scope
-    // refreshes all funnel here; nothing outside this function decides
-    // ownership, so a close with unchanged `hovered` and a refresh with
-    // unchanged hover both still resync.
+    // A grabbed neighbor delivers its real release coordinate here when
+    // Qt has not yet synthesized new hover membership for this source.
+    function receiveRelease(scenePosition) {
+        if (!source || !_service || !_sourceToken || !_sourceVisible()
+                || !scopeAllowed || gestureOwning
+                || !source.contains(source.mapFromItem(null,
+                                                       scenePosition.x, scenePosition.y)))
+            return
+        releaseInside = true
+        _service.claim(_sourceToken, profile)
+        _owned = true
+    }
+
+    // Normal hover and lifecycle events claim here; receiveRelease() claims
+    // from a grabbed neighbor's real coordinates before Qt updates hover.
     function sync() {
         const hints = _hints()
         if (!hints || !_sourceToken)

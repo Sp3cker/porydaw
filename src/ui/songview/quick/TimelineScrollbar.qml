@@ -60,6 +60,7 @@ Item {
 
     signal valueRequested(real value)
     signal wheelRequested(real pixelX, real pixelY, real angleX, real angleY, bool inverted)
+    signal hintReleased(point scenePosition)
 
     function clampedValue(requested) {
         return Math.max(minimum, Math.min(maximum, requested))
@@ -244,6 +245,7 @@ Item {
             // release coordinates: an outside release clears even when Qt
             // froze hover membership during the implicit grab.
             scrollbar.settleHintRelease(mouse.x, mouse.y)
+            scrollbar.hintReleased(scrollbar.mapToItem(null, mouse.x, mouse.y))
             scrollbar.cancelledWhileHeld = false
         }
         // canceled() delivers no event: the grab was lost before a release

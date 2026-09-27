@@ -40,7 +40,11 @@ Item {
     readonly property var hintService: applicationSession.mouseHintsPresenter()
     readonly property bool hintWindowActive: visible && Window.window !== null
                                             && Window.window.visible && Window.window.active
-    onHintWindowActiveChanged: hintService.setWindowActive(hintWindowActive)
+    onHintWindowActiveChanged: {
+        if (hintWindowActive || (Window.window
+                                 && (!Window.window.visible || !Window.window.active)))
+            hintService.setWindowActive(hintWindowActive)
+    }
     readonly property bool hintScopeCovered: headersModel.menuOpen
         || gridModel.gridMenuKind !== 0 || rulerMenu.isOpen
         || applicationSession.headerVoicePickerOpen || applicationSession.timeSigPromptOpen
@@ -584,6 +588,7 @@ Item {
                         }
                     }
                     HoverHint {
+                        id: rollHint
                         source: rollInput
                         hintService: root.hintService
                         scopeAllowed: !root.hintScopeCovered
@@ -818,6 +823,7 @@ Item {
         hintService: root.hintService
         hintScopeAllowed: !root.hintScopeCovered
         thumbObjectName: "timelineHorizontalScrollThumb"
+        onHintReleased: scenePosition => rollHint.receiveRelease(scenePosition)
         onGestureActiveChanged: root.gridModel.setScrollbarGrabActive(
                                     horizontalScrollBar.gestureActive
                                     || (rollScrollBar && rollScrollBar.gestureActive))
@@ -852,6 +858,7 @@ Item {
         hintService: root.hintService
         hintScopeAllowed: !root.hintScopeCovered
         thumbObjectName: "timelineRollScrollThumb"
+        onHintReleased: scenePosition => rollHint.receiveRelease(scenePosition)
         onGestureActiveChanged: root.gridModel.setScrollbarGrabActive(
                                     horizontalScrollBar.gestureActive || rollScrollBar.gestureActive)
 
@@ -1333,12 +1340,12 @@ Item {
     }
 
     Component.onCompleted: {
-        hintService.setWindowActive(hintWindowActive)
+        if (hintWindowActive)
+            hintService.setWindowActive(true)
         if (root.eventListPresenter)
             root.eventListPresenter.setVisible(root.showEvents)
         eventListHost.visible = root.showEvents
         eventPage.active = root.showEvents
         configureViewport()
     }
-    Component.onDestruction: hintService.setWindowActive(false)
 }

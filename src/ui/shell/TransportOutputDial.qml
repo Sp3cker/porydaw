@@ -6,6 +6,7 @@ Item {
     id: dial
     required property QtObject colors
     required property int baseFontPx
+    required property var hintService
     property int value: 100
     signal valueCommitted(int percent)
 
@@ -61,19 +62,29 @@ Item {
         x: dial.width / 2 + Math.cos(angle) * face.width * 0.32 - width / 2
         y: dial.height / 2 - Math.sin(angle) * face.height * 0.32 - height / 2
     }
-    HoverHandler { id: outputHover }
+    HoverHint {
+        id: outputHover
+        source: dial
+        hintService: dial.hintService
+        gestureOwning: outputInput.pressed
+        profile: HintProfiles.DragScrub
+    }
     MouseArea {
+        id: outputInput
         anchors.fill: parent
         hoverEnabled: true
         property real dragLastY: 0
         property real stepAccumulator: 0
+        property point lastPoint: Qt.point(0, 0)
         onPressed: mouse => {
             dragLastY = mouse.y
             stepAccumulator = 0
+            lastPoint = Qt.point(mouse.x, mouse.y)
             dial.forceActiveFocus(Qt.MouseFocusReason)
         }
         onPositionChanged: mouse => {
             if (!pressed) return
+            lastPoint = Qt.point(mouse.x, mouse.y)
             const rate = mouse.modifiers & Qt.ShiftModifier ? 0.2 : 0.5
             stepAccumulator += (mouse.y - dragLastY) * rate
             dragLastY = mouse.y
@@ -83,6 +94,10 @@ Item {
                 dial.valueCommitted(Math.max(0, Math.min(100, dial.value + steps)))
             }
         }
+        onReleased: mouse => outputHover.settleRelease(
+            dial.mapToItem(null, mouse.x, mouse.y))
+        onCanceled: outputHover.settleRelease(
+            dial.mapToItem(null, lastPoint.x, lastPoint.y))
         onWheel: wheel => {
             dial.valueCommitted(Math.max(0, Math.min(100,
                 dial.value + Math.trunc(wheel.angleDelta.y / 120) * 10)))

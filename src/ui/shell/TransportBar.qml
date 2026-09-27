@@ -376,6 +376,7 @@ Rectangle {
             colors: bar.colors
             baseFontPx: bar.baseFontPx
             value: bar.presenter.outputVolume
+            hintService: bar.shell.mouseHints
             visible: bar.outputFits
             Accessible.description: qsTr("Does not change the song volume")
             Layout.preferredWidth: implicitWidth
