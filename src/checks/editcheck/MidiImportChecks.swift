@@ -1,5 +1,7 @@
 import Foundation
 import PorydawCore
+import PorydawCoreCheckNative
+import PorydawProject
 
 func importAnalysis(_ report: CheckReport) {
     let file = MidiFile(division: 25, chunks: [MidiChunk(), MidiChunk(events: [
@@ -318,6 +320,170 @@ func importTransforms(_ report: CheckReport) {
         report.expectEqual(expected: "Tick rescale to division 48 exceeds 32-bit tick range",
                            actual: String(describing: error), cppID: overflowID,
                            what: "overflow describes the division and tick limit")
+    }
+}
+
+func importProjectRoundtrip(_ report: CheckReport) {
+    let roundtripID = "onboardcheck/OnboardingTest::importRoundtrip"
+    let compileID = "onboardcheck/OnboardingTest::compilesThroughMid2agb"
+    let fixtureFlags = ["-E", "-R50", "-G_fixture_rich", "-V100"]
+    do {
+        try withTempProjectCopy(prefix: "midi-import") { root in
+            let midiDir = root.appendingPathComponent("sound/songs/midi", isDirectory: true)
+            let cfg = midiDir.appendingPathComponent("midi.cfg")
+            let flags: [String]
+            do {
+                guard let parsed = MidiCfg.parse(try Data(contentsOf: cfg))["mus_route101"]?.rawFlags,
+                      parsed == fixtureFlags else {
+                    report.fail(roundtripID, "staged route101 MIDI flags are missing or invalid")
+                    return
+                }
+                flags = parsed
+            } catch {
+                report.fail(roundtripID, "staged midi.cfg could not be read: \(error)")
+                return
+            }
+            guard let fixturePath = CheckEnvironment.fixturePath("test_midis/external_import.mid") else {
+                report.fail(roundtripID, "staged external_import.mid is missing")
+                return
+            }
+            let fixture = URL(fileURLWithPath: fixturePath)
+            var imported: MidiFile
+            do {
+                imported = try MidiFile.decode(Array(Data(contentsOf: fixture)))
+                try MidiImport.rescaleDivision(&imported, to: 24)
+            } catch {
+                report.fail(roundtripID, "roundtrip MIDI source could not be decoded or rescaled: \(error)")
+                return
+            }
+
+            let label = "mus_onboardcheck_import"
+            let midi = midiDir.appendingPathComponent(label + ".mid")
+            do {
+                try Data(imported.encoded()).write(to: midi)
+                try MidiCfg.writeMidiCfgLine(midiDir: midiDir, label: label, flags: flags)
+            } catch {
+                report.fail(roundtripID, "import MIDI or midi.cfg could not be persisted: \(error)")
+                return
+            }
+            let reread: MidiFile
+            let serialized: Data
+            let repeatedBytes: Data
+            do {
+                serialized = try Data(contentsOf: midi)
+                reread = try MidiFile.decode(Array(serialized))
+                let repeatFile = midiDir.appendingPathComponent(label + "_repeat.mid")
+                try Data(reread.encoded()).write(to: repeatFile)
+                repeatedBytes = try Data(contentsOf: repeatFile)
+            } catch {
+                report.fail(roundtripID, "persisted import or repeat file could not be read: \(error)")
+                return
+            }
+            // The complete opaque SMF stream must survive disk decode and re-encode unchanged.
+            report.expect(repeatedBytes == serialized, cppID: roundtripID,
+                          message: "persisted imported MIDI re-encodes to identical complete file bytes")
+            report.expect(reread.division == 24, cppID: roundtripID,
+                          message: "persisted imported MIDI retains division 24")
+            report.expect(reread.chunks.count == 3, cppID: roundtripID,
+                          message: "persisted imported MIDI retains all three fixture chunks")
+
+            let store = ProjectStore(projectRoot: root)
+            guard case .success(let opened) = awaitValue({ try await store.open() }) else {
+                report.fail(roundtripID, "copied project could not be opened")
+                return
+            }
+            let enumerated = opened.songs.contains { $0.label == label }
+            report.expect(enumerated, cppID: roundtripID,
+                          message: "A093 copied project song list discovers the persisted import label")
+            guard enumerated else { return }
+            guard case .success(let song) = awaitValue({
+                try await store.songMeta(label: label)
+            }) else {
+                report.fail(roundtripID, "discovered import metadata could not be read")
+                return
+            }
+            let playable = song.isPlayable && !song.registered && song.hasCfg &&
+                song.midPath?.hasSuffix(
+                    "/\(root.lastPathComponent)/sound/songs/midi/mus_onboardcheck_import.mid") == true &&
+                song.cfg.rawFlags == fixtureFlags
+            report.expect(playable, cppID: roundtripID,
+                          message: "A094 imported song is playable and unregistered with persisted MIDI path and fixture flags")
+            guard playable, let midPath = song.midPath else { return }
+            let persisted: MidiFile
+            do {
+                persisted = try MidiFile.decode(Array(Data(contentsOf: URL(fileURLWithPath: midPath))))
+            } catch {
+                report.fail(roundtripID, "discovered MIDI path could not be loaded: \(error)")
+                return
+            }
+            let loaded = MainActor.assumeIsolated {
+                let document = SongDocument(file: persisted, config: song.cfg,
+                                            source: SongSource(label: song.label, midiPath: midPath,
+                                                               hasConfig: song.hasCfg),
+                                            trackBudget: opened.trackBudgetFor(song: song))
+                return (document.rawChunks.map { $0.events.count },
+                        document.state.tempo.count, document.engineTracks.usedTrackCount)
+            }
+            report.expect(loaded.0 == [0, 18, 6] && loaded.1 == 1, cppID: roundtripID,
+                          message: "A095 persisted imported document loads one conductor tempo and both complete event tracks")
+            report.expect(loaded.2 == 2, cppID: roundtripID,
+                          message: "A096 persisted imported song loads exactly two engine tracks")
+
+            let blankLabel = "mus_onboardcheck_compile_blank"
+            let blank = MidiFile(division: 24, chunks: [
+                MidiChunk(events: [
+                    .meta(type: 0x51, data: [0x07, 0xA1, 0x20]),
+                    .meta(type: 0x58, data: [4, 2, 24, 8]),
+                ], endTick: 96),
+                MidiChunk(events: [
+                    .channel(status: 0xC0, data0: 0),
+                    .channel(status: 0xB0, data0: 7, data1: 100),
+                ], endTick: 96),
+            ])
+            do {
+                try Data(blank.encoded()).write(to: midiDir.appendingPathComponent(blankLabel + ".mid"))
+                try MidiCfg.writeMidiCfgLine(midiDir: midiDir, label: blankLabel, flags: flags)
+                _ = try SongRegistration.register(root: root.path, label: blankLabel,
+                                                  constant: "MUS_ONBOARDCHECK_COMPILE_BLANK",
+                                                  player: "MUSIC_PLAYER_BGM")
+            } catch {
+                report.fail(compileID, "blank compiler input could not be persisted or registered: \(error)")
+                return
+            }
+            let blankResult = root.path.withCString { path in
+                blankLabel.withCString { pdc_check_compile_saved_midi(path, $0) }
+            }
+
+            var compileInput: MidiFile
+            do {
+                compileInput = try MidiFile.decode(Array(Data(contentsOf: fixture)))
+                try MidiImport.rescaleDivision(&compileInput, to: 24)
+            } catch {
+                report.fail(compileID, "imported compiler input could not be decoded or rescaled: \(error)")
+                return
+            }
+            report.expect(compileInput.division == 24, cppID: compileID,
+                          message: "A100 imported compiler input rescales to division 24")
+            let importedLabel = "mus_onboardcheck_compile_imported"
+            do {
+                try Data(compileInput.encoded()).write(
+                    to: midiDir.appendingPathComponent(importedLabel + ".mid"))
+                try MidiCfg.writeMidiCfgLine(midiDir: midiDir, label: importedLabel, flags: flags)
+                _ = try SongRegistration.register(root: root.path, label: importedLabel,
+                                                  constant: "MUS_ONBOARDCHECK_COMPILE_IMPORTED",
+                                                  player: "MUSIC_PLAYER_BGM")
+            } catch {
+                report.fail(compileID, "imported compiler input could not be persisted or registered: \(error)")
+                return
+            }
+            let importedResult = root.path.withCString { path in
+                importedLabel.withCString { pdc_check_compile_saved_midi(path, $0) }
+            }
+            report.expect(blankResult == 1 && importedResult == 1, cppID: compileID,
+                          message: "A102 blank and rescaled imported songs both compile through real mid2agb")
+        }
+    } catch {
+        report.fail(roundtripID, "private import project could not be copied: \(error)")
     }
 }
 

@@ -2,19 +2,19 @@ Assertion correspondence: onboardcheck/import.cpp
 
 Reference revision: f7a01dba0d8595d9fc4070f1767d69d8d9ed76a8
 Deleted in: S6 flip cutover (feature/swift-project-store, base 2d1c92d0)
-Retirement: historical deletion record only; the deleted C++ source above is recoverable from the Reference revision and Original SHA-256, never from HEAD. The dispositions and S citations below were established while the file was live and were not re-verified in this cutover; no execution or parity claim is made by this record.
+Retirement: historical deletion record only; the deleted C++ source above is recoverable from the Reference revision and Original SHA-256, never from HEAD. A079–A102 were reconciled against the frozen Swift counterpart hashes below and Task149's swiftcore-midiimport PASS report; semantic correspondence is per-row, and proof parsing alone is not parity evidence.
 Original: src/checks/onboardcheck/import.cpp
 Original SHA-256: b0831014eeca2f2069d1bbf87af241322c7c51b605133d45381b76c72800ac48
-Swift counterpart: src/checks/editcheck/EventChecks.swift (importAnalysis/importTransforms, the onboardcheck import predicates executed by runMidiImportSuite)
+Swift counterpart: src/checks/editcheck/MidiImportChecks.swift (importAnalysis/importTransforms/importProjectRoundtrip; SHA-256 421a94dfc81a38b2d074c669120b7ee6f27311b0dc5e6f0feade23f266084a36), invoked by EventChecks.swift::runMidiImportSuite (SHA-256 52b74cb3eaa149e6a002c1ee68d837568421f8c60ce001cf42fd2b6ce6844820).
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Site tally: 102 sites (51 MATCHED, 51 GAP).
+Site tally: 102 sites (57 MATCHED, 12 NATIVE-SETUP, 33 GAP).
 
 
 
-Command: deno task verify --filter swiftcore --verbose
-Result: PASS (all harnesses in 10.26s) -- controller-run integrated lane against the frozen EventChecks.swift revision pinned above.
-Focused run: deno task verify --filter=swiftcore --verbose --qt midiImport -v2 -> "Totals: 3 passed, 0 failed" with 99 Swift predicate callbacks (implementer-run); deno task lsp:swift clean. Not re-run by this ledger pass.
+Command: /usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-midiimport --verbose
+Result: PASS (build: ok 0.08s; swiftcore-midiimport 0.11s; run_checks PASS, all harnesses in 0.12s; Task149 implementer report; not rerun by ledger pass).
+Focused run: same swiftcore-midiimport lane above, including persisted roundtrip and compiler outcomes (Task149 implementer report). Not rerun by this ledger pass.
 
 A001 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:28
 Disposition: MATCHED
@@ -579,19 +579,8 @@ Original expression:
   QCOMPARE(analysis->currentIndex(), identity->currentIndex());
 
 A079 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:294
-Disposition: GAP
-Mapping/reason: checks::ProjectFixture::copyOf staging (temporary project copy) has native-only ingress in this suite; coreEditCorpusSongs stages through the Deno fixture staging instead, and no Swift predicate asserts that the copy succeeds.
-Source context since previous assertion:
-
-  }
-
-  void OnboardingTest::importRoundtrip()
-  {
-      QString error;
-      std::unique_ptr<checks::ProjectFixture> fixture = copyProject(error);
-
-Original expression:
-  QVERIFY2(fixture, qPrintable(error));
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP: temporary-project copy is staging only; the Swift copy failure is a fail-fast setup guard, not an independent behavior predicate.
 
 A080 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:297
 Disposition: MATCHED
@@ -602,73 +591,36 @@ Disposition: MATCHED
 Mapping: S034
 
 A082 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:301
-Disposition: GAP
-Mapping/reason: defaultCfg(root, cfg) reads the project midi.cfg through the native fixture; midi.cfg parsing is outside MidiImport/MidiFile model scope and no Swift predicate asserts it.
-Source context since previous assertion:
-
-      SongCfg cfg;
-
-Original expression:
-  QVERIFY2(defaultCfg(root, cfg, error), qPrintable(error));
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP: project midi.cfg parsing and the read-error guard are setup; the relevant persisted fixture flags are asserted by A094.
 
 A083 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:304
-Disposition: GAP
-Mapping/reason: writeFile of the rescaled SMF into the project midi directory is native disk and project-directory plumbing outside MidiImport/MidiFile model scope; no Swift predicate writes that path.
-Source context since previous assertion:
-
-      const QString label = QStringLiteral("mus_onboardcheck_import");
-      const QString mid = midiDirectory(root) + QStringLiteral("/") + label + QStringLiteral(".mid");
-
-Original expression:
-  QVERIFY2(imported.writeFile(mid, &error), qPrintable(error));
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP: persisting the imported MIDI is file-staging plumbing; Swift persistence failure is fail-fast setup, while byte-for-byte persisted content is proved separately.
 
 A084 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:305
-Disposition: GAP
-Mapping/reason: SongRegistry::writeMidiCfgLine registers the label in midi.cfg; no Swift predicate writes or verifies a midi.cfg line.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY2(SongRegistry::writeMidiCfgLine(midiDirectory(root), label, cfg.rawFlags, &error),
-               qPrintable(error));
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP: writing the fixture-derived midi.cfg entry is setup plumbing; the persisted flags outcome is independently checked by A094.
 
 A085 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:308
-Disposition: GAP
-Mapping/reason: readFile(mid) plus error.isEmpty is native disk read-back; the Swift roundtrip predicates cover only the in-memory encode/decode (S030-S032).
-Source context since previous assertion:
-
-      const QByteArray serialized = readFile(mid, error);
-
-Original expression:
-  QVERIFY2(error.isEmpty(), qPrintable(error));
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP: the first disk-read error channel is a fail-fast setup guard; the persisted bytes and decoded outcome are asserted independently.
 
 A086 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:310
 Disposition: MATCHED
 Mapping: S033
 
 A087 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:313
-Disposition: GAP
-Mapping/reason: writeFile of the reread SMF to the _repeat.mid path is native disk plumbing outside MidiImport/MidiFile model scope; no Swift predicate writes a second file.
-Source context since previous assertion:
-
-      const QString repeatPath =
-          midiDirectory(root) + QStringLiteral("/") + label + QStringLiteral("_repeat.mid");
-
-Original expression:
-  QVERIFY2(reread.writeFile(repeatPath, &error), qPrintable(error));
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP: writing the repeat file is staging plumbing; Swift write failure is fail-fast setup, and repeat-byte equality is asserted separately.
 
 A088 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:314
 Disposition: MATCHED
 Mapping: S030
 
 A089 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:315
-Disposition: GAP
-Mapping/reason: error.isEmpty() after the second readFile is the native disk error channel; no Swift predicate observes it.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY2(error.isEmpty(), qPrintable(error));
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP: the second disk-read error channel is a fail-fast setup guard; repeat-byte equality is asserted independently.
 
 A090 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:316
 Disposition: MATCHED
@@ -679,133 +631,48 @@ Disposition: MATCHED
 Mapping: S032
 
 A092 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:319
-Disposition: GAP
-Mapping/reason: DecompProject::open(root) is native project-database startup outside MidiImport/MidiFile model scope; no Swift predicate opens the decomp project in this suite.
-Source context since previous assertion:
-
-      DecompProject project;
-
-Original expression:
-  QVERIFY2(project.open(root, &error), qPrintable(error));
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP: opening the project store is a scenario setup guard; Swift open failure terminates the path before distinct discovery assertions A093 and A094.
 
 A093 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:324
-Disposition: GAP
-Mapping/reason: project.songs() enumeration must surface the newly written label; DecompProject song-list behavior has no Swift predicate here.
-Source context since previous assertion:
-
-      const SongInfo *song = nullptr;
-      for (const SongInfo &candidate : project.songs())
-          if (candidate.label == label)
-              song = &candidate;
-
-Original expression:
-  QVERIFY(song);
+Disposition: MATCHED
+Mapping: S054
 
 A094 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:325
-Disposition: GAP
-Mapping/reason: song->isPlayable() && !song->registered is native SongInfo capability classification from the project view; no Swift predicate classifies this label.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(song->isPlayable() && !song->registered);
+Disposition: MATCHED
+Mapping: S055
 
 A095 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:327
-Disposition: GAP
-Mapping/reason: SongDocument::load(*song) loads through the native project SongInfo; Swift builds SongDocument from a decoded MidiFile, so no predicate exercises this path.
-Source context since previous assertion:
-
-      SongDocument document;
-
-Original expression:
-  QVERIFY2(document.load(*song, &error), qPrintable(error));
+Disposition: MATCHED
+Mapping: S056
 
 A096 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:328
-Disposition: GAP
-Mapping/reason: document.engineTrackCount() == 2 after that load; no Swift predicate loads this song and counts engine tracks.
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(document.engineTrackCount(), 2);
+Disposition: MATCHED
+Mapping: S057
 
 A097 | OnboardingTest::compilesThroughMid2agb | src/checks/onboardcheck/import.cpp:343
-Disposition: GAP
-Mapping/reason: no executing harness asserts mid2agb compilation of these fixtures. The compilesThroughMid2agb job has no executor: the onboardcheck native harness is absent from every CMake target and from checkcatalog.cpp.
-Source context since previous assertion:
-
-  }
-
-  void OnboardingTest::compilesThroughMid2agb_data()
-  {
-      QTest::addColumn<QString>("kind");
-      QTest::newRow("blank") << QStringLiteral("blank");
-      QTest::newRow("imported") << QStringLiteral("imported");
-  }
-
-  void OnboardingTest::compilesThroughMid2agb()
-  {
-      QFETCH(QString, kind);
-      QString error;
-      std::unique_ptr<checks::ProjectFixture> fixture = copyProject(error);
-
-Original expression:
-  QVERIFY2(fixture, qPrintable(error));
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP: the compiler journey project copy is staging only; Swift copy failure is a fail-fast setup guard, not an independent compiler outcome.
 
 A098 | OnboardingTest::compilesThroughMid2agb | src/checks/onboardcheck/import.cpp:346
-Disposition: GAP
-Mapping/reason: no executing harness asserts mid2agb compilation of these fixtures. defaultCfg(root, cfg) reads the project midi.cfg for the compile job; no executing lane asserts it.
-Source context since previous assertion:
-
-      const QString root = fixture->root();
-      SongCfg cfg;
-
-Original expression:
-  QVERIFY2(defaultCfg(root, cfg, error), qPrintable(error));
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP: the compiler journey config read is staging; Swift read failure is a fail-fast setup guard, while each variant’s compile result is asserted by A102.
 
 A099 | OnboardingTest::compilesThroughMid2agb | src/checks/onboardcheck/import.cpp:352
-Disposition: GAP
-Mapping/reason: no executing harness asserts mid2agb compilation of these fixtures. The imported row fixture read has an import-model predicate (S011), but the blank row (SongRegistry::blankSong()) and this compile-job staging execute in no lane.
-Source context since previous assertion:
-
-      const QString label = QStringLiteral("mus_onboardcheck_compile_") + kind;
-      SmfFile midi;
-      if (kind == QStringLiteral("blank"))
-          midi = SongRegistry::blankSong();
-      else
-
-Original expression:
-  QVERIFY2(midiFixture(QStringLiteral("external_import.mid"), midi, error),
-                   qPrintable(error));
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP: decoding the imported compiler fixture is input staging; Swift fixture/decode failure is a fail-fast guard, with rescaling proved by A100 and compilation by A102.
 
 A100 | OnboardingTest::compilesThroughMid2agb | src/checks/onboardcheck/import.cpp:355
-Disposition: GAP
-Mapping/reason: no executing harness asserts mid2agb compilation of these fixtures. This row-conditional rescale to division 24 runs only inside the uncompiled mid2agb job; no lane asserts it.
-Source context since previous assertion:
-
-      if (kind == QStringLiteral("imported"))
-
-Original expression:
-  QVERIFY2(rescaleDivision(&midi, 24, &error), qPrintable(error));
+Disposition: MATCHED
+Mapping: S058
 
 A101 | OnboardingTest::compilesThroughMid2agb | src/checks/onboardcheck/import.cpp:357
-Disposition: GAP
-Mapping/reason: no executing harness asserts mid2agb compilation of these fixtures. Writing the compile fixture into the project midi directory is disk plumbing with no executing harness.
-Source context since previous assertion:
-
-      const QString mid = midiDirectory(root) + QStringLiteral("/") + label + QStringLiteral(".mid");
-
-Original expression:
-  QVERIFY2(midi.writeFile(mid, &error), qPrintable(error));
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP: writing and registering compiler inputs is staging plumbing; Swift persistence/registration failures are fail-fast guards, and both compile outcomes are asserted by A102.
 
 A102 | OnboardingTest::compilesThroughMid2agb | src/checks/onboardcheck/import.cpp:358
-Disposition: GAP
-Mapping/reason: no executing harness asserts mid2agb compilation of these fixtures. compile() shells out to the mid2agb binary; no lane compiles SongRegistry::blankSong() or the rescaled external_import.mid (the swiftcore mid2agb runner at MidiChecks.swift compiles project songs and synthetic XCMD traffic only).
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY2(compile(root, mid, cfg.rawFlags, error), qPrintable(error));
+Disposition: MATCHED
+Mapping: S059
 
 Remaining original source (closing sequence and helper bodies):
 
@@ -813,8 +680,7 @@ Remaining original source (closing sequence and helper bodies):
 
 
 Swift assertion predicates
-S identifiers below are the report.expect*/report.fail calls in
-src/checks/editcheck/EventChecks.swift carrying onboardcheck cppIDs. S001-S053
+S identifiers below are the report.expect*/report.fail calls in the Swift checks carrying onboardcheck cppIDs. S001-S059
 all execute under runMidiImportSuite (CoreCheckSupport suite 8, QtTest slot
 midiImport), except S001, which executes under the event-edits suite path
 (trackNameRoles) and carries its cppID as oracle lineage only: it observes
@@ -979,3 +845,21 @@ Anchor: message "duplicate fixture second pass is idempotent"
 
 S053 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "overflow describes the division and tick limit"
+ 
+S054 | importProjectRoundtrip:397 enumerated = opened.songs.contains { $0.label == label } | src/checks/editcheck/MidiImportChecks.swift
+Anchor: message "A093 copied project song list discovers the persisted import label"
+
+S055 | importProjectRoundtrip:410 playable = song.isPlayable && !song.registered && song.hasCfg && song.midPath?.hasSuffix("/\(root.lastPathComponent)/sound/songs/midi/mus_onboardcheck_import.mid") == true && song.cfg.rawFlags == fixtureFlags | src/checks/editcheck/MidiImportChecks.swift
+Anchor: message "A094 imported song is playable and unregistered with persisted MIDI path and fixture flags"
+
+S056 | importProjectRoundtrip:427 loaded.0 == [0, 18, 6] && loaded.1 == 1 | src/checks/editcheck/MidiImportChecks.swift
+Anchor: message "A095 persisted imported document loads one conductor tempo and both complete event tracks"
+
+S057 | importProjectRoundtrip:429 loaded.2 == 2 | src/checks/editcheck/MidiImportChecks.swift
+Anchor: message "A096 persisted imported song loads exactly two engine tracks"
+
+S058 | importProjectRoundtrip:465 compileInput.division == 24 | src/checks/editcheck/MidiImportChecks.swift
+Anchor: message "A100 imported compiler input rescales to division 24"
+
+S059 | importProjectRoundtrip:482 blankResult == 1 && importedResult == 1 | src/checks/editcheck/MidiImportChecks.swift
+Anchor: message "A102 blank and rescaled imported songs both compile through real mid2agb"

@@ -49,6 +49,7 @@ func runMidiImportSuite(_ report: CheckReport) {
     importAnalysis(report)
     importSmfReportRows(report)
     importTransforms(report)
+    importProjectRoundtrip(report)
 }
 
 func chunksSortedByTick(_ file: MidiFile) -> Bool {
