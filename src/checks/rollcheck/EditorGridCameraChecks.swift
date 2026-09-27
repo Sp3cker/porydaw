@@ -57,55 +57,93 @@ func runEditorGridCameraChecks(_ report: CheckReport, session: DocumentSession) 
     checkProjection(report, session: session, grid: grid)
     checkIsolation(report, session: session, grid: grid, counters: counters)
     checkTrackOwnerRemap(report, session: session)
-    checkFractionalGridLattice(report)
+    checkFractionalGridLattice(report, session: session)
     checkContentWindowBoundaryReversal(report)
 }
 
 @MainActor
-private func checkFractionalGridLattice(_ report: CheckReport) {
-    let axis = TimeAxis(map: TimeMap(ticksPerBeat: 24, lengthTicks: 384))
-    let metrics = GridMetrics(baseFontPx: 13, dpr: 1, width: 640, height: 320,
-                              timeAxis: axis)
-    var camera = EditorCamera(ticksPerBeat: 24, lengthTicks: 384, viewportWidth: 640,
-                              rollHeight: 320, limits: GridCameraPolicy.limits(baseFontPx: 13))
-    _ = camera.setTimeZoom(384)
-    var grid = RollGrid(axis: axis, clockTicks: 1, metrics: metrics)
-    let stride = grid.gridTicksAt(96, camera: camera)
-    report.expect(stride > 0 && stride < axis.segmentAt(96).beatTicks,
-                  cppID: latticeID, message: "segment lattice stride is positive")
+private func checkFractionalGridLattice(_ report: CheckReport, session: DocumentSession) {
+    let originalCamera = session.camera
+    let originalSelection = session.grid.selection
+    defer {
+        session.grid.setSelection(originalSelection)
+        _ = session.mutateCamera { $0 = originalCamera }
+    }
+    _ = session.mutateCamera { _ = $0.setTimeZoom(384) }
+    session.grid.setSelection(.auto)
+    let axis = session.grid.axis
+    let segment = axis.segmentAt(96)
+    report.expect(segment.start <= 96, cppID: latticeID,
+                  message: "A018 fractional window segment begins at or before tick 96")
+    report.expect(segment.next >= 289, cppID: latticeID,
+                  message: "A019 fractional window segment reaches past tick 289")
+    let left = 96.75
+    let right = 289.25
+    let begin = TimeDefaults.tick(from: left)
+    let end = Tick(ceil(right) + 1)
     var seen: [Tick] = []
-    grid.forEachSubdivision(from: 96, to: 289, camera: camera) { tick, _ in seen.append(tick) }
-    report.expect(!seen.isEmpty && seen.allSatisfy { $0 >= 96 && $0 < 289 && $0 % stride == 0
-        && $0 % 24 != 0 }, cppID: latticeID,
-                  message: "visible auto sub-grid is culled to the viewport and skips beats")
-
-    _ = camera.setTimeZoom(192)
-    grid.setSelection(.musical(16))
-    let snap = grid.snapTicksAt(96, camera: camera)
-    let drawn = grid.gridTicksAt(96, camera: camera)
-    report.expect(snap >= 3 && 24 % snap == 0 && drawn > 1 && 96 % drawn == 0,
+    session.grid.forEachSubdivision(from: begin, to: end, camera: session.camera) { tick, _ in
+        seen.append(tick)
+    }
+    var expected: [Tick] = []
+    for tick in Tick(96)..<Tick(291) where tick % 24 != 0 {
+        expected.append(tick)
+    }
+    report.expect(seen == expected, cppID: latticeID,
+                  message: "A022 fractional window emits the independently enumerated lattice")
+    let stride = session.grid.gridTicksAt(96, camera: session.camera)
+    report.expect(stride > 0 && stride < segment.beatTicks,
+                  cppID: latticeID, message: "segment lattice stride is positive")
+    var visible: [Tick] = []
+    session.grid.forEachSubdivision(from: 96, to: 289, camera: session.camera) { tick, _ in
+        visible.append(tick)
+    }
+    report.expect(!visible.isEmpty && visible.allSatisfy {
+        $0 >= 96 && $0 < 289 && $0 % stride == 0 && $0 % 24 != 0
+    }, cppID: latticeID, message: "visible auto sub-grid is culled to the viewport and skips beats")
+    _ = session.mutateCamera { _ = $0.setTimeZoom(192) }
+    session.grid.setSelection(.musical(16))
+    let snap = session.grid.snapTicksAt(96, camera: session.camera)
+    let coarse = session.grid.gridTicksAt(96, camera: session.camera)
+    report.expect(snap >= 3 && 24 % snap == 0 && coarse > 1 && 96 % coarse == 0,
                   cppID: latticeID, message: "coarse lattice divides the beat")
-    report.expect(grid.nextSubdivisionTickAfter(96, camera: camera) == 96 + drawn
-        && grid.nextSubdivisionTickAfter(97, camera: camera) == 96 + drawn,
+    report.expect(coarse < segment.beatTicks, cppID: latticeID,
+                  message: "A025 drawn coarse stride remains below one beat")
+    report.expect(UInt64(coarse) * 2 < UInt64(segment.next - 96), cppID: latticeID,
+                  message: "A029 segment has room for two subdivision steps")
+    report.expect(session.grid.nextSubdivisionTickAfter(96, camera: session.camera) == 96 + coarse
+        && session.grid.nextSubdivisionTickAfter(97, camera: session.camera) == 96 + coarse,
                   cppID: latticeID, message: "subdivision restarts at the segment anchor")
     let midpoint = 96.0 + Double(snap) / 2
-    report.expect(grid.snapTick(midpoint, camera: camera) == 96
-        && grid.snapTick(midpoint - 0.25, camera: camera) == 96
-        && grid.snapTick(midpoint + 0.25, camera: camera) == 96 + snap,
+    report.expect(session.grid.snapTick(midpoint, camera: session.camera) == 96
+        && session.grid.snapTick(midpoint - 0.25, camera: session.camera) == 96
+        && session.grid.snapTick(midpoint + 0.25, camera: session.camera) == 96 + snap,
                   cppID: latticeID, message: "auto tie rounds down")
-    report.expectEqual(expected: 96, actual: grid.snapTickDown(midpoint + 0.25, camera: camera),
+    report.expectEqual(expected: 96,
+                       actual: session.grid.snapTickDown(midpoint + 0.25, camera: session.camera),
                        cppID: latticeID, what: "tie down is floor")
     report.expectEqual(expected: 96 + snap,
-                       actual: grid.snapTickUp(midpoint - 0.25, camera: camera),
+                       actual: session.grid.snapTickUp(midpoint - 0.25, camera: session.camera),
                        cppID: latticeID, what: "tie up is ceil")
 
-    grid.axis = TimeAxis(map: TimeMap(ticksPerBeat: 24, lengthTicks: 384,
-        timeSigs: [TimeSigPoint(tick: 102, numerator: 5, denomPow2: 3)]))
-    report.expect(grid.snapTickDown(103.5, camera: camera) == 102
-        && grid.snapTickUp(101.5, camera: camera) == 102
-        && grid.nextSubdivisionTickAfter(101, camera: camera) == 102
-        && grid.nextSubdivisionTickAfter(102, camera: camera) == 102 + drawn,
+    let document = session.document
+    document.setTimeSignature(tick: 102, numerator: 5, denominatorPower: 3)
+    defer {
+        _ = document.history.undoDocument()
+        _ = document.history.undoDocument()
+    }
+    report.expect(session.grid.axis.segmentAt(102).start == 102, cppID: latticeID,
+                  message: "A039 inserted 5/8 seam starts its segment at tick 102")
+    report.expect(session.grid.axis.segmentAt(101).next == 102, cppID: latticeID,
+                  message: "A040 pre-seam segment ends at tick 102")
+    report.expect(session.grid.snapTickDown(103.5, camera: session.camera) == 102
+        && session.grid.snapTickUp(101.5, camera: session.camera) == 102
+        && session.grid.nextSubdivisionTickAfter(101, camera: session.camera) == 102
+        && session.grid.nextSubdivisionTickAfter(102, camera: session.camera) == 102 + coarse,
                   cppID: latticeID, message: "sub-grid restarts at the signature seam")
+    document.deleteTimeSignature(at: 102)
+    report.expect(session.grid.axis.segmentAt(102) == axis.segmentAt(102), cppID: latticeID,
+                  message: "A049 deleting the signature restores the plain segment grid")
 }
 
 @MainActor

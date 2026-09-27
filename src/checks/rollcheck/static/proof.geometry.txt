@@ -21,6 +21,15 @@ Narrow form used while iterating: deno task verify --filter swiftcore --qt proje
 Converted-window case cited: src/checks/rollqml/tst_SwiftRollPlots.qml (sha256 b5d3e154b76f6c4a523667124d7d46c08a5dff9d62f5b30d918d674596c1118d, re-pinned for the task-27 other-events band revision: the canonical band layout now subtracts the mounted other-events band height).
 Command: deno task verify:qml-roll --verbose (task-27 other-events band revision)
 Result: PASS; 1/1 ok. Lane-owner observation on the revision now pinned; this bookkeeping pass ran no lane.
+Command: deno task verify --filter swiftcore-projectsession --verbose (task-90 implementer run)
+Result: PASS (implementer-reported GREEN; this ledger pass ran no lane).
+Command: PORYDAW_ROLL_QML_SUITE=tst_SwiftRollWindowing.qml deno task verify:qml-roll --verbose (task-90 implementer run)
+Result: PASS (implementer-reported GREEN; this ledger pass ran no lane).
+Command: deno task verify:shell --verbose (task-90 implementer run)
+Result: PASS; 26/26 ok (implementer-reported GREEN; this ledger pass ran no lane).
+Command: deno task verify --verbose (task-90 implementer full-tree run)
+Result: PASS; 36/36 ok (implementer-reported GREEN; this ledger pass ran no lane).
+Verified fallback-bind Swift SHA-256: 592a4673506dff51f75345ee87ee5e3173a10408fd1edd4f1192652781c813dd (src/checks/rollcheck/static/geometry.swift, re-pinned for task 90: checkFallbackAndSignatureBind S067-S080)
 
 A001 | PianoRollStaticTest::fallbackCamera | src/checks/rollcheck/static/geometry.cpp:117
 Disposition: RETIRED-REPRESENTATION
@@ -85,8 +94,8 @@ Original expression:
   QCOMPARE(window->color(), background)
 
 A009 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:155
-Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/EditorGridCameraChecks.swift asserts the published grid time marks stay inside one culling window and cover the visible plot (suite 10). Unproved condition: the unsignatured grid publishes exactly 16 lines over 0..96 ticks.
+Disposition: MATCHED
+Mapping: S067
 Source context since previous assertion:
   ;
   }
@@ -109,8 +118,8 @@ Original expression:
   QCOMPARE(lines.size(), size_t(16))
 
 A010 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:158
-Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/EditorGridCameraChecks.swift asserts the published grid time marks positions (suite 10). Unproved condition: each fallback line sits at index * kTicksPerBeat (24).
+Disposition: MATCHED
+Mapping: S068
 Source context since previous assertion:
   ;
       for (int index = 0; index < 16; ++index) {
@@ -119,32 +128,32 @@ Original expression:
   QCOMPARE(line.tick, uint64_t(index) * kTicksPerBeat)
 
 A011 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:159
-Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/EditorGridCameraChecks.swift asserts the published grid time marks positions (suite 10). Unproved condition: every fourth fallback line is a bar line.
+Disposition: MATCHED
+Mapping: S069
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(line.bar, index % 4 == 0)
 
 A012 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:160
-Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/EditorGridCameraChecks.swift asserts the published grid time marks positions (suite 10). Unproved condition: fallback bar numbers are index / 4 + 1.
+Disposition: MATCHED
+Mapping: S070
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(line.barNumber, index / 4 + 1)
 
 A013 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:161
-Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/EditorGridCameraChecks.swift asserts the published grid time marks positions (suite 10). Unproved condition: fallback beat numbers are index % 4 + 1.
+Disposition: MATCHED
+Mapping: S071
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(line.beatNumber, index % 4 + 1)
 
 A014 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:164
-Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift asserts GridSegment.start/beatsPerBar/beatTicks on a 7/8 axis built from the rebuilt timeline (suite 10). Unproved condition: the unsignatured fallback segment at tick 0 starts at 0.
+Disposition: MATCHED
+Mapping: S072
 Source context since previous assertion:
   ;
       }
@@ -153,24 +162,24 @@ Original expression:
   QCOMPARE(segment.start, uint64_t(0))
 
 A015 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:165
-Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift asserts GridSegment.start/beatsPerBar/beatTicks on a 7/8 axis (suite 10); it does not assert the next boundary. Unproved condition: the unsignatured fallback segment next is the kNoTick sentinel.
+Disposition: MATCHED
+Mapping: S073
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(segment.next, CoreTimeDefaults::kNoTick)
 
 A016 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:166
-Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift asserts GridSegment.beatTicks on a 7/8 axis (suite 10). Unproved condition: the unsignatured fallback segment beatTicks is 24.
+Disposition: MATCHED
+Mapping: S074
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(segment.beatTicks, kTicksPerBeat)
 
 A017 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:167
-Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift asserts GridSegment.beatsPerBar on a 7/8 axis (suite 10). Unproved condition: the unsignatured fallback segment beatsPerBar is 4.
+Disposition: MATCHED
+Mapping: S075
 Source context since previous assertion:
   ;
 Original expression:
@@ -433,8 +442,8 @@ A043 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks
 Disposition: RETIRED-REPRESENTATION
 
 A044 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:359
-Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift asserts GridSegment.start on a 7/8 axis built from the rebuilt timeline (suite 10). Unproved condition: the 3/4-bound view segment at tick 0 starts at 0.
+Disposition: MATCHED
+Mapping: S076
 Source context since previous assertion:
   ;
       const qreal offset = rulerPlotOffset(fixture.view);
@@ -458,24 +467,24 @@ Original expression:
   QCOMPARE(segment.start, uint64_t(0))
 
 A045 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:360
-Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift asserts GridSegment.start/beatsPerBar/beatTicks on a 7/8 axis (suite 10); it does not assert the next boundary. Unproved condition: the 3/4-bound segment next is the kNoTick sentinel.
+Disposition: MATCHED
+Mapping: S077
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(segment.next, CoreTimeDefaults::kNoTick)
 
 A046 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:361
-Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift asserts GridSegment.beatTicks on a 7/8 axis (suite 10). Unproved condition: the 3/4-bound segment beatTicks is 24.
+Disposition: MATCHED
+Mapping: S078
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(segment.beatTicks, kTicksPerBeat)
 
 A047 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:362
-Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift asserts GridSegment.beatsPerBar on a 7/8 axis (suite 10). Unproved condition: the 3/4-bound segment beatsPerBar is 3.
+Disposition: MATCHED
+Mapping: S079
 Source context since previous assertion:
   ;
 Original expression:
@@ -498,8 +507,8 @@ Original expression:
   QVERIFY(fixture.view.camera().leadPadPx() > 0.0)
 
 A050 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:366
-Disposition: PARTIAL
-Mapping/reason: Related predicate S066 (src/checks/rollcheck/static/geometry.swift) asserts beat content positions preserved across a 48-TPB bind. Unproved condition: the 3/4 signature bind preserves the view's beat content positions within 1e-6.
+Disposition: MATCHED
+Mapping: S080
 Source context since previous assertion:
   ;
       for (int beat = 1; beat <= 8; ++beat)
@@ -695,3 +704,45 @@ Anchor: message "A039 beat \(beat) retains its display column"
 
 S066 | checkTicksPerBeatKeepsGeometry | src/checks/rollcheck/static/geometry.swift
 Anchor: message "A042 beat \(beat) retains its content coordinate"
+
+S067 | checkFallbackAndSignatureBind | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A009 unsignatured document publishes sixteen beat lines"
+
+S068 | checkFallbackAndSignatureBind | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A010 fallback line positions follow whole beats"
+
+S069 | checkFallbackAndSignatureBind | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A011 every fourth fallback line is a bar"
+
+S070 | checkFallbackAndSignatureBind | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A012 fallback bars use one-based grouping"
+
+S071 | checkFallbackAndSignatureBind | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A013 fallback beats use one-based grouping"
+
+S072 | checkFallbackAndSignatureBind | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A014 fallback segment starts at tick zero"
+
+S073 | checkFallbackAndSignatureBind | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A015 fallback segment runs to the no-tick sentinel"
+
+S074 | checkFallbackAndSignatureBind | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A016 fallback segment uses 24 ticks per beat"
+
+S075 | checkFallbackAndSignatureBind | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A017 fallback segment has four beats per bar"
+
+S076 | checkFallbackAndSignatureBind | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A044 bound 3/4 segment starts at tick zero"
+
+S077 | checkFallbackAndSignatureBind | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A045 bound 3/4 segment runs to the no-tick sentinel"
+
+S078 | checkFallbackAndSignatureBind | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A046 bound 3/4 segment uses 24 ticks per beat"
+
+S079 | checkFallbackAndSignatureBind | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A047 bound 3/4 segment has three beats per bar"
+
+S080 | checkFallbackAndSignatureBind | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A050 binding 3/4 preserves beat content positions"

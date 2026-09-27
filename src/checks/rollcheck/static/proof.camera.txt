@@ -18,18 +18,27 @@ Command: deno task verify:qml-roll --verbose
 Result: PASS; 1/1 ok (controller run recorded before this ledger edit; the edit changes no QML source).
 Command: deno task verify:shell --verbose
 Result: PASS; 11/11 ok (controller run recorded before this ledger edit; the edit changes no shell source).
-Verified Swift SHA-256: 95fb2e80f95bf57e41250632cb8b3e7378fa32be143d02f5bd092313f6029808 (src/checks/rollcheck/static/camera.swift, unchanged by the grid cutover)
-Verified grid-lattice Swift SHA-256: e590e90549b02454a5cd92907aa30df5ab9e2503e82f4fee140ed9ce1511540b (src/checks/rollcheck/EditorGridCameraChecks.swift, re-pinned for the task-34a fractional-lattice rewrite: S067-S074 now assert the positive stride, viewport-culled walk, coarse lattice, segment-anchored subdivisions, tie rounding and signature-seam restart)
+Verified Swift SHA-256: 7e219636f4e88b740ea8922118426a30e2bdee811b9479f433419ac9811bf16b (src/checks/rollcheck/static/camera.swift, re-pinned for task 90: A011/A013/A015 clamp laws, A099 wheel pan, A100 scroll read-back)
+Verified grid-lattice Swift SHA-256: 46f4b0a02e21a797a4d7c077aeddcfca9c41c1c27dc4470af6bada25f210f3fa (src/checks/rollcheck/EditorGridCameraChecks.swift, re-pinned for task 90: S078-S085 assert the segment brackets, independent walk equality, stride bounds, seam boundaries and signature-removal restore over the real session axis)
 Command: deno task verify --filter swiftcore --verbose (task-34a handoff run, locked at /tmp/porydaw-build.lock)
 Result: PASS — implementer-reported 12/37 ok, PASS; seven fractional-camera predicate passes recorded in build/proof-evidence/swiftcore-eventedits.json. This bookkeeping pass ran no lane.
 Verified QML SHA-256: 7a11ea7ca9a6f0450bdc2db5ef318ffedd325c4d527d488a4dded0349dfd5397 (src/checks/rollqml/tst_TimelinePan.qml, last recorded hash); b5d3e154b76f6c4a523667124d7d46c08a5dff9d62f5b30d918d674596c1118d (src/checks/rollqml/tst_SwiftRollPlots.qml, re-pinned for the task-27 other-events band revision: the canonical band layout now subtracts the mounted other-events band height)
 Command: deno task verify:qml-roll --verbose (task-27 other-events band revision)
 Result: PASS; 1/1 ok. Lane-owner observation on the revision now pinned; this bookkeeping pass ran no lane. The roll lane runs tst_SwiftRollPlots.qml test_rollBandGeometryAndLifecycle, recorded in build/proof-evidence/swiftroll-window.json.
+Command: deno task verify --filter swiftcore-projectsession --verbose (task-90 implementer run)
+Result: PASS (implementer-reported GREEN; this ledger pass ran no lane).
+Command: PORYDAW_ROLL_QML_SUITE=tst_SwiftRollWindowing.qml deno task verify:qml-roll --verbose (task-90 implementer run)
+Result: PASS (implementer-reported GREEN; this ledger pass ran no lane).
+Command: deno task verify:shell --verbose (task-90 implementer run)
+Result: PASS; 26/26 ok (implementer-reported GREEN; this ledger pass ran no lane).
+Command: deno task verify --verbose (task-90 implementer full-tree run)
+Result: PASS; 36/36 ok (implementer-reported GREEN; this ledger pass ran no lane).
+Verified roll-windowing QML SHA-256: 07f3bee2b55fd7960c0b7409c0815c6b861bcb5be3608bae4f79cc08fd940a3f (src/checks/rollqml/tst_SwiftRollWindowing.qml, re-pinned for task 90: test_zCameraSurvivesMountedRemapsAndResize with the A091 goToStart cursor predicate)
 Narrow form used while iterating: deno task verify --filter swiftcore --qt projectSession.
 
 A001 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:70
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(NaN, 100.0) returns an empty window.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — QVERIFY(tickRange(nan, 100.0).empty()) pins NaN arithmetic of the deleted songview::detail::tickRange(double, double) ingress (src/ui/songview/detail.cpp:241-250); the Swift walk takes integral Tick bounds (RollGrid.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:309-339) with TimeDefaults.tick(from:) conversion and EditorCamera scroll clamping, so this degenerate window has no callable surface.
 Source context since previous assertion:
   #include "checks/rollcheck/static/tst_pianorollstatic.h"
 
@@ -104,80 +113,80 @@ Original expression:
   QVERIFY(tickRange(nan, 100.0).empty())
 
 A002 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:71
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(0.0, NaN) returns an empty window.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — QVERIFY(tickRange(0.0, nan).empty()) pins NaN arithmetic of the deleted songview::detail::tickRange(double, double) ingress (src/ui/songview/detail.cpp:241-250); the Swift walk takes integral Tick bounds (RollGrid.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:309-339) with TimeDefaults.tick(from:) conversion and EditorCamera scroll clamping, so this degenerate window has no callable surface.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(tickRange(0.0, nan).empty())
 
 A003 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:72
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(+infinity, 100.0) returns an empty window.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — QVERIFY(tickRange(infinity, 100.0).empty()) pins infinite-bound arithmetic of the deleted songview::detail::tickRange(double, double) ingress (src/ui/songview/detail.cpp:241-250); the Swift walk takes integral Tick bounds (RollGrid.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:309-339) with TimeDefaults.tick(from:) conversion and EditorCamera scroll clamping, so this degenerate window has no callable surface.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(tickRange(infinity, 100.0).empty())
 
 A004 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:73
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(0.0, -infinity) returns an empty window.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — QVERIFY(tickRange(0.0, -infinity).empty()) pins infinite-bound arithmetic of the deleted songview::detail::tickRange(double, double) ingress (src/ui/songview/detail.cpp:241-250); the Swift walk takes integral Tick bounds (RollGrid.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:309-339) with TimeDefaults.tick(from:) conversion and EditorCamera scroll clamping, so this degenerate window has no callable surface.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(tickRange(0.0, -infinity).empty())
 
 A005 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:74
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(-64.0, -1.0) returns an empty window.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — QVERIFY(tickRange(-64.0, -1.0).empty()) pins the fully-negative window of the deleted songview::detail::tickRange(double, double) ingress (src/ui/songview/detail.cpp:241-250); the Swift walk takes integral Tick bounds (RollGrid.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:309-339) with TimeDefaults.tick(from:) conversion and EditorCamera scroll clamping, so this degenerate window has no callable surface.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(tickRange(-64.0, -1.0).empty())
 
 A006 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:75
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(48.0, 48.0) returns an empty window.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — QVERIFY(tickRange(48.0, 48.0).empty()) pins the zero-width window of the deleted songview::detail::tickRange(double, double) ingress (src/ui/songview/detail.cpp:241-250); the Swift walk takes integral Tick bounds (RollGrid.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:309-339) with TimeDefaults.tick(from:) conversion and EditorCamera scroll clamping, so this degenerate window has no callable surface.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(tickRange(48.0, 48.0).empty())
 
 A007 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:76
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(64.0, 32.0) returns an empty window.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — QVERIFY(tickRange(64.0, 32.0).empty()) pins the reversed window of the deleted songview::detail::tickRange(double, double) ingress (src/ui/songview/detail.cpp:241-250); the Swift walk takes integral Tick bounds (RollGrid.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:309-339) with TimeDefaults.tick(from:) conversion and EditorCamera scroll clamping, so this degenerate window has no callable surface.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(tickRange(64.0, 32.0).empty())
 
 A008 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:77
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(1.0, 0x1p64) returns an empty window.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — QVERIFY(tickRange(1.0, 0x1p64).empty()) pins the past-ceiling end of the deleted songview::detail::tickRange(double, double) ingress (src/ui/songview/detail.cpp:241-250); the Swift walk takes integral Tick bounds (RollGrid.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:309-339) with TimeDefaults.tick(from:) conversion and EditorCamera scroll clamping, so this degenerate window has no callable surface.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(tickRange(1.0, 0x1p64).empty())
 
 A009 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:78
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(0x1p64, 0x1p64 + 4096.0) returns an empty window.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — QVERIFY(tickRange(0x1p64, 0x1p64 + 4096.0).empty()) pins the past-ceiling window of the deleted songview::detail::tickRange(double, double) ingress (src/ui/songview/detail.cpp:241-250); the Swift walk takes integral Tick bounds (RollGrid.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:309-339) with TimeDefaults.tick(from:) conversion and EditorCamera scroll clamping, so this degenerate window has no callable surface.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(tickRange(0x1p64, 0x1p64 + 4096.0).empty())
 
 A010 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:79
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(1.0, DBL_MAX) returns an empty window.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — QVERIFY(tickRange(1.0, std::numeric_limits<double>::max()).empty()) pins the past-ceiling end of the deleted songview::detail::tickRange(double, double) ingress (src/ui/songview/detail.cpp:241-250); the Swift walk takes integral Tick bounds (RollGrid.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:309-339) with TimeDefaults.tick(from:) conversion and EditorCamera scroll clamping, so this degenerate window has no callable surface.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(tickRange(1.0, std::numeric_limits<double>::max()).empty())
 
 A011 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:81
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(-24.0, 72.5).begin == 0.
+Disposition: MATCHED
+Mapping: S075
 Source context since previous assertion:
   ;
       const songview::detail::TickRange clipped = tickRange(-24.0, 72.5);
@@ -186,15 +195,15 @@ Original expression:
 
 A012 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:82
 Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(-24.0, 72.5).end == 72.
+Mapping/reason: Related predicates S075 (runEditorCameraChecks, message "A011 negative content clamps to tick zero") and S080 (checkFractionalGridLattice, message "A022 fractional window emits the independently enumerated lattice"): the successor clamps negative content to tick 0 and walks integral bounds, but no predicate asserts the (-24.0, 72.5) window end, and the successor walk deliberately covers ceil(+1) past a fractional end (74 here, not the fork truncated 72). Unproved as stated: tickRange(-24.0, 72.5).end == 72.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(clipped.end, uint64_t(72))
 
 A013 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:84
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(96.75, 289.25).begin == 96.
+Disposition: MATCHED
+Mapping: S076
 Source context since previous assertion:
   ;
       const songview::detail::TickRange fractional = tickRange(96.75, 289.25);
@@ -203,15 +212,15 @@ Original expression:
 
 A014 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:85
 Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(96.75, 289.25).end == 289.
+Mapping/reason: Related predicate S080 (checkFractionalGridLattice, message "A022 fractional window emits the independently enumerated lattice") walks TimeDefaults.tick(from: 96.75) to Tick(ceil(289.25) + 1) and emits 96..<291 minus beats, observably past the fork truncated end. Unproved as stated: tickRange(96.75, 289.25).end == 289; the successor deliberate ceil(+1) right-edge coverage (GridScene+Rebuild.swift:70) supersedes the truncation.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(fractional.end, uint64_t(289))
 
 A015 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:87
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(0.0, nextafter(kNoTick, 0.0)).end == Tick(largestBelowCeiling).
+Disposition: MATCHED
+Mapping: S077
 Source context since previous assertion:
   ;
       const double largestBelowCeiling = std::nextafter(double(CoreTimeDefaults::kNoTick), 0.0);
@@ -230,8 +239,8 @@ Original expression:
                CoreTimeDefaults::kMaxTick - 2048)
 
 A017 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:98
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/camera.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — QVERIFY2(fixture.create(error), qPrintable(error)) is a native CameraFixture window prerequisite for the lattice test; the segment, walk, stride and seam laws run over the real session axis with no native window (S078-S085), and the mounted roll covers goToStart (S086).
 Source context since previous assertion:
   ;
   }
@@ -244,8 +253,8 @@ Original expression:
   QVERIFY2(fixture.create(error), qPrintable(error))
 
 A018 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:106
-Disposition: PARTIAL
-Mapping/reason: Related predicate S068 (checkFractionalGridLattice, src/checks/rollcheck/EditorGridCameraChecks.swift, message "visible auto sub-grid is culled to the viewport and skips beats") walks the automatic grid at zoom 384 over 96..289 and requires every emitted tick inside that window. Unproved: the direct TimeAxis.segmentAt(96).start boundary at or before 96.
+Disposition: MATCHED
+Mapping: S078
 Source context since previous assertion:
   ;
       SongView &view = *fixture.view();
@@ -259,8 +268,8 @@ Original expression:
   QVERIFY(segment.start <= 96)
 
 A019 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:107
-Disposition: PARTIAL
-Mapping/reason: Related predicate S068 (checkFractionalGridLattice, message "visible auto sub-grid is culled to the viewport and skips beats") keeps every walked tick below 289 on the same automatic grid. Unproved: the direct TimeAxis.segmentAt(96).next boundary at or beyond 289.
+Disposition: MATCHED
+Mapping: S079
 Source context since previous assertion:
   ;
 Original expression:
@@ -284,8 +293,8 @@ Original expression:
   QVERIFY(lattice < segment.beatTicks)
 
 A022 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:129
-Disposition: PARTIAL
-Mapping/reason: Related predicate S068 (checkFractionalGridLattice, message "visible auto sub-grid is culled to the viewport and skips beats") asserts the walk is non-empty, every tick lies in [96,289), advances on the grid stride and skips beat positions. Unproved: equality with an independently enumerated per-segment membership list, and the fractional 96.75/289.25 window.
+Disposition: MATCHED
+Mapping: S080 (walk equality over the successor window 96..<291: fractional 96.75..289.25 maps via TimeDefaults.tick truncation plus the deliberate ceil(+1) right-edge coverage, a 2-tick superset of the fork 96..<289)
 Source context since previous assertion:
   ;
       const auto walk = [&view](double begin, double end) {
@@ -310,8 +319,8 @@ Original expression:
   QCOMPARE(walk(96.75, 289.25), expectedLines(96, 289))
 
 A023 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:130
-Disposition: PARTIAL
-Mapping/reason: Related predicate S068 (checkFractionalGridLattice, message "visible auto sub-grid is culled to the viewport and skips beats") brackets the walked range on the same grid. Unproved: the NaN-begin window, because the ported forEachSubdivision takes integral Tick bounds, so the deleted double tickRange ingress has no callable Swift surface.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — QVERIFY(walk(quiet_NaN(), 100.0).empty()) feeds NaN through the deleted songview::detail::tickRange(double, double) ingress; the ported forEachSubdivision takes integral Tick bounds (walk over 96..<291 proved by S080), so the NaN-begin window has no callable Swift surface.
 Source context since previous assertion:
   ;
 Original expression:
@@ -333,8 +342,8 @@ Original expression:
   QVERIFY(latticeG > 1)
 
 A025 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:139
-Disposition: PARTIAL
-Mapping/reason: Related predicate S069 (checkFractionalGridLattice, message "coarse lattice divides the beat") pins the musical-16 snap stride at three or more and the drawn stride above one tick at zoom 192. Unproved: the drawn coarse stride staying below the segment beat width, which S069 never bounds.
+Disposition: MATCHED
+Mapping: S081
 Source context since previous assertion:
   ;
 Original expression:
@@ -365,8 +374,8 @@ Original expression:
   QVERIFY(segment.beatTicks % snapG == 0)
 
 A029 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:144
-Disposition: PARTIAL
-Mapping/reason: Related predicate S070 (checkFractionalGridLattice, message "subdivision restarts at the segment anchor") proves nextSubdivisionTickAfter(96) and nextSubdivisionTickAfter(97) both land on 96 plus the drawn stride. Unproved: that the segment leaves room for at least two lattice steps below segment.next.
+Disposition: MATCHED
+Mapping: S082
 Source context since previous assertion:
   ;
       // Aligned and interior ticks advance to the same next subdivision.
@@ -454,8 +463,8 @@ Original expression:
   QCOMPARE(view.grid().snapTickUp(96.0 + snapG / 2.0 - 0.25), Tick(96 + snapG))
 
 A039 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:167
-Disposition: PARTIAL
-Mapping/reason: Related predicate S074 (checkFractionalGridLattice, src/checks/rollcheck/EditorGridCameraChecks.swift, message "sub-grid restarts at the signature seam") installs the same mid-cell 5/8 signature at tick 102 and pins the post-seam lattice there. Unproved: the direct segmentAt(102).start boundary the C++ QTRY_VERIFY reads.
+Disposition: MATCHED
+Mapping: S083
 Source context since previous assertion:
   ;
       // A mid-cell signature change re-anchors the lattice: the first
@@ -467,8 +476,8 @@ Original expression:
   QTRY_VERIFY(view.grid().segmentAt(102).start == 102)
 
 A040 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:168
-Disposition: PARTIAL
-Mapping/reason: Related predicate S074 (checkFractionalGridLattice, message "sub-grid restarts at the signature seam") shows the walk from 101 stops at 102. Unproved: the direct segmentAt(101).next boundary at the seam.
+Disposition: MATCHED
+Mapping: S084
 Source context since previous assertion:
   ;
 Original expression:
@@ -541,8 +550,8 @@ Original expression:
   QCOMPARE(view.grid().snapTick(103.5 + double(snapG)), Tick(102 + snapG))
 
 A049 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:180
-Disposition: PARTIAL
-Mapping/reason: Related predicate S074 (checkFractionalGridLattice, message "sub-grid restarts at the signature seam") covers the lattice after a seam appears. Unproved: the signature-removal path; no executed predicate deletes a time signature and re-reads the segment start.
+Disposition: MATCHED
+Mapping: S085
 Source context since previous assertion:
   ;
       fixture.tab()->document().deleteTimeSig(102);
@@ -733,8 +742,8 @@ Original expression:
   QVERIFY(visible >= 2)
 
 A086 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:369
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/camera.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — QVERIFY2(fixture.create(error), qPrintable(error)) is a native CameraFixture window prerequisite for the camera-range test; the bound-home wheel pan and fractional scroll laws run on synthetic EditorCamera limits (S087-S088) with the mounted roll journeys in S086, and no native window remains.
 Source context since previous assertion:
   ;
       view.applyViewState(original);
@@ -764,8 +773,8 @@ Disposition: MATCHED
 Mapping: S005
 
 A091 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:385
-Disposition: PARTIAL
-Mapping/reason: Related predicate: the executing lane observes the edit cursor through grid.editCursorTick (src/checks/rollcheck/EditorGridCameraChecks.swift) and cursor publication (src/checks/workspace/session_playback.swift); neither drives SongView::goToStart. Unproved: goToStart leaves the edit cursor at tick 0.
+Disposition: MATCHED
+Mapping: S086
 Source context since previous assertion:
   ;
 Original expression:
@@ -863,8 +872,8 @@ Original expression:
   QVERIFY(padNatural != plainNatural)
 
 A099 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:431
-Disposition: PARTIAL
-Mapping/reason: Related predicate S063 (src/checks/rollcheck/static/camera.swift) asserts the same 8px horizontal pixel-wheel pan through grid.handleWheel from the 23.625 fixture offset; the bound-view fixture from scrollPx 0 is not driven. Unproved: the wheel leaves scrollX at -8 on this fixture.
+Disposition: MATCHED
+Mapping: S087
 Source context since previous assertion:
   ;
       state.scrollPx = 0.0;
@@ -874,8 +883,8 @@ Original expression:
   QVERIFY(std::abs(view.camera().scrollX() + 8.0) <= 1e-12)
 
 A100 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:434
-Disposition: PARTIAL
-Mapping/reason: Related predicate S003 (:28-29) asserts fractional camera scroll restoration; no executed predicate reads the production view-state scrollPx field. Unproved: viewState().scrollPx equals -pad/2 after the apply.
+Disposition: MATCHED
+Mapping: S088
 Source context since previous assertion:
   ;
       state.scrollPx = -pad / 2.0;
@@ -1199,3 +1208,45 @@ Anchor: message "tie up is ceil"
 
 S074 | checkFractionalGridLattice | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "sub-grid restarts at the signature seam"
+
+S075 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "A011 negative content clamps to tick zero"
+
+S076 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "A013 fractional content resolves to the preceding tick"
+
+S077 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "A015 largest double below the tick ceiling converts exactly"
+
+S078 | checkFractionalGridLattice | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "A018 fractional window segment begins at or before tick 96"
+
+S079 | checkFractionalGridLattice | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "A019 fractional window segment reaches past tick 289"
+
+S080 | checkFractionalGridLattice | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "A022 fractional window emits the independently enumerated lattice"
+
+S081 | checkFractionalGridLattice | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "A025 drawn coarse stride remains below one beat"
+
+S082 | checkFractionalGridLattice | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "A029 segment has room for two subdivision steps"
+
+S083 | checkFractionalGridLattice | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "A039 inserted 5/8 seam starts its segment at tick 102"
+
+S084 | checkFractionalGridLattice | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "A040 pre-seam segment ends at tick 102"
+
+S085 | checkFractionalGridLattice | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "A049 deleting the signature restores the plain segment grid"
+
+S086 | test_zCameraSurvivesMountedRemapsAndResize | src/checks/rollqml/tst_SwiftRollWindowing.qml
+Anchor: message "A091 Go to Start leaves the mounted edit cursor at tick zero"
+
+S087 | checkHorizontalCameraWheelContract | src/checks/rollcheck/static/camera.swift
+Anchor: message "A099 eight-pixel wheel pan from bound zero reaches negative eight"
+
+S088 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "A100 fractional pre-roll scroll reads back exactly after a bound domain update"

@@ -1,5 +1,6 @@
 import Foundation
 import PorydawApp
+import PorydawCore
 
 private let cameraTransformID = "swiftcore/EditorCamera::transformsAndBounds"
 private let cameraZoomID = "swiftcore/EditorCamera::anchoredZoomAndRestore"
@@ -18,6 +19,14 @@ func runEditorCameraChecks(_ report: CheckReport) {
                   gridCameraNear(compact.snapshot.maxHScroll, 0),
                   cppID: cameraTransformID,
                   message: "caller-resolved minimum viewport produces observable camera bounds")
+    let tickRangeID = "rollcheck/PianoRollStaticTest::tickRangeRejectsInvalidBounds"
+    report.expect(TimeDefaults.tick(from: -0.75) == 0, cppID: tickRangeID,
+                  message: "A011 negative content clamps to tick zero")
+    report.expect(TimeDefaults.tick(from: 96.75) == 96, cppID: tickRangeID,
+                  message: "A013 fractional content resolves to the preceding tick")
+    report.expect(TimeDefaults.tick(from: Double(TimeDefaults.noTick).nextDown) == TimeDefaults.maxTick,
+                  cppID: tickRangeID,
+                  message: "A015 largest double below the tick ceiling converts exactly")
     var camera = EditorCamera(ticksPerBeat: 24, lengthTicks: 480,
                               viewportWidth: 200, rollHeight: 120, limits: limits)
 
@@ -48,6 +57,11 @@ func runEditorCameraChecks(_ report: CheckReport) {
     report.expect(gridCameraNear(viewportCamera.snapshot.scrollX, 10.25),
                   cppID: cameraTransformID,
                   message: "bound viewport updates preserve a legal fractional offset")
+    let halfPad = -viewportCamera.leadPad / 2
+    _ = viewportCamera.setHScroll(halfPad)
+    viewportCamera.updateTimeDomain(ticksPerBeat: 24, lengthTicks: 480)
+    report.expect(viewportCamera.snapshot.scrollX == halfPad, cppID: cameraTransformID,
+                  message: "A100 fractional pre-roll scroll reads back exactly after a bound domain update")
 
     _ = camera.setHScroll(100)
     let anchorX = 50.0
@@ -534,6 +548,10 @@ private func checkHorizontalCameraWheelContract(
     report.expect(gridCameraNear(session.camera.snapshot.scrollX, 23.625 - 8, tolerance: 1e-12)
                       && gridCameraNear(session.camera.snapshot.pixelsPerBeat, 300.125, tolerance: 1e-12),
                   cppID: id, message: "horizontal pixel wheel pans without changing scale")
+    restore(300.125, 0)
+    wheel(pixelX: 8)
+    report.expect(session.camera.snapshot.scrollX == -8, cppID: id,
+                  message: "A099 eight-pixel wheel pan from bound zero reaches negative eight")
     restore()
     let tick = session.camera.tickAtContentX(anchorX)
     wheel(angle: 30)

@@ -20,7 +20,7 @@ The original SongView editorViewState cosmetics and
 time-selection lanes are not modelled in the Swift roll, so every site whose original
 conjunction includes them stays PARTIAL. The raw metadata-to-engine promotion family
 stays GAP because insertRawEvent never promotes or remaps a conductor in Swift.
-Disposition tally: 67 sites: 19 MATCHED, 17 PARTIAL, 19 GAP, 12 NATIVE.
+Disposition tally: 67 sites: 19 MATCHED, 17 PARTIAL, 7 GAP, 12 NATIVE, 12 RETIRED-REPRESENTATION (task-90 signal-order retirements: A004, A007, A010, A017, A020, A023, A030, A033, A036, A042, A046, A050).
 
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — 1/14 ok (controller-recorded post-change run); the swiftcore
@@ -34,6 +34,14 @@ Result: PASS — 11/11 ok (controller-recorded post-change run); the shell-grid-
 lane ran test_trackFollowReload (S030) after the ghost-projection fixture edit, so the
 recorded function list matches the current tst_ShellGridInput.qml. The other shell lanes
 predate the in-progress shell-menu work and are cited nowhere here.
+Command: deno task verify --filter swiftcore-projectsession --verbose (task-90 implementer run)
+Result: PASS (implementer-reported GREEN; this ledger pass ran no lane).
+Command: PORYDAW_ROLL_QML_SUITE=tst_SwiftRollWindowing.qml deno task verify:qml-roll --verbose (task-90 implementer run)
+Result: PASS (implementer-reported GREEN; this ledger pass ran no lane, mounted remap/resize camera journeys in swiftroll-window.json).
+Command: deno task verify:shell --verbose (task-90 implementer run)
+Result: PASS; 26/26 ok (implementer-reported GREEN; this ledger pass ran no lane).
+Command: deno task verify --verbose (task-90 implementer full-tree run)
+Result: PASS; 36/36 ok (implementer-reported GREEN; this ledger pass ran no lane).
 
 A001 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:170
 Disposition: RETIRED-REPRESENTATION
@@ -46,8 +54,8 @@ Disposition: MATCHED
 Mapping: S001
 
 A004 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:198
-Disposition: GAP
-Mapping/reason: GAP — SongView Qt signals (tracksRemapped/documentChanged) do not exist in Swift, so the two-signal emission order has no executing counterpart. S025 (EditorGridCameraChecks.swift) and S003 body (remap.swift) at the move call (remap.swift) prove the remap is reconciled in the single document publication, not the signal order.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — QFAIL("move did not remap before documentChanged") pins the fork tracksRemapped-then-documentChanged two-signal emission order (remapPrecedesDocument); Swift publishes one coalesced SessionChange(trackRemap:) (DocumentSession+Internals.swift:41-68, composeTrackRemaps at :83), with the move remap reconciliation executed by S003/S025.
 Source context since previous assertion:
 ;
 
@@ -92,8 +100,8 @@ Original expression:
 QFAIL("move did not re-address complete SongView track state")
 
 A007 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:209
-Disposition: GAP
-Mapping/reason: GAP — SongView Qt signals do not exist in Swift, so the undo two-signal emission order has no executing counterpart. S003 body (remap.swift) at the move-undo call (remap.swift) proves the remap is reconciled in the single undo publication, not the signal order.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — QFAIL("move undo did not remap before documentChanged") pins the fork tracksRemapped-then-documentChanged two-signal emission order (remapPrecedesDocument); Swift publishes one coalesced SessionChange(trackRemap:) (DocumentSession+Internals.swift:41-68, composeTrackRemaps at :83), with the move-undo remap reconciliation executed by S003.
 Source context since previous assertion:
 ;
     }
@@ -121,8 +129,8 @@ Original expression:
 QFAIL("move undo did not restore remapped owners")
 
 A010 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:220
-Disposition: GAP
-Mapping/reason: GAP — SongView Qt signals do not exist in Swift, so the redo two-signal emission order has no executing counterpart. S003 body (remap.swift) at the move-redo call (remap.swift) proves the remap is reconciled in the single redo publication, not the signal order.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — QFAIL("move redo did not remap before documentChanged") pins the fork tracksRemapped-then-documentChanged two-signal emission order (remapPrecedesDocument); Swift publishes one coalesced SessionChange(trackRemap:) (DocumentSession+Internals.swift:41-68, composeTrackRemaps at :83), with the move-redo remap reconciliation executed by S003.
 Source context since previous assertion:
 ;
     }
@@ -164,8 +172,8 @@ Disposition: MATCHED
 Mapping: S005
 
 A017 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:254
-Disposition: GAP
-Mapping/reason: GAP — SongView Qt signals do not exist in Swift, so the insert two-signal emission order has no executing counterpart. S003 body (remap.swift) at the insert call (remap.swift) proves the remap is reconciled in the single publication, not the signal order.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — QFAIL("insert did not remap before documentChanged") pins the fork tracksRemapped-then-documentChanged two-signal emission order (remapPrecedesDocument); Swift publishes one coalesced SessionChange(trackRemap:) (DocumentSession+Internals.swift:41-68, composeTrackRemaps at :83), with the insert remap reconciliation executed by S003.
 Source context since previous assertion:
 ;
     if (!fixture.remapPrecedesDocument())
@@ -192,8 +200,8 @@ Original expression:
 QFAIL("inserted track inherited existing SongView state")
 
 A020 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:267
-Disposition: GAP
-Mapping/reason: GAP — SongView Qt signals do not exist in Swift, so the insert-undo two-signal emission order has no executing counterpart. S003 body (remap.swift) at the insert-undo call (remap.swift) proves the remap is reconciled in the single undo publication, not the signal order.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — QFAIL("insert undo did not remap before documentChanged") pins the fork tracksRemapped-then-documentChanged two-signal emission order (remapPrecedesDocument); Swift publishes one coalesced SessionChange(trackRemap:) (DocumentSession+Internals.swift:41-68, composeTrackRemaps at :83), with the insert-undo remap reconciliation executed by S003.
 Source context since previous assertion:
 ;
     }
@@ -220,8 +228,8 @@ Original expression:
 QFAIL("insert undo did not restore existing SongView state")
 
 A023 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:276
-Disposition: GAP
-Mapping/reason: GAP — SongView Qt signals do not exist in Swift, so the insert-redo two-signal emission order has no executing counterpart. S003 body (remap.swift) at the insert-redo call (remap.swift) proves the remap is reconciled in the single redo publication, not the signal order.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — QFAIL("insert redo did not remap before documentChanged") pins the fork tracksRemapped-then-documentChanged two-signal emission order (remapPrecedesDocument); Swift publishes one coalesced SessionChange(trackRemap:) (DocumentSession+Internals.swift:41-68, composeTrackRemaps at :83), with the insert-redo remap reconciliation executed by S003.
 Source context since previous assertion:
 ;
 
@@ -261,8 +269,8 @@ Disposition: MATCHED
 Mapping: S006
 
 A030 | PianoRollTest::trackRemapDuplicate | src/checks/rollcheck/remap.cpp:308
-Disposition: GAP
-Mapping/reason: GAP — SongView Qt signals do not exist in Swift, so the duplicate two-signal emission order has no executing counterpart. S003 body (remap.swift) at the duplicate call (remap.swift) proves the remap is reconciled in the single publication, not the signal order.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — QFAIL("duplicate did not remap before documentChanged") pins the fork tracksRemapped-then-documentChanged two-signal emission order (remapPrecedesDocument); Swift publishes one coalesced SessionChange(trackRemap:) (DocumentSession+Internals.swift:41-68, composeTrackRemaps at :83), with the duplicate remap reconciliation executed by S003.
 Source context since previous assertion:
 ;
     if (!fixture.remapPrecedesDocument())
@@ -289,8 +297,8 @@ Original expression:
 QFAIL("duplicated track inherited existing SongView state")
 
 A033 | PianoRollTest::trackRemapDuplicate | src/checks/rollcheck/remap.cpp:321
-Disposition: GAP
-Mapping/reason: GAP — SongView Qt signals do not exist in Swift, so the duplicate-undo two-signal emission order has no executing counterpart. S003 body (remap.swift) at the duplicate-undo call (remap.swift) proves the remap is reconciled in the single undo publication, not the signal order.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — QFAIL("duplicate undo did not remap before documentChanged") pins the fork tracksRemapped-then-documentChanged two-signal emission order (remapPrecedesDocument); Swift publishes one coalesced SessionChange(trackRemap:) (DocumentSession+Internals.swift:41-68, composeTrackRemaps at :83), with the duplicate-undo remap reconciliation executed by S003.
 Source context since previous assertion:
 ;
     }
@@ -317,8 +325,8 @@ Original expression:
 QFAIL("duplicate undo did not restore existing SongView state")
 
 A036 | PianoRollTest::trackRemapDuplicate | src/checks/rollcheck/remap.cpp:330
-Disposition: GAP
-Mapping/reason: GAP — SongView Qt signals do not exist in Swift, so the duplicate-redo two-signal emission order has no executing counterpart. S003 body (remap.swift) at the duplicate-redo call (remap.swift) proves the remap is reconciled in the single redo publication, not the signal order.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — QFAIL("duplicate redo did not remap before documentChanged") pins the fork tracksRemapped-then-documentChanged two-signal emission order (remapPrecedesDocument); Swift publishes one coalesced SessionChange(trackRemap:) (DocumentSession+Internals.swift:41-68, composeTrackRemaps at :83), with the duplicate-redo remap reconciliation executed by S003.
 Source context since previous assertion:
 ;
 
@@ -354,8 +362,8 @@ Disposition: MATCHED
 Mapping: S001
 
 A042 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:374
-Disposition: GAP
-Mapping/reason: GAP — SongView Qt signals do not exist in Swift, so the delete two-signal emission order has no executing counterpart. S003 body (remap.swift) at the delete call (remap.swift) proves the remap is reconciled in the single publication, not the signal order.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — QFAIL("delete did not remap before documentChanged") pins the fork tracksRemapped-then-documentChanged two-signal emission order (remapPrecedesDocument); Swift publishes one coalesced SessionChange(trackRemap:) (DocumentSession+Internals.swift:41-68, composeTrackRemaps at :83), with the delete remap reconciliation executed by S003.
 Source context since previous assertion:
 ;
 
@@ -421,8 +429,8 @@ Original expression:
 QFAIL("delete did not drop cosmetic state from its removed owner")
 
 A046 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:395
-Disposition: GAP
-Mapping/reason: GAP — SongView Qt signals do not exist in Swift, so the delete-undo two-signal emission order has no executing counterpart. S003 body (remap.swift) at the delete-undo call (remap.swift) proves the remap is reconciled in the single undo publication, not the signal order.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — QFAIL("delete undo did not remap before documentChanged") pins the fork tracksRemapped-then-documentChanged two-signal emission order (remapPrecedesDocument); Swift publishes one coalesced SessionChange(trackRemap:) (DocumentSession+Internals.swift:41-68, composeTrackRemaps at :83), with the delete-undo remap reconciliation executed by S003.
 Source context since previous assertion:
 ;
     }
@@ -466,8 +474,8 @@ Original expression:
 QFAIL("delete undo did not restore surviving SongView state")
 
 A050 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:414
-Disposition: GAP
-Mapping/reason: GAP — SongView Qt signals do not exist in Swift, so the delete-redo two-signal emission order has no executing counterpart. S003 body (remap.swift) at the delete-redo call (remap.swift) proves the remap is reconciled in the single redo publication, not the signal order.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — QFAIL("delete redo did not remap before documentChanged") pins the fork tracksRemapped-then-documentChanged two-signal emission order (remapPrecedesDocument); Swift publishes one coalesced SessionChange(trackRemap:) (DocumentSession+Internals.swift:41-68, composeTrackRemaps at :83), with the delete-redo remap reconciliation executed by S003.
 Source context since previous assertion:
 ;
     }

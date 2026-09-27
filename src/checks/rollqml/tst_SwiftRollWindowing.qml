@@ -366,4 +366,107 @@ TestCase {
         }, 5000), "re-applying the palette repaints the strong frame")
         restore()
     }
+    function test_zCameraSurvivesMountedRemapsAndResize() {
+        var surface = testCase.selectedSurface()
+        var grid = session.gridPresenter()
+        var input = findChild(surface, "swiftRollInput")
+        var headerInput = testCase.headerInput()
+        var rows = testCase.headerRows()
+        var headers = testCase.headers()
+        verify(grid && input && headerInput && rows && headers && rows.count >= 3,
+               "mounted grid and at least two real tracks are ready")
+        grid.setEditCursorTick(24)
+        session.goToStart()
+        tryCompare(grid, "editCursorTick", 0, 5000,
+                   "A091 Go to Start leaves the mounted edit cursor at tick zero")
+        grid.setCameraHScroll(21.5)
+        tryCompare(grid, "cameraScrollX", 21.5)
+        mouseWheel(input, input.width / 2, input.height / 2, 0, -8,
+                   Qt.NoButton, Qt.ShiftModifier)
+        tryVerify(function() { return grid.cameraScrollX === 29.5 }, 5000,
+                  "mounted wheel pan advances the fractional camera before remap")
+        var initialZoom = grid.beatWidth
+        mouseWheel(input, input.width / 2, input.height / 2, 0, 120)
+        tryVerify(function() { return grid.beatWidth > initialZoom }, 5000,
+                  "a mounted wheel zooms before the remap")
+        var zoom = grid.beatWidth
+        var scroll = grid.cameraScrollX
+
+        var first = rows.itemAt(0)
+        var x = first.titleRect.x + first.titleRect.width / 2
+        var y = first.titleRect.y + first.titleRect.height / 2
+        mousePress(headerInput, x, y, Qt.LeftButton)
+        var destination = Math.min(headerInput.height - 2, y + headers.rowHeight * 1.8)
+        mouseMove(headerInput, x, destination, 10, Qt.LeftButton)
+        tryCompare(findChild(surface, "timelineTrackHeaderReorderMarker"), "visible", true)
+        var revision = grid.appliedRevisionText
+        mouseRelease(headerInput, x, destination, Qt.LeftButton)
+        tryVerify(function() { return grid.appliedRevisionText !== revision }, 5000,
+                  "the header drag commits a track reorder")
+        compare(grid.cameraScrollX, scroll,
+                "the mounted camera offset survives reorder publication")
+        compare(grid.beatWidth, zoom,
+                "the mounted camera zoom survives reorder publication")
+
+        function chooseMenu(track, action) {
+            tryVerify(function() {
+                return findChild(surface, "quickMenuPanelRoot") === null
+            }, 5000, "the previous header menu releases its modal input")
+            var row = rows.itemAt(track)
+            mouseClick(headerInput, row.titleRect.x + row.titleRect.width / 2,
+                       row.titleRect.y + row.titleRect.height / 2
+                       + track * headers.rowHeight, Qt.RightButton)
+            tryCompare(headers, "menuOpen", true)
+            var menuRow = null
+            tryVerify(function() {
+                menuRow = findChild(surface, "headerMenuRow_" + action)
+                return menuRow !== null
+            }, 5000, "the mounted header menu exposes action " + action)
+            mouseClick(menuRow, menuRow.width / 2, menuRow.height / 2)
+            tryCompare(headers, "menuOpen", false)
+        }
+
+        var count = rows.count
+        chooseMenu(0, 4)
+        tryCompare(rows, "count", count + 1, 5000,
+                   "the mounted Duplicate track action publishes its remap")
+        compare(grid.cameraScrollX, scroll,
+                "the mounted camera offset survives duplicate publication")
+        compare(grid.beatWidth, zoom,
+                "the mounted camera zoom survives duplicate publication")
+
+        chooseMenu(0, 5)
+        tryCompare(rows, "count", count, 5000,
+                   "the mounted Delete track action publishes its remap")
+        compare(grid.cameraScrollX, scroll,
+                "the mounted camera offset survives delete publication")
+        compare(grid.beatWidth, zoom,
+                "the mounted camera zoom survives delete publication")
+        var length = bootstrap.timelineLengthTicks()
+        grid.setCameraHScroll(1e9)
+        var oldEnd = grid.cameraScrollX
+        chooseMenu(1, 5)
+        tryCompare(rows, "count", count - 1, 5000,
+                   "the mounted header menu deletes the trailing lead track")
+        verify(bootstrap.timelineLengthTicks() < length,
+               "deleting the terminal track shrinks the real timeline")
+        var newEnd = bootstrap.timelineLengthTicks() * bootstrap.cameraPxPerTick()
+        tryVerify(function() {
+            return Math.abs(grid.cameraScrollX - newEnd) <= 0.001
+        }, 5000, "a shrinking remap reclamps the mounted camera to the new timeline end")
+        verify(newEnd < oldEnd && grid.beatWidth === zoom,
+               "timeline shrink retains time zoom while moving only the bounded offset")
+
+        grid.setCameraHScroll(19.25)
+        tryCompare(grid, "cameraScrollX", 19.25)
+        var originalWidth = testCase.overlay.width
+        try {
+            testCase.overlay.width = originalWidth - headers.rowHeight
+            tryVerify(function() {
+                return Math.abs(grid.cameraScrollX - 19.25) < 0.001
+            }, 5000, "fractional camera scroll persists on mounted viewport resize")
+        } finally {
+            testCase.overlay.width = originalWidth
+        }
+    }
 }

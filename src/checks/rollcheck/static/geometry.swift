@@ -1,14 +1,65 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 
 @MainActor
 func runGeometryChecks(_ report: CheckReport, session: DocumentSession) {
+    checkFallbackAndSignatureBind(report, session: session)
     checkDefaultBindKeepsGeometry(report)
     checkTicksPerBeatKeepsGeometry(report)
     checkScaleProjectionInvariants(report, session: session)
     checkLiveFoldProjection(report, session: session)
     checkScaleHighlightRasterDocumentGuards(report, session: session)
+}
+
+@MainActor
+private func checkFallbackAndSignatureBind(_ report: CheckReport, session: DocumentSession) {
+    let fallbackID = "rollcheck/PianoRollStaticTest::fallbackGrid"
+    let bindID = "rollcheck/PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars"
+    let axis = session.grid.axis
+    var lines: [(tick: Tick, bar: Bool, barNumber: Int, beatNumber: Int)] = []
+    axis.forEachGridLine(from: 0, to: 384) { tick, bar, barNumber, beatNumber in
+        lines.append((tick, bar, barNumber, beatNumber))
+    }
+    report.expect(lines.count == 16, cppID: fallbackID,
+                  message: "A009 unsignatured document publishes sixteen beat lines")
+    report.expect(lines.count == 16 && lines.indices.allSatisfy {
+        lines[$0].tick == Tick($0 * 24)
+    }, cppID: fallbackID, message: "A010 fallback line positions follow whole beats")
+    report.expect(lines.count == 16 && lines.indices.allSatisfy {
+        lines[$0].bar == ($0 % 4 == 0)
+    }, cppID: fallbackID, message: "A011 every fourth fallback line is a bar")
+    report.expect(lines.count == 16 && lines.indices.allSatisfy {
+        lines[$0].barNumber == $0 / 4 + 1
+    }, cppID: fallbackID, message: "A012 fallback bars use one-based grouping")
+    report.expect(lines.count == 16 && lines.indices.allSatisfy {
+        lines[$0].beatNumber == $0 % 4 + 1
+    }, cppID: fallbackID, message: "A013 fallback beats use one-based grouping")
+    let opening = axis.segmentAt(0)
+    report.expect(opening.start == 0, cppID: fallbackID,
+                  message: "A014 fallback segment starts at tick zero")
+    report.expect(opening.next == TimeDefaults.noTick, cppID: fallbackID,
+                  message: "A015 fallback segment runs to the no-tick sentinel")
+    report.expect(opening.beatTicks == 24, cppID: fallbackID,
+                  message: "A016 fallback segment uses 24 ticks per beat")
+    report.expect(opening.beatsPerBar == 4, cppID: fallbackID,
+                  message: "A017 fallback segment has four beats per bar")
+
+    let before = (1...8).map { session.camera.contentX(tick: Double($0 * 24)) }
+    session.document.setTimeSignature(tick: 0, numerator: 3, denominatorPower: 2)
+    defer { _ = session.document.history.undoDocument() }
+    let bound = session.grid.axis.segmentAt(0)
+    report.expect(bound.start == 0, cppID: bindID,
+                  message: "A044 bound 3/4 segment starts at tick zero")
+    report.expect(bound.next == TimeDefaults.noTick, cppID: bindID,
+                  message: "A045 bound 3/4 segment runs to the no-tick sentinel")
+    report.expect(bound.beatTicks == 24, cppID: bindID,
+                  message: "A046 bound 3/4 segment uses 24 ticks per beat")
+    report.expect(bound.beatsPerBar == 3, cppID: bindID,
+                  message: "A047 bound 3/4 segment has three beats per bar")
+    report.expect((1...8).allSatisfy {
+        abs(session.camera.contentX(tick: Double($0 * 24)) - before[$0 - 1]) <= 1e-6
+    }, cppID: bindID, message: "A050 binding 3/4 preserves beat content positions")
 }
 
 private func geometryCamera(lengthTicks: UInt64? = nil,
