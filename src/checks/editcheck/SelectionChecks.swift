@@ -1,4 +1,6 @@
-import PorydawApp
+@testable import PorydawApp
+import Foundation
+import PorydawAppCommands
 import PorydawCore
 
 @MainActor
@@ -128,6 +130,9 @@ private func clipboardLaneSelectionChecks(_ report: CheckReport, session: Docume
                   cppID: emptyID, message: "A007-A008 unsupported controller covers nothing")
     report.expect(visibleSelectedLanes(empty).isEmpty, cppID: emptyID,
                   message: "A009 empty selection exposes no selected visible lanes")
+    clipboardLaneEndpointAndHitChecks(report, session: session, empty: empty,
+                                      volume: volume, pan: pan)
+
     let range = TimeRange(startTick: 24, endTick: 48)
     let selection = AutomationTimeSelection(range: range, scope: .lanes,
                                             lanes: [volume, modulation], tempo: true)
@@ -210,6 +215,185 @@ private func clipboardLaneSelectionChecks(_ report: CheckReport, session: Docume
                   message: "A050 supported controller is present without a selection")
     report.expect(stack(selection).row(for: .controlChange(track: 0, controller: 99)) == nil,
                   cppID: factsID, message: "A051 unsupported controller is absent")
+    let copyFixture = SongDocument(file: MidiFile(division: 24, chunks: [
+        MidiChunk(events: [.channel(status: 0xC0, data0: 0)], endTick: 240),
+    ]), trackBudget: document.trackBudget)
+    copyFixture.writeLane(track: 0, lane: .controller(7), from: 0,
+                          through: TimeDefaults.noTick,
+                          points: [LaneWrite(tick: 24, value: 100),
+                                   LaneWrite(tick: 72, value: 108)])
+    copyFixture.writeLane(track: 0, lane: .controller(10), from: 0,
+                          through: TimeDefaults.noTick, points: [LaneWrite(tick: 48, value: 64)])
+    let baselineIndex = copyFixture.history.undoIndex
+    let baselineCount = copyFixture.history.undoCount
+    let copiedVolume = ClipboardSemantics.extractTimeRange(
+        TimeRange(startTick: 24, endTick: 96),
+        scope: TimeScope(lanes: [TimeScope.ScopedLane(track: 0, lane: .controller(7))]),
+        from: copyFixture, unterminatedDuration: 24)
+    report.expect(copiedVolume?.lanes == [ClipLane(track: 0, cc: 7, points: [
+        ClipLanePoint(relTick: 0, value: 100),
+        ClipLanePoint(relTick: 48, value: 108),
+    ])] && copiedVolume?.tracks.isEmpty == true && copiedVolume?.tempo.isEmpty == true,
+    cppID: "clipboard/AutomationCoverageTest::endpointSemantics",
+    message: "ordered CC7 copy contains only fixture CC7 events and no CC10 sibling or notes")
+    let nativeBytes = copiedVolume.flatMap { ClipboardCodec.encode($0, ticksPerBeat: 24) }
+    report.expect(nativeBytes == Data(
+        #"{"format":1,"lanes":[{"cc":7,"points":[[0,100],[48,108]],"track":0}],"span":72,"tempo":[],"ticksPerBeat":24,"tracks":[],"wholeLane":false}"#.utf8),
+        cppID: "clipboard/AutomationCoverageTest::endpointSemantics",
+        message: "ordered CC7 clipboard MIME bytes match the fixture without CC10 sibling bytes")
+    report.expect(copyFixture.history.undoIndex == baselineIndex
+                  && copyFixture.history.undoCount == baselineCount,
+                  cppID: "clipboard/AutomationCoverageTest::endpointSemantics",
+                  message: "copying CC7 records no Undo entry")
+    copyFixture.writeLane(track: 0, lane: .controller(7), from: 0,
+                          through: TimeDefaults.noTick, points: [])
+    report.expect(copyFixture.history.undoIndex == baselineIndex + 1
+                  && copyFixture.history.undoCount == baselineCount + 1,
+                  cppID: "clipboard/AutomationCoverageTest::endpointSemantics",
+                  message: "clearing CC7 records exactly one Undo entry")
+    let decoded = nativeBytes.flatMap(ClipboardCodec.decode)
+    let pasteResult = decoded.flatMap {
+        ClipboardSemantics.paste($0.clip, at: 24, selectedTrack: 0, into: copyFixture)
+    }
+    report.expect(pasteResult?.nextCursor == 96
+                  && copyFixture.lanePoints(track: 0, lane: .controller(7)).map {
+                      "\($0.tick):\($0.value)"
+                  } == ["24:100", "72:108"]
+                  && copyFixture.lanePoints(track: 0, lane: .controller(10)).map {
+                      "\($0.tick):\($0.value)"
+                  } == ["48:64"],
+                  cppID: "clipboard/AutomationCoverageTest::endpointSemantics",
+                  message: "decoded CC7 paste restores exactly two Volume events and preserves Pan")
+    report.expect(copyFixture.history.undoIndex == baselineIndex + 2
+                  && copyFixture.history.undoCount == baselineCount + 2,
+                  cppID: "clipboard/AutomationCoverageTest::endpointSemantics",
+                  message: "scoped CC7 paste records exactly one Undo entry")
+    let undone = copyFixture.history.undoDocument()
+    report.expect(undone && copyFixture.history.undoIndex == baselineIndex + 1
+                  && copyFixture.history.undoCount == baselineCount + 2
+                  && copyFixture.lanePoints(track: 0, lane: .controller(7)).isEmpty
+                  && copyFixture.lanePoints(track: 0, lane: .controller(10)).map {
+                      "\($0.tick):\($0.value)"
+                  } == ["48:64"],
+                  cppID: "clipboard/AutomationCoverageTest::endpointSemantics",
+                  message: "one Undo restores empty CC7 with retained Paste Redo and untouched Pan")
+}
+
+@MainActor
+private func clipboardLaneEndpointAndHitChecks(
+    _ report: CheckReport, session: DocumentSession, empty: AutomationRowStack,
+    volume: AutomationParameter, pan: AutomationParameter
+) {
+    let endpointID = "clipboard/AutomationCoverageTest::endpointSemantics"
+    let emptyID = "clipboard/AutomationCoverageTest::emptySelectionAndEndpointPayload"
+    let tempoOnly = empty.laneSet(from: .tempo, through: .tempo)
+    report.expect(tempoOnly.tempo, cppID: endpointID,
+                  message: "A061 Tempo-to-Tempo endpoints include Tempo")
+    report.expect(tempoOnly.lanes.isEmpty, cppID: endpointID,
+                  message: "A062 Tempo-to-Tempo endpoints contain no CC lanes")
+    let ccOnly = empty.laneSet(from: volume, through: volume)
+    report.expect(!ccOnly.tempo, cppID: endpointID,
+                  message: "A063 CC7-to-CC7 endpoints exclude Tempo")
+    report.expect(ccOnly.lanes == [volume], cppID: endpointID,
+                  message: "A064 CC7-to-CC7 endpoints contain only CC7")
+    let mixed = empty.laneSet(from: .tempo, through: pan)
+    report.expect(mixed.tempo, cppID: endpointID,
+                  message: "A065 Tempo-to-CC10 endpoints include Tempo")
+    report.expect(mixed.lanes == [volume, pan], cppID: endpointID,
+                  message: "A066 Tempo-to-CC10 endpoints order CC7 before CC10")
+    report.expect(mixed.tempo, cppID: emptyID,
+                  message: "A010 inactive time selection still resolves Tempo endpoint")
+    report.expect(mixed.lanes == [volume, pan], cppID: emptyID,
+                  message: "A011 inactive time selection still resolves ordered CC endpoints")
+    let reversed = empty.laneSet(from: pan, through: .tempo)
+    report.expect(reversed.tempo, cppID: endpointID,
+                  message: "A067 reversed CC10-to-Tempo endpoints include Tempo")
+    report.expect(reversed.lanes == [volume, pan], cppID: endpointID,
+                  message: "A068 reversed CC10-to-Tempo endpoints retain catalog order")
+    let missing = empty.laneSet(from: .controlChange(track: 0, controller: 99),
+                                through: volume)
+    report.expect(!missing.tempo, cppID: endpointID,
+                  message: "A069 unsupported first endpoint excludes Tempo")
+    report.expect(missing.lanes.isEmpty, cppID: endpointID,
+                  message: "A070 unsupported first endpoint excludes CC lanes")
+
+    let hitID = "clipboard/AutomationCoverageTest::hitTest"
+    let selected = AutomationTimeSelection(range: TimeRange(startTick: 48, endTick: 96),
+                                           scope: .lanes, lanes: [volume])
+    let reversedSelection = AutomationTimeSelection(
+        range: TimeRange(startTick: 96, endTick: 48), scope: .lanes, lanes: [volume])
+    func hitFacts(zoom: Double, scroll: Double, dpr: Double,
+                  selection: AutomationTimeSelection) -> (
+        start: Bool, middle: Bool, before: Bool, end: Bool, pan: Bool, tempo: Bool
+    ) {
+        var camera = EditorCamera(ticksPerBeat: 24, lengthTicks: 384, viewportWidth: 480,
+                                  rollHeight: 120, limits: GridCameraPolicy.limits(baseFontPx: 13))
+        _ = camera.setTimeZoom(zoom)
+        _ = camera.setHScroll(scroll)
+        let projection = AutomationProjection(
+            camera: camera,
+            bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: dpr),
+            geometry: AutomationPlotGeometry(baseFontPx: 13),
+            snapPolicy: AutomationSnapPolicy(grid: session.grid, clockTicks: session.gridClockTicks),
+            songEndTick: 384)
+        let stack = AutomationRowStack.build(document: session.document, primaryTrack: 0,
+                                            selection: selection, ready: true, songEndTick: 384)
+        let start = projection.x(48)
+        let end = projection.x(96)
+        let middle = (start + end) / 2
+        return (
+            stack.hitTest(parameter: volume, x: start, projection: projection, selection: selection),
+            stack.hitTest(parameter: volume, x: middle, projection: projection, selection: selection),
+            stack.hitTest(parameter: volume, x: start - 1, projection: projection, selection: selection),
+            stack.hitTest(parameter: volume, x: end, projection: projection, selection: selection),
+            stack.hitTest(parameter: pan, x: middle, projection: projection, selection: selection),
+            stack.hitTest(parameter: .tempo, x: middle, projection: projection, selection: selection))
+    }
+    let reversedHits = hitFacts(zoom: 96, scroll: 48, dpr: 2, selection: reversedSelection)
+    report.expect(!reversedHits.middle, cppID: hitID,
+                  message: "A053 inactive reversed selection refuses CC7 midpoint at zoom96 scroll48 DPR2")
+
+    let unscrolled = hitFacts(zoom: 96, scroll: 0, dpr: 1, selection: selected)
+    report.expect(unscrolled.start, cppID: hitID,
+                  message: "A054 CC7 hits displayed start at zoom96 scroll0 DPR1")
+    report.expect(unscrolled.middle, cppID: hitID,
+                  message: "A055 CC7 hits displayed midpoint at zoom96 scroll0 DPR1")
+    report.expect(!unscrolled.before, cppID: hitID,
+                  message: "A056 CC7 misses one pixel before start at zoom96 scroll0 DPR1")
+    report.expect(!unscrolled.end, cppID: hitID,
+                  message: "A057 CC7 misses exclusive end at zoom96 scroll0 DPR1")
+    report.expect(!unscrolled.pan, cppID: hitID,
+                  message: "A058 CC10 misses midpoint at zoom96 scroll0 DPR1")
+    report.expect(!unscrolled.tempo, cppID: hitID,
+                  message: "A059 Tempo misses midpoint at zoom96 scroll0 DPR1")
+
+    let scrolled = hitFacts(zoom: 64, scroll: 96, dpr: 1, selection: selected)
+    report.expect(scrolled.start, cppID: hitID,
+                  message: "A054 CC7 hits displayed start at zoom64 scroll96 DPR1")
+    report.expect(scrolled.middle, cppID: hitID,
+                  message: "A055 CC7 hits displayed midpoint at zoom64 scroll96 DPR1")
+    report.expect(!scrolled.before, cppID: hitID,
+                  message: "A056 CC7 misses one pixel before start at zoom64 scroll96 DPR1")
+    report.expect(!scrolled.end, cppID: hitID,
+                  message: "A057 CC7 misses exclusive end at zoom64 scroll96 DPR1")
+    report.expect(!scrolled.pan, cppID: hitID,
+                  message: "A058 CC10 misses midpoint at zoom64 scroll96 DPR1")
+    report.expect(!scrolled.tempo, cppID: hitID,
+                  message: "A059 Tempo misses midpoint at zoom64 scroll96 DPR1")
+
+    let highDPR = hitFacts(zoom: 144, scroll: 192, dpr: 2, selection: selected)
+    report.expect(highDPR.start, cppID: hitID,
+                  message: "A054 CC7 hits displayed start at zoom144 scroll192 DPR2")
+    report.expect(highDPR.middle, cppID: hitID,
+                  message: "A055 CC7 hits displayed midpoint at zoom144 scroll192 DPR2")
+    report.expect(!highDPR.before, cppID: hitID,
+                  message: "A056 CC7 misses one pixel before start at zoom144 scroll192 DPR2")
+    report.expect(!highDPR.end, cppID: hitID,
+                  message: "A057 CC7 misses exclusive end at zoom144 scroll192 DPR2")
+    report.expect(!highDPR.pan, cppID: hitID,
+                  message: "A058 CC10 misses midpoint at zoom144 scroll192 DPR2")
+    report.expect(!highDPR.tempo, cppID: hitID,
+                  message: "A059 Tempo misses midpoint at zoom144 scroll192 DPR2")
 }
 
 

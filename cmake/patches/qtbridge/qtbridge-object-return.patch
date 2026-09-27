@@ -381,7 +381,7 @@ new file mode 100644
 index 0000000..e70bfc6
 --- /dev/null
 +++ b/Sources/QtBridgeCpp/include/quickdisplaylistitem.h
-@@ -0,0 +1,44 @@
+@@ -0,0 +1,46 @@
 +#pragma once
 +
 +#include <QtCore/qabstractitemmodel.h>
@@ -420,9 +420,11 @@ index 0000000..e70bfc6
 +    };
 +
 +    void rebuildSnapshot();
++    void scheduleRebuild();
 +
 +    QPointer<QAbstractItemModel> m_rects;
 +    std::vector<Rect> m_snapshot;
++    bool m_rebuildPending = false;
 +};
 +
 +void registerQuickDisplayListQmlType();
@@ -431,10 +433,11 @@ new file mode 100644
 index 0000000..3befa29
 --- /dev/null
 +++ b/Sources/QtBridgeCpp/quickdisplaylistitem.cpp
-@@ -0,0 +1,160 @@
+@@ -0,0 +1,180 @@
 +#include "quickdisplaylistitem.h"
 +
 +#include <QtCore/qhash.h>
++#include <QtCore/qmetaobject.h>
 +#include <QtCore/qvariant.h>
 +#include <QtGui/qcolor.h>
 +#include <QtQml/qqml.h>
@@ -495,16 +498,24 @@ index 0000000..3befa29
 +    m_rects = rects;
 +
 +    if (m_rects) {
-+        const auto rebuild = [this] { rebuildSnapshot(); };
-+        connect(m_rects, &QAbstractItemModel::modelReset, this, rebuild);
-+        connect(m_rects, &QAbstractItemModel::dataChanged, this, rebuild);
-+        connect(m_rects, &QAbstractItemModel::rowsInserted, this, rebuild);
-+        connect(m_rects, &QAbstractItemModel::rowsRemoved, this, rebuild);
-+        connect(m_rects, &QAbstractItemModel::rowsMoved, this, rebuild);
-+        connect(m_rects, &QAbstractItemModel::layoutChanged, this, rebuild);
++        // QListModel::sync diffs rows one signal at a time; rebuilding the
++        // display-list snapshot per signal rescans the model quadratically
++        // during camera zoom. Queue one rebuild per event-loop pass instead.
++        connect(m_rects, &QAbstractItemModel::modelReset, this,
++                &QuickDisplayListItem::scheduleRebuild);
++        connect(m_rects, &QAbstractItemModel::dataChanged, this,
++                &QuickDisplayListItem::scheduleRebuild);
++        connect(m_rects, &QAbstractItemModel::rowsInserted, this,
++                &QuickDisplayListItem::scheduleRebuild);
++        connect(m_rects, &QAbstractItemModel::rowsRemoved, this,
++                &QuickDisplayListItem::scheduleRebuild);
++        connect(m_rects, &QAbstractItemModel::rowsMoved, this,
++                &QuickDisplayListItem::scheduleRebuild);
++        connect(m_rects, &QAbstractItemModel::layoutChanged, this,
++                &QuickDisplayListItem::scheduleRebuild);
 +        connect(m_rects, &QObject::destroyed, this, [this] {
 +            m_rects = nullptr;
-+            rebuildSnapshot();
++            scheduleRebuild();
 +        });
 +    }
 +
@@ -545,6 +556,17 @@ index 0000000..3befa29
 +        }
 +    }
 +    update();
++}
++
++void QuickDisplayListItem::scheduleRebuild()
++{
++    if (m_rebuildPending)
++        return;
++    m_rebuildPending = true;
++    QMetaObject::invokeMethod(this, [this] {
++        m_rebuildPending = false;
++        rebuildSnapshot();
++    }, Qt::QueuedConnection);
 +}
 +
 +QSGNode *QuickDisplayListItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *)

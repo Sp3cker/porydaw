@@ -313,4 +313,138 @@ EditorDrawerTestSupport {
         compare(bootstrap.automationLaneTicks(), copiedTicks,
                 "lane paste restores every copied absolute tick")
     }
+
+    function test_productionAutomationBandCopyPasteIsLaneScoped() {
+        if (testCase.containerPhase) skip("production composition only")
+        AutomationTabsSupport.mountProductionAutomation(testCase, "automation-band-lane-clipboard")
+        var volume = bootstrap.automationVolumeIndex()
+        var pan = bootstrap.automationPanIndex()
+        verify(AutomationGestureSupport.writeVolumeLanePoints(testCase, volume),
+               "the mounted Volume source contains written events")
+        var input = AutomationTabsSupport.automationPlotInput(testCase)
+        var sourceValues = bootstrap.automationLaneValues()
+        var ticks = bootstrap.automationLaneTicks().split(",").map(Number)
+        verify(ticks.length >= 2, "the written Volume fixture contains distinct ticks")
+        var sourceStartTick = ticks[0]
+        var sourceEndTick = ticks[ticks.length - 1]
+        var expectedPasteValues = sourceValues.split(",").filter(function(entry) {
+            var tick = Number(entry.split(":")[0])
+            return tick >= sourceStartTick && tick < sourceEndTick
+        }).join(",")
+        verify(expectedPasteValues !== "" && expectedPasteValues !== sourceValues,
+               "the half-open source fixture excludes its last Volume event")
+        var grid = testCase.surface.gridModel
+        function xAt(tick) {
+            return Math.round(tick * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX)
+        }
+        var start = xAt(sourceStartTick)
+        var end = xAt(sourceEndTick)
+        verify(end > start && end < input.width - 2,
+               "fixture ticks independently project the Volume band inside the input")
+        AutomationTabsSupport.clickAutomationTab(testCase, pan)
+        var freePan = AutomationGestureSupport.automationFreePoint(testCase)
+        verify(freePan, "the Pan destination has an empty input point")
+        AutomationGestureSupport.dragAutomationPlot(
+            testCase, freePan.x, freePan.y, Math.min(input.width - 4, freePan.x + 96), freePan.y)
+        tryVerify(function() { return bootstrap.automationLaneEventCount() > 0 }, 2000,
+                  "the Pan lane contains a distinct written sibling")
+        var sibling = bootstrap.automationLaneValues()
+        var sourceRevision = bootstrap.automationDocumentRevision()
+        var undoBeforeCopy = session.canUndo
+        var redoBeforeCopy = session.canRedo
+        AutomationTabsSupport.clickAutomationTab(testCase, volume)
+        var y = AutomationGestureSupport.automationFreePoint(testCase).y
+        mousePress(input, start, y, Qt.RightButton)
+        mouseMove(input, end, y, -1, Qt.RightButton)
+        mouseRelease(input, end, y, Qt.RightButton)
+        verify(bootstrap.automationSelectionRange() !== "",
+               "the real right drag selects a Volume range")
+        mouseClick(input, (start + end) / 2, y, Qt.RightButton)
+        compare(bootstrap.automationSelectionRange(), sourceStartTick + ":" + sourceEndTick,
+                "the midpoint context press preserves the captured Volume band")
+        tryVerify(function() { return testCase.surface.rulerMenu.isOpen
+                                       && testCase.surface.rulerMenu.menuKind === 2 }, 2000,
+                  "the selected band opens the production time-selection menu")
+        tryVerify(function() {
+            var panel = findChild(testCase.surface, "quickMenuPanelRoot")
+            return panel && panel.rowObjectNamePrefix === "rulerMenuRow_" && panel.rowItem(0)
+        }, 2000, "the rendered time menu realizes its Copy row")
+        var copyRow = findChild(testCase.surface, "quickMenuPanelRoot").rowItem(0)
+        compare(copyRow.itemData.actionId, 11, "the rendered range Copy action has its native identity")
+        verify(copyRow.itemData.enabled, "the selected band's Copy action is visibly enabled")
+        mouseClick(copyRow, copyRow.width / 2, copyRow.height / 2, Qt.LeftButton)
+        tryVerify(function() {
+            return !testCase.surface.rulerMenu.isOpen
+                && findChild(testCase.surface, "quickMenuPanelRoot") === null
+        }, 3000, "the copied time menu unmounts before switching parameters")
+        compare(bootstrap.automationLaneValues(), sourceValues,
+                "Copy leaves the exact ordered Volume source events unchanged")
+        compare(bootstrap.automationDocumentRevision(), sourceRevision,
+                "Copy records no document revision")
+        compare(session.canUndo, undoBeforeCopy, "Copy records no Undo entry")
+        compare(session.canRedo, redoBeforeCopy, "Copy records no Redo entry")
+        AutomationTabsSupport.clickAutomationTab(testCase, pan)
+        compare(bootstrap.automationActiveParameterIndex(), pan,
+                "the Pan tab activates after copying the Volume band")
+        compare(bootstrap.automationLaneValues(), sibling,
+                "copying the Volume band leaves the written Pan lane unchanged")
+        AutomationTabsSupport.clickAutomationTab(testCase, volume)
+        AutomationMenuSupport.openAutomationTabMenu(testCase, volume)
+        verify(AutomationMenuSupport.clickAutomationMenuRow(testCase, 5),
+               "the mounted Clear row empties the copied Volume destination")
+        tryVerify(function() { return bootstrap.automationLaneValues() === "" }, 2000,
+                  "the destination Volume lane has no events before paste")
+        compare(bootstrap.automationDocumentRevision(), sourceRevision + 1,
+                "Clear publishes exactly one document revision")
+        compare(session.canUndo, true, "Clear adds an Undo entry")
+        compare(session.canRedo, false, "Clear has no Redo entry")
+        AutomationMenuSupport.awaitAutomationModal(testCase, "automationMenu", false)
+        AutomationTabsSupport.clickAutomationTab(testCase, pan)
+        compare(bootstrap.automationLaneValues(), sibling,
+                "the copied and cleared Volume range leaves Pan's exact values unchanged")
+        AutomationTabsSupport.clickAutomationTab(testCase, volume)
+        var revisionBeforePaste = bootstrap.automationDocumentRevision()
+        mousePress(input, start, y, Qt.RightButton)
+        mouseMove(input, end, y, -1, Qt.RightButton)
+        mouseRelease(input, end, y, Qt.RightButton)
+        mouseClick(input, (start + end) / 2, y, Qt.RightButton)
+        tryVerify(function() { return testCase.surface.rulerMenu.isOpen
+                                       && testCase.surface.rulerMenu.menuKind === 2 }, 2000,
+                  "the copied selection reopens the production time menu")
+        tryVerify(function() {
+            var panel = findChild(testCase.surface, "quickMenuPanelRoot")
+            return panel && panel.rowObjectNamePrefix === "rulerMenuRow_" && panel.rowItem(6)
+        }, 2000, "the rendered time menu realizes its Paste row")
+        var pasteRow = findChild(testCase.surface, "quickMenuPanelRoot").rowItem(6)
+        compare(pasteRow.itemData.actionId, 13, "the rendered range Paste action has its native identity")
+        verify(pasteRow.itemData.enabled, "the selected band's Paste action is visibly enabled")
+        var pasteTick = grid.editCursorTick
+        var expectedDestination = expectedPasteValues.split(",").map(function(entry) {
+            var parts = entry.split(":")
+            return (pasteTick + Number(parts[0]) - sourceStartTick) + ":" + parts[1]
+        }).join(",")
+        mouseClick(pasteRow, pasteRow.width / 2, pasteRow.height / 2, Qt.LeftButton)
+        tryVerify(function() { return bootstrap.automationLaneValues() === expectedDestination },
+                  2000, "the selected-band Paste writes exactly the scoped ordered CC7 tick:value events")
+        compare(bootstrap.automationDocumentRevision(), revisionBeforePaste + 1,
+                "Paste publishes exactly one document revision")
+        compare(session.canUndo, true, "Paste adds an Undo entry")
+        compare(session.canRedo, false, "Paste has no Redo entry")
+        tryVerify(function() {
+            return !testCase.surface.rulerMenu.isOpen
+                && findChild(testCase.surface, "quickMenuPanelRoot") === null
+        }, 3000, "the paste time menu unmounts before the next input")
+        verify(bootstrap.requestAutomationUndo(), "Undo reverses the band Paste entry")
+        compare(bootstrap.automationLaneValues(), "",
+                "Undo restores the exact empty Volume destination")
+        compare(bootstrap.automationDocumentRevision(), revisionBeforePaste + 2,
+                "Undo publishes exactly one reversal revision")
+        compare(session.canUndo, true, "Undo retains the earlier Clear history entry")
+        compare(session.canRedo, true, "Undo exposes the reversed Paste as Redo")
+        AutomationTabsSupport.clickAutomationTab(testCase, pan)
+        compare(bootstrap.automationActiveParameterIndex(), pan,
+                "the Pan tab activates after undoing the band paste")
+        compare(bootstrap.automationLaneValues(), sibling,
+                "the band Paste and Undo never write the Pan sibling")
+    }
 }

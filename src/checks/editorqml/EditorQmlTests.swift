@@ -73,6 +73,14 @@ enum EditorQmlLane {
             return runSuite(file: "tst_EditorDrawerReferenceProfiles.qml",
                             payload: [profilePencilCaseName, profileCaseName])
         }
+        if environment[physicalDpr2ChildKey] != nil {
+            guard environment[suiteEnvironmentKey] == "tst_EditorDrawerAutomationTransactions.qml",
+                  environment["QT_SCALE_FACTOR"] == "2",
+                  environment["QT_QPA_PLATFORM"] == "offscreen",
+                  payload == [physicalDpr2CaseName] else {
+                return fail("physical DPR2 child requires only the mounted boundary case")
+            }
+        }
         if let suite = environment[suiteEnvironmentKey] {
             guard (try? drawerSuites())?.contains(suite) == true else {
                 return fail("unknown drawer suite: \(suite)")
@@ -121,6 +129,7 @@ enum EditorQmlLane {
         }
         queue.addOperations(operations, waitUntilFinished: true)
         if outcomes.withLock({ $0.contains(where: { $0 != 0 }) }) { return 1 }
+        if selectors.isEmpty, runPhysicalDpr2BoundaryChild(scratch: scratch) != 0 { return 1 }
         return selectors.isEmpty || requested.contains("tst_EditorDrawerReferenceProfiles.qml")
             ? runProfileChildren(scratch: scratch) : 0
     }
@@ -170,10 +179,10 @@ enum EditorQmlLane {
             ("AutomationCurves", "productionAutomationOriginPhantomCurveRaster productionAutomationGhostCurvesDrawUnderActive productionAutomationLeadInStepAndSelectionPixels"),
             ("AutomationPresentation", "automationPresentationCurveTabAndBadgePixels automationPresentationGhostAxisAndResize automationPresentationInactiveInclusionPixels"),
             ("AutomationTabs", "parameterLabelsFitGutterAtDerivedMinimum_data parameterLabelsFitGutterAtDerivedMinimum productionAutomationPageMountsAndRenders productionAutomationTabSwitchAndGhosts"),
-            ("AutomationTransactions", "productionAutomationDomainRowsThroughInput productionAutomationPromptTransaction"),
+            ("AutomationTransactions", "productionAutomationDomainRowsThroughInput productionAutomationPromptTransaction productionAutomationBandHalfOpenPhysicalBoundaryDpr1 productionAutomationBandHalfOpenPhysicalBoundaryDpr2"),
             ("AutomationPointMenu", "productionAutomationRangeSubmenu productionAutomationOutsideRightRetarget productionAutomationPointMenuDeleteAndDismiss productionAutomationSyntheticDefaultMenuRoute"),
             ("AutomationFocus", "automationModalsRetireWithPage productionAutomationSetValuePromptFocusRoute productionAutomationTempoPromptFocusRoute productionAutomationSpacePriority"),
-            ("AutomationLaneMenu", "productionAutomationMenusAndLaneCommands productionAutomationClearRowClick productionAutomationRange64RowClick productionAutomationCopyRowClick productionAutomationPasteRowClick"),
+            ("AutomationLaneMenu", "productionAutomationMenusAndLaneCommands productionAutomationClearRowClick productionAutomationRange64RowClick productionAutomationCopyRowClick productionAutomationPasteRowClick productionAutomationBandCopyPasteIsLaneScoped"),
             ("AutomationTempo", "productionAutomationTempoPromptPresentation productionAutomationCenteredPromptOffset productionAutomationTapTempoThroughInput"),
             ("PagePlayhead", "productionAutomationFollowAndCancellation productionAllPagesPlayheadPerformance productionVoiceChangesPlayheadPerformance"),
             ("AutomationCamera", "productionAutomationBandGeometry productionAutomationSectionResizeKeepsTabsClickable productionAutomationMiddlePanAndTrackSwitch productionAutomationEmptySwitchPreservesGrid productionAutomationViewStateAcrossDrawerPages productionAutomationWheelZoomPreservesDrawerState"),

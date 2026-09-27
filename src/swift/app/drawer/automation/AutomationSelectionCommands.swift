@@ -62,6 +62,20 @@ extension AutomationPage {
         return true
     }
 
+    func selectionScope(_ selection: AutomationTimeSelection) -> TimeScope {
+        switch selection.scope {
+        case .lanes:
+            let lanes = selection.lanes.reduce(into: Set<TimeScope.ScopedLane>()) { result, item in
+                guard let track = item.track, let lane = item.lane else { return }
+                result.insert(TimeScope.ScopedLane(track: track, lane: lane))
+            }
+            return TimeScope(tracks: [], lanes: lanes, tempo: selection.tempo)
+        case let .tracks(scope):
+            return TimeScope(tracks: scope, lanes: [],
+                             tempo: selection.coversTempo(usedTracks: usedTracks()))
+        }
+    }
+
     func resolvedSelectionScope() -> TimeScope? {
         guard let selection, selection.isActive, !selection.range.hasReservedEndpoint else { return nil }
         var scope = selectionScope(selection)

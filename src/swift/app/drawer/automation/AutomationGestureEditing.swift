@@ -138,8 +138,16 @@ extension AutomationPage {
         let first = min(live.anchorTick, live.currentTick)
         let last = max(live.anchorTick, live.currentTick)
         if live.active {
-            if last > first { selectRange(from: first, to: last) }
-            else { applyTimeSelection(nil) }
+            if last > first {
+                let stack = AutomationRowStack(rows: rows, visibleRowCount: rows.count,
+                                               activeTickRange: nil)
+                let payload = stack.laneSet(from: live.parameter, through: live.parameter)
+                applyTimeSelection(AutomationTimeSelection(
+                    range: TimeRange(startTick: first, endTick: last), scope: .lanes,
+                    lanes: Set(payload.lanes), tempo: payload.tempo))
+            } else {
+                applyTimeSelection(nil)
+            }
             return
         }
         guard let facts = frozenFacts(modifiers: .init()) else { return }
@@ -172,16 +180,20 @@ extension AutomationPage {
             return
         }
         let projection = makeProjection(facts: facts, camera: liveCamera())
-        let tick = projection.tick(atX: x, fine: false)
-        if selectionContains(tick: tick, facts: facts) { return }
+        if selectionContains(x: x, facts: facts, projection: projection) { return }
+        if case .tracks = selection.scope, row(facts.parameter)?.coversNodes == true,
+           x >= projection.x(selection.range.startTick),
+           x < projection.x(selection.range.endTick) { return }
         applyTimeSelection(nil)
     }
 
-    func selectionContains(tick: Tick, facts: AutomationFrozenFacts) -> Bool {
-        guard let selection, selection.isActive,
-              selection.covers(facts.parameter, usedTracks: usedTracks()),
-              row(facts.parameter)?.coversNodes == true else { return false }
-        return selection.range.contains(tick)
+    func selectionContains(x: Double, facts: AutomationFrozenFacts,
+                           projection: AutomationProjection) -> Bool {
+        guard let selection else { return false }
+        let stack = AutomationRowStack(rows: rows, visibleRowCount: rows.count,
+                                       activeTickRange: selection.range)
+        return stack.hitTest(parameter: facts.parameter, x: x,
+                             projection: projection, selection: selection)
     }
 
     func update(sweep transaction: inout AutomationSweepTransaction, x: Double, y: Double,
@@ -240,21 +252,6 @@ extension AutomationPage {
     func commit(_ plan: AutomationDocumentPlan?) -> Bool {
         guard let session, let plan else { return false }
         return AutomationCommit.apply(plan, in: session.document)
-    }
-
-
-    func selectionScope(_ selection: AutomationTimeSelection) -> TimeScope {
-        switch selection.scope {
-        case .lanes:
-            let lanes = selection.lanes.reduce(into: Set<TimeScope.ScopedLane>()) { result, item in
-                guard let track = item.track, let lane = item.lane else { return }
-                result.insert(TimeScope.ScopedLane(track: track, lane: lane))
-            }
-            return TimeScope(tracks: [], lanes: lanes, tempo: selection.tempo)
-        case let .tracks(scope):
-            return TimeScope(tracks: scope, lanes: [],
-                             tempo: selection.coversTempo(usedTracks: usedTracks()))
-        }
     }
 
     /// The parameters the explicit selection covers and that still carry events:

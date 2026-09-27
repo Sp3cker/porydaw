@@ -356,6 +356,36 @@ public struct AutomationRowStack: Equatable, Sendable {
         rows.first { $0.parameter == parameter }
     }
 
+    /// Resolve inclusive endpoints in displayed row order, even without a time selection.
+    public func laneSet(from first: AutomationParameter,
+                        through last: AutomationParameter) -> (tempo: Bool, lanes: [AutomationParameter]) {
+        let visible = rows.prefix(visibleRowCount)
+        guard let firstIndex = visible.firstIndex(where: { $0.parameter == first }),
+              let lastIndex = visible.firstIndex(where: { $0.parameter == last }) else {
+            return (false, [])
+        }
+        let lower = min(firstIndex, lastIndex)
+        let upper = max(firstIndex, lastIndex)
+        var lanes: [AutomationParameter] = []
+        lanes.reserveCapacity(upper - lower + 1)
+        var tempo = false
+        for index in lower...upper {
+            let parameter = rows[index].parameter
+            if parameter.isTempo { tempo = true }
+            else { lanes.append(parameter) }
+        }
+        return (tempo, lanes)
+    }
+
+    /// Hit the physically displayed half-open band, not its snapped tick.
+    public func hitTest(parameter: AutomationParameter, x: Double,
+                        projection: AutomationProjection,
+                        selection: AutomationTimeSelection) -> Bool {
+        guard selection.isActive, row(for: parameter)?.coversLane == true else { return false }
+        return x >= projection.x(selection.range.startTick)
+            && x < projection.x(selection.range.endTick)
+    }
+
     /// The catalog parameters whose selection covers written events.
     public func selectedParameters(track: Int) -> [AutomationParameter] {
         AutomationCatalog.parameters(track: track).filter {

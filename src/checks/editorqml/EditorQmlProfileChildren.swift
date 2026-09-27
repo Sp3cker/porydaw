@@ -40,9 +40,12 @@ extension EditorQmlLane {
     /// for the whole run. One phase's QML content is therefore never a later
     /// phase's reused owner graph.
     static let containerPhaseName = "container"
+    static let physicalDpr2PhaseName = "physical-dpr2-boundary"
+    static let physicalDpr2CaseName = "EditorDrawerLane::test_productionAutomationBandHalfOpenPhysicalBoundaryDpr2"
 
     /// Recursion guard: a child never spawns further children.
     static let childEnvironmentKey = "PORYDAW_EDITOR_QML_PROFILE"
+    static let physicalDpr2ChildKey = "PORYDAW_EDITOR_QML_BOUNDARY_DPR2"
 
     /// The container phase's own staging key, staged before any QML object exists.
     static let phaseEnvironmentKey = "PORYDAW_EDITOR_QML_PHASE"
@@ -60,6 +63,11 @@ extension EditorQmlLane {
         var environment = ProcessInfo.processInfo.environment
         environment["PORYDAW_EDITOR_QML_SUITE"] = suite
         if phase == containerPhaseName { environment[phaseEnvironmentKey] = containerPhaseName }
+        if phase == physicalDpr2PhaseName {
+            environment[physicalDpr2ChildKey] = "1"
+            environment["QT_SCALE_FACTOR"] = "2"
+            environment["QT_QPA_PLATFORM"] = "offscreen"
+        }
         let child = Process()
         child.executableURL = URL(fileURLWithPath: executable)
         child.arguments = payload.isEmpty ? [childScratch.path] : [childScratch.path, "--qt"] + payload
@@ -70,7 +78,7 @@ extension EditorQmlLane {
         do {
             try child.run()
         } catch {
-            return fail("container phase: could not start the child (\(error))")
+            return fail("\(phase) \(suite): could not start the child (\(error))")
         }
         let data = out.fileHandleForReading.readDataToEndOfFile()
         child.waitUntilExit()
@@ -84,8 +92,21 @@ extension EditorQmlLane {
             return fail("\(phase) \(suite): child exited \(child.terminationStatus)"
                 + " (signal \(child.terminationReason == .uncaughtSignal))")
         }
+        if phase == physicalDpr2PhaseName,
+           !output.contains("PASS   : ::\(physicalDpr2CaseName)()") {
+            return fail("\(phase) \(suite): required DPR2 case did not execute and pass")
+        }
         return 0
     }
+
+    /// Run the mounted boundary against Qt's offscreen DPR2 framebuffer.
+    /// The QML case checks screen DPR and captured image dimensions.
+    @MainActor
+    static func runPhysicalDpr2BoundaryChild(scratch: String) -> Int32 {
+        runPhaseChild(scratch: scratch, suite: "tst_EditorDrawerAutomationTransactions.qml",
+                      phase: physicalDpr2PhaseName, payload: [physicalDpr2CaseName])
+    }
+
     /// One child per required profile, each rendering only the named profile case
     /// in its own process, and each verified from its own artifacts: the PNG and
     /// the metadata beside it must exist, and the metadata must name exactly the

@@ -21,7 +21,7 @@ extension AutomationPage {
             guard let facts = frozenFacts(modifiers: .init()) else { return false }
             let projection = makeProjection(facts: facts, camera: liveCamera())
             let tick = projection.tick(atX: x, fine: false)
-            let inside = selectionContains(tick: tick, facts: facts)
+            let inside = selectionContains(x: x, facts: facts, projection: projection)
             band = AutomationRangeBand(revision: facts.revision, parameter: facts.parameter,
                                        anchorTick: tick, currentTick: tick,
                                        pressX: x, pressY: y, insideSelection: inside)

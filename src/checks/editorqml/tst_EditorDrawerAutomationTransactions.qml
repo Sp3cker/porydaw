@@ -12,6 +12,8 @@ EditorDrawerTestSupport {
     id: testCase
     name: "EditorDrawerLane"
 
+    Component { id: bandImageReader; Canvas { width: 1; height: 1 } }
+
     function test_productionAutomationDomainRowsThroughInput() {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
@@ -151,6 +153,108 @@ EditorDrawerTestSupport {
         model.isPencilMode = false
         wait(0)
         compare(session.canUndo, true, "the stroke reached the document history")
+    }
+
+    function test_productionAutomationBandHalfOpenPhysicalBoundaryDpr1() {
+        if (testCase.containerPhase) skip("production composition only")
+        if (Screen.devicePixelRatio !== 1) skip("DPR1 boundary runs in the DPR1 lane")
+        verifyPhysicalBandBoundary(1)
+    }
+
+    function test_productionAutomationBandHalfOpenPhysicalBoundaryDpr2() {
+        if (testCase.containerPhase) skip("production composition only")
+        if (Screen.devicePixelRatio !== 2) skip("DPR2 boundary runs in the DPR2 lane")
+        verifyPhysicalBandBoundary(2)
+    }
+
+    function verifyPhysicalBandBoundary(expectedDpr) {
+        AutomationTabsSupport.mountProductionAutomation(testCase, "automation-band-physical-edge")
+        var volume = bootstrap.automationVolumeIndex()
+        verify(AutomationGestureSupport.writeVolumeLanePoints(testCase, volume),
+               "the mounted Volume lane has written calibration markers")
+        var input = AutomationTabsSupport.automationPlotInput(testCase)
+        var model = AutomationTabsSupport.automationModel(testCase)
+        var ticks = bootstrap.automationLaneTicks().split(",").map(Number)
+        verify(ticks.length >= 2, "the fixture's written Volume sweep has two separate ticks")
+        var startTick = ticks[0]
+        var endTick = ticks[ticks.length - 1]
+        var grid = testCase.surface.gridModel
+        function xAt(tick) {
+            return Math.round(tick * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX)
+        }
+        var startX = xAt(startTick)
+        var endX = xAt(endTick)
+        verify(endTick > startTick && startX > 2 && endX < input.width - 2
+               && endX - startX > model.baseFontPx,
+               "fixture ticks project both band endpoints inside the plot without drawn nodes")
+        var free = AutomationGestureSupport.automationFreePoint(testCase)
+        verify(free, "the band gesture has a free input row")
+        var bandY = free.y
+        function selectBand() {
+            mousePress(input, startX, bandY, Qt.RightButton)
+            mouseMove(input, endX, bandY, -1, Qt.RightButton)
+            mouseRelease(input, endX, bandY, Qt.RightButton)
+            compare(bootstrap.automationSelectionRange(), startTick + ":" + endTick,
+                    "a real right drag publishes the calibration markers' half-open ticks")
+        }
+        var beforeCancel = bootstrap.automationLaneValues()
+        var revisionBeforeCancel = bootstrap.automationDocumentRevision()
+        var undoBeforeCancel = session.canUndo
+        mousePress(input, startX, bandY, Qt.RightButton)
+        mouseMove(input, endX, bandY, -1, Qt.RightButton)
+        verify(bootstrap.automationInteractionActive(),
+               "the right drag stages an active band before cancellation")
+        compare(bootstrap.automationSelectionRange(), "",
+                "a drafted band does not commit selection before release")
+        verify(bootstrap.cancelInput(), "the mounted composition cancels the drafted band")
+        mouseRelease(input, endX, bandY, Qt.RightButton)
+        compare(bootstrap.automationLaneValues(), beforeCancel,
+                "cancelling the staged band preserves original lane bytes")
+        compare(bootstrap.automationDocumentRevision(), revisionBeforeCancel,
+                "cancelling the staged band publishes no document revision")
+        compare(session.canUndo, undoBeforeCancel,
+                "cancelling the staged band adds no Undo entry")
+        compare(bootstrap.automationSelectionRange(), "",
+                "cancelling the staged band leaves no committed selection")
+        selectBand()
+        waitForRendering(testCase.surface)
+        var frame = null
+        verify(testCase.surface.grabToImage(function(result) { frame = result }),
+               "the mounted drawer accepts a physical framebuffer capture")
+        tryVerify(function() { return frame !== null }, 3000,
+                  "the physical framebuffer capture completes")
+        var imageFile = bootstrap.projectRoot + "/automation-band-physical.png"
+        verify(frame.saveToFile(imageFile), "the physical framebuffer is saved to the copied fixture")
+        var reader = bandImageReader.createObject(testCase.surface)
+        tryCompare(reader, "available", true, 3000)
+        var imageURL = "file://" + imageFile
+        reader.loadImage(imageURL)
+        tryVerify(function() { return reader.isImageLoaded(imageURL) }, 3000,
+                  "the physical image bytes load for independent dimensions")
+        var image = reader.getContext("2d").createImageData(imageURL)
+        compare(Screen.devicePixelRatio, expectedDpr,
+                "the declared physical-boundary lane observes its actual screen DPR")
+        compare(image.width, Math.round(testCase.surface.width * expectedDpr),
+                "the physical framebuffer width matches the declared lane DPR")
+        compare(image.height, Math.round(testCase.surface.height * expectedDpr),
+                "the physical framebuffer height matches the declared lane DPR")
+        reader.destroy()
+        mousePress(input, (startX + endX) / 2, bandY, Qt.RightButton)
+        compare(bootstrap.automationSelectionRange(), startTick + ":" + endTick,
+                "a real midpoint press preserves the selected Volume band")
+        mouseRelease(input, (startX + endX) / 2, bandY, Qt.RightButton)
+        model.dismissMenu()
+        mousePress(input, endX, bandY, Qt.RightButton)
+        compare(bootstrap.automationSelectionRange(), "",
+                "a real press on the exclusive displayed endpoint clears the band before snapping")
+        mouseRelease(input, endX, bandY, Qt.RightButton)
+        model.dismissMenu()
+        selectBand()
+        mousePress(input, startX - 1, bandY, Qt.RightButton)
+        compare(bootstrap.automationSelectionRange(), "",
+                "one logical pixel outside the displayed start clears the band before snapping")
+        mouseRelease(input, startX - 1, bandY, Qt.RightButton)
+        model.dismissMenu()
     }
 
     function test_productionAutomationPromptTransaction() {
