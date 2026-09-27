@@ -77,10 +77,20 @@ func drawerAutomationCancellationAndNoOps(_ report: CheckReport, suite: Document
     empty.activate(empty.panLane)
     let emptyBefore = empty.snapshot
     let pressX = empty.x(72)
+    let cursorBeforeBodyPress = empty.session.editCursor
     report.expect(empty.page.pointerPress(x: pressX, y: 60, surface: 1, button: 1), cppID: drawerAutomationCancelID,
                   message: "a press on an empty lane starts a sweep")
+    report.expect(!empty.page.bandVisible, cppID: "automation/AutomationEditingTest::defaultBodyClickSetsCursorOnly",
+                  message: "the default body press previews no range")
+    report.expectEqual(expected: cursorBeforeBodyPress, actual: empty.session.editCursor,
+                       cppID: "automation/AutomationEditingTest::defaultBodyClickSetsCursorOnly",
+                       what: "the edit cursor stays parked while the body press is held")
     report.expect(!empty.page.pointerRelease(x: pressX, y: 60, button: 1), cppID: drawerAutomationCancelID,
                   message: "a press that never travelled commits nothing")
+    report.expect(!empty.page.isPanning, cppID: "automation/AutomationEditingTest::defaultBodyClickSetsCursorOnly",
+                  message: "the released body press has no pan")
+    report.expect(!empty.page.bandVisible, cppID: "automation/AutomationEditingTest::defaultBodyClickSetsCursorOnly",
+                  message: "the released body press leaves no range preview")
     report.expectEqual(expected: emptyBefore, actual: empty.snapshot, cppID: drawerAutomationCancelID,
                        what: "the parked press leaves the document alone")
     let policy = AutomationProjectionCache().snapPolicy(session: empty.session, font: 13, dpr: 1)
@@ -89,6 +99,20 @@ func drawerAutomationCancellationAndNoOps(_ report: CheckReport, suite: Document
                               fine: false, camera: empty.session.camera)
     report.expectEqual(expected: snapped, actual: empty.session.editCursor, cppID: drawerAutomationCancelID,
                        what: "the press parks the edit cursor at the snapped tick")
+
+    let voiceID = "automation/AutomationEditingTest::voicePressIsolated"
+    let voice = VoiceChangesPage(baseFontPx: 13)
+    voice.attach(session: empty.session, palette: GridPalette())
+    voice.configureBody(width: 480, height: 120, gutter: 0, devicePixelRatio: 1,
+                        baseFontPx: 13, dragDistance: 10)
+    let beforeVoicePress = empty.snapshot
+    let cursorBeforeVoicePress = empty.session.editCursor
+    _ = voice.pointerPress(x: empty.x(72), y: 60, surface: 1, button: 1, modifiers: 0)
+    report.expectEqual(expected: beforeVoicePress, actual: empty.snapshot, cppID: voiceID,
+                       what: "pressing the voice input leaves the automation document frozen")
+    report.expectEqual(expected: cursorBeforeVoicePress, actual: empty.session.editCursor, cppID: voiceID,
+                       what: "pressing the voice input leaves the edit cursor parked")
+    _ = voice.pointerRelease(x: empty.x(72), y: 60, button: 1)
 
     // A sub-threshold move leaves a frozen gesture alive but unchanged.
     let jitter = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
@@ -391,6 +415,8 @@ func drawerAutomationBandEscape(_ report: CheckReport, suite: DocumentSession,
     let band = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
     band.activate(band.panLane)
     _ = band.page.pointerPress(x: band.x(24), y: 60, surface: 1, button: AutomationQtButton.right)
+    report.expect(!band.page.isPanning, cppID: bandID,
+                  message: "a right press starts no pan before moving")
     _ = band.page.pointerMove(x: band.x(120), y: 60, buttons: AutomationQtButton.right)
     report.expect(band.page.bandVisible, cppID: bandID, message: "the right drag arms the band")
     let bandBefore = band.snapshot

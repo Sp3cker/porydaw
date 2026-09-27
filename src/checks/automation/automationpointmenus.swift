@@ -132,6 +132,9 @@ func drawerAutomationPointMenuDeleteAndStale(_ report: CheckReport, suite: Docum
                                    button: AutomationQtButton.right)
     report.expect(stale.page.menuTargetIsPoint, cppID: staleID,
                   message: "the stale target opens its point menu")
+    report.expect(stale.page.publishedMenuRows.contains {
+        $0.actionId == AutomationMenuAction.deleteNode.rawValue && $0.enabled
+    }, cppID: staleID, message: "the written stale-journey point menu publishes an enabled Delete row before the rewrite")
     stale.document.writeLane(track: 0, lane: .controller(TimeDefaults.ccPan), from: 168,
                              through: 168, points: [LaneWrite(tick: 168, value: 5)])
     let rewritten = stale.snapshot

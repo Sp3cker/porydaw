@@ -10,6 +10,7 @@ Additional Swift counterpart: src/checks/automation/automationcanvasediting.swif
 Additional Swift counterpart: src/checks/automation/automationselection.swift
 Additional Swift counterpart: src/checks/automation/domain/gesturePointRange.swift
 Additional Swift counterpart: src/checks/automation/presentation/tst_automationpresentation.swift
+Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml
 
 
 Command: deno task verify --filter swiftcore --verbose
@@ -22,6 +23,7 @@ drawerAutomationRestoredInteractionContracts / drawerAutomationBandIsolatesTempo
 (automationselection.swift) and drawerAutomationParameterSwitchAndGhosts
 (presentation/tst_automationpresentation.swift). Not re-executed by this ledger task.
 Converted-window command: deno task verify:qml --verbose
+Task-85 reconciliation: implementer GREEN (this ledger task did not re-run the suite) — deno task verify --filter swiftcore-projectsession --verbose: 1/36 ok, evidence build/proof-evidence/swiftcore-projectsession.json (band/pan/pencil/body/voice-press isolation, Alt history depth, cursor-kind transitions, marker republication, held-B fixture, stale-menu anchor); deno task verify:qml --verbose: editorqml-drawer green, evidence build/proof-evidence/editorqml-drawer.json (mounted voice input bounds, cursor shapes, band isolation, draft republication).
 
 A001 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:46
 Disposition: MATCHED
@@ -47,13 +49,8 @@ Original expression:
   QVERIFY(tab().view().userGestureActive());
 
 A006 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:61
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the band preview does not contain the pan lane after a middle press. The Swift band contract asserts bandVisible/selection for right-press bands only (S018/S019); no predicate reads band-preview lane membership. Unproved condition: band-preview lane membership during a pan.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
+Disposition: MATCHED
+Mapping: S055
 
 A007 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:62
 Disposition: MATCHED
@@ -80,27 +77,12 @@ Original expression:
   QVERIFY(!tab().view().userGestureActive());
 
 A012 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:71
-Disposition: PARTIAL
-Mapping/reason: Partial: same band-preview membership condition as A006 after the release; no predicate reads band-preview lane membership. Unproved condition: band-preview lane membership after the release.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
+Disposition: MATCHED
+Mapping: S056
 
 A013 | AutomationEditingTest::voicePressIsolated | src/checks/automation/automationrouting.cpp:77
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationrouting.cpp) no longer builds or runs. Previous native note: Retained native/QML obligation: the original asserts the rendered voice-changes input item has non-empty bounds (voiceChangeInput().bounds()). The voice-changes area is a separate QML item in the Swift architecture and no Swift presenter predicate measures its rendered bounds. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Source context since previous assertion:
-
-  }
-
-  void AutomationEditingTest::voicePressIsolated()
-  {
-      showVoiceChanges(tab().view());
-
-Original expression:
-  QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
+Disposition: MATCHED
+Mapping: S068
 
 A014 | AutomationEditingTest::voicePressIsolated | src/checks/automation/automationrouting.cpp:79
 Disposition: RETIRED-REPRESENTATION
@@ -118,25 +100,15 @@ A018 | AutomationEditingTest::voicePressIsolated | src/checks/automation/automat
 Disposition: RETIRED-REPRESENTATION
 
 A019 | AutomationEditingTest::voicePressIsolated | src/checks/automation/automationrouting.cpp:91
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts a press in the voice-changes area leaves the document frozen. No executing Swift predicate drives a voice-changes press and re-reads the document; the automation no-write predicates (S015/S031 and the canvas cancellation snapshot predicates) cover automation-side gestures only. Unproved condition: voice-area press isolation.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(frozenDocumentState() == frozen);
+Disposition: MATCHED
+Mapping: S057, S069
 
 A020 | AutomationEditingTest::voicePressIsolated | src/checks/automation/automationrouting.cpp:92
 Disposition: RETIRED-REPRESENTATION
 
 A021 | AutomationEditingTest::voicePressIsolated | src/checks/automation/automationrouting.cpp:94
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts a press in the voice-changes area leaves the edit cursor unchanged. No executing Swift predicate drives a voice-changes press and re-reads the cursor. Unproved condition: voice-area press cursor isolation.
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(tab().view().editCursorTick(), cursorBefore);
+Disposition: MATCHED
+Mapping: S058, S070
 
 A022 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:100
 Disposition: MATCHED
@@ -163,13 +135,8 @@ Original expression:
   QVERIFY(tab().view().userGestureActive());
 
 A026 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:114
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the right press does not start a pan. The band scenario now asserts no pan after the arm-and-Escape sequence (S041), but no executing predicate reads page.isPanning at the right-press moment itself (S013/S017 read it for middle-button pans). Unproved condition: press-time isPanning during a band.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!page().canvas()->isPanning());
+Disposition: MATCHED
+Mapping: S059
 
 A027 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:115
 Disposition: MATCHED
@@ -275,13 +242,8 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A044 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:168
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the pencil press leaves the band preview empty. No executing predicate reads band-preview membership during a pencil stroke (S018/S019 cover right-press bands). Unproved condition: band-preview membership during a pencil stroke.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
+Disposition: MATCHED
+Mapping: S060
 
 A045 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:169
 Disposition: MATCHED
@@ -377,13 +339,8 @@ A059 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automati
 Disposition: RETIRED-REPRESENTATION
 
 A060 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:189
-Disposition: PARTIAL
-Mapping/reason: Partial: same pencil cursor-stability condition as A047 after the release. Unproved condition: pencil cursor stability.
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(tab().view().editCursorTick(), cursorBefore);
+Disposition: MATCHED
+Mapping: S061
 
 A061 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:190
 Disposition: RETIRED-REPRESENTATION
@@ -395,22 +352,12 @@ Original expression:
   QVERIFY(!tab().view().userGestureActive());
 
 A062 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:191
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts no pan is live after the pencil release. No executing Swift predicate reads page.isPanning in a pencil scenario. Unproved condition: isPanning after the pencil release.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!page().canvas()->isPanning());
+Disposition: MATCHED
+Mapping: S062
 
 A063 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:192
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the band preview is empty after the pencil release. No executing predicate reads band-preview membership in a pencil scenario. Unproved condition: band-preview membership after the pencil release.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
+Disposition: MATCHED
+Mapping: S063
 
 A064 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:198
 Disposition: MATCHED
@@ -440,13 +387,8 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A070 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:217
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the body press leaves the band preview empty. No executing predicate reads band membership for a body press. Unproved condition: band-preview membership during a body press.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
+Disposition: MATCHED
+Mapping: S064
 
 A071 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:218
 Disposition: MATCHED
@@ -456,13 +398,8 @@ A072 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automa
 Disposition: RETIRED-REPRESENTATION
 
 A073 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:221
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the edit cursor is still at its previous tick while the body press is held. The Swift predicate asserts the parked cursor after the release (S032); no predicate reads the cursor between press and release. Unproved condition: cursor stability during the press.
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(tab().view().editCursorTick(), cursorBefore);
+Disposition: MATCHED
+Mapping: S065
 
 A074 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:225
 Disposition: MATCHED
@@ -480,22 +417,12 @@ Disposition: MATCHED
 Mapping: S030
 
 A078 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:230
-Disposition: PARTIAL
-Mapping/reason: Partial: same body-press isPanning condition as A069 after the release. Unproved condition: isPanning after the body release.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!page().canvas()->isPanning());
+Disposition: MATCHED
+Mapping: S066
 
 A079 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:231
-Disposition: PARTIAL
-Mapping/reason: Partial: same body-press band-membership condition as A070 after the release. Unproved condition: band-preview membership after the body release.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
+Disposition: MATCHED
+Mapping: S067
 
 A080 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:237
 Disposition: MATCHED
@@ -736,3 +663,51 @@ Anchor: message "a pending pencil stroke leaves the document revision and edit c
 
 S054 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift
 Anchor: message "a pencil stroke leaves the LFO, Volume, Voice, bend and tempo lanes untouched"
+
+S055 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "a middle pan never previews the pan lane as a range"
+
+S056 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the released middle pan leaves no range preview"
+
+S057 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
+Anchor: message "pressing the voice input leaves the automation document frozen"
+
+S058 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
+Anchor: message "pressing the voice input leaves the edit cursor parked"
+
+S059 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift
+Anchor: message "a right press starts no pan before moving"
+
+S060 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
+Anchor: message "a pencil press previews no range"
+
+S061 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
+Anchor: message "a pencil stroke leaves the edit cursor untouched"
+
+S062 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
+Anchor: message "the released pencil stroke owns no pan"
+
+S063 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
+Anchor: message "the released pencil stroke leaves no range preview"
+
+S064 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
+Anchor: message "the default body press previews no range"
+
+S065 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
+Anchor: message "the edit cursor stays parked while the body press is held"
+
+S066 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
+Anchor: message "the released body press has no pan"
+
+S067 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
+Anchor: message "the released body press leaves no range preview"
+
+S068 | test_productionVoiceInputPressIsolatesAutomationAndCursor | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the real mounted voice input has non-empty bounds before its press"
+
+S069 | test_productionVoiceInputPressIsolatesAutomationAndCursor | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the voice-area press leaves the automation document frozen"
+
+S070 | test_productionVoiceInputPressIsolatesAutomationAndCursor | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the voice-area press leaves the edit cursor parked"

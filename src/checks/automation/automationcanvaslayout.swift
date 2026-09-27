@@ -100,6 +100,8 @@ func drawerAutomationMiddlePanIsolation(_ report: CheckReport, suite: DocumentSe
                        what: "starting a pan mutates nothing")
     report.expectEqual(expected: cursorBefore, actual: fixture.session.editCursor, cppID: id,
                        what: "starting a pan parks no cursor")
+    report.expect(!page.bandVisible, cppID: id,
+                  message: "a middle pan never previews the pan lane as a range")
     _ = page.pointerMove(x: 52, y: 60, buttons: AutomationQtButton.middle)
     report.expectEqual(expected: scrollBefore + 48, actual: fixture.session.camera.snapshot.scrollX, cppID: id,
                        what: "the pan scrolls the shared camera by the travel")
@@ -111,6 +113,8 @@ func drawerAutomationMiddlePanIsolation(_ report: CheckReport, suite: DocumentSe
                        what: "the released pan leaves document and history untouched")
     report.expectEqual(expected: cursorBefore, actual: fixture.session.editCursor, cppID: id,
                        what: "the released pan leaves the cursor where it was")
+    report.expect(!page.bandVisible, cppID: id,
+                  message: "the released middle pan leaves no range preview")
 
     let switchID = "automation/AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan"
     _ = page.pointerPress(x: 100, y: 60, surface: 1, button: AutomationQtButton.middle)

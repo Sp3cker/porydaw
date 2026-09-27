@@ -13,7 +13,7 @@ Verification: deno task verify --filter swiftcore --verbose (runAutomationPageCh
 Reference revision pin: the recovered original at the recorded revision hashes to the recorded Original SHA-256; the counterpart paths above are the files this reconciliation read, uncommitted lane edits included.
 Registered run path: src/checks/editorqml/tst_EditorDrawer.qml (EditorDrawerLane :: run_checks, the drawer lane) carries the rendered menu rows, enablement, accessible role and focus entries; src/checks/editorqml/tst_ShellGridMenu.qml (ShellGridMenu :: run_checks, the shell-grid-menu lane) carries the shared-popup takeover and band-fallthrough journeys with real pointer and key delivery; src/checks/automation/AutomationPageChecks.swift :: runAutomationPageChecks -> src/checks/workspace/SessionChecks.swift :: runProjectSessionSuite -> projectSession (swiftcore suite 10) carries the presenter and document entries; the Swift counterpart is compiled in src/checks/CMakeLists.txt :: swift_core_check.
 Execution boundary: MATCHED identifies equivalent executing predicates at the cited S entries. The drawer lane drives the production QML surface with real pointer and key delivery, so the rendered menu rows, enablement, accessible role, focus facts, the accepted prompt's own closure, the lane-delete confirmation's rendered Cancel click and the unwritten lane's projected node are cited from it; the mounted shell-grid-menu lane supplies the shared-popup deliveries (a real click on timelineRulerDivisionControl, a real rendered-row click and real Escape), so A148-A155 and A161-A162 cite it beside the presenter anchors; the fork's native re-entrancy staging (A170-A171) and its division-item focus target (A155, Swift returns focus to timelineRulerInput) are recorded inside those mapping lines; A131 and A181 stay PARTIAL because the stale journey is presenter-dispatched and renders no row of its own, and because the survival tail has no separate late no-prompt predicate; with every remaining original row either MATCHED or RETIRED-REPRESENTATION, those two PARTIAL rows are the only open items. Parser success is not semantic parity.
-Task-71 reconciliation: A181 closes on the new survival-tail predicate (S225), which resolves uniquely in drawerAutomationSharedPopupArbitration and appears once in the build/proof-evidence/swiftcore-projectsession.json pass rows of the frozen-tree lane run; A131 stays PARTIAL with the new stale predicate cited as [S224]. The Execution boundary paragraph's "A131 and A181 stay PARTIAL" sentence is superseded for A181; A131 is now the only open item. This ledger task did not re-run the suite.
+Task-71 reconciliation: A181 closes on the new survival-tail predicate (S225), which resolves uniquely in drawerAutomationSharedPopupArbitration and appears once in the build/proof-evidence/swiftcore-projectsession.json pass rows of the frozen-tree lane run; A131 stays PARTIAL with the new stale predicate cited as [S224]. The Execution boundary paragraph's "A131 and A181 stay PARTIAL" sentence is superseded for A181; A131 is now the only open item. This ledger task did not re-run the suite. Task-85 reconciliation: A131 closes on S226 (Swift pre-rewrite Delete row) with S227/S228 (mounted Delete rendering and mapped scene center); implementer GREEN (this ledger task did not re-run the suite) — deno task verify --filter swiftcore-projectsession --verbose: 1/36 ok, evidence build/proof-evidence/swiftcore-projectsession.json; deno task verify:shell --filter shell-grid-menu --verbose: 1/26 ok, evidence build/proof-evidence/shell-grid-menu.json.
 
 A001 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:109
 Disposition: MATCHED
@@ -661,10 +661,8 @@ Disposition: MATCHED
 Mapping: S036
 
 A131 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:530
-Disposition: PARTIAL
-Mapping/reason: The Task-71 stale journey pins its outcome at [S224] (the rejected stale request publishes no Delete row and leaves the rewritten lane intact). Delete-row rendering stays proven only on the written-node and synthetic menus ([S118], [S161]); the stale journey itself is presenter-dispatched and renders nothing by design, so this row's own rendered Delete row stays unproved.
-Original expression:
-  QVERIFY2(!deleteCenter.isNull(), "the Delete row never rendered")
+Disposition: MATCHED
+Mapping: S226, S227, S228
 
 A132 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:549
 Disposition: MATCHED
@@ -1138,7 +1136,7 @@ Swift executable assertion index
 The S entries are exact predicates already called by the suite. Their presence alone
 does not close any A entry. Preserve their surrounding setup and order in the paired source.
 S001-S027, S091-S094 and S173-S174 index drawerAutomationPromptTransactions;
-S028-S038, S079, S175-S176 drawerAutomationPointMenuDeleteAndStale; S039-S052, S095-S103
+S028-S038, S079, S175-S176 and S226 drawerAutomationPointMenuDeleteAndStale; S039-S052, S095-S103
 and S199-S201 drawerAutomationDuplicatePromptAndParameterSwitch; S053-S078 plus S080-S081
 and S104-S109 drawerAutomationLaneDeleteConfirmation; S082-S090 plus S110-S114
 drawerAutomationOutsidePressRetarget; S188-S193 drawerAutomationTrackSwitchInvalidation;
@@ -1153,10 +1151,11 @@ test_productionAutomationSyntheticDefaultMenuRoute, and S202
 test_productionAutomationMenusAndLaneCommands.
 S204-S215 plus S223 index drawerAutomationSharedPopupArbitration in
 src/checks/automation/automationpointmenus.swift.
-S216-S222 index the mounted shell-grid-menu journeys in
+S216-S222 plus S227-S228 index the mounted shell-grid-menu journeys in
 src/checks/editorqml/tst_ShellGridMenu.qml: S216-S219
-test_automationPointMenuYieldsToPublishedDivisionMenu and S220-S222
-test_automationBandMissFallsThroughToTimeMenu.
+test_automationPointMenuYieldsToPublishedDivisionMenu, S220-S222
+test_automationBandMissFallsThroughToTimeMenu, and S227-S228
+test_automationPointMenuRendersDeleteBeforeDismissal.
 
 S001 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "a prompt opens on a written node"
@@ -1826,3 +1825,12 @@ Anchor: message "the stale journey renders no Delete row"
 
 S225 | drawerAutomationSharedPopupArbitration | src/checks/automation/automationpointmenus.swift
 Anchor: message "the survival journey leaves no prompt visible"
+
+S226 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift
+Anchor: message "the written stale-journey point menu publishes an enabled Delete row before the rewrite"
+
+S227 | test_automationPointMenuRendersDeleteBeforeDismissal | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the written point menu renders its Delete row before any rewrite"
+
+S228 | test_automationPointMenuRendersDeleteBeforeDismissal | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the rendered Delete row has a mapped scene center"

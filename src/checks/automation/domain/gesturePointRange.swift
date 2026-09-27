@@ -166,12 +166,21 @@ func drawerAutomationPointRangeAndPencilReplacements(_ report: CheckReport, suit
                        what: "preparing the display range leaves document and history unchanged")
     committed.page.isPencilMode = true
     let strokeY = committed.y(committed.modulationLane, 60)
+    let cursorBeforeStroke = committed.session.editCursor
     report.expect(committed.page.pointerPress(x: committed.x(24), y: strokeY, surface: 1, button: 1), cppID: drawerAutomationPointRangeID,
                   message: "the pencil press starts a stroke")
     report.expect(committed.page.isPainting, cppID: drawerAutomationPointRangeID,
                   message: "the page publishes the painting gesture")
+    report.expect(!committed.page.bandVisible, cppID: drawerAutomationPointRangeID,
+                  message: "a pencil press previews no range")
     report.expect(committed.page.pointerRelease(x: committed.x(24), y: strokeY, button: 1), cppID: drawerAutomationPointRangeID,
                   message: "the pencil release commits")
+    report.expectEqual(expected: cursorBeforeStroke, actual: committed.session.editCursor,
+                       cppID: drawerAutomationPointRangeID, what: "a pencil stroke leaves the edit cursor untouched")
+    report.expect(!committed.page.isPanning, cppID: drawerAutomationPointRangeID,
+                  message: "the released pencil stroke owns no pan")
+    report.expect(!committed.page.bandVisible, cppID: drawerAutomationPointRangeID,
+                  message: "the released pencil stroke leaves no range preview")
     report.expectEqual(expected: committedBefore.revision + 1, actual: committed.document.revision, cppID: drawerAutomationPointRangeID,
                        what: "one pencil press and release is one revision")
     report.expect(committed.values(committed.modulationLane).contains { $0.hasSuffix(":60") },

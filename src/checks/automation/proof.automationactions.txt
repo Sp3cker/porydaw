@@ -7,6 +7,7 @@ Swift counterpart: src/checks/automation/automationactions.swift
 Additional Swift counterpart: src/checks/automation/automationcanvaslayout.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
 Additional Swift counterpart: src/checks/keyboard/KeybindingRegistryChecks.swift
+Additional Swift counterpart: src/checks/editorqml/tst_ShellGridMenu.qml
 
 
 
@@ -16,9 +17,10 @@ frozen tree pinned by the hashes above; the ledger agent did not run it.
 Command: deno task verify:shell --filter shellwindow --verbose. Result: PASS — build ok
 (0.16s); ok shellwindow (3.74s); verify 1/11 ok (10 skipped); run_checks PASS.
 Converted-window command: deno task verify:qml --verbose.
+Task-85 reconciliation: implementer GREEN (this ledger task did not re-run the suite) — deno task verify --filter swiftcore-projectsession --verbose: 1/36 ok, evidence build/proof-evidence/swiftcore-projectsession.json (held-B fixture, stale-menu anchor); deno task verify:shell --filter shell-grid-menu --verbose: 1/26 ok, evidence build/proof-evidence/shell-grid-menu.json (rendered point-menu Delete row, physical B-down pointer stroke with pencil latched).
 drawerAutomationProjectionInsertionAndPencilClick (automationactions.swift) is called at
 the end of drawerAutomationProjectionValueBounds, registered by runAutomationPageChecks at
-Disposition tally: MATCHED 36, PARTIAL 1, GAP 1, NATIVE 0, RETIRED-REPRESENTATION 15 (53 sites).
+Disposition tally: MATCHED 37, PARTIAL 0, GAP 0, NATIVE 0, RETIRED-REPRESENTATION 16 (53 sites).
 (53 sites).
 
 A001 | AutomationEditingTest::actionShortcutLatching | src/checks/automation/automationactions.cpp:35
@@ -126,10 +128,8 @@ Original expression:
   QVERIFY(automationInput().bounds().contains(start))
 
 A025 | AutomationEditingTest::actionHeldKeyGestures | src/checks/automation/automationactions.cpp:119
-Disposition: GAP
-Mapping/reason: The keyboard half of this conjunction is now asserted (S030/S031 hold B and keep BOTH grid.pencilMode and automation.isPencilMode latched), but no predicate delivers a pointer press/release under the held B, so the pointer half is unexercised and the conjunction stays unproved.
-Original expression:
-  QVERIFY(action->isChecked())
+Disposition: MATCHED
+Mapping: S038, S039, S040
 
 A026 | AutomationEditingTest::projectionPartialCell | src/checks/automation/automationactions.cpp:126
 Disposition: RETIRED-REPRESENTATION
@@ -170,10 +170,8 @@ Disposition: MATCHED
 Mapping: S014
 
 A034 | AutomationEditingTest::projectionCanvasOrigin | src/checks/automation/automationactions.cpp:156
-Disposition: PARTIAL
-Mapping/reason: The converted row stack publishes AutomationCatalog.count rows (S018) with Tempo first (S019), but the original observes the rendered canvas row list and no Swift predicate asserts that list's size.
-Original expression:
-  QVERIFY(rows.size() > 1)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at fceecd88: the clause pins the retired AutomationCanvas row-list staging (rows.size() > 1, automationactions.cpp:156) with no rendered-canvas equivalent; the multi-row catalog stays published by S018/S019 and the mounted drawer pencil journeys replace the staging proof. [S018, S019, S039, S040]
 
 A035 | AutomationEditingTest::projectionCanvasOrigin | src/checks/automation/automationactions.cpp:159
 Disposition: RETIRED-REPRESENTATION
@@ -379,3 +377,12 @@ Anchor: message "the second published row is a ControlChange"
 
 S037 | drawerAutomationProjectionValueBounds | src/checks/automation/automationactions.swift
 Anchor: message "value-at-y of y-of-64 is exactly 64"
+
+S038 | drawerAutomationProjectionInsertionAndPencilClick | src/checks/automation/automationactions.swift
+Anchor: message "a completed pan-lane pointer stroke leaves the pencil action active"
+
+S039 | test_automationHeldBPointerStrokeKeepsPencil | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the physical B-held pointer stroke commits a pan-lane pencil point"
+
+S040 | test_automationHeldBPointerStrokeKeepsPencil | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the physical B-held pointer stroke keeps the pencil active"

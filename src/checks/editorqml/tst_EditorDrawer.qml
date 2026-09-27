@@ -4509,6 +4509,8 @@ TestCase {
                 "the readout draws right-aligned")
         var hoverInput = testCase.voicePlotInput()
         var hoverColumn = testCase.freeVoiceColumn(120)
+        verify(hoverInput.width > 0 && hoverInput.height > 0,
+               "the mounted voice input has non-empty rendered bounds")
         verify(hoverColumn >= 0, "the lane leaves a free column to hover")
         mouseMove(hoverInput, hoverColumn, hoverInput.height / 2)
         var hoverLabel = findChild(page, "voiceHoverLabel")
@@ -4625,7 +4627,11 @@ TestCase {
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
         var location = "production-voice-keyboard"
-        var page = testCase.mountProductionVoice(location)
+        verify(bootstrap.attachProductionSection(testCase.automationKind),
+               "the automation section co-attaches for voice cancellation")
+        var page = testCase.mountProductionVoice(location,
+            { "automationVisible": true, "voiceChangesVisible": true })
+        var automation = testCase.automationModel()
         var model = testCase.voiceModel()
         var marker = testCase.insertVoiceChange(60)
         verify(marker, "the case created a marker through the production picker")
@@ -4705,11 +4711,20 @@ TestCase {
         mousePress(input, start.x, start.y, Qt.LeftButton)
         mouseMove(input, start.x + 30, start.y, -1, Qt.LeftButton)
         compare(model.interactionActive, true, "the live drag reports an active interaction")
+        compare(model.cursorKind, 3, "the live voice drag shows the horizontal cursor")
+        tryCompare(input, "cursorShape", Qt.SizeHorCursor, 1000,
+                   "the held mounted voice input shows the horizontal cursor")
         testCase.clickToggle(testCase.voiceChangesKind)
         tryVerify(function() { return !testCase.section(testCase.voiceChangesKind).visible }, 1000,
                   "the section hid")
         compare(model.interactionActive, false, "hiding the section cancelled the drag")
+        compare(model.cursorKind, 0, "the hidden host restores the voice arrow cursor")
+        compare(automation.bandVisible, false,
+                "ungrabbing the hidden voice host leaves the automation band clear")
         mouseRelease(input, start.x + 30, start.y, Qt.LeftButton)
+        compare(model.cursorKind, 0, "release after ungrab leaves the voice arrow cursor")
+        compare(automation.bandVisible, false,
+                "release after ungrab leaves the automation band clear")
         compare(model.interactionActive, false, "the released pointer committed nothing")
         compare(testCase.voiceMarkerLines().length, before, "the cancelled drag wrote nothing")
         testCase.clickToggle(testCase.voiceChangesKind)
@@ -5161,6 +5176,165 @@ TestCase {
         compare(model.interactionActive, false, "Escape ends the in-flight drag")
         compare(bootstrap.automationDocumentRevision(), revision, "Escape commits no drag")
         compare(testCase.voiceMarkerLines().length, count, "the original marker survives Escape")
+    }
+
+    function test_productionVoiceInputPressIsolatesAutomationAndCursor() {
+        if (testCase.containerPhase) skip("production composition only")
+        verify(bootstrap.attachProductionSection(testCase.automationKind),
+               "the automation section co-attaches to the voice input")
+        testCase.mountProductionVoice("voice-routing-press",
+            { "automationVisible": true, "voiceChangesVisible": true })
+        var input = testCase.voicePlotInput()
+        verify(input && input.width > 0 && input.height > 0,
+               "the real mounted voice input has non-empty bounds before its press")
+        var revision = bootstrap.automationDocumentRevision()
+        var cursor = testCase.surface.gridModel.editCursorTick
+        mousePress(input, input.width * 0.6, input.height / 2, Qt.LeftButton)
+        compare(bootstrap.automationDocumentRevision(), revision,
+                "the voice-area press leaves the automation document frozen")
+        compare(testCase.surface.gridModel.editCursorTick, cursor,
+                "the voice-area press leaves the edit cursor parked")
+        compare(testCase.automationModel().bandVisible, false,
+                "the voice-area press previews no automation range")
+        mouseRelease(input, input.width * 0.6, input.height / 2, Qt.LeftButton)
+    }
+
+    function test_productionVoiceDragCursorDraftAndBandIsolation() {
+        if (testCase.containerPhase) skip("production composition only")
+        verify(bootstrap.attachProductionSection(testCase.automationKind),
+               "the co-mounted automation section attaches to the voice session")
+        testCase.mountProductionVoice("voice-routing-drag",
+            { "automationVisible": true, "voiceChangesVisible": true })
+        var marker = testCase.insertVoiceChange(96)
+        verify(marker, "the mounted voice route has a written marker")
+        var input = testCase.voicePlotInput()
+        var model = testCase.voiceModel()
+        var automation = testCase.automationModel()
+        var point = input.mapFromItem(marker.parent, marker.x + 1,
+                                      marker.y + marker.height / 2)
+        var originalTick = marker.parent.model.tick
+        var revision = bootstrap.automationDocumentRevision()
+        compare(input.cursorShape, Qt.ArrowCursor, "the idle voice input shows the arrow cursor")
+        mousePress(input, point.x, point.y, Qt.LeftButton)
+        mouseMove(input, point.x + 45, point.y, -1, Qt.LeftButton)
+        tryCompare(model, "cursorKind", 3, 1000,
+                   "the held horizontal voice drag publishes the horizontal cursor")
+        tryCompare(input, "cursorShape", Qt.SizeHorCursor, 1000,
+                   "the held horizontal voice drag shows the size cursor")
+        tryVerify(function() {
+            var drawn = testCase.voiceMarkerLines()
+            for (var i = 0; i < drawn.length; ++i) {
+                if (drawn[i].parent.model.tick !== originalTick
+                    && drawn[i].x > marker.x + 10)
+                    return true
+            }
+            return false
+        }, 3000, "the held voice drag republishes its moved marker draft")
+        compare(bootstrap.automationDocumentRevision(), revision,
+                "the voice marker draft writes nothing until release")
+        compare(automation.bandVisible, false,
+                "the held voice drag never previews an automation range")
+        mouseRelease(input, point.x + 45, point.y, Qt.LeftButton)
+        tryCompare(model, "cursorKind", 0)
+        tryCompare(input, "cursorShape", Qt.ArrowCursor, 1000,
+                   "releasing the voice drag restores the arrow cursor")
+        compare(automation.bandVisible, false,
+                "the released voice drag leaves the automation band clear")
+        verify(bootstrap.automationDocumentRevision() !== revision,
+               "the released voice drag commits its projected marker")
+    }
+
+    function test_productionVoiceJitterAndEscapeKeepArrowAndClearBand() {
+        if (testCase.containerPhase) skip("production composition only")
+        verify(bootstrap.attachProductionSection(testCase.automationKind),
+               "the co-mounted automation section attaches to the voice session")
+        testCase.mountProductionVoice("voice-routing-cancel",
+            { "automationVisible": true, "voiceChangesVisible": true })
+        var marker = testCase.insertVoiceChange(96)
+        verify(marker, "the mounted cancellation route has a written marker")
+        var input = testCase.voicePlotInput()
+        verify(input && input.width > 0 && input.height > 0,
+               "the mounted Escape journey has non-empty voice input bounds")
+        var model = testCase.voiceModel()
+        var automation = testCase.automationModel()
+        var point = input.mapFromItem(marker.parent, marker.x + 1,
+                                      marker.y + marker.height / 2)
+        var revision = bootstrap.automationDocumentRevision()
+        mousePress(input, point.x, point.y, Qt.LeftButton)
+        mouseMove(input, point.x, point.y + 3, -1, Qt.LeftButton)
+        compare(model.cursorKind, 0, "stationary vertical voice jitter keeps the arrow cursor")
+        compare(input.cursorShape, Qt.ArrowCursor,
+                "the mounted jitter input keeps the arrow cursor")
+        mouseRelease(input, point.x, point.y + 3, Qt.LeftButton)
+        compare(automation.bandVisible, false,
+                "the released vertical voice jitter leaves the automation band clear")
+        mousePress(input, point.x, point.y, Qt.LeftButton)
+        mouseMove(input, point.x + 45, point.y, -1, Qt.LeftButton)
+        tryCompare(model, "cursorKind", 3, 1000,
+                   "the held Escape journey publishes the horizontal cursor before cancellation")
+        keyClick(Qt.Key_Escape)
+        compare(model.cursorKind, 0, "Escape restores the voice arrow cursor")
+        compare(input.cursorShape, Qt.ArrowCursor,
+                "Escape restores the mounted voice input arrow cursor")
+        compare(automation.bandVisible, false,
+                "Escape leaves the automation range preview clear")
+        mouseRelease(input, point.x + 45, point.y, Qt.LeftButton)
+        compare(bootstrap.automationDocumentRevision(), revision,
+                "the cancelled voice stroke commits nothing")
+    }
+
+    function test_productionVoiceCollisionAndAltCursorIsolation() {
+        if (testCase.containerPhase) skip("production composition only")
+        verify(bootstrap.attachProductionSection(testCase.automationKind),
+               "the co-mounted automation section attaches to the voice session")
+        testCase.mountProductionVoice("voice-routing-collision",
+            { "automationVisible": true, "voiceChangesVisible": true })
+        var first = testCase.insertVoiceChange(96)
+        var second = testCase.insertVoiceChange(240)
+        verify(first && second, "two distinct voice markers are drawn for collision")
+        var input = testCase.voicePlotInput()
+        var model = testCase.voiceModel()
+        var automation = testCase.automationModel()
+        var count = testCase.voiceMarkerLines().length
+        var start = input.mapFromItem(first.parent, first.x + 1, first.y + first.height / 2)
+        var end = input.mapFromItem(second.parent, second.x + 1, second.y + second.height / 2)
+        mousePress(input, start.x, start.y, Qt.LeftButton)
+        mouseMove(input, end.x, end.y, -1, Qt.LeftButton)
+        tryCompare(model, "cursorKind", 3, 1000,
+                   "the held collision drag publishes the horizontal cursor")
+        mouseRelease(input, end.x, end.y, Qt.LeftButton)
+        tryVerify(function() { return testCase.voiceMarkerLines().length === count - 1 }, 3000,
+                  "the collision merges the two drawn occurrences")
+        compare(model.cursorKind, 0, "a collision release restores the voice arrow cursor")
+        compare(input.cursorShape, Qt.ArrowCursor,
+                "the mounted collision release restores the arrow cursor")
+        compare(automation.bandVisible, false,
+                "the collision release leaves the automation band clear")
+
+        var remaining = testCase.voiceMarkerLines()
+        var dragged = null
+        for (var i = 0; i < remaining.length; ++i) {
+            if (Math.abs(remaining[i].x - second.x) < 2)
+                dragged = remaining[i]
+        }
+        verify(dragged, "the collided voice marker remains rendered for an Alt drag")
+        var point = input.mapFromItem(dragged.parent, dragged.x + 1,
+                                      dragged.y + dragged.height / 2)
+        var revision = bootstrap.automationDocumentRevision()
+        mousePress(input, point.x, point.y, Qt.LeftButton, Qt.AltModifier)
+        mouseMove(input, point.x + 35, point.y, -1, Qt.LeftButton, Qt.AltModifier)
+        tryCompare(model, "cursorKind", 3, 1000,
+                   "the held Alt drag publishes the horizontal cursor")
+        tryCompare(input, "cursorShape", Qt.SizeHorCursor, 1000,
+                   "the held Alt drag shows the mounted horizontal cursor")
+        compare(automation.bandVisible, false,
+                "the held Alt drag previews no automation range")
+        mouseRelease(input, point.x + 35, point.y, Qt.LeftButton, Qt.AltModifier)
+        compare(model.cursorKind, 0, "the released Alt drag restores the arrow cursor")
+        compare(automation.bandVisible, false,
+                "the released Alt drag leaves the automation band clear")
+        verify(bootstrap.automationDocumentRevision() !== revision,
+               "the released Alt drag commits the fine-snapped voice marker")
     }
 
     function test_productionVoiceChangesCameraTransactions() {

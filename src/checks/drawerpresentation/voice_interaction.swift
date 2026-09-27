@@ -10,6 +10,10 @@ func drawerVoiceMarkerDragTransactions(_ report: CheckReport, suite: DocumentSes
                                     service: ProjectService, programs: [Int]) {
     let fixture = drawerVoiceVoiceChangesFixture(suite: suite, service: service, programs: programs)
     let page = fixture.page
+    let automation = AutomationPage(baseFontPx: 13)
+    automation.attach(session: fixture.session, palette: GridPalette())
+    automation.configureBody(width: 400, height: 46, gutter: 56, devicePixelRatio: 1,
+                             baseFontPx: 13, dragDistance: 10)
     let baseline = fixture.snapshot
     let originalBytes: [UInt8]
     do {
@@ -65,6 +69,8 @@ func drawerVoiceMarkerDragTransactions(_ report: CheckReport, suite: DocumentSes
     report.expect(page.interactionActive, cppID: drawerVoiceMoveID,
                   message: "the live gesture reports an active interaction")
     _ = page.pointerMove(x: startX + 60, y: 10, buttons: 1)
+    report.expectEqual(expected: 3, actual: page.cursorKind, cppID: drawerVoiceMoveID,
+                       what: "a horizontal marker drag publishes the horizontal cursor")
     report.expect(page.dragActive, cppID: drawerVoiceMoveID,
                   message: "the drag activates past its activation distance")
     guard let preview = page.dragPreviewTick else {
@@ -78,6 +84,10 @@ func drawerVoiceMarkerDragTransactions(_ report: CheckReport, suite: DocumentSes
     report.expectEqual(expected: preview, actual: page.markerTicks[1], cppID: drawerVoiceMoveID,
                        what: "the projection draws the marker at the preview tick")
     _ = page.pointerRelease(x: startX + 60, y: 10, button: 1)
+    report.expectEqual(expected: 0, actual: page.cursorKind, cppID: drawerVoiceMoveID,
+                       what: "releasing the voice drag restores the arrow cursor")
+    report.expect(!automation.bandVisible, cppID: drawerVoiceMoveID,
+                  message: "the released voice drag leaves the automation band clear")
     report.expect(!page.hasGesture && !page.interactionActive, cppID: drawerVoiceMoveID,
                   message: "the release ends the gesture and its interaction")
     report.expectEqual(expected: preview, actual: fixture.lanePoints()[1].tick, cppID: drawerVoiceMoveID,
@@ -178,6 +188,10 @@ func drawerVoiceCancellationPaths(_ report: CheckReport, suite: DocumentSession,
                                service: ProjectService, programs: [Int]) {
     let fixture = drawerVoiceVoiceChangesFixture(suite: suite, service: service, programs: programs)
     let page = fixture.page
+    let automation = AutomationPage(baseFontPx: 13)
+    automation.attach(session: fixture.session, palette: GridPalette())
+    automation.configureBody(width: 400, height: 46, gutter: 56, devicePixelRatio: 1,
+                             baseFontPx: 13, dragDistance: 10)
     let baseline = fixture.snapshot
 
     // A picker cancelled by the container's own path releases the interaction.
@@ -190,12 +204,27 @@ func drawerVoiceCancellationPaths(_ report: CheckReport, suite: DocumentSession,
     report.expectEqual(expected: baseline, actual: fixture.snapshot, cppID: drawerVoiceCancellationID,
                        what: "the cancelled picker wrote nothing")
 
+    let jitterX = fixture.markerX(48)
+    _ = page.pointerPress(x: jitterX, y: 10, surface: 1, button: 1, modifiers: 0)
+    _ = page.pointerMove(x: jitterX, y: 22, buttons: 1)
+    report.expectEqual(expected: 0, actual: page.cursorKind,
+                       cppID: "automation/AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit",
+                       what: "vertical-only marker jitter keeps the arrow cursor")
+    _ = page.pointerRelease(x: jitterX, y: 22, button: 1)
+    report.expect(!automation.bandVisible,
+                  cppID: "automation/AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit",
+                  message: "vertical-only voice jitter leaves the automation band clear")
+
     // A live drag cancelled mid-motion restores presentation and commits nothing.
     let startX = fixture.markerX(48)
     _ = page.pointerPress(x: startX, y: 10, surface: 1, button: 1, modifiers: 0)
     _ = page.pointerMove(x: startX + 60, y: 10, buttons: 1)
     report.expect(page.dragActive, cppID: drawerVoiceCancellationID, message: "the drag is live")
     page.cancelSectionInteraction()
+    report.expect(!automation.bandVisible, cppID: drawerVoiceCancellationID,
+                  message: "cancelling the voice drag leaves the automation band clear")
+    report.expectEqual(expected: 0, actual: page.cursorKind, cppID: drawerVoiceCancellationID,
+                       what: "cancelling the voice drag restores the arrow cursor")
     report.expect(!page.hasGesture && !page.interactionActive, cppID: drawerVoiceCancellationID,
                   message: "cancellation ends the live drag")
     report.expectEqual(expected: [0, 48, 120], actual: page.markerTicks, cppID: drawerVoiceCancellationID,
@@ -294,6 +323,13 @@ func drawerVoiceAltFineClockLattice(_ report: CheckReport, suite: DocumentSessio
     // lattice of the document in front of it, not on the editing lattice.
     let fixture = drawerVoiceVoiceChangesFixture(suite: suite, service: service, programs: programs,
                                       division: 96)
+    let automation = AutomationPage(baseFontPx: 13)
+    automation.attach(session: fixture.session, palette: GridPalette())
+    automation.configureBody(width: 400, height: 46, gutter: 56, devicePixelRatio: 1,
+                             baseFontPx: 13, dragDistance: 10)
+    let revisionBefore = fixture.snapshot.revision
+    let historyCountBefore = fixture.document.history.undoCount
+    let historyIndexBefore = fixture.document.history.undoIndex
     let page = fixture.page
     let clock = TimelineSnapPolicy.clockTicks(
         division: fixture.document.ticksPerBeat,
@@ -312,6 +348,14 @@ func drawerVoiceAltFineClockLattice(_ report: CheckReport, suite: DocumentSessio
     report.expect((page.dragPreviewTick ?? 1) % Tick(clock) == 0, cppID: drawerVoiceFineSnapID,
                   message: "the alt preview lands on the clock lattice itself")
     _ = page.pointerRelease(x: altX, y: 10, button: 1)
+    report.expectEqual(expected: revisionBefore + 1, actual: fixture.snapshot.revision,
+                       cppID: drawerVoiceFineSnapID, what: "the Alt drag advances one revision")
+    report.expectEqual(expected: historyCountBefore + 1, actual: fixture.document.history.undoCount,
+                       cppID: drawerVoiceFineSnapID, what: "the Alt drag records one undo entry")
+    report.expectEqual(expected: historyIndexBefore + 1, actual: fixture.document.history.undoIndex,
+                       cppID: drawerVoiceFineSnapID, what: "the Alt drag advances one undo position")
+    report.expect(!automation.bandVisible, cppID: drawerVoiceFineSnapID,
+                  message: "the released Alt drag leaves the automation band clear")
     report.expectEqual(expected: TimelineSnapPolicy.fineSnap(raw, clockTicks: clock), actual: 
                        fixture.lanePoints().first { $0.value == dragged.value }?.tick,
                        cppID: drawerVoiceFineSnapID,
@@ -323,6 +367,10 @@ func drawerVoiceCollisionDragOutcome(_ report: CheckReport, suite: DocumentSessi
                                   service: ProjectService, programs: [Int]) {
     let fixture = drawerVoiceVoiceChangesFixture(suite: suite, service: service, programs: programs)
     let page = fixture.page
+    let automation = AutomationPage(baseFontPx: 13)
+    automation.attach(session: fixture.session, palette: GridPalette())
+    automation.configureBody(width: 400, height: 46, gutter: 56, devicePixelRatio: 1,
+                             baseFontPx: 13, dragDistance: 10)
     let baseline = fixture.snapshot
     let moving = VoiceOccurrence(fixture.lanePoints()[1])
     let occupied = VoiceOccurrence(fixture.lanePoints()[2])
@@ -333,6 +381,10 @@ func drawerVoiceCollisionDragOutcome(_ report: CheckReport, suite: DocumentSessi
     report.expectEqual(expected: occupied.tick, actual: page.dragPreviewTick, cppID: drawerVoiceCollisionID,
                        what: "the dragged preview lands on the occupied tick")
     _ = page.pointerRelease(x: fixture.markerX(occupied.tick), y: 10, button: 1)
+    report.expectEqual(expected: 0, actual: page.cursorKind, cppID: drawerVoiceCollisionID,
+                       what: "the collision release restores the arrow cursor")
+    report.expect(!automation.bandVisible, cppID: drawerVoiceCollisionID,
+                  message: "the collision release leaves the automation band clear")
 
     let points = fixture.lanePoints()
     report.expectEqual(expected: 2, actual: points.count, cppID: drawerVoiceCollisionID,

@@ -53,6 +53,17 @@ func drawerVoiceMarkerProjection(_ report: CheckReport, suite: DocumentSession,
                        what: "the readout publishes the legacy right alignment the composition draws")
 
     let hitX = fixture.markerX(48)
+    let dragBaseline = fixture.snapshot
+    _ = page.pointerPress(x: hitX, y: 10, surface: 1, button: 1, modifiers: 0)
+    _ = page.pointerMove(x: hitX + 60, y: 10, buttons: 1)
+    let projectedDraft = page.publishedMarkers[1]
+    report.expect(page.dragPreviewTick != nil
+                  && Tick(projectedDraft.tick) == page.dragPreviewTick
+                  && projectedDraft.x == fixture.markerX(Tick(projectedDraft.tick))
+                  && fixture.snapshot == dragBaseline,
+                  cppID: drawerVoiceProjectionID,
+                  message: "the moving voice draft republishes its marker without committing")
+    page.cancelSectionInteraction()
     _ = page.pointerPress(x: hitX + 9, y: 10, surface: 1, button: 1, modifiers: 0)
     report.expectEqual(expected: 48, actual: page.frozenOccurrence?.tick, cppID: drawerVoiceProjectionID,
                        what: "a press inside the marker hit radius takes that marker")
@@ -435,4 +446,34 @@ func drawerVoiceOccurrenceIdentity(_ report: CheckReport, suite: DocumentSession
                        page.publishedMarkers.filter { Tick($0.tick) <= 48 }.map(\.identity),
                        cppID: drawerVoiceIdentityID,
                        what: "the occurrences before the edit keep their identity")
+    let duplicates = drawerVoiceVoiceChangesFixture(suite: suite, service: service, programs: programs)
+    duplicates.document.writeLane(track: 0, lane: .voice, from: 48, through: 48,
+                                  points: [LaneWrite(tick: 48, value: programs[1]),
+                                           LaneWrite(tick: 48, value: programs[1])])
+    duplicates.page.refreshFromDocument()
+    let duplicatePage = duplicates.page
+    let automation = AutomationPage(baseFontPx: 13)
+    automation.attach(session: duplicates.session, palette: GridPalette())
+    automation.configureBody(width: 400, height: 46, gutter: 56, devicePixelRatio: 1,
+                             baseFontPx: 13, dragDistance: 10)
+    let sourceX = duplicates.markerX(48)
+    let initial = duplicatePage.publishedMarkers
+    report.expect(initial.filter { Tick($0.tick) == 48 }.count == 2,
+                  cppID: "automation/AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity",
+                  message: "the document projects both same-tick voice occurrences before the drag")
+    let snapshot = duplicates.snapshot
+    _ = duplicatePage.pointerPress(x: sourceX, y: 10, surface: 1, button: 1, modifiers: 0)
+    let capturedIdentity = duplicatePage.frozenOccurrence?.text
+    _ = duplicatePage.pointerMove(x: sourceX + 60, y: 10, buttons: 1, modifiers: 0)
+    let draft = duplicatePage.publishedMarkers
+    report.expect(draft.filter { Tick($0.tick) == 48 }.count == 1
+                      && draft.contains { $0.identity == capturedIdentity && $0.tick != 48
+                          && $0.x > sourceX + 10 }
+                      && draft.count == initial.count && duplicates.snapshot == snapshot,
+                  cppID: "automation/AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity",
+                  message: "the held duplicate-occurrence drag republishes only its captured marker draft")
+    _ = duplicatePage.pointerRelease(x: sourceX + 60, y: 10, button: 1)
+    report.expect(!automation.bandVisible,
+                  cppID: "automation/AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity",
+                  message: "the released duplicate voice drag leaves the automation band clear")
 }

@@ -141,6 +141,8 @@ func drawerAutomationProjectionInsertionAndPencilClick(_ report: CheckReport, su
     report.expectEqual(expected: [72], actual: fixture.lanePoints(fixture.panLane)
         .filter { $0.tick == mappedCell.tickBegin }.map(\.value),
         cppID: clickID, what: "the first half-open cell holds the clicked value")
+    report.expect(fixture.page.isPencilMode, cppID: "automation/AutomationActionsTest::actionHeldKeyGestures",
+                  message: "a completed pan-lane pointer stroke leaves the pencil action active")
 
     let following = projection.cell(atRawTick: Double(mappedCell.tickEnd))
     report.expect(following.tickBegin < following.tickEnd, cppID: clickID,

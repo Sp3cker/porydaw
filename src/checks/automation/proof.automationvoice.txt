@@ -8,11 +8,13 @@ Swift counterpart: src/checks/drawerpresentation/voice_projection.swift
 Swift counterpart: src/checks/drawerpresentation/voice_picker.swift
 Swift counterpart: src/checks/drawerpresentation/voice_interaction.swift
 Swift counterpart: src/checks/drawerpresentation/voice_lifecycle.swift
+Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml
 
 
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — deno task verify --filter swiftcore --verbose on this worktree at 470231af (1/14 harnesses selected; swiftcore green, including the drawerpresentation voice predicates cited below). Evidence supplied by the lane controller for this settled source snapshot; this ledger task did not re-run the suite.
 Converted-window command: deno task verify:qml --verbose
+Task-85 reconciliation: implementer GREEN (this ledger task did not re-run the suite) — deno task verify --filter swiftcore-projectsession --verbose: 1/36 ok, evidence build/proof-evidence/swiftcore-projectsession.json (Alt history depth, cursor-kind transitions, marker republication, cancellation paths); deno task verify:qml --verbose: editorqml-drawer green, evidence build/proof-evidence/editorqml-drawer.json (mounted cursor shapes, band isolation across gestures, draft republication, Escape and ungrab cancellation).
 Note: task 60 re-anchored S046 and S270 to `Anchor: function` alone. Both name a
 staging guard the run now reports through `report.fail` (voice_projection.swift:263,
 voice_picker.swift:382), so their message never appears in a passing run's evidence
@@ -143,19 +145,8 @@ Disposition: MATCHED
 Mapping: S165
 
 A011 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:102
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: Native Quick window/scene construction (QQuickWindow, SongView quick scene). A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
-Source context since previous assertion:
-
-      const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count(), edited.count());
-
-      mousePress(voiceChangeInput(), Qt::LeftButton, source);
-      mouseMove(voiceChangeInput(), target);
-
-
-Original expression:
-  QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers).revision >
-                  markersBefore.revision);
+Disposition: MATCHED
+Mapping: S292, S293
 
 A012 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:104
 Disposition: MATCHED
@@ -166,13 +157,8 @@ Disposition: MATCHED
 Mapping: S161
 
 A014 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:106
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: Native pointer feedback (cursor shape) is delivered by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(voiceChangeInput().cursor().shape(), Qt::SizeHorCursor);
+Disposition: MATCHED
+Mapping: S294, S295
 
 A015 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:108
 Disposition: MATCHED
@@ -227,22 +213,12 @@ Disposition: MATCHED
 Mapping: S167
 
 A028 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:124
-Disposition: PARTIAL
-Mapping/reason: No drawerpresentation predicate observes the voice page's band preview. Unproved: the band preview is clear after the slot's pointer sequence. [S167]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
+Disposition: MATCHED
+Mapping: S296, S297
 
 A029 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:125
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: Native pointer feedback (cursor shape) is delivered by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(voiceChangeInput().cursor().shape(), Qt::ArrowCursor);
+Disposition: MATCHED
+Mapping: S298, S299
 
 A030 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:127
 Disposition: MATCHED
@@ -296,17 +272,8 @@ Disposition: MATCHED
 Mapping: S157
 
 A039 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:157
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: Native pointer feedback (cursor shape) is delivered by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-
-      const QPointF vertical = source + QPointF(0, QApplication::startDragDistance() + 2);
-      mousePress(voiceChangeInput(), Qt::LeftButton, source);
-      mouseMove(voiceChangeInput(), vertical);
-
-Original expression:
-  QCOMPARE(voiceChangeInput().cursor().shape(), Qt::ArrowCursor);
+Disposition: MATCHED
+Mapping: S300, S301
 
 A040 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:159
 Disposition: MATCHED
@@ -325,13 +292,8 @@ Disposition: MATCHED
 Mapping: S156
 
 A044 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:169
-Disposition: PARTIAL
-Mapping/reason: No drawerpresentation predicate observes the voice page's band preview. Unproved: the band preview is clear after the slot's pointer sequence. [S156]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
+Disposition: MATCHED
+Mapping: S302, S303
 
 A045 | AutomationEditingTest::voiceAltDragUsesFineSnap | src/checks/automation/automationvoice.cpp:175
 Disposition: RETIRED-REPRESENTATION
@@ -378,31 +340,16 @@ Disposition: MATCHED
 Mapping: S259
 
 A054 | std::abs | src/checks/automation/automationvoice.cpp:213
-Disposition: PARTIAL
-Mapping/reason: drawerVoiceAltFineClockLattice asserts the previewed and committed clock-lattice tick; it does not assert the commit's revision advance or its single history entry. Unproved: the Alt drag's revision/history depth. [S259]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(tab().document().revision(), frozen.revision + 1);
+Disposition: MATCHED
+Mapping: S304
 
 A055 | std::abs | src/checks/automation/automationvoice.cpp:214
-Disposition: PARTIAL
-Mapping/reason: drawerVoiceAltFineClockLattice asserts the previewed and committed clock-lattice tick; it does not assert the commit's revision advance or its single history entry. Unproved: the Alt drag's revision/history depth. [S259]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(tab().document().undoStack()->count(), frozen.undoCount + 1);
+Disposition: MATCHED
+Mapping: S305
 
 A056 | std::abs | src/checks/automation/automationvoice.cpp:215
-Disposition: PARTIAL
-Mapping/reason: drawerVoiceAltFineClockLattice asserts the previewed and committed clock-lattice tick; it does not assert the commit's revision advance or its single history entry. Unproved: the Alt drag's revision/history depth. [S259]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(tab().document().undoStack()->index(), frozen.undoIndex + 1);
+Disposition: MATCHED
+Mapping: S306
 
 A057 | std::abs | src/checks/automation/automationvoice.cpp:216
 Disposition: MATCHED
@@ -421,13 +368,8 @@ Disposition: MATCHED
 Mapping: S259
 
 A061 | std::abs | src/checks/automation/automationvoice.cpp:220
-Disposition: PARTIAL
-Mapping/reason: No drawerpresentation predicate observes the voice page's band preview. Unproved: the band preview is clear after the slot's pointer sequence. [S259]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
+Disposition: MATCHED
+Mapping: S307, S308
 
 A062 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:226
 Disposition: RETIRED-REPRESENTATION
@@ -501,13 +443,8 @@ Disposition: MATCHED
 Mapping: S261, S262, S263
 
 A076 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:258
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: Native pointer feedback (cursor shape) is delivered by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(voiceChangeInput().cursor().shape(), Qt::ArrowCursor);
+Disposition: MATCHED
+Mapping: S309, S310
 
 A077 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:259
 Disposition: MATCHED
@@ -518,13 +455,8 @@ Disposition: MATCHED
 Mapping: S167
 
 A079 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:261
-Disposition: PARTIAL
-Mapping/reason: No drawerpresentation predicate observes the voice page's band preview. Unproved: the band preview is clear after the slot's pointer sequence. [S167]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
+Disposition: MATCHED
+Mapping: S311, S312
 
 A080 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:264
 Disposition: MATCHED
@@ -571,28 +503,12 @@ Disposition: MATCHED
 Mapping: S201, S203
 
 A091 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:290
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
-Source context since previous assertion:
-
-  }
-
-  void AutomationEditingTest::voiceEscapeAndUngrabCancel()
-  {
-      showVoiceChanges(tab().view());
-
-Original expression:
-  QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
+Disposition: MATCHED
+Mapping: S313
 
 A092 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:292
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
-Source context since previous assertion:
-
-      const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});
-
-Original expression:
-  QVERIFY(pan.valid());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at fceecd88: the clause pins the retired AutomationCanvas voice row handle (pan.valid(), automationvoice.cpp:292) with no native equivalent; the mounted voice input and automation isolation stay proved by the Escape journey. [S313]
 
 A093 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:298
 Disposition: MATCHED
@@ -622,46 +538,20 @@ Disposition: MATCHED
 Mapping: S201
 
 A100 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:315
-Disposition: PARTIAL
-Mapping/reason: No drawerpresentation predicate observes the voice page's band preview. Unproved: the band preview is clear after the slot's pointer sequence. [S201]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
+Disposition: MATCHED
+Mapping: S314, S315
 
 A101 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:316
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: Native pointer feedback (cursor shape) is delivered by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(voiceChangeInput().cursor().shape(), Qt::ArrowCursor);
+Disposition: MATCHED
+Mapping: S316, S317
 
 A102 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:322
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: Native pointer grab delivery (QQuickWindow mouseGrabberItem) is owned by the window/input item. The retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-
-      const FrozenDocumentState ungrabFrozen =
-          frozenDocumentState(documentChanged.count(), edited.count());
-      mousePress(voiceChangeInput(), Qt::LeftButton, source);
-      mouseMove(voiceChangeInput(), target);
-
-Original expression:
-  QTRY_VERIFY(quickWindow().mouseGrabberItem() == &voiceChangeInput());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at fceecd88: the clause pins QQuick grabber identity (quickWindow().mouseGrabberItem() == &voiceChangeInput(), automationvoice.cpp:322) owned by the window; the held-then-hidden mounted cancellation journey replaces it. [S322, S323]
 
 A103 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:324
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: Native pointer grab delivery (QQuickWindow mouseGrabberItem) is owned by the window/input item. The retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-      voiceChangeInput().ungrabMouse();
-
-Original expression:
-  QTRY_VERIFY(!quickWindow().mouseGrabberItem());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at fceecd88: the clause pins QQuick grabber release (QTRY_VERIFY(!quickWindow().mouseGrabberItem()), automationvoice.cpp:324) owned by the window; the post-hide release journey stays proved by the ungrab entries. [S320, S321]
 
 A104 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:326
 Disposition: MATCHED
@@ -676,22 +566,12 @@ Disposition: MATCHED
 Mapping: S201
 
 A107 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:329
-Disposition: PARTIAL
-Mapping/reason: No drawerpresentation predicate observes the voice page's band preview. Unproved: the band preview is clear after the slot's pointer sequence. [S201]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
+Disposition: MATCHED
+Mapping: S314, S320
 
 A108 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:330
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: Native pointer feedback (cursor shape) is delivered by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(voiceChangeInput().cursor().shape(), Qt::ArrowCursor);
+Disposition: MATCHED
+Mapping: S316, S321
 
 A109 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:336
 Disposition: RETIRED-REPRESENTATION
@@ -733,20 +613,8 @@ Disposition: MATCHED
 Mapping: S169
 
 A115 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:358
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: Native Quick window/scene construction (QQuickWindow, SongView quick scene). A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
-Source context since previous assertion:
-
-      const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count(), edited.count());
-      const auto markersBefore = scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers);
-
-      mousePress(voiceChangeInput(), Qt::LeftButton, source);
-      mouseMove(voiceChangeInput(), target);
-
-
-Original expression:
-  QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers).revision >
-                  markersBefore.revision);
+Disposition: MATCHED
+Mapping: S318
 
 A116 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:360
 Disposition: MATCHED
@@ -813,13 +681,8 @@ Disposition: MATCHED
 Mapping: S084
 
 A132 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:379
-Disposition: PARTIAL
-Mapping/reason: No drawerpresentation predicate observes the voice page's band preview. Unproved: the band preview is clear after the slot's pointer sequence. [S084]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
+Disposition: MATCHED
+Mapping: S319
 
 A133 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:380
 Disposition: MATCHED
@@ -1710,3 +1573,99 @@ Anchor: function
 
 S291 | hold | src/checks/drawerpresentation/voice_lifecycle.swift
 Anchor: function
+
+S292 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift
+Anchor: message "the moving voice draft republishes its marker without committing"
+
+S293 | test_productionVoiceDragCursorDraftAndBandIsolation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the held voice drag republishes its moved marker draft"
+
+S294 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice_interaction.swift
+Anchor: message "a horizontal marker drag publishes the horizontal cursor"
+
+S295 | test_productionVoiceDragCursorDraftAndBandIsolation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the held horizontal voice drag shows the size cursor"
+
+S296 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice_interaction.swift
+Anchor: message "the released voice drag leaves the automation band clear"
+
+S297 | test_productionVoiceDragCursorDraftAndBandIsolation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the released voice drag leaves the automation band clear"
+
+S298 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice_interaction.swift
+Anchor: message "releasing the voice drag restores the arrow cursor"
+
+S299 | test_productionVoiceDragCursorDraftAndBandIsolation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "releasing the voice drag restores the arrow cursor"
+
+S300 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice_interaction.swift
+Anchor: message "vertical-only marker jitter keeps the arrow cursor"
+
+S301 | test_productionVoiceJitterAndEscapeKeepArrowAndClearBand | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the mounted jitter input keeps the arrow cursor"
+
+S302 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice_interaction.swift
+Anchor: message "vertical-only voice jitter leaves the automation band clear"
+
+S303 | test_productionVoiceJitterAndEscapeKeepArrowAndClearBand | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the released vertical voice jitter leaves the automation band clear"
+
+S304 | drawerVoiceAltFineClockLattice | src/checks/drawerpresentation/voice_interaction.swift
+Anchor: message "the Alt drag advances one revision"
+
+S305 | drawerVoiceAltFineClockLattice | src/checks/drawerpresentation/voice_interaction.swift
+Anchor: message "the Alt drag records one undo entry"
+
+S306 | drawerVoiceAltFineClockLattice | src/checks/drawerpresentation/voice_interaction.swift
+Anchor: message "the Alt drag advances one undo position"
+
+S307 | drawerVoiceAltFineClockLattice | src/checks/drawerpresentation/voice_interaction.swift
+Anchor: message "the released Alt drag leaves the automation band clear"
+
+S308 | test_productionVoiceCollisionAndAltCursorIsolation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the released Alt drag leaves the automation band clear"
+
+S309 | drawerVoiceCollisionDragOutcome | src/checks/drawerpresentation/voice_interaction.swift
+Anchor: message "the collision release restores the arrow cursor"
+
+S310 | test_productionVoiceCollisionAndAltCursorIsolation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the mounted collision release restores the arrow cursor"
+
+S311 | drawerVoiceCollisionDragOutcome | src/checks/drawerpresentation/voice_interaction.swift
+Anchor: message "the collision release leaves the automation band clear"
+
+S312 | test_productionVoiceCollisionAndAltCursorIsolation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the collision release leaves the automation band clear"
+
+S313 | test_productionVoiceJitterAndEscapeKeepArrowAndClearBand | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the mounted Escape journey has non-empty voice input bounds"
+
+S314 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice_interaction.swift
+Anchor: message "cancelling the voice drag leaves the automation band clear"
+
+S315 | test_productionVoiceJitterAndEscapeKeepArrowAndClearBand | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "Escape leaves the automation range preview clear"
+
+S316 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice_interaction.swift
+Anchor: message "cancelling the voice drag restores the arrow cursor"
+
+S317 | test_productionVoiceJitterAndEscapeKeepArrowAndClearBand | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "Escape restores the mounted voice input arrow cursor"
+
+S318 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift
+Anchor: message "the held duplicate-occurrence drag republishes only its captured marker draft"
+
+S319 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift
+Anchor: message "the released duplicate voice drag leaves the automation band clear"
+
+S320 | test_productionVoiceChangesPickerKeyboardAndCancellation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "release after ungrab leaves the automation band clear"
+
+S321 | test_productionVoiceChangesPickerKeyboardAndCancellation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "release after ungrab leaves the voice arrow cursor"
+
+S322 | test_productionVoiceChangesPickerKeyboardAndCancellation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the live drag reports an active interaction"
+
+S323 | test_productionVoiceChangesPickerKeyboardAndCancellation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "hiding the section cancelled the drag"
