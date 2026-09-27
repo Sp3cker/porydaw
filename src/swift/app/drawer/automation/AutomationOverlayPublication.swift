@@ -368,22 +368,26 @@ extension AutomationPage {
     // MARK: Internals: model synchronisation
 
     func syncRects(_ model: QListModel<SceneRect>, _ rects: [SceneRect]) {
-        let common = min(model.count, rects.count)
-        for index in 0..<common where !model[index].matches(rects[index]) {
-            model[index] = rects[index]
-        }
-        if model.count != rects.count {
-            model.replaceSubrange(common..<model.count, with: rects[common...])
+        model.update {
+            let common = min(model.count, rects.count)
+            for index in 0..<common where !model[index].matches(rects[index]) {
+                model[index] = rects[index]
+            }
+            if model.count != rects.count {
+                model.replaceSubrange(common..<model.count, with: rects[common...])
+            }
         }
     }
 
     func syncTexts(_ model: QListModel<SceneText>, _ texts: [SceneText]) {
-        let common = min(model.count, texts.count)
-        for index in 0..<common where !Self.textMatches(model[index], texts[index]) {
-            model[index] = texts[index]
-        }
-        if model.count != texts.count {
-            model.replaceSubrange(common..<model.count, with: texts[common...])
+        model.update {
+            let common = min(model.count, texts.count)
+            for index in 0..<common where !Self.textMatches(model[index], texts[index]) {
+                model[index] = texts[index]
+            }
+            if model.count != texts.count {
+                model.replaceSubrange(common..<model.count, with: texts[common...])
+            }
         }
     }
 

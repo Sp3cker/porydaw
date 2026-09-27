@@ -1,16 +1,5 @@
-diff --git a/Sources/QtBridgeMacros/Extensions.swift b/Sources/QtBridgeMacros/Extensions.swift
---- a/Sources/QtBridgeMacros/Extensions.swift
-+++ b/Sources/QtBridgeMacros/Extensions.swift
-@@ -124,7 +124,7 @@ extension TypeSyntax {
-     }
- 
-     var isSupportedReturnType: Bool {
--        return isSupportedSettableType || isVoid
-+        return isSupportedSettableType || isVoid || self.is(IdentifierTypeSyntax.self)
-     }
- 
-     var isVoid: Bool {
 diff --git a/CMakeLists.txt b/CMakeLists.txt
+index b1ce5e6..509fb00 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -59,9 +59,13 @@ ExternalProject_Add(QtBridgeMacros_External
@@ -27,18 +16,119 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
      USES_TERMINAL_BUILD TRUE
      INSTALL_COMMAND ""
  )
-diff --git a/Sources/QtBridge/QmlInstantiable.swift b/Sources/QtBridge/QmlInstantiable.swift
---- a/Sources/QtBridge/QmlInstantiable.swift
-+++ b/Sources/QtBridge/QmlInstantiable.swift
-@@ -50,7 +50,7 @@ extension QmlInstantiable {
- }
+@@ -87,4 +91,3 @@ add_dependencies(QtBridgeMacros QtBridgeMacros_External)
  
- extension QmlInstantiable {
--    package static func registerQmlElement() {
-+    public static func registerQmlElement() {
-         metaObjectBuilder.registerInitializer(initFn: self.init)
-         metaObjectBuilder.registerQmlElement(from: Self.self)
+ add_subdirectory(Sources/QtBridgeCpp)
+ add_subdirectory(Sources/QtBridge)
+-
+diff --git a/Sources/QtBridge/QAbstractListModel.swift b/Sources/QtBridge/QAbstractListModel.swift
+index 07004bc..8e33ded 100644
+--- a/Sources/QtBridge/QAbstractListModel.swift
++++ b/Sources/QtBridge/QAbstractListModel.swift
+@@ -146,7 +146,29 @@ internal final class QAbstractListModel {
+ 
+     public func roleNames() -> [Int32: String] { roles }
+ 
++    private var updateDepth = 0
++    private var pendingDataChange: ClosedRange<Int32>?
++
++    /// Runs `body` with row-change notifications coalesced into a single
++    /// `dataChanged` covering the union of written rows. Nested calls fold
++    /// into the outermost scope.
++    internal func update(_ body: () -> Void) {
++        updateDepth += 1
++        body()
++        updateDepth -= 1
++        if updateDepth == 0, let range = pendingDataChange {
++            pendingDataChange = nil
++            emitDataChanged(range.lowerBound, range.upperBound)
++        }
++    }
++
+     internal func emitDataChanged(_ topLeft: Int32, _ bottomRight: Int32, _ roles: [Int32] = []) {
++        if updateDepth > 0, topLeft <= bottomRight {
++            pendingDataChange = pendingDataChange.map {
++                min($0.lowerBound, topLeft)...max($0.upperBound, bottomRight)
++            } ?? topLeft...bottomRight
++            return
++        }
+         if roles.isEmpty {
+             getCppModel().emitDataChanged(topLeft, bottomRight, nil, 0)
+         } else {
+@@ -162,6 +184,15 @@ internal final class QAbstractListModel {
+ 
+     internal func endInsertRows() -> Void { return getCppModel().endInsertRows() }
+ 
++    @discardableResult
++    internal func beginMoveRows(_ sourceParent: QModelIndex, _ sourceFirst: Int32, _ sourceLast: Int32,
++                                _ destinationParent: QModelIndex, _ destinationRow: Int32) -> Bool {
++        return getCppModel().beginMoveRows(sourceParent.cppModel, sourceFirst, sourceLast,
++                                           destinationParent.cppModel, destinationRow)
++    }
++
++    internal func endMoveRows() { getCppModel().endMoveRows() }
++
+     internal func beginRemoveRows(_ parent: QModelIndex, _ first: Int32, _ last: Int32) -> Void {
+         return getCppModel().beginRemoveRows(parent.cppModel, first, last)
      }
+diff --git a/Sources/QtBridge/QListModel.swift b/Sources/QtBridge/QListModel.swift
+index 1705eed..00f5cd1 100644
+--- a/Sources/QtBridge/QListModel.swift
++++ b/Sources/QtBridge/QListModel.swift
+@@ -109,6 +109,33 @@ public final class QListModel<Element: QVariantGettable>: @MainActor RandomAcces
+         }
+     }
+ 
++    /// Moves an element to a final index within the list.
++    ///
++    /// Invalid indices, identical indices, and moves rejected by
++    /// the underlying Qt model leave the list unchanged.
++    ///
++    /// - Parameters:
++    ///   - sourceIndex: The current index of the element.
++    ///   - destinationIndex: The element's final index.
++    public func move(from sourceIndex: Int, to destinationIndex: Int) {
++        guard storage.indices.contains(sourceIndex),
++              storage.indices.contains(destinationIndex),
++              sourceIndex != destinationIndex
++        else { return }
++
++        let sourceRow = Int32(sourceIndex)
++        let destinationChild = Int32(destinationIndex > sourceIndex
++                                     ? destinationIndex + 1
++                                     : destinationIndex)
++        guard model.beginMoveRows(QModelIndex(), sourceRow, sourceRow,
++                                  QModelIndex(), destinationChild)
++        else { return }
++
++        let element = storage.remove(at: sourceIndex)
++        storage.insert(element, at: destinationIndex)
++        model.endMoveRows()
++    }
++
+     /// Inserts, removes or replaces elements within
+     /// the specified range.
+     ///
+@@ -172,6 +199,19 @@ public final class QListModel<Element: QVariantGettable>: @MainActor RandomAcces
+         model.endResetModel()
+     }
+ 
++    /// Runs `body` with per-row `dataChanged` notifications coalesced into
++    /// one covering the union of written rows, emitted when the outermost
++    /// update returns. Structural changes (insert/remove/reset) keep their
++    /// own notifications. Batch wholesale row rewrites such as per-frame
++    /// scene syncs so views receive one change notification instead of one
++    /// per row.
++    ///
++    /// - Parameter body: The mutations to apply while notifications are
++    ///   coalesced.
++    public func update(_ body: () -> Void) {
++        model.update(body)
++    }
++
+     /// Returns the contents of the list as a Swift array.
+     public var asArray: [Element] { storage }
+ }
 diff --git a/Sources/QtBridge/QVariant.swift b/Sources/QtBridge/QVariant.swift
 index c69ec15..6a08894 100644
 --- a/Sources/QtBridge/QVariant.swift
@@ -82,66 +172,37 @@ index c69ec15..6a08894 100644
  extension Bool: QVariantSettable {
      public func toVariant() -> QVariant { QVariant(value: self) }
      public static func value(from variant: QVariant) -> Bool { variant.toBool() }
-diff --git a/Sources/QtBridge/QListModel.swift b/Sources/QtBridge/QListModel.swift
---- a/Sources/QtBridge/QListModel.swift
-+++ b/Sources/QtBridge/QListModel.swift
-@@ -109,6 +109,33 @@
-         }
+diff --git a/Sources/QtBridge/QmlInstantiable.swift b/Sources/QtBridge/QmlInstantiable.swift
+index 077729f..7e81b4a 100644
+--- a/Sources/QtBridge/QmlInstantiable.swift
++++ b/Sources/QtBridge/QmlInstantiable.swift
+@@ -50,7 +50,7 @@ extension QmlInstantiable {
+ }
+ 
+ extension QmlInstantiable {
+-    package static func registerQmlElement() {
++    public static func registerQmlElement() {
+         metaObjectBuilder.registerInitializer(initFn: self.init)
+         metaObjectBuilder.registerQmlElement(from: Self.self)
      }
- 
-+    /// Moves an element to a final index within the list.
-+    ///
-+    /// Invalid indices, identical indices, and moves rejected by
-+    /// the underlying Qt model leave the list unchanged.
-+    ///
-+    /// - Parameters:
-+    ///   - sourceIndex: The current index of the element.
-+    ///   - destinationIndex: The element's final index.
-+    public func move(from sourceIndex: Int, to destinationIndex: Int) {
-+        guard storage.indices.contains(sourceIndex),
-+              storage.indices.contains(destinationIndex),
-+              sourceIndex != destinationIndex
-+        else { return }
-+
-+        let sourceRow = Int32(sourceIndex)
-+        let destinationChild = Int32(destinationIndex > sourceIndex
-+                                     ? destinationIndex + 1
-+                                     : destinationIndex)
-+        guard model.beginMoveRows(QModelIndex(), sourceRow, sourceRow,
-+                                  QModelIndex(), destinationChild)
-+        else { return }
-+
-+        let element = storage.remove(at: sourceIndex)
-+        storage.insert(element, at: destinationIndex)
-+        model.endMoveRows()
-+    }
-+
-     /// Inserts, removes or replaces elements within
-     /// the specified range.
-     ///
-diff --git a/Sources/QtBridge/QAbstractListModel.swift b/Sources/QtBridge/QAbstractListModel.swift
---- a/Sources/QtBridge/QAbstractListModel.swift
-+++ b/Sources/QtBridge/QAbstractListModel.swift
-@@ -162,6 +162,15 @@
- 
-     internal func endInsertRows() -> Void { return getCppModel().endInsertRows() }
- 
-+    @discardableResult
-+    internal func beginMoveRows(_ sourceParent: QModelIndex, _ sourceFirst: Int32, _ sourceLast: Int32,
-+                                _ destinationParent: QModelIndex, _ destinationRow: Int32) -> Bool {
-+        return getCppModel().beginMoveRows(sourceParent.cppModel, sourceFirst, sourceLast,
-+                                           destinationParent.cppModel, destinationRow)
-+    }
-+
-+    internal func endMoveRows() { getCppModel().endMoveRows() }
-+
-     internal func beginRemoveRows(_ parent: QModelIndex, _ first: Int32, _ last: Int32) -> Void {
-         return getCppModel().beginRemoveRows(parent.cppModel, first, last)
-     }
+diff --git a/Sources/QtBridgeCpp/CMakeLists.txt b/Sources/QtBridgeCpp/CMakeLists.txt
+index 943d39b..af3339f 100644
+--- a/Sources/QtBridgeCpp/CMakeLists.txt
++++ b/Sources/QtBridgeCpp/CMakeLists.txt
+@@ -8,6 +8,8 @@ set(QTBRIDGE_CPP_SOURCES
+     callbackbase.cpp
+     metaparamslist.cpp
+     qappcpp.cpp
++    include/quickdisplaylistitem.h
++    quickdisplaylistitem.cpp
+     qobjectproxy.cpp
+     qobjectproxyimpl.cpp
+     qtestappcpp.cpp
 diff --git a/Sources/QtBridgeCpp/abstractlistmodel.cpp b/Sources/QtBridgeCpp/abstractlistmodel.cpp
+index 3c5db0e..57fc6f7 100644
 --- a/Sources/QtBridgeCpp/abstractlistmodel.cpp
 +++ b/Sources/QtBridgeCpp/abstractlistmodel.cpp
-@@ -64,6 +64,14 @@
+@@ -64,6 +64,14 @@ public:
  
      void endInsertRows() { QAbstractListModel::endInsertRows(); }
  
@@ -156,7 +217,7 @@ diff --git a/Sources/QtBridgeCpp/abstractlistmodel.cpp b/Sources/QtBridgeCpp/abs
      void beginRemoveRows(const QModelIndex &parent, int first, int last) {
          QAbstractListModel::beginRemoveRows(parent, first, last);
      }
-@@ -147,6 +155,15 @@
+@@ -147,6 +155,15 @@ void QAbstractListModelCpp::beginInsertRows(const QModelIndex parent, int first,
  
  void QAbstractListModelCpp::endInsertRows() { m_impl->endInsertRows(); }
  
@@ -172,163 +233,6 @@ diff --git a/Sources/QtBridgeCpp/abstractlistmodel.cpp b/Sources/QtBridgeCpp/abs
  void QAbstractListModelCpp::beginRemoveRows(const QModelIndex &parent, int first, int last) {
      m_impl->beginRemoveRows(parent, first, last);
  }
-diff --git a/Sources/QtBridgeCpp/include/abstractlistmodel.h b/Sources/QtBridgeCpp/include/abstractlistmodel.h
---- a/Sources/QtBridgeCpp/include/abstractlistmodel.h
-+++ b/Sources/QtBridgeCpp/include/abstractlistmodel.h
-@@ -42,6 +42,11 @@
-     void beginInsertRows(const QModelIndex parent, int first, int last);
-     void endInsertRows();
- 
-+    bool beginMoveRows(const QModelIndex &sourceParent, int sourceFirst,
-+                       int sourceLast, const QModelIndex &destinationParent,
-+                       int destinationRow);
-+    void endMoveRows();
-+
-     void beginRemoveRows(const QModelIndex &parent, int first, int last);
-     void endRemoveRows();
- 
-diff --git a/Sources/QtBridgeCpp/qobjectproxy.cpp b/Sources/QtBridgeCpp/qobjectproxy.cpp
---- a/Sources/QtBridgeCpp/qobjectproxy.cpp
-+++ b/Sources/QtBridgeCpp/qobjectproxy.cpp
-@@ -4,6 +4,8 @@
- #include "qobjectproxy.h"
- 
- #include "qobjectproxyimpl.h"
-+
-+#include <QtQml/QJSEngine>
- 
- // Impl
- 
-@@ -13,7 +15,9 @@ public:
-     Impl(void *owner) :
-         m_ownership(Cpp),
-         m_object(new QObjectProxyImpl(owner))
-     {
-+        // ~Impl deletes this object; exclude it from JS garbage collection.
-+        QJSEngine::setObjectOwnership(m_object, QJSEngine::CppOwnership);
-     }
- 
-     Impl(void *owner,
-@@ -55,7 +59,7 @@ private:
-     };
- 
-     Ownership m_ownership;
--    QObject * m_object;
-+    QPointer<QObject> m_object;
- };
- 
- QObjectProxy::QObjectProxy(void *owner)
-diff --git a/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp b/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp
---- a/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp
-+++ b/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp
-@@ -281,5 +281,8 @@@
-     void emitSignal(QObject* obj, const std::string &name, const std::vector<QVariant> &args)
-     {
-+        if (!obj)
-+            return;
-+
-         auto it = m_signalNameToId.find(name);
-         if (it == m_signalNameToId.end())
-             return;
-diff --git a/Sources/QtBridgeCpp/include/qobjectproxyimpl.h b/Sources/QtBridgeCpp/include/qobjectproxyimpl.h
---- a/Sources/QtBridgeCpp/include/qobjectproxyimpl.h
-+++ b/Sources/QtBridgeCpp/include/qobjectproxyimpl.h
-@@ -6,6 +6,7 @@
- #include <QtCore/qobject.h>
- #include <QtQml/qqmllist.h>
- #include <QtQml/qqmlparserstatus.h>
-+#include <QtQml/qqmlengine.h>
- 
- #include "swiftobjectaccesor.h"
- 
-@@ -21,6 +22,11 @@@ public:
-     QObjectProxyImpl(void *swiftObj)
-     : m_swiftObj(swiftObj)
--    {}
-+    {
-+        // A Swift-created proxy is owned by its Swift owner, never by QML.
-+        // Pin CppOwnership so the engine cannot garbage-collect it while the
-+        // Swift object still publishes through it.
-+        QQmlEngine::setObjectOwnership(this, QQmlEngine::CppOwnership);
-+    }
- 
-     using DeleterFn = void(*)(void *swiftObj);
-     QObjectProxyImpl(void *swiftObj, DeleterFn deleter)
-diff --git a/Sources/QtBridgeCpp/include/qappcpp.h b/Sources/QtBridgeCpp/include/qappcpp.h
-index fb09757..4bb1833 100644
---- a/Sources/QtBridgeCpp/include/qappcpp.h
-+++ b/Sources/QtBridgeCpp/include/qappcpp.h
-@@ -7,6 +7,8 @@
- #include <QtCore/qurl.h>
- #include <QtCore/qvariant.h>
- 
-+#include <QtQml/qqmlapplicationengine.h>
-+
- #include <swift/bridging>
- 
- #include "qobjectproxy.h"
-@@ -25,6 +29,10 @@ public:
- 
-     int run(int argc, char **argv);
- 
-+    // The application engine while run() is executing; nullptr before load
-+    // and after exec() returns. Valid to call from slots during exec().
-+    static QQmlApplicationEngine *engine();
-+
- private:
-     std::vector<QString> m_importPaths;
-     QString m_pluginsPath;
-diff --git a/Sources/QtBridgeCpp/qappcpp.cpp b/Sources/QtBridgeCpp/qappcpp.cpp
-index 7e91abd..1922e24 100644
---- a/Sources/QtBridgeCpp/qappcpp.cpp
-+++ b/Sources/QtBridgeCpp/qappcpp.cpp
-@@ -2,12 +2,21 @@
- // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only
- 
- #include "qappcpp.h"
-+#include "quickdisplaylistitem.h"
- 
- #include <QtGui/qguiapplication.h>
- #include <QtQml/qqmlapplicationengine.h>
- 
-+static QQmlApplicationEngine *s_engine = nullptr;
-+
-+QQmlApplicationEngine *QAppCpp::engine()
-+{
-+    return s_engine;
-+}
-+
- QAppCpp::QAppCpp()
- {
-+    registerQuickDisplayListQmlType();
- }
- 
- QAppCpp::~QAppCpp()
-@@ -44,7 +53,10 @@ int QAppCpp::run(int argc, char **argv)
-         engine.addImportPath(path);
- 
-     engine.setInitialProperties(m_map);
-+    s_engine = &engine;
-     engine.load(m_root);
- 
--    return app.exec();
-+    const int rc = app.exec();
-+    s_engine = nullptr;
-+    return rc;
- }
-diff --git a/Sources/QtBridgeCpp/CMakeLists.txt b/Sources/QtBridgeCpp/CMakeLists.txt
-index 943d39b..f023134 100644
---- a/Sources/QtBridgeCpp/CMakeLists.txt
-+++ b/Sources/QtBridgeCpp/CMakeLists.txt
-@@ -8,6 +8,8 @@ set(QTBRIDGE_CPP_SOURCES
-     callbackbase.cpp
-     metaparamslist.cpp
-     qappcpp.cpp
-+    include/quickdisplaylistitem.h
-+    quickdisplaylistitem.cpp
-     qobjectproxy.cpp
-     qobjectproxyimpl.cpp
-     qtestappcpp.cpp
 diff --git a/Sources/QtBridgeCpp/include/QtBridgeCpp.h b/Sources/QtBridgeCpp/include/QtBridgeCpp.h
 index 3e3f056..a0fccfb 100644
 --- a/Sources/QtBridgeCpp/include/QtBridgeCpp.h
@@ -341,6 +245,72 @@ index 3e3f056..a0fccfb 100644
  #include "qobjectproxy.h"
  #include "qobjectproxyimpl.h"
  #include "qtestappcpp.h"
+diff --git a/Sources/QtBridgeCpp/include/abstractlistmodel.h b/Sources/QtBridgeCpp/include/abstractlistmodel.h
+index 173a912..29bb66f 100644
+--- a/Sources/QtBridgeCpp/include/abstractlistmodel.h
++++ b/Sources/QtBridgeCpp/include/abstractlistmodel.h
+@@ -42,6 +42,11 @@ public:
+     void beginInsertRows(const QModelIndex parent, int first, int last);
+     void endInsertRows();
+ 
++    bool beginMoveRows(const QModelIndex &sourceParent, int sourceFirst,
++                       int sourceLast, const QModelIndex &destinationParent,
++                       int destinationRow);
++    void endMoveRows();
++
+     void beginRemoveRows(const QModelIndex &parent, int first, int last);
+     void endRemoveRows();
+ 
+diff --git a/Sources/QtBridgeCpp/include/qappcpp.h b/Sources/QtBridgeCpp/include/qappcpp.h
+index fb09757..a0f6385 100644
+--- a/Sources/QtBridgeCpp/include/qappcpp.h
++++ b/Sources/QtBridgeCpp/include/qappcpp.h
+@@ -7,6 +7,8 @@
+ #include <QtCore/qurl.h>
+ #include <QtCore/qvariant.h>
+ 
++#include <QtQml/qqmlapplicationengine.h>
++
+ #include <swift/bridging>
+ 
+ #include "qobjectproxy.h"
+@@ -25,6 +27,10 @@ public:
+ 
+     int run(int argc, char **argv);
+ 
++    // The application engine while run() is executing; nullptr before load
++    // and after exec() returns. Valid to call from slots during exec().
++    static QQmlApplicationEngine *engine();
++
+ private:
+     std::vector<QString> m_importPaths;
+     QString m_pluginsPath;
+diff --git a/Sources/QtBridgeCpp/include/qobjectproxyimpl.h b/Sources/QtBridgeCpp/include/qobjectproxyimpl.h
+index d55dd45..ad0b7aa 100644
+--- a/Sources/QtBridgeCpp/include/qobjectproxyimpl.h
++++ b/Sources/QtBridgeCpp/include/qobjectproxyimpl.h
+@@ -6,6 +6,7 @@
+ #include <QtCore/qobject.h>
+ #include <QtQml/qqmllist.h>
+ #include <QtQml/qqmlparserstatus.h>
++#include <QtQml/qqmlengine.h>
+ 
+ #include "swiftobjectaccesor.h"
+ 
+@@ -21,7 +22,12 @@ class QObjectProxyImpl : public QObject,
+ public:
+     QObjectProxyImpl(void *swiftObj)
+     : m_swiftObj(swiftObj)
+-    {}
++    {
++        // A Swift-created proxy is owned by its Swift owner, never by QML.
++        // Pin CppOwnership so the engine cannot garbage-collect it while the
++        // Swift object still publishes through it.
++        QQmlEngine::setObjectOwnership(this, QQmlEngine::CppOwnership);
++    }
+ 
+     using DeleterFn = void(*)(void *swiftObj);
+     QObjectProxyImpl(void *swiftObj, DeleterFn deleter)
 diff --git a/Sources/QtBridgeCpp/include/qtestappcpp.h b/Sources/QtBridgeCpp/include/qtestappcpp.h
 index 8efd93c..3eb3144 100644
 --- a/Sources/QtBridgeCpp/include/qtestappcpp.h
@@ -354,34 +324,12 @@ index 8efd93c..3eb3144 100644
      ~QTestAppCpp() = default;
  
      void setImportPath(const char *path);
-diff --git a/Sources/QtBridgeCpp/qtestappcpp.cpp b/Sources/QtBridgeCpp/qtestappcpp.cpp
-index 169c7c9..060a93c 100644
---- a/Sources/QtBridgeCpp/qtestappcpp.cpp
-+++ b/Sources/QtBridgeCpp/qtestappcpp.cpp
-@@ -2,11 +2,17 @@
- // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only
- 
- #include "qtestappcpp.h"
-+#include "quickdisplaylistitem.h"
- 
- #include <QtQuickTest/quicktest.h>
- #include <QtQml/QQmlEngine>
- #include <QtCore/qobject.h>
- 
-+QTestAppCpp::QTestAppCpp()
-+{
-+    registerQuickDisplayListQmlType();
-+}
-+
- void QTestAppCpp::setImportPath(const char *path)
- {
-     m_importPath = std::string(path);
 diff --git a/Sources/QtBridgeCpp/include/quickdisplaylistitem.h b/Sources/QtBridgeCpp/include/quickdisplaylistitem.h
 new file mode 100644
-index 0000000..e70bfc6
+index 0000000..05216db
 --- /dev/null
 +++ b/Sources/QtBridgeCpp/include/quickdisplaylistitem.h
-@@ -0,0 +1,46 @@
+@@ -0,0 +1,44 @@
 +#pragma once
 +
 +#include <QtCore/qabstractitemmodel.h>
@@ -420,24 +368,112 @@ index 0000000..e70bfc6
 +    };
 +
 +    void rebuildSnapshot();
-+    void scheduleRebuild();
 +
 +    QPointer<QAbstractItemModel> m_rects;
 +    std::vector<Rect> m_snapshot;
-+    bool m_rebuildPending = false;
 +};
 +
 +void registerQuickDisplayListQmlType();
+diff --git a/Sources/QtBridgeCpp/qappcpp.cpp b/Sources/QtBridgeCpp/qappcpp.cpp
+index 7e91abd..1922e24 100644
+--- a/Sources/QtBridgeCpp/qappcpp.cpp
++++ b/Sources/QtBridgeCpp/qappcpp.cpp
+@@ -2,12 +2,21 @@
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only
+ 
+ #include "qappcpp.h"
++#include "quickdisplaylistitem.h"
+ 
+ #include <QtGui/qguiapplication.h>
+ #include <QtQml/qqmlapplicationengine.h>
+ 
++static QQmlApplicationEngine *s_engine = nullptr;
++
++QQmlApplicationEngine *QAppCpp::engine()
++{
++    return s_engine;
++}
++
+ QAppCpp::QAppCpp()
+ {
++    registerQuickDisplayListQmlType();
+ }
+ 
+ QAppCpp::~QAppCpp()
+@@ -44,7 +53,10 @@ int QAppCpp::run(int argc, char **argv)
+         engine.addImportPath(path);
+ 
+     engine.setInitialProperties(m_map);
++    s_engine = &engine;
+     engine.load(m_root);
+ 
+-    return app.exec();
++    const int rc = app.exec();
++    s_engine = nullptr;
++    return rc;
+ }
+diff --git a/Sources/QtBridgeCpp/qobjectproxy.cpp b/Sources/QtBridgeCpp/qobjectproxy.cpp
+index 43b202c..0172a58 100644
+--- a/Sources/QtBridgeCpp/qobjectproxy.cpp
++++ b/Sources/QtBridgeCpp/qobjectproxy.cpp
+@@ -5,6 +5,8 @@
+ 
+ #include "qobjectproxyimpl.h"
+ 
++#include <QtQml/QJSEngine>
++
+ // Impl
+ 
+ class QObjectProxy::Impl
+@@ -14,6 +16,8 @@ public:
+         m_ownership(Cpp),
+         m_object(new QObjectProxyImpl(owner))
+     {
++        // ~Impl deletes this object; exclude it from JS garbage collection.
++        QJSEngine::setObjectOwnership(m_object, QJSEngine::CppOwnership);
+     }
+ 
+     Impl(void *owner,
+@@ -55,7 +59,7 @@ private:
+     };
+ 
+     Ownership m_ownership;
+-    QObject * m_object;
++    QPointer<QObject> m_object;
+ };
+ 
+ QObjectProxy::QObjectProxy(void *owner)
+diff --git a/Sources/QtBridgeCpp/qtestappcpp.cpp b/Sources/QtBridgeCpp/qtestappcpp.cpp
+index 169c7c9..060a93c 100644
+--- a/Sources/QtBridgeCpp/qtestappcpp.cpp
++++ b/Sources/QtBridgeCpp/qtestappcpp.cpp
+@@ -2,11 +2,17 @@
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only
+ 
+ #include "qtestappcpp.h"
++#include "quickdisplaylistitem.h"
+ 
+ #include <QtQuickTest/quicktest.h>
+ #include <QtQml/QQmlEngine>
+ #include <QtCore/qobject.h>
+ 
++QTestAppCpp::QTestAppCpp()
++{
++    registerQuickDisplayListQmlType();
++}
++
+ void QTestAppCpp::setImportPath(const char *path)
+ {
+     m_importPath = std::string(path);
 diff --git a/Sources/QtBridgeCpp/quickdisplaylistitem.cpp b/Sources/QtBridgeCpp/quickdisplaylistitem.cpp
 new file mode 100644
-index 0000000..3befa29
+index 0000000..fa31e9d
 --- /dev/null
 +++ b/Sources/QtBridgeCpp/quickdisplaylistitem.cpp
-@@ -0,0 +1,180 @@
+@@ -0,0 +1,186 @@
 +#include "quickdisplaylistitem.h"
 +
 +#include <QtCore/qhash.h>
-+#include <QtCore/qmetaobject.h>
 +#include <QtCore/qvariant.h>
 +#include <QtGui/qcolor.h>
 +#include <QtQml/qqml.h>
@@ -498,24 +534,26 @@ index 0000000..3befa29
 +    m_rects = rects;
 +
 +    if (m_rects) {
-+        // QListModel::sync diffs rows one signal at a time; rebuilding the
-+        // display-list snapshot per signal rescans the model quadratically
-+        // during camera zoom. Queue one rebuild per event-loop pass instead.
++        // Rebuild synchronously on terminal model signals. Batched writers
++        // (QListModel::update) emit one notification per pass, so a direct
++        // rescan is O(layers) per sync; a queued rebuild instead paints one
++        // stale frame whenever an UpdateRequest is already pending, which
++        // shows up as content flicker during camera moves.
 +        connect(m_rects, &QAbstractItemModel::modelReset, this,
-+                &QuickDisplayListItem::scheduleRebuild);
++                &QuickDisplayListItem::rebuildSnapshot);
 +        connect(m_rects, &QAbstractItemModel::dataChanged, this,
-+                &QuickDisplayListItem::scheduleRebuild);
++                &QuickDisplayListItem::rebuildSnapshot);
 +        connect(m_rects, &QAbstractItemModel::rowsInserted, this,
-+                &QuickDisplayListItem::scheduleRebuild);
++                &QuickDisplayListItem::rebuildSnapshot);
 +        connect(m_rects, &QAbstractItemModel::rowsRemoved, this,
-+                &QuickDisplayListItem::scheduleRebuild);
++                &QuickDisplayListItem::rebuildSnapshot);
 +        connect(m_rects, &QAbstractItemModel::rowsMoved, this,
-+                &QuickDisplayListItem::scheduleRebuild);
++                &QuickDisplayListItem::rebuildSnapshot);
 +        connect(m_rects, &QAbstractItemModel::layoutChanged, this,
-+                &QuickDisplayListItem::scheduleRebuild);
++                &QuickDisplayListItem::rebuildSnapshot);
 +        connect(m_rects, &QObject::destroyed, this, [this] {
 +            m_rects = nullptr;
-+            scheduleRebuild();
++            rebuildSnapshot();
 +        });
 +    }
 +
@@ -528,19 +566,35 @@ index 0000000..3befa29
 +    m_snapshot.clear();
 +    if (m_rects) {
 +        const auto roles = m_rects->roleNames();
-+        const int xRole = requiredRole(roles, "x");
-+        const int yRole = requiredRole(roles, "y");
-+        const int widthRole = requiredRole(roles, "width");
-+        const int heightRole = requiredRole(roles, "height");
++        const int frameRole = roles.key("frame", -1);
 +        const int colorRole = requiredRole(roles, "fillColor");
++        int xRole = -1, yRole = -1, widthRole = -1, heightRole = -1;
++        if (frameRole < 0) {
++            xRole = requiredRole(roles, "x");
++            yRole = requiredRole(roles, "y");
++            widthRole = requiredRole(roles, "width");
++            heightRole = requiredRole(roles, "height");
++        }
 +        const int count = m_rects->rowCount();
 +        m_snapshot.reserve(size_t(count));
 +        for (int row = 0; row < count; ++row) {
 +            const QModelIndex index = m_rects->index(row, 0);
-+            const float x = m_rects->data(index, xRole).toFloat();
-+            const float y = m_rects->data(index, yRole).toFloat();
-+            const float width = m_rects->data(index, widthRole).toFloat();
-+            const float height = m_rects->data(index, heightRole).toFloat();
++            // Rows exposing a packed "frame" QVariantMap cost two bridge
++            // crossings instead of five.
++            float x, y, width, height;
++            if (frameRole >= 0) {
++                const QVariantMap frame =
++                    m_rects->data(index, frameRole).toMap();
++                x = frame.value("x").toFloat();
++                y = frame.value("y").toFloat();
++                width = frame.value("width").toFloat();
++                height = frame.value("height").toFloat();
++            } else {
++                x = m_rects->data(index, xRole).toFloat();
++                y = m_rects->data(index, yRole).toFloat();
++                width = m_rects->data(index, widthRole).toFloat();
++                height = m_rects->data(index, heightRole).toFloat();
++            }
 +            const QColor color(m_rects->data(index, colorRole).toString());
 +            if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(width)
 +                || !std::isfinite(height) || !color.isValid())
@@ -556,17 +610,6 @@ index 0000000..3befa29
 +        }
 +    }
 +    update();
-+}
-+
-+void QuickDisplayListItem::scheduleRebuild()
-+{
-+    if (m_rebuildPending)
-+        return;
-+    m_rebuildPending = true;
-+    QMetaObject::invokeMethod(this, [this] {
-+        m_rebuildPending = false;
-+        rebuildSnapshot();
-+    }, Qt::QueuedConnection);
 +}
 +
 +QSGNode *QuickDisplayListItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *)
@@ -614,3 +657,30 @@ index 0000000..3befa29
 +        qmlRegisterType<QuickDisplayListItem>("QtBridge", 1, 0, "QuickDisplayList");
 +    });
 +}
+diff --git a/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp b/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp
+index 6dd803f..46275c5 100644
+--- a/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp
++++ b/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp
+@@ -280,6 +280,9 @@ public:
+ 
+     void emitSignal(QObject* obj, const std::string &name, const std::vector<QVariant> &args)
+     {
++        if (!obj)
++            return;
++
+         auto it = m_signalNameToId.find(name);
+         if (it == m_signalNameToId.end())
+             return;
+diff --git a/Sources/QtBridgeMacros/Extensions.swift b/Sources/QtBridgeMacros/Extensions.swift
+index acce22e..ad3c8c5 100644
+--- a/Sources/QtBridgeMacros/Extensions.swift
++++ b/Sources/QtBridgeMacros/Extensions.swift
+@@ -124,7 +124,7 @@ extension TypeSyntax {
+     }
+ 
+     var isSupportedReturnType: Bool {
+-        return isSupportedSettableType || isVoid
++        return isSupportedSettableType || isVoid || self.is(IdentifierTypeSyntax.self)
+     }
+ 
+     var isVoid: Bool {
