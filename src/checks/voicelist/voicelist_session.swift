@@ -398,6 +398,7 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
         return
     }
     let originalHistory = session.document.history.currentIdentity
+    let secondUndoIndex = second.document.history.undoIndex
     list.refresh(from: session)
     list.selectSlot(slot: 0)
     let editor = list.editor
@@ -412,9 +413,15 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
     do {
         try runBlocking {
             let deadline = Date().addingTimeInterval(20)
-            while second.bankSlots[0].voice?.release != committedRelease && Date() < deadline {
+            while Date() < deadline {
+                if second.bankSlots[0].voice?.release == committedRelease
+                    && second.document.history.undoIndex == secondUndoIndex + 1
+                    && !second.document.history.bankTransitionInFlight {
+                    return
+                }
                 await Task.yield()
             }
+            throw RunBlockingError.timeout
         }
     } catch {
         report.fail(originID, "same-origin queued edit did not complete: \(error)")
@@ -431,7 +438,9 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
     report.expectEqual(expected: committedRelease, actual: second.bankSlots[0].voice?.release, cppID: originID,
                        what: "same-origin edit commits after discarded earlier requests")
     do {
-        _ = try runBlocking { try await second.undo() }
+        let undone = try runBlocking { try await second.undo() }
+        report.expect(undone, cppID: originID,
+                      message: "same-origin queued edit is undoable after history publication")
     } catch {
         report.fail(originID, "same-origin edit undo threw: \(error)")
         return
