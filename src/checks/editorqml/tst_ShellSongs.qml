@@ -187,6 +187,165 @@ TestCase {
         }
     }
 
+    function test_charmapOnlyRegisterAndReopen() {
+        verify(bootstrap.prepareSongActionFixture("charmap"),
+               "the isolated charmap-only fixture stages")
+        const root = bootstrap.projectRoot
+        const charmap = root + "/charmap.txt"
+        compare(fileProbe.fileFingerprint(charmap), "273:9f0b840cb4f4a2c0",
+                "the independently seeded charmap omits exactly the registered song")
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "the action fixture opens a production shell")
+        const session = shell.shellPresenter.session
+        session.openProject(root)
+        verify(waitForNative(function() { return session.projectOpen && presenter().rowCount === 8 }, 30000),
+               "the charmap-only project loads its eight playable registered songs")
+        const id = 2
+        verify(row(id) !== null, "the registered route song is listed")
+        compare(row(id).song.text, "mus_route101  ⚠ not fully registered",
+                "A014: the registered song remains partial rather than becoming an unregistered stray")
+        compare(row(id).song.registrationGapText, "charmap.txt",
+                "A015: the partial registered song is missing only charmap.txt")
+        compare(row(id).song.label, "mus_route101",
+                "A016: the partially registered song remains listed under its original label")
+        mouseDoubleClickSequence(row(id), row(id).width / 2, row(id).height / 2, Qt.LeftButton)
+        verify(waitForNative(function() {
+            return session.songTabs.tabCount === 1
+                && session.songTabs.selectedPage.title === "mus_route101"
+        }, 30000), "A011: the original registered song opens in an editor tab before its charmap repair")
+        compare(presenter().canRegister(id), true,
+                "A012: Register is enabled for the open song with only a charmap gap")
+        mouseClick(row(id), 4, 4, Qt.RightButton)
+        const menu = findChild(shell, "songListContextMenu")
+        compare(menu.contentItem.rowItem(3).enabled, true,
+                "the real context menu enables Register on the charmap-only row")
+        menuAction("register")
+        verify(waitForNative(function() {
+            const dialog = findChild(shell, "songConfirmationDialog")
+            return controller().confirmation === "register" && dialog !== null && dialog.visible
+        }, 5000), "A017: the mounted Register confirmation appears for the charmap-only plan")
+        const confirmation = findChild(shell, "songConfirmationDialog")
+        verify(confirmation.standardButton(Dialog.Ok) !== null,
+               "A018: the mounted Register confirmation has an activatable accepting button")
+        verify(presenter().canRegister(id)
+               && controller().confirmationDetail ===
+                   "The following registration files need updates:\n  - charmap.txt",
+               "A006: the mounted registration plan applies to the charmap and no other missing file")
+        compare(fileProbe.fileFingerprint(charmap), "273:9f0b840cb4f4a2c0",
+                "the plan leaves the stripped charmap unchanged before acceptance")
+        clickConfirmation()
+        verify(waitForNative(function() {
+            return !controller().busy && row(id) !== null
+                && row(id).song.registrationGapText === ""
+                && !row(id).song.warning && !presenter().canRegister(id)
+        }, 30000), "A019: accepting Register refreshes the listed song to complete registration with Register disabled")
+        compare(fileProbe.fileBytesBase64(charmap),
+                "TVVTX0RVTU1ZID0gMDAgMDAKTVVTX0xJVFRMRVJPT1RfVEVTVCA9IDAxIDAwCk1VU19ST1VURTEwMSA9IDAyIDAwCk1VU19ST1VURTEwMiA9IDAzIDAwCk1VU19HU0NfUk9VVEUzOCA9IDA0IDAwCk1VU19DQVVHSFQgPSAwNSAwMApNVVNfUEVUQUxCVVJHID0gMDYgMDAKTVVTX09MREFMRSA9IDA3IDAwCk1VU19HWU0gPSAwOCAwMApNVVNfU1VSRiA9IDA5IDAwCk1VU19WSUNUT1JZX1dJTEQgPSAwQSAwMApTRV9VU0VfSVRFTSA9IDBCIDAwClNFX1BDX0xPR0lOID0gMEMgMDAKU0VfRkFORkFSRV8xVFJLID0gMEQgMDAK",
+                "A020: accepting Register restores every byte of the independently seeded complete charmap")
+        session.songTabs.requestClose(session.songTabs.selectedId)
+        verify(waitForNative(function() { return session.songTabs.tabCount === 0 }, 5000),
+               "the clean registered song tab closes before a fresh open")
+        mouseClick(row(id), 4, 4, Qt.RightButton)
+        compare(menu.contentItem.rowItem(3).enabled, false,
+                "the mounted Register menu is disabled after the completed repair")
+        menuAction("open")
+        verify(waitForNative(function() {
+            return session.projectOpen && session.songTabs.tabCount === 1
+                && session.songTabs.selectedPage.title === "mus_route101"
+        }, 30000), "A023: reopening the repaired song restores an enabled project and a ready editor tab")
+        compare(presenter().canRegister(id), false,
+                "A024: reopening the fully registered song keeps Register disabled")
+    }
+
+    function test_openRegisteredSongDeletion() {
+        verify(bootstrap.prepareSongActionFixture("open-delete"),
+               "the isolated registered deletion fixture stages")
+        const root = bootstrap.projectRoot
+        const midi = root + "/sound/songs/midi/mus_route101.mid"
+        compare(fileProbe.fileFingerprint(midi), "471:d31e7c4a0a32a53f",
+                "the original registered MIDI starts with the fixed fixture bytes")
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "the mounted shell opens the registered deletion fixture")
+        const session = shell.shellPresenter.session
+        session.openProject(root)
+        verify(waitForNative(function() { return session.projectOpen && presenter().rowCount === 8 }, 30000),
+               "the deletion fixture lists all eight playable originals")
+        const id = 2
+        mouseDoubleClickSequence(row(id), row(id).width / 2, row(id).height / 2, Qt.LeftButton)
+        verify(waitForNative(function() {
+            return session.songTabs.tabCount === 1
+                && session.songTabs.selectedPage.title === "mus_route101"
+        }, 30000), "A033: the registered clean deletion candidate opens in its named editor tab")
+        const originalTabId = session.songTabs.selectedId
+        mouseClick(row(id), 4, 4, Qt.RightButton)
+        menuAction("delete")
+        verify(waitForNative(function() { return controller().confirmation === "delete" }, 5000),
+               "A042: the open song raises the mounted deletion confirmation")
+        const dialog = findChild(shell, "songConfirmationDialog")
+        verify(dialog !== null && dialog.visible && dialog.standardButton(Dialog.Ok) !== null,
+               "A043: the deletion confirmation exposes its visible accepting button")
+        clickConfirmation()
+        verify(waitForNative(function() {
+            return !controller().busy && session.songTabs.tabCount === 0
+                && session.songTabs.selectedId !== originalTabId
+        }, 30000), "A045: accepting deletion closes the original clean open song tab")
+        compare(row(id), null, "A046: deletion removes the original song row from the mounted list")
+        compare(presenter().rowCount, 7, "A047: deleting one song decreases the listed count by exactly one")
+        compare(bootstrap.actionMidiExists(), false,
+                "A048: deleting the song removes its original MIDI path")
+        compare(fileProbe.fileFingerprint(root + "/.porydaw/trash/mus_route101.mid"),
+                "471:d31e7c4a0a32a53f",
+                "A049: deletion leaves the original MIDI bytes at the named trash path")
+    }
+
+    function test_fallbackDeletionRefusedWithOpenTab() {
+        verify(bootstrap.prepareSongActionFixture("fallback"),
+               "the isolated fallback fixture stages its playable ID-zero MIDI")
+        const root = bootstrap.projectRoot
+        const paths = ["sound/song_table.inc", "include/constants/songs.h", "ld_script.ld",
+                       "charmap.txt", "sound/songs/midi/midi.cfg", "src/debug.c"]
+        const expected = ["732:4efe265a89789cea", "423:7e4eec643bee2aa",
+                          "761:755b12f592bddb60", "294:863a4ea898d33ff6",
+                          "615:2d0bb9be3c185b9e", "580:1d158bbea527b04f"]
+        compare(JSON.stringify(paths.map(path => fileProbe.fileFingerprint(root + "/" + path))),
+                JSON.stringify(expected), "the six literal fallback project images are staged")
+        const midi = root + "/sound/songs/midi/mus_dummy.mid"
+        compare(fileProbe.fileFingerprint(midi), "471:d31e7c4a0a32a53f",
+                "the playable fallback MIDI starts with independently fixed bytes")
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "the fallback fixture opens a production shell")
+        const session = shell.shellPresenter.session
+        session.openProject(root)
+        verify(waitForNative(function() { return session.projectOpen && presenter().rowCount === 9 }, 30000),
+               "the project lists its newly playable ID-zero fallback")
+        const id = 0
+        mouseDoubleClickSequence(row(id), row(id).width / 2, row(id).height / 2, Qt.LeftButton)
+        verify(waitForNative(function() {
+            return session.songTabs.tabCount === 1
+                && session.songTabs.selectedPage.title === "mus_dummy"
+        }, 30000), "the song-table ID-zero fallback opens in its own clean tab")
+        const tabId = session.songTabs.selectedId
+        mouseClick(row(id), 4, 4, Qt.RightButton)
+        menuAction("delete")
+        verify(waitForNative(function() {
+            return findChild(shell, "shellCriticalDialog").visible
+                && shell.shellPresenter.statusText.indexOf("mus_dummy") >= 0
+        }, 5000), "A035: fallback deletion raises a refusal identifying mus_dummy")
+        const refusal = findChild(shell, "shellCriticalDialog")
+        compare(refusal.informativeText.indexOf("mus_dummy") >= 0, true,
+                "the visible refusal identifies the protected song rather than a blank error")
+        refusal.close()
+        compare(session.songTabs.selectedId, tabId,
+                "A038: rejecting fallback deletion retains the original open tab")
+        compare(JSON.stringify(paths.map(path => fileProbe.fileFingerprint(root + "/" + path))),
+                JSON.stringify(expected),
+                "A039: fallback refusal preserves exact table, header, linker, charmap, flags and debug bytes")
+        compare(fileProbe.fileFingerprint(midi), "471:d31e7c4a0a32a53f",
+                "A041: fallback refusal retains its original playable MIDI bytes")
+        compare(presenter().rowCount, 9,
+                "the fallback refusal retains all nine playable rows in the mounted list")
+    }
+
     function test_mountedSongDockAndConfirmationRoundTrips() {
         verify(bootstrap.prepareSongDockFixture(), "staged project has a stray and partial registration")
         const settings = bootstrap.preferences

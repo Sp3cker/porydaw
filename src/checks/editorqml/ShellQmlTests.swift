@@ -248,6 +248,86 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
             return true
         } catch { return false }
     }
+    public func prepareSongActionFixture(branch: String) -> Bool {
+        guard ["charmap", "open-delete", "fallback"].contains(branch) else { return false }
+        let source = URL(fileURLWithPath: Self.stagedProjectRoot, isDirectory: true)
+        let target = source.deletingLastPathComponent()
+            .appendingPathComponent(source.lastPathComponent + "-action-" + branch, isDirectory: true)
+        let fixture = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
+            .deletingLastPathComponent().appendingPathComponent("fixtures/decompproject")
+        let charmapComplete = """
+            MUS_DUMMY = 00 00
+            MUS_LITTLEROOT_TEST = 01 00
+            MUS_ROUTE101 = 02 00
+            MUS_ROUTE102 = 03 00
+            MUS_GSC_ROUTE38 = 04 00
+            MUS_CAUGHT = 05 00
+            MUS_PETALBURG = 06 00
+            MUS_OLDALE = 07 00
+            MUS_GYM = 08 00
+            MUS_SURF = 09 00
+            MUS_VICTORY_WILD = 0A 00
+            SE_USE_ITEM = 0B 00
+            SE_PC_LOGIN = 0C 00
+            SE_FANFARE_1TRK = 0D 00
+            """ + "\n"
+        let charmapStripped = """
+            MUS_DUMMY = 00 00
+            MUS_LITTLEROOT_TEST = 01 00
+            MUS_ROUTE102 = 03 00
+            MUS_GSC_ROUTE38 = 04 00
+            MUS_CAUGHT = 05 00
+            MUS_PETALBURG = 06 00
+            MUS_OLDALE = 07 00
+            MUS_GYM = 08 00
+            MUS_SURF = 09 00
+            MUS_VICTORY_WILD = 0A 00
+            SE_USE_ITEM = 0B 00
+            SE_PC_LOGIN = 0C 00
+            SE_FANFARE_1TRK = 0D 00
+            """ + "\n"
+        do {
+            if FileManager.default.fileExists(atPath: target.path) {
+                try FileManager.default.removeItem(at: target)
+            }
+            try FileManager.default.copyItem(at: source, to: target)
+            for relative in ["sound/song_table.inc", "include/constants/songs.h",
+                             "sound/songs/midi/midi.cfg", "ld_script.ld", "src/debug.c",
+                             "sound/voicegroups/dummy.inc"] {
+                let bytes = try Data(contentsOf: fixture.appendingPathComponent(relative))
+                let destination = target.appendingPathComponent(relative)
+                try FileManager.default.createDirectory(
+                    at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try bytes.write(to: destination)
+            }
+            for relative in ["sound/songs/midi/mus_stray_test.mid",
+                             "sound/songs/midi/mus_partial_test.mid",
+                             "sound/voicegroups/fixture_songs_dock.inc", ".porydaw"] {
+                let leftover = target.appendingPathComponent(relative)
+                if FileManager.default.fileExists(atPath: leftover.path) {
+                    try FileManager.default.removeItem(at: leftover)
+                }
+            }
+            let charmap = target.appendingPathComponent("charmap.txt")
+            let complete = Data(charmapComplete.utf8)
+            let expected = try Data(contentsOf: fixture.appendingPathComponent("charmap.txt"))
+            guard expected == complete else { return false }
+            try (branch == "charmap" ? charmapStripped : charmapComplete)
+                .write(to: charmap, atomically: true, encoding: .utf8)
+            if branch == "fallback" {
+                let midi = target.appendingPathComponent("sound/songs/midi")
+                let playable = try Data(contentsOf: midi.appendingPathComponent("mus_route101.mid"))
+                try playable.write(to: midi.appendingPathComponent("mus_dummy.mid"))
+            }
+            projectRoot = target.path
+            return true
+        } catch { return false }
+    }
+
+    public func actionMidiExists() -> Bool {
+        FileManager.default.fileExists(atPath:
+            projectRoot + "/sound/songs/midi/mus_route101.mid")
+    }
 
     /// Creates a stray and a partial song in this entry's isolated scratch project.
     public func prepareSongDockFixture() -> Bool {
