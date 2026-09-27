@@ -726,7 +726,7 @@ Anchor: message "save of song and edited home bank refreshes the clean lease"
 S006 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "stale snapshot completion leaves the newer document dirty"
 
-S007 | test_editorSaveCommitsCleanBank | src/checks/editorqml/tst_ShellVoicegroup.qml
+S007 | test_editorSaveCommitsCleanBank | src/checks/editorqml/tst_ShellVoicegroupEditing.qml
 Anchor: message "mounted save completes: "
 
 S008 | bankSharedFailedSaveAndStaleReceipt | src/checks/workspace/bank_sharing_history.swift
@@ -738,7 +738,7 @@ Anchor: message "peer receives the saved bank voice despite MIDI failure"
 S010 | bankSharedFailedSaveAndStaleReceipt | src/checks/workspace/bank_sharing_history.swift
 Anchor: message "failed later stage does not clean the song"
 
-S011 | test_zzzzSharedBankBetweenTwoLiveTabs | src/checks/editorqml/tst_ShellVoicegroup.qml
+S011 | test_zzzzSharedBankBetweenTwoLiveTabs | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "clean saved bank and numeric editor publish back to the first tab"
 
 S012 | saveCoreSectionRefusals | src/checks/projectstore/SaveCoreChecks.swift
@@ -783,61 +783,61 @@ Anchor: message "p: the selector commit resolves display text to the alternate a
 S025 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
 Anchor: message "failed voicegroup selector records the edited song cfg as one dirty undo step"
 
-S026 | test_zySelectorFailurePreservesBinding | src/checks/editorqml/tst_ShellVoicegroup.qml
+S026 | test_zySelectorFailurePreservesBinding | src/checks/editorqml/tst_ShellVoicegroupPicker.qml
 Anchor: message "a missing -G names itself in the failure"
 
-S027 | test_zySelectorFailurePreservesBinding | src/checks/editorqml/tst_ShellVoicegroup.qml
+S027 | test_zySelectorFailurePreservesBinding | src/checks/editorqml/tst_ShellVoicegroupPicker.qml
 Anchor: message "undo after a failed rebind restores the home voicegroup"
 
-S028 | test_editorSaveCommitsCleanBank | src/checks/editorqml/tst_ShellVoicegroup.qml
+S028 | test_editorSaveCommitsCleanBank | src/checks/editorqml/tst_ShellVoicegroupEditing.qml
 Anchor: message "a unified save cleans the dock"
 
 S029 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
 Anchor: message "a bank edit preserves song dirtiness while dirtying the bank"
 
-S030 | test_zySelectorFailurePreservesBinding | src/checks/editorqml/tst_ShellVoicegroup.qml
+S030 | test_zySelectorFailurePreservesBinding | src/checks/editorqml/tst_ShellVoicegroupPicker.qml
 Anchor: message "mounted selector stays available after a successful activation"
 
-S031 | test_zySelectorFailurePreservesBinding | src/checks/editorqml/tst_ShellVoicegroup.qml
+S031 | test_zySelectorFailurePreservesBinding | src/checks/editorqml/tst_ShellVoicegroupPicker.qml
 Anchor: message "failed rebind settles the dock instead of leaving it loading"
 
-S032 | test_zySelectorFailurePreservesBinding | src/checks/editorqml/tst_ShellVoicegroup.qml
+S032 | test_zySelectorFailurePreservesBinding | src/checks/editorqml/tst_ShellVoicegroupPicker.qml
 Anchor: message "failed rebind leaves the selector enabled"
 
-S033 | test_zySelectorFailurePreservesBinding | src/checks/editorqml/tst_ShellVoicegroup.qml
+S033 | test_zySelectorFailurePreservesBinding | src/checks/editorqml/tst_ShellVoicegroupPicker.qml
 Anchor: message "failed rebind retains the mounted release field"
 
-S034 | test_zySelectorFailurePreservesBinding | src/checks/editorqml/tst_ShellVoicegroup.qml
+S034 | test_zySelectorFailurePreservesBinding | src/checks/editorqml/tst_ShellVoicegroupPicker.qml
 Anchor: message "failed rebind keeps the release spin enabled"
 
-S035 | test_zySelectorFailurePreservesBinding | src/checks/editorqml/tst_ShellVoicegroup.qml
+S035 | test_zySelectorFailurePreservesBinding | src/checks/editorqml/tst_ShellVoicegroupPicker.qml
 Anchor: message "failed rebind retains the selected slot row text"
 
-S036 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroup.qml
+S036 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "adjacent release edit dirties the bank"
 
-S037 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroup.qml
+S037 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "adjacent bank edit leaves the document window unmodified"
 
-S038 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroup.qml
+S038 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "zero release leaves the bank dirty"
 
-S039 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroup.qml
+S039 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "zero release leaves the song window unmodified"
 
-S040 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroup.qml
+S040 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "255 release leaves the bank dirty"
 
-S041 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroup.qml
+S041 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "255 release leaves the song window unmodified"
 
 S042 | releaseBoundaryEngineParity | src/checks/workspace/bank_edits.swift
 Anchor: message "release \(name) converges to the exact engine byte"
 
-S043 | test_zzzzzUnifiedSaveAndUndoRestorationReceipts | src/checks/editorqml/tst_ShellVoicegroup.qml
+S043 | test_zzzzzUnifiedSaveAndUndoRestorationReceipts | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "unified Save completes one clean song-and-bank receipt"
 
-S044 | test_zzzzzUnifiedSaveAndUndoRestorationReceipts | src/checks/editorqml/tst_ShellVoicegroup.qml
+S044 | test_zzzzzUnifiedSaveAndUndoRestorationReceipts | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "undo restoration Save completes one clean receipt"
 
 S045 | sessionSaveJourney | src/checks/workspace/session_save.swift
@@ -846,13 +846,13 @@ Anchor: message "retry writes the exact newer MIDI snapshot bytes"
 S046 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
 Anchor: message "missing -G records one document edit without dirtying the retained bank"
 
-S047 | test_zzzzzUnifiedSaveAndUndoRestorationReceipts | src/checks/editorqml/tst_ShellVoicegroup.qml
+S047 | test_zzzzzUnifiedSaveAndUndoRestorationReceipts | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "missing -G failure appears in the mounted shell status"
 
 S048 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
 Anchor: message "undo of failed voicegroup selector restores the clean home binding"
 
-S049 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroup.qml
+S049 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "sample release spin is mounted"
 
 S050 | bankQueuedSave | src/checks/workspace/bank_saves.swift
@@ -861,25 +861,25 @@ Anchor: message "queued release edit dirties only the bank before any song note"
 S051 | bankQueuedSave | src/checks/workspace/bank_saves.swift
 Anchor: message "queued release edit reaches the exact engine release byte"
 
-S052 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroup.qml
+S052 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "focused release field offers the standard window Undo action"
 
-S053 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroup.qml
+S053 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "one focused standard Undo restores the exact release and clean song and bank"
 
-S054 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroup.qml
+S054 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "focused Undo does not write the previously persisted bank bytes"
 
-S055 | test_zzzzzUnifiedSaveAndUndoRestorationReceipts | src/checks/editorqml/tst_ShellVoicegroup.qml
+S055 | test_zzzzzUnifiedSaveAndUndoRestorationReceipts | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "mounted bank Save handles the unified dirty journey"
 
-S056 | test_zzzzzUnifiedSaveAndUndoRestorationReceipts | src/checks/editorqml/tst_ShellVoicegroup.qml
+S056 | test_zzzzzUnifiedSaveAndUndoRestorationReceipts | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "mounted song config edit dirties the document: "
 
-S057 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroup.qml
+S057 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "song setting application independently marks the document window modified"
 
-S058 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroup.qml
+S058 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "song setting retains its value and dirties the document while the bank remains dirty"
 
 S059 | bankQueuedSave | src/checks/workspace/bank_saves.swift
@@ -912,14 +912,14 @@ Anchor: message "bank undo restores the original engine release without writing 
 S068 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift
 Anchor: message "first bank round-trip Save cleans the song and the bank together"
 
-S069 | test_zzzzzUnifiedSaveAndUndoRestorationReceipts | src/checks/editorqml/tst_ShellVoicegroup.qml
+S069 | test_zzzzzUnifiedSaveAndUndoRestorationReceipts | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "missing -G failure renders a visible shell status item"
 
-S070 | test_zzzzzUnifiedSaveAndUndoRestorationReceipts | src/checks/editorqml/tst_ShellVoicegroup.qml
+S070 | test_zzzzzUnifiedSaveAndUndoRestorationReceipts | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "missing -G status retains the fork failure wording"
 
-S071 | test_zzzzzUnifiedSaveAndUndoRestorationReceipts | src/checks/editorqml/tst_ShellVoicegroup.qml
+S071 | test_zzzzzUnifiedSaveAndUndoRestorationReceipts | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "rendered missing -G failure matches the session error"
 
-S072 | test_zzzzzUnifiedSaveAndUndoRestorationReceipts | src/checks/editorqml/tst_ShellVoicegroup.qml
+S072 | test_zzzzzUnifiedSaveAndUndoRestorationReceipts | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "missing -G argument remains fully visible in the shell status text"

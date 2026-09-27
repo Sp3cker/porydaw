@@ -16,6 +16,10 @@ add_library(PorydawApp STATIC
     ApplicationSession.swift
     ApplicationSession+Tabs.swift
     ApplicationSession+Close.swift
+    ApplicationSession+ProjectOpening.swift
+    ApplicationSession+Ruler.swift
+    ApplicationSession+Audio.swift
+    ApplicationSession+Commands.swift
     EditorCommandRouter.swift
     typography/Typography.swift
     transport/TransportBarPresenter.swift
@@ -29,6 +33,7 @@ add_library(PorydawApp STATIC
     songlist/SongDockController.swift
     voicelist/VoiceListSemantics.swift
     voicelist/VoiceListController.swift
+    voicelist/VoiceListController+Bank.swift
     voicelist/VoiceEditorController.swift
     voicelist/VoicegroupCatalog.swift
     MouseHints.swift
@@ -37,6 +42,8 @@ add_library(PorydawApp STATIC
     roll/PianoGrid.swift
     roll/PianoGrid+Support.swift
     roll/PianoGrid+Gestures.swift
+    roll/PianoGrid+Camera.swift
+    roll/PianoGrid+Commands.swift
     roll/PianoGrid+SceneSync.swift
     roll/GridGesture.swift
     roll/GridScene.swift
@@ -102,6 +109,9 @@ add_library(PorydawApp STATIC
     drawer/automation/AutomationTapTempo.swift
     drawer/automation/AutomationLifecycle.swift
     drawer/automation/AutomationPage.swift
+    drawer/automation/AutomationPage+Session.swift
+    drawer/automation/AutomationGestureEditing.swift
+    drawer/automation/AutomationPointerDispatch.swift
     headers/TrackHeaders.swift
     headers/HeaderVoicePicker.swift
     headers/TrackActivity.swift

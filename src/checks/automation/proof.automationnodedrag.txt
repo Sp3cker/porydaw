@@ -1159,10 +1159,10 @@ Anchor: message "a fresh press grabs the node after the switch"
 S164 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the recovery drag commits normally" #2
 
-S165 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift
+S165 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection_pencil.swift
 Anchor: message "a horizontal Shift drag locks the value and moves the tick"
 
-S166 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift
+S166 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection_pencil.swift
 Anchor: message "a vertical Shift drag locks the tick and moves the value"
 
 S167 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
@@ -1183,34 +1183,34 @@ Anchor: message "stationary selection click deletes grabbed node only"
 S172 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "stationary selection click preserves other lanes"
 
-S173 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
+S173 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection_band.swift
 Anchor: message "a band on Tempo selects Tempo alone"
 
-S174 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
+S174 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection_band.swift
 Anchor: message "the band publishes a lane-scoped range"
 
-S175 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
+S175 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection_band.swift
 Anchor: message "banding writes nothing"
 
-S176 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
+S176 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection_band.swift
 Anchor: message "the tempo drag moves the tempo point"
 
-S177 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
+S177 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection_band.swift
 Anchor: message "the tempo drag undoes"
 
-S178 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+S178 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection_band.swift
 Anchor: message "the grabbed lane moves with the selection"
 
-S179 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+S179 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection_band.swift
 Anchor: message "the unselected volume lane is excluded"
 
-S180 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+S180 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection_band.swift
 Anchor: message "tempo is excluded from the CC drag"
 
-S181 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+S181 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection_band.swift
 Anchor: message "one undo restores all selected lanes"
 
-S182 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+S182 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection_band.swift
 Anchor: message "the drag recorded exactly one history entry"
 
 S183 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
@@ -1237,22 +1237,22 @@ Anchor: message "a gesture-first Escape writes nothing"
 S190 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the Delete key routes to the active time selection"
 
-S191 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
+S191 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection_band.swift
 Anchor: message "the Delete command removes the covered span"
 
-S192 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
+S192 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection_band.swift
 Anchor: message "Delete keeps CC points outside the span"
 
-S193 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
+S193 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection_band.swift
 Anchor: message "one Delete is one revision"
 
-S194 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
+S194 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection_band.swift
 Anchor: message "the Delete undoes"
 
-S195 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
+S195 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection_band.swift
 Anchor: message "undo restores the covered CC point"
 
-S196 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
+S196 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection_band.swift
 Anchor: message "an empty Delete writes nothing"
 
 S197 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
@@ -1276,13 +1276,13 @@ Anchor: message "the selected-range band follows its drag"
 S203 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "a moved phantom shifts the preview curve toward its target by a pixel"
 
-S204 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+S204 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "a real node drag stages a point preview before geometry changes"
 
-S205 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+S205 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the geometry rebuild retires the provisional node preview"
 
-S206 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+S206 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "resizing the mounted plot cancels its held node drag"
 
 S207 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift

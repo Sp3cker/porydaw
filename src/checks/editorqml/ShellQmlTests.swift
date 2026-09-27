@@ -10,103 +10,9 @@ import QtBridgeCpp
 /// passes the entry name first, then the scratch project it staged.
 @main
 enum ShellQmlLane {
-    private struct Entry {
-        let name: String
-        let inputFileName: String
-        let fixtureFiles: [String]
-        /// run_checks.ts windowing: "offscreen", or "window-system" for real
-        /// focus/activation delivery (run serially, never beside other windows).
-        var windowing = "offscreen"
-        /// Qt Quick Test selectors run when the caller passes none, so one
-        /// input file can back several entries, each within the harness timeout.
-        var testFunctions: [String] = []
-    }
-
-    /// The rendered text-contrast audit: one entry per shell state and theme.
-    private static let textContrastEntries: [Entry] = ["empty", "song"].flatMap { state in
-        ["vanilla", "dark-neutral-high", "immaterial"].map { mode in
-            Entry(name: "shell-text-contrast-\(state)-\(mode)",
-                  inputFileName: "tst_TextContrast.qml",
-                  fixtureFiles: songs("mus_route101"),
-                  testFunctions: ["TextContrast::test_\(state)ShellText:\(mode)"])
-        }
-    }
-
-    /// Project tables, samples and the original `_fixture_rich` voicegroups.
-    private static let projectFixture = [
-        "sound/song_table.inc",
-        "sound/songs/midi/midi.cfg",
-        "sound/direct_sound_data.inc",
-        "sound/direct_sound_samples/fixture_bass.bin",
-        "sound/direct_sound_samples/fixture_drum.bin",
-        "sound/direct_sound_samples/fixture_loop.bin",
-        "sound/direct_sound_samples/fixture_pluck.bin",
-        "sound/programmable_wave_data.inc",
-        "sound/programmable_wave_samples/fixture_pulse.pcm",
-        "sound/programmable_wave_samples/fixture_saw.pcm",
-        "sound/keysplit_tables.inc",
-        "sound/voicegroups/fixture_rich.inc",
-        "sound/voicegroups/fixture_keys.inc",
-        "sound/voicegroups/fixture_bass.inc",
-        "sound/voicegroups/fixture_drums_a.inc",
-        "sound/voicegroups/fixture_drums_b.inc",
-    ]
-
-    private static func songs(_ labels: String...) -> [String] {
-        projectFixture + labels.map { "sound/songs/midi/\($0).mid" }
-    }
-
-    private static let entries = [
-        Entry(name: "shellwindow", inputFileName: "tst_ShellWindow.qml",
-              fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
-        Entry(name: "shell-grid-input", inputFileName: "tst_ShellGridInput.qml",
-              fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
-        Entry(name: "shell-pitch-bend", inputFileName: "tst_ShellPitchBend.qml",
-              fixtureFiles: songs("mus_route101")),
-        Entry(name: "shell-grid-menu", inputFileName: "tst_ShellGridMenu.qml",
-              fixtureFiles: songs("mus_route101")),
-        Entry(name: "shell-clipboard", inputFileName: "tst_ShellClipboard.qml",
-              fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
-        Entry(name: "shell-theme", inputFileName: "tst_Theme.qml",
-              fixtureFiles: songs("mus_route101")),
-        Entry(name: "shell-typography", inputFileName: "tst_Typography.qml",
-              fixtureFiles: songs("mus_route101")),
-        Entry(name: "shell-open-failure", inputFileName: "tst_ShellOpenFailure.qml",
-              fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
-        Entry(name: "shell-chrome-visuals", inputFileName: "tst_ShellChromeVisuals.qml",
-              fixtureFiles: songs("mus_route101")),
-        Entry(name: "shell-transport", inputFileName: "tst_ShellTransport.qml",
-              fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
-        Entry(name: "shell-menus", inputFileName: "tst_ShellMenus.qml",
-              fixtureFiles: songs("mus_route101")),
-        Entry(name: "shell-note-visuals", inputFileName: "tst_ShellNoteVisuals.qml",
-              fixtureFiles: songs("mus_route101")),
-        Entry(name: "shell-reticle-visuals", inputFileName: "tst_ShellReticleVisuals.qml",
-              fixtureFiles: songs("mus_route101")),
-        Entry(name: "shell-tabs", inputFileName: "tst_ShellTabs.qml",
-              fixtureFiles: songs("mus_route101", "mus_littleroot_test", "mus_route102", "mus_gym")),
-        Entry(name: "shell-songs", inputFileName: "tst_ShellSongs.qml",
-              fixtureFiles: songs("mus_route101", "mus_petalburg", "mus_gym", "mus_surf",
-                                  "mus_victory_wild", "se_fanfare_1trk", "se_pc_login",
-                                  "se_use_item") + ["sound/voicegroups/fixture_alt.inc",
-                                                     "include/constants/songs.h"]),
-        Entry(name: "shell-event-list", inputFileName: "tst_ShellEventList.qml",
-              fixtureFiles: songs("mus_route101")),
-        Entry(name: "shell-drawer-parity", inputFileName: "tst_ShellDrawerParity.qml",
-              fixtureFiles: songs("mus_route101")),
-        Entry(name: "shell-polyphony", inputFileName: "tst_ShellPolyphony.qml",
-              fixtureFiles: songs("mus_route101")),
-        Entry(name: "shell-voicegroup", inputFileName: "tst_ShellVoicegroup.qml",
-              fixtureFiles: songs("mus_route101", "mus_route102") + [
-                  "asm/macros/synth_test.inc", "data/sound_data.s",
-                  "sound/voicegroups/fixture_alt.inc"
-              ]),
-        Entry(name: "shell-settings", inputFileName: "tst_ShellSettings.qml",
-              fixtureFiles: songs("mus_route101")),
-    ] + textContrastEntries
 
     private static var manifestLine: String {
-        let checks = entries.map { entry in
+        let checks = ShellQmlRegistry.entries.map { entry in
             let files = entry.fixtureFiles.map { "\"" + $0 + "\"" }.joined(separator: ",")
             return #"{"name":"\#(entry.name)","argv":["\#(entry.name)","{scratch}"],"binary":"checks","windowing":"\#(entry.windowing)","framework":"qt-test","optIn":false,"scratchKind":"existing-directory","fixtureRootKind":"decomp-project","fixtureFiles":[\#(files)]}"#
         }
@@ -127,7 +33,7 @@ enum ShellQmlLane {
         }
         let usage = "usage: shell_qml_tests <entry> <staged-project-directory> [--qt <Qt args>]"
         guard arguments.count >= 2,
-              let entry = entries.first(where: { $0.name == arguments[0] })
+              let entry = ShellQmlRegistry.entries.first(where: { $0.name == arguments[0] })
         else {
             return fail(usage)
         }

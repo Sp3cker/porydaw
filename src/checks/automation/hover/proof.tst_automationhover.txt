@@ -834,64 +834,64 @@ Anchor: message "a pencil release arms the pencil cursor"
 S046 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "an off-plot node becomes the origin phantom"
 
-S047 | test_automationHintsRetainGrabOrigin | src/checks/editorqml/tst_EditorDrawer.qml
+S047 | test_automationHintsRetainGrabOrigin | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "the node advertises its interaction before the grab"
 
-S048 | test_automationHintsRetainGrabOrigin | src/checks/editorqml/tst_EditorDrawer.qml
+S048 | test_automationHintsRetainGrabOrigin | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "starting a grab retains the originating node instructions"
 
-S049 | test_automationHintsRetainGrabOrigin | src/checks/editorqml/tst_EditorDrawer.qml
+S049 | test_automationHintsRetainGrabOrigin | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "the originating instructions survive outside motion"
 
-S050 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S050 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "the node ring and value label share one hover presentation"
 
-S051 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S051 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "hovering a node writes nothing"
 
-S052 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S052 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "exactly the hovered node carries the ring"
 
-S053 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S053 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "a repeated hover at the same point publishes nothing new"
 
-S054 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S054 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "leaving the plot clears the hover"
 
-S055 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S055 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "a move after a leave revives the hover"
 
-S056 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S056 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "the right click opened the node menu"
 
-S057 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S057 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "dismissing the menu closes it"
 
-S058 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S058 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "pointer motion after a dismissal recovers the hover"
 
-S059 | awaitAutomationModal | src/checks/editorqml/tst_EditorDrawer.qml
+S059 | awaitAutomationModal | src/checks/editorqml/EditorDrawerAutomationMenuSupport.js
 Anchor: message ","
 
 S060 | test_aAutomationHoverRaster | src/checks/editorqml/tst_ShellDrawerParity.qml
 Anchor: message "Tempo"
 
-S061 | checkAutomationParameter | src/checks/editorqml/tst_ShellDrawerParity.qml
+S061 | checkAutomationParameter | src/checks/editorqml/ShellDrawerParityRasterSupport.js
 Anchor: message " publishes its insertion hover"
 
-S062 | checkAutomationParameter | src/checks/editorqml/tst_ShellDrawerParity.qml
+S062 | checkAutomationParameter | src/checks/editorqml/ShellDrawerParityRasterSupport.js
 Anchor: message ": the insertion hover paints"
 
-S063 | checkAutomationParameter | src/checks/editorqml/tst_ShellDrawerParity.qml
+S063 | checkAutomationParameter | src/checks/editorqml/ShellDrawerParityRasterSupport.js
 Anchor: message ": the repeated hover is pixel-stable"
 
-S064 | checkAutomationParameter | src/checks/editorqml/tst_ShellDrawerParity.qml
+S064 | checkAutomationParameter | src/checks/editorqml/ShellDrawerParityRasterSupport.js
 Anchor: message ": leaving the plot clears the hover"
 
-S065 | checkAutomationParameter | src/checks/editorqml/tst_ShellDrawerParity.qml
+S065 | checkAutomationParameter | src/checks/editorqml/ShellDrawerParityRasterSupport.js
 Anchor: message ": the node hover ring draws"
 
-S066 | checkAutomationParameter | src/checks/editorqml/tst_ShellDrawerParity.qml
+S066 | checkAutomationParameter | src/checks/editorqml/ShellDrawerParityRasterSupport.js
 Anchor: message ": node hovering writes nothing"
 
 S067 | drawerAutomationHoverResidual | src/checks/automation/automationcanvashover.swift
@@ -957,40 +957,40 @@ Anchor: message "Tempo's first tick plots through the shared camera"
 S087 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift
 Anchor: message "Tempo shares the active lane's plot width"
 
-S088 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S088 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "automationNodeHover" #1
 
-S089 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S089 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "the hover ring centers on its node"
 
-S090 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S090 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "the hover ring spans twice its ring radius"
 
-S091 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S091 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "a background hover rings no node"
 
-S092 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S092 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "mouseHintStatus"
 
-S093 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S093 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: function
 
-S094 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S094 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "pointer motion after a dismissal restores the underlay hint"
 
-S095 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S095 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "the ring and value label appear together"
 
-S096 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S096 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "the filled held-value ghost changes plot pixels until leave"
 
-S097 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S097 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "the filled insertion ghost follows the held-value curve"
 
 S098 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "an existing-node hover suppresses the insertion ghost"
 
-S099 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S099 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "a written-node hover suppresses the insertion ghost"
 
 S100 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
@@ -1005,37 +1005,37 @@ Anchor: message "an existing Tempo node suppresses the insertion ghost"
 S103 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "an existing-node hover suppresses the insertion ghost"
 
-S104 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawer.qml
+S104 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "the pencil profile changes the mounted plot instructions"
 
-S105 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawer.qml
+S105 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "the mounted phantom hint reaches the status strip"
 
-S106 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawer.qml
+S106 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "the actual plot owns distinct origin-phantom instructions"
 
 S107 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "an origin phantom hover advertises its own operation"
 
-S108 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawer.qml
+S108 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "the phantom profile returns after disarming the pencil"
 
-S109 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawer.qml
+S109 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "the pencil profile changes the mounted plot instructions"
 
-S110 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S110 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "the open menu mutes the underlay hint"
 
 S111 | drawerAutomationMenuHintMuting | src/checks/automation/automationcanvashover.swift
 Anchor: message "the open menu owns the hint scope"
 
-S112 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S112 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "motion between underlying targets stays muted"
 
-S113 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S113 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "pointer motion after a dismissal recovers the hover"
 
-S114 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S114 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "pointer motion after a dismissal restores the underlay hint"
 
 Shared helpers: the swiftcore predicates run under drawerAutomationAutomationFixture with the
@@ -1046,19 +1046,19 @@ automationHoverBuilds, automationMenuOpen, automationDocumentRevision).
 S115 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
 Anchor: message "the mounted plot and alternate focus target exist"
 
-S116 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S116 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "moving from plot to gutter clears the background hover"
 
-S117 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S117 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the gutter leave clears the plot's shell hint"
 
-S118 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S118 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "returning from gutter restores plot hover"
 
-S119 | test_automationPresentationInactiveInclusionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+S119 | test_automationPresentationInactiveInclusionPixels | src/checks/editorqml/tst_EditorDrawerAutomationPresentation.qml
 Anchor: message "a real LFO sweep gives the selection an occupied lane"
 
-S120 | checkAutomationParameter | src/checks/editorqml/tst_ShellDrawerParity.qml
+S120 | checkAutomationParameter | src/checks/editorqml/ShellDrawerParityRasterSupport.js
 Anchor: message " activates by pointer"
 
 S121 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
@@ -1076,40 +1076,40 @@ Anchor: message "the resized plot accepts a fresh sweep"
 S125 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a fresh press grabs the node after the rebuild"
 
-S126 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S126 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the mounted shell dispatches B to arm the pencil"
 
-S127 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S127 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the pencil shortcut replaces the shell hint text"
 
-S128 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S128 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the second mounted B key returns to sweep mode"
 
-S129 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S129 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "sweep hint returns after the second shortcut"
 
-S130 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S130 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "plot entry publishes the exact sweep hint in the shell"
 
-S131 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S131 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the real node right click opens the automation menu"
 
-S132 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S132 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the open menu suppresses the shell's underlying plot hint"
 
-S133 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S133 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the open menu composes its modal pointer underlay"
 
-S134 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S134 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "menu-owned hint remains muted over another plot position"
 
-S135 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S135 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the outside pointer click closes the automation menu"
 
-S136 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S136 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the exact sweep hint recovers at the stationary dismissal point"
 
-S137 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S137 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "Shift-left drag stages the ramp while held"
 
 S138 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
@@ -1145,34 +1145,34 @@ Anchor: message "the second window actually takes activation"
 S148 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
 Anchor: message "deactivation cancels the staged automation gesture"
 
-S149 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S149 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the grid exposes a visible Alt endpoint distinct from coarse snap"
 
-S150 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S150 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the actual Alt-left sweep stages before its release"
 
-S151 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S151 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the mounted Alt sweep commits exactly one song edit"
 
-S152 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S152 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the visible Alt stroke follows the fine endpoint within one painted pixel, not coarse snap"
 
-S153 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S153 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the held fine-grid sweep has not edited the song"
 
-S154 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S154 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the grid places the ramp dip strictly between its snapped endpoints"
 
-S155 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S155 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the released ramp publishes the independently snapped endpoint and middle ticks"
 
-S156 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S156 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the actual in-bounds dip pointer differs from the endpoint interpolation"
 
-S157 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S157 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the in-bounds dip maps away from the independently interpolated midpoint"
 
-S158 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S158 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the released middle node follows endpoint interpolation rather than the dip"
 
 S159 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml

@@ -349,47 +349,47 @@ Anchor: message "cancellation leaves the original document unchanged"
 S008 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
 Anchor: message "draft and cancellation preserve the full song contents"
 
-S009 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml
+S009 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindowEditorKeys.qml
 Anchor: message "the pointer selected one source note"
 
-S010 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml
+S010 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindowEditorKeys.qml
 Anchor: message "Down reverses Up"
 
-S011 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml
+S011 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindowEditorKeys.qml
 Anchor: message "Shift+Down reverses the octave"
 
-S012 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml
+S012 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindowEditorKeys.qml
 Anchor: message "Left returns the selected note"
 
-S013 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml
+S013 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindowEditorKeys.qml
 Anchor: message "Shift+Left restores the selected note duration"
 
-S014 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml
+S014 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindowEditorKeys.qml
 Anchor: message "the edited source note stays selected"
 
 
-S015 | test_gMultiNoteArrowSelectionAndHistory | src/checks/editorqml/tst_ShellWindow.qml
+S015 | test_gMultiNoteArrowSelectionAndHistory | src/checks/editorqml/tst_ShellWindowEditorKeys.qml
 Anchor: message "two visible notes can form an arrow selection"
 
-S016 | test_gMultiNoteArrowSelectionAndHistory | src/checks/editorqml/tst_ShellWindow.qml
+S016 | test_gMultiNoteArrowSelectionAndHistory | src/checks/editorqml/tst_ShellWindowEditorKeys.qml
 Anchor: message "the click extends the note selection"
 
-S017 | test_gMultiNoteArrowSelectionAndHistory | src/checks/editorqml/tst_ShellWindow.qml
+S017 | test_gMultiNoteArrowSelectionAndHistory | src/checks/editorqml/tst_ShellWindowEditorKeys.qml
 Anchor: message "only selected notes move by one key or one snap"
 
-S018 | test_gMultiNoteArrowSelectionAndHistory | src/checks/editorqml/tst_ShellWindow.qml
+S018 | test_gMultiNoteArrowSelectionAndHistory | src/checks/editorqml/tst_ShellWindowEditorKeys.qml
 Anchor: message "unselected notes stay byte-identical"
 
-S019 | test_gMultiNoteArrowSelectionAndHistory | src/checks/editorqml/tst_ShellWindow.qml
+S019 | test_gMultiNoteArrowSelectionAndHistory | src/checks/editorqml/tst_ShellWindowEditorKeys.qml
 Anchor: message "the selection vector is identical after the arrow"
 
-S020 | test_gMultiNoteArrowSelectionAndHistory | src/checks/editorqml/tst_ShellWindow.qml
+S020 | test_gMultiNoteArrowSelectionAndHistory | src/checks/editorqml/tst_ShellWindowEditorKeys.qml
 Anchor: message "one undo restores the pre-arrow state"
 
-S021 | test_gMultiNoteArrowSelectionAndHistory | src/checks/editorqml/tst_ShellWindow.qml
+S021 | test_gMultiNoteArrowSelectionAndHistory | src/checks/editorqml/tst_ShellWindowEditorKeys.qml
 Anchor: message "one redo reapplies the selected-note arrow"
 
-S022 | test_gMultiNoteArrowSelectionAndHistory | src/checks/editorqml/tst_ShellWindow.qml
+S022 | test_gMultiNoteArrowSelectionAndHistory | src/checks/editorqml/tst_ShellWindowEditorKeys.qml
 Anchor: message "Left moves the selected notes back by one snap"
 
 Shared helpers

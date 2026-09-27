@@ -9,11 +9,12 @@
 //      PORYDAW_CHECK_HOST     macos|windows|linux; overrides the host platform
 //                             when env access to it is granted
 
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { createReporter } from "./checks_reporter.ts";
 import type { Reporter } from "./checks_reporter.ts";
 import { wallEstimate } from "./checks_walls.ts";
 import { parseCheckOptions, VERIFY_HELP } from "./checks_options.ts";
+import { enclosingFunction } from "./proof_anchor.ts";
 
 type ScratchKind = "existing-directory" | "must-not-exist-path" | "unused";
 type FixtureRootKind = "decomp-project" | "songs-mk-project" | "none";
@@ -384,16 +385,31 @@ interface ProofEvidencePass {
   readonly row: string;
 }
 
+interface QmlAssertion {
+  readonly path: string;
+  readonly line: number;
+  readonly function: string;
+  readonly message: string;
+}
+
 interface ProofEvidence {
   readonly check: string;
   readonly passes: readonly ProofEvidencePass[];
   readonly functions: readonly string[];
+  readonly qmlAssertions: readonly QmlAssertion[];
 }
 
-function collectProofEvidence(check: string, output: string): ProofEvidence {
+async function collectProofEvidence(
+  check: string,
+  output: string,
+): Promise<ProofEvidence> {
   const passes: ProofEvidencePass[] = [];
   const functions: string[] = [];
-  for (const line of output.split(/\r?\n/)) {
+  const qmlAssertions: QmlAssertion[] = [];
+  const sourceCache = new Map<string, string>();
+  const lines = output.split(/\r?\n/);
+  for (let index = 0; index < lines.length; ++index) {
+    const line = lines[index];
     const marker = "swiftcore PASS cppId=";
     const markerIndex = line.indexOf(marker);
     if (markerIndex >= 0) {
@@ -418,9 +434,33 @@ function collectProofEvidence(check: string, output: string): ProofEvidence {
         continue;
       }
       functions.push(`${pass[1]}::${name}`);
+      continue;
+    }
+    const assertion = /^\s*INFO\s+:.+?\b(QVERIFY|QCOMPARE)\((.*)\)\s*$/.exec(
+      line,
+    );
+    const location =
+      /^\s*Loc: \[.*?(src\/checks\/[^()]+?\.(?:js|qml))\((\d+)\)\]\s*$/
+        .exec(lines[index + 1] ?? "");
+    if (assertion === null || location === null) continue;
+    const path = location[1];
+    let source = sourceCache.get(path);
+    if (source === undefined) {
+      source = await Deno.readTextFile(join(repoRoot, path));
+      sourceCache.set(path, source);
+    }
+    const sourceLine = Number(location[2]);
+    const body = enclosingFunction(source, sourceLine);
+    if (body !== undefined) {
+      qmlAssertions.push({
+        path,
+        line: sourceLine,
+        function: body.name,
+        message: assertion[1] === "QVERIFY" ? assertion[2] : "",
+      });
     }
   }
-  return { check, passes, functions };
+  return { check, passes, functions, qmlAssertions };
 }
 
 async function writeProofEvidence(
@@ -431,7 +471,7 @@ async function writeProofEvidence(
     await Deno.mkdir(join(buildRoot, "proof-evidence"), { recursive: true });
     await Deno.writeTextFile(
       join(buildRoot, "proof-evidence", `${check}.json`),
-      `${JSON.stringify(collectProofEvidence(check, output))}\n`,
+      `${JSON.stringify(await collectProofEvidence(check, output))}\n`,
     );
   } catch (error) {
     console.error(
@@ -521,6 +561,8 @@ async function runCheck(check: CheckManifestEntry): Promise<void> {
       if (uncapQt) {
         args.push("-maxwarnings", "0");
       }
+    } else if (basename(checksInputPath).endsWith("_qml_tests")) {
+      args.push("--qt", "-v2", "-maxwarnings", "0");
     } else if (uncapQt) {
       args.push("--qt", "-maxwarnings", "0");
     }

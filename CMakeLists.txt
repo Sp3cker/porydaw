@@ -232,6 +232,10 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/VoicePickerPrompt.qml
         src/ui/songview/quick/TimeSignaturePrompt.qml
         src/ui/songview/quick/EventListPage.qml
+        src/ui/songview/quick/EventListCell.qml
+        src/ui/songview/quick/EventListTable.qml
+        src/ui/songview/quick/EventListToolbar.qml
+        src/ui/songview/quick/EventListMenu.qml
         src/ui/songview/quick/RulerToolTip.qml
         src/ui/songview/quick/InsertTimePrompt.qml
         src/ui/songview/quick/DragInput.qml
@@ -243,9 +247,15 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/QuickMenuPanel.qml
         src/ui/songview/quick/AutomationTabs.qml
         src/ui/songview/quick/swiftroll/EditorSurface.qml
+        src/ui/songview/quick/swiftroll/EditorRollBand.qml
+        src/ui/songview/quick/swiftroll/EditorRulerBand.qml
+        src/ui/songview/quick/swiftroll/EditorSurfaceMenus.qml
+        src/ui/songview/quick/swiftroll/EditorSurfacePrompts.qml
         src/ui/songview/quick/swiftroll/SongTabs.qml
         src/ui/songview/quick/swiftroll/SongTab.qml
         src/ui/songview/quick/swiftroll/TrackHeaderBand.qml
+        src/ui/songview/quick/swiftroll/TrackHeaderRows.qml
+        src/ui/songview/quick/swiftroll/TrackHeaderScrollbar.qml
         src/ui/songview/quick/swiftroll/SharedPlayhead.qml
         src/ui/songview/quick/swiftroll/SwiftRollOverlay.qml
         src/ui/songview/quick/swiftroll/TimelineQuickItem.qml
@@ -262,10 +272,14 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/drawer/VoiceChangesPage.qml
         src/ui/songview/quick/drawer/VoiceChangeMenu.qml
         src/ui/songview/quick/drawer/AutomationPage.qml
+        src/ui/songview/quick/drawer/AutomationPlot.qml
         src/ui/songview/quick/drawer/AutomationPrompt.qml
         src/ui/songview/quick/drawer/AutomationMenu.qml
         src/ui/songview/quick/drawer/VoicePicker.qml
         src/ui/shell/ShellWindow.qml
+        src/ui/shell/ShellMenuBar.qml
+        src/ui/shell/ShellStatusBar.qml
+        src/ui/shell/ShellGridContextMenu.qml
         src/ui/shell/ThemedWindow.qml
         src/ui/shell/AboutDialog.qml
         src/ui/shell/TransportBar.qml

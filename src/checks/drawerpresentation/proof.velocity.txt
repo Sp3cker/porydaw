@@ -642,58 +642,58 @@ Anchor: message "an intrinsic ruler press takes the level's value"
 S034 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the accessible description names the voice"
 
-S035 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+S035 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "macro \(macro) names \(expected)"
 
-S036 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+S036 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "a keysplit macro names no exact top-level map"
 
-S037 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+S037 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "a drumkit macro names no exact top-level map"
 
-S038 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+S038 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "the last voice change at or before the tick wins"
 
-S039 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+S039 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "the section ends at the next voice change"
 
-S040 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+S040 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "the later change takes over"
 
-S041 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+S041 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "a context with no later change runs to the song's end"
 
-S042 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+S042 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "an unchanged program is the track's first program"
 
-S043 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+S043 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "an editable square-1 slot resolves exactly"
 
-S044 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+S044 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "the resolved map is the slot's top-level voice"
 
-S045 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+S045 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "the context keeps its section boundary"
 
-S046 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+S046 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "a resolved context is editable"
 
-S047 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+S047 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "a slot that publishes no parsed voice is unresolved"
 
-S048 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+S048 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "an unresolved voice publishes a diagnostic and refuses editing"
 
-S049 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+S049 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "a program outside the bank is unresolved"
 
-S050 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+S050 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "the staged bank publishes at least one parsed voice"
 
-S051 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+S051 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "the staged bank's first parsed slot resolves exactly"
 
-S052 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+S052 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "the resolved slot is the editable line kind"
 
 S053 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
@@ -747,133 +747,133 @@ Anchor: message "an unsupported paint press never suspends follow or owns Escape
 S069 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
 Anchor: message "dragging an unsupported velocity context cannot change notes or history"
 
-S070 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
+S070 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "camera refresh moves the handle without changing its value axis"
 
-S071 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
+S071 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "the QML model receives the moved handle"
 
-S072 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
+S072 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "hit testing follows the camera-refreshed handle"
 
-S073 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
+S073 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "document edits invalidate cached note values"
 
-S074 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
+S074 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "undo invalidates cached note values again"
 
-S075 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+S075 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "the presented context tick is the rounded playhead tick"
 
-S076 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+S076 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "the presented context slot is the bank slot at that tick"
 
-S077 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+S077 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "playhead movement preserves the displayed note count"
 
-S078 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+S078 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "the new section resolves the slot of its own tick"
 
-S079 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+S079 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "the stopped velocity context consumes the published edit cursor"
 
-S080 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+S080 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "cursor-only publication changes no document or history state"
 
-S081 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+S081 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "the selected handle publishes its own count"
 
-S082 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+S082 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "the hovered handle publishes its displayed value as the readout"
 
-S083 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+S083 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "the hovered handle publishes its own identity"
 
-S084 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+S084 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "hover leaving every handle hides the readout"
 
-S085 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift
+S085 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "the selected note starts with a parsed, editable opening voice"
 
-S086 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift
+S086 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "an unresolved program change invalidates the selected velocity context"
 
-S087 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift
+S087 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "an unresolved selected voice cannot open the velocity prompt"
 
-S088 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift
+S088 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "an unresolved selected voice cannot start a velocity drag"
 
-S089 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift
+S089 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "undo restores the parsed context rather than retaining the unresolved projection"
 
-S090 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift
+S090 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "the restored voice makes the selected velocity prompt available again"
 
-S091 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift
+S091 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "the restored voice makes the selected velocity drag available again"
 
-S092 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+S092 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawerVelocityRaster.qml
 Anchor: message "the page composed its ruler and plot"
 
-S093 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+S093 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawerVelocityRaster.qml
 Anchor: message "the ruler is the shared gutter column"
 
-S094 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+S094 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawerVelocityRaster.qml
 Anchor: message "the plot starts at the shared origin"
 
-S095 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+S095 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawerVelocityRaster.qml
 Anchor: message "the plot spans the body beside the ruler"
 
-S096 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+S096 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawerVelocityRaster.qml
 Anchor: message "the plot spans the body height"
 
-S097 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+S097 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawerVelocityRaster.qml
 Anchor: message "every note of the primary track published a node"
 
-S098 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+S098 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawerVelocityRaster.qml
 Anchor: message "the ruler rendered its value ladder"
 
-S099 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+S099 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawerVelocityRaster.qml
 Anchor: message "the drawer composed its original detent control"
 
-S100 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+S100 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawerVelocityRaster.qml
 Anchor: message "the drawer control toggles the velocity preference"
 
-S101 | test_productionVelocityPointerEdit | src/checks/editorqml/tst_EditorDrawer.qml
+S101 | test_productionVelocityPointerEdit | src/checks/editorqml/tst_EditorDrawerVelocityEditing.qml
 Anchor: message "the grid published editable primary notes"
 
-S102 | test_productionVelocityPointerEdit | src/checks/editorqml/tst_EditorDrawer.qml
+S102 | test_productionVelocityPointerEdit | src/checks/editorqml/tst_EditorDrawerVelocityEditing.qml
 Anchor: message "a live drag reports an active interaction to the container"
 
-S103 | test_productionVelocityPointerEdit | src/checks/editorqml/tst_EditorDrawer.qml
+S103 | test_productionVelocityPointerEdit | src/checks/editorqml/tst_EditorDrawerVelocityEditing.qml
 Anchor: message "the released drag committed one velocity change"
 
-S104 | test_productionVelocityCancellation | src/checks/editorqml/tst_EditorDrawer.qml
+S104 | test_productionVelocityCancellation | src/checks/editorqml/tst_EditorDrawerVelocityEditing.qml
 Anchor: message "the section hid"
 
-S105 | test_productionVelocityCancellation | src/checks/editorqml/tst_EditorDrawer.qml
+S105 | test_productionVelocityCancellation | src/checks/editorqml/tst_EditorDrawerVelocityEditing.qml
 Anchor: message "the section is visible again"
 
-S106 | test_productionVelocityPlayheadPerformance | src/checks/editorqml/tst_EditorDrawer.qml
+S106 | test_productionVelocityPlayheadPerformance | src/checks/editorqml/tst_EditorDrawerVelocityEditing.qml
 Anchor: message ")" #1
 
-S107 | test_productionVelocityPlayheadPerformance | src/checks/editorqml/tst_EditorDrawer.qml
+S107 | test_productionVelocityPlayheadPerformance | src/checks/editorqml/tst_EditorDrawerVelocityEditing.qml
 Anchor: message "128 shared-playhead presentations rebuilt no velocity content"
 
 S108 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
 Anchor: message "Noise publishes sixteen volume levels"
 
-S109 | test_drawerTypographyFromMountedSession | src/checks/editorqml/tst_EditorDrawer.qml
+S109 | test_drawerTypographyFromMountedSession | src/checks/editorqml/tst_EditorDrawerChrome.qml
 Anchor: message "axis uses the note-name face"
 
-S110 | test_drawerTypographyFromMountedSession | src/checks/editorqml/tst_EditorDrawer.qml
+S110 | test_drawerTypographyFromMountedSession | src/checks/editorqml/tst_EditorDrawerChrome.qml
 Anchor: message "axis uses note-name size"
 
-S111 | test_drawerTypographyFromMountedSession | src/checks/editorqml/tst_EditorDrawer.qml
+S111 | test_drawerTypographyFromMountedSession | src/checks/editorqml/tst_EditorDrawerChrome.qml
 Anchor: message "axis uses note-name weight"
 
-S112 | test_drawerTypographyFromMountedSession | src/checks/editorqml/tst_EditorDrawer.qml
+S112 | test_drawerTypographyFromMountedSession | src/checks/editorqml/tst_EditorDrawerChrome.qml
 Anchor: message "hovered velocity marker paints the bold note-name face"
 
 S113 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
@@ -888,7 +888,7 @@ Anchor: message "a drag preview holds the timeline projection at the captured ve
 S116 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a live drag previews before release"
 
-S117 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
+S117 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "hovering a node presents its velocity marker and intrinsic graduations"
 
 S118 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
@@ -927,136 +927,136 @@ Anchor: message "undo restores the exact pre-drag song bytes"
 S129 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
 Anchor: message "redo restores the exact committed song bytes"
 
-S130 | test_productionVelocityMountedInk | src/checks/editorqml/tst_EditorDrawer.qml
+S130 | test_productionVelocityMountedInk | src/checks/editorqml/tst_EditorDrawerVelocityRaster.qml
 Anchor: message "the grid paints the past-end point"
 
-S131 | test_productionVelocityMountedInk | src/checks/editorqml/tst_EditorDrawer.qml
+S131 | test_productionVelocityMountedInk | src/checks/editorqml/tst_EditorDrawerVelocityRaster.qml
 Anchor: message "an outsider stem paints without a node highlight"
 
-S132 | test_productionVelocityMountedInk | src/checks/editorqml/tst_EditorDrawer.qml
+S132 | test_productionVelocityMountedInk | src/checks/editorqml/tst_EditorDrawerVelocityRaster.qml
 Anchor: message "the selected node paints the highlight ink"
 
-S133 | test_productionVelocityMountedInk | src/checks/editorqml/tst_EditorDrawer.qml
+S133 | test_productionVelocityMountedInk | src/checks/editorqml/tst_EditorDrawerVelocityRaster.qml
 Anchor: message "the unselected node paints its base fill and outline"
 
-S134 | test_productionVelocityMountedInk | src/checks/editorqml/tst_EditorDrawer.qml
+S134 | test_productionVelocityMountedInk | src/checks/editorqml/tst_EditorDrawerVelocityRaster.qml
 Anchor: message "the unselected node paints the dimmed ink"
 
-S135 | test_productionVelocityTransientInk | src/checks/editorqml/tst_EditorDrawer.qml
+S135 | test_productionVelocityTransientInk | src/checks/editorqml/tst_EditorDrawerVelocityRaster.qml
 Anchor: message "the transient band paints its fill over the dragged selector"
 
-S136 | test_productionVelocityTransientInk | src/checks/editorqml/tst_EditorDrawer.qml
+S136 | test_productionVelocityTransientInk | src/checks/editorqml/tst_EditorDrawerVelocityRaster.qml
 Anchor: message "the transient band paints its edge over the dragged selector"
 
-S137 | test_productionVelocityTransientInk | src/checks/editorqml/tst_EditorDrawer.qml
+S137 | test_productionVelocityTransientInk | src/checks/editorqml/tst_EditorDrawerVelocityRaster.qml
 Anchor: message "the transient band empties after the band release"
 
-S138 | test_productionVelocityDetentRepaint | src/checks/editorqml/tst_EditorDrawer.qml
+S138 | test_productionVelocityDetentRepaint | src/checks/editorqml/tst_EditorDrawerVelocityRaster.qml
 Anchor: message "the intrinsic ruler paints its live graduation rows (drawn "
 
-S139 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S139 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "the velocity plot routes a real wheel zoom into the shared camera"
 
-S140 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S140 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "a real velocity wheel holds its tick under the pointer within one physical pixel"
 
-S142 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
+S142 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "the live ruler marker aligns with its underlying note's stored velocity"
 
-S143 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S143 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "the composed velocity plot, ruler and drawer chrome are visible"
 
-S144 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S144 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "the rendered velocity toggle is wholly inside its visible bar"
 
-S145 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S145 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "velocity chrome follows automation by base-font spacing"
 
-S146 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S146 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "the direct-sound context hides the composed detent before PSG staging"
 
-S148 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S148 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "hiding velocity retains its requested section height in preferences"
 
-S149 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S149 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "showing velocity restores its requested body height"
 
-S150 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S150 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "a bar beyond the authoritative timeline paints palette grid ink against its background"
 
-S152 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S152 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "the active ruler graduation paints the semantic separator accent"
 
-S153 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
+S153 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "a held raw drag displays velocity 74 before committing"
 
-S154 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
+S154 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "the held raw-74 drag paints its live ruler marker at 74"
 
-S155 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S155 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "the outsider stem paints the independent one-third Oklab track shade"
 
-S156 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S156 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "the selected velocity ring paints the semantic highlight ink"
 
-S157 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S157 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "an ordinary velocity node paints the antialiased semantic black outline"
 
-S158 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S158 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "an ordinary velocity node paints its track identity fill"
 
-S159 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S159 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "the unselected note paints the semantic dimmed mid ink"
 
-S160 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S160 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "a dimmed note no longer paints an ordinary black outline"
 
-S161 | mountedVelocityRulerAndPaint | src/checks/editorqml/tst_ShellDrawerParity.qml
+S161 | mountedVelocityRulerAndPaint | src/checks/editorqml/ShellDrawerParityVelocityInputSupport.js
 Anchor: message "every family mounts an available and enabled ruler detent control"
 
-S162 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S162 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "the visible detent aligns with the band bottom to the left of the plot"
 
-S163 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S163 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "the actual wave first graduation stays clear of the bottom detent"
 
-S164 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S164 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "clicking the detent visibly repaints its unchecked ink"
 
-S165 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S165 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "clicking the detent visibly repaints its checked ink"
 
-S166 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S166 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "the first ruler click paints the shared edit guide in the velocity plot"
 
-S167 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S167 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "moving the real edit cursor relocates its painted velocity guide"
 
-S168 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+S168 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "a plain track-header selection empties the velocity note selection"
 
-S169 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+S169 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "four live playhead boundaries clamp and round to their exact ticks"
 
-S170 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+S170 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "each rounded playhead boundary resolves the real opening bank program"
 
-S171 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S171 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "the band interior composites its palette selection fill over the real plot"
 
-S172 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S172 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "the new band boundary paints a semantic dashed edge over the resting plot"
 
-S173 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S173 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "releasing the right band clears both its fill and dashed edge pixels"
 
-S174 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S174 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "drawing in the real roll commits one selected note stacked over the first stem"
 
-S176 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S176 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "right-pressing the selected stacked velocity node keeps its highlight ink"
 
-S177 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S177 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "the live ramp paints new semantic edit-preview outline pixels"
 
 S178 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
@@ -1071,29 +1071,29 @@ Anchor: message "velocity redo returns to the committed history position"
 S181 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "velocity redo advances the revision exactly once"
 
-S182 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+S182 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "song refresh preserves the velocity text row count"
 
-S183 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+S183 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "song refresh keeps unchanged velocity text rows in place"
 
-S184 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+S184 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "horizontal scrolling leaves stable velocity text rows untouched"
 
-S185 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S185 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "velocity hide and show retain every painted note row"
 
-S186 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S186 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "velocity hide and show retain every ruler text row"
 
-S187 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
+S187 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity_context.swift
 Anchor: message "the live preview marker aligns with the independently requested raw velocity"
 
 S188 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
 Anchor: message "hovering the live PSG note lights exactly one ruler graduation"
 
-S189 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S189 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "changing the staged PSG voice back to direct sound hides its detent"
 
-S190 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+S190 | dragMountedVelocity | src/checks/editorqml/ShellDrawerParityVelocitySupport.js
 Anchor: message "left-pressing the selected stacked velocity node paints highlight ink"

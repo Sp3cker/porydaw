@@ -219,37 +219,37 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S186 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
+S186 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "Pause presents paused when its action completes"
 
-S187 | test_rulerCommitMovesCursorOnlyInEveryTransportState | src/checks/editorqml/tst_ShellTransport.qml
+S187 | test_rulerCommitMovesCursorOnlyInEveryTransportState | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "the paused press leaves the shared playhead at the pause point"
 
-S188 | test_rulerCommitMovesCursorOnlyInEveryTransportState | src/checks/editorqml/tst_ShellTransport.qml
+S188 | test_rulerCommitMovesCursorOnlyInEveryTransportState | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "the paused commit leaves the mounted clock at the pause point"
 
-S189 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
+S189 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "Play presents playing when its action completes"
 
-S190 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
+S190 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "stopped Play presents the edit-cursor target immediately"
 
-S191 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
+S191 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "the real playback advances beyond the edit cursor"
 
-S192 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
+S192 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "toolbar Play resumes when its action completes"
 
-S193 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
+S193 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "toolbar Play resumes beyond the cursor rather than restarting"
 
-S194 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
+S194 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "a resumed transport does not jump behind its prior pause point"
 
-S195 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
+S195 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "Space presents playing when its action completes"
 
-S196 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
+S196 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "Space restarts from the edit cursor instead of the pause point"
 
 S197 | test_transportControlTransitionsAndSettings | src/checks/editorqml/tst_ShellTransport.qml

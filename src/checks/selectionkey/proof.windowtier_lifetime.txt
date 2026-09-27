@@ -379,124 +379,124 @@ Anchor: message "changing the primary track publishes one selection change"
 S056 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
 Anchor: message "out-of-range primary-track selects keep the track, notes, and publications"
 
-S018 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml
+S018 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindowCrossTab.qml
 Anchor: message "one source note is selected"
 
-S019 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml
+S019 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindowCrossTab.qml
 Anchor: message "Paste advances the destination edit cursor past the inserted note"
 
-S020 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml
+S020 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindowCrossTab.qml
 Anchor: message "cross-tab Paste leaves the source song unchanged"
 
-S021 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml
+S021 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindowCrossTab.qml
 Anchor: message "only the pasted destination has unsaved changes"
 
-S022 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow.qml
+S022 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindowPrompts.qml
 Anchor: message "selectedId"
 
-S023 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S023 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "a real first-tab click retargets the selected workspace"
 
-S024 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml
+S024 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindowEditorKeys.qml
 Anchor: message "Up transposes one semitone"
 
-S057 | test_sMidGestureCloseCancelsHeldBand | src/checks/editorqml/tst_ShellTabs.qml
+S057 | test_sMidGestureCloseCancelsHeldBand | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "the mid-gesture close removes the tab"
 
-S058 | test_sMidGestureCloseCancelsHeldBand | src/checks/editorqml/tst_ShellTabs.qml
+S058 | test_sMidGestureCloseCancelsHeldBand | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "the survivor is presented after the closed page retires"
 
-S059 | test_sMidGestureCloseCancelsHeldBand | src/checks/editorqml/tst_ShellTabs.qml
+S059 | test_sMidGestureCloseCancelsHeldBand | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "reopening the closed song appends its replacement tab"
 
-S060 | test_sMidGestureCloseCancelsHeldBand | src/checks/editorqml/tst_ShellTabs.qml
+S060 | test_sMidGestureCloseCancelsHeldBand | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "the reopened song is selected under a new identity"
 
-S061 | test_sMidGestureCloseCancelsHeldBand | src/checks/editorqml/tst_ShellTabs.qml
+S061 | test_sMidGestureCloseCancelsHeldBand | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "the reopen retains the survivor tab"
 
-S062 | test_sMidGestureCloseCancelsHeldBand | src/checks/editorqml/tst_ShellTabs.qml
+S062 | test_sMidGestureCloseCancelsHeldBand | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "the cancelled band left nothing to save"
 
-S063 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabs.qml
+S063 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "B-to-A selection restores the first song's active Pan lane"
 
-S064 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabs.qml
+S064 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "clicking the first song activates its Pan lane"
 
-S065 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S065 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "the first song returns to clean before the second opens again"
 
-S066 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S066 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "the closed song opens on a fresh timeline"
 
-S067 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S067 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "closing one tab keeps its sibling and the project bytes" #1
 
-S068 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S068 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "reopening restores the shared drawer state on a fresh timeline"
 
-S069 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabs.qml
+S069 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "clicking the second song activates its Tempo lane"
 
-S070 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabs.qml
+S070 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "the second song's active Tempo plot accepts keyboard focus"
 
-S071 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabs.qml
+S071 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "automation-focused Right in B leaves the first song's notes untouched"
 
-S072 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabs.qml
+S072 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "automation-focused Right in B leaves the first song's saved bytes exact"
 
-S073 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabs.qml
+S073 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "the first song's active Pan plot accepts keyboard focus"
 
-S074 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabs.qml
+S074 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "the new primary track paints its Pan automation lane body"
 
-S075 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabs.qml
+S075 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "the new primary track's Pan plot accepts keyboard focus"
 
-S076 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabs.qml
+S076 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "the track-one Pan journey returns the first song to clean"
 
-S077 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabs.qml
+S077 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "B's automation-focused edits unwind to clean before tab switch"
 
-S078 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S078 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "the reopened song owns both newly drawn tick-960 notes"
 
-S079 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S079 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "the reopened tab remounts its real automation plot after drawer restore"
 
-S080 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S080 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "the reopened tab's automation plot owns the routed keys"
 
-S081 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S081 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "reopened-tab Right routes to its newly selected note pair"
 
-S082 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S082 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "reopened-tab Up transposes only the new selected pair"
 
-S083 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S083 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "reopened-tab Right and Up leave the first document unchanged"
 
 S084 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
 Anchor: message "the first-document transpose preserves second-song bytes"
 
-S085 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S085 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "undoing the reopened pair and routed edits returns its song to clean"
 
-S086 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S086 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "the second song returns to clean before its first close"
 
-S087 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S087 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "the first song unwinds its initial edit before opening a second tab"
 
-S088 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S088 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "reopened-tab keys do not advance the first document revision"
 
-S089 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S089 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "reopened-tab keys preserve the first song's saved bytes"
 
 Shared helpers

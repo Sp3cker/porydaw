@@ -265,16 +265,16 @@ Anchor: message "a Shift node drag locks the time axis"
 S030 | drawerAutomationPencilCursorKind | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "releasing the drag reverts to the arrow"
 
-S031 | mountProductionAutomation | src/checks/editorqml/tst_EditorDrawer.qml
+S031 | mountProductionAutomation | src/checks/editorqml/EditorDrawerAutomationTabsSupport.js
 Anchor: message "the production Automation page attaches to its slot"
 
-S032 | test_automationPresentationGhostAxisAndResize | src/checks/editorqml/tst_EditorDrawer.qml
+S032 | test_automationPresentationGhostAxisAndResize | src/checks/editorqml/tst_EditorDrawerAutomationPresentation.qml
 Anchor: message "moving into the parameter gutter presents the arrow cursor"
 
-S033 | test_automationPresentationGhostAxisAndResize | src/checks/editorqml/tst_EditorDrawer.qml
+S033 | test_automationPresentationGhostAxisAndResize | src/checks/editorqml/tst_EditorDrawerAutomationPresentation.qml
 Anchor: message "pencil mode remains visibly armed across the Tempo switch"
 
-S034 | test_automationPresentationGhostAxisAndResize | src/checks/editorqml/tst_EditorDrawer.qml
+S034 | test_automationPresentationGhostAxisAndResize | src/checks/editorqml/tst_EditorDrawerAutomationPresentation.qml
 Anchor: message "the switched Tempo lane uses the custom pencil cursor"
 
 S035 | drawerAutomationPencilCursorKind | src/checks/automation/presentation/tst_automationpresentation.swift
@@ -286,29 +286,29 @@ Anchor: message "the DPR-two plot consumes the pencil pointer move"
 S037 | drawerAutomationPencilCursorKind | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "the restored DPR-one plot consumes the pencil pointer move"
 
-S038 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawer.qml
+S038 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawerReferenceProfiles.qml
 Anchor: message "real profile pointer movement enters the plotted automation input"
 
-S039 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawer.qml
+S039 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawerReferenceProfiles.qml
 Anchor: message "the profiled plot displays its custom pencil after real movement"
 
-S040 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawer.qml
+S040 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawerReferenceProfiles.qml
 Anchor: message "the 16-pixel pencil artwork decodes at the profile's physical width"
 
-S041 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawer.qml
+S041 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawerReferenceProfiles.qml
 Anchor: message "the profiled pencil keeps its horizontal and vertical decoded scale"
 
-S042 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawer.qml
+S042 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawerReferenceProfiles.qml
 Anchor: message "the profiled pencil's horizontal origin follows the mapped pointer"
 
-S043 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawer.qml
+S043 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawerReferenceProfiles.qml
 Anchor: message "the profiled pencil's vertical tip follows the mapped pointer"
 
-S044 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawer.qml
+S044 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawerReferenceProfiles.qml
 Anchor: message "the profiled pencil moves horizontally with a second real pointer move"
 
-S045 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawer.qml
+S045 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawerReferenceProfiles.qml
 Anchor: message "the profiled pencil moves vertically with a second real pointer move"
 
-S046 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawer.qml
+S046 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawerReferenceProfiles.qml
 Anchor: message "the profiled pencil replaces the native plot cursor"

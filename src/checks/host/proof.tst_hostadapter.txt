@@ -1337,46 +1337,46 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates (task-27 other-events band revision):
 
-S001 | test_otherEventsBandMountsBetweenDrawerAndScrollbar | src/checks/editorqml/tst_EditorDrawer.qml
+S001 | test_otherEventsBandMountsBetweenDrawerAndScrollbar | src/checks/editorqml/tst_EditorDrawerChrome.qml
 Anchor: message "the other-events band mounts in the production editor"
 
-S002 | test_otherEventsBandMountsBetweenDrawerAndScrollbar | src/checks/editorqml/tst_EditorDrawer.qml
+S002 | test_otherEventsBandMountsBetweenDrawerAndScrollbar | src/checks/editorqml/tst_EditorDrawerChrome.qml
 Anchor: message "the other-events band starts at the drawer bottom"
 
-S003 | test_otherEventsBandMountsBetweenDrawerAndScrollbar | src/checks/editorqml/tst_EditorDrawer.qml
+S003 | test_otherEventsBandMountsBetweenDrawerAndScrollbar | src/checks/editorqml/tst_EditorDrawerChrome.qml
 Anchor: message "the other-events band ends at the horizontal scrollbar"
 
-S004 | test_otherEventsBandMountsBetweenDrawerAndScrollbar | src/checks/editorqml/tst_EditorDrawer.qml
+S004 | test_otherEventsBandMountsBetweenDrawerAndScrollbar | src/checks/editorqml/tst_EditorDrawerChrome.qml
 Anchor: message "the band remains mounted when every drawer section is collapsed"
 
-S005 | test_otherEventsBandMountsBetweenDrawerAndScrollbar | src/checks/editorqml/tst_EditorDrawer.qml
+S005 | test_otherEventsBandMountsBetweenDrawerAndScrollbar | src/checks/editorqml/tst_EditorDrawerChrome.qml
 Anchor: message "the mounted band uses its presenter's font-derived height"
 
-S006 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawer.qml
+S006 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawerChrome.qml
 Anchor: message "the route101 fixture publishes the full strip count"
 
-S007 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawer.qml
+S007 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawerChrome.qml
 Anchor: message "the gutter input spans the shared header and keyboard width"
 
-S008 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawer.qml
+S008 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawerChrome.qml
 Anchor: message "the marker input spans the roll plot"
 
-S009 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawer.qml
+S009 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawerChrome.qml
 Anchor: message "the band exposes its rendered marker and pointer surfaces"
 
-S010 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawer.qml
+S010 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawerChrome.qml
 Anchor: message "visible markers match the camera projection"
 
-S011 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawer.qml
+S011 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawerChrome.qml
 Anchor: message "the marker follows the same tick projection as the roll"
 
-S012 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawer.qml
+S012 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawerChrome.qml
 Anchor: message "the marker receives a track or file palette color"
 
-S013 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawer.qml
+S013 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawerChrome.qml
 Anchor: message "the hover tooltip describes the visible marker"
 
-S014 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawer.qml
+S014 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawerChrome.qml
 Anchor: message "cancelling input also retires the band tooltip"
 
 S015 | test_rollBandGeometryAndLifecycle | src/checks/rollqml/tst_SwiftRollPlots.qml

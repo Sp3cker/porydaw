@@ -3,26 +3,6 @@ import PorydawCore
 import QtBridge
 import PorydawAppCommands
 
-// The Automation drawer page owner: document-bound parameter selection, the
-// explicit per-parameter time selection, hover/preview/prompt/menu state, the
-// frozen gesture dispatch, tap tempo, the canonical clipboard routes, and
-// the publication diagnostics the drawer seam reads.
-//
-// `ApplicationSession` retains it for the current document: it is attached
-// before the scene mounts, refreshed from the session's existing document,
-// camera, playhead, selection, track and history publications, cancelled while
-// the scene exists, and released only after the host acknowledged scene removal.
-//
-// The production QML (`AutomationPage.qml` and its three modal components)
-// renders the published primitives and delivers real pointer, wheel, keyboard
-// and accessibility input to this owner. It holds no document model, camera,
-// playhead, clock, history or selection of its own.
-//
-// Context rule: a stopped transport consumes the session's edit cursor and a
-// playing one consumes the shared playhead sample the owner is handed. This page
-// owns no clock, no camera and no playhead line. The one monotonic reading the
-// page takes is the tap-tempo interval at a tap's own event boundary.
-
 /// Published constants, mirroring the production automation pane.
 public enum AutomationPagePolicy {
     /// The base font seed of the grid, which is internal to this module.
@@ -35,9 +15,6 @@ public enum AutomationPagePolicy {
     /// The plot's accessible name, and the page's own description seed.
     public static let accessibleName = "Automation"
 }
-
-// Mouse-hint profile IDs moved to AutomationLifecycle.swift, which owns the
-// hover-hint publication that resolves them.
 
 @MainActor
 @QtBridgeable
@@ -104,7 +81,7 @@ public final class AutomationPage: EditorDrawerPage {
     /// session's edit cursor while stopped.
     @QtIgnored public internal(set) var contextTick: Tick = 0
     @QtIgnored public internal(set) var contextValue: Int?
-    public private(set) var playing = false
+    @QtIgnored public internal(set) var playing = false
     /// The shared pencil tool's state, owned by the window's edit commands.
     public var isPencilMode: Bool = false {
         willSet {
@@ -218,111 +195,16 @@ public final class AutomationPage: EditorDrawerPage {
     /// Hover publications.
     @QtIgnored public internal(set) var hoverBuildCount: UInt64 = 0
     /// Shared-playhead presentations the page consumed.
-    public private(set) var playheadPresentationCount: UInt64 = 0
+    @QtIgnored public internal(set) var playheadPresentationCount: UInt64 = 0
     /// Presentations that moved the effective context.
     @QtIgnored public internal(set) var contextChangeCount: UInt64 = 0
     /// The playing tick the last presentation carried.
-    public private(set) var presentedTick: Tick = 0
+    @QtIgnored public internal(set) var presentedTick: Tick = 0
 
 
-    // MARK: Check-facing state
-
-    @QtIgnored public var hasGesture: Bool { gesture != nil }
-    @QtIgnored public var hasPrompt: Bool { prompt != nil }
-    @QtIgnored public var hasMenu: Bool { menu != nil }
-    @QtIgnored public var hasBand: Bool { band != nil }
-    @QtIgnored public var isPanning: Bool { panActive }
-    @QtIgnored public var isDraggingNodes: Bool { if case .node = gesture { return true }; return false }
-    @QtIgnored public var isSweeping: Bool { if case .sweep = gesture { return true }; return false }
-    @QtIgnored public var isPainting: Bool { if case .pencil = gesture { return true }; return false }
-    @QtIgnored public var laneCount: Int { projection?.eventCount ?? 0 }
-    @QtIgnored public var hasClipboard: Bool { clipboard.read() != nil }
-    @QtIgnored public var frozenRevision: UInt64? { frozen?.revision }
-    @QtIgnored public var menuRowActions: [Int] { menu?.rows.map(\.actionId) ?? [] }
-    @QtIgnored public var menuTargetIsPoint: Bool { if case .point = menu?.target { return true }; return false }
-    @QtIgnored public var promptForExistingNode: Bool { prompt?.forExistingNode ?? false }
-    @QtIgnored public var tapTempoSession: AutomationTapTempoSession { tapSession }
-    @QtIgnored public var publishedTabs: [AutomationTabHandle] { tabSnapshots }
-    @QtIgnored public var publishedNodes: [AutomationNodeHandle] { nodeSnapshots }
-    @QtIgnored public var publishedMenuRows: [AutomationMenuRowHandle] { menuRowSnapshots }
-    @QtIgnored public var publishedCurveRuns: [SceneRect] { curveRunSnapshots }
-
-    /// The first catalog index whose parameter satisfies `predicate`, so a lane
-    /// reads the same selector order the page publishes.
-    @QtIgnored
-    public func firstCatalogIndex(matching predicate: (AutomationParameter) -> Bool) -> Int? {
-        AutomationCatalog.parameters(track: activeTrack() ?? 0)
-            .firstIndex(where: predicate)
-    }
-
-    /// One catalog index's written-event count, read from the current document.
-    @QtIgnored
-    public func catalogEventCount(_ parameter: AutomationParameter) -> Int {
-        guard let session else { return 0 }
-        return projectionFacts.snapshot(parameter, session: session).eventCount
-    }
-
-    /// The ghost-pinned catalog indexes, comma-separated, in selector order.
-    @QtIgnored public var firstGhostText: String {
-        let track = activeTrack() ?? 0
-        return AutomationCatalog.parameters(track: track).enumerated()
-            .filter { ghostParameters.contains($0.element) }
-            .map { String($0.offset) }
-            .joined(separator: ",")
-    }
-
-    /// The live document revision the owner reads: the fact a refused or
-    /// cancelled interaction must leave untouched.
-    @QtIgnored public var documentRevision: UInt64 { session?.document.revision ?? 0 }
-
-    /// The selected track the page presents, or `nil` while none is.
-    @QtIgnored public var activeTrackIndex: Int? { activeTrack() }
-
-    /// The written-event count of one track's active parameter, read from the
-    /// current document exactly as the row stack reads it.
-    @QtIgnored
-    public func laneEventCount(track: Int) -> Int {
-        guard let session, let lane = activeParameter.lane else {
-            return activeParameter.isTempo ? session?.document.state.tempo.count ?? 0 : 0
-        }
-        return session.document.lanePoints(track: track, lane: lane).count
-    }
-
-    /// The active parameter's written-event ticks in the current document.
-    @QtIgnored public var activeLaneTicks: [Tick] {
-        guard let session else { return [] }
-        return projectionFacts.snapshot(activeParameter, session: session).sources.map(\.tick)
-    }
-
-    /// The active parameter's written `tick:value` pairs, in document order.
-    @QtIgnored public var activeLaneValues: [String] {
-        guard let session else { return [] }
-        return projectionFacts.snapshot(activeParameter, session: session)
-            .sources.map { "\($0.tick):\($0.value)" }
-    }
-
-    /// The selector index of one parameter in the current catalog, or -1.
-    @QtIgnored
-    public func catalogIndex(of parameter: AutomationParameter) -> Int {
-        AutomationCatalog.parameters(track: activeTrack() ?? 0).firstIndex(of: parameter) ?? -1
-    }
-
-    /// The document's tick-zero tempo in whole BPM, or `nil` when it has none.
-    @QtIgnored public var tempoBpmAtTickZero: Int? {
-        guard let session,
-              let point = session.document.state.tempo.first(where: { $0.tick == 0 }) else {
-            return nil
-        }
-        return Int(TimeDefaults.tempoBPM(
-            forMicrosecondsPerQuarterNote: point.microsecondsPerQuarterNote).rounded())
-    }
-
-    /// Whether the accepted clipboard holds points for the active parameter, which
-    /// is exactly the lane menu's Paste availability.
-    @QtIgnored public var laneClipAvailable: Bool { laneClipPoints(activeParameter) != nil }
 
     @QtIgnored weak var session: DocumentSession?
-    private var selectionTransitionToken: UUID?
+    @QtIgnored var selectionTransitionToken: UUID?
     @QtIgnored var gesture: AutomationGesture?
     @QtIgnored var frozen: AutomationFrozenFacts?
     /// The camera the live gesture froze with its facts. `EditorCamera` is a
@@ -370,61 +252,6 @@ public final class AutomationPage: EditorDrawerPage {
         publishTypography()
     }
 
-    // Content rebuilds and the owned-state application helpers moved to
-    // AutomationLifecycle.swift; this file keeps the bridge surface, stored
-    // state and entry points.
-
-    /// Installs the document and palette owners. Called before the container
-    /// attaches the page, so no publication precedes the session it reads.
-    @QtIgnored
-    public func attach(session: DocumentSession, palette: GridPalette) {
-        if let selectionTransitionToken, let previousSession = self.session {
-            previousSession.removeSelectionTransitionObserver(selectionTransitionToken)
-        }
-        self.session = session
-        selectionTransitionToken = session.addSelectionTransitionObserver { [weak self] _ in
-            guard let self else { return }
-            self.rebuildContent(selectionOnly: true)
-            self.onCommandAvailabilityChanged?()
-        }
-        self.palette = palette
-        contextTick = session.editCursor
-        lastPresentation = nil
-        rebuildContent()
-    }
-
-    /// Drops the session and everything the page owns. Called after the host
-    /// acknowledged scene removal and before the document owners retire.
-    @QtIgnored
-    public func detach() {
-        cancelSectionInteraction()
-        if let selectionTransitionToken, let session {
-            session.removeSelectionTransitionObserver(selectionTransitionToken)
-        }
-        selectionTransitionToken = nil
-        session = nil
-        projection = nil
-        rows = []
-        selectedParameters = []
-        ghostPins = []
-        ghostParameters = []
-        ghostLabels = []
-        laneClipboardPoints = []
-        menu = nil
-        laneDelete = nil
-        band = nil
-        gesture = nil
-        frozen = nil
-        frozenCamera = nil
-        tapSession.reset()
-        tapGuard = nil
-        publishMenuRows()
-        publishPrompt()
-        publishTapTempo()
-        publishContent(nil)
-        publishInteractionState()
-    }
-
     @QtIgnored var palette = GridPalette()
     /// The body facts the last `configureBody` really applied, so a selector
     /// origin or drag-distance change rebuilds exactly once.
@@ -434,8 +261,6 @@ public final class AutomationPage: EditorDrawerPage {
     @QtIgnored var titleMetrics: AutomationCaption?
     @QtIgnored var noteNameMetrics: AutomationCaption?
 
-    // Owned-state application moved to AutomationLifecycle.swift.
-
     // MARK: Composition input
 
     /// The page body's own facts, pushed by the production QML as it lays out:
@@ -444,79 +269,29 @@ public final class AutomationPage: EditorDrawerPage {
     public func configureBody(width: Double, height: Double, gutter: Double,
                               devicePixelRatio: Double, baseFontPx: Double,
                               dragDistance: Double) {
-        let configuration = AutomationBodySceneConfiguration.resolve(
-            width: width,
-            height: height,
-            gutter: gutter,
-            devicePixelRatio: devicePixelRatio,
-            baseFontPx: baseFontPx,
-            dragDistance: dragDistance,
-            currentWidth: plotWidth,
-            currentHeight: plotHeight,
-            currentDevicePixelRatio: self.devicePixelRatio,
-            currentOrigin: lastBodyOrigin,
-            currentDragDistance: lastBodyDragDistance,
-            currentBaseFontPx: self.baseFontPx)
-        applyBodySceneConfiguration(configuration)
+        configureBodyImpl(width: width, height: height, gutter: gutter,
+                          devicePixelRatio: devicePixelRatio, baseFontPx: baseFontPx,
+                          dragDistance: dragDistance)
     }
 
     // MARK: Refresh
 
     public func refreshFromDocument() {
-        guard let session else { return }
-        let revision = session.document.revision
-        func stale(_ facts: AutomationFrozenFacts) -> Bool {
-            facts.revision != revision
-                || (facts.parameter.track != nil && facts.parameter.track != activeTrack())
-        }
-        if let frozen, stale(frozen) {
-            cancelGesture()
-        }
-        if let prompt, stale(prompt.facts) { cancelPrompt() }
-        if let laneDelete, stale(laneDelete.facts) { cancelPrompt() }
-        if let live = menu,
-           stale(live.facts) || live.facts.parameter != activeParameter
-               || live.facts.selection != selection {
-            menu = nil
-            publishMenuRows()
-        }
-        if let band, band.revision != revision { self.band = nil }
-        if let tapGuard, tapGuard.revision != revision || tapGuard.parameter != activeParameter {
-            resetTapTempo()
-        }
-        publishInteractionState()
-        rebuildContent()
+        refreshFromDocumentImpl()
     }
 
-    /// Cursor-only publication: the stopped readout consumes the session's
-    /// current edit cursor without rebuilding document-derived content.
-    @QtIgnored
-    public func refreshEditCursor() {
-        guard session != nil, !playing else { return }
-        publishContext()
-    }
 
     /// Camera-only publication: the same points at new plot positions. A live
     /// gesture keeps its own frozen projection, so only the drawn content moves.
     public func refreshCamera() {
-        guard session != nil else { return }
-        rebuildContent()
+        refreshCameraImpl()
     }
 
     /// One shared-playhead presentation, delivered by the shared owner's fan-out.
     /// Movement re-publishes the effective context and rebuilds nothing: neither
     /// the curve, the nodes nor an open modal depend on the playing tick.
     public func refreshPlayhead(tick: Double, playing: Bool) {
-        guard session != nil else { return }
-        let resolved = Tick(max(0, tick).rounded())
-        guard lastPresentation?.tick != resolved || lastPresentation?.playing != playing else {
-            return
-        }
-        lastPresentation = (resolved, playing)
-        playheadPresentationCount &+= 1
-        self.playing = playing
-        if playing { presentedTick = resolved }
-        publishContext()
+        refreshPlayheadImpl(tick: tick, playing: playing)
     }
 
     // MARK: Parameter and selection state

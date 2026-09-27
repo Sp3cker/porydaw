@@ -933,7 +933,7 @@ Anchor: message "Space does not insert into the numeric field"
 S188 | test_transportControlTransitionsAndSettings | src/checks/editorqml/tst_ShellTransport.qml
 Anchor: message "the same Space shortcut pauses playback"
 
-S189 | test_outputVolumeSurvivesShellRelaunch | src/checks/editorqml/tst_ShellTransport.qml
+S189 | test_outputVolumeSurvivesShellRelaunch | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "application output preference survives a fresh shell session"
 
 S190 | checkTransportTogglePreferences | src/checks/workspace/transport_checks.swift
@@ -957,10 +957,10 @@ Anchor: message "follow playhead stays enabled without an open song"
 S196 | test_unloadedTransportPreferencesStayActionable | src/checks/editorqml/tst_ShellTransport.qml
 Anchor: message "resonance suppression stays enabled without an open song"
 
-S197 | test_outputDialIncrementalDrag | src/checks/editorqml/tst_ShellTransport.qml
+S197 | test_outputDialIncrementalDrag | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "pressing the output dial without dragging leaves the volume unchanged"
 
-S198 | test_outputDialIncrementalDrag | src/checks/editorqml/tst_ShellTransport.qml
+S198 | test_outputDialIncrementalDrag | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "dragging the output dial accumulates steps from the pointer's last position"
 
 S199 | test_transportTogglePreferencesSurviveRelaunch | src/checks/editorqml/tst_ShellTransport.qml
@@ -969,10 +969,10 @@ Anchor: message "the follow-playhead preference survives a fresh shell session"
 S200 | test_transportTogglePreferencesSurviveRelaunch | src/checks/editorqml/tst_ShellTransport.qml
 Anchor: message "the resonance-suppression preference survives a fresh shell session"
 
-S201 | test_outputDialFineDragAndTooltip | src/checks/editorqml/tst_ShellTransport.qml
+S201 | test_outputDialFineDragAndTooltip | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "shift dragging the output dial uses the fine rate"
 
-S202 | test_outputDialFineDragAndTooltip | src/checks/editorqml/tst_ShellTransport.qml
+S202 | test_outputDialFineDragAndTooltip | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "the output dial tooltip explains it does not change the song volume"
 
 S203 | test_songFiltersSurviveShellRelaunch | src/checks/editorqml/tst_ShellSongs.qml
@@ -1038,49 +1038,49 @@ Anchor: message "undo restores first song master field"
 S223 | checkTransportVolumeIsolation | src/checks/workspace/transport_checks.swift
 Anchor: message "undo returns the first song to its clean saved state"
 
-S224 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+S224 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "scale selector is unavailable before a song opens"
 
-S225 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+S225 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "loaded song master volume editor accepts input"
 
-S226 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+S226 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "loaded master field reflects the selected song"
 
-S227 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+S227 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "stationary output click creates no song undo"
 
-S228 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+S228 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "pointer drag to 42 updates the output dial"
 
-S229 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+S229 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "output drag to 42 creates no song undo"
 
-S230 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+S230 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "output drag to 42 cannot dirty the song"
 
-S231 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+S231 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "second tab field displays its selected song volume"
 
-S232 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+S232 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "global output 37 survives tab selection"
 
-S233 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+S233 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "second song remains clean after first song edit"
 
-S234 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+S234 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "undo restores first song volume in mounted field"
 
-S235 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+S235 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "undo returns first song to its clean state"
 
-S236 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+S236 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "bare Space from numeric chrome starts the window transport"
 
-S237 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+S237 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "numeric-field digit stays local and never starts transport"
 
-S238 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+S238 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "numeric-field digit appears only in the focused draft"
 
 S239 | test_transportClockAndSpacerSurviveTextAndResize | src/checks/editorqml/tst_ShellTransport.qml
@@ -1101,26 +1101,26 @@ Anchor: message "volume spacer absorbs additional width when toolbar grows"
 S244 | test_transportClockAndSpacerSurviveTextAndResize | src/checks/editorqml/tst_ShellTransport.qml
 Anchor: message "volume chrome retains expanding spacer, Volume, field, Output, dial order "
 
-S245 | test_outputDialEndpointPixels | src/checks/editorqml/tst_ShellTransport.qml
+S245 | test_outputDialEndpointPixels | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "painted dial has a tick at 240 degrees"
 
-S246 | test_outputDialEndpointPixels | src/checks/editorqml/tst_ShellTransport.qml
+S246 | test_outputDialEndpointPixels | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "painted dial has a tick at minus 60 degrees"
 
-S247 | test_outputDialEndpointPixels | src/checks/editorqml/tst_ShellTransport.qml
+S247 | test_outputDialEndpointPixels | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "painted dial leaves 270 degrees without a tick"
 
-S248 | test_outputDialIncrementalDrag | src/checks/editorqml/tst_ShellTransport.qml
+S248 | test_outputDialIncrementalDrag | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "mounted output dial input clamps to zero"
 
-S249 | test_outputDialIncrementalDrag | src/checks/editorqml/tst_ShellTransport.qml
+S249 | test_outputDialIncrementalDrag | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "lower output bound rejects further pointer reduction"
 
-S250 | test_outputDialIncrementalDrag | src/checks/editorqml/tst_ShellTransport.qml
+S250 | test_outputDialIncrementalDrag | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "mounted output dial input clamps to one hundred"
 
-S251 | test_outputDialIncrementalDrag | src/checks/editorqml/tst_ShellTransport.qml
+S251 | test_outputDialIncrementalDrag | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "upper output bound rejects further pointer increase"
 
-S252 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransport.qml
+S252 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "scale chrome leaves bare Space to window transport"

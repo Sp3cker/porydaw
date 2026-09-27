@@ -717,289 +717,289 @@ A116 | SelectionWindowTierTest::chromeToggleRoutesNoteArrows | src/checks/select
 Disposition: MATCHED
 Mapping: S191
 
-S120 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S120 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A030 label activation keeps the selection start"
 
-S121 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S121 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A030 label activation keeps the selection end"
 
-S122 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S122 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A030 label activation keeps the lanes scope"
 
-S123 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S123 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A030 label activation keeps both selected CC lanes"
 
-S124 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S124 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A030 label activation keeps Tempo out of the scope"
 
-S125 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S125 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A030 label activation keeps the note selection empty"
 
-S126 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S126 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A038 Return activation keeps the selection start"
 
-S127 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S127 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A038 Return activation keeps the selection end"
 
-S128 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S128 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A038 Return activation keeps the lanes scope"
 
-S129 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S129 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A038 Return activation keeps both selected CC lanes"
 
-S130 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S130 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A038 Return activation keeps Tempo out of the scope"
 
-S131 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S131 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A038 Return activation keeps the note selection empty"
 
-S132 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S132 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A035 label activation keeps the exact undo index"
 
-S133 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S133 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A035 prompt Escape keeps the exact undo index"
 
-S134 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S134 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A041 Up keeps the selection start"
 
-S135 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S135 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A041 Up keeps the selection end"
 
-S136 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S136 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A041 Up keeps the lanes scope"
 
-S137 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S137 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A041 Up keeps both selected CC lanes"
 
-S138 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S138 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A041 Up keeps Tempo out of the scope"
 
-S139 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S139 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A041 Up keeps the note selection empty"
 
-S140 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S140 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A052 prompt draft leaves song contents unchanged"
 
-S141 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S141 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A053 prompt draft keeps the selection start"
 
-S142 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S142 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A053 prompt draft keeps the selection end"
 
-S143 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S143 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A053 prompt draft keeps the lanes scope"
 
-S144 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S144 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A053 prompt draft keeps both selected CC lanes"
 
-S145 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S145 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A053 prompt draft keeps Tempo excluded"
 
-S146 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S146 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A053 prompt draft keeps the note selection empty"
 
-S147 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S147 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A056 prompt Escape keeps the selection start"
 
-S148 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S148 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A056 prompt Escape keeps the selection end"
 
-S149 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S149 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A056 prompt Escape keeps the lanes scope"
 
-S150 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S150 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A056 prompt Escape keeps both selected CC lanes"
 
-S151 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S151 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A056 prompt Escape keeps Tempo excluded"
 
-S152 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S152 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A056 prompt Escape keeps the note selection empty"
 
-S153 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S153 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A061 window Copy keeps the selection start"
 
-S154 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S154 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A061 window Copy keeps the selection end"
 
-S155 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S155 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A061 window Copy keeps the lanes scope"
 
-S156 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S156 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A061 window Copy keeps both selected CC lanes"
 
-S157 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S157 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A061 window Copy keeps Tempo excluded"
 
-S158 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S158 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A061 window Copy keeps the note selection empty"
 
-S159 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S159 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A062 Delete removes the selected Pan point"
 
-S160 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S160 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A063 Delete removes the selected Modulation point"
 
-S161 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S161 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A064 Delete retains the unselected Volume point"
 
-S162 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S162 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A065 Delete retains the first reserved note by identity"
 
-S163 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S163 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A065 Delete retains the second reserved note by identity"
 
-S164 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S164 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A067 Select All includes the first reserved note by ID"
 
-S165 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S165 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A068 Select All includes the second reserved note by ID"
 
-S166 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S166 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A070 Paste lands a Pan point at the committed cursor"
 
-S167 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S167 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A071 Paste lands Pan value 32 at the committed cursor"
 
-S168 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S168 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A072 Paste lands a Modulation point at the committed cursor"
 
-S169 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S169 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A073 Paste lands Modulation value 96 at the committed cursor"
 
-S170 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S170 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A074 Paste keeps the unselected Volume lane empty at the cursor"
 
-S171 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S171 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A075 Paste retains the first reserved note unchanged"
 
-S172 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S172 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A075 Paste retains the second reserved note unchanged"
 
-S173 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S173 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A076 Paste keeps Volume as the active parameter"
 
-S174 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S174 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A078 routed Right advances the first reserved note one snap by ID"
 
-S175 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S175 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A078 routed Right advances the second reserved note one snap by ID"
 
-S176 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S176 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A078 routed Up raises the first reserved note one semitone by ID"
 
-S177 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S177 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A078 routed Up raises the second reserved note one semitone by ID"
 
-S178 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S178 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "A078 routed arrows preserve the pair selection"
 
-S179 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+S179 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "an unrecognized key changes nothing"
 
-S180 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+S180 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "A010 F24 never activates window Copy"
 
-S181 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+S181 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "A010 F24 never activates window Solo"
 
-S182 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+S182 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "A014 automation resize grip owns active focus before arrows"
 
-S183 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+S183 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "A017 grip Up leaves both reserved notes byte-identical"
 
-S184 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+S184 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "grip Down leaves both reserved notes byte-identical"
 
-S185 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+S185 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "A018 grip arrows never activate window Copy"
 
-S186 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+S186 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "A018 grip arrows never activate window Solo"
 
-S187 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+S187 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "grip Left leaves both reserved notes byte-identical"
 
-S188 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+S188 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "A020 grip Right leaves both reserved notes byte-identical"
 
-S189 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+S189 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "A108 automation toggle owns active focus before arrows"
 
-S190 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+S190 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "A113 bare Space on the focused toggle retains both note IDs"
 
-S191 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+S191 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "A116 toggle Return leaves both reserved notes byte-identical"
 
-S192 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S192 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
 Anchor: message "A077 label owns focus before routed arrows"
 
-S193 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S193 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
 Anchor: message "label-focus arrows advance the selected note one grid step"
 
-S194 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S194 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
 Anchor: message "label-focus Up transposes the selected note"
 
-S195 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+S195 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
 Anchor: message "A066 label retains active focus after Delete"
 
-S196 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+S196 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
 Anchor: message "A065 Delete leaves both reserved notes at their original tick and pitch"
 
-S197 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+S197 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
 Anchor: message "A067 Select All includes the first reserved note by its original ID"
 
-S198 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+S198 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
 Anchor: message "A068 Select All includes the second reserved note by its original ID"
 
-S199 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+S199 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
 Anchor: message "A075 lane Paste leaves both original notes unchanged by ID"
 
-S200 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+S200 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "real Tab traversal reaches the automation resize grip"
 
-S201 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+S201 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
 Anchor: message "the focused first parameter is the controller 10 Pan lane"
 
-S202 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+S202 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
 Anchor: message "the first label takes keyboard focus"
 
-S203 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+S203 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
 Anchor: message "the focused second parameter is the controller 1 Modulation lane"
 
-S204 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+S204 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
 Anchor: message "the second label takes keyboard focus"
 
-S205 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S205 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
 Anchor: message "the focused Volume label represents controller 7"
 
-S206 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S206 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
 Anchor: message "A031 the Volume label owns active focus before commands"
 
-S207 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+S207 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "real Tab traversal reaches the automation drawer toggle"
 
-S208 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+S208 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
 Anchor: message "the opened automation band owns active focus before the Tap journey"
 
-S209 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+S209 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
 Anchor: message "the Tempo parameter is enabled before its focused Tap button"
 
-S210 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S210 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "two direct tempo taps preserve the exact undo index"
 
-S211 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+S211 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_window.swift
 Anchor: message "two direct tempo taps preserve the exact undo count"
 
-S212 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+S212 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
 Anchor: message "Return on the focused Tap button adds the second tap"
 
 S213 | checkMountedPitchKeyAndUndo | src/checks/workspace/session_edit_routing.swift
 Anchor: message "window Space during a Tap draft preserves the exact undo count"
 
-S214 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+S214 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
 Anchor: message "bare Space on the Tap button owns transport"
 
 S215 | checkMountedPitchKeyAndUndo | src/checks/workspace/session_edit_routing.swift
@@ -1008,27 +1008,27 @@ Anchor: message "the Tap draft starts with Pan and Modulation selected"
 S216 | checkMountedPitchKeyAndUndo | src/checks/workspace/session_edit_routing.swift
 Anchor: message "window Space retains exact Pan and Modulation bounds without Tempo or notes"
 
-S217 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+S217 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
 Anchor: message "a real automation band stages a lane time range before Tap Space"
 
-S218 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+S218 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
 Anchor: message "Tap Space preserves the mounted automation lane time range"
 
-S219 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S219 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
 Anchor: message "the Volume insertion selects the exact 48 draft"
 
-S220 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S220 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
 Anchor: message "the active Volume lane opens its production insertion draft of 48"
 
-S221 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S221 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
 Anchor: message "the native text clipboard contains exactly 48 after Volume Copy"
 
-S222 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S222 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
 Anchor: message "Volume insertion Paste restores exactly 48"
 
-S223 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S223 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
 Anchor: message "the closed value prompt permits refocusing the Volume controller 7 label"
 
-S224 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S224 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
 Anchor: message "Volume insertion Escape closes its exact 48 draft without a write"
 

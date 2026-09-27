@@ -1755,22 +1755,22 @@ Anchor: message "hard bank failure keeps the entry available and does not cross 
 S185 | historyTransitionRegressions | src/checks/workspace/bank_history_probes.swift
 Anchor: message "self-cancelling bank merge is removed so undo reaches the preceding document edit"
 
-S186 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml
+S186 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "shellTimeMenu"
 
-S187 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml
+S187 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "the real automation section can be opened"
 
-S188 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml
+S188 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "Insert Time shifts all later events by the same range span"
 
-S189 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml
+S189 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "the Time menu Delete Time removes the inserted blank range"
 
-S190 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml
+S190 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "a Volume-only deletion preserves all notes"
 
-S191 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow.qml
+S191 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindowPrompts.qml
 Anchor: message "an open song without a time selection cannot delete a selected range"
 
 S192 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
@@ -1848,22 +1848,22 @@ Anchor: function
 S215 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
 Anchor: message "one undo restores exact all-track removal bytes"
 
-S217 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
+S217 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "Play presents playing when its action completes"
 
-S218 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
+S218 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "Space presents playing when its action completes"
 
 S219 | test_transportControlTransitionsAndSettings | src/checks/editorqml/tst_ShellTransport.qml
 Anchor: message "the same Space shortcut pauses playback"
 
-S220 | test_rulerCommitMovesCursorOnlyInEveryTransportState | src/checks/editorqml/tst_ShellTransport.qml
+S220 | test_rulerCommitMovesCursorOnlyInEveryTransportState | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "the paused press leaves the shared playhead at the pause point"
 
-S221 | test_rulerCommitMovesCursorOnlyInEveryTransportState | src/checks/editorqml/tst_ShellTransport.qml
+S221 | test_rulerCommitMovesCursorOnlyInEveryTransportState | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "ruler commit preserves the paused transport"
 
-S222 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
+S222 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "the stopped edit cursor is away from the origin"
  
 S223 | runEditRoutingChecks | src/checks/workspace/session_edit_routing.swift
@@ -1914,91 +1914,91 @@ Anchor: message "whole-song deletion ripples the other track"
 S238 | runEditRoutingChecks | src/checks/workspace/session_edit_routing.swift
 Anchor: message "one undo restores exact whole-song removal bytes"
 
-S239 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S239 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "text-field S never changes Solo"
 
-S240 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S240 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "text-field S never activates Solo"
 
-S241 | test_explicitSoloEditMenuStaysAvailableWithTextFocus | src/checks/editorqml/tst_ShellMenus.qml
+S241 | test_explicitSoloEditMenuStaysAvailableWithTextFocus | src/checks/editorqml/tst_ShellMenusCommands.qml
 Anchor: message "text focus does not disable the explicit window Solo action"
 
-S242 | test_explicitSoloEditMenuStaysAvailableWithTextFocus | src/checks/editorqml/tst_ShellMenus.qml
+S242 | test_explicitSoloEditMenuStaysAvailableWithTextFocus | src/checks/editorqml/tst_ShellMenusCommands.qml
 Anchor: message "the Edit Solo row remains actionable under text focus"
 
-S243 | test_explicitSoloEditMenuStaysAvailableWithTextFocus | src/checks/editorqml/tst_ShellMenus.qml
+S243 | test_explicitSoloEditMenuStaysAvailableWithTextFocus | src/checks/editorqml/tst_ShellMenusCommands.qml
 Anchor: message "explicit Edit Solo activation still reaches the selected track"
 
-S244 | test_rulerCursorInsertDiffersFromSelectionEditMenu | src/checks/editorqml/tst_ShellMenus.qml
+S244 | test_rulerCursorInsertDiffersFromSelectionEditMenu | src/checks/editorqml/tst_ShellMenusLoop.qml
 Anchor: message "right-clicking the ruler opens the cursor menu"
 
-S245 | test_rulerCursorInsertDiffersFromSelectionEditMenu | src/checks/editorqml/tst_ShellMenus.qml
+S245 | test_rulerCursorInsertDiffersFromSelectionEditMenu | src/checks/editorqml/tst_ShellMenusLoop.qml
 Anchor: message "the ruler cursor menu commits its clicked snap before offering Insert Time"
 
-S246 | test_rulerCursorInsertDiffersFromSelectionEditMenu | src/checks/editorqml/tst_ShellMenus.qml
+S246 | test_rulerCursorInsertDiffersFromSelectionEditMenu | src/checks/editorqml/tst_ShellMenusLoop.qml
 Anchor: message "the cursor menu is mounted"
 
-S247 | test_rulerCursorInsertDiffersFromSelectionEditMenu | src/checks/editorqml/tst_ShellMenus.qml
+S247 | test_rulerCursorInsertDiffersFromSelectionEditMenu | src/checks/editorqml/tst_ShellMenusLoop.qml
 Anchor: message "the mounted ruler menu populates its Insert Time row"
 
-S248 | test_rulerCursorInsertDiffersFromSelectionEditMenu | src/checks/editorqml/tst_ShellMenus.qml
+S248 | test_rulerCursorInsertDiffersFromSelectionEditMenu | src/checks/editorqml/tst_ShellMenusLoop.qml
 Anchor: message "the cursor ruler Insert Time row is available without a selected span"
 
-S249 | test_eventMoveRoutesThroughMenuAndEventListKey | src/checks/editorqml/tst_ShellMenus.qml
+S249 | test_eventMoveRoutesThroughMenuAndEventListKey | src/checks/editorqml/tst_ShellMenusCommands.qml
 Anchor: message "the hidden event list disables move up"
 
-S250 | test_eventMoveRoutesThroughMenuAndEventListKey | src/checks/editorqml/tst_ShellMenus.qml
+S250 | test_eventMoveRoutesThroughMenuAndEventListKey | src/checks/editorqml/tst_ShellMenusCommands.qml
 Anchor: message "the hidden event list disables move down"
 
-S251 | test_eventMoveRoutesThroughMenuAndEventListKey | src/checks/editorqml/tst_ShellMenus.qml
+S251 | test_eventMoveRoutesThroughMenuAndEventListKey | src/checks/editorqml/tst_ShellMenusCommands.qml
 Anchor: message "hiding the event list keeps the window Solo action enabled"
 
-S252 | test_eventMoveRoutesThroughMenuAndEventListKey | src/checks/editorqml/tst_ShellMenus.qml
+S252 | test_eventMoveRoutesThroughMenuAndEventListKey | src/checks/editorqml/tst_ShellMenusCommands.qml
 Anchor: message "the hidden event list retains the Edit Solo row"
 
-S253 | test_eventMoveRoutesThroughMenuAndEventListKey | src/checks/editorqml/tst_ShellMenus.qml
+S253 | test_eventMoveRoutesThroughMenuAndEventListKey | src/checks/editorqml/tst_ShellMenusCommands.qml
 Anchor: message "showing the event list does not steal the window Solo action"
 
-S254 | test_eventMoveRoutesThroughMenuAndEventListKey | src/checks/editorqml/tst_ShellMenus.qml
+S254 | test_eventMoveRoutesThroughMenuAndEventListKey | src/checks/editorqml/tst_ShellMenusCommands.qml
 Anchor: message "the shown event list retains the Edit Solo row"
 
-S255 | test_eventMoveRoutesThroughMenuAndEventListKey | src/checks/editorqml/tst_ShellMenus.qml
+S255 | test_eventMoveRoutesThroughMenuAndEventListKey | src/checks/editorqml/tst_ShellMenusCommands.qml
 Anchor: message "hiding the list disables move up again"
 
-S256 | test_eventMoveRoutesThroughMenuAndEventListKey | src/checks/editorqml/tst_ShellMenus.qml
+S256 | test_eventMoveRoutesThroughMenuAndEventListKey | src/checks/editorqml/tst_ShellMenusCommands.qml
 Anchor: message "the hidden list revokes the Move Down menu row"
 
-S257 | test_eventMoveRoutesThroughMenuAndEventListKey | src/checks/editorqml/tst_ShellMenus.qml
+S257 | test_eventMoveRoutesThroughMenuAndEventListKey | src/checks/editorqml/tst_ShellMenusCommands.qml
 Anchor: message "closing the event list leaves the window Solo action available"
 
-S258 | test_eventMoveRoutesThroughMenuAndEventListKey | src/checks/editorqml/tst_ShellMenus.qml
+S258 | test_eventMoveRoutesThroughMenuAndEventListKey | src/checks/editorqml/tst_ShellMenusCommands.qml
 Anchor: message "the closed event list retains the Edit Solo row"
 
-S259 | test_timeRangeSelectionKeys | src/checks/editorqml/tst_ShellClipboard.qml
+S259 | test_timeRangeSelectionKeys | src/checks/editorqml/tst_ShellClipboardRange.qml
 Anchor: message "the swept selection enables Delete Time"
 
-S260 | test_timeRangeSelectionKeys | src/checks/editorqml/tst_ShellClipboard.qml
+S260 | test_timeRangeSelectionKeys | src/checks/editorqml/tst_ShellClipboardRange.qml
 Anchor: message "the swept selection enables Insert Time"
 
-S261 | test_timeRangeSelectionKeys | src/checks/editorqml/tst_ShellClipboard.qml
+S261 | test_timeRangeSelectionKeys | src/checks/editorqml/tst_ShellClipboardRange.qml
 Anchor: message "the swept selection enables Copy instead of the cleared note selection"
 
-S262 | test_timeRangeSelectionKeys | src/checks/editorqml/tst_ShellClipboard.qml
+S262 | test_timeRangeSelectionKeys | src/checks/editorqml/tst_ShellClipboardRange.qml
 Anchor: message "the copied time clip enables Paste"
 
-S263 | test_timeRangeSelectionKeys | src/checks/editorqml/tst_ShellClipboard.qml
+S263 | test_timeRangeSelectionKeys | src/checks/editorqml/tst_ShellClipboardRange.qml
 Anchor: message "the range deletion enables Undo"
 
-S264 | test_timeRangeSelectionKeys | src/checks/editorqml/tst_ShellClipboard.qml
+S264 | test_timeRangeSelectionKeys | src/checks/editorqml/tst_ShellClipboardRange.qml
 Anchor: message "the range deletion invalidates Redo"
 
-S265 | test_timeRangeSelectionKeys | src/checks/editorqml/tst_ShellClipboard.qml
+S265 | test_timeRangeSelectionKeys | src/checks/editorqml/tst_ShellClipboardRange.qml
 Anchor: message "undoing range deletion enables Redo"
 
-S266 | test_timeRangeSelectionKeys | src/checks/editorqml/tst_ShellClipboard.qml
+S266 | test_timeRangeSelectionKeys | src/checks/editorqml/tst_ShellClipboardRange.qml
 Anchor: message "Insert Time remains available after Paste consumes the range"
 
-S267 | test_timeRangeSelectionKeys | src/checks/editorqml/tst_ShellClipboard.qml
+S267 | test_timeRangeSelectionKeys | src/checks/editorqml/tst_ShellClipboardRange.qml
 Anchor: message "Paste consumes the time range and disables Delete Time"
 
 S268 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
@@ -2076,40 +2076,40 @@ Anchor: message "stale acceptance preserves the undo index"
 S292 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
 Anchor: message "stale acceptance preserves the undo count"
 
-S293 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindow.qml
+S293 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindowPrompts.qml
 Anchor: message "Cancel closes the mounted Insert Time form"
 
-S294 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindow.qml
+S294 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindowPrompts.qml
 Anchor: message "Cancel unmounts the old prompt before another command"
 
-S295 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindow.qml
+S295 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindowPrompts.qml
 Anchor: message "Cancel leaves the selected document unchanged"
 
-S296 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindow.qml
+S296 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindowPrompts.qml
 Anchor: message "the menu-opened form has editable numeric fields"
 
-S297 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindow.qml
+S297 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindowPrompts.qml
 Anchor: message "typing replaces the selected Bars value"
 
-S298 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindow.qml
+S298 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindowPrompts.qml
 Anchor: message "Tab moves editing from Bars to Beats"
 
-S299 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindow.qml
+S299 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindowPrompts.qml
 Anchor: message "typing edits the actual Beats input"
 
-S300 | test_eStandaloneInsertTimeZeroClickClosesWithoutEdit | src/checks/editorqml/tst_ShellWindow.qml
+S300 | test_eStandaloneInsertTimeZeroClickClosesWithoutEdit | src/checks/editorqml/tst_ShellWindowPrompts.qml
 Anchor: message "the mounted zero-span form exposes Bars and OK"
 
-S301 | test_eStandaloneInsertTimeZeroClickClosesWithoutEdit | src/checks/editorqml/tst_ShellWindow.qml
+S301 | test_eStandaloneInsertTimeZeroClickClosesWithoutEdit | src/checks/editorqml/tst_ShellWindowPrompts.qml
 Anchor: message "the zero-span form accepts typed zero Bars"
 
-S302 | test_eStandaloneInsertTimeZeroClickClosesWithoutEdit | src/checks/editorqml/tst_ShellWindow.qml
+S302 | test_eStandaloneInsertTimeZeroClickClosesWithoutEdit | src/checks/editorqml/tst_ShellWindowPrompts.qml
 Anchor: message "clicking OK closes the accepted zero-span form"
 
-S303 | test_eStandaloneInsertTimeZeroClickClosesWithoutEdit | src/checks/editorqml/tst_ShellWindow.qml
+S303 | test_eStandaloneInsertTimeZeroClickClosesWithoutEdit | src/checks/editorqml/tst_ShellWindowPrompts.qml
 Anchor: message "a zero-span OK click preserves the selected document revision"
 
-S304 | test_eStandaloneInsertTimeZeroClickClosesWithoutEdit | src/checks/editorqml/tst_ShellWindow.qml
+S304 | test_eStandaloneInsertTimeZeroClickClosesWithoutEdit | src/checks/editorqml/tst_ShellWindowPrompts.qml
 Anchor: message "a zero-span OK click preserves the selected document notes"
 
 S305 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
@@ -2121,28 +2121,28 @@ Anchor: message "\(label) advancing playhead keeps the captured prompt open"
 S307 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
 Anchor: message "\(label) advancing playhead preserves the captured edit cursor"
 
-S308 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindow.qml
+S308 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindowPrompts.qml
 Anchor: message "Cancel form accepts typed Bars input"
 
-S309 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindow.qml
+S309 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindowPrompts.qml
 Anchor: message "Cancel form Tab moves to Beats"
 
-S310 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindow.qml
+S310 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindowPrompts.qml
 Anchor: message "Cancel form accepts typed Beats input"
 
-S311 | test_jPlayingSelectedRangeInsertAndDeleteThroughWindow | src/checks/editorqml/tst_ShellWindow.qml
+S311 | test_jPlayingSelectedRangeInsertAndDeleteThroughWindow | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "the mounted Insert Time action is enabled before a range is selected"
 
-S312 | test_jPlayingSelectedRangeInsertAndDeleteThroughWindow | src/checks/editorqml/tst_ShellWindow.qml
+S312 | test_jPlayingSelectedRangeInsertAndDeleteThroughWindow | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "the real mounted transport enters Play"
 
 S313 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
 Anchor: message "playing insertion begins with its edit cursor before the range"
 
-S314 | test_jPlayingSelectedRangeInsertAndDeleteThroughWindow | src/checks/editorqml/tst_ShellWindow.qml
+S314 | test_jPlayingSelectedRangeInsertAndDeleteThroughWindow | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "the playhead is before the selected insertion seam"
 
-S315 | test_jPlayingSelectedRangeInsertAndDeleteThroughWindow | src/checks/editorqml/tst_ShellWindow.qml
+S315 | test_jPlayingSelectedRangeInsertAndDeleteThroughWindow | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "the playing selected-range shortcut never opens the insertion prompt"
 
 S316 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
@@ -2175,7 +2175,7 @@ Anchor: message "stopped insertion undo returns to its original history position
 S330 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
 Anchor: message "stopped insertion undo restores the exact original MIDI bytes"
 
-S332 | test_jPlayingSelectedRangeInsertAndDeleteThroughWindow | src/checks/editorqml/tst_ShellWindow.qml
+S332 | test_jPlayingSelectedRangeInsertAndDeleteThroughWindow | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "the scoped Time menu deletion never opens Insert Time"
 
 S333 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
@@ -2253,19 +2253,19 @@ Anchor: message "whole-song deletion undo restores the original history position
 S361 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
 Anchor: message "whole-song deletion undo restores the exact original MIDI bytes"
 
-S362 | test_jPlayingSelectedRangeInsertAndDeleteThroughWindow | src/checks/editorqml/tst_ShellWindow.qml
+S362 | test_jPlayingSelectedRangeInsertAndDeleteThroughWindow | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "the mounted edit cursor stays before the selected range when Play starts"
 
-S363 | test_jPlayingSelectedRangeInsertAndDeleteThroughWindow | src/checks/editorqml/tst_ShellWindow.qml
+S363 | test_jPlayingSelectedRangeInsertAndDeleteThroughWindow | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "the roll retains its painted active range after insertion"
 
-S364 | test_jPlayingSelectedRangeInsertAndDeleteThroughWindow | src/checks/editorqml/tst_ShellWindow.qml
+S364 | test_jPlayingSelectedRangeInsertAndDeleteThroughWindow | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "the painted scoped range retains its start after insertion"
 
-S365 | test_jPlayingSelectedRangeInsertAndDeleteThroughWindow | src/checks/editorqml/tst_ShellWindow.qml
+S365 | test_jPlayingSelectedRangeInsertAndDeleteThroughWindow | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "the painted scoped range retains its end after insertion"
 
-S366 | test_jPlayingSelectedRangeInsertAndDeleteThroughWindow | src/checks/editorqml/tst_ShellWindow.qml
+S366 | test_jPlayingSelectedRangeInsertAndDeleteThroughWindow | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "the unselected track header stays outside the scoped range after insertion"
 
 S367 | checkLiveTabTimeIsolation | src/checks/workspace/session_time_routing.swift
@@ -2277,10 +2277,10 @@ Anchor: message "stopped insertion undo leaves the sibling bytes untouched"
 S369 | checkLiveTabTimeIsolation | src/checks/workspace/session_time_routing.swift
 Anchor: message "scoped deletion preserves the inactive document bytes"
 
-S370 | test_jWholeSongRangeDeletesBothTracksThroughWindow | src/checks/editorqml/tst_ShellWindow.qml
+S370 | test_jWholeSongRangeDeletesBothTracksThroughWindow | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "the whole-song Time menu removes the first designated painted note"
 
-S371 | test_jWholeSongRangeDeletesBothTracksThroughWindow | src/checks/editorqml/tst_ShellWindow.qml
+S371 | test_jWholeSongRangeDeletesBothTracksThroughWindow | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "the whole-song Time menu removes the second designated painted note"
 
 S372 | checkLiveTabTimeIsolation | src/checks/workspace/session_time_routing.swift
@@ -2289,31 +2289,31 @@ Anchor: message "whole-song deletion leaves the inactive song byte-exact"
 S373 | checkLiveTabTimeIsolation | src/checks/workspace/session_time_routing.swift
 Anchor: message "whole-song deletion undo preserves the inactive song bytes"
 
-S374 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S374 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "both real songs have distinct ready pages"
 
-S375 | openTwoSongShell | src/checks/editorqml/tst_ShellWindow.qml
+S375 | openTwoSongShell | src/checks/editorqml/ShellWindowSupport.qml
 Anchor: message "the two-song shell window becomes active"
 
-S376 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S376 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "the selected ready page is displayed"
 
-S377 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S377 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "the Edit menu returned keyboard focus to the roll"
 
-S378 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml
+S378 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindowCrossTab.qml
 Anchor: message "the destination ready page replaces the source"
 
-S379 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml
+S379 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindowCrossTab.qml
 Anchor: message "tab input cannot remain with the inactive source"
 
-S380 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S380 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "Copy runs with every drawer section hidden"
 
-S381 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S381 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "native Copy is registered as a window shortcut"
 
-S382 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S382 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "native Copy activates the window shortcut once"
 
 S383 | runEditRoutingChecks | src/checks/workspace/session_edit_routing.swift
@@ -2346,52 +2346,52 @@ Anchor: message "selected time-range Copy retains the source ticks per beat"
 S392 | runEditRoutingChecks | src/checks/workspace/session_edit_routing.swift
 Anchor: message "selected time-range Copy preserves its exact span"
 
-S393 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S393 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "the production song-list search is mounted"
 
-S394 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S394 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "the production editor selects the complete text"
 
-S395 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S395 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "native text Copy and Paste restore the exact production search text"
 
-S396 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S396 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: function
 
-S397 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S397 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "production drawer chrome retains intentional non-text focus"
 
-S398 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S398 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "first non-text S activates Solo once"
 
-S399 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S399 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "second non-text S activates Solo twice total"
 
-S400 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S400 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "first roll S activates Solo three times total"
 
-S401 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S401 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "second roll S activates Solo four times total"
 
-S402 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S402 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "time-range Copy activates the same window shortcut once"
 
-S403 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S403 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "ruler input paints the selected time range"
 
-S404 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S404 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "text Copy never activates the window Copy shortcut"
 
-S405 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S405 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "switching from a focused roll targets the first ready editor"
 
-S406 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S406 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "switching back targets the second ready editor"
 
-S407 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml
+S407 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindowCrossTab.qml
 Anchor: message "switching ready tabs preserves the intentional chrome text focus"
 
-S408 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml
+S408 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindowCrossTab.qml
 Anchor: message "pointer entry transfers chrome focus to the selected ready editor"
 
 S409 | runEditRoutingChecks | src/checks/workspace/session_edit_routing.swift
@@ -2400,41 +2400,41 @@ Anchor: message "selected note Copy leaves both songs and histories untouched"
 S410 | runEditRoutingChecks | src/checks/workspace/session_edit_routing.swift
 Anchor: message "both Copy paths leave both songs and histories untouched"
 
-S411 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+S411 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "focused velocity chrome A toggles only Automation"
 
-S412 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+S412 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "the roll and drawer chrome are visible"
 
-S413 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+S413 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "focused chrome starts with Automation hidden"
 
-S414 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+S414 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "focused chrome starts with Velocity visible"
 
-S415 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+S415 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "focused chrome starts with Voice Changes hidden"
 
-S416 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+S416 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "focused chrome starts with the polyphony dock hidden"
 
-S417 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+S417 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "focused velocity chrome A shows the mounted Automation section"
 
-S418 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+S418 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "focused velocity chrome V hides the mounted Velocity section"
 
-S419 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+S419 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "focused velocity chrome P shows the mounted Voice Changes section"
 
-S420 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+S420 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "focused velocity chrome Ctrl+Shift+P shows the mounted polyphony dock"
 
-S421 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+S421 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "focused velocity chrome V toggles only Velocity"
 
-S422 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+S422 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "focused velocity chrome P toggles only Voice Changes"
 
-S423 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+S423 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "focused velocity chrome Ctrl+Shift+P toggles only Polyphony"

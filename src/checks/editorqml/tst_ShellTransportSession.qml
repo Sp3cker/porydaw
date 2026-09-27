@@ -1,0 +1,384 @@
+import QtQuick
+import QtTest
+
+ShellTransportSupport {
+
+    function test_explicitOpenSupersedesStartupRestoreDuringPlayback() {
+        verify(bootstrap.seedStartupSong(bootstrap.projectRoot, "mus_littleroot_test"))
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "the production shell starts with a saved tab recipe")
+        const session = shell.shellPresenter.session
+        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        verify(waitForNative(function() {
+            return session.songOpen || session.lastSaveError.length > 0
+        }, 30000), "an explicit song opens while startup restore is pending: "
+                   + session.lastSaveError)
+        compare(session.lastSaveError, "")
+        compare(session.songTabs.selectedPage.title, "mus_route101",
+                "the startup recipe never displaces the explicit open")
+        shell.requestActivate()
+        tryCompare(shell, "active", true, 3000)
+        const bar = findChild(shell, "transportToolbar")
+        const play = findChild(bar, "transport.play")
+        tryCompare(play, "actionable", true, 3000)
+        mouseClick(play, play.width / 2, play.height / 2)
+        tryCompare(bar.presenter, "state", 3, 3000)
+        wait(400)
+        bar.presenter.refresh()
+        compare(session.songTabs.selectedPage.title, "mus_route101")
+        compare(session.songTabs.tabCount, 1, "startup does not append its saved tab")
+        compare(bar.presenter.state, 3, "a late restore cannot stop explicit playback")
+    }
+
+    function test_scaleControlsFollowSelectedTab() {
+        var bar = openShell()
+        var root = findChild(bar, "transportScaleRoot")
+        var type = findChild(bar, "transportScaleType")
+        var highlight = findChild(bar, "transportScaleHighlight")
+        var fold = findChild(bar, "transportScaleFold")
+        verify(root && type && highlight && fold, "scale selector is mounted")
+        verify(!root.enabled && !type.enabled && !highlight.enabled && !fold.enabled,
+               "scale selector is unavailable before a song opens")
+        bar = openSong()
+        compare(root.currentIndex, 0, "new tab opens with C root")
+        compare(type.currentIndex, 0, "new tab opens with Major scale")
+        verify(!highlight.checked && !fold.Accessible.checked,
+               "new tab opens with Highlight and Fold off")
+        mouseClick(highlight, highlight.width / 2, highlight.height / 2)
+        compare(bar.presenter.scaleHighlight, true, "Highlight toggle edits the selected tab")
+        mouseClick(highlight, highlight.width / 2, highlight.height / 2)
+        var toggledOff = !bar.presenter.scaleHighlight
+        mouseClick(highlight, highlight.width / 2, highlight.height / 2)
+        verify(toggledOff && bar.presenter.scaleHighlight,
+               "Highlight toggles off and on from the transport control")
+        mouseClick(fold, fold.width / 2, fold.height / 2)
+        compare(bar.presenter.scaleFold, true, "Fold toggle edits the selected tab")
+        bar.presenter.setScaleRoot(9)
+        bar.presenter.setScaleType(2)
+        tryCompare(root, "currentIndex", 9, 3000)
+        tryCompare(type, "currentIndex", 2, 3000)
+        var session = shell.shellPresenter.session
+        session.openSong("mus_littleroot_test")
+        verify(waitForNative(function() {
+            return session.songTabs.tabCount === 2 && bar.presenter.scaleRoot === 0
+        }, 30000), "second tab restores independent default scale")
+        compare(bar.presenter.scaleFold, false, "second tab does not inherit Fold")
+        session.openSong("mus_route101")
+        verify(waitForNative(function() {
+            return bar.presenter.scaleRoot === 9 && bar.presenter.scaleType === 2
+        }, 5000), "first tab restores its root and type")
+        compare(bar.presenter.scaleHighlight, true, "first tab restores Highlight")
+        tryCompare(root, "currentIndex", 9, 3000,
+                   "mounted root selector follows the restored tab")
+        tryCompare(type, "currentIndex", 2, 3000,
+                   "mounted scale selector follows the restored tab")
+        compare(highlight.checked, true, "mounted Highlight control follows the restored tab")
+        compare(fold.Accessible.checked, true, "the first tab keeps its scale state after second-tab edits")
+        compare(bar.presenter.scaleFold, true, "first tab restores Fold")
+    }
+
+    function test_rulerCommitMovesCursorOnlyInEveryTransportState() {
+        var bar = openShell()
+        var session = shell.shellPresenter.session
+        openSong()
+        var clock = findChild(bar, "transportTimeLabel")
+        var play = findChild(bar, "transport.play")
+        var pause = findChild(bar, "transport.pause")
+        verify(waitForNative(function() { return rollSurface() !== null }, 10000),
+               "the roll surface mounts for the fixture song")
+        var surface = rollSurface()
+        var grid = surface.gridModel
+        var ruler = findChild(surface, "timelineRulerInput")
+        verify(ruler !== null, "the ruler input mounts in the roll surface")
+        var stoppedCursor = grid.editCursorTick
+        mouseClick(ruler, ruler.width * 0.85, ruler.height * 0.5, Qt.RightButton)
+        tryCompare(session, "timeSigMenuOpen", true)
+        verify(waitForNative(function() {
+            return findChild(surface, "quickMenuPanelRoot") !== null
+        }, 5000), "the stopped ruler menu mounts before keyboard dismissal")
+        var menu = findChild(surface, "quickMenuPanelRoot")
+        tryCompare(menu.parent, "activeFocus", true, 3000,
+                   "the stopped ruler menu owns Escape focus")
+        verify(grid.editCursorTick !== stoppedCursor, "the stopped press commits the cursor")
+        verify(Math.abs(session.playheadPresenter().tick) < 0.5,
+               "stopped commit leaves the playhead at origin")
+        bar.presenter.refresh()
+        verify(clock.text.startsWith("0:00.0 / "), "stopped commit leaves the transport clock")
+        keyClick(Qt.Key_Escape)
+        tryCompare(session, "timeSigMenuOpen", false)
+        verify(waitForNative(function() {
+            return findChild(surface, "quickMenuPanelRoot") === null
+        }, 3000), "the dismissed menu panel leaves the visible scene")
+        grid.setEditCursorTick(0)
+        verify(Math.abs(grid.editCursorTick) < 0.5,
+               "resetting the stopped edit cursor keeps the next Play near the song start")
+        compare(play.actionable, true, "loaded song can start playback")
+        mouseClick(play, play.width / 2, play.height / 2)
+        tryCompare(bar.presenter, "state", 3, 3000)
+        verify(waitForNative(function() {
+            bar.presenter.refresh()
+            return !clock.text.startsWith("0:00.0 / ")
+        }, 5000), "playback advances the mounted clock")
+        mouseClick(pause, pause.width / 2, pause.height / 2)
+        tryCompare(bar.presenter, "state", 2, 3000)
+        bar.presenter.refresh()
+        var pausedClock = clock.text
+        var pausedTick = session.playheadPresenter().tick
+        mouseClick(ruler, ruler.width * 0.6, ruler.height * 0.5, Qt.RightButton)
+        var targetCursor = grid.editCursorTick
+        verify(targetCursor > pausedTick, "the paused ruler target is ahead of playback")
+        verify(Math.abs(session.playheadPresenter().tick - pausedTick) < 0.5,
+               "the paused press leaves the shared playhead at the pause point")
+        tryCompare(session, "timeSigMenuOpen", true)
+        verify(waitForNative(function() {
+            return findChild(surface, "quickMenuPanelRoot") !== null
+        }, 5000), "the paused ruler menu mounts before keyboard dismissal")
+        menu = findChild(surface, "quickMenuPanelRoot")
+        tryCompare(menu.parent, "activeFocus", true, 3000,
+                   "the paused ruler menu owns Escape focus")
+        keyClick(Qt.Key_Escape)
+        tryCompare(session, "timeSigMenuOpen", false)
+        verify(waitForNative(function() {
+            return findChild(surface, "quickMenuPanelRoot") === null
+        }, 3000), "the paused menu panel leaves the visible scene")
+        bar.presenter.refresh()
+        compare(clock.text, pausedClock,
+                "the paused commit leaves the mounted clock at the pause point")
+        compare(bar.presenter.state, 2, "ruler commit preserves the paused transport")
+    }
+
+    function test_backgroundRulerSeekCannotMoveSelectedSong() {
+        var bar = openShell()
+        var session = shell.shellPresenter.session
+        openSong()
+        verify(waitForNative(function() { return rollSurface() !== null }, 10000),
+               "the first tab mounts its ruler")
+        var firstSurface = rollSurface()
+        var firstRuler = findChild(firstSurface, "timelineRulerInput")
+        verify(firstRuler !== null, "the first tab has a ruler input")
+        var firstCursor = firstSurface.gridModel.editCursorTick
+        var firstId = session.songTabs.selectedId
+        session.openSong("mus_littleroot_test")
+        verify(waitForNative(function() {
+            return session.songTabs.tabCount === 2
+                && session.songTabs.selectedId !== firstId
+                && bar.presenter.state !== 0
+        }, 30000), "the second song takes the selected workspace and audio engine")
+
+        var play = findChild(bar, "transport.play")
+        var pause = findChild(bar, "transport.pause")
+        var clock = findChild(bar, "transportTimeLabel")
+        mouseClick(play, play.width / 2, play.height / 2)
+        tryCompare(bar.presenter, "state", 3, 3000)
+        verify(waitForNative(function() {
+            bar.presenter.refresh()
+            return !clock.text.startsWith("0:00.0 / ")
+        }, 5000), "the selected song advances before the stale ruler event")
+        mouseClick(pause, pause.width / 2, pause.height / 2)
+        tryCompare(bar.presenter, "state", 2, 3000)
+        bar.presenter.refresh()
+        var selectedClock = clock.text
+        var selectedTick = session.playheadPresenter().tick
+        var oldTargetX = firstRuler.width * 0.85
+        firstSurface.rulerMenu.beginSweep(oldTargetX, 0, 0)
+        firstSurface.rulerMenu.endSweep(oldTargetX, 0)
+        verify(firstSurface.gridModel.editCursorTick !== firstCursor,
+               "the background tab actually commits its own ruler cursor")
+        verify(Math.abs(session.playheadPresenter().tick - selectedTick) < 0.001,
+               "a background ruler seek cannot move the selected song's shared playhead")
+        bar.presenter.refresh()
+        compare(clock.text, selectedClock, "the selected song clock remains at its paused position")
+        compare(bar.presenter.state, 2, "a background ruler event preserves the selected transport")
+    }
+
+    function test_toolbarResumeAndSpaceRestartAtEditCursor() {
+        var bar = openShell()
+        var session = shell.shellPresenter.session
+        openSong()
+        verify(waitForNative(function() { return rollSurface() !== null }, 10000),
+               "the song mounts its roll before transport input")
+        var surface = rollSurface()
+        var ruler = findChild(surface, "timelineRulerInput")
+        var play = findChild(bar, "transport.play")
+        var pause = findChild(bar, "transport.pause")
+        verify(ruler && play && pause, "ruler and toolbar transport are mounted")
+        var grid = surface.gridModel
+        var cursorX = grid.beatWidth - grid.cameraScrollX
+        verify(cursorX > 0 && cursorX < ruler.width,
+               "one beat of the fixture is visible on the mounted ruler")
+        surface.rulerMenu.beginSweep(cursorX, 0, 0)
+        surface.rulerMenu.endSweep(cursorX, 0)
+        var cursor = surface.gridModel.editCursorTick
+        verify(cursor > 0, "the stopped edit cursor is away from the origin")
+        verify(waitForNative(function() { return play.actionable && play.enabled }, 3000),
+               "the mounted Play control becomes actionable for the loaded song")
+        mouseClick(play, play.width / 2, play.height / 2)
+        verify(waitForNative(function() { return bar.presenter.state === 3 }, 3000),
+               "Play presents playing when its action completes")
+        verify(Math.abs(session.playheadPresenter().tick - cursor) < 0.001,
+               "stopped Play presents the edit-cursor target immediately")
+        verify(waitForNative(function() {
+            return session.playheadPresenter().tick > cursor + 8
+        }, 5000), "the real playback advances beyond the edit cursor")
+        verify(waitForNative(function() { return pause.actionable && pause.enabled }, 3000),
+               "the mounted Pause control becomes actionable during playback")
+        mouseClick(pause, pause.width / 2, pause.height / 2)
+        verify(waitForNative(function() { return bar.presenter.state === 2 }, 3000),
+               "Pause presents paused when its action completes")
+        var paused = session.playheadPresenter().tick
+        verify(waitForNative(function() { return play.actionable && play.enabled }, 3000),
+               "the mounted Play control becomes actionable while paused")
+        mouseClick(play, play.width / 2, play.height / 2)
+        verify(waitForNative(function() { return bar.presenter.state === 3 }, 3000),
+               "toolbar Play resumes when its action completes")
+        verify(session.playheadPresenter().tick > cursor + 8,
+               "toolbar Play resumes beyond the cursor rather than restarting")
+        verify(waitForNative(function() { return pause.actionable && pause.enabled }, 3000),
+               "the mounted Pause control becomes actionable after resuming")
+        mouseClick(pause, pause.width / 2, pause.height / 2)
+        verify(waitForNative(function() { return bar.presenter.state === 2 }, 3000),
+               "the resumed transport pauses")
+        verify(session.playheadPresenter().tick >= paused - 1,
+               "a resumed transport does not jump behind its prior pause point")
+        var master = findChild(bar, "transportMasterVolume")
+        verify(master !== null, "the Space route has a mounted focus target")
+        master.focusInput(Qt.OtherFocusReason)
+        keyClick(Qt.Key_Space)
+        verify(waitForNative(function() { return bar.presenter.state === 3 }, 3000),
+               "Space presents playing when its action completes")
+        verify(Math.abs(session.playheadPresenter().tick - cursor) < 0.001,
+               "Space restarts from the edit cursor instead of the pause point")
+    }
+
+    function test_homeHomesCursorWithoutMovingStoppedPlayhead() {
+        var bar = openShell()
+        var session = shell.shellPresenter.session
+        openSong()
+        verify(waitForNative(function() { return rollSurface() !== null }, 10000),
+               "the roll surface mounts for the Home check")
+        var home = rollSurface()
+        var grid = home.gridModel
+        var rewind = findChild(bar, "transport.go-to-start")
+        var play = findChild(bar, "transport.play")
+        verify(rewind && play, "rewind and play are mounted")
+        grid.setEditCursorTick(grid.ticksPerBeat * 4)
+        var cursor = grid.editCursorTick
+        verify(cursor > 0, "the stopped edit cursor starts away from the origin")
+        mouseClick(rewind, rewind.width / 2, rewind.height / 2)
+        compare(grid.editCursorTick, 0, "Home homes the stopped edit cursor")
+        verify(Math.abs(session.playheadPresenter().tick) < 0.5,
+               "Home leaves the stopped playhead at the origin")
+        mouseClick(play, play.width / 2, play.height / 2)
+        tryCompare(bar.presenter, "state", 3, 3000)
+        verify(session.playheadPresenter().tick < cursor,
+               "Play after Home starts at the homed origin rather than the old cursor")
+        var first = session.playheadPresenter().tick
+        verify(waitForNative(function() {
+            return session.playheadPresenter().tick > first + 8
+        }, 5000), "playback advances from the homed origin")
+    }
+
+    function test_cancelledSweepAndHiddenMixDoNotPublishIntoSelectedWorkspace() {
+        var bar = openShell()
+        var session = shell.shellPresenter.session
+        openSong()
+        verify(waitForNative(function() { return rollSurface() !== null }, 10000),
+               "the first tab mounts its roll")
+        var first = rollSurface()
+        var ruler = findChild(first, "timelineRulerInput")
+        var cursor = first.gridModel.editCursorTick
+        first.rulerMenu.beginSweep(ruler.width * 0.4, 0, 0)
+        session.cancelGridInput(0)
+        first.rulerMenu.endSweep(ruler.width * 0.4, 0)
+        compare(first.gridModel.editCursorTick, cursor,
+                "a late ruler release after input cancellation cannot commit its seek")
+        first.rulerMenu.beginSweep(ruler.width * 0.4, 0, 0)
+        first.rulerMenu.endSweep(ruler.width * 0.4, 0)
+        verify(first.gridModel.editCursorTick !== cursor,
+               "an uncancelled sweep still commits its ruler cursor")
+        var firstId = session.songTabs.selectedId
+        var firstTab = session.songTabs.selectedPage
+        var firstHeaders = findChild(first, "timelineTrackHeaderRows")
+        verify(firstHeaders && firstHeaders.count > 0, "the first tab has track headers")
+        var firstTrack = firstHeaders.itemAt(0)
+        verify(firstTrack && !firstTrack.isAddTrack, "the first tab has a playable track")
+        var muteRect = firstTab.trackHeadersPresenter().muteButtonRect
+        mouseClick(firstTrack, muteRect.x + muteRect.width / 2,
+                   muteRect.y + muteRect.height / 2)
+        tryCompare(firstTrack, "muteChecked", true)
+        session.openSong("mus_littleroot_test")
+        verify(waitForNative(function() {
+            return session.songTabs.tabCount === 2 && session.songTabs.selectedId !== firstId
+                && bar.presenter.state !== 0 && rollSurface() !== null
+        }, 30000), "the second tab binds its own audio and editor")
+        var secondId = session.songTabs.selectedId
+        var second = rollSurface()
+        var secondHeaders = findChild(second, "timelineTrackHeaderRows")
+        verify(secondHeaders && secondHeaders.count > 0, "the second tab has track headers")
+        var secondTrack = secondHeaders.itemAt(0)
+        verify(secondTrack && !secondTrack.isAddTrack, "the second tab has a playable track")
+        compare(secondTrack.muteChecked, false, "the second tab does not inherit first-tab mute")
+        firstTab.trackHeadersPresenter().activateSolo(0)
+        tryCompare(firstTrack, "soloChecked", true)
+        compare(secondTrack.soloChecked, false,
+                "hidden solo publication cannot change the selected tab")
+        var selectedTick = session.playheadPresenter().tick
+        first.rulerMenu.beginSweep(ruler.width * 0.8, 0, 0)
+        firstTab.cancelGridInput(0)
+        first.rulerMenu.endSweep(ruler.width * 0.8, 0)
+        verify(Math.abs(session.playheadPresenter().tick - selectedTick) < 0.001,
+               "a late background ruler release cannot seek selected audio")
+        session.songTabs.selectTab(firstId)
+        tryCompare(session.songTabs, "selectedId", firstId)
+        verify(waitForNative(function() {
+            return firstTrack.muteChecked && firstTrack.soloChecked
+        }, 3000), "reactivation restores the first tab's mute and solo state")
+        session.songTabs.selectTab(secondId)
+        tryCompare(secondTrack, "muteChecked", false)
+        compare(secondTrack.soloChecked, false,
+                "returning to the second tab does not retain first-tab masks")
+        session.songTabs.selectTab(firstId)
+        tryCompare(session.songTabs, "selectedId", firstId)
+        var headersModel = firstTab.trackHeadersPresenter()
+        var headerInput = findChild(first, "timelineTrackHeadersInput")
+        verify(headerInput !== null, "the selected tab mounts its header input")
+        verify(waitForNative(function() {
+            return rollSurface() === first && headerInput.visible && headerInput.enabled
+        }, 3000), "the first tab's mounted header is active again")
+        var rowY = Math.max(1, headersModel.rowHeight / 2)
+        var beforeCount = firstHeaders.count
+        mouseClick(headerInput, headerInput.width * 0.5, rowY, Qt.RightButton)
+        tryCompare(headersModel, "menuOpen", true)
+        verify(waitForNative(function() {
+            return findChild(first, "quickMenuPanelRoot") !== null
+        }, 3000), "the selected header menu mounts")
+        var menu = findChild(first, "quickMenuPanelRoot")
+        tryVerify(function() { return menuActionRow(menu, 4) !== null }, 3000)
+        var duplicate = menuActionRow(menu, 4)
+        compare(duplicate.itemData.enabled, true)
+        mouseClick(duplicate, duplicate.width / 2, duplicate.height / 2)
+        tryCompare(headersModel, "menuOpen", false)
+        tryCompare(firstHeaders, "count", beforeCount + 1)
+        verify(waitForNative(function() {
+            return findChild(first, "quickMenuPanelRoot") === null
+        }, 3000), "the duplicate menu leaves the mounted scene")
+        mouseClick(headerInput, headerInput.width * 0.5, rowY, Qt.RightButton)
+        tryCompare(headersModel, "menuOpen", true)
+        verify(waitForNative(function() {
+            return findChild(first, "quickMenuPanelRoot") !== null
+        }, 3000), "the removal menu mounts")
+        menu = findChild(first, "quickMenuPanelRoot")
+        tryVerify(function() { return menuActionRow(menu, 5) !== null }, 3000)
+        var remove = menuActionRow(menu, 5)
+        compare(remove.itemData.enabled, true)
+        mouseClick(remove, remove.width / 2, remove.height / 2)
+        tryCompare(headersModel, "menuOpen", false)
+        tryCompare(firstHeaders, "count", beforeCount)
+        var survivor = firstHeaders.itemAt(0)
+        verify(survivor && !survivor.isAddTrack, "a playable track survives removal")
+        compare(survivor.muteChecked, false,
+                "deleting the muted track drops its mask instead of muting its successor")
+        compare(survivor.soloChecked, false,
+                "deleting the solo track drops its mask instead of soloing its successor")
+    }
+}

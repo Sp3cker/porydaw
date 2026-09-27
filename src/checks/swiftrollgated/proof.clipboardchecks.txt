@@ -1377,43 +1377,43 @@ Anchor: message "document shrink privately reconciles extent and reclamps horizo
             && gridCameraNear(shrunk.scrollX, shrunk.maxHScroll),
         cppID: viewportID, message: "document shrink privately reconciles extent and reclamps horizontal scroll")
 
-S023 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S023 | checkProjection | src/checks/rollcheck/EditorGridProjectionChecks.swift
 Anchor: message "generated time marks stay inside the one-viewport culling window"
     report.expect(
         !markXs.isEmpty && markXs.allSatisfy { $0 >= -cullingWidth - 2 && $0 <= 2 * cullingWidth + 2 },
         cppID: projectionID, message: "generated time marks stay inside the one-viewport culling window")
 
-S024 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S024 | checkProjection | src/checks/rollcheck/EditorGridProjectionChecks.swift
 Anchor: message "generated time marks cover the visible plot"
     report.expect(
         (markXs.min() ?? 1) <= 0 && (markXs.max() ?? -1) >= cullingWidth,
         cppID: projectionID, message: "generated time marks cover the visible plot")
 
-S025 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S025 | checkProjection | src/checks/rollcheck/EditorGridProjectionChecks.swift
 Anchor: message "camera movement does not alter noteSummary document state"
     report.expect(
         grid.noteSummary == summaryBeforeCameraMove,
         cppID: projectionID, message: "camera movement does not alter noteSummary document state")
 
-S026 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S026 | checkProjection | src/checks/rollcheck/EditorGridProjectionChecks.swift
 Anchor: message "known note rectangle equals the camera projection"
     report.expect(
         projected,
         cppID: projectionID, message: "known note rectangle equals the camera projection")
 
-S027 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S027 | checkProjection | src/checks/rollcheck/EditorGridProjectionChecks.swift
 Anchor: message "pre-roll mask presence follows the projected tick-zero position"
     report.expect(
         maskCount == (zeroX > 0 ? 1 : 0),
         cppID: projectionID, message: "pre-roll mask presence follows the projected tick-zero position")
 
-S028 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S028 | checkProjection | src/checks/rollcheck/EditorGridProjectionChecks.swift
 Anchor: message "beginPointer selects the note under the projected rectangle"
     report.expect(
         session.selectedNotes.contains(originalNote.id),
         cppID: projectionID, message: "beginPointer selects the note under the projected rectangle")
 
-S029 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S029 | checkProjection | src/checks/rollcheck/EditorGridProjectionChecks.swift
 Anchor: message "one-cell drag publishes the snapped tick and pitch preview"
     report.expect(
         previewRect.map {
@@ -1423,41 +1423,41 @@ Anchor: message "one-cell drag publishes the snapped tick and pitch preview"
         } ?? false,
         cppID: projectionID, message: "one-cell drag publishes the snapped tick and pitch preview")
 
-S030 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S030 | checkProjection | src/checks/rollcheck/EditorGridProjectionChecks.swift
 Anchor: message "endPointer commits one revision at the snapped tick and pitch"
     report.expect(
         session.document.revision == originalRevision + 1
             && moved.map { Int($0.tick) == expectedTick && Int($0.pitch) == expectedPitch } == true,
         cppID: projectionID, message: "endPointer commits one revision at the snapped tick and pitch")
 
-S031 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S031 | checkProjection | src/checks/rollcheck/EditorGridProjectionChecks.swift
 Anchor: message "draw drag on an empty row adds one snapped note"
     report.expect(
         session.document.revision == drawRevision + 1
             && created.map { Int($0.tick) == drawTick && Int($0.pitch) == drawPitch } == true,
         cppID: projectionID, message: "draw drag on an empty row adds one snapped note")
 
-S032 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S032 | checkProjection | src/checks/rollcheck/EditorGridProjectionChecks.swift
 Anchor: message "right-drag band selects exactly the visible intersecting notes"
     report.expect(
         session.selectedNotes == visibleIDs,
         cppID: projectionID, message: "right-drag band selects exactly the visible intersecting notes")
 
-S033 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S033 | checkProjection | src/checks/rollcheck/EditorGridProjectionChecks.swift
 Anchor: message "inputCancelled discards an active gesture without document mutation"
     report.expect(
         session.document.revision == cancelRevision
             && session.document.notes(in: grid.trackIndex).count == cancelCount,
         cppID: projectionID, message: "inputCancelled discards an active gesture without document mutation")
 
-S034 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S034 | checkProjection | src/checks/rollcheck/EditorGridProjectionChecks.swift
 Anchor: message "Escape discards an active gesture without document mutation"
     report.expect(
         session.document.revision == cancelRevision
             && session.document.notes(in: grid.trackIndex).count == cancelCount,
         cppID: projectionID, message: "Escape discards an active gesture without document mutation")
 
-S035 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S035 | checkProjection | src/checks/rollcheck/EditorGridProjectionChecks.swift
 Anchor: message "press outside projected pitch rows is rejected"
     report.expect(
         session.document.revision == cancelRevision,
@@ -1587,57 +1587,57 @@ Anchor: message "time paste advances by span and each tile is one undo entry"
 
 Shared helper: none. No shared Swift fixture file carrying expects was identified for this pairing.
 
-S053 | openRoute101 | src/checks/editorqml/tst_ShellClipboard.qml
+S053 | openRoute101 | src/checks/editorqml/ShellClipboardSupport.qml
 Anchor: message "mus_route101"
     shell = shellComponent.createObject(null); shell.requestActivate(); session.openProjectAndSong(bootstrap.projectRoot, "mus_route101"); waitForNative(songOpen); tryVerify(renderedNoteCount > 0); resolves surface/grid/roll
 
-S054 | pastedAt | src/checks/editorqml/tst_ShellClipboard.qml
+S054 | pastedAt | src/checks/editorqml/ShellClipboardSupport.qml
 Anchor: function
     two fully visible notes on one track sorted by (tick, id); real left click plus Shift-click; both selected with selectedCount 2; actionEnabled roll.copy true, edit.undo/redo false
 
-S055 | pastedAt | src/checks/editorqml/tst_ShellClipboard.qml
+S055 | pastedAt | src/checks/editorqml/ShellClipboardSupport.qml
 Anchor: function
     sentinel bytes staged via GridInputClipProbe.writeClipJson, round-trip read plus clipSummary "[]"; held real left press disables Copy; real Copy keeps exact bytes, notes and revision; release restores Copy
 
-S056 | pastedAt | src/checks/editorqml/tst_ShellClipboard.qml
+S056 | pastedAt | src/checks/editorqml/ShellClipboardSupport.qml
 Anchor: function
     cleared clip plus real Copy publishes bytes parsed as format 1, grid ticksPerBeat, span 0, wholeLane false, empty lanes/tempo, one track with the source track and both notes as relTick/key/duration/velocity; copiedOrigin/copiedEnd derived
 
-S057 | pastedAt | src/checks/editorqml/tst_ShellClipboard.qml
+S057 | pastedAt | src/checks/editorqml/ShellClipboardSupport.qml
 Anchor: function
     snap-guarded cursor staging with setEditCursorTick round-trip; Paste enabled; real Paste publishes two selected notes at cursor offsets with selectedCount 2 and committed cursor
 
-S058 | pastedAt | src/checks/editorqml/tst_ShellClipboard.qml
+S058 | pastedAt | src/checks/editorqml/ShellClipboardSupport.qml
 Anchor: function
     real Undo removes both pasted notes (undo off, redo on); real Redo restores both notes and the cursor (undo on, redo off)
 
-S059 | pastedAt | src/checks/editorqml/tst_ShellClipboard.qml
+S059 | pastedAt | src/checks/editorqml/ShellClipboardSupport.qml
 Anchor: function
     documentDirty true; openSong on the selected label raises pendingCloseId; real Discard click replaces page and grid in place (same window, tabCount 1, gate cleared, new grid object) with history reset and exact clip bytes preserved
 
-S060 | pastedAt | src/checks/editorqml/tst_ShellClipboard.qml
+S060 | pastedAt | src/checks/editorqml/ShellClipboardSupport.qml
 Anchor: function
     replacement staging plus Paste enabled; real Paste publishes two selected notes and the committed cursor on the replacement grid
 
-S061 | pastedAt | src/checks/editorqml/tst_ShellClipboard.qml
+S061 | pastedAt | src/checks/editorqml/ShellClipboardSupport.qml
 Anchor: function
     staged empty span-48 clip pastes to a no-op (summary, cursor, dirty unchanged); one Undo removes the preceding real paste and restores pre-paste notes and dirty state
 
-S062 | pastedAt | src/checks/editorqml/tst_ShellClipboard.qml
+S062 | pastedAt | src/checks/editorqml/ShellClipboardSupport.qml
 Anchor: function
     staged span-96 single-note clip tiles at tileStart with cursor advancing 96 per paste; tiled Undos remove second-then-first tile restoring baseline notes and dirty state; clip remains staged
 
-S063 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboard.qml
+S063 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboardRoundTrip.qml
 Anchor: message "Undo starts disabled"
 
-S064 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboard.qml
+S064 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboardRoundTrip.qml
 Anchor: message "Redo starts disabled"
 
-S065 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboard.qml
+S065 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboardRoundTrip.qml
 Anchor: message "Copy is enabled"
 
-S066 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboard.qml
+S066 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboardRoundTrip.qml
 Anchor: message "Copy returns after release"
 
-S067 | test_noteMenuKeyboardDeleteAndEscape | src/checks/editorqml/tst_ShellGridMenu.qml
+S067 | test_noteMenuKeyboardDeleteAndEscape | src/checks/editorqml/tst_ShellGridMenuNoteActions.qml
 Anchor: message "the mounted Edit menu owns Copy Paste Undo and Redo"

@@ -44,9 +44,12 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtTracked public var songTabs: SongTabsController
     @QtTracked public var polyphony: PolyphonyPanelPresenter
 
-    public private(set) var projectRoot = ""
-    private var labels: [String] = []
-    private var settingsVoicegroups: [String] = []
+    @QtIgnored
+    public internal(set) var projectRoot = ""
+    @QtIgnored
+    var labels: [String] = []
+    @QtIgnored
+    var settingsVoicegroups: [String] = []
     @QtIgnored
     var catalogService: ProjectService?
     @QtIgnored
@@ -55,22 +58,28 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// Drawer chrome belongs to the document, so this one is never attached to:
     /// it is the stable object QML may hold before the first open and after the
     /// last close.
-    private let emptyDrawerPresenter: EditorDrawerPresenter
+    @QtIgnored
+    let emptyDrawerPresenter: EditorDrawerPresenter
     private let emptyOtherEventsBand: OtherEventsBandPresenter
     /// One shared playhead for the whole surface. A document workspace binds it
     /// to its own document while that workspace is active and detaches it before
     /// that workspace is deactivated or released.
-    private let playhead: SharedPlayheadPresenter
-    private let playheadGuides: PlayheadGuidesPresenter
-    private let eventList: EventListPresenter
+    @QtIgnored
+    let playhead: SharedPlayheadPresenter
+    @QtIgnored
+    let playheadGuides: PlayheadGuidesPresenter
+    @QtIgnored
+    let eventList: EventListPresenter
     @QtIgnored
     let transportBar: TransportBarPresenter
     @QtIgnored
     let voiceList = VoiceListController()
     @QtIgnored
     let songDock = SongDockController()
-    private var pickerAuditionRevision = 0
-    private let mouseHints = MouseHints()
+    @QtIgnored
+    var pickerAuditionRevision = 0
+    @QtIgnored
+    let mouseHints = MouseHints()
     /// The workspaces whose rows have left the strip and whose pages have not
     /// reported their destruction yet. The page holds the C++ proxy for every
     /// presenter it read, so a workspace is retained here until its page is
@@ -81,35 +90,32 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// lands before the project service it borrows stops.
     @QtIgnored
     var retireChain: Task<Void, Never>?
-    private var isDisposed = false
-    private var hasReleased = false
+    @QtIgnored
+    var isDisposed = false
+    @QtIgnored
+    var hasReleased = false
     @QtIgnored
     var activeReplacementTask: Task<Void, Never>?
     @QtIgnored
     var startupRestoreTask: Task<Void, Never>?
     @QtIgnored
     var pendingProjectSwitch: ProjectSwitchCandidate?
-    private let preferences = PreferencesStore()
-    private var persistenceConfigured = false
-    private var editorLanes = EditorLaneState()
-    public private(set) var editorChrome = EditorDrawerChromeState()
+    @QtIgnored
+    let preferences = PreferencesStore()
+    @QtIgnored
+    var persistenceConfigured = false
+    @QtIgnored
+    var editorLanes = EditorLaneState()
+    @QtIgnored
+    public internal(set) var editorChrome = EditorDrawerChromeState()
 
-    private var isRestoringTabs = false
+    @QtIgnored
+    var isRestoringTabs = false
     @QtIgnored
     var isHostCloseWalk = false
-    private var isReplacingProject = false
+    @QtIgnored
+    var isReplacingProject = false
 
-    /// A fully read project waiting to replace the open one: everything that can
-    /// fail is read before any live tab is released.
-    struct ProjectSwitchCandidate {
-        let path: String
-        let label: String?
-        let restore: WorkspaceTabRecipe?
-        let service: ProjectService
-        let labels: [String]
-        let songs: [SongListing]
-        let voicegroupCatalog: VoicegroupCatalog
-    }
 
     public required init() {
         let palette = GridPalette()
@@ -135,95 +141,14 @@ public final class ApplicationSession: QmlInstantiableStatus {
             lastSaveError = String(describing: error)
         }
         polyphony.attach(audio: audio)
-        polyphony.onJump = { [weak self] tick, track, key, dpr in
-            guard let session = self?.workspace?.session else { return }
-            let previousNotes = session.selectedNoteOrder
-            session.selectPrimaryTrack(track)
-            guard let note = session.document.notes(in: track).last(where: {
-                $0.tick <= tick && Int($0.pitch) == key
-                    && UInt64(tick) < UInt64($0.tick) + UInt64($0.duration)
-            }) else {
-                session.setSelectedNotes(previousNotes)
-                return
-            }
-            session.setSelectedNotes([note.id])
-            _ = session.mutateCamera { $0.ensureKeyVisible(key) }
-            session.editCursor = tick
-            _ = session.mutateCamera { $0.ensureTickVisible(UInt64(tick), dpr: dpr) }
-        }
+        connectPolyphonyJump()
         eventList.onRevealVoiceRequested = { [voiceList] program in
             voiceList.revealSlot(slot: program)
         }
         eventList.onPerformEventListCommand = { [weak self] command in
             self?.performEventListCommand(command: command)
         }
-        voiceList.onAuditionVoice = { [weak self] voice, key, velocity in
-            guard (0..<128).contains(voice), (0..<128).contains(key),
-                  (0..<128).contains(velocity) else { return }
-            self?.audio?.previewVoice(program: UInt8(voice), key: UInt8(key),
-                                      velocity: UInt8(velocity))
-        }
-        voiceList.onVoicegroupChangeRequested = { [weak self] arg in
-            guard let self, let session = self.selectedDocument else { return }
-            Task { [weak self, weak session] in
-                guard let session else { return }
-                do {
-                    try await session.selectVoicegroup(arg)
-                } catch ProjectServiceError.operationFailed(let message) {
-                    self?.lastSaveError = message
-                } catch {
-                    self?.lastSaveError = String(describing: error)
-                }
-                if self?.selectedDocument === session {
-                    self?.voiceList.refresh(from: session)
-                }
-            }
-        }
-        voiceList.onSaveRequested = { [weak self] in self?.requestSave() }
-        voiceList.onSampleAuditionRequested = { [weak self] symbol, kind, adsr in
-            guard let self, let service = self.catalogService,
-                  let session = self.selectedDocument else { return }
-            self.voiceList.pickerSampleDetail = ""
-            self.voiceList.pickerSampleLoop = false
-            self.audio?.auditionSampleOff()
-            self.pickerAuditionRevision += 1
-            let revision = self.pickerAuditionRevision
-            Task { [weak self, weak session] in
-                let sound = await service.pickerSound(symbol: symbol, kind: kind)
-                guard let self, let session, self.selectedDocument === session,
-                      self.catalogService === service,
-                      self.pickerAuditionRevision == revision,
-                      let audio = self.audio, let sound else { return }
-                let chosen = AudioADSR(
-                    attack: UInt8(truncatingIfNeeded: adsr.attack),
-                    decay: UInt8(truncatingIfNeeded: adsr.decay),
-                    sustain: UInt8(truncatingIfNeeded: adsr.sustain),
-                    release: UInt8(truncatingIfNeeded: adsr.release))
-                switch sound {
-                case let .sample(bytes, frequency, loopStart, looped, toneKey, envelope):
-                    let envelope = envelope.map {
-                        AudioADSR(attack: $0.0, decay: $0.1, sustain: $0.2, release: $0.3)
-                    } ?? chosen
-                    _ = audio.auditionSample(samples: bytes, frequency: frequency,
-                                             loopStart: loopStart, looped: looped,
-                                             key: 60, adsr: envelope, toneKey: toneKey)
-                    self.voiceList.pickerSampleDetail = "\(bytes.count) samples · \(frequency) Hz"
-                    self.voiceList.pickerSampleLoop = looped
-                case let .wave(bytes, envelope):
-                    let envelope = envelope.map {
-                        AudioADSR(attack: $0.0, decay: $0.1, sustain: $0.2, release: $0.3)
-                    } ?? chosen
-                    _ = audio.auditionWave(wave16: bytes, key: 60, adsr: envelope)
-                    self.voiceList.pickerSampleDetail = "16 samples"
-                }
-            }
-        }
-        voiceList.onSampleAuditionStopRequested = { [weak self] in
-            self?.pickerAuditionRevision += 1
-            self?.voiceList.pickerSampleDetail = ""
-            self?.voiceList.pickerSampleLoop = false
-            self?.audio?.auditionSampleOff()
-        }
+        connectVoiceAudition()
         songTabs.attach(app: self)
         transportBar.attach(session: self)
         transportBar.onAvailabilityChanged = { [weak self] in
@@ -274,107 +199,39 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// it, so all of them follow the selection, and it is nil exactly while the
     /// strip is empty.
     var workspace: DocumentWorkspace? { songTabs.selectedWorkspace }
-    private struct PendingTimeSignature {
-        let session: DocumentSession
-        let tick: Tick
-        let revision: UInt64
-        let numerator: Int
-        let denominatorPower: Int
-    }
-    private var pendingTimeSignature: PendingTimeSignature?
+    @QtIgnored
+    var pendingTimeSignature: PendingTimeSignature?
 
     public func openTimeSigPrompt(tick: Double) {
-        guard let workspace, tick.isFinite, tick >= 0,
-              tick < Double(TimeDefaults.noTick) else { return }
-        workspace.rulerMenu.cancelInsertTimePrompt()
-        let session = workspace.session
-        let target = TimeDefaults.tick(from: tick)
-        let axis = TimeAxis(map: TimeMap(
-            ticksPerBeat: UInt32(session.document.ticksPerBeat),
-            timeSigs: session.document.timeSignatures.map {
-                TimeSigPoint(tick: $0.tick, numerator: $0.numerator,
-                             denomPow2: $0.denominatorPower)
-            }))
-        let signature = axis.signatureAt(target)
-        pendingTimeSignature = PendingTimeSignature(
-            session: session, tick: target, revision: session.document.revision,
-            numerator: signature.numerator, denominatorPower: signature.denomPow2)
-        timeSigPromptInitialNumerator = min(32, max(1, signature.numerator))
-        timeSigPromptInitialDenominatorPow2 = min(5, max(0, signature.denomPow2))
-        var appearance = PromptAppearance.metrics(base: workspace.grid.baseFontPx)
-        timeSigPromptFont = PromptAppearance.font(typography: typography)
-        appearance["background"] = palette.chromeBackground
-        appearance["text"] = palette.primaryText
-        appearance["buttonText"] = palette.primaryText
-        appearance["buttonBackground"] = palette.chromeBackground
-        appearance["pressedBackground"] = palette.hoverChipFill
-        appearance["focus"] = palette.editCursor
-        appearance["selection"] = palette.tabSelectedBackground
-        appearance["selectionText"] = palette.selectionText
-        appearance["outline"] = palette.separator
-        timeSigPromptAppearance = appearance
-        timeSigMenuOpen = false
-        timeSigPromptOpen = true
-        songTabs.publishTimeSigFlags()
+        openTimeSigPromptImpl(tick: tick)
     }
 
     public func openTimeSigPromptAtCursor() {
-        guard let session = workspace?.session else { return }
-        openTimeSigPrompt(tick: Double(session.editCursor))
+        openTimeSigPromptAtCursorImpl()
     }
 
     public func acceptTimeSigPrompt(numerator: Int, denominatorPow2: Int) {
-        guard (1...32).contains(numerator), (0...5).contains(denominatorPow2),
-              let pending = pendingTimeSignature else { return }
-        pendingTimeSignature = nil
-        timeSigPromptOpen = false
-        songTabs.publishTimeSigFlags()
-        guard workspace?.session === pending.session,
-              pending.session.document.revision == pending.revision,
-              numerator != pending.numerator || denominatorPow2 != pending.denominatorPower
-        else { return }
-        pending.session.document.setTimeSignature(
-            tick: pending.tick, numerator: numerator, denominatorPower: denominatorPow2)
+        acceptTimeSigPromptImpl(numerator: numerator, denominatorPow2: denominatorPow2)
     }
 
     public func cancelTimeSigPrompt() {
-        pendingTimeSignature = nil
-        timeSigPromptOpen = false
-        songTabs.publishTimeSigFlags()
+        cancelTimeSigPromptImpl()
     }
 
     public func captureTimeSigMenuPress(contentX: Double, pointerY: Double) {
-        guard let workspace else { return }
-        workspace.rulerMenu.captureRulerPress(contentX: contentX, pointerY: pointerY)
+        captureTimeSigMenuPressImpl(contentX: contentX, pointerY: pointerY)
     }
 
     public func openTimeSigMenu() {
-        guard let workspace else { return }
-        workspace.rulerMenu.cancelInsertTimePrompt()
-        cancelTimeSigPrompt()
-        workspace.rulerMenu.openRulerAtRelease()
-        timeSigMenuOpen = workspace.rulerMenu.isOpen
-        songTabs.publishTimeSigFlags()
+        openTimeSigMenuImpl()
     }
 
     public func closeTimeSigMenu() {
-        workspace?.rulerMenu.close()
-        timeSigMenuOpen = false
-        songTabs.publishTimeSigFlags()
+        closeTimeSigMenuImpl()
     }
 
     public func timeSigChipTick(contentX: Double, pointerY: Double) -> Double {
-        guard let workspace, let tick = workspace.rulerMenu.signatureTick(
-            at: contentX, pointerY: pointerY)
-        else { return -1 }
-        return Double(tick)
-    }
-
-    private func invalidateTimeSigPrompt(session: DocumentSession, revision: UInt64) {
-        if let pending = pendingTimeSignature, pending.session === session,
-           pending.revision != revision {
-            cancelTimeSigPrompt()
-        }
+        return timeSigChipTickImpl(contentX: contentX, pointerY: pointerY)
     }
 
     /// The selected tab's document session, for Swift-side drivers that need
@@ -497,81 +354,35 @@ public final class ApplicationSession: QmlInstantiableStatus {
     public func mouseHintsPresenter() -> MouseHints { mouseHints }
 
     public func gridCommandAvailable(command: Int) -> Bool {
-        guard let command = EditCommand(rawValue: command) else { return false }
-        return commandRouter?.isAvailable(command) ?? false
+        return gridCommandAvailableImpl(command: command)
     }
 
     public func performGridCommand(command: Int) {
-        guard let command = EditCommand(rawValue: command) else { return }
-        commandRouter?.perform(command)
+        performGridCommandImpl(command: command)
     }
 
     public func routeGridKey(command: Int, autoRepeat: Bool) -> Int {
-        guard let command = EditCommand(rawValue: command) else {
-            return EditKeyDecision.decline.rawValue
-        }
-        return commandRouter?.route(command, autoRepeat: autoRepeat).rawValue
-            ?? EditKeyDecision.decline.rawValue
+        return routeGridKeyImpl(command: command, autoRepeat: autoRepeat)
     }
 
     public func releaseGridKey(autoRepeat: Bool) -> Bool {
-        guard !autoRepeat, let workspace else { return false }
-        return workspace.grid.finishKeyboardTransposeAudition()
+        return releaseGridKeyImpl(autoRepeat: autoRepeat)
     }
 
     public func routeEventListCommand(command: Int, autoRepeat: Bool) -> Int {
-        guard let command = EditCommand(rawValue: command), eventList.attached,
-              eventList.visible, !eventList.editing, !eventList.menuOpen,
-              let workspace else {
-            return EditKeyDecision.decline.rawValue
-        }
-        let available: Bool
-        switch command {
-        case .moveEventUp, .moveEventDown:
-            available = eventList.model.row(at: eventList.currentRow)?.eventIndex != nil
-        default:
-            available = commandRouter?.isAvailable(command) ?? false
-        }
-        return EditKeyArbiter.decide(command: command, surface: EditSurfaceState(
-            pointerGestureActive: eventList.pointerDown,
-            timeSelectionActive: workspace.session.timeSelection?.isActive == true,
-            noteSelectionEmpty: workspace.session.selectedNotes.isEmpty,
-            origin: .eventList, autoRepeat: autoRepeat,
-            commandAvailable: available)).rawValue
+        return routeEventListCommandImpl(command: command, autoRepeat: autoRepeat)
     }
 
     public func performEventListCommand(command: Int) {
-        guard let command = EditCommand(rawValue: command), eventList.attached else { return }
-        switch command {
-        case .selectAll: eventList.selectAll()
-        case .delete: eventList.deleteSelected()
-        case .moveEventUp: eventList.moveEvent(delta: -1)
-        case .moveEventDown: eventList.moveEvent(delta: 1)
-        default: commandRouter?.perform(command)
-        }
+        performEventListCommandImpl(command: command)
     }
 
     public func handleGridEscape() -> Bool {
-        if workspace?.drawer.resizeActive == true {
-            workspace?.drawer.cancelResize()
-            return true
-        }
-        if workspace?.velocityPage.handleEscape() == true {
-            return true
-        }
-        return workspace?.grid.handleEscape() ?? false
+        return handleGridEscapeImpl()
     }
 
     public func cancelGridInput(reason: Int) {
-        // An installed workspace's cancel already covers the drawer it owns, so
-        // the empty presenter is cancelled only when no document is present.
-        if let workspace {
-            workspace.cancel(reason: reason)
-            cancelTimeSigPrompt()
-            closeTimeSigMenu()
-        } else {
-            emptyDrawerPresenter.inputCancelled(reason: reason)
-        }
+        cancelGridInputImpl(reason: reason)
     }
 
     @QtSignal public func gridCommandAvailabilityChanged()
@@ -593,9 +404,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// so the release follows this acknowledgment rather than the request, and a
     /// host that acknowledges more than once releases once.
     public func acknowledgeGridDetached() {
-        guard isDisposed, !hasReleased else { return }
-        hasReleased = true
-        releaseDocumentPresentation()
+        acknowledgeGridDetachedImpl()
     }
 
     /// The host's close path, called before it destroys the Quick scene's engine.
@@ -604,32 +413,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// the document-bound owners until the host acknowledges scene removal
     /// through `acknowledgeGridDetached()`, which is where the release happens.
     public func hostClosing() {
-        isDisposed = true
-        if let pending = pendingProjectSwitch {
-            pendingProjectSwitch = nil
-            Task { await pending.service.close() }
-        }
-        mouseHints.setWindowActive(active: false)
-        activeReplacementTask?.cancel()
-        // Cancel while the scene exists: every tab's resize session and every
-        // attached page's interaction end in the same call, whether the tab is
-        // the selected one or hidden behind it. Each workspace's cancel covers
-        // the drawer it owns; without a tab the empty presenter is the only
-        // drawer that can hold one.
-        for tab in songTabs.allTabs {
-            tab.workspace.cancel(reason: GridCancelReason.hidden.rawValue)
-            // The scene is about to die: no camera, playback or document
-            // publication may reach a page proxy it has already released.
-            tab.workspace.suspendCallbacks()
-        }
-        // Closed-but-page-alive workspaces are not in allTabs, yet their
-        // sessions can still publish into the dying scene.
-        for tab in pendingReleases.values {
-            tab.workspace.suspendCallbacks()
-        }
-        if songTabs.tabCount == 0 {
-            emptyDrawerPresenter.inputCancelled(reason: GridCancelReason.hidden.rawValue)
-        }
+        hostClosingImpl()
     }
 
     // MARK: - Project and song opens
@@ -647,15 +431,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
         noteNameMode = preferences.bool(key: "noteNames", fallback: false)
     }
 
-    @QtIgnored
-    func restoreStartup() {
-        guard persistenceConfigured else { return }
-        let recipe = EditorViewStateCodec.loadTabs(store: preferences)
-        guard !recipe.projectPath.isEmpty else { return }
-        startProjectSwitch(path: recipe.projectPath, label: nil, restore: recipe)
-    }
-
-
     public func openProject(path: String) {
         requestProjectSwitch(path: path, label: nil)
     }
@@ -671,512 +446,56 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// changed under the open document — gated by the same question a close
     /// asks. A label that is not open appends a tab and selects it.
     public func openSong(label: String) {
-        if let live = songTabs.tab(label: label) {
-            guard live.tabId == songTabs.selectedId else {
-                songTabs.selectTab(tabId: live.tabId)
-                return
-            }
-            songTabs.requestReload(tabId: live.tabId)
-            return
-        }
-        startOpen(label: label, at: nil)
-    }
-
-    @QtIgnored
-    func openSongFromDock(label: String, newTab: Bool) {
-        if let live = songTabs.tab(label: label) {
-            if live.tabId == songTabs.selectedId, !newTab {
-                songTabs.requestReload(tabId: live.tabId)
-            } else {
-                songTabs.selectTab(tabId: live.tabId)
-            }
-        } else if !newTab, let selected = songTabs.selectedPage {
-            songTabs.requestReplacement(tabId: selected.tabId, label: label)
-        } else {
-            startOpen(label: label, at: nil)
-        }
+        openSongImpl(label: label)
     }
 
     /// Closes every tab, then accounts for every dirty bank, asking about each
     /// dirty one in turn. The host's close path calls this; `allTabsClosed`
     /// answers when nothing is left to ask and `closeCancelled` answers a refusal.
     public func requestCloseAll() {
-        persistTabRecipe()
-        isHostCloseWalk = true
-        songTabs.startCloseAll()
-    }
-
-    private func requestProjectSwitch(path: String, label: String?) {
-        // A deliberate open wins over a recipe still loading in the background.
-        startupRestoreTask?.cancel()
-        startupRestoreTask = nil
-        if let pending = pendingProjectSwitch, pending.restore != nil {
-            pendingProjectSwitch = nil
-            Task { await pending.service.close() }
-        }
-        startProjectSwitch(path: path, label: label, restore: nil)
-    }
-
-    private struct ProjectRead: Sendable {
-        let service: ProjectService
-        let songs: [SongListing]
-        let voicegroupCatalog: VoicegroupCatalog
-
-        static func load(path: String) async throws -> ProjectRead {
-            let service = ProjectService()
-            do {
-                try await service.open(root: path)
-                let songs = try await service.songs()
-                let voicegroupCatalog = try await service.voicegroupCatalog()
-                return ProjectRead(service: service, songs: songs,
-                                   voicegroupCatalog: voicegroupCatalog)
-            } catch {
-                await service.close()
-                throw error
-            }
-        }
-    }
-
-    private func startProjectSwitch(path: String, label: String?,
-                                    restore: WorkspaceTabRecipe?) {
-        let priorTask = activeReplacementTask
-        let read = Task { @concurrent in try await ProjectRead.load(path: path) }
-        let replacement = Task { [weak self] in
-            _ = await priorTask?.value
-            let loaded: ProjectRead
-            do {
-                loaded = try await read.value
-            } catch {
-                guard let self, !Task.isCancelled else { return }
-                if restore != nil, self.persistenceConfigured {
-                    EditorViewStateCodec.saveTabs(
-                        WorkspaceTabRecipe(projectPath: path, orderedSongs: [], selectedSong: ""),
-                        store: self.preferences)
-                }
-                self.failOpen(String(describing: error))
-                return
-            }
-            guard let self, !self.isDisposed, !Task.isCancelled else {
-                await loaded.service.close()
-                return
-            }
-            self.lastSaveError = ""
-            let candidate = ProjectSwitchCandidate(
-                path: path, label: label, restore: restore, service: loaded.service,
-                labels: loaded.songs.map(\.label), songs: loaded.songs,
-                voicegroupCatalog: loaded.voicegroupCatalog)
-            self.pendingProjectSwitch = candidate
-            self.songTabs.startProjectSwitchCloseAll()
-        }
-        activeReplacementTask = replacement
-        if restore != nil { startupRestoreTask = replacement }
-    }
-
-    /// Opens `label` after every earlier open has finished: one open at a time,
-    /// in the order they were asked for, and never while the host is closing. The
-    /// session is held weakly until the open actually starts, for the same reason
-    /// a queued project switch is.
-    func startOpen(label: String, at index: Int?, restoring tab: ReloadedTab? = nil) {
-        let priorTask = activeReplacementTask
-        activeReplacementTask = Task { [weak self] in
-            _ = await priorTask?.value
-            await self?.openTab(label: label, at: index, restoring: tab)
-        }
-    }
-
-    /// Builds one workspace and installs it only after its document is ready.
-    /// A pending reload keeps the original selectable tab until that swap.
-    private func openTab(label: String, at index: Int?, restoring tab: ReloadedTab? = nil) async {
-        guard let service = catalogService else {
-            if let tab { songTabs.failReload(restoring: tab) }
-            failOpen("Open a project before opening a song.")
-            return
-        }
-        guard let audio else {
-            if let tab { songTabs.failReload(restoring: tab) }
-            failOpen(String(describing:
-                NativeAudioError.initializationFailed("Audio service is unavailable.")))
-            return
-        }
-        lastSaveError = ""
-        do {
-            let session = try await DocumentSession.open(
-                service: service, label: label, sampleRate: audio.sampleRate)
-            if let tab {
-                session.selectedTrack = tab.selectedTrack
-                session.editCursor = tab.editCursor
-                session.grid = tab.grid
-                session.grid.axis = session.projectionCache.timeAxis
-                session.grid.setTicksPerClock(session.gridClockTicks)
-            }
-            let workspace = DocumentWorkspace(
-                session: session, audio: audio, playhead: playhead,
-                playheadGuides: playheadGuides, eventList: eventList, palette: palette,
-                typography: typography, callbacks: makeCallbacks(for: session))
-            workspace.onEditorChromeChanged = { [weak self] state in
-                self?.updateEditorChrome(state)
-            }
-            workspace.drawer.applyChrome(editorChrome)
-            if let tab {
-                // The first viewport normally homes the roll to the song's
-                // pitches. Complete that one-time initialization before
-                // restoring the outgoing camera, so mounting QML cannot
-                // overwrite the retained vertical scroll.
-                if tab.camera.rollHeight > 0 {
-                    workspace.grid.configureViewport(
-                        width: tab.camera.viewportWidth, height: tab.camera.rollHeight,
-                        fontPx: Double(typography.baseFontPx), dpr: tab.devicePixelRatio)
-                }
-                session.mutateCamera { camera in
-                    camera.restore(pixelsPerBeat: tab.camera.pixelsPerBeat,
-                                   keyHeight: tab.camera.keyHeight,
-                                   scrollX: tab.camera.scrollX, scrollY: tab.camera.scrollY)
-                }
-                workspace.grid.refreshCamera()
-            }
-            workspace.pitchBend.onAuditionFromTick = { [weak self, weak workspace] tick in
-                guard let self, let workspace, self.workspace === workspace,
-                      let audio = self.audio, audio.songLoaded else { return }
-                self.publishSeek(tick: tick, timeline: workspace.session.timeline,
-                                 startPlayback: true)
-                self.transportBar.refresh()
-            }
-            // New tabs receive the current View menu display modes: the grid
-            // defaults both off, and each setter no-ops (without rebuilding)
-            // when the mode is already off.
-            workspace.grid.setVelocityColorMode(enabled: velocityColorMode)
-            workspace.grid.setNoteNameMode(enabled: noteNameMode)
-            workspace.grid.refreshTimeSelectionHighlight()
-            workspace.automationPage.onCommandAvailabilityChanged = { [weak self, weak workspace] in
-                workspace?.grid.refreshTimeSelectionHighlight()
-                self?.gridCommandAvailabilityChanged()
-            }
-            workspace.automationPage.onLaneRangeChanged = { [weak self] parameter, range in
-                self?.updateEditorLaneRange(parameter: parameter, range: range)
-            }
-            workspace.automationPage.laneRanges = editorLanes.laneRanges.reduce(into: [:]) {
-                if let parameter = EditorViewStateCodec.parameter(for: $1.key) {
-                    $0[parameter] = $1.value
-                }
-            }
-            workspace.automationPage.refreshCamera()
-            guard !isDisposed, !Task.isCancelled else {
-                // The host is closing: nothing adopts this document.
-                if let tab { songTabs.cancelReload(tabId: tab.tabId) }
-                workspace.teardown()
-                _ = await session.close()
-                return
-            }
-            let tabSession = SongTabSession(tabId: tab?.tabId ?? songTabs.reserveTabId(),
-                                            title: label, workspace: workspace, app: self)
-            if let tab {
-                tabSession.showsEvents = songTabs.tab(id: tab.tabId)?.showsEvents ?? tab.showsEvents
-                guard songTabs.finishReload(tabSession, restoring: tab) else {
-                    let changedWhileLoading = songTabs.tab(id: tab.tabId).map {
-                        !tab.matches($0)
-                    } ?? false
-                    workspace.teardown()
-                    _ = await session.close()
-                    if changedWhileLoading {
-                        failOpen("The song changed while reloading; its original tab was kept.")
-                    }
-                    return
-                }
-            } else {
-                songTabs.add(tabSession, at: index)
-            }
-        } catch {
-            if Task.isCancelled {
-                if let tab { songTabs.cancelReload(tabId: tab.tabId) }
-            } else {
-                if let tab { songTabs.failReload(restoring: tab) }
-                failOpen(String(describing: error))
-            }
-        }
-    }
-
-    private func makeCallbacks(for session: DocumentSession) -> DocumentWorkspace.Callbacks {
-        DocumentWorkspace.Callbacks(
-            addTrackVoiceRequested: { [weak self, weak session] in
-                guard let self, let session, self.selectedDocument === session else { return }
-                self.addTrackVoiceRequested()
-            },
-            changeTrackVoiceRequested: { [weak self, weak session] track in
-                guard let self, let session, self.selectedDocument === session else { return }
-                self.changeTrackVoiceRequested(track: track)
-            },
-            revealTrackVoiceRequested: { [weak self, weak session] track in
-                guard let self, let session, self.selectedDocument === session else { return }
-                self.voiceList.revealTrackVoice(track: track, session: session)
-            },
-            headerVoicePickerOpenChanged: { [weak self, weak session] open in
-                guard let self, let session else { return }
-                self.songTabs.tabs.first { $0.workspace.session === session }?
-                    .headerVoicePickerOpen = open
-                if self.selectedDocument === session { self.headerVoicePickerOpen = open }
-            },
-            headerVoicePickerCompleted: { [weak self, weak session] program in
-                guard let self, let session, self.selectedDocument === session else { return }
-                self.completeTrackHeaderVoiceRequest(program: program)
-            },
-            gridCommandAvailabilityChanged: { [weak self, weak session] in
-                guard let self, let session, self.selectedDocument === session else { return }
-                self.gridCommandAvailabilityChanged()
-            },
-            sessionStateChanged: { [weak self, weak session] in
-                guard let session else { return }
-                self?.tabStateChanged(for: session)
-            },
-            publicationFailed: { [weak self] message in
-                self?.lastSaveError = message
-            },
-            timeSignaturePromptInvalidated: { [weak self] session, revision in
-                self?.invalidateTimeSigPrompt(session: session, revision: revision)
-            },
-            transportPlayingChanged: { [weak self] _ in
-                self?.resyncTransportAfterEngineTransition()
-            })
-    }
-
-    private func failOpen(_ message: String) {
-        lastSaveError = message
-        openFailed(message: message)
+        requestCloseAllImpl()
     }
 
     public func requestSave() {
-        guard let session = workspace?.session, !saveInProgress else { return }
-        saveInProgress = true
-        lastSaveError = ""
-        Task { [weak self] in
-            do {
-                try await session.save()
-                if let self, let service = self.catalogService,
-                   self.selectedDocument === session {
-                    let catalog = try await service.voicegroupCatalog()
-                    if self.catalogService === service {
-                        self.voiceList.synthChoices = catalog.synths
-                        self.voiceList.synthDefinitions.merge(catalog.synthDefinitions) {
-                            _, saved in saved
-                        }
-                        self.voiceList.synthSymbols.formUnion(catalog.synths)
-                        self.voiceList.catalogRevision += 1
-                    }
-                }
-            } catch {
-                self?.lastSaveError = String(describing: error)
-            }
-            self?.saveInProgress = false
-        }
+        requestSaveImpl()
     }
 
     public func requestUndo() {
-        guard let session = workspace?.session else { return }
-        canUndo = false
-        canRedo = false
-        lastSaveError = ""
-        Task { [weak self] in
-            do {
-                _ = try await session.undo()
-            } catch {
-                let message = String(describing: error)
-                self?.lastSaveError = message
-                self?.operationFailed(message: message)
-                self?.refreshDocumentState()
-            }
-        }
+        requestUndoImpl()
     }
 
     public func requestRedo() {
-        guard let session = workspace?.session else { return }
-        canUndo = false
-        canRedo = false
-        lastSaveError = ""
-        Task { [weak self] in
-            do {
-                _ = try await session.redo()
-            } catch {
-                let message = String(describing: error)
-                self?.lastSaveError = message
-                self?.operationFailed(message: message)
-                self?.refreshDocumentState()
-            }
-        }
+        requestRedoImpl()
     }
 
     public func play() {
-        guard let audio, audio.songLoaded else { return }
-        if audio.transport == AudioTransportState.stopped.rawValue,
-           let session = workspace?.session {
-            publishSeek(tick: session.editCursor, timeline: session.timeline, startPlayback: true)
-            transportBar.refresh()
-        } else {
-            audio.play()
-            refreshTransportPresentation()
-        }
+        playImpl()
     }
 
     public func playPause() {
-        guard let audio, audio.songLoaded else { return }
-        if audio.transport == SharedPlayheadPolicy.playingTransport {
-            audio.pause()
-            refreshTransportPresentation()
-        } else if let session = workspace?.session {
-            publishSeek(tick: session.editCursor, timeline: session.timeline, startPlayback: true)
-            transportBar.refresh()
-        } else {
-            transportBar.refresh()
-        }
+        playPauseImpl()
     }
 
     public func stop() {
-        audio?.stop()
-        // Stop's rewind comes from the audio service; this presents whatever
-        // sample and transport the service reports now. No tick is synthesized.
-        refreshTransportPresentation()
+        stopImpl()
     }
 
     public func goToStart() {
-        guard let workspace else { return }
-        let session = workspace.session
-        session.editCursor = 0
-        _ = session.mutateCamera { $0.setHScroll($0.snapshot.minHScroll) }
-        if let audio, audio.songLoaded,
-           audio.transport != AudioTransportState.stopped.rawValue {
-            publishSeek(tick: 0, timeline: session.timeline, startPlayback: false)
-        } else {
-            playhead.refreshImmediate()
-        }
-        transportBar.refresh()
-    }
-
-    private func publishSeek(tick: Tick, timeline: PlaybackTimeline, startPlayback: Bool) {
-        guard let audio else { return }
-        let target = timeline.sample(for: tick)
-        audio.seek(sample: target)
-        if startPlayback {
-            audio.play()
-        }
-        playhead.observe(sample: target, transport: audio.transport)
-    }
-
-    private func refreshTransportPresentation() {
-        playhead.refreshImmediate()
-        transportBar.refresh()
-    }
-
-    private func resyncTransportAfterEngineTransition() {
-        guard let audio, audio.songLoaded else { return }
-        guard transportBar.state != Int(audio.transport) + 1 else { return }
-        refreshTransportPresentation()
-    }
-
-    func finishProjectSwitch(_ candidate: ProjectSwitchCandidate) async {
-        isReplacingProject = true
-        await releaseTabs()
-        await catalogService?.close()
-        guard !isDisposed, !Task.isCancelled else {
-            isReplacingProject = false
-            await candidate.service.close()
-            return
-        }
-        catalogService = candidate.service
-        projectRoot = candidate.path
-        projectRootChanged()
-        labels = candidate.labels
-        songDock.install(service: candidate.service, songs: candidate.songs)
-        let catalog = candidate.voicegroupCatalog
-        settingsVoicegroups = catalog.groupArgs
-        voiceList.setVoicegroupChoices(catalog.groupArgs)
-        voiceList.sampleChoices = catalog.samples
-        voiceList.waveSymbols = catalog.waves
-        voiceList.drumkitSymbols = catalog.drumkits
-        voiceList.keysplitTables = catalog.keysplits
-        voiceList.synthSymbols = Set(catalog.synths)
-        voiceList.synthChoices = catalog.synths
-        voiceList.synthDefinitions = catalog.synthDefinitions
-        voiceList.canMintSynths = catalog.canMintSynths
-        voiceList.adsrDefaults = catalog.defaults
-        voiceList.catalogRevision += 1
-        projectOpen = true
-        if let recipe = candidate.restore {
-            let restored = recipe.normalized(available: candidate.labels)
-            isRestoringTabs = true
-            for song in restored.orderedSongs {
-                guard !Task.isCancelled else { break }
-                await openTab(label: song, at: nil)
-            }
-            if let selected = songTabs.tab(label: restored.selectedSong) {
-                songTabs.selectTab(tabId: selected.tabId)
-            }
-            isRestoringTabs = false
-        } else if let label = candidate.label {
-            isReplacingProject = false
-            await openTab(label: label, at: nil)
-        }
-        isReplacingProject = false
-        if candidate.restore == nil { persistTabRecipe() }
-    }
-
-    func persistTabRecipe() {
-        guard projectOpen, persistenceConfigured,
-              !isRestoringTabs, !isHostCloseWalk, !isReplacingProject,
-              pendingProjectSwitch == nil else { return }
-        EditorViewStateCodec.saveTabs(songTabs.recipe(projectPath: projectRoot),
-                                      store: preferences)
-    }
-
-    private func updateEditorChrome(_ state: EditorDrawerChromeState) {
-        guard editorChrome != state else { return }
-        editorChrome = state
-        for tab in songTabs.allTabs where tab.workspace.drawer.chromeState != state {
-            tab.workspace.drawer.applyChrome(state)
-        }
-        if persistenceConfigured {
-            EditorViewStateCodec.saveChrome(state, store: preferences)
-            EditorViewStateCodec.saveLanes(editorLanes, store: preferences)
-        }
-    }
-
-    private func updateEditorLaneRange(parameter: AutomationParameter, range: Int) {
-        guard let key = EditorViewStateCodec.rowKey(for: parameter) else { return }
-        guard editorLanes.laneRanges[key] != range else { return }
-        editorLanes.laneRanges[key] = range
-        for tab in songTabs.allTabs {
-            let page = tab.workspace.automationPage
-            if page.laneRanges[parameter] != range {
-                page.laneRanges[parameter] = range
-                page.refreshCamera()
-            }
-        }
-        if persistenceConfigured {
-            EditorViewStateCodec.saveLanes(editorLanes, store: preferences)
-        }
+        goToStartImpl()
     }
 
     /// Applies the velocity-hue display mode app-wide: every open tab's grid
     /// re-hues its non-ghost fills (and draw preview) immediately, and tabs
     /// opened later receive the current value in openTab. No-op when unchanged.
     public func setVelocityColorMode(enabled: Bool) {
-        guard velocityColorMode != enabled else { return }
-        velocityColorMode = enabled
-        for tab in songTabs.allTabs {
-            tab.workspace.grid.setVelocityColorMode(enabled: enabled)
-        }
-        preferences.setBool(key: "velocityNoteColors", value: enabled)
-        preferences.synchronize()
+        setVelocityColorModeImpl(enabled: enabled)
     }
 
     /// Applies the note-name display mode app-wide, with the same
     /// push-to-open-tabs and apply-to-later-tabs semantics as
     /// setVelocityColorMode. No-op when unchanged.
     public func setNoteNameMode(enabled: Bool) {
-        guard noteNameMode != enabled else { return }
-        noteNameMode = enabled
-        for tab in songTabs.allTabs {
-            tab.workspace.grid.setNoteNameMode(enabled: enabled)
-        }
-        preferences.setBool(key: "noteNames", value: enabled)
-        preferences.synchronize()
+        setNoteNameModeImpl(enabled: enabled)
     }
 
     /// Republishes the flags the window and the strip read: the song is open

@@ -38,6 +38,8 @@ Commands below exist at the inspected revision. Reuse them in surface briefs; ch
 
 Sources: `deno.json`, `tools/cli.ts`, `src/checks/checkcatalog.cpp`, `src/checks/editorqml/ShellQmlTests.swift`, `src/checks/projectstore/ExportChecks.swift`, `tools/proof_reader.ts`.
 
+The normal QML verify lanes run QtTest with `-v2` and write each assertion's source path, line and enclosing function to `build/proof-evidence/<entry>.json`. This includes imported JS support functions; the executed proof check matches their anchored assertion locations rather than inferring execution from the calling QML test alone. An explicit `--qt` payload controls verbosity instead, so use `-v2` there when refreshing assertion evidence.
+
 Use a registered shell entry for focused acceptance, for example:
 
 ```sh

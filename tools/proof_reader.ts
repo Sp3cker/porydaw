@@ -1,5 +1,6 @@
 // Read-only index over checked-in proof.*.txt files. The proofs remain authoritative.
 import {
+  findFunctionBodies,
   functionName,
   literalPattern,
   parseAnchorLine,
@@ -500,9 +501,17 @@ interface EvidencePass {
   row: string;
 }
 
+interface QmlAssertion {
+  path: string;
+  line: number;
+  function: string;
+  message: string;
+}
+
 interface EvidenceFile {
   passes: EvidencePass[];
   functions: string[];
+  qmlAssertions: QmlAssertion[];
 }
 
 async function loadEvidence(dir: string): Promise<EvidenceFile[]> {
@@ -529,6 +538,7 @@ async function loadEvidence(dir: string): Promise<EvidenceFile[]> {
     const data = JSON.parse(await Deno.readTextFile(path)) as {
       passes?: { cppId?: unknown; row?: unknown }[];
       functions?: unknown[];
+      qmlAssertions?: QmlAssertion[];
     };
     files.push({
       passes: (data.passes ?? []).filter((pass) =>
@@ -537,9 +547,31 @@ async function loadEvidence(dir: string): Promise<EvidenceFile[]> {
       functions: (data.functions ?? []).filter((name) =>
         typeof name === "string"
       ) as string[],
+      qmlAssertions: (data.qmlAssertions ?? []).filter((assertion) =>
+        typeof assertion.path === "string" &&
+        Number.isInteger(assertion.line) &&
+        typeof assertion.function === "string" &&
+        typeof assertion.message === "string"
+      ),
     });
   }
   return files;
+}
+
+function assertionCallLine(
+  source: string,
+  literalLine: number,
+  startLine: number,
+): number {
+  const lines = source.split("\n");
+  for (let line = literalLine; line >= startLine; --line) {
+    if (
+      /\b(?:verify|compare|tryVerify|tryCompare)\s*\(/.test(lines[line - 1])
+    ) {
+      return line;
+    }
+  }
+  return -1;
 }
 
 type AnchorVerdict = "executed" | "not executed" | "unverifiable";
@@ -547,6 +579,7 @@ type AnchorVerdict = "executed" | "not executed" | "unverifiable";
 function classifyPredicates(
   proofs: readonly Proof[],
   evidence: readonly EvidenceFile[],
+  sources: Map<string, string | undefined>,
 ): Map<string, AnchorVerdict> {
   const rows = evidence.flatMap((file) => file.passes.map((pass) => pass.row));
   const functions = new Set(
@@ -554,6 +587,7 @@ function classifyPredicates(
       name.split("::").at(-1)!
     ),
   );
+  const qmlAssertions = evidence.flatMap((file) => file.qmlAssertions);
   const verdicts = new Map<string, AnchorVerdict>();
   for (const proof of proofs) {
     for (const predicate of proof.predicates) {
@@ -568,6 +602,29 @@ function classifyPredicates(
           !name.startsWith("test_")
             ? "unverifiable"
             : functions.has(name)
+            ? "executed"
+            : "not executed",
+        );
+      } else if (header.path.endsWith(".js") && anchor.kind === "message") {
+        const source = sources.get(header.path);
+        const resolved = resolveAnchor(source, header.functionField, anchor);
+        const body = source === undefined || !resolved.ok
+          ? undefined
+          : findFunctionBodies(source, functionName(header.functionField))
+            .find((candidate) =>
+              candidate.startLine <= resolved.line &&
+              candidate.endLine >= resolved.line
+            );
+        const line = body === undefined || !resolved.ok
+          ? -1
+          : assertionCallLine(source!, resolved.line, body.startLine);
+        verdicts.set(
+          key,
+          qmlAssertions.some((assertion) =>
+              assertion.path === header.path &&
+              assertion.function === body?.name &&
+              assertion.line === line
+            )
             ? "executed"
             : "not executed",
         );
@@ -1033,7 +1090,7 @@ async function main(args: string[]): Promise<void> {
     }
     if (executed !== undefined) {
       const evidence = await loadEvidence(executed);
-      const verdicts = classifyPredicates(proofs, evidence);
+      const verdicts = classifyPredicates(proofs, evidence, cache);
       let ran = 0;
       let missing = 0;
       let unverifiable = 0;

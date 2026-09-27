@@ -793,5 +793,5 @@ Anchor: message "delete drops the removed owner and falls selection back"
 S029 | checkTrackOwnerRemap | src/checks/rollcheck/remap.swift
 Anchor: message "undo restores the track without reviving dropped owner state"
 
-S030 | test_trackFollowReload | src/checks/editorqml/tst_ShellGridInput.qml
+S030 | test_trackFollowReload | src/checks/editorqml/tst_ShellGridInputCancel.qml
 Anchor: message "setTrack follows track 1 with other tracks as ghosts"

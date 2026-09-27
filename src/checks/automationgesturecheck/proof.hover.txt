@@ -322,73 +322,73 @@ Anchor: message "hover move republishes without writing" #1
 S028 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "hover move republishes without writing" #2
 
-S029 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S029 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "the real automation plot input describes its active parameter"
 
-S030 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S030 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "the background move keeps its hover ('"
 
-S031 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S031 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "inter-node hover exposes the actual guide"
 
-S032 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S032 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "the mounted insertion guide aligns within one plot pixel"
 
 S033 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "inter-node CC hover aligns its insertion guide within one pixel"
 
-S034 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S034 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "inter-node hover exposes the held-value ghost"
 
-S035 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S035 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "the filled held-value ghost changes plot pixels until leave"
 
-S036 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S036 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "leaving restores the neutral plot cursor"
 
-S037 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S037 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "a handled automation press focuses the actual input"
 
-S038 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S038 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "window deactivation cancels the live automation gesture"
 
-S039 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S039 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "a real move after deactivation restores passive hover"
 
-S040 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S040 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "the node ring recovers after a strong cancellation"
 
-S041 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S041 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "the actual insertion guide changes plot pixels until leave"
 
-S042 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S042 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "background hover retains its value label without a ring"
 
-S043 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S043 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "a repeated hover at the same point publishes nothing new"
 
-S044 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S044 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "the hovered node draws its hover ring"
 
-S045 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S045 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "the node hover paints over the background hover"
 
-S046 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S046 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "the ring and value label appear together"
 
-S047 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S047 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "a written-node hover suppresses the insertion ghost"
 
 S048 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "leaving clears the guide ghost ring and label together"
 
-S049 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S049 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "leaving clears the mounted held-value ghost"
 
-S050 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+S050 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
 Anchor: message "leaving the plot unrings every node"
 
-S051 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S051 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "plot entry presents the background hover"
 
 S052 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
@@ -400,7 +400,7 @@ Anchor: message "deactivation cancels the staged automation gesture"
 S054 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
 Anchor: message "Qt deactivation relinquishes the MouseArea pointer grab"
 
-S055 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S055 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "moving from plot to gutter clears the background hover"
 
 S056 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml

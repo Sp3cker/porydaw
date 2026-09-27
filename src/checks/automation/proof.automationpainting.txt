@@ -407,7 +407,7 @@ Anchor: message "unpinning drops the ghost label"
 S035 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the parked press leaves the document alone"
 
-S036 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
+S036 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection_band.swift
 Anchor: message "banding writes nothing"
 
 S037 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
@@ -422,61 +422,61 @@ Anchor: message "pinned vanilla ghost curve runs use #80EA3C3C half-alpha ink"
 S040 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift
 Anchor: message "an empty tempo store composes no lead-in"
 
-S041 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+S041 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "empty Tempo paints no default lead-in curve pixels"
 
-S042 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+S042 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "empty Tempo paints no synthetic origin marker pixels"
 
-S043 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+S043 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "the first nonzero Tempo point paints the default 120 BPM lead-in"
 
-S044 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+S044 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "the implicit lead-in paints no origin marker"
 
-S045 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+S045 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "the first written Tempo marker paints lane ink"
 
-S046 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+S046 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "the written Tempo origin paints lane ink"
 
-S047 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+S047 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "written tick-zero Tempo removes the default lead-in pixels before its restore cell"
 
-S048 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+S048 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "the held CC step paints the same lane ink"
 
-S049 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+S049 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "each written CC marker paints lane ink"
 
-S050 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+S050 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "the first half-open Pan node paints its highlight ring"
 
-S051 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+S051 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "the half-open selection paints its reticle edge"
 
-S052 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+S052 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "the endpoint Pan node paints no highlight ring"
 
-S053 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+S053 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "the later Pan node paints no highlight ring"
 
-S054 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+S054 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "extending the range keeps the first highlight ring"
 
-S055 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+S055 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "extending the endpoint paints the second highlight ring"
 
-S056 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+S056 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "the extended range still excludes the third highlight ring"
 
-S057 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+S057 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "the explicit Tempo held step paints lane ink before its restore cell"
 
-S058 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+S058 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "the selected Tempo node paints its highlight ring"
 
-S059 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+S059 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "the Tempo selection paints its reticle edge"
 
 S060 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift

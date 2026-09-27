@@ -769,37 +769,37 @@ Anchor: message "duplicate remains one undo entry"
 S045 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "undo restores the original range contents"
 
-S046 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift
+S046 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection_pencil.swift
 Anchor: message "starting a pencil stroke outside clears the selection"
 
-S047 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift
+S047 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection_pencil.swift
 Anchor: message "a horizontal Shift drag locks the value and moves the tick"
 
-S048 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift
+S048 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection_pencil.swift
 Anchor: message "a vertical Shift drag locks the tick and moves the value"
 
-S049 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift
+S049 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection_pencil.swift
 Anchor: message "markers are visible at default zoom"
 
-S050 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift
+S050 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection_pencil.swift
 Anchor: message "markers hide below the detail threshold"
 
-S051 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift
+S051 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection_pencil.swift
 Anchor: message "the pencil press through hidden markers starts a stroke"
 
-S052 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift
+S052 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection_pencil.swift
 Anchor: message "the stroke through hidden markers commits"
 
-S053 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift
+S053 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection_pencil.swift
 Anchor: message "the hidden-marker stroke inserts instead of grabbing the node"
 
-S054 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift
+S054 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection_pencil.swift
 Anchor: message "markers return above the threshold"
 
-S055 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift
+S055 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection_pencil.swift
 Anchor: message "the pencil press on a visible node grabs it"
 
-S056 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift
+S056 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection_pencil.swift
 Anchor: message "a stationary release on the grabbed node deletes exactly it"
 
 S057 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
@@ -853,7 +853,7 @@ Anchor: message "track range paints the tick-144 Pan selected ring"
 S073 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "half-open track range excludes the tick-192 Pan ring"
 
-S074 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawer.qml
+S074 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawerAutomationPreview.qml
 Anchor: message "the selected node ring paints the selection tint in the captured drawer"
 
 S075 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
@@ -889,29 +889,29 @@ Anchor: message "parameter switch removes every provisional node marker rectangl
 S085 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "parameter switch removes the preview readout band and hover overlays"
 
-S086 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawer.qml
+S086 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawerAutomationPreview.qml
 Anchor: message "leaving the plot retains the captured node and its visible preview"
 
-S087 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawer.qml
+S087 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawerAutomationPreview.qml
 Anchor: message "cancelled transient pixels disappear from the captured drawer"
 
-S088 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawer.qml
+S088 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawerAutomationPreview.qml
 Anchor: message "the held transient marker paints real pixels before cancellation"
 
-S089 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawer.qml
+S089 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawerAutomationPreview.qml
 Anchor: message "cancel outside the plot retires every visible transient"
 
-S090 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawer.qml
+S090 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawerAutomationPreview.qml
 Anchor: message "a fresh node press captures after parameter switch"
 
-S091 | test_productionAutomationPanSelectedRingPixels | src/checks/editorqml/tst_EditorDrawer.qml
+S091 | test_productionAutomationPanSelectedRingPixels | src/checks/editorqml/tst_EditorDrawerAutomationPreview.qml
 Anchor: message "the tick-48 Pan ring paints the selection tint"
 
-S092 | test_productionAutomationPanSelectedRingPixels | src/checks/editorqml/tst_EditorDrawer.qml
+S092 | test_productionAutomationPanSelectedRingPixels | src/checks/editorqml/tst_EditorDrawerAutomationPreview.qml
 Anchor: message "the tick-96 Pan ring paints the selection tint"
 
-S093 | test_productionAutomationPanSelectedRingPixels | src/checks/editorqml/tst_EditorDrawer.qml
+S093 | test_productionAutomationPanSelectedRingPixels | src/checks/editorqml/tst_EditorDrawerAutomationPreview.qml
 Anchor: message "the tick-144 Pan ring paints the selection tint"
 
-S094 | test_productionAutomationPanSelectedRingPixels | src/checks/editorqml/tst_EditorDrawer.qml
+S094 | test_productionAutomationPanSelectedRingPixels | src/checks/editorqml/tst_EditorDrawerAutomationPreview.qml
 Anchor: message "the excluded tick-192 Pan ring paints no selection tint"

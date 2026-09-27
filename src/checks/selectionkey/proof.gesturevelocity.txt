@@ -345,79 +345,79 @@ Anchor: message "cancellation leaves the original document unchanged"
 S008 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
 Anchor: message "draft and cancellation preserve the full song contents"
 
-S009 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawer.qml
+S009 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawerVelocityHitTargets.qml
 Anchor: message "production velocity geometry exposes the following node over the selected stem"
 
-S010 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawer.qml
+S010 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawerVelocityHitTargets.qml
 Anchor: message "the mounted roll zoomed the overlapping notes"
 
-S011 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawer.qml
+S011 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawerVelocityHitTargets.qml
 Anchor: message "the mounted roll restored its original time zoom"
 
-S012 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawer.qml
+S012 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawerVelocityHitTargets.qml
 Anchor: message "beginning an overlap-node drag targets the visible following node"
 
-S013 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawer.qml
+S013 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawerVelocityHitTargets.qml
 Anchor: message "the production Escape route owns the overlap drag"
 
-S014 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawer.qml
+S014 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawerVelocityHitTargets.qml
 Anchor: message "cancelling an overlap-node drag restores the earlier selection"
 
-S015 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawer.qml
+S015 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawerVelocityHitTargets.qml
 Anchor: message "cancelling the overlap-node drag writes no document change"
 
-S016 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawer.qml
+S016 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawerVelocityHitTargets.qml
 Anchor: message "clicking the overlap node replaces the earlier selection"
 
-S017 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawer.qml
+S017 | test_productionVelocityOverlapTargetsVisibleNode | src/checks/editorqml/tst_EditorDrawerVelocityHitTargets.qml
 Anchor: message "the overlap fixture retains both notes after the cancelled gesture"
 
-S018 | test_productionVelocityCoincidentNodePriority | src/checks/editorqml/tst_EditorDrawer.qml
+S018 | test_productionVelocityCoincidentNodePriority | src/checks/editorqml/tst_EditorDrawerVelocityHitTargets.qml
 Anchor: message "the tied-node fixture retains both real equal-velocity notes"
 
-S019 | test_productionVelocityCoincidentNodePriority | src/checks/editorqml/tst_EditorDrawer.qml
+S019 | test_productionVelocityCoincidentNodePriority | src/checks/editorqml/tst_EditorDrawerVelocityHitTargets.qml
 Anchor: message "production velocity geometry exposes both coincident nodes"
 
-S020 | test_productionVelocityCoincidentNodePriority | src/checks/editorqml/tst_EditorDrawer.qml
+S020 | test_productionVelocityCoincidentNodePriority | src/checks/editorqml/tst_EditorDrawerVelocityHitTargets.qml
 Anchor: message "equal unselected velocity nodes retain later-model-order priority"
 
-S021 | test_productionVelocityCoincidentNodePriority | src/checks/editorqml/tst_EditorDrawer.qml
+S021 | test_productionVelocityCoincidentNodePriority | src/checks/editorqml/tst_EditorDrawerVelocityHitTargets.qml
 Anchor: message "a selected velocity node wins over its tied sibling"
 
-S022 | test_productionVelocityStemGestureCancellation | src/checks/editorqml/tst_EditorDrawer.qml
+S022 | test_productionVelocityStemGestureCancellation | src/checks/editorqml/tst_EditorDrawerVelocityHitTargets.qml
 Anchor: message "production velocity geometry exposes the selected duration stem"
 
-S023 | test_productionVelocityStemGestureCancellation | src/checks/editorqml/tst_EditorDrawer.qml
+S023 | test_productionVelocityStemGestureCancellation | src/checks/editorqml/tst_EditorDrawerVelocityHitTargets.qml
 Anchor: message "the selected velocity-stem drag retains its captured note selection"
 
-S024 | test_productionVelocityStemGestureCancellation | src/checks/editorqml/tst_EditorDrawer.qml
+S024 | test_productionVelocityStemGestureCancellation | src/checks/editorqml/tst_EditorDrawerVelocityHitTargets.qml
 Anchor: message "first Escape cancels the gesture and restores its selection"
 
-S025 | test_productionVelocityStemGestureCancellation | src/checks/editorqml/tst_EditorDrawer.qml
+S025 | test_productionVelocityStemGestureCancellation | src/checks/editorqml/tst_EditorDrawerVelocityHitTargets.qml
 Anchor: message "first Escape leaves the captured notes unchanged"
 
-S026 | test_productionVelocityStemGestureCancellation | src/checks/editorqml/tst_EditorDrawer.qml
+S026 | test_productionVelocityStemGestureCancellation | src/checks/editorqml/tst_EditorDrawerVelocityHitTargets.qml
 Anchor: message "first Escape leaves the document revision unchanged"
 
-S027 | test_productionVelocityStemGestureCancellation | src/checks/editorqml/tst_EditorDrawer.qml
+S027 | test_productionVelocityStemGestureCancellation | src/checks/editorqml/tst_EditorDrawerVelocityHitTargets.qml
 Anchor: message "second Escape clears the remaining selection"
 
-S028 | test_productionVelocityStemGestureCancellation | src/checks/editorqml/tst_EditorDrawer.qml
+S028 | test_productionVelocityStemGestureCancellation | src/checks/editorqml/tst_EditorDrawerVelocityHitTargets.qml
 Anchor: message "clicking an unselected velocity stem replaces the note selection"
 
-S029 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindow.qml
+S029 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindowVelocity.qml
 Anchor: message "routed edit keys cannot mutate a live velocity stem drag"
 
-S030 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindow.qml
+S030 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindowVelocity.qml
 Anchor: message "held edit keys leave the document revision frozen"
 
-S031 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindow.qml
+S031 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindowVelocity.qml
 Anchor: message "the first routed Escape retains the captured note selection"
 
-S032 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindow.qml
+S032 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindowVelocity.qml
 Anchor: message "Escape and release roll back the velocity stem preview"
 
-S033 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindow.qml
+S033 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindowVelocity.qml
 Anchor: message "Escape and release commit no document edit"
 
 S034 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
@@ -426,54 +426,54 @@ Anchor: message "delete"
 S035 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
 Anchor: message "backspace"
 
-S036 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindow.qml
+S036 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindowVelocity.qml
 Anchor: message "the idle following node pixel paints above the selected earlier stem"
 
-S037 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindow.qml
+S037 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindowVelocity.qml
 Anchor: message "the hovered following node pixel paints above the earlier stem"
 
-S038 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindow.qml
+S038 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindowVelocity.qml
 Anchor: message "the selected following node pixel paints above the earlier stem"
 
-S039 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindow.qml
+S039 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindowVelocity.qml
 Anchor: message "the zoomed following node pixel paints above the earlier stem"
 
-S040 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindow.qml
+S040 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindowVelocity.qml
 Anchor: message "the live overlap drag captures the painted following node"
 
-S041 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindow.qml
+S041 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindowVelocity.qml
 Anchor: message "overlap Escape restores the earlier-note selection and exact note content"
 
-S042 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindow.qml
+S042 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindowVelocity.qml
 Anchor: message "overlap Escape preserves document revision"
 
-S043 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindow.qml
+S043 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindowVelocity.qml
 Anchor: message "overlap Escape leaves the history tip unchanged"
 
-S044 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindow.qml
+S044 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindowVelocity.qml
 Anchor: message "overlap Escape leaves no live gesture after release"
 
-S045 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindow.qml
+S045 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindowVelocity.qml
 Anchor: message "Right after an overlap click moves only the visible following note"
 
-S046 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindow.qml
+S046 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindowVelocity.qml
 Anchor: message "the live selected-stem drag retains its two-note capture"
 
-S047 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindow.qml
+S047 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindowVelocity.qml
 Anchor: message "held stem edit keys do not push undo history"
 
-S048 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindow.qml
+S048 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindowVelocity.qml
 Anchor: message "held stem edit keys do not change redo history"
 
-S049 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindow.qml
+S049 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindowVelocity.qml
 Anchor: message "held edit keys cannot replace the captured stem selection"
 
-S050 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindow.qml
+S050 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindowVelocity.qml
 Anchor: message "first Escape ends the captured stem gesture"
 
 
-S051 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindow.qml
+S051 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindowVelocity.qml
 Anchor: message "stem Escape leaves undo history unchanged"
 
-S052 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindow.qml
+S052 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindowVelocity.qml
 Anchor: message "stem Escape restores the exact two-note selection"

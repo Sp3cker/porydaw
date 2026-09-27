@@ -707,58 +707,58 @@ Anchor: message "activating the pan lane returns its handle" #1
 S076 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gesturePencil.swift
 Anchor: message "a pencil stroke on an empty lane commits once"
 
-S077 | drawerAutomationTempoBendClickRestore | src/checks/automation/automationselection.swift
+S077 | drawerAutomationTempoBendClickRestore | src/checks/automation/automationselection_pencil.swift
 Anchor: message "the tempo pencil click records one revision"
 
-S078 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+S078 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "mixed move preserves exact surviving raw Pan and LFO point order"
 
-S079 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S079 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "Tempo bounds expose the exact supported BPM interval"
 
-S080 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S080 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "CC text formats both neutral and zero"
 
-S081 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S081 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "bend bounds and zero and hundred text retain their domain"
 
-S082 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S082 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "covered lane reports the complete 50 to 150 interval"
 
-S083 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S083 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "uncovered lane keeps the interval without coverage"
 
-S084 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S084 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "empty Delete leaves bytes revision and undo index intact"
 
-S085 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S085 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "unknown Tempo Delete leaves bytes revision and undo index intact"
 
-S086 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S086 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "unknown CC Delete preserves bytes and history"
 
-S087 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S087 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "CC node Delete removes its entire same-tick raw group without touching siblings"
 
-S088 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S088 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "empty Tempo move leaves bytes revision and undo index intact"
 
-S089 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S089 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "unknown Tempo move leaves bytes revision and undo index intact"
 
-S090 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S090 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "fractional Tempo collision evicts occupant but preserves 499999 microseconds"
 
-S091 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S091 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "empty CC move preserves the complete document snapshot"
 
-S092 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S092 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "unknown CC move preserves bytes and history"
 
-S093 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S093 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "collision vacates source and writes both raw Pan occupants in order"
 
-S094 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S094 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "collision evicts the destination group without reordering surviving CC events"
 
 S095 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift
@@ -773,43 +773,43 @@ Anchor: message "moved occurrence encodes at tick 384"
 S098 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "Tempo formats raw BPM"
 
-S099 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S099 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "fractional Tempo lane value formats its full 151 BPM text"
 
-S100 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S100 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "398406-us Tempo lane displays both actual nodes including rounded 151 BPM"
 
-S101 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S101 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "cleared range is inactive and cannot cover its former lane"
 
-S102 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S102 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "empty Tempo lane displays no written nodes"
 
-S103 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S103 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "empty modulation lane has no displayed nodes but retains its lead-in"
 
-S104 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S104 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "CC collision undo restores index bytes and every original point"
 
-S105 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S105 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "CC collision redo restores committed index bytes and points"
 
-S106 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S106 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "Tempo collision undo restores index bytes and both source points"
 
-S107 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S107 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "Tempo collision redo restores index bytes and sole destination"
 
-S108 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S108 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "changing fractional Tempo tick and value commits exactly one edit"
 
-S109 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S109 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "changing fractional Tempo to 140 vacates source and recomputes destination"
 
-S110 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S110 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "changed Tempo move undo restores original index bytes and fractional point"
 
-S111 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
+S111 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeContract.swift
 Anchor: message "changed Tempo move redo restores committed index bytes and destination"
 
 S112 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift

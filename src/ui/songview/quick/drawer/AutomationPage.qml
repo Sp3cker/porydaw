@@ -1,29 +1,5 @@
-// The Automation drawer page: the parameter selector in the shared gutter, the
-// value axis, the step/ramp curve with its ghost pins, the nodes and the origin
-// phantom, the explicit time selection, the range band, the live gesture
-// transient, the hover/preview value labels, the context readout, inline tempo
-// tapping and the page's two modal surfaces.
-//
-// Swift owns every value (AutomationPage.swift): the shared camera projection,
-// the parameter catalog and row facts, the explicit selection, the frozen
-// gesture with its press-time camera, the prompts, the menu rows, the accepted
-// clipboard and the tap-tempo session. This file renders published primitives
-// and delivers real pointer, wheel, keyboard and accessibility input to that
-// owner; it holds no tick, no value, no camera, no clock and no document model.
-//
-// Surfaces: the selector column owns the gutter (its two-column grid is the
-// production `AutomationTabs.qml` layout, built from the published tab records),
-// and the plot beside it owns editing in the plot-local coordinates the shared
-// camera projects into. Bare Space is never claimed here, so the window
-// transport keeps it; only the value prompt's text field consumes text keys.
-//
-// The original pencil pixmap is painted in the window's unclipped overlay;
-// only a visible, loaded overlay suppresses the native cursor.
-//
-// Modal surfaces: `AutomationPrompt` and `AutomationMenu` compose into the
-// container's one modal layer (`EditorDrawer.qml`'s `drawerModalLayer`), which
-// the container hands this page as its optional `modalHost` after loading, and
-// into the page itself when a composition mounts the page without one.
+// Automation drawer page: shared parameter gutter, model lifecycle and modals.
+// The plot handles rendering and input; Swift owns all automation values.
 pragma ComponentBehavior: Bound
 
 import QtQuick
@@ -38,12 +14,8 @@ FocusScope {
     property bool hintScopeAllowed: true
     required property QtObject applicationSession
 
-    /// The page's Swift owner for the current document, and the neutral empty
-    /// model while there is none: `automationPage()` fails once no document is
-    /// presented, and the host removes this scene before the session releases the
-    /// page. A guarded binding is therefore what a teardown re-evaluation
-    /// resolves, and it re-reads the owner when the session publishes the next
-    /// document.
+    /// The Swift owner for this document; guarded during scene teardown.
+    /// Re-evaluates when the session publishes a new document.
     readonly property var model: page.applicationSession
                                  && page.applicationSession.songOpen
                                  ? page.applicationSession.automationPage()
@@ -57,18 +29,13 @@ FocusScope {
                                      && page.applicationSession.songOpen
                                      ? page.applicationSession.gridPresenter()
                                      : null
-    /// The session's grid presenter while a document presentation exists, and the
-    /// palette this page draws with. The page can be re-evaluated during scene
-    /// teardown, after the session released the grid, so every palette read
-    /// below goes through this guarded expression; the fallback draws nothing.
+    /// Guard palette reads while scene teardown releases the grid presenter.
     readonly property var gridPalette: page.gridModel ? page.gridModel.palette : fallbackPalette
 
     QtObject {
         id: fallbackPalette
 
-        /// Neutral colors for the window between scene removal and the session's
-        /// release; nothing drawn then reaches a frame. Covers every role this
-        /// page reads plus the roles AutomationTabs reads through pagePalette.
+        /// Neutral fallback colors while no document is presented.
         readonly property color chromeBackground: "transparent"
         readonly property color rollBackground: "transparent"
         readonly property color outline: "transparent"
@@ -190,14 +157,12 @@ FocusScope {
                                      Qt.styleHints.startDragDistance)
     }
     function geometryChanged() {
-        if (plotInput.pressed && page.pageModel.interactionActive)
+        if (plot.input.pressed && page.pageModel.interactionActive)
             page.pageModel.cancelSectionInteraction()
         page.pushBodyFacts()
     }
 
-    // Every fact `configureBody` publishes is a dependency: the owner's arrival,
-    // the drawn size, the plot origin and the font the page's own geometry is
-    // measured from. The owner compares and rebuilds only for real changes.
+    // Reconfigure when owner, geometry, plot origin or base font changes.
     onModelChanged: {
         page.pushBodyFacts()
         page.createModals()
@@ -217,26 +182,14 @@ FocusScope {
             page.prompt.destroy()
     }
 
-    // The shared clock reaches this page in Swift: `ApplicationSession` fans the
-    // presenter's distinct presentations into the page owner, so no QML surface
-    // reads the presenter or calls a page mutator through a bridge wrapper.
+    // The session fans shared-clock presentations into the Swift page owner.
 
-    // A modal surface, a live gesture or a tap-tempo session claims Escape;
-    // everything else passes on to the window, so the shared routing keeps
-    // owning Escape.
+    // Only active modals, gestures and tap-tempo sessions claim Escape.
     Keys.onEscapePressed: (event) => event.accepted = page.pageModel.handleEscape()
 
     readonly property int tabsSurface: 0
     readonly property int plotSurface: 1
 
-    function cursorFor(kind) {
-        switch (kind) {
-        case 2: return Qt.SizeVerCursor
-        case 3: return Qt.SizeHorCursor
-        case 4: return Qt.ClosedHandCursor
-        default: return Qt.ArrowCursor
-        }
-    }
 
     /// Where focus returns after a modal closes: this page's plot.
     function focusOrigin() {
@@ -261,9 +214,7 @@ FocusScope {
             color: page.gridPalette.chromeBackground
         }
 
-        // The production selector is a scrollable two-column grid whose
-        // Tempo row spans both columns. The scroll position follows the active
-        // and focused tab, exactly as the production `ensureVisible` does.
+        // The production selector follows the active and focused tab.
         AutomationTabs {
             anchors.fill: parent
             pageModel: page.pageModel
@@ -278,383 +229,30 @@ FocusScope {
         Accessible.focusable: false
     }
 
-    // ---- plot ---------------------------------------------------------------
-
-    Item {
+    AutomationPlot {
         id: plot
-
-        objectName: "automationPlot"
         x: page.plotOrigin
         y: 0
         width: page.plotWidth
         height: page.height
-        clip: true
-        activeFocusOnTab: true
-        Binding {
-            target: page.model
-            property: "plotFocused"
-            value: (plot.activeFocus || plotInput.activeFocus) && page.visible
-            when: page.model !== null
-            restoreMode: Binding.RestoreNone
-        }
-
-        Rectangle {
-            anchors.fill: parent
-            color: page.gridPalette.rollBackground
-        }
-
-        TimelineQuickItem {
-            objectName: "automationGridLines"
-            anchors.fill: parent
-            rects: (page.pageModel ? page.pageModel.gridLines : [])
-        }
-
-        TimelineQuickItem {
-            objectName: "automationValueLines"
-            anchors.fill: parent
-            rects: (page.pageModel ? page.pageModel.valueLines : [])
-        }
-
-        Repeater {
-            model: (page.pageModel ? page.pageModel.valueLabels : [])
-
-            delegate: Text {
-                required property var model
-                objectName: "automationScaleLabel"
-
-                x: model.labelRect.x
-                y: model.labelRect.y
-                width: model.labelRect.width
-                height: model.labelRect.height
-                text: model.labelText
-                color: page.gridPalette.primaryText
-                font: Qt.font(model.labelFont)
-                textFormat: Text.PlainText
-                renderType: Text.NativeRendering
-                horizontalAlignment: model.labelHorizontalAlignment
-                verticalAlignment: model.labelVerticalAlignment
-                elide: Text.ElideRight
-                maximumLineCount: 1
-                clip: true
-            }
-        }
-
-        TimelineQuickItem {
-            objectName: "automationSelectionRects"
-            anchors.fill: parent
-            rects: (page.pageModel ? page.pageModel.selectionRects : [])
-        }
-
-        TimelineQuickItem {
-            objectName: "automationCurveRuns"
-            anchors.fill: parent
-            rects: (page.pageModel ? page.pageModel.curveRuns : [])
-        }
-
-        Repeater {
-            model: (page.pageModel ? page.pageModel.ghostNameLabels : [])
-            delegate: Rectangle {
-                required property var model
-                property alias text: ghostCaption.text
-                objectName: "automationGhostNameLabel"
-                x: model.labelRect.x
-                y: model.labelRect.y
-                width: model.labelRect.width
-                height: model.labelRect.height
-                color: page.gridPalette.chromeBackground
-                Text {
-                    id: ghostCaption
-                    objectName: "automationGhostCaption"
-                    anchors.fill: parent
-                    text: model.labelText
-                    color: page.gridPalette.windowText
-                    font: Qt.font(model.labelFont)
-                    textFormat: Text.PlainText
-                    renderType: Text.NativeRendering
-                    verticalAlignment: Text.AlignVCenter
-                    elide: Text.ElideRight
-                }
-            }
-        }
-
-        Rectangle {
-            id: hoverGuide
-            objectName: "automationHoverGuide"
-            readonly property var display: page.pageModel.hoverDisplay
-            visible: display.visible && display.hasGhost
-            x: display.guideX - width / 2
-            y: 0
-            width: 1 / page.Screen.devicePixelRatio
-            height: plot.height
-            color: page.gridPalette.windowText
-            Accessible.ignored: true
-        }
-
-        Rectangle {
-            objectName: "automationHoverGhost"
-            readonly property var display: page.pageModel.hoverDisplay
-            readonly property real radiusPx: Math.max(1, Math.round(page.baseFontPx * 3 / 16))
-            visible: display.visible && display.hasGhost
-            x: display.guideX - radiusPx
-            y: display.ghostY - radiusPx
-            width: radiusPx * 2
-            height: width
-            radius: radiusPx
-            color: page.gridPalette.windowText
-            Accessible.ignored: true
-        }
-
-        // One drawn node per published entry, plus the origin phantom at the plot
-        // edge. A selected node keeps its ring, a hovered one its own ring, and
-        // the projected engine node is drawn in the secondary ink.
-        Repeater {
-            model: (page.pageModel ? page.pageModel.nodes : [])
-
-            delegate: Item {
-                id: node
-
-                required property var model
-
-                objectName: node.model.primitiveName + (node.model.phantom ? "Phantom" : "")
-                x: 0
-                y: 0
-                width: plot.width
-                height: plot.height
-                Accessible.ignored: true
-
-                Rectangle {
-                    objectName: "automationNodeRing"
-                    visible: node.model.selected
-                    x: node.model.x - node.model.ringRadius
-                    y: node.model.y - node.model.ringRadius
-                    width: 2 * node.model.ringRadius
-                    height: 2 * node.model.ringRadius
-                    radius: node.model.ringRadius
-                    color: "transparent"
-                    border.width: Math.max(1, node.model.outlineWidth)
-                    border.color: node.model.ringColor
-                }
-
-                Rectangle {
-                    objectName: "automationNodeHover"
-                    visible: page.pageModel.hoverDisplay.hasNode
-                             && page.pageModel.hoverDisplay.nodeTick === node.model.tick
-                             && !node.model.selected
-                    x: node.model.x - node.model.ringRadius
-                    y: node.model.y - node.model.ringRadius
-                    width: 2 * node.model.ringRadius
-                    height: 2 * node.model.ringRadius
-                    radius: node.model.ringRadius
-                    color: "transparent"
-                    border.width: Math.max(1, node.model.outlineWidth)
-                    border.color: node.model.ringColor
-                }
-
-                Rectangle {
-                    objectName: "automationNodeFill"
-                    x: node.model.x - node.model.radius
-                    y: node.model.y - node.model.radius
-                    width: 2 * node.model.radius
-                    height: 2 * node.model.radius
-                    radius: node.model.radius
-                    color: node.model.fillColor
-                    border.width: Math.max(1, node.model.outlineWidth)
-                    border.color: node.model.outlineColor
-                }
-            }
-        }
-
-        // The range press's own band.
-        Rectangle {
-            objectName: "automationRangeBand"
-
-            visible: (page.pageModel ? page.pageModel.bandVisible : false)
-            x: (page.pageModel ? page.pageModel.bandRect.x : 0)
-            y: (page.pageModel ? page.pageModel.bandRect.y : 0)
-            width: (page.pageModel ? page.pageModel.bandRect.width : 0)
-            height: (page.pageModel ? page.pageModel.bandRect.height : 0)
-            color: page.gridPalette.selectionFill
-            border.width: 1
-            border.color: page.gridPalette.selectionEdge
-            Accessible.ignored: true
-        }
-
-        // The frozen gesture's draft markers.
-        TimelineQuickItem {
-            objectName: "automationPreviewRects"
-            anchors.fill: parent
-            rects: (page.pageModel ? page.pageModel.previewRects : [])
-        }
-
-        // The hover value label and the live gesture's own readout.
-        Text {
-            objectName: "automationHoverLabel"
-
-            visible: page.pageModel.hoverDisplay.visible
-            x: page.pageModel.hoverDisplay.x
-            y: page.pageModel.hoverDisplay.y
-            width: page.pageModel.hoverDisplay.width
-            height: page.pageModel.hoverDisplay.height
-            text: page.pageModel.hoverDisplay.text
-            color: page.gridPalette.primaryText
-            font: Qt.font(page.pageModel ? page.pageModel.noteNameFont : {})
-            textFormat: Text.PlainText
-            renderType: Text.NativeRendering
-            horizontalAlignment: Text.AlignLeft
-            verticalAlignment: Text.AlignVCenter
-            elide: Text.ElideRight
-            maximumLineCount: 1
-            clip: true
-        }
-
-        Text {
-            objectName: "automationPreviewLabel"
-
-            visible: (page.pageModel ? page.pageModel.previewLabelVisible : false)
-            x: (page.pageModel ? page.pageModel.previewLabelRect.x : 0)
-            y: (page.pageModel ? page.pageModel.previewLabelRect.y : 0)
-            width: (page.pageModel ? page.pageModel.previewLabelRect.width : 0)
-            height: (page.pageModel ? page.pageModel.previewLabelRect.height : 0)
-            text: (page.pageModel ? page.pageModel.previewLabelText : "")
-            color: page.gridPalette.primaryText
-            font: Qt.font(page.pageModel ? page.pageModel.noteNameFont : {})
-            textFormat: Text.PlainText
-            renderType: Text.NativeRendering
-            horizontalAlignment: Text.AlignLeft
-            verticalAlignment: Text.AlignVCenter
-            elide: Text.ElideRight
-            maximumLineCount: 1
-            clip: true
-        }
-
-        // The effective context readout: the active parameter and the value it
-        // holds at the shared tick.
-        Text {
-            objectName: "automationReadout"
-
-            visible: (page.pageModel ? page.pageModel.readoutVisible : false)
-            x: (page.pageModel ? page.pageModel.readoutRect.x : 0)
-            y: (page.pageModel ? page.pageModel.readoutRect.y : 0)
-            width: (page.pageModel ? page.pageModel.readoutRect.width : 0)
-            height: (page.pageModel ? page.pageModel.readoutRect.height : 0)
-            text: (page.pageModel ? page.pageModel.readoutText : "")
-            color: page.gridPalette.primaryText
-            font: Qt.font(page.pageModel ? page.pageModel.titleFont : {})
-            textFormat: Text.PlainText
-            renderType: Text.NativeRendering
-            horizontalAlignment: Text.AlignRight
-            verticalAlignment: Text.AlignVCenter
-            elide: Text.ElideRight
-            maximumLineCount: 1
-            clip: true
-        }
-
-        Text {
-            objectName: "automationPlotMessage"
-
-            visible: !(page.pageModel ? page.pageModel.trackAvailable : false)
-                     && (page.pageModel ? page.pageModel.plotMessage : "").length > 0
-            anchors.centerIn: parent
-            text: (page.pageModel ? page.pageModel.plotMessage : "")
-            color: page.gridPalette.primaryText
-            font: Qt.font(page.pageModel ? page.pageModel.captionFont : {})
-            textFormat: Text.PlainText
-            renderType: Text.NativeRendering
-        }
-
-        MouseArea {
-            id: plotInput
-
-            objectName: "automationPlotInput"
-            anchors.fill: parent
-            acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-            hoverEnabled: true
-            preventStealing: true
-            cursorShape: pencilCursor.visible ? Qt.BlankCursor
-                : page.cursorFor(page.pageModel ? page.pageModel.cursorKind : 0)
-
-            onPressed: mouse => {
-                plotMoves.flush()
-                mouse.accepted = page.pageModel.pointerPress(
-                    mouse.x, mouse.y, page.plotSurface, mouse.button, mouse.modifiers)
-                if (mouse.accepted)
-                    plotInput.forceActiveFocus(Qt.MouseFocusReason)
-            }
-            onDoubleClicked: (mouse) => {
-                plotMoves.flush()
-                if (mouse.button === Qt.LeftButton)
-                    page.pageModel.pointerDoubleClick(mouse.x, mouse.y)
-                mouse.accepted = true
-            }
-            onPositionChanged: (mouse) => plotMoves.enqueue(
-                mouse.x, mouse.y, mouse.buttons, mouse.modifiers)
-            onReleased: (mouse) => {
-                plotMoves.flush()
-                plotHint.settleRelease(plotInput.mapToItem(null, mouse.x, mouse.y))
-                mouse.accepted = page.pageModel.pointerRelease(
-                    mouse.x, mouse.y, mouse.button, mouse.modifiers)
-            }
-            onCanceled: {
-                plotMoves.flush()
-                plotHint.settleRelease(plotHint.point.scenePosition)
-                page.pageModel.cancelSectionInteraction()
-            }
-            onExited: {
-                plotMoves.flush()
-                page.pageModel.pointerLeave()
-            }
-            MoveCoalescer {
-                id: plotMoves
-                dispatch: (x, y, buttons, modifiers) =>
-                    page.pageModel.pointerMove(x, y, buttons, modifiers)
-            }
-            Accessible.role: Accessible.Canvas
-            Accessible.name: qsTr("Automation plot")
-            Accessible.description: page.pageModel.accessibleDescription
-            Accessible.focusable: true
-        }
-
-        // The plot is one mixed-profile input group. Its Swift hover
-        // publication selects node, origin-phantom, sweep or pencil help;
-        // the group retains that originating profile only for the MouseArea's
-        // real grab, then settles containment from the delivered release.
-        HoverHint {
-            id: plotHint
-
-            source: plot
-            hintService: page.hintService
-            scopeAllowed: page.hintScopeAllowed
-            gestureOwning: plotInput.pressed
-            profile: page.pageModel.hoverHintProfile
-        }
-
-        WheelHandler {
-            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-
-            onWheel: (event) => {
-                // The shared navigation owner: the roll's own wheel entry, with
-                // this plot's anchor, so zoom stays anchored where the pointer is.
-                if (!page.gridModel)
-                    return
-                page.gridModel.handleWheel(
-                    event.angleDelta.x, event.angleDelta.y,
-                    event.pixelDelta.x, event.pixelDelta.y,
-                    event.modifiers, event.phase, false, event.x, event.y)
-                event.accepted = true
-            }
-        }
-
-        Accessible.role: Accessible.Canvas
-        Accessible.name: qsTr("Automation")
-        Accessible.description: (page.pageModel ? page.pageModel.accessibleDescription : "")
-        Accessible.focusable: true
+        model: page.model
+        pageModel: page.pageModel
+        gridModel: page.gridModel
+        gridPalette: page.gridPalette
+        baseFontPx: page.baseFontPx
+        devicePixelRatio: page.Screen.devicePixelRatio
+        pageVisible: page.visible
+        hintService: page.hintService
+        hintScopeAllowed: page.hintScopeAllowed
+        plotSurface: page.plotSurface
+        pencilCursorVisible: pencilCursor.visible
     }
 
     Image {
         id: pencilCursor
         objectName: "automationPencilCursor"
         parent: page.Window.window ? page.Window.window.contentItem : page
-        readonly property point pointer: plotInput.mapToItem(parent, plotInput.mouseX, plotInput.mouseY)
+        readonly property point pointer: plot.input.mapToItem(parent, plot.input.mouseX, plot.input.mouseY)
         x: pointer.x
         y: pointer.y - 15
         width: 16
@@ -667,17 +265,14 @@ FocusScope {
         visible: page.visible && page.Window.window !== null && page.Window.window.active
             && status === Image.Ready && page.pageModel.isPencilMode
             && page.pageModel.cursorKind <= 1 && !page.pageModel.menuOpen && !page.pageModel.promptOpen
-            && (plotInput.containsMouse || plotInput.pressed)
+            && (plot.input.containsMouse || plot.input.pressed)
             && pointer.x >= 0 && pointer.y >= 0 && pointer.x < parent.width && pointer.y < parent.height
         Accessible.ignored: true
     }
 
     // ---- modal and local surfaces -------------------------------------------
 
-    // The page owns modality for its two modal surfaces; each renders the flag
-    // it is pushed and delivers the input that drives the page. The push happens
-    // on the page's own change signals instead of a binding inside the modal's
-    // scope, which would have to read through the `var`-typed model.
+    // Page model changes synchronize the two modal surfaces.
     Connections {
         target: page.pageModel
 
@@ -685,9 +280,7 @@ FocusScope {
         function onPromptOpenChanged() { page.syncModals() }
     }
 
-    /// The container's one unclipped modal layer, when the container hosts this
-    /// page (a composition that mounts the page elsewhere keeps the modals inside
-    /// the page). Filled in `createModals`.
+    /// The container's unclipped modal layer, or this page when standalone.
     property var modalHost: null
     property var menu: null
     property var prompt: null
@@ -720,18 +313,15 @@ FocusScope {
         }
     }
 
-    /// Creates the page-owned modals in the container's unclipped layer, or in
-    /// the page when there is no layer. Reparenting preserves their identity;
-    /// page teardown retires them even when the external layer survives.
+    /// Modals move to the container layer without losing their identity.
+    /// Page teardown retires them even when that layer survives.
     function createModals() {
         var host = page.modalHost !== null && page.modalHost !== undefined ? page.modalHost : page
         if (page.menu === null) {
             page.menu = menuComponent.createObject(host, {"model": page.pageModel,
                                                           "pageItem": page})
         } else if (page.menu.parent !== host) {
-            // The container hands its modal layer over after the page completes,
-            // so a modal created in that window moves onto the layer it belongs
-            // to instead of being rebuilt (its anchors re-resolve on the move).
+            // Move the existing modal when the container supplies its layer.
             page.menu.parent = host
         }
         if (page.prompt === null) {

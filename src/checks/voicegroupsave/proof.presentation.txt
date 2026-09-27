@@ -1255,40 +1255,40 @@ Anchor: message "voice-line request resolves the clicked track's current program
 Line: 45
 Predicate: report.expectEqual(expected: [42, 17], actual: revealedPrograms, cppID: id) for the staged voice lanes of tracks 1 and 0
 
-S044 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroup.qml
+S044 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "synth type creates an unsaved bank edit"
 Line: 657
 Predicate: verify(waitForNative(function() { return draft.isSynth && controller.bankDirty }, 15000), ...) after draft.changeType(-1, draft.symbol)
 
-S045 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroup.qml
+S045 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "the adopted synth publishes its type and sample glyph"
 Line: 662
 Predicate: verify(row.typeName === "Synth (Golden Sun)" && row.typeIconKey === 0 && icon.Accessible.name === row.typeName, ...)
 
-S046 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroup.qml
+S046 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "uncommitted synth does not masquerade as a saved definition"
 Line: 674
 Predicate: verify(controller.synthCatalogChoices().indexOf(pulse) < 0, ...)
 
-S047 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroup.qml
+S047 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "pulse parameters occupy the editor"
 
-S048 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroup.qml
+S048 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "save persists synth and refreshes catalog: "
 Line: 681
 Predicate: verify(waitForNative(function() { return (!controller.bankDirty && controller.synthCatalogChoices().includes(pulse)) || app.lastSaveError.length > 0 }, 15000), "save persists synth and refreshes catalog: " + app.lastSaveError)
 
-S049 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroup.qml
+S049 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "mounted synth waveform is visible"
 
 S050 | test_typeColumnFamiliesAndAlternateChips | src/checks/editorqml/tst_ShellVoicegroup.qml
 Anchor: message "the alternate fixture offers a selectable blank bank slot"
 
-S051 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroup.qml
+S051 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "slot zero is a non-synth DirectSound voice before Synth selection"
 
-S052 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroup.qml
+S052 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "DirectSound slot zero offers an enabled Synth type, sample picker, and ADSR release"
 
-S053 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroup.qml
+S053 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroupSave.qml
 Anchor: message "non-synth DirectSound keeps preconstructed waveform and pulse fields hidden"

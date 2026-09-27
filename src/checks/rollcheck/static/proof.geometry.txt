@@ -473,37 +473,37 @@ Anchor: message "wide range reveal prefers its requested leading edge"
 S030 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "wide range reveal honors the requested trailing edge"
 
-S031 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
+S031 | checkGridCameraWheel | src/checks/rollcheck/static/camera_wheel.swift
 Anchor: message "phase \(phase.rawValue) performs one anchored time zoom publication"
 
-S032 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
+S032 | checkGridCameraWheel | src/checks/rollcheck/static/camera_wheel.swift
 Anchor: message "momentum suppresses time zoom without publishing"
 
-S033 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
+S033 | checkGridCameraWheel | src/checks/rollcheck/static/camera_wheel.swift
 Anchor: message "pixel deltas receive five-times angle weighting"
 
-S034 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
+S034 | checkGridCameraWheel | src/checks/rollcheck/static/camera_wheel.swift
 Anchor: message "effective angle and pixel zooms each publish once"
 
-S035 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
+S035 | checkGridCameraWheel | src/checks/rollcheck/static/camera_wheel.swift
 Anchor: message "Shift wheel pans by negative selected delta exactly once"
 
-S036 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
+S036 | checkGridCameraWheel | src/checks/rollcheck/static/camera_wheel.swift
 Anchor: message "Shift pan clamps at minimum and repeated clamped pan is silent"
 
-S037 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
+S037 | checkGridCameraWheel | src/checks/rollcheck/static/camera_wheel.swift
 Anchor: message "Shift pan clamps at maximum and repeated clamped pan is silent"
 
-S038 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
+S038 | checkGridCameraWheel | src/checks/rollcheck/static/camera_wheel.swift
 Anchor: message "horizontal-only momentum still pans exactly once"
 
-S039 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
+S039 | checkGridCameraWheel | src/checks/rollcheck/static/camera_wheel.swift
 Anchor: message "Ctrl wheel performs one row-anchored pitch zoom publication"
 
-S040 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
+S040 | checkGridCameraWheel | src/checks/rollcheck/static/camera_wheel.swift
 Anchor: message "momentum suppresses pitch zoom without publishing"
 
-S041 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
+S041 | checkGridCameraWheel | src/checks/rollcheck/static/camera_wheel.swift
 Anchor: message "gutter wheel scrolls by negative half-delta exactly once"
 
 S062 | checkDefaultBindKeepsGeometry | src/checks/rollcheck/static/geometry.swift
@@ -563,22 +563,22 @@ Anchor: message "A047 bound 3/4 segment has three beats per bar"
 S080 | checkFallbackAndSignatureBind | src/checks/rollcheck/static/geometry.swift
 Anchor: message "A050 binding 3/4 preserves beat content positions"
 
-S081 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+S081 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisualsRuler.qml
 Anchor: message "the mounted roll and ruler produce a raster"
 
-S082 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+S082 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisualsRuler.qml
 Anchor: message "the ruler pre-roll shade is uniform across upper and lower samples"
 
-S083 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+S083 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisualsRuler.qml
 Anchor: message "the ruler pad is distinct from adjacent chrome"
 
-S084 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+S084 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisualsRuler.qml
 Anchor: message "tick zero paints a continuous upper ruler stem"
 
-S085 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+S085 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisualsRuler.qml
 Anchor: message "the pre-zero ruler has room for a caption probe"
 
-S086 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+S086 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisualsRuler.qml
 Anchor: message "no placeholder caption paints before tick zero"
 
 S087 | checkCeilingGridWalk | src/checks/rollcheck/static/geometry.swift
@@ -596,32 +596,32 @@ Anchor: message "A003 tick zero starts inside the independently computed lead pa
 S091 | checkFallbackAndSignatureBind | src/checks/rollcheck/static/geometry.swift
 Anchor: message "A004 fallback grid retains the seed-font default beat zoom"
 
-S092 | unsignedRulerCapture | src/checks/editorqml/tst_ShellNoteVisuals.qml
+S092 | unsignedRulerCapture | src/checks/editorqml/ShellNoteVisualsSupport.qml
 Anchor: message "the fallback or regrouped bar stem paints at its independently computed physical pixel"
 
-S093 | unsignedRulerCapture | src/checks/editorqml/tst_ShellNoteVisuals.qml
+S093 | unsignedRulerCapture | src/checks/editorqml/ShellNoteVisualsSupport.qml
 Anchor: message "at least two bar numbers paint as real native text on chrome"
 
-S094 | unsignedRulerCapture | src/checks/editorqml/tst_ShellNoteVisuals.qml
+S094 | unsignedRulerCapture | src/checks/editorqml/ShellNoteVisualsSupport.qml
 Anchor: message "the loaded ruler has at least two independently positioned visible bars"
 
-S095 | unsignedRulerCapture | src/checks/editorqml/tst_ShellNoteVisuals.qml
+S095 | unsignedRulerCapture | src/checks/editorqml/ShellNoteVisualsSupport.qml
 Anchor: message "each fallback or bound beat stem paints at its independently computed device pixel"
 
-S096 | unsignedRulerCapture | src/checks/editorqml/tst_ShellNoteVisuals.qml
+S096 | unsignedRulerCapture | src/checks/editorqml/ShellNoteVisualsSupport.qml
 Anchor: message "the signature-free loaded ruler produces a framebuffer"
 
-S097 | unsignedRulerJourney | src/checks/editorqml/tst_ShellNoteVisuals.qml
+S097 | unsignedRulerJourney | src/checks/editorqml/ShellNoteVisualsSupport.qml
 Anchor: message "A048 binding three-four retains the mounted ruler height"
 
 S098 | checkFallbackAndSignatureBind | src/checks/rollcheck/static/geometry.swift
 Anchor: message "A049 the bound three-four camera retains a positive viewport lead pad"
 
-S099 | unsignedRulerJourney | src/checks/editorqml/tst_ShellNoteVisuals.qml
+S099 | unsignedRulerJourney | src/checks/editorqml/ShellNoteVisualsSupport.qml
 Anchor: message "three-four bar caps paint at new ticks and not former four-four bar ticks"
 
-S100 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+S100 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisualsRuler.qml
 Anchor: message "tick zero leaves a font-scaled visible pre-roll pad"
 
-S101 | unsignedRulerCapture | src/checks/editorqml/tst_ShellNoteVisuals.qml
+S101 | unsignedRulerCapture | src/checks/editorqml/ShellNoteVisualsSupport.qml
 Anchor: message "the ruler framebuffer retains native device-pixel dimensions"

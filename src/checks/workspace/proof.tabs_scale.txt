@@ -1075,65 +1075,65 @@ Anchor: message "hard bank failure keeps the entry available and does not cross 
 S185 | historyTransitionRegressions | src/checks/workspace/bank_history_probes.swift
 Anchor: message "self-cancelling bank merge is removed so undo reaches the preceding document edit"
 
-S186 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+S186 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: function
 
 S187 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
 Anchor: message "track selection keeps per-tab Fold and Highlight settings"
 
-S188 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+S188 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "new tab opens with C root"
   tst_ShellTransport.qml:501 compare(root.currentIndex, 0, "new tab opens with C root") on the mounted root selector after openSong.
 
-S189 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+S189 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "new tab opens with Major scale"
   tst_ShellTransport.qml:502 compare(type.currentIndex, 0, "new tab opens with Major scale") on the mounted type selector.
 
-S190 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+S190 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "new tab opens with Highlight and Fold off"
   tst_ShellTransport.qml:503-504 verify(!highlight.checked && !fold.Accessible.checked, "new tab opens with Highlight and Fold off") on the mounted controls.
 
-S191 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+S191 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "Highlight toggle edits the selected tab"
   tst_ShellTransport.qml:505-506 mouseClick on transportScaleHighlight then compare(bar.presenter.scaleHighlight, true, "Highlight toggle edits the selected tab").
 
-S192 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+S192 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "Highlight toggles off and on from the transport control"
   tst_ShellTransport.qml:507-511 second and third Highlight clicks; toggledOff = !bar.presenter.scaleHighlight, then verify(toggledOff && bar.presenter.scaleHighlight, "Highlight toggles off and on from the transport control").
 
-S193 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+S193 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "Fold toggle edits the selected tab"
   tst_ShellTransport.qml:512-513 mouseClick on transportScaleFold then compare(bar.presenter.scaleFold, true, "Fold toggle edits the selected tab").
 
-S194 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+S194 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "second tab restores independent default scale"
   tst_ShellTransport.qml:520-522 waitForNative until session.songTabs.tabCount === 2 && bar.presenter.scaleRoot === 0, message "second tab restores independent default scale".
 
-S195 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+S195 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "second tab does not inherit Fold"
   tst_ShellTransport.qml:523 compare(bar.presenter.scaleFold, false, "second tab does not inherit Fold") after the second song opens while the first tab's Fold is enabled.
 
-S196 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+S196 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "first tab restores its root and type"
   tst_ShellTransport.qml:525-527 after the first song reopens, waitForNative until bar.presenter.scaleRoot === 9 && bar.presenter.scaleType === 2.
 
-S197 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+S197 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "first tab restores Highlight"
   tst_ShellTransport.qml:528 compare(bar.presenter.scaleHighlight, true, "first tab restores Highlight").
 
-S198 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+S198 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "mounted root selector follows the restored tab"
   tst_ShellTransport.qml:529-530 tryCompare(root, "currentIndex", 9, 3000, "mounted root selector follows the restored tab").
 
-S199 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+S199 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "mounted scale selector follows the restored tab"
   tst_ShellTransport.qml:531-532 tryCompare(type, "currentIndex", 2, 3000, "mounted scale selector follows the restored tab").
 
-S200 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+S200 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "mounted Highlight control follows the restored tab"
   tst_ShellTransport.qml:533 compare(highlight.checked, true, "mounted Highlight control follows the restored tab").
 
-S201 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+S201 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "the first tab keeps its scale state after second-tab edits"
   tst_ShellTransport.qml:534 compare(fold.Accessible.checked, true, "the first tab keeps its scale state after second-tab edits").
 

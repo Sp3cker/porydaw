@@ -1663,58 +1663,58 @@ Anchor: message "hard bank failure keeps the entry available and does not cross 
 S185 | historyTransitionRegressions | src/checks/workspace/bank_history_probes.swift
 Anchor: message "self-cancelling bank merge is removed so undo reaches the preceding document edit"
 
-S186 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml
+S186 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindowCrossTab.qml
 Anchor: message "Discard advances the remaining clean tab and detaches the scene"
 
-S187 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml
+S187 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindowCrossTab.qml
 Anchor: message "songTabDiscard"
 
-S188 | test_eTimeAndTracksMenuContainment (with test_d retarget rows) | src/checks/editorqml/tst_ShellWindow.qml
+S188 | test_eTimeAndTracksMenuContainment (with test_d retarget rows) | src/checks/editorqml/tst_ShellWindowPrompts.qml
 Anchor: message "the active song offers Solo"
 
 S189 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
 Anchor: message "a fresh tab carries the shared view state before it is ready"
 
-S190 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S190 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "closing one tab keeps its sibling and the project bytes" #1
 
-S191 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S191 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "closing one tab keeps its sibling and the project bytes" #2
 
-S192 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S192 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "reopening restores the shared drawer state on a fresh timeline"
 
-S193 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S193 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "the closed song opens on a fresh timeline"
 
-S194 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S194 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "reopening never rewrites the project song bytes"
 
-S195 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S195 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "a fresh tab carries the retained sibling drawer section"
 
-S196 | test_seededEventListRestoresBothStates | src/checks/editorqml/tst_ShellWindow.qml
+S196 | test_seededEventListRestoresBothStates | src/checks/editorqml/tst_ShellWindowCrossTab.qml
 Anchor: message "a seeded hidden event list restores hidden" #1
 
-S197 | test_seededEventListRestoresBothStates | src/checks/editorqml/tst_ShellWindow.qml
+S197 | test_seededEventListRestoresBothStates | src/checks/editorqml/tst_ShellWindowCrossTab.qml
 Anchor: message "a seeded hidden event list restores hidden" #2
 
-S198 | test_seededEventListRestoresBothStates | src/checks/editorqml/tst_ShellWindow.qml
+S198 | test_seededEventListRestoresBothStates | src/checks/editorqml/tst_ShellWindowCrossTab.qml
 Anchor: message "the reloaded tab installs a fresh timeline"
 
-S199 | test_seededEventListRestoresBothStates | src/checks/editorqml/tst_ShellWindow.qml
+S199 | test_seededEventListRestoresBothStates | src/checks/editorqml/tst_ShellWindowCrossTab.qml
 Anchor: message "a seeded visible event list restores visible"
 
-S200 | openTwoSongShell | src/checks/editorqml/tst_ShellWindow.qml
+S200 | openTwoSongShell | src/checks/editorqml/ShellWindowSupport.qml
 Anchor: message "Route 101 loads from the original mainwindowrouting project"
 
-S201 | openTwoSongShell | src/checks/editorqml/tst_ShellWindow.qml
+S201 | openTwoSongShell | src/checks/editorqml/ShellWindowSupport.qml
 Anchor: message "Littleroot opens in the second tab of the same project"
 
-S202 | openTwoSongShell | src/checks/editorqml/tst_ShellWindow.qml
+S202 | openTwoSongShell | src/checks/editorqml/ShellWindowSupport.qml
 Anchor: message "Littleroot is the selected workspace"
 
-S203 | test_pMouseHintTargetClaims | src/checks/editorqml/tst_ShellWindow.qml
+S203 | test_pMouseHintTargetClaims | src/checks/editorqml/tst_ShellWindowHints.qml
 Anchor: message "each hover target publishes its own non-empty profile"
 
 S204 | test_oFreshTabViewStateDefaults (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
@@ -1744,76 +1744,76 @@ Anchor: message "reopened song homes to its canonical horizontal scroll"
 S212 | test_oFreshTabViewStateDefaults (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: message "a fresh tab starts at its song's canonical vertical scroll"
 
-S213 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+S213 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "reload seeds a non-default pixels-per-beat zoom"
 
-S214 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+S214 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "reload seeds a non-default keyboard row height"
 
-S215 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+S215 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "reload seeds a non-default vertical camera"
 
-S216 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+S216 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "reload seeds a non-default horizontal scroll"
 
-S217 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+S217 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "reload seeds the alternate used track"
 
-S218 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+S218 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "reload seeds a used alternate track with rendered notes"
 
-S219 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+S219 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "reload seeds the musical-16 grid division"
 
-S220 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+S220 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "reload seeds triplet grid feel"
 
-S221 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+S221 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "reload seeds the visible Event List"
 
-S222 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+S222 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "the reloaded song returns in the same tab identity"
 
-S223 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+S223 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "reload retains the seeded pixels per beat"
 
-S224 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+S224 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "reload retains the seeded key height"
 
-S225 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+S225 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "reload retains the seeded horizontal scroll"
 
-S226 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+S226 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "reload retains the seeded vertical scroll"
 
-S227 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+S227 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "reload retains the selected track"
 
-S228 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+S228 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "reload retains the edit cursor"
 
-S229 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+S229 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "reload retains the selected grid division identity"
 
-S230 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+S230 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "reload retains triplet grid feel"
 
-S231 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+S231 | test_qReloadPreservesViewAndClearsHistory (shell-tabs lane) | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "reload retains event list visibility"
 
-S232 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S232 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "reopening retains the real resized shared section height"
 
-S233 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S233 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "the reopened drawer retains its active page"
 
-S234 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S234 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "reopening retains the third shared drawer section"
 
-S235 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S235 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "reopening retains the hidden automation section height"
 
-S236 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S236 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "reopening retains the Voice Changes section height"
 
 S237 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
@@ -1840,7 +1840,7 @@ Anchor: message "a fresh tab restores the shared Voice Changes section height"
 S244 | test_oFreshTabViewStateDefaults | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: message "a fresh tab restores the shared active drawer page"
 
-S245 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S245 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "the second tab paints its changed lane range before close"
 
 S246 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
@@ -1861,136 +1861,136 @@ Anchor: message "a fresh tab starts with straight grid feel"
 S251 | test_oFreshTabViewStateDefaults | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: message "a fresh tab has no event list"
 
-S252 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabs.qml
+S252 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "the reloading song stays in the strip while its document opens"
 
-S253 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabs.qml
+S253 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "the reloaded target adopts a fresh ready document"
 
-S254 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabs.qml
+S254 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "the reloaded tab mounts the retained Event List"
 
-S255 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabs.qml
+S255 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "the user explicitly selects the surviving tab during reload"
 
-S256 | test_qReloadCompletionKeepsDifferentSelection | src/checks/editorqml/tst_ShellTabs.qml
+S256 | test_qReloadCompletionKeepsDifferentSelection | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "background reload completion cannot steal the user's selected tab"
 
-S257 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabs.qml
+S257 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "returning to the reloaded tab restores its visible Event List"
 
-S258 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabs.qml
+S258 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "the pending reload keeps its existing mounted tab selectable"
 
-S259 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabs.qml
+S259 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "the user selects the still-reloading tab before its ready publication"
 
-S260 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabs.qml
+S260 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "selecting the pending target retains its original presentation"
 
-S261 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabs.qml
+S261 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "the user can leave the pending target without discarding it"
 
-S262 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabs.qml
+S262 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "the final explicit selection returns to pending B before ready"
 
-S263 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabs.qml
+S263 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "reload completion retains the user's selected target"
 
-S264 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S264 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "the real resize persists the shared velocity section height"
 
-S265 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S265 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "dragging the real Velocity grip shrinks its mounted body"
 
-S266 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S266 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "the reopened tab's automation plot owns the routed keys"
 
-S267 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabs.qml
+S267 | test_qSelectionDuringReloadKeepsExplicitTarget | src/checks/editorqml/tst_ShellTabsReload.qml
 Anchor: message "the reload target starts with its visible Event List"
 
-S268 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabs.qml
+S268 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "hovering the real output dial publishes its drag profile"
 
-S269 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabs.qml
+S269 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "dragging the grabbed output dial changes its actual value below fifty"
 
-S270 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabs.qml
+S270 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "the grabbed dial keeps its origin hint while the value changes"
 
-S271 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabs.qml
+S271 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "releasing the dial over the output combo clears its former profile"
 
-S272 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabs.qml
+S272 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "hovering the scrollbar claims its intentionally empty profile"
 
-S273 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabs.qml
+S273 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "the scrollbar keeps its empty profile across the grab"
 
-S274 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabs.qml
+S274 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "releasing the scrollbar over the roll reveals the roll profile"
 
-S275 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabs.qml
+S275 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "real pointer hover reaches the first track header source"
 
-S276 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabs.qml
+S276 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "hovering the first header publishes its track-scope profile"
 
-S277 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabs.qml
+S277 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "pressing the first header changes the primary track from one to zero"
 
-S278 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabs.qml
+S278 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "dragging the first header displays its live reorder indicator"
 
-S279 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabs.qml
+S279 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "the held header retains its original profile"
 
-S280 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabs.qml
+S280 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "dropping the reordered track commits exactly one document revision"
 
-S281 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabs.qml
+S281 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "the live post-reorder header target publishes its own track profile"
 
-S282 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabs.qml
+S282 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "the stationary pointer really hovers the roll source"
 
-S283 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabs.qml
+S283 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "stationary roll hover publishes its distinct roll profile"
 
-S284 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabs.qml
+S284 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "keyboard focus actually moves to the header under a stationary roll pointer"
 
-S285 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabs.qml
+S285 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "keyboard focus actually moves again to a header control"
 
-S286 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabs.qml
+S286 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "header focus leaves the real roll pointer hover in place"
 
-S287 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabs.qml
+S287 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "header keyboard focus cannot replace the stationary roll hint"
 
-S288 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabs.qml
+S288 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "Tab focus navigation leaves the roll pointer over its source"
 
-S289 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabs.qml
+S289 | test_mouseHintsFollowDialScrollbarHeaderAndFocus | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "Tab focus navigation cannot publish a hint without pointer ingress"
 
-S290 | test_mouseHintsReleaseHiddenAndClosedTabOwners | src/checks/editorqml/tst_ShellTabs.qml
+S290 | test_mouseHintsReleaseHiddenAndClosedTabOwners | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "the second tab roll receives real pointer hover"
 
-S291 | test_mouseHintsReleaseHiddenAndClosedTabOwners | src/checks/editorqml/tst_ShellTabs.qml
+S291 | test_mouseHintsReleaseHiddenAndClosedTabOwners | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "B's live roll claims the visible mouse hint"
 
-S292 | test_mouseHintsReleaseHiddenAndClosedTabOwners | src/checks/editorqml/tst_ShellTabs.qml
+S292 | test_mouseHintsReleaseHiddenAndClosedTabOwners | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "B's hidden roll cannot keep its hint over A's event list"
 
-S293 | test_mouseHintsReleaseHiddenAndClosedTabOwners | src/checks/editorqml/tst_ShellTabs.qml
+S293 | test_mouseHintsReleaseHiddenAndClosedTabOwners | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "the selected first tab roll receives new pointer hover"
 
-S294 | test_mouseHintsReleaseHiddenAndClosedTabOwners | src/checks/editorqml/tst_ShellTabs.qml
+S294 | test_mouseHintsReleaseHiddenAndClosedTabOwners | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "A's actual roll hover reclaims the visible hint"
 
-S295 | test_mouseHintsReleaseHiddenAndClosedTabOwners | src/checks/editorqml/tst_ShellTabs.qml
+S295 | test_mouseHintsReleaseHiddenAndClosedTabOwners | src/checks/editorqml/tst_ShellTabsMouseHints.qml
 Anchor: message "destroying A cannot clear the surviving B roll profile"
 
 S296 | mouseHintOwnershipChecks | src/checks/workspace/session_editor_semantics.swift

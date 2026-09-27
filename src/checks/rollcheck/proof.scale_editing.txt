@@ -936,19 +936,19 @@ Anchor: message "fold exception-row piano key auditions its pitch"
 S030 | checkFoldPointerAndLifecycle | src/checks/rollcheck/scale_editing.swift
 Anchor: message "fold horizontal move keeps the exception pitch"
 
-S031 | ShellGridInput::test_mountedFoldKeyboardNudges | src/checks/editorqml/tst_ShellGridInput.qml
+S031 | ShellGridInput::test_mountedFoldKeyboardNudges | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
 Anchor: message "mounted Up moves the selection one fold degree"
 
-S032 | ShellGridInput::test_mountedFoldKeyboardNudges | src/checks/editorqml/tst_ShellGridInput.qml
+S032 | ShellGridInput::test_mountedFoldKeyboardNudges | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
 Anchor: message "mounted Shift+Up moves the selection an octave in fold"
 
-S033 | ShellGridInput::test_mountedFoldKeyboardNudges | src/checks/editorqml/tst_ShellGridInput.qml
+S033 | ShellGridInput::test_mountedFoldKeyboardNudges | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
 Anchor: message "mounted chromatic Up moves the selection a semitone with fold off"
 
-S034 | ShellGridInput::test_mountedFoldKeyboardNudges | src/checks/editorqml/tst_ShellGridInput.qml
+S034 | ShellGridInput::test_mountedFoldKeyboardNudges | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
 Anchor: message "mounted fold Up moves an off-scale exception to the next degree"
 
-S035 | ShellGridInput::test_mountedFoldKeyboardNudges | src/checks/editorqml/tst_ShellGridInput.qml
+S035 | ShellGridInput::test_mountedFoldKeyboardNudges | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
 Anchor: message "mounted folded boundary Up pushes no edit"
 
 S036 | SwiftRollSelection::test_foldDragExceptionCommitsAfterRelease | src/checks/rollqml/tst_SwiftRollSelection.qml

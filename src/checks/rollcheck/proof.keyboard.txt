@@ -967,19 +967,19 @@ Anchor: message "an extra Shift+Left at the floor is a document and history no-o
 S055 | checkKeyboardResizeNotes | src/checks/rollcheck/keyboard.swift
 Anchor: message "the shrink sequence merges and one undo restores the fixture"
 
-S056 | checkTimelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.swift
+S056 | checkTimelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard_timeline_insert.swift
 Anchor: message "track insertion seed reaches its shortcut position"
 
-S057 | checkTimelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.swift
+S057 | checkTimelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard_timeline_insert.swift
 Anchor: message "track-scoped blank insertion shifts only the selected track"
 
-S058 | checkTimelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.swift
+S058 | checkTimelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard_timeline_insert.swift
 Anchor: message "undo restores the track-scoped insertion"
 
-S059 | checkTimelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.swift
+S059 | checkTimelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard_timeline_insert.swift
 Anchor: message "lane-scoped blank insertion shifts CC7 without moving the note"
 
-S060 | checkTimelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.swift
+S060 | checkTimelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard_timeline_insert.swift
 Anchor: message "undo restores the lane-scoped insertion"
 
 S061 | checkKeyboardKeepsEditedNoteVisible | src/checks/rollcheck/keyboard.swift
@@ -1048,10 +1048,10 @@ Anchor: message "keyboard remaps leave other-track ghost notes untouched"
 S082 | checkRulerSweepSingleTrackScope | src/checks/rollcheck/note_rendering_economy.swift
 Anchor: message "the sweep fixture can provision the intersecting other-track note"
 
-S083 | test_otherEventsBandMountsBetweenDrawerAndScrollbar | src/checks/editorqml/tst_EditorDrawer.qml
+S083 | test_otherEventsBandMountsBetweenDrawerAndScrollbar | src/checks/editorqml/tst_EditorDrawerChrome.qml
 Anchor: message "the other-events band mounts in the production editor"
 
-S084 | test_otherEventsBandMountsBetweenDrawerAndScrollbar | src/checks/editorqml/tst_EditorDrawer.qml
+S084 | test_otherEventsBandMountsBetweenDrawerAndScrollbar | src/checks/editorqml/tst_EditorDrawerChrome.qml
 Anchor: message "the other-events band starts at the drawer bottom"
 
 S085 | runOtherEventsBandChecks | src/checks/drawerpresentation/other_events_band.swift
@@ -1084,52 +1084,52 @@ Anchor: message "Up over an active time selection transposes the covered notes"
 S094 | checkTimeSelectionHighlights | src/checks/rollcheck/keyboard_time_selection.swift
 Anchor: message "Right over an active time selection nudges the covered notes and advances the band start"
 
-S095 | test_rulerDragThresholdAndRightDragMenu | src/checks/editorqml/tst_ShellGridMenu.qml
+S095 | test_rulerDragThresholdAndRightDragMenu | src/checks/editorqml/tst_ShellGridMenuRulerLifecycle.qml
 Anchor: message "a sub-threshold ruler press releases as a cursor tap, not a selection"
 
-S096 | test_rulerDragThresholdAndRightDragMenu | src/checks/editorqml/tst_ShellGridMenu.qml
+S096 | test_rulerDragThresholdAndRightDragMenu | src/checks/editorqml/tst_ShellGridMenuRulerLifecycle.qml
 Anchor: message "a ruler drag past the drag threshold creates the exact snapped selection"
 
-S097 | test_rulerDragThresholdAndRightDragMenu | src/checks/editorqml/tst_ShellGridMenu.qml
+S097 | test_rulerDragThresholdAndRightDragMenu | src/checks/editorqml/tst_ShellGridMenuRulerLifecycle.qml
 Anchor: message "a left click outside the time selection keeps it"
 
-S098 | test_rulerDragThresholdAndRightDragMenu | src/checks/editorqml/tst_ShellGridMenu.qml
+S098 | test_rulerDragThresholdAndRightDragMenu | src/checks/editorqml/tst_ShellGridMenuRulerLifecycle.qml
 Anchor: message "a ruler right-drag creates no time selection"
 
-S099 | test_rulerDragThresholdAndRightDragMenu | src/checks/editorqml/tst_ShellGridMenu.qml
+S099 | test_rulerDragThresholdAndRightDragMenu | src/checks/editorqml/tst_ShellGridMenuRulerLifecycle.qml
 Anchor: message "releasing a ruler right-drag opens the ruler menu"
 
-S100 | test_rulerDragThresholdAndRightDragMenu | src/checks/editorqml/tst_ShellGridMenu.qml
+S100 | test_rulerDragThresholdAndRightDragMenu | src/checks/editorqml/tst_ShellGridMenuRulerLifecycle.qml
 Anchor: message "Escape dismisses the right-drag ruler menu"
 
-S101 | test_controlRulerSweepPublishesSecondaryHeaderOverlay | src/checks/editorqml/tst_ShellGridMenu.qml
+S101 | test_controlRulerSweepPublishesSecondaryHeaderOverlay | src/checks/editorqml/tst_ShellGridMenuRulerLifecycle.qml
 Anchor: message "a Control ruler drag adds the overlapping track to the scope"
 
-S102 | test_controlRulerSweepPublishesSecondaryHeaderOverlay | src/checks/editorqml/tst_ShellGridMenu.qml
+S102 | test_controlRulerSweepPublishesSecondaryHeaderOverlay | src/checks/editorqml/tst_ShellGridMenuRulerLifecycle.qml
 Anchor: message "the time-scoped secondary header publishes its selection overlay"
 
-S103 | test_controlRulerSweepPublishesSecondaryHeaderOverlay | src/checks/editorqml/tst_ShellGridMenu.qml
+S103 | test_controlRulerSweepPublishesSecondaryHeaderOverlay | src/checks/editorqml/tst_ShellGridMenuRulerLifecycle.qml
 Anchor: message "the fixture presents a secondary-track note inside the ruler viewport"
 
-S104 | test_controlRulerSweepPublishesSecondaryHeaderOverlay | src/checks/editorqml/tst_ShellGridMenu.qml
+S104 | test_controlRulerSweepPublishesSecondaryHeaderOverlay | src/checks/editorqml/tst_ShellGridMenuRulerLifecycle.qml
 Anchor: message "the note's secondary header row is mounted"
 
-S105 | test_rollKeysEditTimeScopedNotesAndEmptyClickClearsBand | src/checks/editorqml/tst_ShellGridMenu.qml
+S105 | test_rollKeysEditTimeScopedNotesAndEmptyClickClearsBand | src/checks/editorqml/tst_ShellGridMenuInputZones.qml
 Anchor: message "the selection covers a mounted primary-track note"
 
-S106 | test_rollKeysEditTimeScopedNotesAndEmptyClickClearsBand | src/checks/editorqml/tst_ShellGridMenu.qml
+S106 | test_rollKeysEditTimeScopedNotesAndEmptyClickClearsBand | src/checks/editorqml/tst_ShellGridMenuInputZones.qml
 Anchor: message "Up with an active time selection transposes the covered note"
 
-S107 | test_rollKeysEditTimeScopedNotesAndEmptyClickClearsBand | src/checks/editorqml/tst_ShellGridMenu.qml
+S107 | test_rollKeysEditTimeScopedNotesAndEmptyClickClearsBand | src/checks/editorqml/tst_ShellGridMenuInputZones.qml
 Anchor: message "Right with an active time selection nudges the covered note"
 
-S108 | test_rollKeysEditTimeScopedNotesAndEmptyClickClearsBand | src/checks/editorqml/tst_ShellGridMenu.qml
+S108 | test_rollKeysEditTimeScopedNotesAndEmptyClickClearsBand | src/checks/editorqml/tst_ShellGridMenuInputZones.qml
 Anchor: message "Right over an active time selection advances the band start"
 
-S109 | test_rollKeysEditTimeScopedNotesAndEmptyClickClearsBand | src/checks/editorqml/tst_ShellGridMenu.qml
+S109 | test_rollKeysEditTimeScopedNotesAndEmptyClickClearsBand | src/checks/editorqml/tst_ShellGridMenuInputZones.qml
 Anchor: message "the in-band roll click targets empty note space"
 
-S110 | test_rollKeysEditTimeScopedNotesAndEmptyClickClearsBand | src/checks/editorqml/tst_ShellGridMenu.qml
+S110 | test_rollKeysEditTimeScopedNotesAndEmptyClickClearsBand | src/checks/editorqml/tst_ShellGridMenuInputZones.qml
 Anchor: message "a left click on empty roll space inside the selection clears it"
 
 S088-S110 are the task-53 additions: S088/S089 the swept-range retention and the fixture-byte restoration of checkRulerSweepScope, S090 the cancelled-sweep law of checkRulerTapAndCancel, S091 the slot post-seed unwind of swiftcore/PianoRoll::withKeyboardSeed, S092-S094 the time-shortcut seed and the time-covered Up/Right outcomes of checkTimeSelectionHighlights, and S095-S110 the mounted threshold/right-drag, Control-sweep secondary-header and roll-key/empty-click predicates of tst_ShellGridMenu.qml. They execute under swiftcore/PianoRoll::* in the swiftcore projectSession lane and under the shell-grid-menu lane.
@@ -1142,22 +1142,22 @@ Anchor: message "header records follow used timeline tracks with one conditional
 
 S111/S112 are the task-66 additions: the header-model resolution guard and the records-match-timeline reconciliation of the main Swift check's timelineRulerScope block, executed under cppID swiftcore/PianoRoll::timelineRulerScope in the swiftcore projectSession lane. Both are report.expect predicates recorded in build/proof-evidence/swiftcore-projectsession.json.
 
-S113 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml
+S113 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "a mouse sweep writes Volume automation into the document"
 
-S114 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml
+S114 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "the sweep leaves written Volume events at distinct ticks"
 
-S115 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml
+S115 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "the selected lane range enables Insert Time"
 
-S116 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml
+S116 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "Ctrl+D duplicates the range once and advances the selection and cursor"
 
-S117 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml
+S117 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "the duplicated range is camera-visible"
 
-S118 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml
+S118 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "repeating Ctrl+D duplicates the newest copy"
 
 S119 | checkKeyboardDuplicatePrefersTimeSelection | src/checks/rollcheck/note_commands.swift
@@ -1166,34 +1166,34 @@ Anchor: message "active time range owns duplicate and advances the cursor"
 S120 | expectOneUndo | src/checks/rollcheck/note_commands.swift
 Anchor: message "one undo reverses the command"
 
-S121 | checkTimelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.swift
+S121 | checkTimelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard_timeline_insert.swift
 Anchor: message "a second track can be provisioned for the insert fixture"
 
-S122 | checkTimelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.swift
+S122 | checkTimelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard_timeline_insert.swift
 Anchor: message "a free key exists on the unselected track"
 
-S123 | checkTimelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.swift
+S123 | checkTimelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard_timeline_insert.swift
 Anchor: message "the unselected-track insert fixture exists"
 
-S124 | checkTimelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.swift
+S124 | checkTimelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard_timeline_insert.swift
 Anchor: message "track insert starts with the scoped range and parked cursor"
 
-S125 | checkTimelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.swift
+S125 | checkTimelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard_timeline_insert.swift
 Anchor: message "lane insertion seed reaches its shortcut position"
 
-S126 | checkTimelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.swift
+S126 | checkTimelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard_timeline_insert.swift
 Anchor: message "the lane point and note insert fixtures exist"
 
-S127 | checkTimelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.swift
+S127 | checkTimelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard_timeline_insert.swift
 Anchor: message "lane insert starts with the scoped range and parked cursor"
 
-S128 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml
+S128 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "Insert Time shifts all later events by the same range span"
 
-S129 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml
+S129 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "a Volume-only selection does not move notes"
 
-S130 | test_focusedRouting | src/checks/editorqml/tst_ShellGridInput.qml
+S130 | test_focusedRouting | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
 Anchor: message "mounted Right after Up and Shift+Down advances exactly one snap cell"
 
 S131 | test_modifiedRulerSweepPaintsExactNoteScope | src/checks/editorqml/tst_ShellGridInput.qml
@@ -1232,13 +1232,13 @@ Anchor: message "each Shift+Left preserves both note identities and positions"
 S142 | checkKeyboardResizeNotes | src/checks/rollcheck/keyboard.swift
 Anchor: message "repeated Shift+Left reaches the one-tick floor"
 
-S143 | test_focusedRouting | src/checks/editorqml/tst_ShellGridInput.qml
+S143 | test_focusedRouting | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
 Anchor: message "mounted Shift+Left reaches the one-tick duration floor"
 
 S144 | checkKeyboardResizeNotes | src/checks/rollcheck/keyboard.swift
 Anchor: message "an extra Shift+Left at the floor is a document and history no-op"
 
-S145 | test_focusedRouting | src/checks/editorqml/tst_ShellGridInput.qml
+S145 | test_focusedRouting | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
 Anchor: message "mounted Shift+Left at the floor writes no document revision"
 
 S146 | checkKeyboardResizeNotes | src/checks/rollcheck/keyboard.swift

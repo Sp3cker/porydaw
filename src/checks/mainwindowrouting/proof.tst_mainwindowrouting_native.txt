@@ -1169,11 +1169,11 @@ Anchor: message "failed project replacement preserves the document label"
 S190 | sessionOpenAndRecovery | src/checks/workspace/session_io.swift
 Anchor: message "failed replacement keeps the open document session and its label"
 
-S191 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S191 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "closing one tab keeps its sibling and the project bytes" #1
 
-S192 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S192 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "closing one tab keeps its sibling and the project bytes" #2
 
-S193 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+S193 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "reopening never rewrites the project song bytes"

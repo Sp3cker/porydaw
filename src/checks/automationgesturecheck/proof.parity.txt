@@ -588,13 +588,13 @@ Anchor: message "a sweep ramp commits one document edit"
 S053 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gesturePencil.swift
 Anchor: message "a pencil stroke on an empty lane commits once"
 
-S054 | drawerAutomationTempoBendClickRestore | src/checks/automation/automationselection.swift
+S054 | drawerAutomationTempoBendClickRestore | src/checks/automation/automationselection_pencil.swift
 Anchor: message "the tempo pencil click records one revision"
 
 S055 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "an origin phantom hover keeps the arrow cursor"
 
-S056 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawer.qml
+S056 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "the origin phantom hover retains the arrow"
 
 S057 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
@@ -606,7 +606,7 @@ Anchor: message "a moved phantom retains its full preview curve"
 S059 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "a moved phantom shifts the preview curve toward its target by a pixel"
 
-S060 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawer.qml
+S060 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
 Anchor: message "a moved origin phantom changes the drawn held-value curve"
 
 S061 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
@@ -615,7 +615,7 @@ Anchor: message "the held right drag visibly stages its time band before release
 S062 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "right-band release selects the snapped range in only its active lane or Tempo"
 
-S063 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S063 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "right-band release publishes its selection fill and two edges"
 
 S064 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
@@ -648,10 +648,10 @@ Anchor: message "the released sweep serializes one complete history edit"
 S073 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "sweep undo restores full-song bytes and original history index"
 
-S074 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S074 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the released ramp publishes the independently snapped endpoint and middle ticks"
 
-S075 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S075 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the released middle node follows endpoint interpolation rather than the dip"
 
 S076 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
@@ -666,28 +666,28 @@ Anchor: message "the plain stroke writes the empty lane"
 S079 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "pencil undo restores exact song bytes and history index"
 
-S080 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+S080 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "a real node drag stages a point preview before geometry changes"
 
-S081 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+S081 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "resizing the mounted plot cancels its held node drag"
 
-S082 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+S082 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the geometry rebuild retires the provisional node preview"
 
-S083 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+S083 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the stale node release after geometry rebuild cannot edit the song"
 
 S084 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
 Anchor: message "the resized plot has no stale range preview"
 
-S085 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+S085 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the held node preview has not edited the song"
 
-S086 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+S086 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "a fresh node drag stages on the rebuilt geometry"
 
-S087 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+S087 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "the fresh node drag commits exactly one edit after resize"
 
 S088 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml

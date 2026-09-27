@@ -119,6 +119,8 @@ if(APPLE)
         editcheck/TimeRangeDuplicationAndGlobalsChecks.swift
         editcheck/TimeCorpusChecks.swift
         editcheck/SelectionChecks.swift
+        editcheck/SelectionTrackChecks.swift
+        editcheck/SelectionTransitions.swift
         editcheck/TickBoundsChecks.swift
         editcheck/ClipboardCodecChecks.swift
         editcheck/ClipboardEditingChecks.swift
@@ -128,6 +130,7 @@ if(APPLE)
         editcheck/XcmdPlaybackChecks.swift
         editcheck/FormatZeroChecks.swift
         rollcheck/static/camera.swift
+        rollcheck/static/camera_wheel.swift
         rollcheck/static/geometry.swift
         rollcheck/static/gate.swift
         rollcheck/camera_grid.swift
@@ -144,6 +147,8 @@ if(APPLE)
         rollcheck/note_rendering_ghosts.swift
         rollcheck/note_rendering_economy.swift
         rollcheck/keyboard.swift
+        rollcheck/keyboard_timeline_insert.swift
+        rollcheck/keyboard_drum_labels.swift
         rollcheck/keyboard_time_selection.swift
         rollcheck/keyboard_parity.swift
         rollcheck/selection.swift
@@ -193,6 +198,7 @@ if(APPLE)
         automation/domain/tst_automationdomainLegacy.swift
         automation/domain/gestureSweep.swift
         automation/domain/gestureNodeDrag.swift
+        automation/domain/gestureNodeContract.swift
         automation/domain/gestureNodeDragPhantom.swift
         automation/domain/gesturePointRange.swift
         automation/domain/gesturePencil.swift
@@ -209,9 +215,14 @@ if(APPLE)
         automation/automationtaptempo.swift
         automation/automationactions.swift
         automation/automationselection.swift
+        automation/automationselection_band.swift
+        automation/automationselection_pencil.swift
+        automation/automationselection_mixed.swift
         automation/automationmenus.swift
         selectionkey/localinputtier_text.swift
+        selectionkey/localinputtier_window.swift
         drawerpresentation/velocity.swift
+        drawerpresentation/velocity_context.swift
         drawerpresentation/voice_projection.swift
         drawerpresentation/voice_picker.swift
         drawerpresentation/voice_interaction.swift
@@ -225,10 +236,13 @@ if(APPLE)
         velocity/VelocityClickSelectionChecks.swift
         velocity/VelocityClickCancellationChecks.swift
         velocity/VelocityPaintDetentChecks.swift
+        velocity/VelocityProgramFlowChecks.swift
         velocity/VelocityPaintDetentUnlockedChecks.swift
         velocity/VelocityRollCoreChecks.swift
         rollcheck/velocity_prompt.swift
         rollcheck/EditorGridCameraChecks.swift
+        rollcheck/EditorGridLatticeChecks.swift
+        rollcheck/EditorGridProjectionChecks.swift
         rollcheck/EditorGridCameraIsolation.swift
         drawerpresentation/EditorDrawerChecks.swift
         drawerpresentation/other_events_band.swift
@@ -371,6 +385,10 @@ if(APPLE)
     # executable below links it instead of compiling Swift itself.
     add_library(editor_qml_lane STATIC
         editorqml/EditorQmlTests.swift
+        editorqml/EditorQmlProfileChildren.swift
+        editorqml/EditorQmlProfileEvidence.swift
+        editorqml/EditorQmlBootstrap.swift
+        editorqml/EditorQmlBootstrapSupport.swift
         editorqml/DrawerTestPage.swift
         "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"
     )
@@ -403,6 +421,15 @@ if(APPLE)
         # importing file's directory at runtime — no fixture staging or qrc
         # needed. Listed here so the build tracks the helper every suite imports.
         editorqml/NativeWait.js
+        editorqml/EditorDrawerTestSupport.qml
+        editorqml/EditorDrawerLayoutSupport.js
+        editorqml/EditorDrawerPixelSupport.js
+        editorqml/EditorDrawerPageSupport.js
+        editorqml/EditorDrawerVelocitySupport.js
+        editorqml/EditorDrawerAutomationTabsSupport.js
+        editorqml/EditorDrawerAutomationGestureSupport.js
+        editorqml/EditorDrawerAutomationMenuSupport.js
+        editorqml/EditorDrawerVoiceSupport.js
         "${PROJECT_SOURCE_DIR}/resources/fonts.qrc"
     )
     set_target_properties(editor_qml_tests PROPERTIES
@@ -479,6 +506,7 @@ if(APPLE)
 
     add_library(shell_qml_lane STATIC
         editorqml/ShellQmlTests.swift
+        editorqml/ShellQmlEntries.swift
         editorqml/GridInputClipProbe.swift
         editorqml/GatedVisualsProbe.swift
         editorqml/PolyphonyShellProbe.swift
@@ -502,6 +530,72 @@ if(APPLE)
 
     add_executable(shell_qml_tests
         editorqml/EditorQmlPaths.swift.in
+        editorqml/NativeWait.js
+        editorqml/ShellWindowSupport.qml
+        editorqml/tst_ShellWindowCrossTab.qml
+        editorqml/tst_ShellWindowDrawer.qml
+        editorqml/tst_ShellWindowShortcuts.qml
+        editorqml/tst_ShellWindowEditorKeys.qml
+        editorqml/tst_ShellWindowPrompts.qml
+        editorqml/tst_ShellWindowFocus.qml
+        editorqml/tst_ShellWindowTimeEditing.qml
+        editorqml/tst_ShellWindowVelocity.qml
+        editorqml/tst_ShellWindowParameterKeys.qml
+        editorqml/tst_ShellWindowLabelCommands.qml
+        editorqml/tst_ShellWindowHints.qml
+        editorqml/ShellGridInputSupport.qml
+        editorqml/tst_ShellGridInputDraw.qml
+        editorqml/tst_ShellGridInputEditing.qml
+        editorqml/tst_ShellGridInputCancel.qml
+        editorqml/tst_ShellGridInputKeyboard.qml
+        editorqml/tst_ShellGridInputAutomation.qml
+        editorqml/ShellPitchBendSupport.qml
+        editorqml/tst_ShellPitchBendCancellation.qml
+        editorqml/tst_ShellPitchBendControls.qml
+        editorqml/tst_ShellPitchBendPointer.qml
+        editorqml/tst_ShellPitchBendKeys.qml
+        editorqml/tst_ShellPitchBendRetarget.qml
+        editorqml/ShellGridMenuSupport.qml
+        editorqml/tst_ShellGridMenuInputZones.qml
+        editorqml/tst_ShellGridMenuNoteActions.qml
+        editorqml/tst_ShellGridMenuRulerLifecycle.qml
+        editorqml/tst_ShellGridMenuRulerMarkers.qml
+        editorqml/tst_ShellGridMenuRulerClipboard.qml
+        editorqml/tst_ShellGridMenuAutomation.qml
+        editorqml/ShellClipboardSupport.qml
+        editorqml/tst_ShellClipboardRange.qml
+        editorqml/tst_ShellClipboardRoundTrip.qml
+        editorqml/ShellTransportSupport.qml
+        editorqml/tst_ShellTransportVolume.qml
+        editorqml/tst_ShellTransportSession.qml
+        editorqml/ShellMenusSupport.qml
+        editorqml/tst_ShellMenusCommands.qml
+        editorqml/tst_ShellMenusLoop.qml
+        editorqml/ShellNoteVisualsSupport.qml
+        editorqml/tst_ShellNoteVisualsDetail.qml
+        editorqml/tst_ShellNoteVisualsRuler.qml
+        editorqml/ShellTabsSupport.qml
+        editorqml/ShellTabsRenderingSupport.js
+        editorqml/tst_ShellTabsMouseHints.qml
+        editorqml/tst_ShellTabsOpenSelect.qml
+        editorqml/tst_ShellTabsClose.qml
+        editorqml/tst_ShellTabsDrawer.qml
+        editorqml/tst_ShellTabsBankLifetime.qml
+        editorqml/tst_ShellTabsReload.qml
+        editorqml/ShellEventListSupport.qml
+        editorqml/tst_ShellEventListMenus.qml
+        editorqml/tst_ShellEventListPresentation.qml
+        editorqml/tst_ShellEventListKeyboardSelection.qml
+        editorqml/ShellDrawerParitySupport.qml
+        editorqml/ShellDrawerParityRasterSupport.js
+        editorqml/ShellDrawerParityVelocitySupport.js
+        editorqml/ShellDrawerParityVelocityInputSupport.js
+        editorqml/tst_ShellDrawerParityAutomation.qml
+        editorqml/tst_ShellDrawerParityVoiceVelocity.qml
+        editorqml/ShellVoicegroupSupport.qml
+        editorqml/tst_ShellVoicegroupEditing.qml
+        editorqml/tst_ShellVoicegroupPicker.qml
+        editorqml/tst_ShellVoicegroupSave.qml
         "${PROJECT_SOURCE_DIR}/resources/fonts.qrc"
     )
     set_target_properties(shell_qml_tests PROPERTIES

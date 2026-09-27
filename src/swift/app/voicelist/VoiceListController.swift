@@ -162,12 +162,12 @@ public final class VoiceListController {
 
     // MARK: Bound model
 
-    private var slots: [BankSlotView] = []
-    private var usedVoices: Set<Int> = []
+    @QtIgnored var slots: [BankSlotView] = []
+    @QtIgnored var usedVoices: Set<Int> = []
     /// The arg the selector currently stands at (native m_vgArg).
-    private var currentArg = ""
+    @QtIgnored var currentArg = ""
     /// Last list handed to setVoicegroupChoices (native m_vgChoices).
-    private var knownArgs: [String] = []
+    @QtIgnored var knownArgs: [String] = []
 
     /// Project-scoped catalogs the bank view cannot carry, injected by the
     /// owner exactly like setSource's symbol lists. The sample list feeds
@@ -203,7 +203,7 @@ public final class VoiceListController {
     public func drumkitChoices() -> [String] { drumkitSymbols }
     public func synthCatalogChoices() -> [String] { synthChoices }
 
-    private weak var session: DocumentSession?
+    @QtIgnored weak var session: DocumentSession?
 
     public init() {
         rows.reset(to: (0..<VoiceListController.slotCount).map { slot in
@@ -212,151 +212,7 @@ public final class VoiceListController {
         editor.owner = self
     }
 
-    // MARK: Session binding (the owner's refresh seam)
-
-    /// Binds the document session the edit path applies through. Explicit:
-    /// the granular bindBank/setUsedVoices seam alone is not edit-capable.
-    /// The reference is weak — the workspace owns the session.
-    @QtIgnored
-    public func bindSession(_ session: DocumentSession) {
-        self.session = session
-    }
-
-    @QtIgnored
-    func editOrigin() -> VoiceListEditOrigin? {
-        guard let session else { return nil }
-        return VoiceListEditOrigin(session: session,
-                                   sourcePath: session.bankLease.sourcePath,
-                                   sectionLabel: session.bankLease.sectionLabel)
-    }
-
-    @QtIgnored
-    func isCurrentEditOrigin(_ origin: VoiceListEditOrigin) -> Bool {
-        guard let session else { return false }
-        return session === origin.session && !session.isClosed
-            && session.bankLease.sourcePath == origin.sourcePath
-            && session.bankLease.sectionLabel == origin.sectionLabel
-    }
-
-    /// Full owner-equivalent sync: bind the session, rebind the bank view,
-    /// reflect the document's voicegroup arg, and re-derive the used marks.
-    /// Call this from the owner's session-change seam when bank/document
-    /// domains publish; it is the Swift counterpart of the native owner's
-    /// rebuildVoicegroupPresentation sequence.
-    @QtIgnored
-    public func refresh(from session: DocumentSession) {
-        bindSession(session)
-        bindBank(slots: session.bankSlots, dirty: session.bankDirty,
-                 loadName: session.bankLoadName)
-        let arg = session.document.state.config.voicegroupArgument
-        setCurrentVoicegroupArg(arg.isEmpty ? "_dummy" : arg)
-        refreshUsedVoices(from: session)
-    }
-
-    /// The programs the song actually references, derived like the native
-    /// SongView::usedVoices: first programs of used tracks plus every
-    /// voice-change lane point across the 16 engine tracks.
-    @QtIgnored
-    public func refreshUsedVoices(from session: DocumentSession) {
-        var used = Set<Int>()
-        for track in session.timeline.tracks where track.used && track.firstProgram >= 0 {
-            used.insert(track.firstProgram)
-        }
-        for track in 0..<16 {
-            for point in session.document.lanePoints(track: track, lane: .voice) {
-                used.insert(point.value)
-            }
-        }
-        setUsedVoices(used)
-    }
-
-    // MARK: Loading overlay
-
-    /// The async-load placeholder: loading fills the stable rows with
-    /// "NNN  Loading..." and disables the selector in place; nothing is
-    /// hidden or rebuilt. Exiting — setLoading(false) or a bindBank — restores
-    /// the selector text from the standing arg and re-derives the rows.
-    @QtIgnored
-    public func setLoading(_ loading: Bool) {
-        if loading == isLoading && !loading { return }
-        isLoading = loading
-        if loading {
-            releaseVoice()
-            selectorText = "Loading..."
-            selectorPlaceholder = "Loading..."
-        } else {
-            selectorText = VoiceListSemantics.voicegroupDisplayName(currentArg)
-        }
-        rederiveRows()
-        editor.refresh()
-        updateSelectorEnabled()
-    }
-
-    // MARK: Bank binding (setSource)
-
-    /// Publishes a bank view: slots is the copied BankSlotView array (nil
-    /// detaches, like setSource(nullptr)). A nil bind also exits loading and
-    /// drops the used marks; a live rebind keeps them — the owner re-marks
-    /// after the new bank lands (native setSource clears kUsedRole only on
-    /// a null view).
-    @QtIgnored
-    public func bindBank(slots newSlots: [BankSlotView]?, dirty: Bool = false,
-                         loadName: String = "") {
-        releaseVoice()
-        let wasLoading = isLoading
-        isLoading = false
-        isBound = newSlots != nil
-        slots = newSlots ?? []
-        bankDirty = dirty
-        bankLoadName = loadName
-        panelTitle = dirty ? "Voicegroup*" : "Voicegroup"
-        if wasLoading {
-            selectorText = VoiceListSemantics.voicegroupDisplayName(currentArg)
-        }
-        if newSlots == nil {
-            usedVoices = []
-        }
-        rederiveRows()
-        editor.refresh()
-        updateSelectorEnabled()
-    }
-
-    /// One slot's voice changed outside the editor (an undo/redo, or the
-    /// owner applying a requested edit): the owner hands over the changed
-    /// slot's new view and only that row re-derives — the narrow-refresh
-    /// counterpart of the native owner swapping the bank view before
-    /// calling voiceChanged. Ignored while loading, matching the native
-    /// early-out.
-    @QtIgnored
-    public func voiceChanged(_ slot: Int, slotView: BankSlotView? = nil) {
-        guard !isLoading, slots.indices.contains(slot) else { return }
-        if let slotView {
-            slots[slot] = slotView
-        }
-        rederiveRow(slot)
-        if slot == currentSlot { editor.refresh() }
-    }
-
     // MARK: Selector
-
-    /// The selector's -G choices (native args; display names are published).
-    /// A same-list call is a no-op; the current arg never emits back.
-    @QtIgnored
-    public func setVoicegroupChoices(_ args: [String]) {
-        guard args != knownArgs else { return }
-        knownArgs = args
-        argChoices.reset(to: args.map {
-            VoiceListArgChoice(name: VoiceListSemantics.voicegroupDisplayName($0), arg: $0)
-        })
-    }
-
-    /// Reflects the song's current -G arg without emitting (programmatic
-    /// feedback never requests a change).
-    @QtIgnored
-    public func setCurrentVoicegroupArg(_ arg: String) {
-        currentArg = arg
-        selectorText = VoiceListSemantics.voicegroupDisplayName(arg)
-    }
 
     /// A user commit of the selector text (activation or editing-finished):
     /// resolves the display text back to an arg and emits the change
@@ -390,30 +246,7 @@ public final class VoiceListController {
         revealRequest += 1
     }
 
-    @QtIgnored
-    public func revealTrackVoice(track: Int, session: DocumentSession) {
-        guard session.timeline.tracks.indices.contains(track) else { return }
-        let first = session.timeline.tracks[track].firstProgram
-        let program = first >= 0 ? first
-            : session.document.lanePoints(track: track, lane: .voice).first?.value ?? -1
-        guard program >= 0 else { return }
-        revealSlot(slot: program)
-    }
-
     // MARK: Used marks
-
-    /// The programs the song actually references; their rows render marked.
-    @QtIgnored
-    public func setUsedVoices(_ used: Set<Int>) {
-        usedVoices = used
-        for slot in 0..<rows.count {
-            let row = rows[slot]
-            let marked = used.contains(slot)
-            guard row.used != marked else { continue }
-            row.used = marked
-            rows[slot] = row
-        }
-    }
 
     public func slotIsMarkedUsed(slot: Int) -> Bool {
         slot >= 0 && slot < rows.count && rows[slot].used
@@ -568,91 +401,4 @@ public final class VoiceListController {
         onEditSampleRequested?(slot)
     }
 
-    // MARK: Row derivation
-
-    private func voiceAt(_ slot: Int) -> BankVoice? {
-        guard slots.indices.contains(slot) else { return nil }
-        return slots[slot].voice
-    }
-
-    private func updateSelectorEnabled() {
-        selectorEnabled = isBound && !isLoading
-        if !isLoading {
-            selectorPlaceholder = isBound ? "dummy" : "No song loaded"
-        }
-    }
-    private func rederiveRows() {
-        for slot in 0..<rows.count { rederiveRow(slot) }
-    }
-
-    /// QListModel snapshots each handle's role values. Mutating the handle
-    /// alone leaves QML delegates on their original snapshot; setting the same
-    /// handle back emits the model's dataChanged without replacing row identity.
-    private func publishRow(_ value: VoiceListRow, at slot: Int) {
-        let row = rows[slot]
-        guard row.title != value.title || row.typeName != value.typeName ||
-                row.adsr != value.adsr ||
-                row.typeIconKey != VoiceListSemantics.iconKey(glyph: value.glyph,
-                                                               altChip: value.altChip) ||
-                row.altChip != value.altChip || row.used != value.used else { return }
-        row.apply(value)
-        rows[slot] = row
-    }
-
-    private func rederiveRow(_ slot: Int) {
-        if isLoading {
-            // The overlay rewrites the text cells only; used marks survive
-            // (native setLoading never touches kUsedRole).
-            publishRow(VoiceListRow(slot: slot,
-                                    title: String(format: "%03d  Loading...", slot),
-                                    used: usedVoices.contains(slot)), at: slot)
-            return
-        }
-        // Blank slots render like their editor: a None-kind row is a
-        // template the user can materialize.
-        if slots.indices.contains(slot), slots[slot].kind == BankSlotKind.none {
-            publishRow(VoiceListRow(slot: slot,
-                                    title: String(format: "%03d  [Blank]", slot),
-                                    used: usedVoices.contains(slot)), at: slot)
-            return
-        }
-        // Parsed editable voices are authoritative for unsaved edits. Native
-        // loaded-tone facts cover read-only and otherwise unparsed slots.
-        if let voice = voiceAt(slot) {
-            let synth = slots[slot].isSynth || synthSymbols.contains(voice.symbol)
-            let typeByte = VoiceListSemantics.voiceType(forMacro: voice.macro)
-            let typeName = VoiceListSemantics.typeDisplayName(typeByte: typeByte, synth: synth)
-            let name = VoiceListSemantics.macroHasSymbol(voice.macro) ? voice.symbol : ""
-            publishRow(VoiceListRow(
-                slot: slot,
-                title: VoiceListSemantics.voiceColumnText(slot: slot, symbol: name,
-                                                         typeName: typeName),
-                typeName: typeName,
-                adsr: VoiceListSemantics.adsrText(voice),
-                glyph: VoiceListSemantics.glyph(forTypeByte: typeByte, synth: synth),
-                altChip: VoiceListSemantics.isAltChip(typeByte),
-                used: usedVoices.contains(slot)), at: slot)
-            return
-        }
-        if slots.indices.contains(slot), let tone = slots[slot].tone {
-            let typeByte = UInt8(tone.type)
-            let typeName = VoiceListSemantics.typeDisplayName(
-                typeByte: typeByte, synth: tone.isSynth)
-            let adsr = tone.adsr.map {
-                "\($0.attack) \($0.decay) \($0.sustain) \($0.release)"
-            } ?? ""
-            publishRow(VoiceListRow(
-                slot: slot,
-                title: VoiceListSemantics.voiceColumnText(
-                    slot: slot, symbol: tone.name, typeName: typeName),
-                typeName: typeName,
-                adsr: adsr,
-                glyph: VoiceListSemantics.glyph(forTypeByte: typeByte, synth: tone.isSynth),
-                altChip: VoiceListSemantics.isAltChip(typeByte),
-                used: usedVoices.contains(slot)), at: slot)
-            return
-        }
-        publishRow(VoiceListRow(slot: slot, title: String(format: "%03d", slot),
-                                used: usedVoices.contains(slot)), at: slot)
-    }
 }

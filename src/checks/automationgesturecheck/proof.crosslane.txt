@@ -520,110 +520,110 @@ Anchor: message "the selected-range band follows its drag"
 S048 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "a selected-range drag deletes through the range"
 
-S049 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+S049 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection_band.swift
 Anchor: message "the unselected volume lane is excluded"
 
-S050 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+S050 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection_band.swift
 Anchor: message "a multi-lane drag preserves tempo and CC order"
 
 S051 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "a stale batch release writes nothing"
 
-S052 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+S052 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "mixed selected drag publishes ordered Pan collisions and preserves Volume playback"
 
-S053 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+S053 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "mixed move preserves exact surviving raw Pan and LFO point order"
 
-S054 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+S054 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "mixed selected drag publishes exact 499999-us Tempo at tick 144"
 
-S055 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+S055 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "mixed Tempo Pan LFO move leaves unrelated Volume events byte-identical"
 
-S056 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+S056 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "mixed selected drag translates its Tempo Pan LFO interval to 144 through 192"
 
-S057 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+S057 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "mixed selection drag finishes idle on pointer release"
 
-S058 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection.swift
+S058 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "mixed Delete removes only the interval Tempo and leaves gesture idle"
 
-S059 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection.swift
+S059 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "mixed Delete removes only selected raw groups and keeps outsiders ordered"
 
-S060 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection.swift
+S060 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "selected Delete removes covered Pan playback but leaves later occupants"
 
-S061 | drawerAutomationMixedDragRebuildCancellation | src/checks/automation/automationselection.swift
+S061 | drawerAutomationMixedDragRebuildCancellation | src/checks/automation/automationselection_mixed.swift
 Anchor: message "stale release keeps original mixed range and rebuilt bytes while idle"
 
-S062 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection.swift
+S062 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "Pan LFO range shifts LFO but never changes unrelated Volume"
 
-S063 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+S063 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "mixed drag increments the applied undo index exactly once"
 
-S064 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection.swift
+S064 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "Tempo-scoped drag makes exactly one edit and leaves both raw CC rows untouched"
 
-S065 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection.swift
+S065 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "Pan LFO range commits one revision and applied undo entry then finishes idle"
 
-S066 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+S066 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "mixed move undo restores prior index MIDI bytes and all selected points"
 
-S067 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+S067 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "mixed move redo restores committed index MIDI bytes and Pan points"
 
-S068 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection.swift
+S068 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "Pan LFO-only range preserves fractional Tempo at source"
 
-S069 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection.swift
+S069 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "Pan LFO undo restores original bytes index points and Tempo row"
 
-S070 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection.swift
+S070 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "Pan LFO redo restores committed bytes index points and Tempo row"
 
-S071 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection.swift
+S071 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "Pan LFO-only edit preserves complete Tempo row and raw Volume events"
 
-S072 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection.swift
+S072 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "Pan LFO range shifts LFO but never changes unrelated Volume"
 
-S073 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+S073 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "mixed drag preview leaves MIDI bytes index and all selected points unchanged"
 
-S074 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection.swift
+S074 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "Pan LFO selected preview does not write raw events"
 
-S075 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+S075 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "mixed selected drag publishes one dirty edit and one history entry"
 
-S076 | test_mountedMixedAutomationRangeDragDeleteUndo | src/checks/editorqml/tst_ShellGridInput.qml
+S076 | test_mountedMixedAutomationRangeDragDeleteUndo | src/checks/editorqml/tst_ShellGridInputAutomation.qml
 Anchor: message "held mixed Shift drag preserves every displayed Tempo point"
 
-S077 | test_mountedMixedAutomationRangeDragDeleteUndo | src/checks/editorqml/tst_ShellGridInput.qml
+S077 | test_mountedMixedAutomationRangeDragDeleteUndo | src/checks/editorqml/tst_ShellGridInputAutomation.qml
 Anchor: message "held mixed Shift drag leaves the document revision unchanged"
 
-S078 | test_mountedMixedAutomationRangeDragDeleteUndo | src/checks/editorqml/tst_ShellGridInput.qml
+S078 | test_mountedMixedAutomationRangeDragDeleteUndo | src/checks/editorqml/tst_ShellGridInputAutomation.qml
 Anchor: message "mixed Shift release moves the selected Tempo point"
 
-S079 | test_mountedMixedAutomationRangeDragDeleteUndo | src/checks/editorqml/tst_ShellGridInput.qml
+S079 | test_mountedMixedAutomationRangeDragDeleteUndo | src/checks/editorqml/tst_ShellGridInputAutomation.qml
 Anchor: message "mixed Shift release translates Pan by exactly the Tempo tick delta"
 
-S080 | test_mountedMixedAutomationRangeDragDeleteUndo | src/checks/editorqml/tst_ShellGridInput.qml
+S080 | test_mountedMixedAutomationRangeDragDeleteUndo | src/checks/editorqml/tst_ShellGridInputAutomation.qml
 Anchor: message "mixed Shift release translates LFO by exactly the Tempo tick delta"
 
-S081 | test_mountedMixedAutomationRangeDragDeleteUndo | src/checks/editorqml/tst_ShellGridInput.qml
+S081 | test_mountedMixedAutomationRangeDragDeleteUndo | src/checks/editorqml/tst_ShellGridInputAutomation.qml
 Anchor: message "mounted mixed Delete removes the exact translated Tempo occurrence"
 
-S082 | test_mountedMixedAutomationRangeDragDeleteUndo | src/checks/editorqml/tst_ShellGridInput.qml
+S082 | test_mountedMixedAutomationRangeDragDeleteUndo | src/checks/editorqml/tst_ShellGridInputAutomation.qml
 Anchor: message "mounted mixed Delete removes the exact translated Pan occurrence"
 
-S083 | test_mountedMixedAutomationRangeDragDeleteUndo | src/checks/editorqml/tst_ShellGridInput.qml
+S083 | test_mountedMixedAutomationRangeDragDeleteUndo | src/checks/editorqml/tst_ShellGridInputAutomation.qml
 Anchor: message "mounted mixed Delete removes the exact translated LFO occurrence"
 
-S084 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+S084 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "shortcut hover and menu dismissal never edit the song"

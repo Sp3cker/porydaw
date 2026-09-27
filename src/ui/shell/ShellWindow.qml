@@ -1,8 +1,6 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Controls.Basic as Basic
 import QtQuick.Dialogs
-import QtQml.Models
 import PorydawApp
 import Porydaw.Ui
 
@@ -16,7 +14,6 @@ ThemedWindow {
     colors: shell.session.palette
     property bool establishApplicationIdentity: false
     property int actionRevision: 0
-    property bool noteMenuSwallowingRelease: false
     property bool dockSettingsReady: false
     property var normalFrame: null
     property bool sessionStatePersisted: false
@@ -102,18 +99,6 @@ ThemedWindow {
         shell.openStartup()
     }
 
-    // Cocoa uses the primary NativeText suffix as the same key equivalent the
-    // old QAction supplied. ShortcutOverride arbitrates it before keyDown;
-    // an Action.shortcut here would incorrectly add another Qt map entry.
-    function nativeMenuText(actionId) {
-        const shortcut = shell.actionShortcut(actionId)
-        const label = shell.menuLabel(actionId)
-        return shortcut.length > 0 ? label + "\t" + shortcut : label
-    }
-
-    // A Swift method's internal reads do not install QML binding dependencies.
-    // Re-evaluate delivery and menus on the same notifications as the native
-    // updateWindowActions/updateGridActions slots, without duplicating policy.
     Connections {
         target: shell.session
         function onProjectOpenChanged() {
@@ -122,7 +107,7 @@ ThemedWindow {
         }
         function onProjectRootChanged() { shell.refreshWindowChrome() }
         function onSongOpenChanged() {
-            gridContextMenu.close()
+            gridContextMenu.menu.close()
             shell.songOpenChanged()
             ++root.actionRevision
         }
@@ -151,19 +136,19 @@ ThemedWindow {
         target: shell.session.songTabs
         function onSelectedTabShowsEventsChanged() { ++root.actionRevision }
         function onSelectedPageChanged() {
-            gridContextMenu.close()
+            gridContextMenu.menu.close()
             shell.refreshWindowChrome()
             ++root.actionRevision
         }
         function onSelectedIdChanged() {
-            gridContextMenu.close()
+            gridContextMenu.menu.close()
             ++root.actionRevision
         }
         function onTabCountChanged() { ++root.actionRevision }
     }
     Connections {
         target: shell.session.songOpen ? shell.session.gridPresenter() : null
-        function onAppliedRevisionTextChanged() { gridContextMenu.close() }
+        function onAppliedRevisionTextChanged() { gridContextMenu.menu.close() }
     }
     Connections {
         target: root.drawerSectionSource
@@ -250,312 +235,10 @@ ThemedWindow {
         }
     }
 
-    menuBar: MenuBar {
-        Menu {
-            id: fileMenu
-            objectName: "shellFileMenu"
-            title: qsTr("&File")
-            onAboutToShow: ++root.actionRevision
-            Instantiator {
-                model: shell.fileActionIds
-                delegate: MenuItem {
-                    // No submenu/check visuals: skips per-item image loads at launch.
-                    arrow: null
-                    indicator: null
-                    required property string modelData
-                    objectName: "shellAction_" + modelData
-                    text: root.nativeMenuText(modelData)
-                    enabled: {
-                        root.actionRevision
-                        return shell.actionEnabled(modelData)
-                    }
-                    onTriggered: shell.activate(modelData)
-                }
-                onObjectAdded: (index, object) => fileMenu.insertItem(index, object)
-                onObjectRemoved: (index, object) => fileMenu.removeItem(object)
-            }
-        }
-        Menu {
-            id: editMenu
-            objectName: "shellEditMenu"
-            title: qsTr("&Edit")
-            onAboutToShow: ++root.actionRevision
-            Instantiator {
-                model: shell.editTopActionIds
-                delegate: MenuItem {
-                    arrow: null
-                    indicator: null
-                    required property string modelData
-                    objectName: "shellAction_" + modelData
-                    text: root.nativeMenuText(modelData)
-                    enabled: {
-                        root.actionRevision
-                        return shell.actionEnabled(modelData)
-                    }
-                    onTriggered: shell.activate(modelData)
-                }
-                onObjectAdded: (index, object) => editMenu.insertItem(index, object)
-                onObjectRemoved: (index, object) => editMenu.removeItem(object)
-            }
-            MenuSeparator {
-                id: editSectionSeparator
-                objectName: "shellEditSectionSeparator"
-            }
-            Instantiator {
-                model: shell.editClipboardActionIds
-                delegate: MenuItem {
-                    arrow: null
-                    indicator: null
-                    required property string modelData
-                    objectName: "shellAction_" + modelData
-                    text: root.nativeMenuText(modelData)
-                    enabled: {
-                        root.actionRevision
-                        return shell.actionEnabled(modelData)
-                    }
-                    onTriggered: shell.activate(modelData)
-                }
-                onObjectAdded: (index, object) => {
-                    let anchor = 0
-                    while (anchor < editMenu.count && editMenu.itemAt(anchor) !== editSectionSeparator)
-                        ++anchor
-                    editMenu.insertItem(anchor + 1 + index, object)
-                }
-                onObjectRemoved: (index, object) => editMenu.removeItem(object)
-            }
-            Menu {
-                id: timeMenu
-                objectName: "shellTimeMenu"
-                title: qsTr("&Time")
-                onAboutToShow: ++root.actionRevision
-                Instantiator {
-                    model: shell.timeActionIds
-                    delegate: MenuItem {
-                        arrow: null
-                        indicator: null
-                        required property string modelData
-                        objectName: "shellAction_" + modelData
-                        text: root.nativeMenuText(modelData)
-                        enabled: {
-                            root.actionRevision
-                            return shell.actionEnabled(modelData)
-                        }
-                        onTriggered: shell.activate(modelData)
-                    }
-                    onObjectAdded: (index, object) => timeMenu.insertItem(index, object)
-                    onObjectRemoved: (index, object) => timeMenu.removeItem(object)
-                }
-            }
-            Menu {
-                id: notesMenu
-                objectName: "shellNotesMenu"
-                title: qsTr("&Notes")
-                onAboutToShow: ++root.actionRevision
-                Instantiator {
-                    model: shell.notesActionIds
-                    delegate: MenuItem {
-                        arrow: null
-                        indicator: null
-                        required property string modelData
-                        objectName: "shellAction_" + modelData
-                        text: root.nativeMenuText(modelData)
-                        enabled: { root.actionRevision; return shell.actionEnabled(modelData) }
-                        onTriggered: shell.activate(modelData)
-                    }
-                    onObjectAdded: (index, object) => notesMenu.insertItem(index, object)
-                    onObjectRemoved: (index, object) => notesMenu.removeItem(object)
-                }
-            }
-            Menu {
-                id: moveMenu
-                objectName: "shellMoveMenu"
-                title: qsTr("&Move")
-                onAboutToShow: ++root.actionRevision
-                Instantiator {
-                    model: shell.moveActionIds
-                    delegate: MenuItem {
-                        arrow: null
-                        indicator: null
-                        required property string modelData
-                        objectName: "shellAction_" + modelData
-                        text: root.nativeMenuText(modelData)
-                        enabled: { root.actionRevision; return shell.actionEnabled(modelData) }
-                        onTriggered: shell.activate(modelData)
-                    }
-                    onObjectAdded: (index, object) => moveMenu.insertItem(index, object)
-                    onObjectRemoved: (index, object) => moveMenu.removeItem(object)
-                }
-            }
-            Menu {
-                id: tracksMenu
-                objectName: "shellTracksMenu"
-                title: qsTr("Tr&acks")
-                onAboutToShow: ++root.actionRevision
-                Instantiator {
-                    model: shell.tracksActionIds
-                    delegate: MenuItem {
-                        arrow: null
-                        indicator: null
-                        required property string modelData
-                        objectName: "shellAction_" + modelData
-                        text: root.nativeMenuText(modelData)
-                        enabled: {
-                            root.actionRevision
-                            return shell.actionEnabled(modelData)
-                        }
-                        onTriggered: shell.activate(modelData)
-                    }
-                    onObjectAdded: (index, object) => tracksMenu.insertItem(index, object)
-                    onObjectRemoved: (index, object) => tracksMenu.removeItem(object)
-                }
-            }
-            Menu {
-                id: automationMenu
-                objectName: "shellAutomationMenu"
-                title: qsTr("&Automation")
-                onAboutToShow: ++root.actionRevision
-                Instantiator {
-                    model: shell.automationActionIds
-                    delegate: MenuItem {
-                        arrow: null
-                        indicator: null
-                        required property string modelData
-                        objectName: "shellAction_" + modelData
-                        text: root.nativeMenuText(modelData)
-                        enabled: { root.actionRevision; return shell.actionEnabled(modelData) }
-                        onTriggered: shell.activate(modelData)
-                    }
-                    onObjectAdded: (index, object) => automationMenu.insertItem(index, object)
-                    onObjectRemoved: (index, object) => automationMenu.removeItem(object)
-                }
-            }
-            Menu {
-                id: eventsMenu
-                objectName: "shellEventsMenu"
-                title: qsTr("&Events")
-                onAboutToShow: ++root.actionRevision
-                Instantiator {
-                    model: shell.eventsActionIds
-                    delegate: MenuItem {
-                        arrow: null
-                        indicator: null
-                        required property string modelData
-                        objectName: "shellAction_" + modelData
-                        text: root.nativeMenuText(modelData)
-                        enabled: { root.actionRevision; return shell.actionEnabled(modelData) }
-                        onTriggered: shell.activate(modelData)
-                    }
-                    onObjectAdded: (index, object) => eventsMenu.insertItem(index, object)
-                    onObjectRemoved: (index, object) => eventsMenu.removeItem(object)
-                }
-            }
-            Menu {
-                id: loopMenu
-                objectName: "shellLoopMenu"
-                title: qsTr("&Loop")
-                onAboutToShow: ++root.actionRevision
-                Instantiator {
-                    model: shell.loopActionIds
-                    delegate: MenuItem {
-                        arrow: null
-                        indicator: null
-                        required property string modelData
-                        objectName: "shellAction_" + modelData
-                        text: root.nativeMenuText(modelData)
-                        enabled: { root.actionRevision; return shell.actionEnabled(modelData) }
-                        onTriggered: shell.activate(modelData)
-                    }
-                    onObjectAdded: (index, object) => loopMenu.insertItem(index, object)
-                    onObjectRemoved: (index, object) => loopMenu.removeItem(object)
-                }
-            }
-            Menu {
-                id: transportMenu
-                objectName: "shellTransportMenu"
-                title: qsTr("Trans&port")
-                onAboutToShow: ++root.actionRevision
-                Instantiator {
-                    model: shell.transportActionIds
-                    delegate: MenuItem {
-                        arrow: null
-                        required property string modelData
-                        objectName: "shellAction_" + modelData
-                        text: root.nativeMenuText(modelData)
-                        checkable: shell.actionCheckable(modelData)
-                        checked: { root.actionRevision; return shell.actionChecked(modelData) }
-                        enabled: { root.actionRevision; return shell.actionEnabled(modelData) }
-                        onTriggered: shell.activate(modelData)
-                    }
-                    onObjectAdded: (index, object) => transportMenu.insertItem(index, object)
-                    onObjectRemoved: (index, object) => transportMenu.removeItem(object)
-                }
-            }
-            MenuSeparator {}
-            Instantiator {
-                model: shell.editTailActionIds
-                delegate: MenuItem {
-                    arrow: null
-                    indicator: null
-                    required property string modelData
-                    objectName: "shellAction_" + modelData
-                    text: root.nativeMenuText(modelData)
-                    enabled: { root.actionRevision; return shell.actionEnabled(modelData) }
-                    onTriggered: shell.activate(modelData)
-                }
-                onObjectAdded: (index, object) => editMenu.addItem(object)
-                onObjectRemoved: (index, object) => editMenu.removeItem(object)
-            }
-        }
-
-        Menu {
-            id: viewMenu
-            objectName: "shellViewMenu"
-            title: qsTr("&View")
-            onAboutToShow: ++root.actionRevision
-            MenuSeparator { objectName: "shellViewSectionSeparator" }
-            Instantiator {
-                model: shell.viewActionIds
-                delegate: MenuItem {
-                    arrow: null
-                    required property string modelData
-                    objectName: "shellAction_" + modelData
-                    text: root.nativeMenuText(modelData)
-                    checkable: shell.actionCheckable(modelData)
-                    checked: {
-                        root.actionRevision
-                        return shell.actionChecked(modelData)
-                    }
-                    enabled: {
-                        root.actionRevision
-                        return shell.actionEnabled(modelData)
-                    }
-                    onTriggered: shell.activate(modelData)
-                }
-                onObjectAdded: (index, object) =>
-                    viewMenu.insertItem(index < 5 ? index : index + 1, object)
-                onObjectRemoved: (index, object) => viewMenu.removeItem(object)
-            }
-        }
-        Menu {
-            id: helpMenu
-            objectName: "shellHelpMenu"
-            title: qsTr("&Help")
-            onAboutToShow: ++root.actionRevision
-            // Qt Quick Controls offers no QAction::AboutRole equivalent, so the
-            // item stays in the Help menu on every platform, as it did on
-            // non-macOS builds of the old app.
-            MenuItem {
-                arrow: null
-                indicator: null
-                objectName: "shellAction_help.about"
-                text: root.nativeMenuText("help.about")
-                enabled: {
-                    root.actionRevision
-                    return shell.actionEnabled("help.about")
-                }
-                onTriggered: shell.activate("help.about")
-            }
-        }
+    menuBar: ShellMenuBar {
+        shell: root.shellPresenter
+        windowRoot: root
+        actionRevision: root.actionRevision
     }
     SettingsDialog {
         id: settingsDialog
@@ -626,9 +309,9 @@ ThemedWindow {
                 shellRouter: shell
                 onContextMenuAt: (x, y) => {
                     root.actionRevision++
-                    gridContextMenu.x = x
-                    gridContextMenu.y = y
-                    gridContextMenu.open()
+                    gridContextMenu.menu.x = x
+                    gridContextMenu.menu.y = y
+                    gridContextMenu.menu.open()
                 }
             }
             onItemChanged: {
@@ -730,246 +413,21 @@ ThemedWindow {
         typography: root.chromeTypography
         layoutSpaces: root.chromeSpacing
     }
-    footer: Rectangle {
-        readonly property int statusTopInset: 3
-        readonly property int statusBottomInset: 2
-        readonly property int statusGripHeight: 13 + 4
-        readonly property bool showingFailure: shell.session.lastSaveError.length > 0
-                                                && shell.statusText === shell.session.lastSaveError
-        implicitHeight: Math.max(captionMetrics.height, bodyMetrics.height, statusGripHeight)
-                        + statusTopInset + statusBottomInset
-        color: shell.session.palette.windowBackground
-        Text {
-            objectName: "shellStatusText"
-            id: shellStatus
-            anchors.left: parent.left
-            width: Math.max(0, Math.min(implicitWidth, parent.showingFailure
-                ? parent.width - (polyMeter.visible ? polyMeter.width : 0)
-                  - root.chromeSpacing.two * 3
-                : parent.width / 4 - root.chromeSpacing.two))
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            anchors.topMargin: parent.statusTopInset
-            anchors.bottomMargin: parent.statusBottomInset
-            anchors.leftMargin: root.chromeSpacing.two
-            text: shell.statusText
-            font: Qt.font(root.chromeTypography.caption)
-            color: root.colors.windowText
-            verticalAlignment: Text.AlignVCenter
-            elide: Text.ElideRight
-        }
-        Text {
-            objectName: "shellMouseHintText"
-            visible: !parent.showingFailure
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            anchors.topMargin: parent.statusTopInset
-            anchors.bottomMargin: parent.statusBottomInset
-            width: Math.max(0, parent.width - 2 * Math.max(
-                shellStatus.width + root.chromeSpacing.two * 2,
-                polyMeter.visible ? polyMeter.width + root.chromeSpacing.two * 2 : 0))
-            text: shell.mouseHints.text
-            textFormat: Text.PlainText
-            font: Qt.font(root.chromeTypography.caption)
-            color: root.colors.windowText
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-            elide: Text.ElideRight
-        }
-        Row {
-            id: polyMeter
-            objectName: "shellPolyMeter"
-            anchors.right: parent.right
-            anchors.rightMargin: root.chromeSpacing.two
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.verticalCenterOffset: (parent.statusTopInset - parent.statusBottomInset) / 2
-            spacing: bodyMetrics.advanceWidth(" ") / 2
-            visible: presenter.polyMeterVisible
-            readonly property var presenter: shell.session.transportBarPresenter()
-            Text {
-                objectName: "shellPolyPcmCaption"
-                text: qsTr("PCM")
-                font: Qt.font(root.chromeTypography.body)
-                color: root.colors.windowText
-            }
-            Rectangle {
-                implicitWidth: pcmValue.implicitWidth + polyMeter.spacing * 2
-                implicitHeight: bodyMetrics.height
-                color: root.colors.polyphonyValueBackground
-                Text {
-                    id: pcmValue
-                    objectName: "shellPolyPcmValue"
-                    anchors.fill: parent
-                    anchors.leftMargin: polyMeter.spacing
-                    anchors.rightMargin: polyMeter.spacing
-                    text: polyMeter.presenter.pcmText
-                    font: Qt.font(root.chromeTypography.bodyMono)
-                    color: root.colors.polyphonyValueText
-                    horizontalAlignment: Text.AlignRight
-                    verticalAlignment: Text.AlignVCenter
-                }
-            }
-            Text {
-                text: "·"
-                color: root.colors.windowText
-                font: Qt.font(root.chromeTypography.body)
-            }
-            Text {
-                objectName: "shellPolyCgbCaption"
-                text: qsTr("CGB")
-                color: root.colors.windowText
-                font: Qt.font(root.chromeTypography.body)
-            }
-            Rectangle {
-                implicitWidth: cgbValue.implicitWidth + polyMeter.spacing * 2
-                implicitHeight: bodyMetrics.height
-                color: root.colors.polyphonyValueBackground
-                Text {
-                    id: cgbValue
-                    objectName: "shellPolyCgbValue"
-                    anchors.fill: parent
-                    anchors.leftMargin: polyMeter.spacing
-                    anchors.rightMargin: polyMeter.spacing
-                    text: polyMeter.presenter.cgbText
-                    font: Qt.font(root.chromeTypography.bodyMono)
-                    color: root.colors.polyphonyValueText
-                    horizontalAlignment: Text.AlignRight
-                    verticalAlignment: Text.AlignVCenter
-                }
-            }
-            Text {
-                visible: polyMeter.presenter.lostVisible
-                text: "·"
-                color: root.colors.windowText
-                font: Qt.font(root.chromeTypography.body)
-            }
-            Rectangle {
-                visible: polyMeter.presenter.lostVisible
-                implicitWidth: lostValue.implicitWidth + polyMeter.spacing * 2
-                implicitHeight: bodyMetrics.height
-                color: root.colors.polyphonyValueBackground
-                Text {
-                    id: lostValue
-                    objectName: "shellPolyLostValue"
-                    anchors.fill: parent
-                    anchors.leftMargin: polyMeter.spacing
-                    anchors.rightMargin: polyMeter.spacing
-                    text: polyMeter.presenter.lostText
-                    color: root.colors.polyphonyValueText
-                    font: Qt.font(root.chromeTypography.body)
-                    horizontalAlignment: Text.AlignRight
-                    verticalAlignment: Text.AlignVCenter
-                }
-            }
-            Text {
-                visible: polyMeter.presenter.lostVisible
-                text: qsTr("notes lost")
-                font: Qt.font(root.chromeTypography.body)
-                color: root.colors.windowText
-            }
-        }
+    footer: ShellStatusBar {
+        root: root
+        shell: root.shellPresenter
+        bodyMetrics: bodyMetrics
+        captionMetrics: captionMetrics
     }
 
-    Component {
-        id: contextRow
-        Basic.MenuItem {
-            id: contextAction
-            required property string modelData
-            objectName: "shellContextAction_" + modelData
-            text: shell.actionLabel(modelData)
-            readonly property string shortcutText: shell.actionShortcut(modelData)
-            readonly property color foreground: !enabled ? root.colors.disabledText
-                : down ? root.colors.buttonPressedText : root.colors.windowText
-            Accessible.description: shortcutText
-            hoverEnabled: true
-            padding: root.chromeSpacing.one
-            contentItem: Item {
-                implicitWidth: caption.implicitWidth + (hint.visible
-                    ? hint.implicitWidth + bodyMetrics.averageCharacterWidth * 2 : 0)
-                implicitHeight: Math.max(caption.implicitHeight, hint.implicitHeight)
-                Text {
-                    id: caption
-                    anchors.left: parent.left
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: contextAction.text
-                    font: contextAction.font
-                    color: contextAction.foreground
-                }
-                Text {
-                    id: hint
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: text.length > 0
-                    text: contextAction.shortcutText
-                    font: contextAction.font
-                    color: contextAction.foreground
-                }
-            }
-            background: Rectangle {
-                color: contextAction.down ? root.colors.buttonPressedBackground
-                    : contextAction.highlighted ? root.colors.menuHoverBackground
-                    : root.colors.menuBackground
-            }
-            enabled: {
-                root.actionRevision
-                return shell.actionEnabled(modelData)
-            }
-            onTriggered: shell.activate(modelData)
-        }
-    }
-    Item {
-        parent: Overlay.overlay
-        anchors.fill: parent
-        z: 1
-        visible: gridContextMenu.visible || root.noteMenuSwallowingRelease
-        MouseArea {
-            anchors.fill: parent
-            acceptedButtons: Qt.LeftButton | Qt.RightButton
-            preventStealing: true
-            onPressed: (mouse) => {
-                root.noteMenuSwallowingRelease = true
-                if (mouse.button === Qt.RightButton) {
-                    const surface = editorScene.item
-                        ? editorScene.item.selectedEditorSurface() : null
-                    const point = mapToItem(null, mouse.x, mouse.y)
-                    gridContextMenu.close()
-                    if (surface)
-                        surface.retargetNoteMenu(point.x, point.y)
-                } else {
-                    gridContextMenu.close()
-                }
-                mouse.accepted = true
-            }
-            onReleased: Qt.callLater(() => root.noteMenuSwallowingRelease = false)
-            onCanceled: Qt.callLater(() => root.noteMenuSwallowingRelease = false)
-        }
-    }
-    Basic.Menu {
+    ShellGridContextMenu {
         id: gridContextMenu
-        objectName: "shellGridContextMenu"
-        parent: Overlay.overlay
-        popupType: Popup.Item
-        z: 2
-        font: Qt.font(root.chromeTypography.body)
-        closePolicy: Basic.Popup.CloseOnEscape
-        palette.window: root.colors.menuBackground
-        palette.dark: root.colors.outline
-        onAboutToShow: ++root.actionRevision
-        Instantiator {
-            model: shell.contextHeadActionIds
-            delegate: contextRow
-            onObjectAdded: (index, object) => gridContextMenu.insertItem(index, object)
-            onObjectRemoved: (index, object) => gridContextMenu.removeItem(object)
-        }
-        Basic.MenuSeparator {}
-        Instantiator {
-            model: shell.contextBodyActionIds
-            delegate: contextRow
-            onObjectAdded: (index, object) => gridContextMenu.insertItem(index + 2, object)
-            onObjectRemoved: (index, object) => gridContextMenu.removeItem(object)
-        }
+        root: root
+        shell: root.shellPresenter
+        editorScene: editorScene
+        bodyMetrics: bodyMetrics
     }
+
     FolderDialog {
         id: projectPicker
         objectName: "shellProjectPicker"

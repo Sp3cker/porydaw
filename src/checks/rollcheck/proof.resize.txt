@@ -341,10 +341,10 @@ Anchor: message "right edge grips the off-grid note"
 S024 | test_edgeHoverShowsResizeCursor | src/checks/rollqml/tst_SwiftRollSelection.qml
 Anchor: function
 
-S025 | test_resizeMinimum | src/checks/editorqml/tst_ShellGridInput.qml
+S025 | test_resizeMinimum | src/checks/editorqml/tst_ShellGridInputEditing.qml
 Anchor: function
 
-S026 | test_noteRasterParity | src/checks/editorqml/tst_ShellNoteVisuals.qml
+S026 | test_noteRasterParity | src/checks/editorqml/tst_ShellNoteVisualsDetail.qml
 Anchor: function
 
 S027 | checkEdgeResize | src/checks/rollcheck/resize.swift
@@ -362,16 +362,16 @@ Anchor: message "boundary-right drag resizes the right note's start only"
 S031 | checkEdgeResize | src/checks/rollcheck/resize.swift
 Anchor: message "stationary Ctrl+edge click joins the note without resizing"
 
-S032 | test_ghostEdgesAndMinimumZoomFace | src/checks/editorqml/tst_ShellNoteVisuals.qml
+S032 | test_ghostEdgesAndMinimumZoomFace | src/checks/editorqml/tst_ShellNoteVisualsRuler.qml
 Anchor: message "a snap-cell narrow note remains visible at minimum time zoom: "
 
-S033 | test_ghostEdgesAndMinimumZoomFace | src/checks/editorqml/tst_ShellNoteVisuals.qml
+S033 | test_ghostEdgesAndMinimumZoomFace | src/checks/editorqml/tst_ShellNoteVisualsRuler.qml
 Anchor: message "the minimum-zoom note outline differs visibly from its face"
 
-S034 | test_ghostEdgesAndMinimumZoomFace | src/checks/editorqml/tst_ShellNoteVisuals.qml
+S034 | test_ghostEdgesAndMinimumZoomFace | src/checks/editorqml/tst_ShellNoteVisualsRuler.qml
 Anchor: message "the minimum-zoom narrow note retains its painted face"
 
-S035 | test_ghostEdgesAndMinimumZoomFace | src/checks/editorqml/tst_ShellNoteVisuals.qml
+S035 | test_ghostEdgesAndMinimumZoomFace | src/checks/editorqml/tst_ShellNoteVisualsRuler.qml
 Anchor: message "the minimum-zoom narrow note paints its top outline in the border role"
 
 S036 | checkResizeSelection | src/checks/rollcheck/resize.swift

@@ -135,4 +135,45 @@ extension ApplicationSession {
             allTabsClosed()
         }
     }
+
+    func acknowledgeGridDetachedImpl() {
+        guard isDisposed, !hasReleased else { return }
+        hasReleased = true
+        releaseDocumentPresentation()
+    }
+
+    func hostClosingImpl() {
+        isDisposed = true
+        if let pending = pendingProjectSwitch {
+            pendingProjectSwitch = nil
+            Task { await pending.service.close() }
+        }
+        mouseHints.setWindowActive(active: false)
+        activeReplacementTask?.cancel()
+        // Cancel while the scene exists: every tab's resize session and every
+        // attached page's interaction end in the same call, whether the tab is
+        // the selected one or hidden behind it. Each workspace's cancel covers
+        // the drawer it owns; without a tab the empty presenter is the only
+        // drawer that can hold one.
+        for tab in songTabs.allTabs {
+            tab.workspace.cancel(reason: GridCancelReason.hidden.rawValue)
+            // The scene is about to die: no camera, playback or document
+            // publication may reach a page proxy it has already released.
+            tab.workspace.suspendCallbacks()
+        }
+        // Closed-but-page-alive workspaces are not in allTabs, yet their
+        // sessions can still publish into the dying scene.
+        for tab in pendingReleases.values {
+            tab.workspace.suspendCallbacks()
+        }
+        if songTabs.tabCount == 0 {
+            emptyDrawerPresenter.inputCancelled(reason: GridCancelReason.hidden.rawValue)
+        }
+    }
+
+    func requestCloseAllImpl() {
+        persistTabRecipe()
+        isHostCloseWalk = true
+        songTabs.startCloseAll()
+    }
 }

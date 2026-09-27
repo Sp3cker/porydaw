@@ -2511,40 +2511,40 @@ Anchor: message "hard bank failure keeps the entry available and does not cross 
 S185 | historyTransitionRegressions | src/checks/workspace/bank_history_probes.swift
 Anchor: message "self-cancelling bank merge is removed so undo reaches the preceding document edit"
 
-S186 | openTwoSongShell | src/checks/editorqml/tst_ShellWindow.qml
+S186 | openTwoSongShell | src/checks/editorqml/ShellWindowSupport.qml
 Anchor: message "Littleroot opens in the second tab of the same project"
 
-S187 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S187 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "shellEditMenu"
 
-S188 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S188 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "shellAction_roll.copy"
 
-S189 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S189 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "a real first-tab click retargets the selected workspace"
 
-S190 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S190 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "a real second-tab click restores Littleroot's workspace"
 
-S191 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S191 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindowShortcuts.qml
 Anchor: message "Solo is enabled for the selected track"
 
-S192 | entries | src/checks/editorqml/ShellQmlTests.swift
+S192 | entries | src/checks/editorqml/ShellQmlEntries.swift
 Anchor: function
 
-S193 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow.qml
+S193 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindowPrompts.qml
 Anchor: message "shellTimeMenu" #1
 
-S194 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow.qml
+S194 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindowPrompts.qml
 Anchor: message "shellEditMenu"
 
-S195 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow.qml
+S195 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindowPrompts.qml
 Anchor: message "Time mounts " #1
 
-S196 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow.qml
+S196 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindowPrompts.qml
 Anchor: message "shellAction_" #1
 
-S197 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml
+S197 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindowTimeEditing.qml
 Anchor: message "shellTimeMenu"
 
 S198 | drawerLayoutCheckDrawerFocusRequests | src/checks/drawerpresentation/drawer_state.swift
@@ -2574,7 +2574,7 @@ Anchor: message "A074 move succeeds"
 S206 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: function
 
-S207 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow.qml
+S207 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindowPrompts.qml
 Anchor: message "Tracks mounts " #1
 
 S208 | test_forkMenuTopologyAndLabels | src/checks/editorqml/tst_ShellMenus.qml
@@ -2619,19 +2619,19 @@ Anchor: message "hiding one section retains the other sections and the active pa
 S221 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
 Anchor: message "a non-selected tab's mutation reaches the selected tab silently"
 
-S222 | test_sharedDrawerWindowShortcutsFanOut | src/checks/editorqml/tst_ShellWindow.qml
+S222 | test_sharedDrawerWindowShortcutsFanOut | src/checks/editorqml/tst_ShellWindowDrawer.qml
 Anchor: message " key restores the shared state on the sibling tab"
 
-S223 | test_sharedDrawerWindowShortcutsFanOut | src/checks/editorqml/tst_ShellWindow.qml
+S223 | test_sharedDrawerWindowShortcutsFanOut | src/checks/editorqml/tst_ShellWindowDrawer.qml
 Anchor: message "drawer menu items disable while the event list shows: "
 
-S224 | test_sharedDrawerWindowShortcutsFanOut | src/checks/editorqml/tst_ShellWindow.qml
+S224 | test_sharedDrawerWindowShortcutsFanOut | src/checks/editorqml/tst_ShellWindowDrawer.qml
 Anchor: message "the gated keys leave the drawer state unchanged"
 
-S225 | test_sharedDrawerWindowShortcutsFanOut | src/checks/editorqml/tst_ShellWindow.qml
+S225 | test_sharedDrawerWindowShortcutsFanOut | src/checks/editorqml/tst_ShellWindowDrawer.qml
 Anchor: message "the initiating drawer publishes one preference change per key"
 
-S226 | test_sharedDrawerWindowShortcutsFanOut | src/checks/editorqml/tst_ShellWindow.qml
+S226 | test_sharedDrawerWindowShortcutsFanOut | src/checks/editorqml/tst_ShellWindowDrawer.qml
 Anchor: message "the projected sibling never republishes a preference change"
 
 S227 | runEditorViewStateChecks | src/checks/workspace/editor_view_state_checks.swift
@@ -2640,37 +2640,37 @@ Anchor: message "the combined chrome and lane state round-trips through preferen
 S228 | runEditorViewStateChecks | src/checks/workspace/editor_view_state_checks.swift
 Anchor: message "application preferences retain one lane blob"
 
-S229 | openTwoSongShell | src/checks/editorqml/tst_ShellWindow.qml
+S229 | openTwoSongShell | src/checks/editorqml/ShellWindowSupport.qml
 Anchor: message "Route 101 loads from the original mainwindowrouting project"
 
-S230 | openTwoSongShell | src/checks/editorqml/tst_ShellWindow.qml
+S230 | openTwoSongShell | src/checks/editorqml/ShellWindowSupport.qml
 Anchor: message "Littleroot opens in the second tab of the same project"
 
-S231 | openTwoSongShell | src/checks/editorqml/tst_ShellWindow.qml
+S231 | openTwoSongShell | src/checks/editorqml/ShellWindowSupport.qml
 Anchor: message "Littleroot is the selected workspace"
 
-S232 | test_pMouseHintTargetClaims | src/checks/editorqml/tst_ShellWindow.qml
+S232 | test_pMouseHintTargetClaims | src/checks/editorqml/tst_ShellWindowHints.qml
 Anchor: message "each hover target publishes its own non-empty profile"
 
-S233 | test_pMouseHintTargetClaims | src/checks/editorqml/tst_ShellWindow.qml
+S233 | test_pMouseHintTargetClaims | src/checks/editorqml/tst_ShellWindowHints.qml
 Anchor: message "a no-hint control claims empty instead of leaking"
 
-S234 | test_pMouseHintTargetClaims | src/checks/editorqml/tst_ShellWindow.qml
+S234 | test_pMouseHintTargetClaims | src/checks/editorqml/tst_ShellWindowHints.qml
 Anchor: message "returning to the row body restores the row text"
 
-S235 | test_qMouseHintMenuAndPopupScope | src/checks/editorqml/tst_ShellWindow.qml
+S235 | test_qMouseHintMenuAndPopupScope | src/checks/editorqml/tst_ShellWindowHints.qml
 Anchor: message "an open menu keeps the rename hint and dismiss restores the editor hint"
 
-S236 | test_qMouseHintMenuAndPopupScope | src/checks/editorqml/tst_ShellWindow.qml
+S236 | test_qMouseHintMenuAndPopupScope | src/checks/editorqml/tst_ShellWindowHints.qml
 Anchor: message "dismissing a popup restores the covered target hint"
 
-S237 | test_rMouseHintStatusPresentation | src/checks/editorqml/tst_ShellWindow.qml
+S237 | test_rMouseHintStatusPresentation | src/checks/editorqml/tst_ShellWindowHints.qml
 Anchor: message "the footer caption mirrors the current hint text"
 
-S238 | test_rMouseHintStatusPresentation | src/checks/editorqml/tst_ShellWindow.qml
+S238 | test_rMouseHintStatusPresentation | src/checks/editorqml/tst_ShellWindowHints.qml
 Anchor: message "transient status and meter changes keep the hint center"
 
-S239 | test_rMouseHintStatusPresentation | src/checks/editorqml/tst_ShellWindow.qml
+S239 | test_rMouseHintStatusPresentation | src/checks/editorqml/tst_ShellWindowHints.qml
 Anchor: message "elided hints retain the status center"
 
 S240 | mouseHintScopeChecks | src/checks/workspace/session_editor_semantics.swift
@@ -2682,19 +2682,19 @@ Anchor: message "dismissing a popup restores the covered target hint"
 S242 | mouseHintScopeChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "an operational status update preserves the presenter's current hint"
 
-S243 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindow.qml
+S243 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindowDrawer.qml
 Anchor: message "hiding the last visible drawer section hides it on the sibling tab"
 
-S244 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindow.qml
+S244 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindowDrawer.qml
 Anchor: message "all hidden sections remain hidden when selecting the sibling tab"
 
-S245 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindow.qml
+S245 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindowDrawer.qml
 Anchor: message "a second A hides Automation on the origin tab"
 
-S246 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindow.qml
+S246 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindowDrawer.qml
 Anchor: message "V shows Velocity on the origin tab"
 
-S247 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindow.qml
+S247 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindowDrawer.qml
 Anchor: message "P shows Voice Changes on the origin tab"
 
 S248 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
@@ -2709,25 +2709,25 @@ Anchor: message "Voice Changes becomes active on the origin drawer"
 S251 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
 Anchor: message "Voice Changes becomes active on the sibling drawer"
 
-S252 | test_sharedDrawerWindowShortcutsFanOut | src/checks/editorqml/tst_ShellWindow.qml
+S252 | test_sharedDrawerWindowShortcutsFanOut | src/checks/editorqml/tst_ShellWindowDrawer.qml
 Anchor: message "the Automation View command re-enables after leaving Event List"
 
-S253 | test_sharedDrawerWindowShortcutsFanOut | src/checks/editorqml/tst_ShellWindow.qml
+S253 | test_sharedDrawerWindowShortcutsFanOut | src/checks/editorqml/tst_ShellWindowDrawer.qml
 Anchor: message "the Velocity View command re-enables after leaving Event List"
 
-S254 | test_sharedDrawerWindowShortcutsFanOut | src/checks/editorqml/tst_ShellWindow.qml
+S254 | test_sharedDrawerWindowShortcutsFanOut | src/checks/editorqml/tst_ShellWindowDrawer.qml
 Anchor: message "the Voice Changes View command re-enables after leaving Event List"
 
-S255 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindow.qml
+S255 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindowDrawer.qml
 Anchor: message "the View menu hides Voice Changes on the sibling tab"
 
-S256 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindow.qml
+S256 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindowDrawer.qml
 Anchor: message "hiding Voice Changes leaves Velocity visible"
 
-S257 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindow.qml
+S257 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindowDrawer.qml
 Anchor: message "the View menu hides Velocity on the sibling tab"
 
-S258 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindow.qml
+S258 | test_drawerHideResizeAndAllHiddenFanOut | src/checks/editorqml/tst_ShellWindowDrawer.qml
 Anchor: message "hiding Velocity leaves Automation visible on the sibling tab"
 
 S259 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift

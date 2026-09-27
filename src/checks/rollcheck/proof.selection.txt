@@ -512,7 +512,7 @@ Anchor: message "Selecting"
 S011 | test_bandCancelRestoresSelection | src/checks/rollqml/tst_SwiftRollSelection.qml
 Anchor: function
 
-S012 | test_escapeCancel band | src/checks/editorqml/tst_ShellGridInput.qml
+S012 | test_escapeCancel band | src/checks/editorqml/tst_ShellGridInputCancel.qml
 Anchor: function
 
 S013 | checkThresholdDrawCell | src/checks/rollcheck/selection_editing.swift
@@ -602,16 +602,16 @@ Anchor: message "undo restores the original note identity and position"
 S041 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
 Anchor: message "Ctrl press on a grouped anchor preserves the selection"
 
-S042 | test_rightDragCommit | src/checks/editorqml/tst_ShellGridInput.qml
+S042 | test_rightDragCommit | src/checks/editorqml/tst_ShellGridInputEditing.qml
 Anchor: function
 
-S043 | test_ungrabCancel | src/checks/editorqml/tst_ShellGridInput.qml
+S043 | test_ungrabCancel | src/checks/editorqml/tst_ShellGridInputCancel.qml
 Anchor: function
 
 S044 | checkOrderedSelection | src/checks/rollcheck/selection_editing.swift
 Anchor: message "band keeps press order before newly covered notes"
 
-S045 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S045 | checkProjection | src/checks/rollcheck/EditorGridProjectionChecks.swift
 Anchor: message "right-drag band selects exactly the visible intersecting notes"
 
 S046 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
@@ -644,7 +644,7 @@ Anchor: message "within-slop release parks the nearest snapped edit cursor and s
 S055 | checkThresholdDrawCell | src/checks/rollcheck/selection_editing.swift
 Anchor: message "crossing draw slop does not re-attack the sounding press key"
 
-S056 | test_emptyClickSlopAndDoubleDraw | src/checks/editorqml/tst_ShellGridInput.qml
+S056 | test_emptyClickSlopAndDoubleDraw | src/checks/editorqml/tst_ShellGridInputDraw.qml
 Anchor: message "below draw slop, click creates no note"
 
 S057 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
@@ -673,7 +673,7 @@ Anchor: message "threshold draws unwind to the pre-seed MIDI bytes and history"
 S064 | checkThresholdDrawCell | src/checks/rollcheck/selection_editing.swift
 Anchor: message "toggling note-name mode while drawing leaves the pending note face unchanged"
 
-S065 | test_exactDrawThreshold | src/checks/editorqml/tst_ShellGridInput.qml
+S065 | test_exactDrawThreshold | src/checks/editorqml/tst_ShellGridInputDraw.qml
 Anchor: message "note-name mode leaves the held draw face pixel unchanged"
 
 S066 | checkThresholdDrawCell | src/checks/rollcheck/selection_editing.swift

@@ -190,4 +190,75 @@ extension AutomationPage {
         }
         if configuration.changed { rebuildContent() }
     }
+
+    func configureBodyImpl(width: Double, height: Double, gutter: Double,
+                              devicePixelRatio: Double, baseFontPx: Double,
+                              dragDistance: Double) {
+        let configuration = AutomationBodySceneConfiguration.resolve(
+            width: width,
+            height: height,
+            gutter: gutter,
+            devicePixelRatio: devicePixelRatio,
+            baseFontPx: baseFontPx,
+            dragDistance: dragDistance,
+            currentWidth: plotWidth,
+            currentHeight: plotHeight,
+            currentDevicePixelRatio: self.devicePixelRatio,
+            currentOrigin: lastBodyOrigin,
+            currentDragDistance: lastBodyDragDistance,
+            currentBaseFontPx: self.baseFontPx)
+        applyBodySceneConfiguration(configuration)
+    }
+
+    func refreshFromDocumentImpl() {
+        guard let session else { return }
+        let revision = session.document.revision
+        func stale(_ facts: AutomationFrozenFacts) -> Bool {
+            facts.revision != revision
+                || (facts.parameter.track != nil && facts.parameter.track != activeTrack())
+        }
+        if let frozen, stale(frozen) {
+            cancelGesture()
+        }
+        if let prompt, stale(prompt.facts) { cancelPrompt() }
+        if let laneDelete, stale(laneDelete.facts) { cancelPrompt() }
+        if let live = menu,
+           stale(live.facts) || live.facts.parameter != activeParameter
+               || live.facts.selection != selection {
+            menu = nil
+            publishMenuRows()
+        }
+        if let band, band.revision != revision { self.band = nil }
+        if let tapGuard, tapGuard.revision != revision || tapGuard.parameter != activeParameter {
+            resetTapTempo()
+        }
+        publishInteractionState()
+        rebuildContent()
+    }
+
+    /// Cursor-only publication: the stopped readout consumes the session's
+    /// current edit cursor without rebuilding document-derived content.
+    @QtIgnored
+    public func refreshEditCursor() {
+        guard session != nil, !playing else { return }
+        publishContext()
+    }
+
+    func refreshCameraImpl() {
+        guard session != nil else { return }
+        rebuildContent()
+    }
+
+    func refreshPlayheadImpl(tick: Double, playing: Bool) {
+        guard session != nil else { return }
+        let resolved = Tick(max(0, tick).rounded())
+        guard lastPresentation?.tick != resolved || lastPresentation?.playing != playing else {
+            return
+        }
+        lastPresentation = (resolved, playing)
+        playheadPresentationCount &+= 1
+        self.playing = playing
+        if playing { presentedTick = resolved }
+        publishContext()
+    }
 }

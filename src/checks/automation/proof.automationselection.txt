@@ -795,79 +795,79 @@ Anchor: message "duplicate remains one undo entry"
 S035 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "undo restores the original range contents"
 
-S036 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
+S036 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection_band.swift
 Anchor: message "a band on Tempo selects Tempo alone"
 
-S037 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
+S037 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection_band.swift
 Anchor: message "the band publishes a lane-scoped range"
 
-S038 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
+S038 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection_band.swift
 Anchor: message "banding writes nothing"
 
-S039 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
+S039 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection_band.swift
 Anchor: message "the pointer route takes the tempo drag"
 
-S040 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
+S040 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection_band.swift
 Anchor: message "the tempo drag moves the tempo point"
 
-S041 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
+S041 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection_band.swift
 Anchor: message "the tempo drag leaves the CC lane alone"
 
-S042 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
+S042 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection_band.swift
 Anchor: message "the tempo drag undoes"
 
-S043 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
+S043 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection_band.swift
 Anchor: message "a band on Pan selects the Pan lane alone"
 
-S044 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+S044 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection_band.swift
 Anchor: message "the grabbed lane moves with the selection"
 
-S045 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+S045 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection_band.swift
 Anchor: message "the second selected lane shares the delta"
 
-S046 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+S046 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection_band.swift
 Anchor: message "the unselected volume lane is excluded"
 
-S047 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+S047 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection_band.swift
 Anchor: message "tempo is excluded from the CC drag"
 
-S048 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+S048 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection_band.swift
 Anchor: message "the multi-lane drag is one revision"
 
-S049 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+S049 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection_band.swift
 Anchor: message "one undo restores all selected lanes"
 
-S050 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+S050 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection_band.swift
 Anchor: message "undo restores the grabbed lane"
 
-S051 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+S051 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection_band.swift
 Anchor: message "undo restores the second selected lane"
 
-S052 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+S052 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection_band.swift
 Anchor: message "the drag recorded exactly one history entry"
 
-S053 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift
+S053 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection_band.swift
 Anchor: message "a lane with events pins as a ghost"
 
-S054 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift
+S054 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection_band.swift
 Anchor: message "pinning a ghost writes nothing"
 
-S055 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift
+S055 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection_band.swift
 Anchor: message "the page publishes the pinned ghost"
 
-S056 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift
+S056 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection_band.swift
 Anchor: message "pinning keeps the active parameter"
 
-S057 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift
+S057 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection_band.swift
 Anchor: message "the ghost survives parameter activation"
 
-S058 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift
+S058 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection_band.swift
 Anchor: message "activation around a ghost writes nothing"
 
-S059 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift
+S059 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection_band.swift
 Anchor: message "the pin toggles off again"
 
-S060 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift
+S060 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection_band.swift
 Anchor: message "unpinning drops the ghost"
 
 S061 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
@@ -903,116 +903,116 @@ Anchor: message "switching parameters cancels the drag"
 S071 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the cancelled drag writes nothing"
 
-S072 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
+S072 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection_band.swift
 Anchor: message "the Delete command removes the covered span"
 
-S073 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
+S073 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection_band.swift
 Anchor: message "Delete keeps CC points outside the span"
 
-S074 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
+S074 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection_band.swift
 Anchor: message "Delete removes the covered tempo point"
 
-S075 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
+S075 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection_band.swift
 Anchor: message "one Delete is one revision"
 
-S076 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
+S076 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection_band.swift
 Anchor: message "the Delete undoes"
 
-S077 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
+S077 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection_band.swift
 Anchor: message "undo restores the covered CC point"
 
-S078 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
+S078 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection_band.swift
 Anchor: message "undo restores the covered tempo point"
 
-S079 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
+S079 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection_band.swift
 Anchor: message "Delete with no selection commits nothing"
 
-S080 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
+S080 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection_band.swift
 Anchor: message "an empty Delete writes nothing"
 
 S081 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the Delete key routes to the active time selection"
 
-S082 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+S082 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "mixed selected Tempo drag keeps document and playback frozen while held"
 
-S083 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+S083 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "mixed selected drag publishes one dirty edit and one history entry"
 
-S084 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+S084 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "mixed selected drag translates its Tempo Pan LFO interval to 144 through 192"
 
-S085 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+S085 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "mixed selected drag publishes ordered Pan collisions and preserves Volume playback"
 
-S086 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+S086 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "mixed selected drag publishes the selected LFO into playback"
 
-S087 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+S087 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "mixed selected drag publishes exact 499999-us Tempo at tick 144"
 
-S088 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+S088 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "one undo restores both original Pan playback groups"
 
-S089 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+S089 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "one redo restores ordered moved Pan playback"
 
-S090 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection.swift
+S090 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "Tempo-only horizontal drag freezes document and playback while held"
 
-S091 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection.swift
+S091 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "Tempo-only horizontal drag publishes exact moved Tempo without touching Pan"
 
-S092 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection.swift
+S092 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "displayed Tempo Delete covers the selected Pan and LFO lanes"
 
-S093 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection.swift
+S093 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "selected Delete publishes exactly one dirty edit"
 
-S094 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection.swift
+S094 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "selected Delete removes covered Pan playback but leaves later occupants"
 
-S095 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection.swift
+S095 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "selected Delete removes covered LFO playback but leaves later events"
 
-S096 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection.swift
+S096 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "Delete undo restores exact raw Tempo in playback"
 
-S097 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection.swift
+S097 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection_mixed.swift
 Anchor: message "Delete redo removes all three selected playback streams again"
 
-S098 | drawerAutomationMixedDragRebuildCancellation | src/checks/automation/automationselection.swift
+S098 | drawerAutomationMixedDragRebuildCancellation | src/checks/automation/automationselection_mixed.swift
 Anchor: message "document rebuild cancels the drag without changing its selected scope"
 
-S099 | drawerAutomationMixedDragRebuildCancellation | src/checks/automation/automationselection.swift
+S099 | drawerAutomationMixedDragRebuildCancellation | src/checks/automation/automationselection_mixed.swift
 Anchor: message "release after rebuild retains original Pan LFO and Tempo playback"
 
-S100 | test_mountedAutomationDragDeleteUndoPreservesRoll | src/checks/editorqml/tst_ShellGridInput.qml
+S100 | test_mountedAutomationDragDeleteUndoPreservesRoll | src/checks/editorqml/tst_ShellGridInputAutomation.qml
 Anchor: message "Delete removes every shifted selected automation point"
 
-S101 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+S101 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection_band.swift
 Anchor: message "horizontal multi-CC drag moves its half-open interval by 48"
 
-S102 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+S102 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection_band.swift
 Anchor: message "shifted Pan reaches playback at tick 72"
 
-S103 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+S103 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection_band.swift
 Anchor: message "shifted Modulation reaches playback at tick 96"
 
-S104 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift
+S104 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection_band.swift
 Anchor: message "negative and upper-bound ghost indices leave every pin empty"
 
-S105 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift
+S105 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection_band.swift
 Anchor: message "unwritten Modulation has no document lane events"
 
-S106 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift
+S106 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection_band.swift
 Anchor: message "rejected Modulation pin preserves active Volume"
 
-S107 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+S107 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection_band.swift
 Anchor: message "held multi-CC preview freezes revision history and both selected lanes"
 
-S108 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+S108 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection_band.swift
 Anchor: message "held multi-CC preview emits no document publication"
 
-S109 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
+S109 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection_band.swift
 Anchor: message "shifted CC selection retains only Pan and Modulation scope"

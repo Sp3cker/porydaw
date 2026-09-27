@@ -345,22 +345,22 @@ S008 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinp
 Anchor: message "draft and cancellation preserve the full song contents"
 
 
-S009 | test_gestureKeysPreserveNotesUntilRelease | src/checks/editorqml/tst_ShellGridInput.qml
+S009 | test_gestureKeysPreserveNotesUntilRelease | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
 Anchor: message "Delete during an active note gesture changes no notes"
 
-S010 | test_gestureKeysPreserveNotesUntilRelease | src/checks/editorqml/tst_ShellGridInput.qml
+S010 | test_gestureKeysPreserveNotesUntilRelease | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
 Anchor: message "Delete during a draw records no document edit"
 
-S011 | test_gestureKeysPreserveNotesUntilRelease | src/checks/editorqml/tst_ShellGridInput.qml
+S011 | test_gestureKeysPreserveNotesUntilRelease | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
 Anchor: message "Escape cancels the gesture and restores the staged selection"
 
-S012 | test_moveGestureEscapeRestoresSelectedNote | src/checks/editorqml/tst_ShellGridInput.qml
+S012 | test_moveGestureEscapeRestoresSelectedNote | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
 Anchor: message "a selected-note move consumes Delete while its pointer is held"
 
-S013 | test_moveGestureEscapeRestoresSelectedNote | src/checks/editorqml/tst_ShellGridInput.qml
+S013 | test_moveGestureEscapeRestoresSelectedNote | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
 Anchor: message "Delete during a move records no document edit"
 
-S014 | test_moveGestureEscapeRestoresSelectedNote | src/checks/editorqml/tst_ShellGridInput.qml
+S014 | test_moveGestureEscapeRestoresSelectedNote | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
 Anchor: message "the cancelled move retains the original selected note and its bytes"
 
 S015 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
