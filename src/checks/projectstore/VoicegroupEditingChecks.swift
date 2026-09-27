@@ -26,13 +26,13 @@ internal func runVoicegroupEditingSuite(_ report: CheckReport) {
 }
 
 private func editingExpect(_ row: String, _ result: Bool, _ report: CheckReport, _ message: String) {
-    report.expect(result, cppID: "voicegroupsourceediting/\(row)", message: "\(row): \(message)")
+    report.expect(result, cppID: "voicegroupsourceediting/\(row)", message: message)
 }
 
 private func editingEqual<T: Equatable>(_ row: String, _ expected: T, _ actual: T,
                                          _ report: CheckReport, _ message: String) {
     report.expectEqual(expected: expected, actual: actual, cppID: "voicegroupsourceediting/\(row)",
-                       what: "\(row): \(message)")
+                       what: message)
 }
 
 private func editingRoot() -> URL {
@@ -58,26 +58,26 @@ private func editingBlankSlot(_ report: CheckReport) {
         try withTempProjectCopy(prefix: "voicegroup-editing") { root in
             let source = try openRichSource(at: root)
             let baseline = editingLoad(root: root, name: source.loadName)
-            editingExpect("A001", baseline != nil, report, "fixture session opens source and native baseline")
+            editingExpect("A001", baseline != nil, report, "A001: fixture session opens source and native baseline")
             guard let baseline else { return }
             defer { voicegroup_free(baseline) }
             let slot = (0..<128).first { source.kindAt(slot: $0) == .none }
-            editingExpect("A003", slot != nil, report, "fixture_rich retains a materializable blank slot")
+            editingExpect("A003", slot != nil, report, "A003: fixture_rich retains a materializable blank slot")
             guard let slot else { return }
             let before = source.sourceBytes()
             let created = VgVoice(macro: .square1, sustain: 15)
             let draft = source.voiceDraft(slot: slot, blank: created)
-            editingExpect("A004", draft != nil, report, "blank slot produces a draft")
-            editingExpect("A005", draft?.materializesBlank == true, report, "draft marks materialization")
-            editingEqual("A006", created, draft?.voice, report, "draft retains the requested voice")
-            editingExpect("A007", source.setVoice(slot: slot, voice: created), report, "blank slot accepts voice")
-            editingExpect("A008", source.voiceAt(slot: slot) != nil, report, "inserted voice is present")
-            editingEqual("A009", created, source.voiceAt(slot: slot), report, "inserted voice equals request")
-            editingExpect("A010", source.dirty, report, "materialization marks source dirty")
-            editingExpect("A011", source.restoreSourceBytes(before), report, "original source bytes restore")
-            editingEqual("A012", VgLineKind.none, source.kindAt(slot: slot), report, "restored slot is empty")
-            editingEqual("A013", before, source.sourceBytes(), report, "restored bytes equal original")
-            editingExpect("A014", !source.dirty, report, "restoring pristine bytes clears dirty")
+            editingExpect("A004", draft != nil, report, "A004: blank slot produces a draft")
+            editingExpect("A005", draft?.materializesBlank == true, report, "A005: draft marks materialization")
+            editingEqual("A006", created, draft?.voice, report, "A006: draft retains the requested voice")
+            editingExpect("A007", source.setVoice(slot: slot, voice: created), report, "A007: blank slot accepts voice")
+            editingExpect("A008", source.voiceAt(slot: slot) != nil, report, "A008: inserted voice is present")
+            editingEqual("A009", created, source.voiceAt(slot: slot), report, "A009: inserted voice equals request")
+            editingExpect("A010", source.dirty, report, "A010: materialization marks source dirty")
+            editingExpect("A011", source.restoreSourceBytes(before), report, "A011: original source bytes restore")
+            editingEqual("A012", VgLineKind.none, source.kindAt(slot: slot), report, "A012: restored slot is empty")
+            editingEqual("A013", before, source.sourceBytes(), report, "A013: restored bytes equal original")
+            editingExpect("A014", !source.dirty, report, "A014: restoring pristine bytes clears dirty")
         }
     } catch {
         report.fail("voicegroupsourceediting/fixture", "blank fixture setup failed: \(error)")
@@ -91,53 +91,55 @@ private func editingSparseInsertions(_ report: CheckReport) {
     do {
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         editingExpect("A015", FileManager.default.fileExists(atPath: root.path), report,
-                      "temporary directory is available")
+                      "A015: temporary directory is available")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         editingExpect("A016", FileManager.default.fileExists(atPath: folder.path), report,
-                      "sound/voicegroups directory exists")
+                      "A016: sound/voicegroups directory exists")
         let path = folder.appendingPathComponent("sparse.inc")
         try Data("voice_group sparse, 36\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 0\n".utf8).write(to: path)
         editingExpect("A017", FileManager.default.fileExists(atPath: path.path), report,
-                      "sparse source fixture is written")
+                      "A017: sparse source fixture is written")
         let source = VoicegroupSource()
         var error: String?
         let opened = source.open(projectRoot: root.path, voicegroupArg: "_sparse", error: &error)
-        editingExpect("A018", opened, report, "sparse source opens: \(error ?? "")")
+        editingExpect("A018", opened, report, "A018: sparse source opens")
+        if !opened { report.fail("voicegroupsourceediting/fixture", "sparse source open failed: \(error ?? "")") }
         guard opened, let original = source.voiceAt(slot: 36) else { return }
         let beforeFirst = VgVoice(macro: .square2, sustain: 15)
         let afterLast = VgVoice(macro: .noise, sustain: 15, release: 3)
-        editingEqual("A019", VgLineKind.none, source.kindAt(slot: 12), report, "slot 12 starts blank")
-        editingEqual("A020", VgLineKind.none, source.kindAt(slot: 80), report, "slot 80 starts blank")
-        editingExpect("A021", source.setVoice(slot: 12, voice: beforeFirst), report, "insert before first voice")
-        editingExpect("A022", source.voiceAt(slot: 12) != nil, report, "slot 12 is populated")
-        editingEqual("A023", beforeFirst, source.voiceAt(slot: 12), report, "slot 12 matches inserted voice")
-        editingExpect("A024", source.voiceAt(slot: 36) != nil, report, "original slot is populated")
-        editingEqual("A025", original, source.voiceAt(slot: 36), report, "original slot is unchanged")
-        editingExpect("A026", source.setVoice(slot: 80, voice: afterLast), report, "insert after last voice")
-        editingExpect("A027", source.voiceAt(slot: 80) != nil, report, "slot 80 is populated")
-        editingEqual("A028", afterLast, source.voiceAt(slot: 80), report, "slot 80 matches inserted voice")
-        editingExpect("A029", try source.save(), report, "sparse source saves")
-        editingExpect("A030", !source.dirty, report, "save clears dirty")
+        editingEqual("A019", VgLineKind.none, source.kindAt(slot: 12), report, "A019: slot 12 starts blank")
+        editingEqual("A020", VgLineKind.none, source.kindAt(slot: 80), report, "A020: slot 80 starts blank")
+        editingExpect("A021", source.setVoice(slot: 12, voice: beforeFirst), report, "A021: insert before first voice")
+        editingExpect("A022", source.voiceAt(slot: 12) != nil, report, "A022: slot 12 is populated")
+        editingEqual("A023", beforeFirst, source.voiceAt(slot: 12), report, "A023: slot 12 matches inserted voice")
+        editingExpect("A024", source.voiceAt(slot: 36) != nil, report, "A024: original slot is populated")
+        editingEqual("A025", original, source.voiceAt(slot: 36), report, "A025: original slot is unchanged")
+        editingExpect("A026", source.setVoice(slot: 80, voice: afterLast), report, "A026: insert after last voice")
+        editingExpect("A027", source.voiceAt(slot: 80) != nil, report, "A027: slot 80 is populated")
+        editingEqual("A028", afterLast, source.voiceAt(slot: 80), report, "A028: slot 80 matches inserted voice")
+        editingExpect("A029", try source.save(), report, "A029: sparse source saves")
+        editingExpect("A030", !source.dirty, report, "A030: save clears dirty")
         let reloaded = VoicegroupSource()
         let reopened = reloaded.open(projectRoot: root.path, voicegroupArg: "_sparse", error: &error)
-        editingExpect("A031", reopened, report, "saved sparse source reopens: \(error ?? "")")
+        editingExpect("A031", reopened, report, "A031: saved sparse source reopens")
+        if !reopened { report.fail("voicegroupsourceediting/fixture", "saved sparse source reopen failed: \(error ?? "")") }
         guard reopened else { return }
-        editingExpect("A032", reloaded.voiceAt(slot: 12) != nil, report, "slot 12 survives reload")
-        editingEqual("A033", beforeFirst, reloaded.voiceAt(slot: 12), report, "slot 12 survives exactly")
-        editingExpect("A034", reloaded.voiceAt(slot: 36) != nil, report, "slot 36 survives reload")
-        editingEqual("A035", original, reloaded.voiceAt(slot: 36), report, "slot 36 survives exactly")
-        editingExpect("A036", reloaded.voiceAt(slot: 80) != nil, report, "slot 80 survives reload")
-        editingEqual("A037", afterLast, reloaded.voiceAt(slot: 80), report, "slot 80 survives exactly")
+        editingExpect("A032", reloaded.voiceAt(slot: 12) != nil, report, "A032: slot 12 survives reload")
+        editingEqual("A033", beforeFirst, reloaded.voiceAt(slot: 12), report, "A033: slot 12 survives exactly")
+        editingExpect("A034", reloaded.voiceAt(slot: 36) != nil, report, "A034: slot 36 survives reload")
+        editingEqual("A035", original, reloaded.voiceAt(slot: 36), report, "A035: slot 36 survives exactly")
+        editingExpect("A036", reloaded.voiceAt(slot: 80) != nil, report, "A036: slot 80 survives reload")
+        editingEqual("A037", afterLast, reloaded.voiceAt(slot: 80), report, "A037: slot 80 survives exactly")
         let loaded = editingLoad(root: root, name: "sparse")
-        editingExpect("A038", loaded != nil, report, "native loader accepts saved sparse source")
+        editingExpect("A038", loaded != nil, report, "A038: native loader accepts saved sparse source")
         guard let loaded else { return }
         defer { voicegroup_free(loaded) }
         editingEqual("A039", vgMacroVoiceType(.square2), editingTone(loaded, 12).type, report,
-                     "inserted slot 12 loads as square 2")
+                     "A039: inserted slot 12 loads as square 2")
         editingEqual("A040", vgMacroVoiceType(.square1), editingTone(loaded, 36).type, report,
-                     "original slot 36 loads as square 1")
+                     "A040: original slot 36 loads as square 1")
         editingEqual("A041", vgMacroVoiceType(.noise), editingTone(loaded, 80).type, report,
-                     "inserted slot 80 loads as noise")
+                     "A041: inserted slot 80 loads as noise")
     } catch {
         report.fail("voicegroupsourceediting/fixture", "sparse fixture setup failed: \(error)")
     }
@@ -281,12 +283,12 @@ private func editingFamily(_ family: Int, _ report: CheckReport) {
             let file = URL(filePath: source.filePath)
             let before = try Data(contentsOf: file)
             let baseline = editingLoad(root: root, name: source.loadName)
-            editingExpect("A042", baseline != nil, report, "fixture session opens source and native baseline")
+            editingExpect("A042", baseline != nil, report, "A042: fixture session opens source and native baseline")
             guard let baseline else { return }
             defer { voicegroup_free(baseline) }
             let drumkits = VoicegroupSource.drumkitInstruments(root.path)
             if family >= 5 {
-                editingExpect("A049", drumkits.count >= 2, report, "fixture retains two drumkit definitions")
+                editingExpect("A049", drumkits.count >= 2, report, "A049: fixture retains two drumkit definitions")
                 guard drumkits.count >= 2 else { return }
             }
             var slot: Int
@@ -296,7 +298,7 @@ private func editingFamily(_ family: Int, _ report: CheckReport) {
                 let found = editingFirstSlot(source) {
                     $0 == .directSound || $0 == .directSoundNoResample || $0 == .directSoundAlt
                 }
-                editingExpect("A043", found != nil, report, "fixture retains a DirectSound voice")
+                editingExpect("A043", found != nil, report, "A043: fixture retains a DirectSound voice")
                 guard let found, var voice = source.voiceAt(slot: found) else { return }
                 slot = found
                 voice.key = 61
@@ -305,13 +307,13 @@ private func editingFamily(_ family: Int, _ report: CheckReport) {
                 voice.sustain = 50
                 voice.release = 25
                 let donor = source.voiceAt(slot: 1)
-                editingExpect("A044", donor != nil, report, "fixture retains donor at slot 1")
+                editingExpect("A044", donor != nil, report, "A044: fixture retains donor at slot 1")
                 guard let donor else { return }
                 voice.symbol = donor.symbol
                 edited = voice
             case 1:
                 let found = editingFirstSlot(source) { $0 == .square1 || $0 == .square1Alt }
-                editingExpect("A045", found != nil, report, "fixture retains a square-1 voice")
+                editingExpect("A045", found != nil, report, "A045: fixture retains a square-1 voice")
                 guard let found, var voice = source.voiceAt(slot: found) else { return }
                 slot = found
                 voice.duty = 3
@@ -320,14 +322,14 @@ private func editingFamily(_ family: Int, _ report: CheckReport) {
                 edited = voice
             case 2:
                 let found = editingFirstSlot(source) { $0 == .noise || $0 == .noiseAlt }
-                editingExpect("A046", found != nil, report, "fixture retains a noise voice")
+                editingExpect("A046", found != nil, report, "A046: fixture retains a noise voice")
                 guard let found, var voice = source.voiceAt(slot: found) else { return }
                 slot = found
                 voice.period = 1 - (voice.period & 1)
                 edited = voice
             case 3:
                 let found = editingFirstSlot(source) { $0 == .progWave || $0 == .progWaveAlt }
-                editingExpect("A047", found != nil, report, "fixture retains a programmable-wave voice")
+                editingExpect("A047", found != nil, report, "A047: fixture retains a programmable-wave voice")
                 guard let found, var voice = source.voiceAt(slot: found) else { return }
                 slot = found
                 voice.release = (voice.release & 7) == 5 ? 6 : 5
@@ -336,7 +338,7 @@ private func editingFamily(_ family: Int, _ report: CheckReport) {
                 let found = editingFirstSlot(source) { $0 == .keysplit }
                 let donor = found.flatMap { source.voiceAt(slot: $0 + 1) }
                 editingExpect("A048", found != nil && donor?.macro == .keysplit, report,
-                              "fixture retains adjacent keysplit voices")
+                              "A048: fixture retains adjacent keysplit voices")
                 guard let found, let donor, var voice = source.voiceAt(slot: found) else { return }
                 slot = found
                 voice.symbol = donor.symbol
@@ -344,7 +346,7 @@ private func editingFamily(_ family: Int, _ report: CheckReport) {
                 edited = voice
             case 5:
                 let found = editingFirstSlot(source) { $0 == .keysplitAll }
-                editingExpect("A050", found != nil, report, "fixture retains a drumkit aggregate")
+                editingExpect("A050", found != nil, report, "A050: fixture retains a drumkit aggregate")
                 guard let found, var voice = source.voiceAt(slot: found) else { return }
                 slot = found
                 voice.symbol = drumkits[drumkits.count - 1]
@@ -352,7 +354,7 @@ private func editingFamily(_ family: Int, _ report: CheckReport) {
             default:
                 slot = 4
                 editingExpect("A051", source.voiceAt(slot: slot) != nil, report,
-                              "conversion slot 4 is populated")
+                              "A051: conversion slot 4 is populated")
                 edited = VgVoice(macro: .keysplitAll, symbol: drumkits[0])
             }
             var aggregateOracleSlot = family == 4 ? slot + 1 : -1
@@ -362,21 +364,21 @@ private func editingFamily(_ family: Int, _ report: CheckReport) {
                         source.voiceAt(slot: index)?.symbol == edited.symbol
                 } ?? -1
                 editingExpect("A052", aggregateOracleSlot >= 0, report,
-                              "selected drumkit has an existing aggregate")
+                              "A052: selected drumkit has an existing aggregate")
             }
             let expectedName = family == 0 ? editingVoiceName(baseline, 1) :
                 (family == 4 ? editingVoiceName(baseline, slot + 1) :
                     (family >= 5 ? editingLoaderVoiceName(edited.symbol) : editingVoiceName(baseline, slot)))
-            editingExpect("A053", source.setVoice(slot: slot, voice: edited), report, "edited voice is accepted")
-            editingExpect("A054", source.dirty, report, "edited voice makes source dirty")
+            editingExpect("A053", source.setVoice(slot: slot, voice: edited), report, "A053: edited voice is accepted")
+            editingExpect("A054", source.dirty, report, "A054: edited voice makes source dirty")
             let previewDir = root.appendingPathComponent(".porydaw/vgpreview", isDirectory: true)
             try FileManager.default.createDirectory(at: previewDir, withIntermediateDirectories: true)
             editingExpect("A055", FileManager.default.fileExists(atPath: previewDir.path), report,
-                          "preview directory is available")
+                          "A055: preview directory is available")
             let previewFile = previewDir.appendingPathComponent("\(source.loadName).inc")
             try Data(source.renderPreview()).write(to: previewFile)
             editingExpect("A056", FileManager.default.fileExists(atPath: previewFile.path), report,
-                          "preview bytes are written to the loader path")
+                          "A056: preview bytes are written to the loader path")
             var config = VoicegroupLoaderConfig()
             let previewPathBytes = Array(".porydaw/vgpreview".utf8) + [0]
             withUnsafeMutableBytes(of: &config.voicegroupPaths) { $0.copyBytes(from: previewPathBytes) }
@@ -384,89 +386,90 @@ private func editingFamily(_ family: Int, _ report: CheckReport) {
             let preview = withUnsafePointer(to: &config) {
                 editingLoad(root: root, name: source.loadName, config: $0)
             }
-            editingExpect("A057", preview != nil, report, "native loader accepts edited preview")
+            editingExpect("A057", preview != nil, report, "A057: native loader accepts edited preview")
             guard let preview else { return }
             defer { voicegroup_free(preview) }
             editingEqual("A058", expectedName, editingVoiceName(preview, slot), report,
-                         "preview resolves edited display name")
+                         "A058: preview resolves edited display name")
             editingEqual("A059", vgMacroVoiceType(edited.macro), editingTone(preview, slot).type, report,
-                         "preview loads the edited voice type")
+                         "A059: preview loads the edited voice type")
             if family >= 4 {
                 if aggregateOracleSlot >= 0 {
                     editingExpect("A060", editingSameResolvedTone(
                         editingTone(preview, slot), editingTone(baseline, aggregateOracleSlot),
                         key: family >= 5 ? 36 : 60), report,
-                        "preview aggregate resolves the same playable child as existing aggregate")
+                        "A060: preview aggregate resolves the same playable child as existing aggregate")
                 } else {
                     report.fail("voicegroupsourceediting/fixture",
                                 "preview aggregate has no baseline oracle slot")
                 }
             }
             editingExpect("A061", editingSameVoiceFields(source.voiceAt(slot: slot), edited), report,
-                          "edited source retains the requested family fields")
+                          "A061: edited source retains the requested family fields")
             editingEqual("A062", before, try Data(contentsOf: file), report,
-                         "preview does not modify the original file")
-            editingExpect("A063", try source.save(), report, "edited source saves")
-            editingExpect("A064", !source.dirty, report, "save clears dirty")
+                         "A062: preview does not modify the original file")
+            editingExpect("A063", try source.save(), report, "A063: edited source saves")
+            editingExpect("A064", !source.dirty, report, "A064: save clears dirty")
             editingEqual("A065", 1, editingChangedLineCount(before, try Data(contentsOf: file)), report,
-                         "saving the edit changes exactly one source line")
+                         "A065: saving the edit changes exactly one source line")
             let reloaded = editingLoad(root: root, name: source.loadName)
-            editingExpect("A066", reloaded != nil, report, "saved source loads as native bank")
+            editingExpect("A066", reloaded != nil, report, "A066: saved source loads as native bank")
             guard let reloaded else { return }
             defer { voicegroup_free(reloaded) }
             let tone = editingTone(reloaded, slot)
             editingEqual("A067", vgMacroVoiceType(edited.macro), tone.type, report,
-                         "saved bank retains edited native voice type")
+                         "A067: saved bank retains edited native voice type")
             if family >= 4 {
-                editingExpect("A068", tone.subGroup != nil, report, "aggregate has a subgroup")
+                editingExpect("A068", tone.subGroup != nil, report, "A068: aggregate has a subgroup")
                 if family == 4 {
-                    editingExpect("A069", tone.keySplitTable != nil, report, "keysplit retains lookup table")
+                    editingExpect("A069", tone.keySplitTable != nil, report, "A069: keysplit retains lookup table")
                 }
                 if aggregateOracleSlot >= 0 {
                     editingExpect("A070", editingSameResolvedTone(
                         tone, editingTone(baseline, aggregateOracleSlot),
                         key: family >= 5 ? 36 : 60), report,
-                        "saved aggregate resolves unchanged child")
+                        "A070: saved aggregate resolves unchanged child")
                 } else {
                     report.fail("voicegroupsourceediting/fixture",
                                 "saved aggregate has no baseline oracle slot")
                 }
             } else {
-                editingEqual("A071", UInt8(truncatingIfNeeded: edited.key), tone.key, report, "native key")
-                editingEqual("A072", UInt8(truncatingIfNeeded: edited.attack), tone.attack, report, "native attack")
-                editingEqual("A073", UInt8(truncatingIfNeeded: edited.decay), tone.decay, report, "native decay")
-                editingEqual("A074", UInt8(truncatingIfNeeded: edited.sustain), tone.sustain, report, "native sustain")
-                editingEqual("A075", UInt8(truncatingIfNeeded: edited.release), tone.release, report, "native release")
+                editingEqual("A071", UInt8(truncatingIfNeeded: edited.key), tone.key, report, "A071: native key")
+                editingEqual("A072", UInt8(truncatingIfNeeded: edited.attack), tone.attack, report, "A072: native attack")
+                editingEqual("A073", UInt8(truncatingIfNeeded: edited.decay), tone.decay, report, "A073: native decay")
+                editingEqual("A074", UInt8(truncatingIfNeeded: edited.sustain), tone.sustain, report, "A074: native sustain")
+                editingEqual("A075", UInt8(truncatingIfNeeded: edited.release), tone.release, report, "A075: native release")
                 if family == 0 || family == 3 {
                     editingEqual("A076", edited.pan == 0 ? UInt8(0) : UInt8(0x80 | edited.pan),
-                                 tone.panSweep, report, "native sample/wave pan flags")
+                                 tone.panSweep, report, "A076: native sample/wave pan flags")
                 }
                 if family == 1 {
                     editingEqual("A077", UInt8(truncatingIfNeeded: edited.sweep), tone.panSweep,
-                                 report, "square sweep packing")
+                                 report, "A077: square sweep packing")
                     editingEqual("A078", UInt(edited.duty & 0x03), UInt(bitPattern: tone.wavePointer),
-                                 report, "square duty packing")
+                                 report, "A078: square duty packing")
                 } else if family == 2 {
                     editingEqual("A079", UInt(edited.period & 0x01), UInt(bitPattern: tone.wavePointer),
-                                 report, "noise period packing")
+                                 report, "A079: noise period packing")
                 }
             }
             editingEqual("A080", expectedName, editingVoiceName(reloaded, slot), report,
-                         "saved bank resolves edited display name")
+                         "A080: saved bank resolves edited display name")
             for untouched in 0..<128 where untouched != slot {
                 editingEqual("A081", editingSnapshot(baseline, untouched), editingSnapshot(reloaded, untouched),
-                             report, "every unedited native slot remains equal to the baseline")
+                             report, "A081: every unedited native slot remains equal to the baseline")
             }
             let roundTrip = VoicegroupSource()
             var error: String?
             let opened = roundTrip.open(projectRoot: root.path, voicegroupArg: "_fixture_rich", error: &error)
-            editingExpect("A082", opened, report, "saved edited source reopens: \(error ?? "")")
+            editingExpect("A082", opened, report, "A082: saved edited source reopens")
+            if !opened { report.fail("voicegroupsourceediting/fixture", "saved edited source reopen failed: \(error ?? "")") }
             guard opened else { return }
-            editingExpect("A083", !roundTrip.dirty, report, "freshly opened source is pristine")
+            editingExpect("A083", !roundTrip.dirty, report, "A083: freshly opened source is pristine")
             editingExpect("A084", roundTrip.voiceAt(slot: slot) != nil, report,
-                          "edited slot remains populated after reopen")
+                          "A084: edited slot remains populated after reopen")
             editingExpect("A085", editingSameVoiceFields(roundTrip.voiceAt(slot: slot), edited), report,
-                          "edited voice family fields survive save and reopen")
+                          "A085: edited voice family fields survive save and reopen")
         }
     } catch {
         report.fail("voicegroupsourceediting/fixture", "family \(family) fixture failed: \(error)")
@@ -536,15 +539,15 @@ private func editingConfiguredBaselineAndSynth(_ report: CheckReport) {
 
 private func editingDisplayNames(_ report: CheckReport) {
     editingEqual("A093", "Sample", vgMacroDisplayName(.directSound), report,
-                 "DirectSound display name")
+                 "A093: DirectSound display name")
     editingEqual("A094", "Sample (fixed pitch)", vgMacroDisplayName(.directSoundNoResample), report,
-                 "fixed-pitch sample display name")
+                 "A094: fixed-pitch sample display name")
     editingEqual("A095", "Sample (reverse)", vgMacroDisplayName(.directSoundAlt), report,
-                 "reverse sample display name")
+                 "A095: reverse sample display name")
     editingEqual("A096", "Sample (fixed pitch)", m4aVoiceTypeName(UInt8(VOICE_DIRECTSOUND_NO_RESAMPLE)),
-                 report, "native fixed-pitch sample type name")
+                 report, "A096: native fixed-pitch sample type name")
     editingEqual("A097", "Sample (reverse)", m4aVoiceTypeName(UInt8(VOICE_DIRECTSOUND_ALT)),
-                 report, "native reverse sample type name")
+                 report, "A097: native reverse sample type name")
     editingEqual("A098", "Sample", m4aVoiceTypeName(UInt8(VOICE_KEYSPLIT)),
-                 report, "native keysplit voice type name")
+                 report, "A098: native keysplit voice type name")
 }

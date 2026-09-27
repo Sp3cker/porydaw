@@ -7,7 +7,7 @@ Original: src/checks/voicegroup/voicegroupsourceediting.cpp
 Original SHA-256: c837c97a48a868618574a575613652e4e138678f8519528c7f5285d7e905812b
 Swift counterpart: src/checks/projectstore/VoicegroupEditingChecks.swift
 
-Swift counterpart SHA-256: 5659d54713c77964c1b076e00ba2bcb28cf856c21ab9e0193280d7b79fc3d80f
+Swift counterpart SHA-256: d93650da2f65e8934779015d26b1f7e3932378cffaac017ff4ac93f7939ba6bf
 Shared helper: none; the fixture, snapshot and tone helpers are file-private in the Swift counterpart.
 
 
@@ -856,215 +856,215 @@ S091 | editingConfiguredBaselineAndSynth | src/checks/projectstore/VoicegroupEdi
 Anchor: message "the song's configured voicegroup argument resolves and loads the baseline bank"
 
 S092 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "every unedited native slot remains equal to the baseline"
+Anchor: message "A081: every unedited native slot remains equal to the baseline"
 
 
 S093 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "fixture_rich retains a materializable blank slot"
+Anchor: message "A003: fixture_rich retains a materializable blank slot"
 
 S094 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "blank slot produces a draft"
+Anchor: message "A004: blank slot produces a draft"
 
 S095 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "draft marks materialization"
+Anchor: message "A005: draft marks materialization"
 
 S096 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "draft retains the requested voice"
+Anchor: message "A006: draft retains the requested voice"
 
 S097 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "blank slot accepts voice"
+Anchor: message "A007: blank slot accepts voice"
 
 S098 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "inserted voice is present"
+Anchor: message "A008: inserted voice is present"
 
 S099 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "inserted voice equals request"
+Anchor: message "A009: inserted voice equals request"
 
 S100 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "materialization marks source dirty"
+Anchor: message "A010: materialization marks source dirty"
 
 S101 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "original source bytes restore"
+Anchor: message "A011: original source bytes restore"
 
 S102 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "restored slot is empty"
+Anchor: message "A012: restored slot is empty"
 
 S103 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "restored bytes equal original"
+Anchor: message "A013: restored bytes equal original"
 
 S104 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "restoring pristine bytes clears dirty"
+Anchor: message "A014: restoring pristine bytes clears dirty"
 
 S105 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "slot 12 starts blank"
+Anchor: message "A019: slot 12 starts blank"
 
 S106 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "slot 80 starts blank"
+Anchor: message "A020: slot 80 starts blank"
 
 S107 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "insert before first voice"
+Anchor: message "A021: insert before first voice"
 
 S108 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "slot 12 is populated"
+Anchor: message "A022: slot 12 is populated"
 
 S109 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "slot 12 matches inserted voice"
+Anchor: message "A023: slot 12 matches inserted voice"
 
 S110 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "original slot is populated"
+Anchor: message "A024: original slot is populated"
 
 S111 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "original slot is unchanged"
+Anchor: message "A025: original slot is unchanged"
 
 S112 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "insert after last voice"
+Anchor: message "A026: insert after last voice"
 
 S113 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "slot 80 is populated"
+Anchor: message "A027: slot 80 is populated"
 
 S114 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "slot 80 matches inserted voice"
+Anchor: message "A028: slot 80 matches inserted voice"
 
 S115 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "sparse source saves"
+Anchor: message "A029: sparse source saves"
 
 S116 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "save clears dirty"
+Anchor: message "A030: save clears dirty"
 
 S117 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "slot 12 survives reload"
+Anchor: message "A032: slot 12 survives reload"
 
 S118 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "slot 12 survives exactly"
+Anchor: message "A033: slot 12 survives exactly"
 
 S119 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "slot 36 survives reload"
+Anchor: message "A034: slot 36 survives reload"
 
 S120 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "slot 36 survives exactly"
+Anchor: message "A035: slot 36 survives exactly"
 
 S121 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "slot 80 survives reload"
+Anchor: message "A036: slot 80 survives reload"
 
 S122 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "slot 80 survives exactly"
+Anchor: message "A037: slot 80 survives exactly"
 
 S123 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "native loader accepts saved sparse source"
+Anchor: message "A038: native loader accepts saved sparse source"
 
 S124 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "inserted slot 12 loads as square 2"
+Anchor: message "A039: inserted slot 12 loads as square 2"
 
 S125 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "original slot 36 loads as square 1"
+Anchor: message "A040: original slot 36 loads as square 1"
 
 S126 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "inserted slot 80 loads as noise"
+Anchor: message "A041: inserted slot 80 loads as noise"
 
 S127 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "edited voice is accepted"
+Anchor: message "A053: edited voice is accepted"
 
 S128 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "edited voice makes source dirty"
+Anchor: message "A054: edited voice makes source dirty"
 
 S129 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "native loader accepts edited preview"
+Anchor: message "A057: native loader accepts edited preview"
 
 S130 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "preview resolves edited display name"
+Anchor: message "A058: preview resolves edited display name"
 
 S131 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "preview loads the edited voice type"
+Anchor: message "A059: preview loads the edited voice type"
 
 S132 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "preview aggregate resolves the same playable child as existing aggregate"
+Anchor: message "A060: preview aggregate resolves the same playable child as existing aggregate"
 
 S133 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "edited source retains the requested family fields"
+Anchor: message "A061: edited source retains the requested family fields"
 
 S134 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "preview does not modify the original file"
+Anchor: message "A062: preview does not modify the original file"
 
 S135 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "edited source saves"
+Anchor: message "A063: edited source saves"
 
 S136 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "save clears dirty"
+Anchor: message "A064: save clears dirty"
 
 S137 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "saving the edit changes exactly one source line"
+Anchor: message "A065: saving the edit changes exactly one source line"
 
 S138 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "saved source loads as native bank"
+Anchor: message "A066: saved source loads as native bank"
 
 S139 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "saved bank retains edited native voice type"
+Anchor: message "A067: saved bank retains edited native voice type"
 
 S140 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "aggregate has a subgroup"
+Anchor: message "A068: aggregate has a subgroup"
 
 S141 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "keysplit retains lookup table"
+Anchor: message "A069: keysplit retains lookup table"
 
 S142 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "saved aggregate resolves unchanged child"
+Anchor: message "A070: saved aggregate resolves unchanged child"
 
 S143 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "native key"
+Anchor: message "A071: native key"
 
 S144 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "native attack"
+Anchor: message "A072: native attack"
 
 S145 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "native decay"
+Anchor: message "A073: native decay"
 
 S146 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "native sustain"
+Anchor: message "A074: native sustain"
 
 S147 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "native release"
+Anchor: message "A075: native release"
 
 S148 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "native sample/wave pan flags"
+Anchor: message "A076: native sample/wave pan flags"
 
 S149 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "square sweep packing"
+Anchor: message "A077: square sweep packing"
 
 S150 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "square duty packing"
+Anchor: message "A078: square duty packing"
 
 S151 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "noise period packing"
+Anchor: message "A079: noise period packing"
 
 S152 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "saved bank resolves edited display name"
+Anchor: message "A080: saved bank resolves edited display name"
 
 S153 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "freshly opened source is pristine"
+Anchor: message "A083: freshly opened source is pristine"
 
 S154 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "edited slot remains populated after reopen"
+Anchor: message "A084: edited slot remains populated after reopen"
 
 S155 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "edited voice family fields survive save and reopen"
+Anchor: message "A085: edited voice family fields survive save and reopen"
 
 S156 | editingDisplayNames | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "DirectSound display name"
+Anchor: message "A093: DirectSound display name"
 
 S157 | editingDisplayNames | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "fixed-pitch sample display name"
+Anchor: message "A094: fixed-pitch sample display name"
 
 S158 | editingDisplayNames | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "reverse sample display name"
+Anchor: message "A095: reverse sample display name"
 
 S159 | editingDisplayNames | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "native fixed-pitch sample type name"
+Anchor: message "A096: native fixed-pitch sample type name"
 
 S160 | editingDisplayNames | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "native reverse sample type name"
+Anchor: message "A097: native reverse sample type name"
 
 S161 | editingDisplayNames | src/checks/projectstore/VoicegroupEditingChecks.swift
-Anchor: message "native keysplit voice type name"
+Anchor: message "A098: native keysplit voice type name"
 
 Shared helpers
 none: the fixture, snapshot and tone helpers are file-private in
