@@ -8,9 +8,10 @@ Status: **in execution.** Landed: 52 (32aa160d), 53 (e7c58e06) + 53b (342dc379),
 77a (4451e20a), 77b (2348b0b8); native Edit-menu titles (5481df9f); 600-line split merged
 (9963c029); 78 (54c7f97a), 79 (64d1ec73), 80 (0d976b08), 81 (a23312fc + 4b3e72eb), 82
 (436fb910), 83 (ad4acc9e), 84 (c96c7cc3), 85 (e13dd126), 86 (2eef29d9), 87 (43143ec6), 88
-(7e87ae82), 89 (bec04d0f), 90 (85f5a931). Resize sweep 9.9 s → 1.5–2.1 s with no per-resize
-or per-scroll scene rebuild. Next: wave 91–98 (§10). Proof files: 155 → 112 (17 closed
-ledgers deleted after wave 83–90); open GAP+PARTIAL rows 3703 → 3297.
+(7e87ae82), 89 (bec04d0f), 90 (85f5a931), 91 (1dd9b6cc), 92 (09b19bfb), 93 (58250a35), 94
+(b516afee), 95 + 97 (28b4c04d), 96 (107297f6), 98 (759ee469). Resize sweep 9.9 s → 1.5–2.1 s
+with no per-resize or per-scroll scene rebuild. Next: wave 99–106 (§11). Proof files: 155 →
+111 (fully closed ledgers deleted); open GAP+PARTIAL rows 3703 → 2985.
 User rulings this sprint: insert-cursor commits never seek or move the playhead in any
 transport state (8f6d41d2, deliberate deviation from fork `mainwindow.cpp:520-528`; Go to
 Start still rewinds); the ~115 ms anti-click settle hold on resume stays; blank-slot undo
