@@ -268,6 +268,86 @@ internal func bankMergeSealing(report: CheckReport, session: DocumentSession) {
 }
 
 @MainActor
+internal func bankMissingBasisAndApplied(report: CheckReport, fixtureRoot: String) {
+    let id = "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied"
+    let projectDir = stageTestProject(in: fixtureRoot, projectName: "swiftcore-bank-missing-basis")
+    let service = ProjectService()
+    let original = BankVoice(
+        macro: BankVoiceMacro.square1, key: 60, pan: 0, symbol: "", keysplitTable: "",
+        sweep: 2, duty: 2, period: 0, attack: 2, decay: 3, sustain: 12, release: 4)
+    let edited = BankVoice(
+        macro: BankVoiceMacro.square1, key: 61, pan: 0, symbol: "", keysplitTable: "",
+        sweep: 2, duty: 2, period: 0, attack: 2, decay: 3, sustain: 12, release: 4)
+    do {
+        let session = try runBlocking {
+            try await service.open(root: projectDir)
+            return try await DocumentSession.open(service: service, label: "mus_session_test")
+        }
+        guard session.bankSlots.indices.contains(0), session.bankSlots[0].voice == original else {
+            report.fail(id, "fresh fixture slot zero must hold the literal original square voice")
+            return
+        }
+        let originalPath = session.bankLease.sourcePath
+        let originalSection = session.bankLease.sectionLabel
+        let historyCount = session.document.history.undoCount
+        let historyIndex = session.document.history.undoIndex
+        let undoBefore = session.document.history.canUndo
+        let redoBefore = session.document.history.canRedo
+        let dirtyBefore = session.bankDirty
+        do {
+            _ = try runBlocking {
+                try await session.applyBankEdit(slot: 0, value: original, expected: nil)
+            }
+            report.fail(id, "occupied slot zero with no expected basis must conflict")
+        } catch {
+            let conflict = error as? ProjectServiceError
+            report.expect(conflict != nil, cppID: id,
+                          message: "A048: missing-basis bank edit returns a typed project failure")
+            report.expect(conflict == .bankConflict, cppID: id,
+                          message: "A049: missing-basis bank edit yields the bank conflict variant")
+        }
+        report.expect(session.document.history.undoCount == historyCount
+                      && session.document.history.undoIndex == historyIndex
+                      && session.document.history.canUndo == undoBefore
+                      && session.document.history.canRedo == redoBefore,
+                      cppID: id, message: "missing-basis conflict records no history action")
+        report.expect(session.bankSlots.first?.voice == original && session.bankDirty == dirtyBefore,
+                      cppID: id, message: "missing-basis conflict leaves literal original voice and dirty state unchanged")
+
+        let appliedOutcome: Result<AppliedBankEdit, Error> = Result {
+            try runBlocking {
+                try await session.applyBankEdit(slot: 0, value: edited, expected: original)
+            }
+        }
+        let returnedReceipt = try? appliedOutcome.get()
+        report.expect(returnedReceipt?.dirty == true, cppID: id,
+                      message: "A051: matching edit returns a bank-dirty applied receipt")
+        guard let applied = returnedReceipt else {
+            report.fail(id, "matching edit must return an applied bank receipt")
+            return
+        }
+        report.expect(applied.slots.indices.contains(0)
+                      && applied.slots[0].kind == BankSlotKind.editable,
+                      cppID: id, message: "A052: matching edit returns an editable applied slot view")
+        report.expect(applied.lease.sourcePath == originalPath
+                      && applied.lease.sectionLabel == originalSection,
+                      cppID: id, message: "A053: applied view retains the bank identity captured at initial load")
+        report.expect(applied.slots.indices.contains(0) && applied.slots[0].voice != nil,
+                      cppID: id, message: "A054: applied view contains an occupied slot zero")
+        report.expect(applied.slots.indices.contains(0) && applied.slots[0].voice == edited,
+                      cppID: id, message: "A055: applied view contains the complete edited literal voice")
+        report.expect(applied.materializationToken == nil, cppID: id,
+                      message: "A056: matching occupied-slot edit has no blank materialization")
+        report.expect(session.bankSlots.first?.voice == edited
+                      && session.document.history.undoCount == historyCount + 1
+                      && session.document.history.canUndo,
+                      cppID: id, message: "matching edit publishes the edited literal and records one undo action")
+    } catch {
+        report.fail(id, "fresh bank conflict scenario failed: \(error)")
+    }
+}
+
+@MainActor
 internal func bankConflicts(report: CheckReport, session: DocumentSession, service: ProjectService) {
     // 4. Bank Conflict Handling
     let undoBeforeInitialConflict = session.document.history.canUndo

@@ -2,7 +2,7 @@ Assertion correspondence: project/iomutations.cpp
 
 Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Deleted in: S6 flip cutover (feature/swift-project-store, base 2d1c92d0)
-Retirement: historical deletion record. A003–A026 reconciled for task 133 against the final Swift counterpart snapshot and implementer-reported focused execution; unassigned historical entries remain as recorded.
+Retirement: historical deletion record. A003–A026 reconciled for task 133 against the final Swift counterpart snapshot and implementer-reported focused execution; A027–A041 reconciled for task 140 and A042–A056 for task 141 against the final Swift checks and implementer-reported focused execution; remaining entries stay as recorded.
 Original: src/checks/project/iomutations.cpp
 Original SHA-256: 7e9bc82238223d083d9896a86accebbe1892abdf03e38dba935c4507537c35b8
 Swift counterpart: src/checks/workspace/SessionChecks.swift
@@ -25,6 +25,17 @@ Task-133 command: /usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -
 Task-133 result: PASS, 1/36 (implementer-reported; executes all four failureStages scenarios; not rerun by ledger writer).
 Task-133 shell command: /usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify:shell --filter shell-open-failure --verbose
 Task-133 shell result: PASS, 1/75 (implementer-reported; real mounted failed-open journey; not rerun by ledger writer).
+
+Task-140 SHA-256: src/checks/workspace/session_save.swift dfca705d7d9a9e4dece4a8881fd83f6ab1b6919e1ea98683b8144dc1412745cf
+Task-141 SHA-256: src/checks/workspace/bank_edits.swift ad44473dbcee23b3d47e18ae58f039c702249710fb26c90ec3ed473951b569c5
+Task-141 SHA-256: src/checks/workspace/SessionChecks.swift 51819923a76914a49f327e64ef9793146311df9a217a089eb4a1c8df2839e092
+
+Task-140 command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-projectsession --verbose
+Task-140 result: PASS — ok: swiftcore-projectsession (8.68s); verify 1/36 ok, run_checks PASS (implementer-reported in agent://Task140; not rerun by ledger writer).
+Task-140 shell command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify:shell --filter shell-songs --verbose
+Task-140 shell result: PASS — ok: shell-songs (7.89s); verify 1/75 ok, run_checks PASS (implementer-reported in agent://Task140; not rerun by ledger writer).
+Task-141 command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-projectsession --verbose
+Task-141 result: PASS — build ok (2.11s); swiftcore-projectsession (8.68s); verify 1/36 ok, run_checks PASS (implementer-reported in agent://Task141; not rerun by ledger writer).
 
 A001 | ProjectIoMutationsTest::init | src/checks/project/iomutations.cpp:194
 Disposition: GAP
@@ -530,8 +541,8 @@ Original expression:
   QCOMPARE(failure->stage, SongStage::Save)
 
 A027 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:304
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in session_save.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: S024 — the copied-project open guard is unnumbered Swift setup/failure plumbing; this native fixture-open precondition is retired, not matched by the later byte assertion.
 Source context since previous assertion:
   ;
       }
@@ -546,8 +557,8 @@ Original expression:
   QVERIFY2(opened, qPrintable(error))
 
 A028 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:309
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in session_save.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: S024 — the initial song-load guard is unnumbered Swift setup/failure plumbing; this native fixture precondition is retired, not matched by the later byte assertion.
 Source context since previous assertion:
   ;
       if (!opened)
@@ -559,8 +570,8 @@ Original expression:
   QVERIFY2(initial, qPrintable(error))
 
 A029 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:314
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in session_save.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: S024 — literal sidecar seeding is setup for the executing save predicate; this native optional-value guard is fixture plumbing and is not claimed as an equivalent assertion.
 Source context since previous assertion:
   ;
       if (!initial)
@@ -572,8 +583,8 @@ Original expression:
   QVERIFY2(legacy, qPrintable(error))
 
 A030 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:321
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in session_save.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: S024 — this result-count wait pins native asynchronous queue transport; the executing Swift save result and byte predicate do not reproduce the count.
 Source context since previous assertion:
   ;
       if (!legacy)
@@ -587,8 +598,8 @@ Original expression:
   QVERIFY2(m_fixture->waitFor(resultBase + 1, error), qPrintable(error))
 
 A031 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:322
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in session_save.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: S024 — the native SongSaved envelope is retired representation; DocumentSession.save() returns void and the predicate proves bytes, not the deleted envelope.
 Source context since previous assertion:
   ;
 
@@ -596,8 +607,8 @@ Original expression:
   QVERIFY(std::holds_alternative<SongSaved>(m_fixture->results().back()))
 
 A032 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:324
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in session_save.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: S024 — this native readBytes optional guard is fixture/error plumbing; exact byte equality covers the consumer outcome without claiming an equivalent guard assertion.
 Source context since previous assertion:
   ;
       const std::optional<QByteArray> afterBare = readBytes(legacy->path, error);
@@ -606,8 +617,8 @@ Original expression:
   QVERIFY2(afterBare, qPrintable(error))
 
 A033 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:326
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in session_save.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Disposition: MATCHED
+Mapping: S024 — corrected to the fork-seeded .porydaw/<label>.json path; exact byte equality after bare document save proves the same untouched-sidecar clause and strengthens the prior contains marker.
 Source context since previous assertion:
   ;
       if (afterBare)
@@ -616,8 +627,8 @@ Original expression:
   QCOMPARE(*afterBare, legacy->bytes)
 
 A034 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:331
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in session_save.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: S025 — this result-count wait pins native asynchronous queue transport; the executing bank-lease save and byte predicate do not reproduce the count.
 Source context since previous assertion:
   ;
 
@@ -629,8 +640,8 @@ Original expression:
   QVERIFY2(m_fixture->waitFor(resultBase + 2, error), qPrintable(error))
 
 A035 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:332
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in session_save.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: S025 — the native LoadedBankView envelope is retired representation; the Swift predicate proves bank-lease-save bytes, not the deleted result type.
 Source context since previous assertion:
   ;
 
@@ -638,8 +649,8 @@ Original expression:
   QVERIFY(std::holds_alternative<LoadedBankView>(m_fixture->results()[resultBase]))
 
 A036 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:333
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in session_save.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: S025 — the native SongSaved envelope is retired representation; ProjectService.save returns SaveReceipt and the predicate proves bytes, not the deleted envelope.
 Source context since previous assertion:
   ;
 
@@ -647,8 +658,8 @@ Original expression:
   QVERIFY(std::holds_alternative<SongSaved>(m_fixture->results()[resultBase + 1]))
 
 A037 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:335
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in session_save.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: S025 — this native readBytes optional guard is fixture/error plumbing; exact byte equality covers the consumer outcome without claiming an equivalent guard assertion.
 Source context since previous assertion:
   ;
       const std::optional<QByteArray> afterRecipe = readBytes(legacy->path, error);
@@ -657,8 +668,8 @@ Original expression:
   QVERIFY2(afterRecipe, qPrintable(error))
 
 A038 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:337
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in session_save.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Disposition: MATCHED
+Mapping: S025 — corrected to the fork-seeded .porydaw/<label>.json path; exact byte equality after the bank-lease save proves the same untouched-sidecar clause and strengthens the prior contains marker.
 Source context since previous assertion:
   ;
       if (afterRecipe)
@@ -667,8 +678,8 @@ Original expression:
   QCOMPARE(*afterRecipe, legacy->bytes)
 
 A039 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:341
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in session_save.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: S026 — the native optional SongLoad result envelope is retired representation; Swift reopens via DocumentSession.open and tests the sidecar bytes afterward without claiming parity for that old result type.
 Source context since previous assertion:
   ;
 
@@ -679,8 +690,8 @@ Original expression:
   QVERIFY2(reloaded, qPrintable(error))
 
 A040 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:343
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in session_save.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: S026 — this native reload optional guard is fixture/failure plumbing; the Swift reopen journey is executed but no separate assertion is claimed for this guard.
 Source context since previous assertion:
   ;
       const std::optional<QByteArray> afterReload = readBytes(legacy->path, error);
@@ -689,8 +700,8 @@ Original expression:
   QVERIFY2(afterReload, qPrintable(error))
 
 A041 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:345
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in session_save.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Disposition: MATCHED
+Mapping: S026 — corrected to the fork-seeded .porydaw/<label>.json path; exact byte equality after reopening proves the same untouched-sidecar clause and strengthens the prior contains marker.
 Source context since previous assertion:
   ;
       if (afterReload)
@@ -699,8 +710,8 @@ Original expression:
   QCOMPARE(*afterReload, legacy->bytes)
 
 A042 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:352
-Disposition: PARTIAL
-Mapping/reason: Related predicates S013-S015 in bank_edits.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: S016-S023 document the executing missing-basis conflict and matching-edit consumer outcomes; this fixture-open guard is setup plumbing, not a separate behavioral assertion.
 Source context since previous assertion:
   ;
   }
@@ -714,8 +725,8 @@ Original expression:
   QVERIFY2(opened, qPrintable(error))
 
 A043 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:357
-Disposition: PARTIAL
-Mapping/reason: Related predicates S013-S015 in bank_edits.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: S016-S023 document the executing missing-basis conflict and matching-edit consumer outcomes; this initial SongLoad guard is setup plumbing, not a separate behavioral assertion.
 Source context since previous assertion:
   ;
       if (!opened)
@@ -727,8 +738,8 @@ Original expression:
   QVERIFY2(initial, qPrintable(error))
 
 A044 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:363
-Disposition: PARTIAL
-Mapping/reason: Related predicates S013-S015 in bank_edits.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: S016-S023 document the executing missing-basis conflict and matching-edit consumer outcomes; this native result-count wait is setup/result-queue plumbing, not a separate behavioral assertion.
 Source context since previous assertion:
   ;
       if (!initial)
@@ -741,8 +752,8 @@ Original expression:
   QVERIFY2(m_fixture->waitFor(viewBase + 2, error), qPrintable(error))
 
 A045 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:365
-Disposition: PARTIAL
-Mapping/reason: Related predicates S013-S015 in bank_edits.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: S016-S023 document the executing missing-basis conflict and matching-edit consumer outcomes; this native LoadedBankView variant guard is retired envelope/setup plumbing.
 Source context since previous assertion:
   ;
       const auto *const loadedView = std::get_if<LoadedBankView>(&m_fixture->results()[viewBase]);
@@ -751,8 +762,8 @@ Original expression:
   QVERIFY(loadedView)
 
 A046 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:369
-Disposition: PARTIAL
-Mapping/reason: Related predicates S013-S015 in bank_edits.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: S016-S023 document the executing missing-basis conflict and matching-edit consumer outcomes; this dynamic native slot lookup is setup plumbing, while the accepted Swift scenario fixes slot zero.
 Source context since previous assertion:
   ;
       if (!loadedView)
@@ -763,8 +774,8 @@ Original expression:
   QVERIFY(slot >= 0)
 
 A047 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:381
-Disposition: PARTIAL
-Mapping/reason: Related predicates S013-S015 in bank_edits.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: S016 records the executing typed-conflict behavior; this native result-count wait pins asynchronous result-queue transport rather than the user-observable conflict outcome.
 Source context since previous assertion:
   ;
       if (slot < 0)
@@ -783,8 +794,8 @@ Original expression:
   QVERIFY2(m_fixture->waitFor(resultBase + 1, error), qPrintable(error))
 
 A048 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:384
-Disposition: PARTIAL
-Mapping/reason: Related predicates S013-S015 in bank_edits.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Disposition: MATCHED
+Mapping: S016 — missing expected basis on occupied slot returns a typed ProjectServiceError.
 Source context since previous assertion:
   ;
       const auto *const conflictResult =
@@ -794,8 +805,8 @@ Original expression:
   QVERIFY(conflictResult)
 
 A049 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:386
-Disposition: PARTIAL
-Mapping/reason: Related predicates S013-S015 in bank_edits.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Disposition: MATCHED
+Mapping: S017 — missing expected basis returns the exact bankConflict variant.
 Source context since previous assertion:
   ;
       if (conflictResult)
@@ -804,8 +815,8 @@ Original expression:
   QVERIFY(std::holds_alternative<VoicegroupEditConflictResult>(*conflictResult))
 
 A050 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:393
-Disposition: PARTIAL
-Mapping/reason: Related predicates S013-S015 in bank_edits.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping: S018 records the executing applied-receipt behavior; this native result-count wait pins asynchronous result-queue transport rather than the applied edit outcome.
 Source context since previous assertion:
   ;
 
@@ -819,8 +830,8 @@ Original expression:
   QVERIFY2(m_fixture->waitFor(resultBase + 1, error), qPrintable(error))
 
 A051 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:396
-Disposition: PARTIAL
-Mapping/reason: Related predicates S013-S015 in bank_edits.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Disposition: MATCHED
+Mapping: S018 — matching edit returns a bank-dirty applied receipt.
 Source context since previous assertion:
   ;
       const auto *const appliedResult =
@@ -830,8 +841,8 @@ Original expression:
   QVERIFY(appliedResult)
 
 A052 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:400
-Disposition: PARTIAL
-Mapping/reason: Related predicates S013-S015 in bank_edits.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Disposition: MATCHED
+Mapping: S019 — matching edit returns an editable slot-zero view.
 Source context since previous assertion:
   ;
       if (!appliedResult)
@@ -842,8 +853,8 @@ Original expression:
   QVERIFY(applied)
 
 A053 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:403
-Disposition: PARTIAL
-Mapping/reason: Related predicates S013-S015 in bank_edits.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Disposition: MATCHED
+Mapping: S020 — applied view retains the loaded bank source path and section identity.
 Source context since previous assertion:
   ;
       if (!applied)
@@ -853,8 +864,8 @@ Original expression:
   QVERIFY(applied->view.id == bankId)
 
 A054 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:404
-Disposition: PARTIAL
-Mapping/reason: Related predicates S013-S015 in bank_edits.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Disposition: MATCHED
+Mapping: S021 — applied view contains an occupied slot zero.
 Source context since previous assertion:
   ;
 
@@ -862,8 +873,8 @@ Original expression:
   QVERIFY(applied->view.slotViews[slot].voice.has_value())
 
 A055 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:406
-Disposition: PARTIAL
-Mapping/reason: Related predicates S013-S015 in bank_edits.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Disposition: MATCHED
+Mapping: S022 — applied view contains the complete edited literal voice.
 Source context since previous assertion:
   ;
       if (applied->view.slotViews[slot].voice)
@@ -872,8 +883,8 @@ Original expression:
   QVERIFY(*applied->view.slotViews[slot].voice == editedVoice)
 
 A056 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:407
-Disposition: PARTIAL
-Mapping/reason: Related predicates S013-S015 in bank_edits.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Disposition: MATCHED
+Mapping: S023 — matching occupied-slot edit has no blank materialization.
 Source context since previous assertion:
   ;
 
@@ -1374,8 +1385,11 @@ Swift assertion predicates
 S001 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "initial tempo 120 BPM schedules exactly 24000 samples at tick 24"
 
-S002 | sessionSavePersistence | src/checks/workspace/session_save.swift
-Anchor: message "save leaves legacy sidecar JSON untouched"
+S002 | sessionLegacySidecarPersistence | src/checks/workspace/session_save.swift
+Anchor: message "A033 bare document save preserves every literal legacy sidecar byte"
+Line: 241
+Predicate: report.expect(afterBare == seed, cppID: id, message: "A033 bare document save preserves every literal legacy sidecar byte")
+Note: Path correction from the Swift-invented sound/songs/midi/*.mid.json marker to the fork's .porydaw/<label>.json sidecar; exact byte equality replaces contains "protected".
 
 S003 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "reopen reproduces saved authoritative 150 BPM timing"
@@ -1432,3 +1446,60 @@ Anchor: message "initial conflict leaves canUndo unchanged"
 
 S015 | bankConflicts | src/checks/workspace/bank_edits.swift
 Anchor: message "initial conflict leaves canRedo unchanged"
+S016 | bankMissingBasisAndApplied | src/checks/workspace/bank_edits.swift
+Anchor: message "A048: missing-basis bank edit returns a typed project failure"
+Line: 304
+Predicate: report.expect(conflict != nil, cppID: id, message: "A048: missing-basis bank edit returns a typed project failure")
+
+S017 | bankMissingBasisAndApplied | src/checks/workspace/bank_edits.swift
+Anchor: message "A049: missing-basis bank edit yields the bank conflict variant"
+Line: 306
+Predicate: report.expect(conflict == .bankConflict, cppID: id, message: "A049: missing-basis bank edit yields the bank conflict variant")
+
+S018 | bankMissingBasisAndApplied | src/checks/workspace/bank_edits.swift
+Anchor: message "A051: matching edit returns a bank-dirty applied receipt"
+Line: 323
+Predicate: report.expect(returnedReceipt?.dirty == true, cppID: id, message: "A051: matching edit returns a bank-dirty applied receipt")
+
+S019 | bankMissingBasisAndApplied | src/checks/workspace/bank_edits.swift
+Anchor: message "A052: matching edit returns an editable applied slot view"
+Line: 329
+Predicate: report.expect(applied.slots.indices.contains(0) && applied.slots[0].kind == BankSlotKind.editable, cppID: id, message: "A052: matching edit returns an editable applied slot view")
+
+S020 | bankMissingBasisAndApplied | src/checks/workspace/bank_edits.swift
+Anchor: message "A053: applied view retains the bank identity captured at initial load"
+Line: 332
+Predicate: report.expect(applied.lease.sourcePath == originalPath && applied.lease.sectionLabel == originalSection, cppID: id, message: "A053: applied view retains the bank identity captured at initial load")
+
+S021 | bankMissingBasisAndApplied | src/checks/workspace/bank_edits.swift
+Anchor: message "A054: applied view contains an occupied slot zero"
+Line: 335
+Predicate: report.expect(applied.slots.indices.contains(0) && applied.slots[0].voice != nil, cppID: id, message: "A054: applied view contains an occupied slot zero")
+
+S022 | bankMissingBasisAndApplied | src/checks/workspace/bank_edits.swift
+Anchor: message "A055: applied view contains the complete edited literal voice"
+Line: 337
+Predicate: report.expect(applied.slots.indices.contains(0) && applied.slots[0].voice == edited, cppID: id, message: "A055: applied view contains the complete edited literal voice")
+
+S023 | bankMissingBasisAndApplied | src/checks/workspace/bank_edits.swift
+Anchor: message "A056: matching occupied-slot edit has no blank materialization"
+Line: 339
+Predicate: report.expect(applied.materializationToken == nil, cppID: id, message: "A056: matching occupied-slot edit has no blank materialization")
+
+S024 | sessionLegacySidecarPersistence | src/checks/workspace/session_save.swift
+Anchor: message "A033 bare document save preserves every literal legacy sidecar byte"
+Line: 241
+Predicate: report.expect(afterBare == seed, cppID: id, message: "A033 bare document save preserves every literal legacy sidecar byte")
+Note: Path correction from the Swift-invented sound/songs/midi/*.mid.json marker to the fork's .porydaw/<label>.json sidecar; exact byte equality replaces contains "protected".
+
+S025 | sessionLegacySidecarPersistence | src/checks/workspace/session_save.swift
+Anchor: message "A038 bank-lease song save preserves every literal legacy sidecar byte"
+Line: 258
+Predicate: report.expect(afterRecipe == seed, cppID: id, message: "A038 bank-lease song save preserves every literal legacy sidecar byte")
+Note: Path correction from the Swift-invented sound/songs/midi/*.mid.json marker to the fork's .porydaw/<label>.json sidecar; exact byte equality replaces contains "protected".
+
+S026 | sessionLegacySidecarPersistence | src/checks/workspace/session_save.swift
+Anchor: message "A041 reopening the saved song preserves every literal legacy sidecar byte"
+Line: 274
+Predicate: report.expect(afterReload == seed, cppID: id, message: "A041 reopening the saved song preserves every literal legacy sidecar byte")
+Note: Path correction from the Swift-invented sound/songs/midi/*.mid.json marker to the fork's .porydaw/<label>.json sidecar; exact byte equality replaces contains "protected".
