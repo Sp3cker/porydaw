@@ -1589,202 +1589,112 @@ Original expression:
         QCOMPARE(valueCopy, original)
 
 A184 | MainWindowRoutingStateTest::mouseHintFollowsRealTargets | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:492
-Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
-Source context since previous assertion:
-    }
-
-    void mouseHintFollowsRealTargets()
-    {
-        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
-Original expression:
-        QVERIFY(session.has_value())
+Disposition: MATCHED
+Mapping/reason: S229, S230, S231 open Route 101 and Littleroot as distinct tabs; openTwoSongShell runs unconditionally in the green S232/S235/S237 shellwindow journeys (helper anchors are classified unverifiable by the reader, not skipped at runtime).
 
 A185 | MainWindowRoutingStateTest::mouseHintFollowsRealTargets | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:496
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S232 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QQuickWindow canvas handle, not a surviving Swift/QML ownership contract.
 
 A186 | MainWindowRoutingStateTest::mouseHintFollowsRealTargets | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:500
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S232 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QQuickItem plot/gutter/header handles, not a surviving Swift/QML ownership contract.
 
 A187 | MainWindowRoutingStateTest::mouseHintFollowsRealTargets | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:502
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S232 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins C++ TrackHeaderModel pointer, not a surviving Swift/QML ownership contract.
 
 A188 | MainWindowRoutingStateTest::mouseHintFollowsRealTargets | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:503
-Disposition: GAP
-Mapping/reason: Automation-lane identity/remap/mutation or header-model observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: S232 proves real header hover; the mounted journey checks rows.count > 0, but the row-count guard has no exact message anchor. No new message-anchored predicate directly covers this fixture cardinality clause.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(model->rowCount() >= 1)
 
 A189 | MainWindowRoutingStateTest::mouseHintFollowsRealTargets | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:508
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-
-        // Ordinary hover through the real Quick delivery: each target's own
-        // profile survives the move without any manual clear.
-        QTest::mouseMove(canvas, plot->mapToScene(plot->boundingRect().center()).toPoint());
-Original expression:
-        QTRY_VERIFY(hints.currentSource() == plot)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S232 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QObject currentSource() == plot identity, not a surviving Swift/QML ownership contract.
 
 A190 | MainWindowRoutingStateTest::mouseHintFollowsRealTargets | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:510
-Disposition: PARTIAL
-Mapping/reason: Related predicates S002, S003, S004, S005, S006, S007, S008, S009 in src/checks/workspace/session_editor_semantics.swift (MouseHints ownership/text model: claim, clear, window-active publication); unproved: real Qt hover/drag/focus event delivery and QObject source identity in this test.
-Source context since previous assertion:
-        const QString plotProfile = hints.currentText();
-Original expression:
-        QVERIFY(!plotProfile.isEmpty())
+Disposition: MATCHED
+Mapping/reason: S232 executes real plot, gutter and header hover delivery and guards each captured profile as non-empty before comparing distinct target text; shellwindow.json records the passing target-claims function.
 
 A191 | MainWindowRoutingStateTest::mouseHintFollowsRealTargets | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:513
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-
-        QTest::mouseMove(canvas, gutter->mapToScene(gutter->boundingRect().center()).toPoint());
-Original expression:
-        QTRY_VERIFY(hints.currentSource() == gutter)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S232 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QObject currentSource() == gutter identity, not a surviving Swift/QML ownership contract.
 
 A192 | MainWindowRoutingStateTest::mouseHintFollowsRealTargets | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:514
-Disposition: PARTIAL
-Mapping/reason: Related predicates S002, S003, S004, S005, S006, S007, S008, S009 in src/checks/workspace/session_editor_semantics.swift (MouseHints ownership/text model: claim, clear, window-active publication); unproved: real Qt hover/drag/focus event delivery and QObject source identity in this test.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(!hints.currentText().isEmpty())
+Disposition: MATCHED
+Mapping/reason: S232 executes real plot, gutter and header hover delivery and guards each captured profile as non-empty before comparing distinct target text; shellwindow.json records the passing target-claims function.
 
 A193 | MainWindowRoutingStateTest::mouseHintFollowsRealTargets | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:519
-Disposition: GAP
-Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
-Source context since previous assertion:
-
-        const std::optional<QPointF> title = headerRowPoint(
-            *headers, *model, 0,
-            model->data(model->index(0, 0), songview::TrackHeaderModel::TitleRectRole).toRectF());
-Original expression:
-        QVERIFY(title.has_value())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S232 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins C++ optional headerRowPoint/title probe, not a surviving Swift/QML ownership contract.
 
 A194 | MainWindowRoutingStateTest::mouseHintFollowsRealTargets | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:521
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        QTest::mouseMove(canvas, headers->mapToScene(*title).toPoint());
-Original expression:
-        QTRY_VERIFY(hints.currentSource() == headers)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S232 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QObject currentSource() == headers identity, not a surviving Swift/QML ownership contract.
 
 A195 | MainWindowRoutingStateTest::mouseHintFollowsRealTargets | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:523
-Disposition: PARTIAL
-Mapping/reason: Related predicates S002, S003, S004, S005, S006, S007, S008, S009 in src/checks/workspace/session_editor_semantics.swift (MouseHints ownership/text model: claim, clear, window-active publication); unproved: real Qt hover/drag/focus event delivery and QObject source identity in this test.
-Source context since previous assertion:
-        const QString rowProfile = hints.currentText();
-Original expression:
-        QVERIFY(!rowProfile.isEmpty())
+Disposition: MATCHED
+Mapping/reason: S232 executes real plot, gutter and header hover delivery and guards each captured profile as non-empty before comparing distinct target text; shellwindow.json records the passing target-claims function.
 
 A196 | MainWindowRoutingStateTest::mouseHintFollowsRealTargets | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:529
-Disposition: GAP
-Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
-Source context since previous assertion:
-
-        // The mute control is a no-hint target inside the same input item:
-        // it claims an empty profile instead of leaking the row's.
-        const std::optional<QPointF> mute =
-            headerRowPoint(*headers, *model, 0, model->muteButtonRect());
-Original expression:
-        QVERIFY(mute.has_value())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S232 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins C++ optional headerRowPoint/mute probe, not a surviving Swift/QML ownership contract.
 
 A197 | MainWindowRoutingStateTest::mouseHintFollowsRealTargets | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:531
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        QTest::mouseMove(canvas, headers->mapToScene(*mute).toPoint());
-Original expression:
-        QTRY_VERIFY(hints.currentSource() == headers && hints.currentText().isEmpty())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S233 covers the displayed behavior (mute claims empty); git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies the conjunctive row additionally pins QObject currentSource() identity, retired with the C++ observer.
 
 A198 | MainWindowRoutingStateTest::mouseHintFollowsRealTargets | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:535
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-
-        // Back on the row body the scope profile returns unchanged.
-        QTest::mouseMove(canvas, headers->mapToScene(*title).toPoint());
-Original expression:
-        QTRY_VERIFY(hints.currentSource() == headers && hints.currentText() == rowProfile)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S234 covers the displayed behavior (returning to the row restores its text); git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies the conjunctive row additionally pins QObject currentSource() identity, retired with the C++ observer.
 
 A199 | MainWindowRoutingStateTest::mouseHintFollowsRealTargets | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:540
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Original native visibility/rendering obligation (widget shown/hidden, pixel grab). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-
-        // The Quick scrollbar is its own no-hint group: the covered band
-        // profile must not leak through it.
-        QQuickItem *const scrollbar = quickItem(view, QLatin1String("timelineRollScrollBar"));
-Original expression:
-        QVERIFY(scrollbar && scrollbar->isVisible())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S232 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QQuickItem scrollbar pointer/isVisible guard, not a surviving Swift/QML ownership contract.
 
 A200 | MainWindowRoutingStateTest::mouseHintFollowsRealTargets | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:543
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        QTest::mouseMove(canvas,
-                         scrollbar->mapToScene(scrollbar->boundingRect().center()).toPoint());
-Original expression:
-        QTRY_VERIFY(hints.currentSource() != headers && hints.currentText().isEmpty())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S233 covers the displayed behavior (scrollbar suppresses covered text); git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies the conjunctive row additionally pins QObject currentSource() identity, retired with the C++ observer.
 
 A201 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:549
-Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
-Source context since previous assertion:
-    }
-
-    void mouseHintMenuScopeKeepsRenameAndRestoresEditor()
-    {
-        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
-Original expression:
-        QVERIFY(session.has_value())
+Disposition: MATCHED
+Mapping/reason: S229, S230, S231 open Route 101 and Littleroot as distinct tabs; openTwoSongShell runs unconditionally in the green S232/S235/S237 shellwindow journeys (helper anchors are classified unverifiable by the reader, not skipped at runtime).
 
 A202 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:553
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S235 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QQuickWindow canvas handle, not a surviving Swift/QML ownership contract.
 
 A203 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:555
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S235 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins C++ TrackHeaderModel pointer, not a surviving Swift/QML ownership contract.
 
 A204 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:556
-Disposition: GAP
-Mapping/reason: Automation-lane identity/remap/mutation or header-model observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: S235 executes a second header-row menu journey; rows.count > 1 is an unlabelled guard, not an exact message-anchored fixture cardinality predicate.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(model->rowCount() >= 2)
 
 A205 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:558
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        QQuickItem *const headers = quickItem(view, QLatin1String("timelineTrackHeadersInput"));
-Original expression:
-        QVERIFY(headers)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S235 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QQuickItem headers pointer, not a surviving Swift/QML ownership contract.
 
 A206 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:560
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S235 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins C++ QuickPopupSession pointer, not a surviving Swift/QML ownership contract.
 
 A207 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:569
-Disposition: GAP
-Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
-Source context since previous assertion:
-        const quick_popup::PromptGuard guard(view);
-
-        // A real double-click on the row title opens the in-band rename editor.
-        const int track =
-            model->data(model->index(0, 0), songview::TrackHeaderModel::TrackRole).toInt();
-        const std::optional<QPointF> title = headerRowPoint(
-            *headers, *model, 0,
-            model->data(model->index(0, 0), songview::TrackHeaderModel::TitleRectRole).toRectF());
-Original expression:
-        QVERIFY(title.has_value())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S235 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins C++ optional headerRowPoint/title probe, not a surviving Swift/QML ownership contract.
 
 A208 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:572
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: S235 executes menu-triggered rename; unproved: double-clicking the first row starts renaming that same track (the frozen journey opens Rename through the menu instead).
 Source context since previous assertion:
         QTest::mouseDClick(canvas, Qt::LeftButton, Qt::NoModifier,
                            headers->mapToScene(*title).toPoint());
@@ -1792,76 +1702,40 @@ Original expression:
         QTRY_COMPARE(model->renamingTrack(), track)
 
 A209 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:574
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Original native visibility/rendering obligation (widget shown/hidden, pixel grab). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        QQuickItem *const renameInput = quickItem(view, QLatin1String("timelineTrackHeaderRename"));
-Original expression:
-        QTRY_VERIFY(renameInput && renameInput->isVisible())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S235 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QQuickItem renameInput pointer/isVisible guard, not a surviving Swift/QML ownership contract.
 
 A210 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:576
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S235 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QQuickItem editor parent handle, not a surviving Swift/QML ownership contract.
 
 A211 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:580
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-
-        // Hovering the editor publishes its own profile, not the row's.
-        hoverAt(*canvas, editor->mapToScene(editor->boundingRect().center()).toPoint());
-Original expression:
-        QTRY_VERIFY(hints.currentSource() == editor)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S235 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QObject currentSource() == editor identity, not a surviving Swift/QML ownership contract.
 
 A212 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:581
-Disposition: PARTIAL
-Mapping/reason: Related predicates S002, S003, S004, S005, S006, S007, S008, S009 in src/checks/workspace/session_editor_semantics.swift (MouseHints ownership/text model: claim, clear, window-active publication); unproved: real Qt hover/drag/focus event delivery and QObject source identity in this test.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(!hints.currentText().isEmpty())
+Disposition: MATCHED
+Mapping/reason: S240 explicitly requires non-empty rename text and S235 exercises the mounted rename editor hover before reopening it and restoring editor/row text; green Swift message and shellwindow function evidence.
 
 A213 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:587
-Disposition: GAP
-Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
-Source context since previous assertion:
-
-        // The shared header menu suppresses every hint outside its own scope.
-        const std::optional<QPointF> secondTitle = headerRowPoint(
-            *headers, *model, 1,
-            model->data(model->index(1, 0), songview::TrackHeaderModel::TitleRectRole).toRectF());
-Original expression:
-        QVERIFY(secondTitle.has_value())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S235 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins C++ optional headerRowPoint/secondTitle probe, not a surviving Swift/QML ownership contract.
 
 A214 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:590
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        QTest::mouseClick(canvas, Qt::RightButton, Qt::NoModifier,
-                          headers->mapToScene(*secondTitle).toPoint());
-Original expression:
-        QVERIFY2(
-            QTest::qWaitFor([popup] { return popup->isOpen() && quick_popup::menuPanel(*popup); }),
-            "the header right-press did not open the shared menu")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S235 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins quick_popup::menuPanel and QuickPopupSession isOpen guard, not a surviving Swift/QML ownership contract.
 
 A215 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:593
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QTRY_VERIFY(!hints.currentSource() || popup->owns(hints.currentSource()))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S235 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QuickPopupSession::owns QObject-source identity, not a surviving Swift/QML ownership contract.
 
 A216 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:594
-Disposition: PARTIAL
-Mapping/reason: Related predicates S002, S003, S004, S005, S006, S007, S008, S009 in src/checks/workspace/session_editor_semantics.swift (MouseHints ownership/text model: claim, clear, window-active publication); unproved: real Qt hover/drag/focus event delivery and QObject source identity in this test.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(hints.currentText().isEmpty())
+Disposition: MATCHED
+Mapping/reason: S240 explicitly checks menuMuted (empty text while the menu owns scope); S235 also unconditionally observes mounted menu-open then empty hints.text before the rename recovery journey.
 
 A217 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:598
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: S235 executes the mounted menu/rename journey and an unlabelled renamingTrack check for this transition; unproved by an exact message-anchored predicate: opening the second-row menu ends the in-progress rename.
 Source context since previous assertion:
 
         // Opening the menu hands its panel popup focus, which commits the
@@ -1870,79 +1744,48 @@ Original expression:
         QTRY_COMPARE(model->renamingTrack(), -1)
 
 A218 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:599
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Original native visibility/rendering obligation (widget shown/hidden, pixel grab). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QTRY_VERIFY(!renameInput->isVisible())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S235 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QQuickItem renameInput isVisible observer, not a surviving Swift/QML ownership contract.
 
 A219 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:606
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S235 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins quick_popup::menuPanel handle, not a surviving Swift/QML ownership contract.
 
 A220 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:608
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S235 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins C++ QuickMenuModel pointer, not a surviving Swift/QML ownership contract.
 
 A221 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:618
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        int renameRow = -1;
-        for (int row = 0; row < menuModel->rowCount(); ++row) {
-            if (menuModel->data(menuModel->index(row, 0), songview::QuickMenuModel::IdRole)
-                    .toInt() ==
-                static_cast<int>(songview::TrackHeaderModel::HeaderMenuAction::RenameTrack)) {
-                renameRow = row;
-                break;
-            }
-        }
-Original expression:
-        QVERIFY(renameRow >= 0)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S235 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QuickMenuModel IdRole index lookup for RenameTrack, not a surviving Swift/QML ownership contract.
 
 A222 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:619
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY2(quick_popup::clickMenuRow(*popup, renameRow),
-                 "the menu's Rename track row did not render")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S235 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins quick_popup::clickMenuRow native rendering/delivery guard, not a surviving Swift/QML ownership contract.
 
 A223 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:621
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QTRY_VERIFY(!popup->isOpen())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S235 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QuickPopupSession isOpen observer, not a surviving Swift/QML ownership contract.
 
 A224 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:622
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: S235 executes the mounted menu/rename journey and an unlabelled renamingTrack check for this transition; unproved by an exact message-anchored predicate: choosing Rename targets the menu track.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QTRY_COMPARE(model->renamingTrack(), menuTrack)
 
 A225 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:623
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Original native visibility/rendering obligation (widget shown/hidden, pixel grab). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QTRY_VERIFY(renameInput->isVisible())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S235 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QQuickItem renameInput isVisible observer, not a surviving Swift/QML ownership contract.
 
 A226 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:625
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        hoverAt(*canvas, editor->mapToScene(editor->boundingRect().center()).toPoint());
-Original expression:
-        QTRY_VERIFY(hints.currentSource() == editor && !hints.currentText().isEmpty())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S235 covers the displayed behavior (reopened rename/editor text); git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies the conjunctive row additionally pins QObject currentSource() identity, retired with the C++ observer.
 
 A227 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:631
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: S235 executes the mounted menu/rename journey and an unlabelled renamingTrack check for this transition; unproved by an exact message-anchored predicate: finishRename ends renaming.
 Source context since previous assertion:
 
         // Cancelling the rename through the model's own finish path — the
@@ -1953,256 +1796,126 @@ Original expression:
         QTRY_COMPARE(model->renamingTrack(), -1)
 
 A228 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:633
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        hoverAt(*canvas, headers->mapToScene(*title).toPoint());
-Original expression:
-        QTRY_VERIFY(hints.currentSource() == headers && !hints.currentText().isEmpty())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S235 covers the displayed behavior (row text after rename finish); git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies the conjunctive row additionally pins QObject currentSource() identity, retired with the C++ observer.
 
 A229 | MainWindowRoutingStateTest::mouseHintPopupScopeRestoresCoveredTarget | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:639
-Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
-Source context since previous assertion:
-    }
-
-    void mouseHintPopupScopeRestoresCoveredTarget()
-    {
-        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
-Original expression:
-        QVERIFY(session.has_value())
+Disposition: MATCHED
+Mapping/reason: S229, S230, S231 open Route 101 and Littleroot as distinct tabs; openTwoSongShell runs unconditionally in the green S232/S235/S237 shellwindow journeys (helper anchors are classified unverifiable by the reader, not skipped at runtime).
 
 A230 | MainWindowRoutingStateTest::mouseHintPopupScopeRestoresCoveredTarget | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:644
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S236 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QQuickWindow canvas handle, not a surviving Swift/QML ownership contract.
 
 A231 | MainWindowRoutingStateTest::mouseHintPopupScopeRestoresCoveredTarget | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:646
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        QQuickItem *const gutter = quickItem(view, QLatin1String("timelineRollGutterInput"));
-Original expression:
-        QVERIFY(gutter)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S236 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QQuickItem gutter pointer, not a surviving Swift/QML ownership contract.
 
 A232 | MainWindowRoutingStateTest::mouseHintPopupScopeRestoresCoveredTarget | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:648
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S236 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins C++ QuickPopupSession pointer, not a surviving Swift/QML ownership contract.
 
 A233 | MainWindowRoutingStateTest::mouseHintPopupScopeRestoresCoveredTarget | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:652
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        const quick_popup::PromptGuard guard(view);
-
-        hoverAt(*canvas, gutter->mapToScene(gutter->boundingRect().center()).toPoint());
-Original expression:
-        QTRY_VERIFY(hints.currentSource() == gutter)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S236 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QObject currentSource() == gutter identity, not a surviving Swift/QML ownership contract.
 
 A234 | MainWindowRoutingStateTest::mouseHintPopupScopeRestoresCoveredTarget | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:654
-Disposition: PARTIAL
-Mapping/reason: Related predicates S002, S003, S004, S005, S006, S007, S008, S009 in src/checks/workspace/session_editor_semantics.swift (MouseHints ownership/text model: claim, clear, window-active publication); unproved: real Qt hover/drag/focus event delivery and QObject source identity in this test.
-Source context since previous assertion:
-        const QString gutterProfile = hints.currentText();
-Original expression:
-        QVERIFY(!gutterProfile.isEmpty())
+Disposition: MATCHED
+Mapping/reason: S232 guards the real gutter profile as non-empty; S236 captures that non-empty gutter text before the popup and verifies its restoration after dismissal.
 
 A235 | MainWindowRoutingStateTest::mouseHintPopupScopeRestoresCoveredTarget | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:658
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-
-        // The Insert Time action opens its canvas form; the session scope
-        // suppresses the covered gutter hint.
-Original expression:
-        QVERIFY(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S236 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins C++ SongView focusTimelineBand native-focus establishment, not a surviving Swift/QML ownership contract.
 
 A236 | MainWindowRoutingStateTest::mouseHintPopupScopeRestoresCoveredTarget | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:659
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(window.m_insertTimeAction)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S236 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QAction m_insertTimeAction pointer, not a surviving Swift/QML ownership contract.
 
 A237 | MainWindowRoutingStateTest::mouseHintPopupScopeRestoresCoveredTarget | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:661
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        window.m_insertTimeAction->trigger();
-Original expression:
-        QVERIFY2(QTest::qWaitFor([popup] {
-                     return popup->isOpen() &&
-                            quick_popup::promptItem(*popup, QLatin1String("insertTimePrompt"));
-                 }),
-                 "the Insert Time action did not open its canvas prompt")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S236 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QuickPopupSession isOpen / quick_popup::promptItem native session guard, not a surviving Swift/QML ownership contract.
 
 A238 | MainWindowRoutingStateTest::mouseHintPopupScopeRestoresCoveredTarget | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:666
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QTRY_VERIFY(!hints.currentSource() || popup->owns(hints.currentSource()))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S236 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QuickPopupSession::owns QObject-source identity, not a surviving Swift/QML ownership contract.
 
 A239 | MainWindowRoutingStateTest::mouseHintPopupScopeRestoresCoveredTarget | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:667
-Disposition: PARTIAL
-Mapping/reason: Related predicates S002, S003, S004, S005, S006, S007, S008, S009 in src/checks/workspace/session_editor_semantics.swift (MouseHints ownership/text model: claim, clear, window-active publication); unproved: real Qt hover/drag/focus event delivery and QObject source identity in this test.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(hints.currentText().isEmpty())
+Disposition: MATCHED
+Mapping/reason: S241 explicitly checks covered (empty text under popup scope); S236 also unconditionally observes empty hints.text while the mounted Insert Time prompt covers the gutter.
 
 A240 | MainWindowRoutingStateTest::mouseHintPopupScopeRestoresCoveredTarget | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:673
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-
-        // Cancelling through the bridge entry point — the same call the
-        // form's Escape handler makes — dismisses the form; the stationary
-        // cursor's covered target republishes its own profile.
-        view.cancelInsertTimePrompt();
-Original expression:
-        QTRY_VERIFY(!popup->isOpen())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S236 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QuickPopupSession isOpen observer, not a surviving Swift/QML ownership contract.
 
 A241 | MainWindowRoutingStateTest::mouseHintPopupScopeRestoresCoveredTarget | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:674
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QTRY_VERIFY(hints.currentSource() == gutter && hints.currentText() == gutterProfile)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S236 covers the displayed behavior (covered gutter profile restored after popup dismissal); git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies the conjunctive row additionally pins QObject currentSource() identity, retired with the C++ observer.
 
 A242 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:680
-Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
-Source context since previous assertion:
-    }
-
-    void mouseHintStatusLayoutStaysStable()
-    {
-        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
-Original expression:
-        QVERIFY(session.has_value())
+Disposition: MATCHED
+Mapping/reason: S229, S230, S231 open Route 101 and Littleroot as distinct tabs; openTwoSongShell runs unconditionally in the green S232/S235/S237 shellwindow journeys (helper anchors are classified unverifiable by the reader, not skipped at runtime).
 
 A243 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:685
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S237 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QQuickWindow canvas handle, not a surviving Swift/QML ownership contract.
 
 A244 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:688
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S237 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QQuickItem plot/gutter pointers, not a surviving Swift/QML ownership contract.
 
 A245 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:690
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native status-bar/meter/caption rendering obligation. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        QStatusBar *const bar = window.statusBar();
-Original expression:
-        QVERIFY(bar)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S237 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QStatusBar pointer, not a surviving Swift/QML ownership contract.
 
 A246 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:695
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native status-bar/meter/caption rendering obligation. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        QWidget *caption = nullptr;
-        for (QWidget *const child : bar->findChildren<QWidget *>())
-            if (child->accessibleName() == QStringLiteral("Mouse hint"))
-                caption = child;
-Original expression:
-        QVERIFY(caption)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S237 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QWidget caption child lookup by accessibleName, not a surviving Swift/QML ownership contract.
 
 A247 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:697
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native status-bar/meter/caption rendering obligation. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        QWidget *const meter = window.m_polyMeter;
-Original expression:
-        QVERIFY(meter)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S237 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QWidget m_polyMeter pointer, not a surviving Swift/QML ownership contract.
 
 A248 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:724
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S237 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QObject currentSource() == plot identity, not a surviving Swift/QML ownership contract.
 
-        const auto captionIsCentered = [&] {
-            const QImage image = caption->grab().toImage();
-            // The caption paints nothing but the hint text, so ink is
-            // whatever differs from the untouched background. Neither ink
-            // RGB nor coverage alone is portable: subpixel antialiasing
-            // tints glyph pixels far from the pen color, and QWidget::grab
-            // fills the unpainted area transparently or opaquely depending
-            // on the platform. Corners stay clear of the centered text.
-            const QColor bg = image.pixelColor(0, 0);
-            int left = image.width();
-            int right = -1;
-            for (int y = 0; y < image.height(); ++y)
-                for (int x = 0; x < image.width(); ++x)
-                    if (image.pixelColor(x, y) != bg) {
-                        left = qMin(left, x);
-                        right = qMax(right, x);
-                    }
-            const qreal center = caption->mapTo(bar, QPoint()).x() +
-                                 (left + right + 1) / (2.0 * image.devicePixelRatio());
-            // Ink bounds differ from centered advance widths by glyph bearings.
-            const qreal bearingAllowance = QFontMetrics(caption->font()).height() / 2.0;
-            return right >= left && qAbs(center - bar->width() / 2.0) <= bearingAllowance;
-        };
 
-        hoverAt(*canvas, plot->mapToScene(plot->boundingRect().center()).toPoint());
-Original expression:
-        QTRY_VERIFY(hints.currentSource() == plot)
 
 A249 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:726
-Disposition: PARTIAL
-Mapping/reason: Related predicates S002, S003, S004, S005, S006, S007, S008, S009 in src/checks/workspace/session_editor_semantics.swift (MouseHints ownership/text model: claim, clear, window-active publication); unproved: real Qt hover/drag/focus event delivery and QObject source identity in this test.
-Source context since previous assertion:
-        const QString profile = hints.currentText();
-Original expression:
-        QVERIFY(!profile.isEmpty())
+Disposition: MATCHED
+Mapping/reason: S237 directly checks the real plot hover publishes non-empty hints.text and the footer caption mirrors it.
 
 A250 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:728
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native status-bar/meter/caption rendering obligation. A presenter-level Swift check cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: S237 proves visible initial caption text; unproved: the accessible-description value equals the current full hint. No frozen predicate observes the accessibility channel.
 Source context since previous assertion:
         QCoreApplication::processEvents();
 Original expression:
         QCOMPARE(caption->accessibleDescription(), profile)
 
 A251 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:730
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native status-bar/meter/caption rendering obligation. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        const int barHeight = bar->height();
-Original expression:
-        QVERIFY2(captionIsCentered(), "Hint text must be centered on the status bar")
+Disposition: MATCHED
+Mapping/reason: S238 asserts centered alignment and caption center within the font-derived allowance of the footer center; the hint starts centered and remains centered through status/meter changes.
 
 A252 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:736
-Disposition: PARTIAL
-Mapping/reason: Related predicates S002, S003, S004, S005, S006, S007, S008, S009 in src/checks/workspace/session_editor_semantics.swift (MouseHints ownership/text model: claim, clear, window-active publication); unproved: real Qt hover/drag/focus event delivery and QObject source identity in this test.
-Source context since previous assertion:
-
-        // An operational message never displaces the hint text or the bar's
-        // height; the caption's stretch absorbs the transient message's space.
-        bar->showMessage(QStringLiteral("Operational message"), 2000);
-        QCoreApplication::processEvents();
-Original expression:
-        QCOMPARE(hints.currentText(), profile)
+Disposition: MATCHED
+Mapping/reason: S242 explicitly checks hints.text == editorHint after an operational status update; S238 exercises the mounted operational-message caption/center journey.
 
 A253 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:737
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native status-bar/meter/caption rendering obligation. A presenter-level Swift check cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: S238 proves visible caption during the operational message text; unproved: the accessible-description value equals the current full hint. No frozen predicate observes the accessibility channel.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(caption->accessibleDescription(), profile)
 
 A254 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:738
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native status-bar/meter/caption rendering obligation. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(bar->height(), barHeight)
+Disposition: MATCHED
+Mapping/reason: S238 explicitly retains the captured footer height across operational status and meter visibility transitions.
 
 A255 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:746
 Disposition: PARTIAL
-Mapping/reason: Related predicates S002, S003, S004, S005, S006, S007, S008, S009 in src/checks/workspace/session_editor_semantics.swift (MouseHints ownership/text model: claim, clear, window-active publication); unproved: real Qt hover/drag/focus event delivery and QObject source identity in this test.
+Mapping/reason: S238 verifies caption.text == hints.text and stable center/height while showing the meter; unproved: hints.text still equals the pre-meter captured profile (both compared live strings could change together).
 Source context since previous assertion:
 
         // Showing the permanent meter leaves the displayed hint and the bar's
@@ -2215,55 +1928,36 @@ Original expression:
         QCOMPARE(hints.currentText(), profile)
 
 A256 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:747
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native status-bar/meter/caption rendering obligation. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY2(captionIsCentered(), "Showing the meter must not shift the hint center")
+Disposition: MATCHED
+Mapping/reason: S238 includes the shown-meter state in its accumulated centered-caption and unchanged-height predicate.
 
 A257 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:752
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-
-        // A longer profile changes only the painted text: the full string
-        // stays accessible and the meter does not move.
-        hoverAt(*canvas, gutter->mapToScene(gutter->boundingRect().center()).toPoint());
-Original expression:
-        QTRY_VERIFY(hints.currentSource() == gutter)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S237 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QObject currentSource() == gutter identity, not a surviving Swift/QML ownership contract.
 
 A258 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:754
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native status-bar/meter/caption rendering obligation. A presenter-level Swift check cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: S239 proves visible full caption string while elided text; unproved: the accessible-description value equals the current full hint. No frozen predicate observes the accessibility channel.
 Source context since previous assertion:
         QCoreApplication::processEvents();
 Original expression:
         QCOMPARE(caption->accessibleDescription(), hints.currentText())
 
 A259 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:755
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native status-bar/meter/caption rendering obligation. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(meter->x(), meterX)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S237 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QWidget meter x() geometry observer, not a surviving Swift/QML ownership contract.
 
 A260 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:756
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native status-bar/meter/caption rendering obligation. A presenter-level Swift check cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: S238 proves footer height stability across status/meter visibility changes; S239 proves centered elision. Unproved: footer height remains the captured metered height when the profile changes to a longer hint.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(bar->height(), meteredHeight)
 
 A261 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:757
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native status-bar/meter/caption rendering obligation. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY2(captionIsCentered(), "Elided hints must retain the status-bar center")
+Disposition: MATCHED
+Mapping/reason: S239 requires the real caption to be truncated, retain the full hint string, and remain horizontally centered after its allocation becomes narrower than the full hint.
 
 A262 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:773
 Disposition: GAP
@@ -3032,3 +2726,45 @@ Anchor: message "the combined chrome and lane state round-trips through preferen
 
 S228 | runEditorViewStateChecks | src/checks/workspace/editor_view_state_checks.swift
 Anchor: message "application preferences retain one lane blob"
+
+S229 | openTwoSongShell | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Route 101 loads from the original mainwindowrouting project"
+
+S230 | openTwoSongShell | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Littleroot opens in the second tab of the same project"
+
+S231 | openTwoSongShell | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Littleroot is the selected workspace"
+
+S232 | test_pMouseHintTargetClaims | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "each hover target publishes its own non-empty profile"
+
+S233 | test_pMouseHintTargetClaims | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "a no-hint control claims empty instead of leaking"
+
+S234 | test_pMouseHintTargetClaims | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "returning to the row body restores the row text"
+
+S235 | test_qMouseHintMenuAndPopupScope | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "an open menu keeps the rename hint and dismiss restores the editor hint"
+
+S236 | test_qMouseHintMenuAndPopupScope | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "dismissing a popup restores the covered target hint"
+
+S237 | test_rMouseHintStatusPresentation | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the footer caption mirrors the current hint text"
+
+S238 | test_rMouseHintStatusPresentation | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "transient status and meter changes keep the hint center"
+
+S239 | test_rMouseHintStatusPresentation | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "elided hints retain the status center"
+
+S240 | mouseHintScopeChecks | src/checks/workspace/session_editor_semantics.swift
+Anchor: message "an open menu keeps the rename hint and dismiss restores the editor hint"
+
+S241 | mouseHintScopeChecks | src/checks/workspace/session_editor_semantics.swift
+Anchor: message "dismissing a popup restores the covered target hint"
+
+S242 | mouseHintScopeChecks | src/checks/workspace/session_editor_semantics.swift
+Anchor: message "an operational status update preserves the presenter's current hint"

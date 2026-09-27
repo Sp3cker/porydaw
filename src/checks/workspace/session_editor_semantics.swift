@@ -44,6 +44,44 @@ internal func mouseHintOwnershipChecks(_ report: CheckReport) {
     hints.claim(sourceToken: first, profile: -1)
     report.expectEqual(expected: "", actual: hints.text, cppID: id,
                        what: "unknown profile clears rather than retaining unrelated instructions")
+    mouseHintScopeChecks(report)
+}
+
+@MainActor
+internal func mouseHintScopeChecks(_ report: CheckReport) {
+    let presenter = ShellPresenter()
+    let hints = presenter.mouseHints
+    hints.setWindowActive(active: true)
+    let editor = hints.allocateSourceToken()
+    let menu = hints.allocateSourceToken()
+    let popup = hints.allocateSourceToken()
+    hints.claim(sourceToken: editor, profile: 1)
+    let renameHint = hints.text
+    hints.claim(sourceToken: menu, profile: 0)
+    let menuMuted = hints.text.isEmpty
+    hints.clear(sourceToken: menu)
+    hints.claim(sourceToken: editor, profile: 1)
+    let renameRestored = hints.text == renameHint
+    hints.claim(sourceToken: editor, profile: 14)
+    let editorHint = hints.text
+    report.expect(!renameHint.isEmpty && menuMuted && renameRestored
+                  && !editorHint.isEmpty && editorHint != renameHint,
+                  cppID: "swiftcore/mouseHintScopeChecks::menuScope",
+                  message: "an open menu keeps the rename hint and dismiss restores the editor hint")
+
+    hints.claim(sourceToken: popup, profile: 0)
+    let covered = hints.text.isEmpty
+    hints.clear(sourceToken: popup)
+    hints.claim(sourceToken: editor, profile: 14)
+    report.expect(covered && hints.text == editorHint,
+                  cppID: "swiftcore/mouseHintScopeChecks::popupScope",
+                  message: "dismissing a popup restores the covered target hint")
+
+    presenter.statusText = "Operational message"
+    report.expect(presenter.mouseHints === presenter.session.mouseHintsPresenter()
+                  && hints.text == editorHint && presenter.statusText == "Operational message",
+                  cppID: "swiftcore/mouseHintScopeChecks::statusPresentation",
+                  message: "an operational status update preserves the presenter's current hint")
 }
 
 @MainActor

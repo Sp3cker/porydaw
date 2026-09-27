@@ -19,17 +19,15 @@ Item {
     property bool visibleWhenNotScrollable: false
     property string thumbObjectName: ""
     property string accessibleName: qsTr("Timeline")
+    property var hintService: null
+    property bool hintScopeAllowed: true
 
-    // One no-hint group over the whole scrollbar footprint (track, thumb
-    // and wheel surface): no modifier-dependent action exists here, and the
-    // publisher keeps covered band hints from leaking through. Every
-    // instance inherits it. The thumb drag settles the group's
-    // releaseInside from real release coordinates; while the drag holds the
-    // grab the originating empty profile is retained.
     HoverHint {
         id: thumbHint
 
         source: scrollbar
+        hintService: scrollbar.hintService
+        scopeAllowed: scrollbar.hintScopeAllowed
         gestureOwning: scrollbar.gestureActive
     }
 

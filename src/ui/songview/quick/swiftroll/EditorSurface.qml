@@ -41,6 +41,19 @@ Item {
     readonly property bool hintWindowActive: visible && Window.window !== null
                                             && Window.window.visible && Window.window.active
     onHintWindowActiveChanged: hintService.setWindowActive(hintWindowActive)
+    readonly property bool hintScopeCovered: headersModel.menuOpen
+        || gridModel.gridMenuKind !== 0 || rulerMenu.isOpen
+        || applicationSession.headerVoicePickerOpen || applicationSession.timeSigPromptOpen
+        || rulerMenu.insertTimePromptOpen || velocityModel.promptOpen
+        || pitchBendPresenter.isOpen
+    function refreshHintScope() {
+        if (!hintScopeCovered && hintWindowActive)
+            hintService.scopeRefresh()
+    }
+    onHintScopeCoveredChanged: {
+        if (!hintScopeCovered)
+            Qt.callLater(refreshHintScope)
+    }
     readonly property real timelineSplitX: headersModel.trackHeaderWidth + gridModel.keyboardWidth
     readonly property real scrollbarBreadth: headersModel.scrollbarWidth
     readonly property int noteCount: gridModel.renderedNoteCount
@@ -252,6 +265,8 @@ Item {
             bandVisible: rollBandContent.visible
             model: root.headersModel
             controlFont: Qt.font(root.headersModel.controlFont)
+            hintService: root.hintService
+            hintScopeAllowed: !root.hintScopeCovered
         }
 
         // The roll owns a keyboard-local coordinate space beside the headers.
@@ -400,6 +415,13 @@ Item {
                     }
                     z: 10
                 }
+                HoverHint {
+                    source: gutterInput
+                    hintService: root.hintService
+                    scopeAllowed: !root.hintScopeCovered
+                    gestureOwning: gutterInput.pressed
+                    profile: HintProfiles.RollGutter
+                }
 
                 WheelHandler {
                     acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
@@ -536,6 +558,13 @@ Item {
                                     root.gridModel.updateHover(x, y)
                             }
                         }
+                    }
+                    HoverHint {
+                        source: rollInput
+                        hintService: root.hintService
+                        scopeAllowed: !root.hintScopeCovered
+                        gestureOwning: rollInput.pressed
+                        profile: HintProfiles.RollPlot
                     }
                 }
 
@@ -741,6 +770,8 @@ Item {
         handleColor: root.headersModel.appearance.scrollbarHandle
         handleHoverColor: root.headersModel.appearance.scrollbarHandleHover
         visibleWhenNotScrollable: true
+        hintService: root.hintService
+        hintScopeAllowed: !root.hintScopeCovered
         thumbObjectName: "timelineHorizontalScrollThumb"
         onGestureActiveChanged: root.gridModel.setScrollbarGrabActive(
                                     horizontalScrollBar.gestureActive
@@ -773,6 +804,8 @@ Item {
         handleHoverColor: root.headersModel.appearance.scrollbarHandleHover
         visibleWhenNotScrollable: true
         externalVisible: !root.showEvents
+        hintService: root.hintService
+        hintScopeAllowed: !root.hintScopeCovered
         thumbObjectName: "timelineRollScrollThumb"
         onGestureActiveChanged: root.gridModel.setScrollbarGrabActive(
                                     horizontalScrollBar.gestureActive || rollScrollBar.gestureActive)

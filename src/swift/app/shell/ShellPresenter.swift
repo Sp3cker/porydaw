@@ -137,6 +137,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
 
     @QtTracked public var session: ApplicationSession
     @QtTracked public var settingsStore: EngineSettingsStore
+    @QtTracked public var mouseHints: MouseHints
     public var actionIds: [String]
     public var fileActionIds: [String]
     public var editTopActionIds: [String]
@@ -175,6 +176,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
 
     public init() {
         session = ApplicationSession()
+        mouseHints = session.mouseHintsPresenter()
         settingsStore = EngineSettingsStore()
         settingsStore.attach(session: session)
         actionIds = Self.allActionIds
@@ -397,13 +399,13 @@ public final class ShellPresenter: QmlInstantiableStatus {
         return false
     }
 
-    /// The native window rejects the first close while tabs and dirty banks
-    /// answer their gate; no close bypasses hostClosing -> scene removal ->
     public func releaseEditorKey(autoRepeat: Bool) -> Bool {
         guard sceneActive, session.songOpen, !autoRepeat else { return false }
         return session.releaseGridKey(autoRepeat: autoRepeat)
     }
 
+    /// The native window rejects the first close while tabs and dirty banks
+    /// answer their gate; no close bypasses hostClosing -> scene removal ->
     /// detach ack.
     public func beginClose() -> Bool {
         if closeReady { return true }

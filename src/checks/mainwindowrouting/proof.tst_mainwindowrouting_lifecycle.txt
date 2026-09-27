@@ -1099,64 +1099,36 @@ Original expression:
         QCOMPARE(loadEditorViewState(QSettings{}), state)
 
 A111 | MainWindowRoutingLifecycleTest::mouseHintWidgetDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:396
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-open precondition for the two-song Qt MainWindow session (and the two tabs being distinct); no Swift predicate opens a two-song Qt session.
-Source context since previous assertion:
-    }
-
-    void mouseHintWidgetDragSettlesOnRelease()
-    {
-        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
-Original expression:
-        QVERIFY(session.has_value())
+Disposition: MATCHED
+Mapping/reason: S200, S201, S202 prove Route 101 and Littleroot open in distinct tabs; openTwoSongShell runs unconditionally in the green S203 shellwindow journey (helper anchors are reader-unverifiable, not runtime-skipped).
 
 A112 | MainWindowRoutingLifecycleTest::mouseHintWidgetDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:400
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S203 covers the replacement hover surface, not the transport dial; git show b5815a6e23296a9cc48c85a201a2ce858b99aae9:src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp verifies this clause pins TransportBar pointer, retired native widget/delivery internals.
 
 A113 | MainWindowRoutingLifecycleTest::mouseHintWidgetDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:403
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S203 covers the replacement hover surface, not the transport dial; git show b5815a6e23296a9cc48c85a201a2ce858b99aae9:src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp verifies this clause pins QDial and QComboBox pointers, retired native widget/delivery internals.
 
 A114 | MainWindowRoutingLifecycleTest::mouseHintWidgetDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:408
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Original native visibility/rendering obligation (widget shown/hidden, pixel grab). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        // The packed transport toolbar overflows the fixture's 960px window
-        // and hides the dial in the extension; widening relayouts it into
-        // view. The session owns this window, so no restore is needed.
-        window.resize(1400, 640);
-Original expression:
-        QTRY_VERIFY(dial->isVisibleTo(&window))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S203 covers the replacement hover surface, not the transport dial; git show b5815a6e23296a9cc48c85a201a2ce858b99aae9:src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp verifies this clause pins QDial isVisibleTo(QWidget) after toolbar overflow relayout, retired native widget/delivery internals.
 
 A115 | MainWindowRoutingLifecycleTest::mouseHintWidgetDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:416
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S203 covers the replacement hover surface, not the transport dial; git show b5815a6e23296a9cc48c85a201a2ce858b99aae9:src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp verifies this clause pins QWindow windowHandle pointer, retired native widget/delivery internals.
 
 A116 | MainWindowRoutingLifecycleTest::mouseHintWidgetDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:426
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        const auto windowPoint = [dialWindow](QWidget *widget, const QPoint &local) {
-            return dialWindow->mapFromGlobal(widget->mapToGlobal(local));
-        };
-        const int originalValue = dial->value();
-        QCursor::setPos(combo->mapToGlobal(combo->rect().center()));
-        QCursor::setPos(dial->mapToGlobal(dial->rect().center()));
-        // underMouse proves Qt's Enter reached the dial; without it the
-        // claim assert below cannot distinguish a delivery miss (covered or
-        // overflowed widget) from an observer drop.
-Original expression:
-        QTRY_VERIFY(dial->underMouse())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S203 covers the replacement hover surface, not the transport dial; git show b5815a6e23296a9cc48c85a201a2ce858b99aae9:src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp verifies this clause pins QDial underMouse() after spontaneous QCursor delivery, retired native widget/delivery internals.
 
 A117 | MainWindowRoutingLifecycleTest::mouseHintWidgetDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:427
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QTRY_VERIFY(hints.currentSource() == dial)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S203 covers the replacement hover surface, not the transport dial; git show b5815a6e23296a9cc48c85a201a2ce858b99aae9:src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp verifies this clause pins QObject currentSource() == dial identity, retired native widget/delivery internals.
 
 A118 | MainWindowRoutingLifecycleTest::mouseHintWidgetDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:429
 Disposition: PARTIAL
-Mapping/reason: Related predicates S002, S003, S004, S005, S006, S007, S008, S009 in src/checks/workspace/session_editor_semantics.swift (MouseHints ownership/text model: claim, clear, window-active publication); unproved: real Qt hover/drag/focus event delivery and QObject source identity in this test.
+Mapping/reason: S203 proves non-empty plot/gutter/header hover profiles; S002–S009 cover ownership/text rules. Unproved: hovering the transport output dial publishes its own non-empty profile; none of the frozen target/scope predicates exercises that dial.
 Source context since previous assertion:
         const QString dialProfile = hints.currentText();
 Original expression:
@@ -2211,3 +2183,15 @@ Anchor: message "the reloaded tab installs a fresh timeline"
 
 S199 | test_seededEventListRestoresBothStates | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "a seeded visible event list restores visible"
+
+S200 | openTwoSongShell | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Route 101 loads from the original mainwindowrouting project"
+
+S201 | openTwoSongShell | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Littleroot opens in the second tab of the same project"
+
+S202 | openTwoSongShell | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Littleroot is the selected workspace"
+
+S203 | test_pMouseHintTargetClaims | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "each hover target publishes its own non-empty profile"

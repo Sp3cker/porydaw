@@ -9,6 +9,8 @@ Item {
     required property bool bandVisible
     required property var model
     required property font controlFont
+    required property var hintService
+    required property bool hintScopeAllowed
 
     readonly property var headersModel: model
     readonly property var appearance: headersModel.appearance
@@ -78,6 +80,23 @@ Item {
                 return index
         }
         return -1
+    }
+    function hintProfileAt(x, y) {
+        if (root.headersModel.rowHeight <= 0)
+            return HintProfiles.Empty
+        const index = Math.floor((y + root.headersModel.scrollY) / root.headersModel.rowHeight)
+        const row = trackHeaderRows.itemAt(index)
+        if (!row || row.isAddTrack)
+            return HintProfiles.Empty
+        const localY = y + root.headersModel.scrollY - index * root.headersModel.rowHeight
+        const mute = root.headersModel.muteButtonRect
+        const solo = root.headersModel.soloButtonRect
+        if ((x >= mute.x && x < mute.x + mute.width
+             && localY >= mute.y && localY < mute.y + mute.height)
+                || (x >= solo.x && x < solo.x + solo.width
+                    && localY >= solo.y && localY < solo.y + solo.height))
+            return HintProfiles.Empty
+        return HintProfiles.TrackScope
     }
 
     function deliverWheel(event) {
@@ -493,6 +512,14 @@ Item {
                     }
                 }
             }
+            HoverHint {
+                id: headerHint
+                source: headerInput
+                hintService: root.hintService
+                scopeAllowed: root.hintScopeAllowed && !renameEditor.visible
+                gestureOwning: headerInput.pressed
+                profile: root.hintProfileAt(point.position.x, point.position.y)
+            }
 
             Rectangle {
                 objectName: "timelineTrackHeaderReorderMarker"
@@ -505,8 +532,6 @@ Item {
                 z: 3
             }
 
-            // TimelineScrollbar's vertical chrome and gesture geometry, without
-            // its legacy TimelineGestureScrollbar and HoverHint C++ dependencies.
             Item {
                 id: trackHeaderScrollBar
 
@@ -678,6 +703,12 @@ Item {
                     }
                 }
             }
+            HoverHint {
+                source: trackHeaderScrollBar
+                hintService: root.hintService
+                scopeAllowed: root.hintScopeAllowed
+                profile: HintProfiles.Empty
+            }
         }
 
         Item {
@@ -727,8 +758,12 @@ Item {
                         adoptRenameDraft()
                 }
 
-                HoverHandler {
+                HoverHint {
+                    source: renameEditor
+                    hintService: root.hintService
+                    scopeAllowed: root.hintScopeAllowed
                     cursorShape: Qt.IBeamCursor
+                    profile: HintProfiles.TextSelection
                 }
 
                 Rectangle {

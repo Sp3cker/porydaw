@@ -735,17 +735,35 @@ ThemedWindow {
         color: shell.session.palette.windowBackground
         Text {
             objectName: "shellStatusText"
+            id: shellStatus
             anchors.left: parent.left
-            anchors.right: polyMeter.visible ? polyMeter.left : parent.right
+            width: Math.max(0, Math.min(implicitWidth, parent.width / 4 - root.chromeSpacing.two))
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             anchors.topMargin: parent.statusTopInset
             anchors.bottomMargin: parent.statusBottomInset
             anchors.leftMargin: root.chromeSpacing.two
-            anchors.rightMargin: root.chromeSpacing.two
             text: shell.statusText
             font: Qt.font(root.chromeTypography.caption)
             color: root.colors.windowText
+            verticalAlignment: Text.AlignVCenter
+            elide: Text.ElideRight
+        }
+        Text {
+            objectName: "shellMouseHintText"
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            anchors.topMargin: parent.statusTopInset
+            anchors.bottomMargin: parent.statusBottomInset
+            width: Math.max(0, parent.width - 2 * Math.max(
+                shellStatus.width + root.chromeSpacing.two * 2,
+                polyMeter.visible ? polyMeter.width + root.chromeSpacing.two * 2 : 0))
+            text: shell.mouseHints.text
+            textFormat: Text.PlainText
+            font: Qt.font(root.chromeTypography.caption)
+            color: root.colors.windowText
+            horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
         }
