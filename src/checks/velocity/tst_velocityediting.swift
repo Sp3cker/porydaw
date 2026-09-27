@@ -21,6 +21,7 @@ func drawerVelocityGestureTransactions(_ report: CheckReport, session: DocumentS
     page.refreshFromDocument()
     let baseline = DocumentSnapshot(document)
     let dragDepth = document.history.undoCount
+    let baselineIndex = document.history.undoIndex
     let dragPublications = drawerVelocityPublicationCounter(session: fixture.session)
     let before = fixture.handle(notes[0])?.y ?? 0
     fixture.drag(notes[0], dy: -24)
@@ -39,6 +40,9 @@ func drawerVelocityGestureTransactions(_ report: CheckReport, session: DocumentS
                        what: "one released drag advances the document revision once")
     report.expect(committed.identity != baseline.identity, cppID: drawerVelocityTransactionID,
                   message: "one released drag makes exactly one history entry")
+    report.expectEqual(expected: baselineIndex + 1, actual: document.history.undoIndex,
+                       cppID: drawerVelocityTransactionID,
+                       what: "a committed velocity drag occupies the next history position")
     report.expect(committed.canUndo && !baseline.canUndo, cppID: drawerVelocityTransactionID,
                   message: "the drag's entry becomes undoable")
     report.expect(document.note(notes[0].id)?.velocity != notes[0].velocity, cppID: drawerVelocityTransactionID,
@@ -54,6 +58,13 @@ func drawerVelocityGestureTransactions(_ report: CheckReport, session: DocumentS
                       + "\(fixture.handle(notes[0])?.level ?? -99)")
 
     _ = try? runBlocking { try await fixture.session.undo() }
+    let undone = DocumentSnapshot(document)
+    report.expectEqual(expected: baselineIndex, actual: document.history.undoIndex,
+                       cppID: drawerVelocityHistoryID,
+                       what: "velocity undo returns to the exact pre-edit history position")
+    report.expectEqual(expected: committed.revision + 1, actual: undone.revision,
+                       cppID: drawerVelocityHistoryID,
+                       what: "velocity undo advances the revision exactly once")
     report.expectEqual(expected: Int(notes[0].velocity), actual: Int(document.note(notes[0].id)?.velocity ?? 0),
                        cppID: drawerVelocityHistoryID, what: "Undo restores the captured velocity")
     report.expectEqual(expected: Int(notes[1].velocity), actual: Int(document.note(notes[1].id)?.velocity ?? 0),
@@ -64,6 +75,13 @@ func drawerVelocityGestureTransactions(_ report: CheckReport, session: DocumentS
     report.expectEqual(expected: 3, actual: fixture.handles.count, cppID: drawerVelocityHistoryID,
                        what: "Undo rebuilds the page without losing its handles")
     _ = try? runBlocking { try await fixture.session.redo() }
+    let redone = DocumentSnapshot(document)
+    report.expectEqual(expected: baselineIndex + 1, actual: document.history.undoIndex,
+                       cppID: drawerVelocityHistoryID,
+                       what: "velocity redo returns to the committed history position")
+    report.expectEqual(expected: undone.revision + 1, actual: redone.revision,
+                       cppID: drawerVelocityHistoryID,
+                       what: "velocity redo advances the revision exactly once")
     report.expectEqual(expected: committed.identity, actual: DocumentSnapshot(document).identity, cppID: drawerVelocityHistoryID,
                        what: "Redo restores the committed history identity")
     report.expectEqual(expected: committedVelocities,

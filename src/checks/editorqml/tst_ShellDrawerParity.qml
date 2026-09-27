@@ -164,6 +164,75 @@ TestCase {
                         Math.abs(image.green(x, y) - target[1]),
                         Math.abs(image.blue(x, y) - target[2]))
     }
+    function colorChannels(color) {
+        var hex = String(color).replace("#", "")
+        if (hex.length === 8)
+            hex = hex.slice(2)
+        return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16),
+                parseInt(hex.slice(4, 6), 16)]
+    }
+
+    function paintedColor(image, capture, item, color) {
+        var region = regionOf(image, capture, item)
+        var expected = colorChannels(color)
+        for (var y = region.y0; y <= region.y1; ++y) {
+            for (var x = region.x0; x <= region.x1; ++x) {
+                if (pixelDistance(image, x, y, expected) <= 3)
+                    return true
+            }
+        }
+        return false
+    }
+    function nearestPaintedColor(image, capture, item, color) {
+        var region = regionOf(image, capture, item)
+        var expected = colorChannels(color)
+        var nearest = 255
+        for (var y = region.y0; y <= region.y1; ++y) {
+            for (var x = region.x0; x <= region.x1; ++x)
+                nearest = Math.min(nearest, pixelDistance(image, x, y, expected))
+        }
+        return nearest
+    }
+    function compositedColor(base, overlay) {
+        var color = String(overlay).replace("#", "")
+        var alpha = color.length === 8 ? parseInt(color.slice(0, 2), 16) / 255 : 1
+        var ink = colorChannels(overlay)
+        return base.map(function(channel, index) {
+            return Math.round(channel * (1 - alpha) + ink[index] * alpha)
+        })
+    }
+    function forkStemShade(trackFill) {
+        var rgb = colorChannels(trackFill).map(function(value) {
+            var channel = value / 255
+            return channel <= 0.04045 ? channel / 12.92
+                                      : Math.pow((channel + 0.055) / 1.055, 2.4)
+        })
+        var l = Math.pow(0.4122214708 * rgb[0] + 0.5363325363 * rgb[1]
+                         + 0.0514459929 * rgb[2], 1 / 3)
+        var m = Math.pow(0.2119034982 * rgb[0] + 0.6806995451 * rgb[1]
+                         + 0.1073969566 * rgb[2], 1 / 3)
+        var s = Math.pow(0.0883024619 * rgb[0] + 0.2817188376 * rgb[1]
+                         + 0.6299787005 * rgb[2], 1 / 3)
+        var light = (0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s) * 2 / 3
+        var a = (1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s) * 2 / 3
+        var b = (0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s) * 2 / 3
+        var ll = light + 0.3963377774 * a + 0.2158037573 * b
+        var mm = light - 0.1055613458 * a - 0.0638541728 * b
+        var ss = light - 0.0894841775 * a - 1.2914855480 * b
+        function gamma(value) {
+            var channel = value <= 0.0031308 ? 12.92 * value
+                           : 1.055 * Math.pow(Math.max(0, value), 1 / 2.4) - 0.055
+            return Math.round(Math.max(0, Math.min(255, channel * 255)))
+        }
+        return "#" + [
+            gamma(4.0767416621 * ll * ll * ll - 3.3077115913 * mm * mm * mm
+                  + 0.2309699292 * ss * ss * ss),
+            gamma(-1.2684380046 * ll * ll * ll + 2.6097574011 * mm * mm * mm
+                  - 0.3413193965 * ss * ss * ss),
+            gamma(-0.0041960863 * ll * ll * ll - 0.7034186147 * mm * mm * mm
+                  + 1.7076147010 * ss * ss * ss)
+        ].map(function(value) { return ("0" + value.toString(16)).slice(-2) }).join("")
+    }
 
     function pixelsDiffer(before, after, x, y) {
         return before.red(x, y) !== after.red(x, y)
@@ -496,6 +565,8 @@ TestCase {
                "the real velocity page, input delegate and detent control are mounted")
         var grid = gridModel()
         grid.setTrack(0)
+        verify(!detent.visible,
+               "the direct-sound context hides the composed detent before PSG staging")
         var voiceInput = voicePlotInput()
         var voicePage = voiceModel()
         verify(voiceInput && voiceInput.visible && voicePage,
@@ -522,6 +593,20 @@ TestCase {
                && originalNotes[4].velocity === 104 && originalNotes[5].velocity === 110,
                "the three staged notes after the square change are literal 98/104/110")
         var notes = [originalNotes[3], originalNotes[5], originalNotes[4]]
+        var capture = shell.contentItem
+        var page = velocityPageItem()
+        var unselectedFill = collectByName(page, "velocityNodeFill", []).find(function(fill) {
+            return fill.parent.model.noteIdText === String(notes[0].id)
+        })
+        verify(unselectedFill, "the staged ordinary velocity node is mounted before selection")
+        waitForRendering(tabsRoot())
+        var ordinaryFrame = grabImage(capture)
+        verify(nearestPaintedColor(ordinaryFrame, capture, unselectedFill,
+                                   page.gridPalette.noteBorder) <= 16,
+               "an ordinary velocity node paints the antialiased semantic black outline")
+        verify(paintedColor(ordinaryFrame, capture, unselectedFill,
+                            page.gridPalette.noteFill(0, 127)),
+               "an ordinary velocity node paints its track identity fill")
         var roll = rollInput()
         grid.setCameraVScroll((127 - (notes[0].pitch + notes[1].pitch) / 2 + 0.5)
                               * grid.rowHeight - roll.height / 2)
@@ -543,6 +628,78 @@ TestCase {
                               selected: JSON.parse(grid.noteSummary).filter(function(note) {
                                   return note.selected
                               }).map(function(note) { return [note.id, note.velocity] }) }))
+        var plot = findChild(page, "velocityPlot")
+        var ruler = findChild(page, "velocityRuler")
+        var drawer = findChild(selectedSurface(), "editorDrawer")
+        var bar = findChild(drawer, "drawerBar")
+        var velocityToggle = findChild(drawer, "drawerToggle_velocity")
+        var automationToggle = findChild(drawer, "drawerToggle_automation")
+        verify(plot && ruler && bar && velocityToggle && automationToggle,
+               "the composed velocity plot, ruler and drawer chrome are visible")
+        var bounds = detent.mapToItem(drawer, 0, 0)
+        var band = ruler.mapToItem(drawer, 0, 0)
+        var plotLeft = plot.mapToItem(drawer, 0, 0).x
+        verify(bar.visible && velocityToggle.visible
+               && velocityToggle.x >= bar.x
+               && velocityToggle.x + velocityToggle.width <= bar.x + bar.width
+               && velocityToggle.y >= bar.y
+               && velocityToggle.y + velocityToggle.height <= bar.y + bar.height,
+               "the rendered velocity toggle is wholly inside its visible bar")
+        compare(velocityToggle.x, automationToggle.x + automationToggle.width
+                + Math.round(grid.baseFontPx / 4),
+                "velocity chrome follows automation by base-font spacing")
+        verify(Math.abs(bounds.x - band.x) <= 1 / page.Screen.devicePixelRatio
+               && Math.abs(bounds.y + detent.height - band.y - ruler.height)
+                  <= 1 / page.Screen.devicePixelRatio
+               && bounds.x + detent.width < plotLeft,
+               "the visible detent aligns with the band bottom to the left of the plot")
+        var graduation = collectByName(ruler, "velocityRulerGraduations", [])
+        verify(graduation.length === 1,
+               "the composed ruler has an intrinsic graduation paint layer")
+        var ring = findChild(collectByName(page, "velocityNodeFill", []).find(function(fill) {
+            return fill.parent.model.noteIdText === String(notes[0].id)
+        }).parent, "velocityNodeRing")
+        var outsiderFill = collectByName(page, "velocityNodeFill", []).find(function(fill) {
+            return fill.parent.model.noteIdText === String(notes[2].id)
+        })
+        var outsiderStem = findChild(outsiderFill.parent, "velocityNodeStem")
+        verify(ring && outsiderStem && outsiderFill, "selected and unselected note paint is mounted")
+        waitForRendering(tabsRoot())
+        var selectedFrame = grabImage(capture)
+        verify(paintedColor(selectedFrame, capture, ring, page.gridPalette.selectionRing),
+               "the selected velocity ring paints the semantic highlight ink")
+        var expectedStem = forkStemShade(page.gridPalette.noteFill(0, 127))
+        verify(nearestPaintedColor(selectedFrame, capture, outsiderStem, expectedStem) <= 16,
+               "the outsider stem paints the independent one-third Oklab track shade")
+        verify(paintedColor(selectedFrame, capture, outsiderFill, page.gridPalette.outline),
+               "the unselected note paints the semantic dimmed mid ink")
+        compare(outsiderFill.border.width, 0,
+                "a dimmed note no longer paints an ordinary black outline")
+        mouseMove(input, outsiderFill.parent.model.x, outsiderFill.parent.model.y,
+                  -1, Qt.NoButton)
+        verify(waitForNative(function() {
+            return model.hoveredNoteText === String(notes[2].id)
+        }, 3000), "hovering the outsider selects its own ruler context")
+        var hoverFrame = grabImage(capture)
+        verify(paintedColor(hoverFrame, capture, graduation[0],
+                            page.gridPalette.selectionRing),
+               "the active ruler graduation paints the semantic separator accent")
+        mouseMove(input, input.width - 3, input.height - 3, -1, Qt.NoButton)
+        var checkedFrame = grabRegionStable(capture, regionOf(selectedFrame, capture, detent))
+        mouseClick(detent, detent.width / 2, detent.height / 2)
+        tryCompare(detent.Accessible, "checked", false)
+        var uncheckedFrame = grabUntilDifferent(capture, checkedFrame,
+                                                 regionOf(checkedFrame, capture, detent))
+        verify(changedPixels(checkedFrame, uncheckedFrame,
+                             regionOf(checkedFrame, capture, detent), 0) > 0,
+               "clicking the detent visibly repaints its unchecked ink")
+        mouseClick(detent, detent.width / 2, detent.height / 2)
+        tryCompare(detent.Accessible, "checked", true)
+        var restoredFrame = grabUntilDifferent(capture, uncheckedFrame,
+                                                regionOf(uncheckedFrame, capture, detent))
+        verify(changedPixels(uncheckedFrame, restoredFrame,
+                             regionOf(restoredFrame, capture, detent), 0) > 0,
+               "clicking the detent visibly repaints its checked ink")
         compare(model.axisMode, 1, "the mounted square context publishes its intrinsic axis")
         compare(detent.Accessible.checked, model.detentsEnabled,
                 "the rendered detent control reflects the enabled page preference")
@@ -554,6 +711,41 @@ TestCase {
         tryCompare(model, "detentsEnabled", true)
         tryCompare(detent.Accessible, "checked", true, 3000,
                    "the rendered detent control checks on click")
+        var tickX = input.width * 0.4
+        var anchoredTick = (tickX + grid.cameraScrollX) * grid.ticksPerBeat / grid.beatWidth
+        var oldBeatWidth = grid.beatWidth
+        mouseWheel(input, tickX, input.height / 2, 0, 120, Qt.NoButton, Qt.NoModifier)
+        verify(waitForNative(function() { return grid.beatWidth > oldBeatWidth }, 3000),
+               "the velocity plot routes a real wheel zoom into the shared camera")
+        verify(Math.abs(anchoredTick * grid.beatWidth / grid.ticksPerBeat
+                        - grid.cameraScrollX - tickX)
+               <= 1 / page.Screen.devicePixelRatio,
+               "a real velocity wheel holds its tick under the pointer within one physical pixel")
+        mouseWheel(input, tickX, input.height / 2, 0, -120, Qt.NoButton, Qt.NoModifier)
+        verify(waitForNative(function() { return grid.beatWidth <= oldBeatWidth }, 3000),
+               "the reverse velocity wheel restores the gesture's original time zoom")
+        grid.setCameraHScroll(0)
+        var velocityBody = findChild(drawer, "drawerBody_velocity")
+        var bodyHeight = velocityBody.height
+        var rowCount = collectByName(page, "velocityNodeFill", []).length
+        var textRowCount = ruler.children.filter(function(item) {
+            return item.labelText !== undefined
+        }).length
+        verify(textRowCount > 0, "the mounted velocity ruler has painted text rows")
+        mouseClick(velocityToggle, velocityToggle.width / 2, velocityToggle.height / 2)
+        tryCompare(velocityBody, "visible", false)
+        compare(settings.int("editorDrawer.velocityHeight", -1), bodyHeight,
+                "hiding velocity retains its requested section height in preferences")
+        mouseClick(velocityToggle, velocityToggle.width / 2, velocityToggle.height / 2)
+        tryCompare(velocityBody, "visible", true)
+        compare(velocityBody.height, bodyHeight,
+                "showing velocity restores its requested body height")
+        compare(collectByName(page, "velocityNodeFill", []).length, rowCount,
+                "velocity hide and show retain every painted note row")
+        compare(ruler.children.filter(function(item) {
+            return item.labelText !== undefined
+        }).length, textRowCount,
+        "velocity hide and show retain every ruler text row")
         var first = velocityHandleFor(notes[0].id)
         var later = velocityHandleFor(notes[1].id)
         var outside = velocityHandleFor(notes[2].id)
@@ -634,8 +826,190 @@ TestCase {
                 tryCompare(model, "contextSlot", family.slot)
                 compare(model.axisMode, 1,
                         "the selected wave or noise voice presents its intrinsic axis")
+                if (family.slot === 6) {
+                    var firstRow = collectByName(ruler, "velocityGraduation", [])[0]
+                    verify(firstRow, "the staged wave paints its lowest graduation")
+                    var waveBounds = detent.mapToItem(drawer, 0, 0)
+                    var waveCenter = firstRow.mapToItem(drawer, firstRow.width / 2,
+                                                         firstRow.height / 2)
+                    verify(waveCenter.y < waveBounds.y
+                           || waveCenter.y > waveBounds.y + detent.height,
+                           "the actual wave first graduation stays clear of the bottom detent")
+                }
                 mountedVelocityRulerAndPaint(model, detent, input, grid, notes, family.snap)
             }
+            var ramp = findChild(page, "velocityRamp")
+            var rampStartX = input.width * 0.6
+            var rampEndX = input.width * 0.8
+            var rampStartY = input.height * 0.25
+            var rampEndY = input.height * 0.4
+            var quietRampFrame = grabImage(capture)
+            mousePress(input, rampStartX, rampStartY, Qt.LeftButton, Qt.ShiftModifier)
+            mouseMove(input, rampEndX, rampEndY, -1, Qt.LeftButton, Qt.ShiftModifier)
+            verify(waitForNative(function() { return ramp.visible }, 3000),
+                   "a real Shift drag paints the velocity ramp preview")
+            var rampFrame = grabImage(capture)
+            var rampMid = ramp.mapToItem(capture, ramp.width / 2, ramp.height / 2)
+            var rampPixelX = Math.round(rampMid.x * rampFrame.width / capture.width)
+            var rampPixelY = Math.round(rampMid.y * rampFrame.height / capture.height)
+            var rampInk = colorChannels(page.gridPalette.primaryText)
+            var liveRampInk = false
+            for (var px = rampPixelX - 2; px <= rampPixelX + 2; ++px) {
+                for (var py = rampPixelY - 2; py <= rampPixelY + 2; ++py) {
+                    if (pixelDistance(rampFrame, px, py, rampInk) <= 24
+                        && pixelsDiffer(quietRampFrame, rampFrame, px, py))
+                        liveRampInk = true
+                }
+            }
+            verify(liveRampInk, "the live ramp paints new semantic edit-preview outline pixels")
+            mouseRelease(input, rampEndX, rampEndY, Qt.LeftButton, Qt.ShiftModifier)
+            tryCompare(ramp, "visible", false)
+            var bandStartX = input.width * 0.65
+            var bandEndX = input.width * 0.85
+            var bandStartY = input.height * 0.55
+            var bandEndY = input.height * 0.75
+            var restingFrame = grabImage(capture)
+            mousePress(input, bandStartX, bandStartY, Qt.RightButton)
+            mouseMove(input, bandEndX, bandEndY, -1, Qt.RightButton)
+            var bandFrame = grabUntilDifferent(capture, restingFrame,
+                                                regionOf(restingFrame, capture, plot))
+            verify(model.interactionActive,
+                   "a real right-band drag owns an active selection gesture")
+            var edgeOrigin = input.mapToItem(capture,
+                                              bandStartX + 2 / page.Screen.devicePixelRatio,
+                                              bandStartY)
+            var edgeX = Math.round(edgeOrigin.x * bandFrame.width / capture.width)
+            var edgeY = Math.round(edgeOrigin.y * bandFrame.height / capture.height)
+            var edgeInk = colorChannels(page.gridPalette.selectionEdge)
+            var paintedEdge = null
+            for (var ex = edgeX - 2; ex <= edgeX + 2; ++ex) {
+                for (var ey = edgeY - 2; ey <= edgeY + 2; ++ey) {
+                    if (pixelDistance(bandFrame, ex, ey, edgeInk) <= 16
+                        && pixelsDiffer(restingFrame, bandFrame, ex, ey))
+                        paintedEdge = { x: ex, y: ey }
+                }
+            }
+            verify(paintedEdge !== null,
+                   "the new band boundary paints a semantic dashed edge over the resting plot")
+            var midPoint = input.mapToItem(capture, (bandStartX + bandEndX) / 2,
+                                           (bandStartY + bandEndY) / 2)
+            var midX = Math.round(midPoint.x * bandFrame.width / capture.width)
+            var midY = Math.round(midPoint.y * bandFrame.height / capture.height)
+            var underlyingFill = [restingFrame.red(midX, midY),
+                                  restingFrame.green(midX, midY),
+                                  restingFrame.blue(midX, midY)]
+            verify(pixelDistance(bandFrame, midX, midY,
+                                 compositedColor(underlyingFill,
+                                                 page.gridPalette.selectionFill)) <= 4
+                   && pixelsDiffer(restingFrame, bandFrame, midX, midY),
+                   "the band interior composites its palette selection fill over the real plot")
+            mouseRelease(input, bandEndX, bandEndY, Qt.RightButton)
+            verify(waitForNative(function() { return !model.interactionActive }, 3000),
+                   "releasing the right-band gesture relinquishes its pointer capture")
+            var clearedFrame = grabImage(capture)
+            verify(!pixelsDiffer(restingFrame, clearedFrame, midX, midY)
+                   && !pixelsDiffer(restingFrame, clearedFrame, paintedEdge.x, paintedEdge.y),
+                   "releasing the right band clears both its fill and dashed edge pixels")
+            var editGuide = findChild(selectedSurface(), "sharedPlayheadEditVelocityGuide")
+            var timelineRuler = findChild(selectedSurface(), "timelineRulerInput")
+            verify(editGuide && timelineRuler,
+                   "the real timeline ruler and shared velocity edit guide are mounted")
+            mouseClick(timelineRuler, grid.beatWidth / 2, timelineRuler.height / 2)
+            verify(waitForNative(function() { return editGuide.visible }, 3000),
+                   "the first ruler click paints the shared edit guide in the velocity plot")
+            var guideX = editGuide.guide.contentX
+            mouseClick(timelineRuler, grid.beatWidth * 1.5, timelineRuler.height / 2)
+            verify(waitForNative(function() {
+                return editGuide.guide.contentX !== guideX
+            }, 3000), "moving the real edit cursor relocates its painted velocity guide")
+            var guideFrame = grabImage(capture)
+            verify(paintedColor(guideFrame, capture, editGuide, page.gridPalette.editCursor),
+                   "the moved edit guide paints its semantic cursor ink in the velocity band")
+            var beforeStack = JSON.parse(grid.noteSummary)
+            var drawStart = gridPointFor(notes[0].tick + 8, notes[0].pitch + 1)
+            var drawEnd = gridPointFor(notes[0].tick + 20, notes[0].pitch)
+            verify(drawStart.x > 0 && drawEnd.x < roll.width
+                   && drawStart.y > 0 && drawStart.y < roll.height
+                   && drawEnd.y > 0 && drawEnd.y < roll.height,
+                   "the real roll can draw a stacked note across adjacent pitch rows")
+            mousePress(roll, drawStart.x, drawStart.y, Qt.LeftButton)
+            mouseMove(roll, drawEnd.x, drawEnd.y, -1, Qt.LeftButton)
+            mouseRelease(roll, drawEnd.x, drawEnd.y, Qt.LeftButton)
+            var newStack = JSON.parse(grid.noteSummary).filter(function(note) {
+                return note.track === 0 && !beforeStack.some(function(old) {
+                    return old.id === note.id
+                })
+            })
+            verify(newStack.length === 1 && newStack[0].pitch === notes[0].pitch
+                   && newStack[0].tick > notes[0].tick
+                   && newStack[0].tick < notes[0].tick + notes[0].duration
+                   && newStack[0].selected,
+                   "drawing in the real roll commits one selected note stacked over the first stem")
+            var stackedHandle = velocityHandleFor(newStack[0].id)
+            verify(stackedHandle, "the stacked roll note paints a velocity handle")
+            var stackedRing = collectByName(page, "velocityNodeRing", []).find(function(ring) {
+                return ring.parent.model.noteIdText === String(newStack[0].id)
+            })
+            verify(stackedRing && stackedRing.visible,
+                   "the stacked velocity node owns a visible selected ring")
+            mousePress(input, stackedHandle.x, stackedHandle.y, Qt.LeftButton)
+            var leftStackFrame = grabImage(capture)
+            verify(paintedColor(leftStackFrame, capture, stackedRing,
+                                page.gridPalette.selectionRing),
+                   "left-pressing the selected stacked velocity node paints highlight ink")
+            mouseRelease(input, stackedHandle.x, stackedHandle.y, Qt.LeftButton)
+            mousePress(input, stackedHandle.x, stackedHandle.y, Qt.RightButton)
+            var pressedStackFrame = grabImage(capture)
+            verify(paintedColor(pressedStackFrame, capture, stackedRing,
+                                page.gridPalette.selectionRing),
+                   "right-pressing the selected stacked velocity node keeps its highlight ink")
+            mouseRelease(input, stackedHandle.x, stackedHandle.y, Qt.RightButton)
+            grid.setCameraHScroll(1e9)
+            var timelineEndTick = grid.cameraScrollX * grid.ticksPerBeat / grid.beatWidth
+            var barsAfterEnd = collectByName(plot, "velocityGrid", []).filter(function(row) {
+                var tick = (row.x + row.width / 2 + grid.cameraScrollX)
+                           * grid.ticksPerBeat / grid.beatWidth
+                return String(row.fillColor).toLowerCase()
+                           === String(page.gridPalette.gridLineBar).toLowerCase()
+                    && tick > timelineEndTick && row.x > 3 && row.x < input.width - 8
+            })
+            verify(barsAfterEnd.length > 0,
+                   "the grid exposes a painted bar after the camera's authoritative timeline end")
+            var pastBar = barsAfterEnd[0]
+            var gridFrame = grabImage(capture)
+            var pastPoint = pastBar.mapToItem(capture, pastBar.width / 2, input.height * 0.82)
+            var pixelX = Math.round(pastPoint.x * gridFrame.width / capture.width)
+            var pixelY = Math.round(pastPoint.y * gridFrame.height / capture.height)
+            var neighborInk = [gridFrame.red(pixelX + 5, pixelY),
+                               gridFrame.green(pixelX + 5, pixelY),
+                               gridFrame.blue(pixelX + 5, pixelY)]
+            var expectedBarInk = compositedColor(neighborInk, page.gridPalette.gridLineBar)
+            var pastEndBarPainted = false
+            for (var offset = -2; offset <= 2; ++offset) {
+                if (pixelDistance(gridFrame, pixelX + offset, pixelY, expectedBarInk) <= 16
+                    && pixelDistance(gridFrame, pixelX + offset, pixelY, neighborInk) > 6)
+                    pastEndBarPainted = true
+            }
+            verify(pastEndBarPainted,
+                   "a bar beyond the authoritative timeline paints palette grid ink against its background")
+            grid.setCameraHScroll(0)
+            mouseDoubleClickSequence(voiceInput, insertionX, voiceInput.height / 2,
+                                     Qt.LeftButton)
+            tryCompare(voicePage, "pickerOpen", true)
+            var directSearch = findChild(selectedSurface(), "voicePickerSearch")
+            verify(waitForNative(function() {
+                return directSearch && directSearch.activeFocus
+            }, 3000), "the real voice picker opens for a PSG-to-direct-sound change")
+            directSearch.selectAll()
+            keyClick(Qt.Key_0)
+            keyClick(Qt.Key_0)
+            keyClick(Qt.Key_0)
+            tryCompare(voicePage, "pickerHasMatch", true)
+            keyClick(Qt.Key_Return)
+            tryCompare(voicePage, "pickerOpen", false)
+            verify(waitForNative(function() {
+                return model.contextSlot === 0 && !model.detentsAvailable && !detent.visible
+            }, 3000), "changing the staged PSG voice back to direct sound hides its detent")
         }
     }
 

@@ -10,13 +10,24 @@ Additional Swift counterpart: src/checks/rollcheck/static/camera.swift
 Additional Swift counterpart: src/checks/keyboard/KeybindingRegistryChecks.swift
 Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
+Task 101 Swift check SHA-256: fca798d3929d4871b7b977efcefc86a811f738602183d12dabdd66f5d39ca1f2 (src/checks/drawerpresentation/velocity.swift)
+Task 101 editing check SHA-256: d69a53436f8eb626f507094fea0eb7f20f7673efb27483cc061dc52ef8c245f5 (src/checks/velocity/tst_velocityediting.swift)
+Task 101 mounted QML SHA-256: 5531f1f0d2e579910ebcae75e8a5680e20a710d708663d0637773e3811e4f8e6 (src/checks/editorqml/tst_ShellDrawerParity.qml)
+Task 101 interaction SHA-256: f07265cf22d03ee5bd78e18052d6b9df56e998b654f0eeba92f3d5756a5a63fc (src/swift/app/drawer/velocity/VelocityInteraction.swift)
 
 Command: deno task verify:qml --verbose
 Result: PASS — drawer lane PASS (drawer 1/1; profiles all 4) on the task-6 settled
 tst_EditorDrawer.qml. Controller-run; the ledger agent did not run it.
 Command: deno task build:checks; deno task verify --filter swiftcore-projectsession --verbose (sibling velocity lane)
 Result: PASS — provided by the implementer (agent://Task59a, locked build) for the frozen Stage A tree: build ok; 1/36 ok (35 sibling harnesses skipped by the filter), and the cited VelocityRollCore / VelocityClickSelection / drawerVelocityProjectionRefresh / click-case predicates appear in that lane's evidence (build/proof-evidence/swiftcore-projectsession.json); the keybinding and camera anchors appear in the same lane. Not re-run by the ledger writer.
-Note: Stage B evidence fresh 2026-09-26: the editorqml-drawer lane functions[] pass record lists 86 passing functions including test_productionVelocityMountedInk/TransientInk/DetentRepaint. S130-S138 below execute green, but the cited rows stay PARTIAL: each native clause observes the quick-scene layer (VelocityGrid/VelocityStems/VelocityNodes/VelocityTransient ink, exact-black/mid/track-fill identity, chrome detentVisible flag), which no composed-model predicate establishes.
+Note: Stage B evidence fresh 2026-09-26: editorqml-drawer passed its mounted ink/transient/detent functions (S130-S138). Task 101's mounted shell and Swift lanes provide the additional predicates below; the remaining partials name the specific unproved conjuncts.
+
+Command: deno task verify --filter swiftcore-projectsession --verbose
+Result: GREEN — task 101 implementer (agent://Task101, locked build): build ok; 1/36 ok. Native velocity projection/history/context predicates passed.
+Command: deno task verify:shell --filter shell-drawer-parity --verbose
+Result: GREEN — task 101 implementer (agent://Task101, locked build): build ok; 1/26 ok. Mounted velocity wheel/chrome/paint journey passed.
+Command: deno task verify:shell --verbose; deno task verify
+Result: GREEN — earlier task 101 implementer run (agent://Ledger101): 26/26 shell and 36/36 Swift. The current source snapshot's full-suite verification belongs to the controller; the proof writer did not run it.
 
 A001 | createVelocityFixture | src/checks/drawerpresentation/velocity.cpp:39
 Disposition: RETIRED-REPRESENTATION
@@ -69,23 +80,16 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: The row pins the native gutter item bounds derived from `geometry->plotRect.x() - geometry->rect.x()` (f3069ef6:116-117); the composed page publishes its own ruler width.
 
 A014 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:119
-Disposition: PARTIAL
-Mapping/reason: The QML pointer-edit case requires at least one editable primary note from the composed grid's own summary (its primary filter drops ghosts and other tracks) before it clicks one; the native document notesForTrack(0) guard for this fixture is unproved. [S101]
-Original expression:
-  QVERIFY(!notes.empty())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S101; the native `notesForTrack(0)` fixture guard `!notes.empty()` (f3069ef6:118-119) is a prerequisite for its synthetic song, not a velocity-page behavior; the mounted Swift fixture supplies editable primary notes independently.
 
 A015 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:128
-Disposition: PARTIAL
-Mapping/reason: The Swift projection predicate zooms the shared camera directly and moves the handle; the wheel event that raises this page camera's pxPerBeat is unproved. [S070]
-Original expression:
-  QVERIFY(view.camera().pxPerBeat() > zoom)
+Disposition: MATCHED
+Mapping: S139 — a real wheel on the mounted velocity plot increases shared camera zoom.
 
 A016 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:129
-Disposition: PARTIAL
-Mapping/reason: The Swift projection predicate asserts the handle follows camera.displayX after a direct zoom; the wheel anchor's held display position is unproved. [S070]
-Original expression:
-  QVERIFY(std::abs(view.camera().displayX(tick, 0.0, input->devicePixelRatio()) - anchor.x()) <=
-              1.0 / input->devicePixelRatio())
+Disposition: MATCHED
+Mapping: S140 — the same wheel holds the original tick under its pointer within one physical pixel.
 
 A017 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:131
 Disposition: MATCHED
@@ -100,54 +104,36 @@ Disposition: MATCHED
 Mapping: S006
 
 A020 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:134
-Disposition: PARTIAL
-Mapping/reason: The ladder asserts only that a lower displayed velocity draws lower; the marker y equal to velocityToY of its own displayed value is unproved. [S008]
-Original expression:
-  QVERIFY(std::abs(drawer->velocityArea()->axis().markers()[0].y -
-                       drawer->velocityArea()->axis().velocityToY(notes.front().velocity)) <=
-              1.0 / input->devicePixelRatio())
+Disposition: MATCHED
+Mapping: S142, S187 — the hovered marker maps its independently stored note velocity; the raw-74 preview maps the independently requested value.
 
 A021 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:145
-Disposition: PARTIAL
-Mapping/reason: The QML drawer case finds and clicks the composed detent control; the drawer bar item's visibility for this fixture is unproved. [S099]
-Original expression:
-  QVERIFY(fixture.barItem->isVisible())
+Disposition: MATCHED
+Mapping: S143 — the mounted drawer bar and its velocity toggle are visible.
 
 A022 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:146
-Disposition: PARTIAL
-Mapping/reason: The QML drawer case routes a real click to the composed detent control; the bar item's interaction pointer identity with the chrome Bar target is unproved. [S100]
-Original expression:
-  QCOMPARE(fixture.barItem->interaction(), &chrome.interaction(DrawerChromeTarget::Bar))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S144; native bar-item pointer identity `barItem->interaction() == &chrome.interaction(Bar)` (f3069ef6:146) has no composed-QML counterpart; the mounted control's real geometry and click route are checked separately.
 
 A023 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:147
-Disposition: PARTIAL
-Mapping/reason: The QML drawer case clicks the composed detent control at its center; bar/toggle rectangle containment in the chrome bar rect is unproved. [S100]
-Original expression:
-  QVERIFY(chrome.barRect().contains(chrome.velocityToggleRect()))
+Disposition: MATCHED
+Mapping: S144 — the actual velocity toggle lies wholly inside the visible bar.
 
 A024 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:148
-Disposition: PARTIAL
-Mapping/reason: The QML drawer composes the detent control beside the toggles; the toggle row's spacing from the automation toggle is unproved. [S099]
-Original expression:
-  QCOMPARE(chrome.velocityToggleRect().x(), chrome.automationToggleRect().x() +
-                                                    chrome.automationToggleRect().width() +
-                                                    layout::space(layout::Space::One))
+Disposition: MATCHED
+Mapping: S145 — actual toggle spacing follows Automation by the base-font spacing.
 
 A025 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:151
 Disposition: RETIRED-REPRESENTATION
 Mapping/reason: The row pins the native bar item `bounds()` hosting the chrome toggle rect center (f3069ef6:151); the QML drawer composes its own control bounds.
 
 A026 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:153
-Disposition: PARTIAL
-Mapping/reason: The Swift key-split predicate asserts a continuous context publishes no available detents; the composed drawer item's hidden state for this fixture is unproved. [S058]
-Original expression:
-  QVERIFY(!fixture.detentItem->isVisible())
+Disposition: MATCHED
+Mapping: S146 — the mounted direct-sound detent control is hidden.
 
 A027 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:154
-Disposition: PARTIAL
-Mapping/reason: The Swift key-split predicate asserts the continuous context's !detentsAvailable; the chrome-level detentVisible flag behind the composed item is unproved. [S058]
-Original expression:
-  QVERIFY(!chrome.detentVisible())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S146; `!chrome.detentVisible()` (f3069ef6:154) duplicates the native chrome flag behind the separately proved hidden composed detent.
 
 A028 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:155
 Disposition: MATCHED
@@ -162,22 +148,16 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: The row pins the Qt focus policy `VelocityAxis::graduationLabelsFocusable()` (f3069ef6:157); no Swift surface exposes an item focus policy.
 
 A031 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:163
-Disposition: PARTIAL
-Mapping/reason: The QML cancellation case toggles the section off and verifies it is hidden; the native drawer section visibility flag for this fixture is unproved. [S104]
-Original expression:
-  QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::Velocity))
+Disposition: MATCHED
+Mapping: S104, S148 — clicking the mounted velocity toggle hides the section before retained-height inspection.
 
 A032 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:164
-Disposition: PARTIAL
-Mapping/reason: The QML cancellation case asserts only the section's hidden and visible flags; the drawer section height retained while hidden is unproved. [S104]
-Original expression:
-  QCOMPARE(view.drawerSectionHeight(EditorDrawerPage::Velocity), height)
+Disposition: MATCHED
+Mapping: S148 — hiding retains the requested velocity section height in persisted preferences.
 
 A033 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:167
-Disposition: PARTIAL
-Mapping/reason: The QML cancellation case toggles the section back on and verifies it is visible; the native visibility flag for this fixture is unproved. [S105]
-Original expression:
-  QVERIFY(view.drawerSectionVisible(EditorDrawerPage::Velocity))
+Disposition: MATCHED
+Mapping: S149 — clicking the actual toggle shows the section again.
 
 A034 | VelocityPageTest::continuousGraduationDensity | src/checks/drawerpresentation/velocity.cpp:178
 Disposition: MATCHED
@@ -209,7 +189,7 @@ Mapping: S003
 
 A041 | VelocityPageTest::gridAndPanClamp | src/checks/drawerpresentation/velocity.cpp:205
 Disposition: PARTIAL
-Mapping/reason: The mounted page paints a past-end grid rect with the model fill across the plot height in a passing lane; the quick-scene VelocityGrid layer observation is unproved. [S130]
+Mapping/reason: S150 samples palette-composited bar ink, but its past-end calculation uses cameraScrollX (the viewport's left tick), not the authoritative timeline length; a bar within the timeline can still pass.
 Original expression:
   QVERIFY(std::any_of(colors.cbegin(), colors.cend(), [&](const QColor &color) {
           return layerTouches(
@@ -266,32 +246,20 @@ Disposition: MATCHED
 Mapping: S118
 
 A054 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:296
-Disposition: PARTIAL
-Mapping/reason: Graduation 9's active flag is asserted for a displayed value supplied as activeValues [76]; the single active graduation count after the hover is unproved. [S027]
-Original expression:
-  QCOMPARE(
-          std::count_if(fixture.area->axis().graduations().cbegin(),
-                        fixture.area->axis().graduations().cbegin() +
-                            fixture.area->axis().graduationCount(),
-                        [](const VelocityAxisGraduation &graduation) { return graduation.active; }),
-          1)
+Disposition: MATCHED
+Mapping: S188 — hovering the live PSG note leaves exactly one active ruler graduation.
 
 A055 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:302
 Disposition: MATCHED
 Mapping: S117, S027
 
 A056 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:307
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/velocity.cpp) no longer builds or runs. Previous native note: Original native quick-scene layer obligation: VelocityAxis accent ink at the gutter separator. A page-level Swift predicate cannot establish this observation.
-Original expression:
-  QVERIFY(layerTouches(*fixture.rig->quickScene(), songview::TimelineQuickLayer::VelocityAxis,
-                           accentProbe, fixture.gutterItem->palette().highlight().color()))
+Disposition: MATCHED
+Mapping: S152 — the mounted ruler's active graduation paints the semantic highlight accent at the gutter.
 
 A057 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:311
-Disposition: PARTIAL
-Mapping/reason: The ladder predicate names markers with their displayed values from its own activeValues; the marker value under the live 74 gesture preview is unproved. [S006]
-Original expression:
-  QCOMPARE(fixture.area->axis().markers()[0].velocity, 74)
+Disposition: MATCHED
+Mapping: S153, S154 — the held raw-74 preview publishes its own marker at 74.
 
 A058 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:312
 Disposition: RETIRED-REPRESENTATION
@@ -310,98 +278,62 @@ Disposition: MATCHED
 Mapping: S059
 
 A062 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:332
-Disposition: PARTIAL
-Mapping/reason: The mounted outsider stem paints visible with the model stem color while unselected in a passing lane; the quick-scene VelocityStems layer observation is unproved. [S131]
-Original expression:
-  QVERIFY(checks::support::layerHasColorIn(
-          stems,
-          QRectF(nodeX, outsiderY - layout::singlePixel(),
-                 fixture.xForTick(double(fixture.notes[1].tick + fixture.notes[1].duration)) - nodeX,
-                 2 * layout::singlePixel()),
-          stemColor))
+Disposition: MATCHED
+Mapping: S155 — a mounted outsider stem paints the independently computed one-third Oklab shade of its track fill.
 
 A063 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:338
-Disposition: PARTIAL
-Mapping/reason: The mounted selected node paints the highlight ring in the selection-ring color in a passing lane; the quick-scene VelocityNodes highlight-layer observation is unproved. [S132]
-Original expression:
-  QVERIFY(checks::support::layerHasColorIn(nodes, selectedProbe,
-                                               fixture.inputItem->palette().highlight().color()))
+Disposition: MATCHED
+Mapping: S156 — the selected node visibly paints its semantic highlight ring.
 
 A064 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:340
 Disposition: PARTIAL
-Mapping/reason: The mounted unselected node paints its base fill and outline in a passing lane; the exact-black base ink is unproved. [S133]
+Mapping/reason: S157 samples the semantic black outline with a 16-channel antialiasing tolerance over the ordinary node; it does not establish literal black ink at the fork's outsider probe.
 Original expression:
   QVERIFY(checks::support::layerHasColorIn(nodes, outsiderProbe, Qt::black))
 
 A065 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:341
-Disposition: PARTIAL
-Mapping/reason: The mounted unselected node paints its model fill in a passing lane; the track-fill color identity is unproved. [S133]
-Original expression:
-  QVERIFY(checks::support::layerHasColorIn(nodes, outsiderProbe, trackFill))
+Disposition: MATCHED
+Mapping: S158 — the ordinary node visibly paints the track-identity fill independently of its own model value.
 
 A066 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:346
-Disposition: PARTIAL
-Mapping/reason: The mounted deselected node paints dimmed with no outline in the model fill in a passing lane; the mid-color identity is unproved. [S134]
-Original expression:
-  QVERIFY(checks::support::layerHasColorIn(dimmedNodes, outsiderProbe,
-                                               fixture.inputItem->palette().mid().color()))
+Disposition: MATCHED
+Mapping: S159 — the dimmed node visibly paints the semantic mid/outline ink in place of ordinary track fill.
 
 A067 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:348
-Disposition: PARTIAL
-Mapping/reason: The mounted dimmed node drops its outline in a passing lane; the quick-scene absence-of-base layer observation is unproved. [S134]
-Original expression:
-  QVERIFY(!checks::support::layerHasColorIn(dimmedNodes, outsiderProbe, Qt::black))
+Disposition: MATCHED
+Mapping: S160 — the dimmed node's ordinary black outline is removed.
 
 A068 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:354
-Disposition: PARTIAL
-Mapping/reason: The mounted square-voice ruler paints live graduation rows with the composed detent control visible and enabled in a passing lane; the chrome-level detentVisible flag behind the composed item is unproved. [S057][S138]
-Original expression:
-  QVERIFY(fixture.detentItem->isVisible())
+Disposition: MATCHED
+Mapping: S161 — the mounted resolved PSG detent control is visible and enabled.
 
 A069 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:355
-Disposition: PARTIAL
-Mapping/reason: The mounted square-voice ruler paints live graduation rows with the composed detent control visible and enabled in a passing lane; the chrome-level detentVisible flag behind the composed item is unproved. [S057][S138]
-Original expression:
-  QVERIFY(fixture.drawerChrome->detentVisible())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S161; the native `drawerChrome->detentVisible()` flag (f3069ef6:355) duplicates the separately proved mounted detent visibility, not another user-visible state.
 
 A070 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:356
-Disposition: PARTIAL
-Mapping/reason: The QML drawer case clicks the composed detent control; the detent item's interaction pointer identity with the chrome Detent target is unproved. [S100]
-Original expression:
-  QCOMPARE(fixture.detentItem->interaction(),
-               &fixture.drawerChrome->interaction(DrawerChromeTarget::Detent))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S161; the native `detentItem->interaction() == &drawerChrome->interaction(Detent)` pointer identity (f3069ef6:356-357) is absent from QML; the mounted detent click route is already checked.
 
 A071 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:358
-Disposition: PARTIAL
-Mapping/reason: The QML drawer case clicks the composed detent control at its center; the detent item's bounds equality with the chrome detentRect size is unproved. [S100]
-Original expression:
-  QCOMPARE(fixture.detentItem->bounds(),
-               QRectF(QPointF{}, fixture.drawerChrome->detentRect().size()))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S162; the native `detentItem->bounds() == QRectF({}, detentRect.size())` object-bounds identity (f3069ef6:358-359) is not a composed-surface law; its rendered placement is separately checked.
 
 A072 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:362
-Disposition: PARTIAL
-Mapping/reason: The QML case asserts the ruler is the shared gutter column; the detent rect's left edge alignment with the band's left edge is unproved. [S093]
-Original expression:
-  QVERIFY(std::abs(detentRect.left() - band.left()) <= layout::singlePixel())
+Disposition: MATCHED
+Mapping: S162 — the visible detent's left edge aligns with the mounted band's left edge within one physical pixel.
 
 A073 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:363
-Disposition: PARTIAL
-Mapping/reason: The QML case asserts the plot spans the body height; the detent rect's bottom edge alignment with the band's bottom edge is unproved. [S096]
-Original expression:
-  QVERIFY(std::abs(detentRect.bottom() - band.bottom()) <= layout::singlePixel())
+Disposition: MATCHED
+Mapping: S162 — the visible detent's bottom edge aligns with the mounted band's bottom edge within one physical pixel.
 
 A074 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:364
-Disposition: PARTIAL
-Mapping/reason: The QML case asserts the plot starts at the ruler width; the detent rect lying left of the plot is unproved. [S094]
-Original expression:
-  QVERIFY(detentRect.right() < fixture.plotRect().left())
+Disposition: MATCHED
+Mapping: S162 — the visible detent lies left of the plot.
 
 A075 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:365
-Disposition: PARTIAL
-Mapping/reason: The QML case asserts the ruler rendered its value ladder; the detent rect avoiding the first graduation row is unproved. [S098]
-Original expression:
-  QVERIFY(!detentRect.contains(
-          QPointF(detentRect.center().x(), fixture.area->axis().graduations()[0].y)))
+Disposition: MATCHED
+Mapping: S163 — in the fork's programmable-wave context, the mounted first graduation center is outside the detent's vertical bounds.
 
 A076 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:377
 Disposition: MATCHED
@@ -416,10 +348,8 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: The row pins a `captureQuickBand` ruler-band framebuffer equality between two captures (f3069ef6:383); no Swift surface captures those pixels.
 
 A079 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:384
-Disposition: PARTIAL
-Mapping/reason: The QML drawer case asserts the toggled preference; the chrome icon revision that repaints the detent icon is unproved. [S100]
-Original expression:
-  QVERIFY(fixture.drawerChrome->iconRevision() > checkedIconRevision)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S164; native `drawerChrome->iconRevision() > checkedIconRevision` (f3069ef6:384) counts a removed chrome icon cache; the visibly changed unchecked ink is proved by a mounted framebuffer comparison.
 
 A080 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:389
 Disposition: MATCHED
@@ -430,130 +360,89 @@ Disposition: MATCHED
 Mapping: S100
 
 A082 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:391
-Disposition: PARTIAL
-Mapping/reason: The QML drawer case asserts the restored preference; the chrome icon revision bump after the second click is unproved. [S100]
-Original expression:
-  QVERIFY(fixture.drawerChrome->iconRevision() > uncheckedIconRevision)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S165; native `drawerChrome->iconRevision() > uncheckedIconRevision` (f3069ef6:391) counts a removed chrome icon cache; the visibly changed checked ink is proved by a mounted framebuffer comparison.
 
 A083 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:393
-Disposition: PARTIAL
-Mapping/reason: The Swift key-split predicate asserts the direct-sound context is continuous with !detentsAvailable; the deferred native visibility of the composed detent item is unproved. [S058]
-Original expression:
-  QTRY_VERIFY(!fixture.detentItem->isVisible())
+Disposition: MATCHED
+Mapping: S189 — replacing the staged PSG voice with direct sound hides the mounted detent.
 
 A084 | VelocityPageTest::editCursorAndContextRounding | src/checks/drawerpresentation/velocity.cpp:403
 Disposition: RETIRED-REPRESENTATION
 Mapping/reason: The row pins the native `TimelineQuickView` named "timelineQuickCanvas" in the edit-cursor case (f3069ef6:401-403); the mounted page has no such object.
 
 A085 | VelocityPageTest::editCursorAndContextRounding | src/checks/drawerpresentation/velocity.cpp:409
-Disposition: PARTIAL
-Mapping/reason: The Swift diagnostics predicate publishes an edit cursor through the session and asserts the stopped context consumes it; the edit cursor's own visibility is unproved. [S079]
-Original expression:
-  QVERIFY(quick->editVisible())
+Disposition: MATCHED
+Mapping: S166 — clicking the real timeline ruler paints the shared velocity edit guide.
 
 A086 | VelocityPageTest::editCursorAndContextRounding | src/checks/drawerpresentation/velocity.cpp:410
-Disposition: PARTIAL
-Mapping/reason: The Swift predicate asserts the context slot follows the published edit cursor; the edit root content x movement between cursor ticks is unproved. [S079]
-Original expression:
-  QVERIFY(first != quick->editRootContentX())
+Disposition: MATCHED
+Mapping: S167 — moving the real edit cursor relocates its painted guide.
 
 A087 | VelocityPageTest::editCursorAndContextRounding | src/checks/drawerpresentation/velocity.cpp:412
-Disposition: PARTIAL
-Mapping/reason: The Swift predicate asserts the selected count of a hand-picked note set; the empty selection after clearTrackHeaderSelection is unproved. [S081]
-Original expression:
-  QVERIFY(view.selectionModel().noteSelection().empty())
+Disposition: MATCHED
+Mapping: S168 — plain track-header selection empties selected velocity notes.
 
 A088 | VelocityPageTest::editCursorAndContextRounding | src/checks/drawerpresentation/velocity.cpp:422
 Disposition: PARTIAL
-Mapping/reason: The Swift predicates assert the presented context tick is the rounded playhead tick and the slot at that tick; the .5 rounding boundary (0.49/0.5/0.51) and the negative clamp (-1.0) are unproved. [S075][S076]
+Mapping/reason: S169, S170 prove the four rounded playhead ticks and their opening direct-sound slot, but not the fork's repeated context-voice identity for square, wave and noise.
 Original expression:
   QCOMPARE(view.voiceContext(expected[index]).voice, &fixture.voicegroup.voices[0])
 
 A089 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:446
-Disposition: PARTIAL
-Mapping/reason: The mounted right-drag band paints its fill in the selection-fill color in a passing lane; the quick-scene VelocityTransient layer observation is unproved. [S135]
-Original expression:
-  QVERIFY(layerTouches(*fixture.rig->quickScene(),
-                           songview::TimelineQuickLayer::VelocityTransient, selector, fill))
+Disposition: MATCHED
+Mapping: S171 — the live band's interior pixel composites the palette's alpha-30 selection fill over its prior plot background.
 
 A090 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:448
-Disposition: PARTIAL
-Mapping/reason: The mounted right-drag band paints its edge in the selection-edge color in a passing lane; the quick-scene VelocityTransient layer observation is unproved. [S136]
-Original expression:
-  QVERIFY(layerTouches(*fixture.rig->quickScene(),
-                           songview::TimelineQuickLayer::VelocityTransient, selector, edge))
+Disposition: MATCHED
+Mapping: S172 — the new band boundary paints the semantic dashed edge against its prior pixels.
 
 A091 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:453
 Disposition: PARTIAL
-Mapping/reason: The mounted band publishes no fill or edge after release in a passing lane; the quick-scene layer-empty observation is unproved. [S137]
+Mapping/reason: S173 verifies that sampled fill and boundary-edge pixels return to their pre-band colors on release, but does not prove the fork's entire velocity transient layer is empty.
 Original expression:
   QVERIFY(
           layerEmpty(*fixture.rig->quickScene(), songview::TimelineQuickLayer::VelocityTransient))
 
 A092 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:458
-Disposition: PARTIAL
-Mapping/reason: The Swift predicates resolve notes by id in their own synthetic fixture; this fixture's first-note lookup guard is unproved. [S064]
-Original expression:
-  QVERIFY(fixture.document.findNote(fixture.notes[0].noteId, &first))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S101; `fixture.document.findNote(fixture.notes[0].noteId, &first)` (f3069ef6:458) is a native fixture guard before stacking, not a user-visible velocity outcome.
 
 A093 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:465
-Disposition: PARTIAL
-Mapping/reason: The added overlapping note's presence in the track's note list is unproved; the Swift predicate resolves its own fixture's notes by id. [S064]
-Original expression:
-  QVERIFY(overlap != notes.cend())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S174; `overlap != notes.cend()` (f3069ef6:465) is the native added-note iterator guard; the mounted roll creates and observes the stacked note by identity.
 
 A094 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:468
-Disposition: PARTIAL
-Mapping/reason: The Swift key-split predicate resolves each selected note's own level through VelocityMap.level(of:); the added overlapping note's level resolution is unproved. [S059]
-Original expression:
-  QVERIFY(overlapLevel)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S174; `overlapLevel` (f3069ef6:468) is a native fixture level guard for the added overlapping note, not a visible level law.
 
 A095 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:474
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/velocity.cpp) no longer builds or runs. Previous native note: Original native quick-scene layer obligation: VelocityNodes highlight ink on the stacked node under the press. A page-level Swift predicate cannot establish this observation.
-Original expression:
-  QVERIFY(layerTouches(*fixture.rig->quickScene(), songview::TimelineQuickLayer::VelocityNodes,
-                           QRectF(stacked - QPointF(3, 3), QSizeF(6, 6)),
-                           fixture.inputItem->palette().highlight().color()))
+Disposition: MATCHED
+Mapping: S190 — a real left press on the newly stacked selected node paints its semantic highlight ring.
 
 A096 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:481
 Disposition: MATCHED
 Mapping: S059
 
 A097 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:487
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/velocity.cpp) no longer builds or runs. Previous native note: Original native quick-scene layer obligation: VelocityNodes highlight ink on the right-pressed selected node. A page-level Swift predicate cannot establish this observation.
-Original expression:
-  QVERIFY(layerTouches(*fixture.rig->quickScene(), songview::TimelineQuickLayer::VelocityNodes,
-                           QRectF(selected - QPointF(3, 3), QSizeF(6, 6)),
-                           fixture.inputItem->palette().highlight().color()))
+Disposition: MATCHED
+Mapping: S176 — right-pressing the selected stacked node retains visible highlight ink.
 
 A098 | VelocityPageTest::rampAndRollPreview | src/checks/drawerpresentation/velocity.cpp:503
-Disposition: PARTIAL
-Mapping/reason: The Swift predicates resolve notes by id in their own synthetic fixture; this fixture's first-note lookup guard is unproved. [S064]
-Original expression:
-  QVERIFY(fixture.document.findNote(fixture.notes[0].noteId, &first))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S177; `fixture.document.findNote(fixture.notes[0].noteId, &first)` (f3069ef6:503) is a native ramp fixture lookup prerequisite, not the rendered ramp outcome.
 
 A099 | VelocityPageTest::rampAndRollPreview | src/checks/drawerpresentation/velocity.cpp:504
-Disposition: PARTIAL
-Mapping/reason: The Swift predicates resolve notes by id in their own synthetic fixture; this fixture's third-note lookup guard is unproved. [S064]
-Original expression:
-  QVERIFY(fixture.document.findNote(fixture.notes[2].noteId, &third))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S177; `fixture.document.findNote(fixture.notes[2].noteId, &third)` (f3069ef6:504) is a native ramp fixture lookup prerequisite, not the rendered ramp outcome.
 
 A100 | VelocityPageTest::rampAndRollPreview | src/checks/drawerpresentation/velocity.cpp:511
-Disposition: PARTIAL
-Mapping/reason: The added ramp midpoint note's presence in the track's note list is unproved; the Swift predicate resolves its own fixture's notes by id. [S064]
-Original expression:
-  QVERIFY(middle != notes.cend())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S177; `middle != notes.cend()` (f3069ef6:511) is the native added-note iterator guard before a ramp preview, not a user-visible result.
 
 A101 | VelocityPageTest::rampAndRollPreview | src/checks/drawerpresentation/velocity.cpp:523
-Disposition: PARTIAL
-Mapping/reason: The shift-ramp preview outline is a scene-layer observation and the ramp's frozen preview values are asserted only by the sibling: executing predicate lives in sibling velocity lane file src/checks/velocity/velocitydetentdragging.swift:drawerVelocityFrozenGesturePolicy; representation/ownership unproved here.
-Original expression:
-  QVERIFY(layerTouches(*fixture.rig->quickScene(),
-                           songview::TimelineQuickLayer::VelocityTransient,
-                           QRectF(quarter - QPointF(2.0, 2.0), QSizeF(5.0, 5.0)),
-                           themes::color(themes::Role::song_view_edit_preview_outline)))
+Disposition: MATCHED
+Mapping: S177 — the real Shift-drag ramp paints new semantic edit-preview outline pixels.
 
 A102 | VelocityPageTest::rampAndRollPreview | src/checks/drawerpresentation/velocity.cpp:534
 Disposition: MATCHED
@@ -600,32 +489,24 @@ Disposition: MATCHED
 Mapping: S128
 
 A113 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:577
-Disposition: PARTIAL
-Mapping/reason: Private undo-stack index inspection is replaced by history identity in the sibling: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
-Original expression:
-  QCOMPARE(undone.undoIndex, baseline.undoIndex)
+Disposition: MATCHED
+Mapping: S178 — undo restores the exact pre-edit history position.
 
 A114 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:578
-Disposition: PARTIAL
-Mapping/reason: The undone revision advance is asserted only by the sibling's snapshot comparison: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
-Original expression:
-  QCOMPARE(undone.revision, committed.revision + 1)
+Disposition: MATCHED
+Mapping: S179 — undo advances revision exactly once from committed state.
 
 A115 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:581
 Disposition: MATCHED
 Mapping: S129
 
 A116 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:582
-Disposition: PARTIAL
-Mapping/reason: Private undo-stack index inspection is replaced by history identity in the sibling: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
-Original expression:
-  QCOMPARE(redone.undoIndex, committed.undoIndex)
+Disposition: MATCHED
+Mapping: S180 — redo restores the committed history position.
 
 A117 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:583
-Disposition: PARTIAL
-Mapping/reason: The redone revision advance is asserted only by the sibling's snapshot comparison: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
-Original expression:
-  QCOMPARE(redone.revision, undone.revision + 1)
+Disposition: MATCHED
+Mapping: S181 — redo advances revision exactly once from undone state.
 
 A118 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:592
 Disposition: MATCHED
@@ -636,22 +517,16 @@ Disposition: MATCHED
 Mapping: S097, S101
 
 A120 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:605
-Disposition: PARTIAL
-Mapping/reason: The converted lane asserts no velocity content rebuild across playhead presentations; the songChanged/refresh trigger that must not churn rows is unproved. [S107]
-Original expression:
-  QCOMPARE(churn, 0)
+Disposition: MATCHED
+Mapping: S182, S183 — song refresh retains text count and unchanged row identity.
 
 A121 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:608
-Disposition: PARTIAL
-Mapping/reason: The converted lane asserts no velocity content rebuild across playhead presentations; the editor horizontal scroll trigger that must not churn rows is unproved. [S107]
-Original expression:
-  QCOMPARE(churn, 0)
+Disposition: MATCHED
+Mapping: S184 — horizontal scrolling retains the full text-row count and each row's object identity without changing handle count.
 
 A122 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:612
-Disposition: PARTIAL
-Mapping/reason: The Swift predicate preserves the published handle count across playhead movement; the row count preserved across a drawer hide and re-show is unproved. [S077]
-Original expression:
-  QCOMPARE(text->rowCount(), rows)
+Disposition: MATCHED
+Mapping: S185, S186 — hide/show retains both painted note and ruler text row counts.
 
 A123 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:621
 Disposition: MATCHED
@@ -1078,3 +953,147 @@ Anchor: message "the transient band empties after the band release"
 
 S138 | test_productionVelocityDetentRepaint | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "the intrinsic ruler paints its live graduation rows (drawn "
+
+S139 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the velocity plot routes a real wheel zoom into the shared camera"
+
+S140 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "a real velocity wheel holds its tick under the pointer within one physical pixel"
+
+S142 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the live ruler marker aligns with its underlying note's stored velocity"
+
+S143 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the composed velocity plot, ruler and drawer chrome are visible"
+
+S144 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the rendered velocity toggle is wholly inside its visible bar"
+
+S145 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "velocity chrome follows automation by base-font spacing"
+
+S146 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the direct-sound context hides the composed detent before PSG staging"
+
+S148 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "hiding velocity retains its requested section height in preferences"
+
+S149 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "showing velocity restores its requested body height"
+
+S150 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "a bar beyond the authoritative timeline paints palette grid ink against its background"
+
+S152 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the active ruler graduation paints the semantic separator accent"
+
+S153 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
+Anchor: message "a held raw drag displays velocity 74 before committing"
+
+S154 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the held raw-74 drag paints its live ruler marker at 74"
+
+S155 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the outsider stem paints the independent one-third Oklab track shade"
+
+S156 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the selected velocity ring paints the semantic highlight ink"
+
+S157 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "an ordinary velocity node paints the antialiased semantic black outline"
+
+S158 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "an ordinary velocity node paints its track identity fill"
+
+S159 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the unselected note paints the semantic dimmed mid ink"
+
+S160 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "a dimmed note no longer paints an ordinary black outline"
+
+S161 | mountedVelocityRulerAndPaint | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "every family mounts an available and enabled ruler detent control"
+
+S162 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the visible detent aligns with the band bottom to the left of the plot"
+
+S163 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the actual wave first graduation stays clear of the bottom detent"
+
+S164 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "clicking the detent visibly repaints its unchecked ink"
+
+S165 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "clicking the detent visibly repaints its checked ink"
+
+S166 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the first ruler click paints the shared edit guide in the velocity plot"
+
+S167 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "moving the real edit cursor relocates its painted velocity guide"
+
+S168 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+Anchor: message "a plain track-header selection empties the velocity note selection"
+
+S169 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+Anchor: message "four live playhead boundaries clamp and round to their exact ticks"
+
+S170 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+Anchor: message "each rounded playhead boundary resolves the real opening bank program"
+
+S171 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the band interior composites its palette selection fill over the real plot"
+
+S172 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the new band boundary paints a semantic dashed edge over the resting plot"
+
+S173 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "releasing the right band clears both its fill and dashed edge pixels"
+
+S174 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "drawing in the real roll commits one selected note stacked over the first stem"
+
+S176 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "right-pressing the selected stacked velocity node keeps its highlight ink"
+
+S177 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the live ramp paints new semantic edit-preview outline pixels"
+
+S178 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "velocity undo returns to the exact pre-edit history position"
+
+S179 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "velocity undo advances the revision exactly once"
+
+S180 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "velocity redo returns to the committed history position"
+
+S181 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "velocity redo advances the revision exactly once"
+
+S182 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+Anchor: message "song refresh preserves the velocity text row count"
+
+S183 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+Anchor: message "song refresh keeps unchanged velocity text rows in place"
+
+S184 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+Anchor: message "horizontal scrolling leaves stable velocity text rows untouched"
+
+S185 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "velocity hide and show retain every painted note row"
+
+S186 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "velocity hide and show retain every ruler text row"
+
+S187 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the live preview marker aligns with the independently requested raw velocity"
+
+S188 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
+Anchor: message "hovering the live PSG note lights exactly one ruler graduation"
+
+S189 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "changing the staged PSG voice back to direct sound hides its detent"
+
+S190 | dragMountedVelocity | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "left-pressing the selected stacked velocity node paints highlight ink"

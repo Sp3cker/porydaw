@@ -31,6 +31,9 @@ func drawerVelocityValueAxisLadder(_ report: CheckReport) {
                        what: "the highest displayed value names the second marker")
     report.expect(continuous.markers[0].y > continuous.markers[1].y, cppID: drawerVelocityAxisID,
                   message: "a lower velocity draws lower on the ruler")
+    report.expect(abs(continuous.markers[0].y - continuous.velocityToY(64)) <= 1,
+                  cppID: drawerVelocityAxisID,
+                  message: "the lower marker aligns with its independently supplied velocity 64")
     let single = VelocityAxisModel(map: VelocityMap(voiceKind: .unresolved), geometry: geometry,
                                    activeValues: [76, 76])
     report.expectEqual(expected: 1, actual: single.markers.count, cppID: drawerVelocityAxisID,
@@ -99,6 +102,9 @@ func drawerVelocityPsgIntrinsicRows(_ report: CheckReport) {
                        what: "level 9's representative velocity is 76")
     report.expect(square.graduations[9].active, cppID: drawerVelocityPsgID,
                   message: "the displayed value marks its own graduation active")
+    report.expectEqual(expected: 1, actual: square.graduations.filter(\.active).count,
+                       cppID: drawerVelocityPsgID,
+                       what: "hovering one PSG value lights exactly one graduation")
     report.expect(square.graduations[9].audible, cppID: drawerVelocityPsgID,
                   message: "an audible level is not the silent level")
     report.expect(!square.graduations[0].audible, cppID: drawerVelocityPsgID,
@@ -326,6 +332,9 @@ func drawerVelocityKeysplitPerNoteMapping(_ report: CheckReport, session: Docume
         _ = page.pointerMove(x: wave.x, y: wave.y, buttons: 0)
         report.expect(page.axisModel.map == VelocityMap(voiceKind: .wave),
                       cppID: drawerVelocityKeysplitID, message: "hover resolves the hovered note key")
+        report.expectEqual(expected: 1, actual: page.axisModel.graduations.filter(\.active).count,
+                           cppID: drawerVelocityPsgID,
+                           what: "hovering the live PSG note lights exactly one ruler graduation")
         page.pointerLeave()
     }
     let before = DocumentSnapshot(document)
@@ -412,6 +421,11 @@ func drawerVelocityProjectionRefresh(_ report: CheckReport, session: DocumentSes
                       && page.axisGraduationsVisible,
                   cppID: drawerVelocityProjectionID,
                   message: "hovering a node presents its velocity marker and intrinsic graduations")
+    report.expect(page.axisModel.markers.contains {
+        $0.velocity == Int(note.velocity)
+            && abs($0.y - page.axisModel.velocityToY(Int(note.velocity))) <= 1
+    }, cppID: drawerVelocityProjectionID,
+    message: "the live ruler marker aligns with its underlying note's stored velocity")
     page.pointerLeave()
     report.expect(!page.axisModel.markers.contains { $0.velocity == Int(note.velocity) },
                   cppID: drawerVelocityProjectionID,
@@ -431,6 +445,26 @@ func drawerVelocityProjectionRefresh(_ report: CheckReport, session: DocumentSes
     report.expectEqual(expected: oldValue, actual: drawerVelocityTimelineVelocity(fixture.session, note.id),
                        cppID: drawerVelocityProjectionID,
                        what: "undo rebuilds the original timeline projection")
+    fixture.session.setSelectedNotes([fixture.notes[0].id])
+    page.refreshFromDocument()
+    page.setUseDetents(enabled: false)
+    if let handle = fixture.handle(fixture.notes[0]) {
+        let destination = page.axisModel.velocityToY(74)
+        _ = page.pointerPress(x: handle.x, y: handle.y, surface: 1, button: 1,
+                              modifiers: 0x0400_0000)
+        _ = page.pointerMove(x: handle.x, y: destination, buttons: 1)
+        report.expectEqual(expected: 74, actual: fixture.handle(fixture.notes[0])?.value ?? -1,
+                           cppID: drawerVelocityProjectionID,
+                           what: "a held raw drag displays velocity 74 before committing")
+        report.expect(page.axisModel.markers.contains { $0.velocity == 74 },
+                      cppID: drawerVelocityProjectionID,
+                      message: "the held raw-74 drag paints its live ruler marker at 74")
+        report.expect(page.axisModel.markers.contains {
+            $0.velocity == 74 && abs($0.y - page.axisModel.velocityToY(74)) <= 1
+        }, cppID: drawerVelocityProjectionID,
+        message: "the live preview marker aligns with the independently requested raw velocity")
+        page.cancelSectionInteraction()
+    }
     page.detach()
 }
 
@@ -491,6 +525,19 @@ func drawerVelocityPlayheadDiagnostics(_ report: CheckReport, session: DocumentS
                        what: "the presented context tick is the rounded playhead tick")
     report.expectEqual(expected: 0, actual: page.presentedContextSlot, cppID: drawerVelocityDiagnosticsID,
                        what: "the presented context slot is the bank slot at that tick")
+    var roundedTicks: [Tick] = []
+    var boundarySlots: [Int] = []
+    for position in [-1.0, 0.49, 0.5, 0.51] {
+        page.refreshPlayhead(tick: position, playing: true)
+        roundedTicks.append(page.presentedContextTick)
+        boundarySlots.append(page.presentedContextSlot)
+    }
+    report.expectEqual(expected: [Tick(0), 0, 1, 1], actual: roundedTicks,
+                       cppID: drawerVelocityDiagnosticsID,
+                       what: "four live playhead boundaries clamp and round to their exact ticks")
+    report.expectEqual(expected: [0, 0, 0, 0], actual: boundarySlots,
+                       cppID: drawerVelocityDiagnosticsID,
+                       what: "each rounded playhead boundary resolves the real opening bank program")
     report.expectEqual(expected: handleCount, actual: fixture.handles.count, cppID: drawerVelocityDiagnosticsID,
                        what: "playhead movement preserves the displayed note count")
 
@@ -519,6 +566,13 @@ func drawerVelocityPlayheadDiagnostics(_ report: CheckReport, session: DocumentS
     page.refreshFromDocument()
     report.expectEqual(expected: 1, actual: page.selectedCount, cppID: drawerVelocityProjectionID,
                        what: "the selected handle publishes its own count")
+    fixture.session.adjustTrackScope(track: 0, action: .plain)
+    page.refreshFromDocument()
+    report.expect(fixture.session.selectedNoteOrder.isEmpty && page.selectedCount == 0,
+                  cppID: drawerVelocityDiagnosticsID,
+                  message: "a plain track-header selection empties the velocity note selection")
+    fixture.session.setSelectedNotes([fixture.notes[0].id])
+    page.refreshFromDocument()
     if let handle = fixture.handle(fixture.notes[0]) {
         page.pointerMove(x: handle.x, y: handle.y, buttons: 0)
     }
@@ -530,4 +584,22 @@ func drawerVelocityPlayheadDiagnostics(_ report: CheckReport, session: DocumentS
     page.pointerMove(x: 3, y: 3, buttons: 0)
     report.expect(!page.readoutVisible, cppID: drawerVelocityProjectionID,
                   message: "hover leaving every handle hides the readout")
+    let stableLabels = page.axisLabels.asArray
+    let stableCount = page.handles.asArray.count
+    page.refreshFromDocument()
+    report.expectEqual(expected: stableLabels.count, actual: page.axisLabels.asArray.count,
+                       cppID: drawerVelocityDiagnosticsID,
+                       what: "song refresh preserves the velocity text row count")
+    report.expect(zip(stableLabels, page.axisLabels.asArray).allSatisfy { $0 === $1 },
+                  cppID: drawerVelocityDiagnosticsID,
+                  message: "song refresh keeps unchanged velocity text rows in place")
+    fixture.session.mutateCamera { camera in
+        camera.setHScroll(camera.snapshot.scrollX + 12)
+    }
+    page.refreshHorizontalProjection()
+    report.expect(page.axisLabels.asArray.count == stableLabels.count
+                  && zip(stableLabels, page.axisLabels.asArray).allSatisfy { $0 === $1 }
+                  && page.handles.asArray.count == stableCount,
+                  cppID: drawerVelocityDiagnosticsID,
+                  message: "horizontal scrolling leaves stable velocity text rows untouched")
 }

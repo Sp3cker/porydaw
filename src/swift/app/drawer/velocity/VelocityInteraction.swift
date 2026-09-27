@@ -130,7 +130,7 @@ extension VelocityPage {
             VelocityGesturePolicy.applyRelative(&gesture!, y: y)
             gesture?.previousX = x
             gesture?.previousY = y
-            publishHandles(projectHandles())
+            refreshAxisAndHandles()
         case .paint:
             paintBetween(fromX: gesture!.previousX, fromY: gesture!.previousY, toX: x, toY: y)
             gesture?.previousX = x
@@ -389,7 +389,7 @@ extension VelocityPage {
             session.setSelectedNotes(selectionBefore)
         }
         refreshInteractionPublished()
-        publishHandles(projectHandles())
+        refreshAxisAndHandles()
         publishTransient()
     }
 
@@ -406,7 +406,7 @@ extension VelocityPage {
                              expectedRevision: live.revision)
         }
         refreshInteractionPublished()
-        publishHandles(projectHandles())
+        refreshAxisAndHandles()
         publishTransient()
     }
 
