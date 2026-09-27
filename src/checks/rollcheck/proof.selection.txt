@@ -39,6 +39,10 @@ Result: PASS — 36/36 ok (implementer-reported GREEN; proof-only pass ran no la
 Verified selection_band.swift SHA-256: b2f46a83ad92d0ad1d9059aeb2cb6b37e5bc1c90a39731f52c6e5d1b7821fb03 (src/checks/rollcheck/selection_band.swift).
 Verified selection_audition.swift SHA-256: 6e70f51bdf21532dc434f29d5e08c974e731c9eefb4bc7139733b0ea399ef8b0 (src/checks/rollcheck/selection_audition.swift).
 Verified selection_editing.swift SHA-256: 1106d08387d834e41db0b1532e1be6d52a2b0f7f981295a8014a19d7839f6fdd (src/checks/rollcheck/selection_editing.swift).
+Command: deno task verify:shell --filter shell-grid-input-draw --verbose (Task 130 implementer run)
+Result: PASS; 1/75 selected, 74 skipped at ordinary DPR and QT_SCALE_FACTOR=2 (implementer-reported). This run used the pre-review source hash recorded below; the A025 full-frame predicates were already present.
+Task 130 pre-review SHA-256: b21ba5712fb6e23af040eeac4e724492a3c2139c7be322f67d8144c484e393e2 (src/checks/editorqml/tst_ShellGridInputDraw.qml).
+Verified final Task 130 SHA-256: cb3c2ae036ba52ca6c2f3839a6da7f4bcc8da80fec6a14d219b83eececae2210 (src/checks/editorqml/tst_ShellGridInputDraw.qml).
 
 
 A001 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:36
@@ -217,8 +221,8 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: S064 — `if (readoutCell.key < 0)`/`QFAIL("no free grid cell for the draw readout probe")` is the deleted native findFreeCell fixture prerequisite; Swift stages the cell for the held pending-face mode toggle at S064.
 
 A025 | PianoRollTest::selectionPendingDrawReadout | src/checks/rollcheck/selection.cpp:282
-Disposition: PARTIAL
-Mapping/reason: S064 (src/checks/rollcheck/selection_editing.swift:295-298) preserves the pending preview face across note-name mode; S065 (src/checks/editorqml/tst_ShellGridInput.qml:191-207) observes unchanged mounted shell-framebuffer face pixel while held. Unproved: original equality of the two complete captured frames after the mid-gesture mode toggle.
+Disposition: MATCHED
+Mapping: S081, S082 — the mounted pending-draw journey asserts equal physical viewport dimensions and compares every pixel in the entire roll viewport after the real note-name toggle.
 Source context since previous assertion:
   ;
           } else {
@@ -720,3 +724,9 @@ Anchor: message "undoing the non-Scale move and Right nudge restores exact MIDI 
 
 S080 | checkThresholdDrawCell | src/checks/rollcheck/selection_editing.swift
 Anchor: message "undoing the press-grown draw restores exact MIDI bytes"
+
+S081 | test_exactDrawThreshold | src/checks/editorqml/tst_ShellGridInputDraw.qml
+Anchor: message "A025 the pending roll viewport retains identical physical frame dimensions"
+
+S082 | test_exactDrawThreshold | src/checks/editorqml/tst_ShellGridInputDraw.qml
+Anchor: message "A025 note-name mode changes no pixel in the complete held roll viewport"

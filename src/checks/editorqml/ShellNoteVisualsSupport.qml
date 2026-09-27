@@ -18,6 +18,7 @@ TestCase {
     property var grabbed: null
     property bool unsignedSongPrepared: false
     property int physicalRulerCaptureNumber: 0
+    property int physicalSurfaceCaptureNumber: 0
 
     property alias bootstrap: _bootstrap
     property alias probe: _probe
@@ -93,6 +94,35 @@ TestCase {
         return image
     }
     function shellDpr(image) { return image.width / shell.contentItem.width }
+    function grabSurface(context) {
+        var item = context.surface
+        waitForRendering(item)
+        var capture = null
+        verify(item.grabToImage(function(result) { capture = result }),
+               "the mounted note surface accepts a physical framebuffer capture")
+        tryVerify(function() { return capture !== null }, 3000)
+        var file = bootstrap.projectRoot + "/note-surface-dpr2-"
+                   + (++physicalSurfaceCaptureNumber) + ".png"
+        verify(capture.saveToFile(file), "the mounted note surface saves its physical framebuffer")
+        var reader = physicalCaptureReader.createObject(item)
+        tryCompare(reader, "available", true, 3000)
+        var url = "file://" + file
+        reader.loadImage(url)
+        tryVerify(function() { return reader.isImageLoaded(url) }, 3000)
+        var pixels = reader.getContext("2d").createImageData(url)
+        verify(pixels.width === Math.round(item.width * Screen.devicePixelRatio)
+               && pixels.height === Math.round(item.height * Screen.devicePixelRatio),
+               "the mounted note surface retains native device-pixel dimensions")
+        reader.destroy()
+        return {
+            width: pixels.width, height: pixels.height,
+            red: function(x, y) { return pixels.data[(y * pixels.width + x) * 4] },
+            green: function(x, y) { return pixels.data[(y * pixels.width + x) * 4 + 1] },
+            blue: function(x, y) { return pixels.data[(y * pixels.width + x) * 4 + 2] },
+            alpha: function(x, y) { return pixels.data[(y * pixels.width + x) * 4 + 3] }
+        }
+    }
+
     function win(item, x, y) {
         var corg = shell.contentItem.mapToItem(null, 0, 0)
         var w = item.mapToItem(null, x, y)
@@ -113,9 +143,10 @@ TestCase {
         return findChild(fills, "gridNote_" + id)
     }
 
-    function deviceRect(item, plot, image, dpr) {
-        var topLeft = win(item, 0, 0)
-        var size = win(item, item.width, item.height)
+    function deviceRect(item, plot, image, dpr, target) {
+        var origin = target || shell.contentItem
+        var topLeft = item.mapToItem(origin, 0, 0)
+        var size = item.mapToItem(origin, item.width, item.height)
         var r = { x: Math.round(topLeft.x * dpr), y: Math.round(topLeft.y * dpr),
                   w: Math.max(1, Math.round((size.x - topLeft.x) * dpr)),
                   h: Math.max(1, Math.round((size.y - topLeft.y) * dpr)) }
@@ -126,7 +157,7 @@ TestCase {
         return r
     }
 
-    function visibleNote(fills, plot, image, dpr, notes, selected) {
+    function visibleNote(fills, plot, image, dpr, notes, selected, target) {
         var best = null
         var bestArea = -1
         for (var i = 0; i < notes.length; ++i) {
@@ -141,7 +172,7 @@ TestCase {
             if (topLeft.x < 1 || topLeft.y < 1
                     || bottomRight.x > plot.width - 1 || bottomRight.y > plot.height - 1)
                 continue
-            var rect = deviceRect(item, plot, image, dpr)
+            var rect = deviceRect(item, plot, image, dpr, target)
             var area = rect.w * rect.h
             if (rect.w >= 5 && rect.h >= 5 && area > bestArea) {
                 best = { note: note, item: item, rect: rect }
@@ -224,7 +255,7 @@ TestCase {
                         Math.abs(a[2] - b[2]))
     }
 
-    function openNotes(captureFontPx, unsigned) {
+    function openNotes(captureFontPx, unsigned, division) {
         var properties = captureFontPx === undefined
                 ? {} : { typographyCaptureFont: Qt.font({ pixelSize: captureFontPx }) }
         shell = shellComponent.createObject(null, properties)
@@ -233,7 +264,8 @@ TestCase {
         tryCompare(shell, "active", true, 3000)
         var session = shell.shellPresenter.session
         if (unsigned) {
-            verify(probe.prepareUnsignedSong(bootstrap.projectRoot, "mus_route101"),
+            verify(probe.prepareUnsignedSong(bootstrap.projectRoot, "mus_route101",
+                                             division || 24),
                    "the staged Route 101 copy has a removable explicit signature")
             unsignedSongPrepared = true
         }
@@ -287,18 +319,20 @@ TestCase {
         return true
     }
 
-    function trackFace(context, image, ghost) {
+    function trackFace(context, image, ghost, target) {
         var notes = publishedNotes(context.grid)
         verify(notes !== null, "the note summary is valid")
         var track = context.grid.trackIndex
         var candidates = notes.filter(function(note) {
             return (note.track !== track) === ghost
         })
-        return visibleNote(context.fills, context.plot, image, shellDpr(image),
-                           candidates, undefined)
+        return visibleNote(context.fills, context.plot, image,
+                           image.width / (target || shell.contentItem).width,
+                           candidates, undefined, target)
     }
 
-    function unsignedRulerCapture(context, expectedBeat, expectedScroll, barTicks, physical) {
+    function unsignedRulerCapture(context, expectedBeat, expectedScroll, barTicks, physical,
+                                  division) {
         var ruler = findChild(context.surface, "timelineQuickRuler")
         verify(ruler, "the signature-free loaded ruler is mounted")
         var image, dpr, reader = null
@@ -356,7 +390,7 @@ TestCase {
         var counted = 0
         var captions = 0
         for (var tick of barTicks) {
-            var x = gutter + tick / 24 * expectedBeat - expectedScroll
+            var x = gutter + tick / (division || 24) * expectedBeat - expectedScroll
             if (x < context.grid.baseFontPx || x > context.plot.width - context.grid.baseFontPx)
                 continue
             var column = pixelX(x)
@@ -378,10 +412,12 @@ TestCase {
                 ++captions
         }
         var beatCount = 0
-        for (var beatTick = 24; beatTick <= barTicks[barTicks.length - 1]; beatTick += 24) {
+        var ticksPerBeat = division || 24
+        for (var beatTick = ticksPerBeat; beatTick <= barTicks[barTicks.length - 1];
+             beatTick += ticksPerBeat) {
             if (barTicks.indexOf(beatTick) >= 0)
                 continue
-            var beatX = gutter + beatTick / 24 * expectedBeat - expectedScroll
+            var beatX = gutter + beatTick / ticksPerBeat * expectedBeat - expectedScroll
             if (beatX < gutter + context.grid.baseFontPx
                     || beatX > context.plot.width - context.grid.baseFontPx)
                 continue
@@ -399,6 +435,43 @@ TestCase {
         if (reader)
             reader.destroy()
         return image
+    }
+
+    function exactRulerColumns(context, image, beatWidth, scroll, physical) {
+        var ruler = findChild(context.surface, "timelineQuickRuler")
+        var dpr = physical ? Screen.devicePixelRatio : shellDpr(image)
+        var gutter = Math.max(1, Math.round(context.grid.baseFontPx * 13 / 3))
+        var background = Helpers.channels(context.session.palette.chromeBackground)
+        var ink = Helpers.channels(context.session.palette.gridLine)
+        var composite = [0, 1, 2].map(function(channel) {
+            return Math.round((ink[channel] * ink[3]
+                             + background[channel] * (255 - ink[3])) / 255)
+        })
+        var y0 = Math.round((physical ? ruler.height * 0.73
+                             : win(ruler, 0, ruler.height * 0.73).y) * dpr)
+        var y1 = Math.round((physical ? ruler.height * 0.88
+                             : win(ruler, 0, ruler.height * 0.88).y) * dpr)
+        var columns = []
+        for (var bar = 0; bar < 6; ++bar) {
+            var x = gutter + bar * 4 * beatWidth - scroll
+            var expected = Math.round((physical ? x : win(ruler, x, 0).x) * dpr)
+            if (x < context.grid.baseFontPx
+                    || x > ruler.width - context.grid.baseFontPx) {
+                columns.push(-1)
+                continue
+            }
+            var detected = -1
+            for (var offset = -1; offset <= 1 && detected < 0; ++offset) {
+                var count = 0
+                for (var y = y0; y <= y1; ++y)
+                    if (channelDelta(rgb(image, expected + offset, y), composite) <= 12)
+                        ++count
+                if (count >= 2)
+                    detected = expected + offset
+            }
+            columns.push(detected)
+        }
+        return columns
     }
 
     function unsignedRulerJourney(context, physical) {

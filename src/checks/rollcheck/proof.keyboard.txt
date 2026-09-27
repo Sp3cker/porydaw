@@ -43,6 +43,11 @@ Command: deno task verify:shell --filter shell-grid-input
 Result: PASS — controller-recorded task-102 mounted keyboard/ruler journey at the default device-pixel ratio; no DPR2 run or lane rerun claimed here.
 Command: deno task verify --filter swiftcore-projectsession
 Result: PASS — controller-recorded task-102 keyboard/ruler/domain checks; no lane rerun during proof reconciliation.
+Command: deno task verify:shell --filter shell-note-visuals-ruler --filter shell-grid-input --verbose (Task 130 implementer run)
+Result: PASS; 7/75 selected, 68 skipped (ordinary DPR; implementer-reported).
+Command: QT_SCALE_FACTOR=2 deno task verify:shell --filter shell-note-visuals-ruler --filter shell-grid-input --verbose (Task 130 implementer run)
+Result: PASS; 7/75 selected, 68 skipped; ring predicates use physical captures at observed DPR2 (implementer-reported).
+Verified Task 130 QML SHA-256: 07e12cb7a93386d4507bf1828a705e508f68ad584398c440a358acbf6c5ff766 (src/checks/editorqml/tst_ShellGridInput.qml).
 
 
 A001 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:38
@@ -175,8 +180,8 @@ Disposition: MATCHED
 Mapping: S133 (rendered secondary note lies within the roll plot viewport in both axes)
 
 A029 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:256
-Disposition: PARTIAL
-Mapping/reason: S076 proves selection-ring scene frames at DPR2; S134, S135 prove actual mounted framebuffer ghost-ring pixels at the default DPR. Unproved: the DPR2 framebuffer was not exercised in the controller-recorded mounted run.
+Disposition: MATCHED
+Mapping: S134, S148, S149 — the executing mounted ruler journey checks every covered note's selection-ring pixels and explicitly requires both covered ghost and primary rings at normal DPR and physical DPR2.
 
 Source context since previous assertion:
       const qreal scopedDpr = scopedImage.devicePixelRatio();
@@ -314,8 +319,8 @@ Disposition: MATCHED
 Mapping: S093
 
 A053 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:447
-Disposition: PARTIAL
-Mapping/reason: S076 proves selected primary's scene frame at DPR2; S136 proves the mounted primary ring's framebuffer pixels after Up at the default DPR. Unproved: the DPR2 framebuffer was not exercised in the controller-recorded mounted run.
+Disposition: MATCHED
+Mapping: S136 — after the mounted time-scoped Up journey, the edited primary's selection-ring pixel is checked from the physical framebuffer at normal DPR and DPR2.
 
 Source context since previous assertion:
       songview::EditorSelectionModel::TimeSelection band;
@@ -1248,3 +1253,9 @@ S147 | test_modifiedRulerSweepPaintsExactNoteScope | src/checks/editorqml/tst_Sh
 Anchor: message "mounted time selection blocks both resize keys without changing notes"
 
 S113–S118 and S128/S129 are the task-58 additions from the mounted shellwindow journey test_jTimeSelectionInsertAndDeleteMutatesDocument (the duplicate-time and Insert Time rows A061–A067, A075, A087); S119/S120 are the swiftcore duplicate-routing and single-undo predicates of note_commands.swift (checkKeyboardDuplicatePrefersTimeSelection and its expectOneUndo helper); S121–S127 are the converted insert fixture guards and the hardened track/lane Insert Time anchors of keyboard.swift (checkTimelineInsertBlankTimeTracks, checkTimelineInsertBlankTimeLanes). S091 remains the shared seed helper's post-seed unwind anchor (swiftcore/PianoRoll::withKeyboardSeed) that closes A049, A067, A076, A081 and A088.
+
+S148 | test_modifiedRulerSweepPaintsExactNoteScope | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "modified ruler scope paints each covered note's independently located selection ring"
+
+S149 | test_modifiedRulerSweepPaintsExactNoteScope | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "the modified ruler proves both a covered ghost and a primary raster ring"

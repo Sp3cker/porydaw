@@ -7,17 +7,125 @@ import "GatedVisualsHelpers.js" as Helpers
 
 ShellNoteVisualsSupport {
     function test_unsignedRulerBarRasterAfterBindAndPan() {
-        unsignedRulerJourney(openNotes(undefined, true), false)
+        compare(Screen.devicePixelRatio, probe.expectedLaneDpr(),
+                "the unsigned ruler executes at the requested framebuffer DPR")
+        unsignedRulerJourney(openNotes(undefined, true), probe.expectedLaneDpr() === 2)
+    }
+
+    function test_explicitFourFourAndFortyEightTickRulerColumns() {
+        var physical = probe.expectedLaneDpr() === 2
+        compare(Screen.devicePixelRatio, probe.expectedLaneDpr(),
+                "the explicit ruler executes at the requested framebuffer DPR")
+        var context = openNotes(undefined, true)
+        var grid = context.grid
+        var lead = Math.min(256, Math.max(48, Math.round(context.plot.width * 0.1)))
+        var beat = Math.round(13 * 8 / 3) * Math.pow(1.0015, -160)
+        grid.handleWheel(0, -160, 0, 0, Qt.NoModifier, 0, false, 0, 0)
+        grid.setCameraHScroll(-lead)
+        verify(Math.abs(grid.beatWidth - beat) < 0.1,
+               "the mounted ruler uses the independently computed reduced beat zoom")
+        var ticks24 = [0, 96, 192, 288, 384, 480]
+        var gutter = Math.max(1, Math.round(grid.baseFontPx * 13 / 3))
+        var scrolls = [-lead, gutter + 20 * beat - context.plot.width
+                       + 2 * grid.baseFontPx]
+        var beforeViews = []
+        var beforeColumns = [-1, -1, -1, -1, -1, -1]
+        for (var view = 0; view < scrolls.length; ++view) {
+            grid.setCameraHScroll(scrolls[view])
+            var initial = unsignedRulerCapture(context, beat, scrolls[view],
+                                               ticks24, physical, 24)
+            var detected = exactRulerColumns(context, initial, beat, scrolls[view],
+                                             physical)
+            beforeViews.push(detected)
+            for (var bar = 0; bar < detected.length; ++bar)
+                if (detected[bar] >= 0)
+                    beforeColumns[bar] = detected[bar]
+        }
+        verify(beforeColumns.every(function(column) { return column >= 0 }),
+               "A034 the six original four-four bar stems occupy detected framebuffer columns")
+        context.session.openTimeSigPrompt(0)
+        context.session.acceptTimeSigPrompt(4, 2)
+        for (view = 0; view < scrolls.length; ++view) {
+            grid.setCameraHScroll(scrolls[view])
+            var bound = unsignedRulerCapture(context, beat, scrolls[view],
+                                             ticks24, physical, 24)
+            compare(exactRulerColumns(context, bound, beat, scrolls[view], physical),
+                    beforeViews[view],
+                    "A034 explicit four-four binding retains all six original raster bar columns")
+        }
+
+        cleanup()
+        context = openNotes(undefined, true, 48)
+        grid = context.grid
+        grid.handleWheel(0, -160, 0, 0, Qt.NoModifier, 0, false, 0, 0)
+        compare(grid.ticksPerBeat, 48, "the loaded ruler uses a real 48-TPB song")
+        verify(Math.abs(grid.beatWidth - beat) < 0.1,
+               "the 48-TPB ruler retains the independently computed beat zoom")
+        var ticks48 = [0, 192, 384, 576, 768, 960]
+        var doubled = null
+        var doubledColumns = [-1, -1, -1, -1, -1, -1]
+        for (view = 0; view < scrolls.length; ++view) {
+            grid.setCameraHScroll(scrolls[view])
+            var image = unsignedRulerCapture(context, beat, scrolls[view],
+                                             ticks48, physical, 48)
+            if (view === 0)
+                doubled = image
+            detected = exactRulerColumns(context, image, beat, scrolls[view], physical)
+            compare(detected, beforeViews[view],
+                    "A041 each 48-TPB bar stem shares its actual 24-TPB framebuffer column")
+            for (bar = 0; bar < detected.length; ++bar)
+                if (detected[bar] >= 0)
+                    doubledColumns[bar] = detected[bar]
+        }
+        verify(doubledColumns.every(function(column) { return column >= 0 }),
+               "A041 the 48-TPB ruler paints all six bar stems on its actual framebuffer")
+        compare(doubledColumns, beforeColumns,
+                "A041 all six 48-TPB bar columns equal their 24-TPB framebuffer columns")
+        var ruler = findChild(context.surface, "timelineQuickRuler")
+        var dpr = physical ? Screen.devicePixelRatio : shellDpr(doubled)
+        var background = Helpers.channels(context.session.palette.chromeBackground)
+        var ink = Helpers.channels(context.session.palette.gridLine)
+        var composite = [0, 1, 2].map(function(channel) {
+            return Math.round((ink[channel] * ink[3]
+                             + background[channel] * (255 - ink[3])) / 255)
+        })
+        var y = Math.round((physical ? ruler.height * 0.73
+                            : win(ruler, 0, ruler.height * 0.73).y) * dpr)
+        function beatColumn(index) {
+            var position = gutter + index * beat + lead
+            return Math.round((physical ? position : win(ruler, position, 0).x) * dpr)
+        }
+        function stemAt(index) {
+            var x = beatColumn(index)
+            for (var dx = -1; dx <= 1; ++dx)
+                if (channelDelta(rgb(doubled, x + dx, y), composite) <= 12)
+                    return true
+            return false
+        }
+        function gapAfter(index) {
+            var between = beatColumn(index) + Math.round(beat * dpr / 2)
+            return channelDelta(rgb(doubled, between, y), background) <= 12
+        }
+        verify(stemAt(1), "A040 the bound 48-TPB first beat stem paints at its exact physical column")
+        verify(gapAfter(1), "A040 the first 48-TPB beat stem has unmarked chrome after its column")
+        verify(stemAt(2), "A040 the bound 48-TPB second beat stem paints at its exact physical column")
+        verify(gapAfter(2), "A040 the second 48-TPB beat stem has unmarked chrome after its column")
+        verify(stemAt(3), "A040 the bound 48-TPB third beat stem paints at its exact physical column")
+        verify(gapAfter(3), "A040 the third 48-TPB beat stem has unmarked chrome after its column")
     }
 
 
     function test_preRollPadAndRulerRaster() {
+        compare(Screen.devicePixelRatio, probe.expectedLaneDpr(),
+                "the pre-roll raster executes at the requested framebuffer DPR")
+        var physical = probe.expectedLaneDpr() === 2
         var context = openNotes()
         var grid = context.grid
         grid.setCameraHScroll(grid.cameraMinHScroll)
-        var image = grabShell()
+        var target = physical ? context.surface : shell.contentItem
+        var image = physical ? grabSurface(context) : grabShell()
         verify(image !== null, "the mounted roll and ruler produce a raster")
-        var dpr = shellDpr(image)
+        var dpr = image.width / target.width
         verify(dpr > 0, "the mounted roll capture has positive physical DPR")
         var plot = context.plot
         var ruler = findChild(context.surface, "timelineQuickRuler")
@@ -42,7 +150,7 @@ ShellNoteVisualsSupport {
         verify(accidental > 0, "an accidental key row is visible inside the mounted roll")
         var padX = tickZero / 2
         function plotPixel(x, y) {
-            var p = win(plot, x, y)
+            var p = plot.mapToItem(target, x, y)
             return rgb(image, Math.round(p.x * dpr), Math.round(p.y * dpr))
         }
         var naturalPad = plotPixel(padX, natural)
@@ -57,7 +165,7 @@ ShellNoteVisualsSupport {
         verify(channelDelta(naturalPad, naturalPlot) > 1,
                "the pre-roll pad differs from the natural-key plot")
         function rulerPixel(x, y) {
-            var p = win(ruler, grid.keyboardWidth + x, y)
+            var p = ruler.mapToItem(target, grid.keyboardWidth + x, y)
             return rgb(image, Math.round(p.x * dpr), Math.round(p.y * dpr))
         }
         var upper = rulerPixel(padX * 0.5, ruler.height * 0.5)
@@ -77,8 +185,8 @@ ShellNoteVisualsSupport {
                "the tick-zero stem ink differs from adjacent ruler chrome")
         var top = Math.floor(ruler.height * 0.05 * dpr)
         var bottom = Math.floor(ruler.height * 0.45 * dpr)
-        var zero = win(ruler, grid.keyboardWidth + tickZero, 0)
-        var rulerTop = Math.round(win(ruler, 0, 0).y * dpr)
+        var zero = ruler.mapToItem(target, grid.keyboardWidth + tickZero, 0)
+        var rulerTop = Math.round(ruler.mapToItem(target, 0, 0).y * dpr)
         var longest = 0
         for (var dx = -1; dx <= 1; ++dx) {
             var count = 0
@@ -91,9 +199,10 @@ ShellNoteVisualsSupport {
         }
         verify(longest >= (bottom - top) * 0.7,
                "tick zero paints a continuous upper ruler stem")
-        var captionLeft = Math.round(win(ruler, grid.keyboardWidth + grid.baseFontPx * 0.3, 0).x * dpr)
-        var captionRight = Math.round(win(ruler, grid.keyboardWidth + tickZero
-                                          - grid.baseFontPx * 0.3, 0).x * dpr)
+        var captionLeft = Math.round(ruler.mapToItem(
+            target, grid.keyboardWidth + grid.baseFontPx * 0.3, 0).x * dpr)
+        var captionRight = Math.round(ruler.mapToItem(
+            target, grid.keyboardWidth + tickZero - grid.baseFontPx * 0.3, 0).x * dpr)
         verify(captionRight > captionLeft, "the pre-zero ruler has room for a caption probe")
         var captionInk = 0
         for (var cy = rulerTop; cy < rulerTop + Math.floor(ruler.height * dpr) - 1; ++cy)
@@ -104,11 +213,15 @@ ShellNoteVisualsSupport {
     }
 
     function test_ghostEdgesAndMinimumZoomFace() {
+        compare(Screen.devicePixelRatio, probe.expectedLaneDpr(),
+                "the ghost raster executes at the requested framebuffer DPR")
+        var physical = probe.expectedLaneDpr() === 2
         var context = openNotes()
         var grid = context.grid
-        var image = grabShell()
+        var target = physical ? context.surface : shell.contentItem
+        var image = physical ? grabSurface(context) : grabShell()
         verify(image !== null, "the ghost roll produces a raster")
-        var ghost = trackFace(context, image, true)
+        var ghost = trackFace(context, image, true, target)
         verify(ghost !== null && ghost.rect.h >= 6,
                "an other-track note has room for edge and adjacent interior probes")
         var cx = ghost.rect.x + Math.floor(ghost.rect.w / 2)
@@ -130,7 +243,7 @@ ShellNoteVisualsSupport {
         verify(waitForNative(function() {
             return grid.beatWidth <= grid.baseFontPx / 3 + 0.01
         }, 5000), "the mounted note reaches the minimum time zoom")
-        var zoom = grabShell()
+        var zoom = physical ? grabSurface(context) : grabShell()
         verify(zoom !== null, "the minimum-time-zoom roll produces a raster")
         var notes = publishedNotes(grid)
         var narrow = null
@@ -145,11 +258,12 @@ ShellNoteVisualsSupport {
                     || point.x + item.width > context.plot.width - 2
                     || point.y + item.height > context.plot.height - 2)
                 continue
-            var rect = deviceRect(item, context.plot, zoom, shellDpr(zoom))
+            var rect = deviceRect(item, context.plot, zoom,
+                                  zoom.width / target.width, target)
             if (rect.w >= 3 && rect.h >= 3 && (!narrow || rect.w < narrow.rect.w))
                 narrow = { note: notes[i], rect: rect }
         }
-        verify(narrow !== null && narrow.rect.w <= 3 * shellDpr(zoom),
+        verify(narrow !== null && narrow.rect.w <= 3 * zoom.width / target.width,
                "a snap-cell narrow note remains visible at minimum time zoom: "
                + (narrow ? JSON.stringify(narrow.rect) : "no visible note"))
         var box = narrow.rect

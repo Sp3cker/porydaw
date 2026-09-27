@@ -1,8 +1,37 @@
 import QtQuick
 import QtTest
+import ShellQmlCheck 1.0
 import "GatedVisualsHelpers.js" as Helpers
 
 ShellGridInputSupport {
+    GatedVisualsProbe { id: dprProbe }
+    Component { id: physicalReader; Canvas { width: 1; height: 1 } }
+    property int physicalCaptureIndex: 0
+
+    function physicalShellImage(item) {
+        var capture = null
+        verify(item.grabToImage(function(result) { capture = result }),
+               "the mounted selection accepts a physical framebuffer capture")
+        tryVerify(function() { return capture !== null }, 3000)
+        var file = bootstrap.projectRoot + "/grid-selection-dpr2-"
+                   + (++physicalCaptureIndex) + ".png"
+        verify(capture.saveToFile(file),
+               "the mounted selection saves its physical framebuffer")
+        var reader = physicalReader.createObject(item)
+        tryCompare(reader, "available", true, 3000)
+        var url = "file://" + file
+        reader.loadImage(url)
+        tryVerify(function() { return reader.isImageLoaded(url) }, 3000)
+        var pixels = reader.getContext("2d").createImageData(url)
+        reader.destroy()
+        return {
+            width: pixels.width, height: pixels.height,
+            red: function(x, y) { return pixels.data[(y * pixels.width + x) * 4] },
+            green: function(x, y) { return pixels.data[(y * pixels.width + x) * 4 + 1] },
+            blue: function(x, y) { return pixels.data[(y * pixels.width + x) * 4 + 2] }
+        }
+    }
+
     function test_headerRenameFocusAndLifecycle() {
         var session = openRoute101()
         var surface = selectedSurface()
@@ -211,23 +240,26 @@ ShellGridInputSupport {
     }
 
     function test_modifiedRulerSweepPaintsExactNoteScope() {
+        compare(Screen.devicePixelRatio, dprProbe.expectedLaneDpr(),
+                "the modified sweep executes at the requested framebuffer DPR")
+        var physical = dprProbe.expectedLaneDpr() === 2
         openRoute101()
         var surface = selectedSurface()
         var grid = surface.gridModel
         var ruler = findChild(surface, "timelineRulerInput")
         var plot = findChild(surface, "timelineQuickRollPlot")
+        var captureItem = physical ? surface : shell.contentItem
         verify(ruler !== null && plot !== null, "the mounted roll and ruler accept a scope sweep")
-        function rasterBottom(item) {
-            if (!item || !item.visible || item.width < 5 || item.height < 5)
-                return null
-            var inPlot = item.mapToItem(plot, item.width / 2, 0)
-            var bottom = item.mapToItem(plot, item.width / 2, item.height)
-            if (inPlot.x < 2 || inPlot.x >= plot.width - 2
-                    || inPlot.y < 2 || bottom.y >= plot.height - 2)
-                return null
-            return item.mapToItem(shell.contentItem, item.width / 2, item.height)
-        }
         var scale = grid.beatWidth / grid.ticksPerBeat
+        function rasterBottom(note) {
+            var x = (note.tick + note.duration / 2) * scale - grid.cameraScrollX
+            var bottom = (128 - note.pitch) * grid.rowHeight - grid.cameraScrollY
+                         - 2 / grid.devicePixelRatio
+            if (x < 2 || x >= plot.width - 2 || bottom < grid.rowHeight + 2
+                    || bottom >= plot.height - 2)
+                return null
+            return plot.mapToItem(captureItem, x, bottom)
+        }
         var notes = gridNotes(grid)
         var secondary = null
         for (var i = 0; i < notes.length; ++i) {
@@ -240,9 +272,9 @@ ShellGridInputSupport {
                 return other.track === grid.trackIndex && !other.ghost
                     && other.tick >= candidate.tick
                     && other.tick < candidate.tick + candidate.duration
-                    && rasterBottom(primaryItem) !== null
+                    && primaryItem && rasterBottom(other) !== null
             })
-            if (candidate.ghost && rasterBottom(item) !== null && primaryOverlap
+            if (candidate.ghost && item && rasterBottom(candidate) !== null && primaryOverlap
                     && left > ruler.width * 0.15 && right < ruler.width * 0.6) {
                 secondary = candidate
                 break
@@ -259,19 +291,23 @@ ShellGridInputSupport {
         verify(shell.shellPresenter.session.gridCommandAvailable(17),
                "the mounted modified sweep publishes an active time selection")
         waitForRendering(shell.contentItem)
-        var image = grabImage(shell.contentItem)
+        var image = physical ? physicalShellImage(captureItem) : grabImage(captureItem)
         verify(image.width > 0 && image.height > 0, "the modified selection renders pixels")
-        var dpr = image.width / shell.contentItem.width
+        var dpr = image.width / captureItem.width
+        verify(image.width === Math.round(captureItem.width * Screen.devicePixelRatio)
+               && image.height === Math.round(captureItem.height * Screen.devicePixelRatio),
+               "the modified ruler uses the observed physical framebuffer dimensions")
         var ring = Helpers.channels(grid.palette.selectionRing)
         var selectedTracks = {}
         selectedTracks[grid.trackIndex] = true
         var startTick = secondary.tick - grid.snapTicks
         var endTick = secondary.tick + secondary.duration + grid.snapTicks
         var probed = 0
+        var ghostRings = 0
+        var primaryRings = 0
         for (var index = 0; index < notes.length; ++index) {
             var note = notes[index]
-            var rendered = findChild(surface, "gridNote_" + note.id)
-            if (rasterBottom(rendered) === null)
+            if (rasterBottom(note) === null)
                 continue
             if (note.tick < endTick && note.tick + note.duration > startTick)
                 selectedTracks[note.track] = true
@@ -285,8 +321,7 @@ ShellGridInputSupport {
                 if (visible.track !== Number(track) || visible.tick >= endTick
                         || visible.tick + visible.duration <= startTick)
                     continue
-                var rect = findChild(surface, "gridNote_" + visible.id)
-                var bottom = rasterBottom(rect)
+                var bottom = rasterBottom(visible)
                 if (bottom === null)
                     continue
                 var px = Math.round(bottom.x * dpr)
@@ -295,22 +330,25 @@ ShellGridInputSupport {
                     continue
                 var actual = [image.red(px, py), image.green(px, py), image.blue(px, py)]
                 verify(Helpers.colorsNear(actual, ring),
-                       "modified ruler scope paints the selection-ring pixels of every overlapping track")
+                       "modified ruler scope paints each covered note's independently located selection ring")
                 found = true
                 ++probed
-                break
+                if (visible.ghost)
+                    ++ghostRings
+                else if (visible.track === grid.trackIndex)
+                    ++primaryRings
             }
-            verify(found, "every selected overlap track retains a visible raster witness")
+            verify(found,
+                   "modified ruler scope paints the selection-ring pixels of every overlapping track")
         }
         verify(probed >= 2, "the mounted sweep paints primary and secondary note rings")
+        verify(ghostRings > 0 && primaryRings > 0,
+               "the modified ruler proves both a covered ghost and a primary raster ring")
         var coveredPrimary = notes.find(function(note) {
             if (note.track !== grid.trackIndex || note.ghost
                     || note.tick < startTick || note.tick >= endTick)
                 return false
-            var item = findChild(surface, "gridNote_" + note.id)
-            if (rasterBottom(item) === null)
-                return false
-            return item.mapToItem(plot, 0, 0).y > grid.rowHeight + 2
+            return rasterBottom(note) !== null
         })
         verify(coveredPrimary !== undefined, "the selected span contains a primary note for key delivery")
         var roll = rollInput(surface)
@@ -322,9 +360,11 @@ ShellGridInputSupport {
                 && shell.shellPresenter.session.gridCommandAvailable(17)
         }, 5000), "mounted Up edits the covered primary while retaining the time range")
         waitForRendering(shell.contentItem)
-        var keyedImage = grabImage(shell.contentItem)
-        var keyedNote = findChild(surface, "gridNote_" + coveredPrimary.id)
-        var keyedBottom = rasterBottom(keyedNote)
+        var keyedImage = physical ? physicalShellImage(captureItem) : grabImage(captureItem)
+        var keyedBottom = rasterBottom({
+            tick: coveredPrimary.tick, duration: coveredPrimary.duration,
+            pitch: coveredPrimary.pitch + 1
+        })
         verify(keyedBottom !== null,
                "the time-scoped keyboard edit leaves its primary note inside the rendered plot")
         var keyedX = Math.round(keyedBottom.x * dpr)

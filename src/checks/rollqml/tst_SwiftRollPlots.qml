@@ -397,27 +397,47 @@ TestCase {
         waitForRendering(plot)
         var notes = JSON.parse(grid.noteSummary)
         var reference = null
+        var referenceID = -1
+        var referencePitch = -1
         for (var i = 0; i < notes.length; ++i) {
             var item = findChild(fill, "gridNote_" + notes[i].id)
             var position = item ? item.mapToItem(plot, 0, 0) : null
-            if ([0, 2, 4, 5, 7, 9, 11].indexOf(notes[i].pitch % 12) >= 0
+            if (notes[i].track === grid.trackIndex
+                    && [0, 2, 4, 5, 7, 9, 11].indexOf(notes[i].pitch % 12) >= 0
                     && item && position.y > 0 && position.y < plot.height - item.height) {
                 reference = item
+                referenceID = notes[i].id
+                referencePitch = notes[i].pitch
                 break
             }
         }
         verify(reference !== null, "a visible note anchors the note-face probe")
         var dpr = grid.devicePixelRatio
         var h = grid.rowHeight * dpr
+        var occupied = {}
+        for (var index = 0; index < notes.length; ++index)
+            occupied[notes[index].pitch] = true
         var middlePitch = 127 - Math.floor((grid.cameraScrollY + plot.height / 2)
                                            / grid.rowHeight)
-        var cPitch = Math.round(middlePitch / 12) * 12
-        var y = Math.round(((127 - cPitch + 0.5) * grid.rowHeight
-                            - grid.cameraScrollY) * dpr) - h
-        verify(y > 4 * h && y < plot.height * dpr - 2 * h,
-               "visible scale rows surround the plot center")
-        var x = Math.round(plot.width * dpr * 0.82)
-        var before = grabImage(plot)
+        var cPitch = -1
+        for (var octave = 12; octave + 14 < 128; octave += 12)
+            if (!occupied[octave] && !occupied[octave + 1] && !occupied[octave + 2]
+                    && (cPitch < 0 || Math.abs(octave - middlePitch)
+                        < Math.abs(cPitch - middlePitch)))
+                cPitch = octave
+        verify(cPitch >= 0,
+               "A017 the Highlight raster uses an octave with unoccupied C, C-sharp and D")
+        grid.setCameraVScroll(Math.max(0, (127 - cPitch) * grid.rowHeight
+                                            - plot.height / 2))
+        waitForRendering(plot)
+        var localY = Math.round(((127 - cPitch + 0.5) * grid.rowHeight
+                                 - grid.cameraScrollY) * dpr)
+        verify(localY > 4 * h && localY < plot.height * dpr - 2 * h,
+               "the unused scale and accidental rows lie fully inside the plot")
+        var position = plot.mapToItem(s, plot.width * 0.82, localY / dpr)
+        var x = Math.round(position.x * dpr)
+        var y = Math.round(position.y * dpr)
+        var before = grabImage(s)
         var gutterBefore = grabImage(gutter)
         var noteBefore = grabImage(reference)
         var natural = expectedTint(before, x, y)
@@ -427,7 +447,7 @@ TestCase {
                "Highlight retains the fork's translucent tint")
         transport.setScaleHighlight(true)
         waitForRendering(plot)
-        var highlighted = grabImage(plot)
+        var highlighted = grabImage(s)
         verify(pixelMatches(highlighted, x, y, natural),
                "Highlight tints the scale row at the fork composite")
         verify(pixelMatches(highlighted, x, Math.round(y - h),
@@ -437,10 +457,10 @@ TestCase {
                "Highlight leaves the non-scale row untouched")
         var gutterAfter = grabImage(gutter)
         var gutterX = Math.round(gutter.width * dpr / 2)
-        verify(pixelMatches(gutterAfter, gutterX, y,
-                            {r: gutterBefore.red(gutterX, y),
-                             g: gutterBefore.green(gutterX, y),
-                             b: gutterBefore.blue(gutterX, y)}),
+        verify(pixelMatches(gutterAfter, gutterX, localY,
+                            {r: gutterBefore.red(gutterX, localY),
+                             g: gutterBefore.green(gutterX, localY),
+                             b: gutterBefore.blue(gutterX, localY)}),
                "Highlight leaves the keyboard column untouched")
         verify(pixelMatches(highlighted, x, Math.round(y - 2 * h), second),
                "Highlight tints every scale degree identically")
@@ -454,7 +474,7 @@ TestCase {
                "Highlight leaves the painted note face unchanged")
         transport.setScaleRoot(1)
         waitForRendering(plot)
-        var rooted = grabImage(plot)
+        var rooted = grabImage(s)
         verify(pixelMatches(rooted, x, Math.round(y - 2 * h),
                             {r: before.red(x, Math.round(y - 2 * h)),
                              g: before.green(x, Math.round(y - 2 * h)),
@@ -464,7 +484,7 @@ TestCase {
         transport.setScaleRoot(0)
         transport.setScaleType(1)
         waitForRendering(plot)
-        var minor = grabImage(plot)
+        var minor = grabImage(s)
         verify(pixelMatches(minor, x, Math.round(y - 4 * h),
                             {r: before.red(x, Math.round(y - 4 * h)),
                              g: before.green(x, Math.round(y - 4 * h)),
@@ -474,23 +494,34 @@ TestCase {
         transport.setScaleHighlight(false)
         transport.setScaleFold(true)
         waitForRendering(plot)
-        var foldedNote = findChild(fill, reference.objectName)
+        var foldedNote = findChild(fill, "gridNote_" + referenceID)
         verify(foldedNote !== null, "the reference note is still rendered in Fold")
         var foldedNotes = JSON.parse(grid.noteSummary)
         var foldedPitches = []
         for (var j = 0; j < foldedNotes.length; ++j) {
-            if (foldedPitches.indexOf(foldedNotes[j].pitch) < 0)
+            if (foldedNotes[j].track === grid.trackIndex
+                    && foldedPitches.indexOf(foldedNotes[j].pitch) < 0)
                 foldedPitches.push(foldedNotes[j].pitch)
         }
         foldedPitches.sort(function(a, b) { return b - a })
-        var cRow = foldedPitches.indexOf(60)
-        verify(cRow >= 0, "the Fold fixture contains a C note")
-        var foldedY = Math.round((cRow + 0.5) * h - grid.cameraScrollY * dpr)
-        var foldedBefore = grabImage(plot)
+        var cRow = foldedPitches.indexOf(referencePitch)
+        verify(cRow >= 0 && foldedNote.visible,
+               "A025 the Fold tint probe retains its actually occupied selected-track pitch")
+        grid.setCameraVScroll(Math.max(0, (cRow + 0.5) * grid.rowHeight
+                                            - plot.height / 2))
+        waitForRendering(plot)
+        var foldedY = Math.round((cRow + 0.5) * grid.rowHeight * dpr
+                                 - grid.cameraScrollY * dpr)
+        verify(foldedY >= h / 2 && foldedY < plot.height * dpr - h / 2,
+               "A026 the occupied Fold row is wholly inside the mounted roll viewport")
+        var foldedSurfaceY = Math.round(
+            plot.mapToItem(s, 0, foldedY / dpr).y * dpr)
+        var foldedBefore = grabImage(s)
         transport.setScaleHighlight(true)
         waitForRendering(plot)
-        var folded = grabImage(plot)
-        verify(pixelMatches(folded, x, foldedY, expectedTint(foldedBefore, x, foldedY)),
+        var folded = grabImage(s)
+        verify(pixelMatches(folded, x, foldedSurfaceY,
+                            expectedTint(foldedBefore, x, foldedSurfaceY)),
                "Highlight tints a visible occupied Fold row")
         transport.setScaleFold(false)
         transport.setScaleHighlight(false)

@@ -9,6 +9,9 @@ public final class GatedVisualsProbe: QmlInstantiableStatus {
     public init() {}
 
     public func componentComplete() {}
+    public func expectedLaneDpr() -> Int {
+        ProcessInfo.processInfo.environment["QT_SCALE_FACTOR"] == "2" ? 2 : 1
+    }
 
     private static func songURL(projectRoot: String, label: String) -> URL {
         URL(fileURLWithPath: projectRoot, isDirectory: true)
@@ -23,7 +26,7 @@ public final class GatedVisualsProbe: QmlInstantiableStatus {
         songURL(projectRoot: projectRoot, label: label).appendingPathExtension("unsignedbak")
     }
 
-    public func prepareUnsignedSong(projectRoot: String, label: String) -> Bool {
+    public func prepareUnsignedSong(projectRoot: String, label: String, division: Int = 24) -> Bool {
         let song = Self.songURL(projectRoot: projectRoot, label: label)
         let backup = Self.unsignedBackupURL(projectRoot: projectRoot, label: label)
         do {
@@ -33,6 +36,16 @@ public final class GatedVisualsProbe: QmlInstantiableStatus {
             else { return false }
             for index in file.chunks.indices {
                 file.chunks[index].events.removeAll { $0.metaType == 0x58 }
+            }
+            guard division == 24 || division == 48, file.division == 24 else { return false }
+            if division == 48 {
+                file.division = 48
+                for index in file.chunks.indices {
+                    for eventIndex in file.chunks[index].events.indices {
+                        file.chunks[index].events[eventIndex].tick *= 2
+                    }
+                    file.chunks[index].endTick *= 2
+                }
             }
             try original.write(to: backup)
             try Data(file.encoded()).write(to: song)
