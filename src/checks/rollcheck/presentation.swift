@@ -2,6 +2,8 @@ import Foundation
 @testable import PorydawApp
 @testable import PorydawAppCommands
 import PorydawCore
+@testable import PorydawAppAudio
+import PorydawPlaybackNative
 
 @MainActor
 func runPresentationChecks(_ report: CheckReport, session: DocumentSession) {
@@ -10,6 +12,123 @@ func runPresentationChecks(_ report: CheckReport, session: DocumentSession) {
     checkHeaderKeyboardMuteSolo(report, session: session)
     checkHeaderReconciliation(report, session: session)
     checkPresenterMetrics(report, session: session)
+    checkMountedPolyphonyReveal(report)
+}
+
+@MainActor
+private func checkMountedPolyphonyReveal(_ report: CheckReport) {
+    let id = "rollcheck/PianoRollTest::polyphonyEventReveal"
+    guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
+        report.fail(id, "mounted polyphony check requires a staged fixture directory")
+        return
+    }
+    let root = stageTestProject(in: fixtureRoot, projectName: "swiftcore-polyphony-reveal")
+    let app = ApplicationSession()
+    defer {
+        app.hostClosing()
+        app.acknowledgeGridDetached()
+    }
+    app.openProjectAndSong(path: root, label: "mus_session_test")
+    let deadline = Date().addingTimeInterval(25)
+    while !app.songOpen && app.lastSaveError.isEmpty && Date() < deadline {
+        _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+    }
+    guard app.songOpen, let session = app.selectedDocument,
+          let other = session.document.addTrack(voice: 0),
+          let planted = try? session.document.addNotes([
+              NewNote(track: 0, tick: 12_000, pitch: 60, duration: 6, velocity: 80),
+              NewNote(track: 0, tick: 12_024, pitch: 60, duration: 6, velocity: 80),
+              NewNote(track: 0, tick: 12_072, pitch: 60, duration: 6, velocity: 80),
+          ]), planted.count == 3,
+          let baseline = try? session.document.captureSave() else {
+        report.fail(id, "loaded polyphony fixture could not prepare the losing-track notes")
+        return
+    }
+    let document = session.document
+    let historyIndex = document.history.undoIndex
+    let historyCount = document.history.undoCount
+    let revision = document.revision
+    let identity = document.history.currentIdentity
+    session.selectPrimaryTrack(other)
+    session.setSelectedNotes([planted[2]])
+    let initialScroll = session.camera.snapshot.scrollX
+    var snapshot = AudioPolySnapshot(maxPcmChannels: 0, invert: false,
+        pcm: Array(repeating: AudioPolyChannel(on: false, releasing: false,
+                                              track: 0, midiKey: 0),
+                   count: Int(TOTAL_PCM_CHANNELS)),
+        cgb: Array(repeating: AudioPolyChannel(on: false, releasing: false,
+                                              track: 0, midiKey: 0),
+                   count: Int(TOTAL_CGB_CHANNELS)),
+        drop: Array(repeating: 0, count: Int(MAX_TRACKS)),
+        steal: Array(repeating: 0, count: Int(MAX_TRACKS)),
+        tailCut: Array(repeating: 0, count: Int(MAX_TRACKS)),
+        eventTotal: 3,
+        events: Array(repeating: M4APolyEvent(type: 0, trackIndex: 0, midiKey: 0,
+                                              byTrack: 0, program: 0, tick: 0),
+                      count: Int(M4A_POLY_EVENT_CAPACITY)))
+    snapshot.events[0] = M4APolyEvent(type: 1, trackIndex: 0, midiKey: 60,
+                                       byTrack: 1, program: 0, tick: 12_027)
+    snapshot.events[1] = M4APolyEvent(type: 1, trackIndex: 0, midiKey: 127,
+                                       byTrack: 1, program: 0, tick: 12_048)
+    snapshot.events[2] = M4APolyEvent(type: 1, trackIndex: 0, midiKey: 60,
+                                       byTrack: 1, program: 0, tick: 12_048)
+    app.polyphony.update(snapshot)
+    app.polyphony.activateEvent(index: 2, devicePixelRatio: 1)
+    report.expect(session.selectedNoteOrder == [planted[1]], cppID: id,
+                  message: "A018 the positioned event finds the last note on its earlier matching key")
+    report.expect(session.selectedTrack == 0, cppID: id,
+                  message: "A019 a positioned event selects its losing track")
+    report.expect(session.selectedNoteOrder.count == 1
+                  && session.selectedNoteOrder.first == planted[1], cppID: id,
+                  message: "A020 the positioned event selects exactly its last earlier same-key note")
+    let revealed = session.camera.snapshot
+    report.expect(revealed.scrollX > initialScroll
+                  && session.camera.contentX(tick: 12_027) >= 0
+                  && session.camera.contentX(tick: 12_027) <= revealed.viewportWidth,
+                  cppID: id,
+                  message: "the active positioned event tick is revealed within the roll viewport")
+    report.expect(session.editCursor == 12_027, cppID: id,
+                  message: "the active positioned event sets the edit cursor without changing notes")
+    let afterHit = try? document.captureSave()
+    report.expect(document.history.undoIndex == historyIndex
+                  && document.history.undoCount == historyCount
+                  && document.history.currentIdentity == identity, cppID: id,
+                  message: "A023 a matched event preserves the undo index and count")
+    report.expect(afterHit?.bytes == baseline.bytes && document.revision == revision,
+                  cppID: id, message: "A024 a matched event preserves exact exported MIDI bytes")
+    session.selectPrimaryTrack(other)
+    session.setSelectedNotes([planted[1]])
+    let beforeMiss = session.camera.snapshot
+    let cursorBeforeMiss = session.editCursor
+    app.polyphony.activateEvent(index: 1, devicePixelRatio: 1)
+    report.expect(session.selectedNoteOrder == [planted[1]], cppID: id,
+                  message: "A021 an unused key retains the previously selected note")
+    report.expect(session.selectedTrack == 0, cppID: id,
+                  message: "A022 an unused key selects its losing track despite no note match")
+    report.expect(session.camera.snapshot == beforeMiss && session.editCursor == cursorBeforeMiss,
+                  cppID: id, message: "an unused-key miss leaves the viewport and cursor untouched")
+    let afterMiss = try? document.captureSave()
+    report.expect(document.history.undoIndex == historyIndex
+                  && document.history.undoCount == historyCount
+                  && document.history.currentIdentity == identity, cppID: id,
+                  message: "the unused-key event preserves the undo index and count")
+    report.expect(afterMiss?.bytes == baseline.bytes && document.revision == revision,
+                  cppID: id, message: "the unused-key event preserves exact exported MIDI bytes")
+    session.selectPrimaryTrack(other)
+    session.setSelectedNotes([planted[1]])
+    let beforeExpiryMiss = session.camera.snapshot
+    let cursorBeforeExpiryMiss = session.editCursor
+    app.polyphony.activateEvent(index: 0, devicePixelRatio: 1)
+    report.expect(session.selectedTrack == 0 && session.selectedNoteOrder == [planted[1]],
+                  cppID: id, message: "an expired same-key note does not replace the selection")
+    report.expect(session.camera.snapshot == beforeExpiryMiss
+                  && session.editCursor == cursorBeforeExpiryMiss, cppID: id,
+                  message: "an expired same-key event leaves the viewport and cursor untouched")
+    let afterExpiryMiss = try? document.captureSave()
+    report.expect(afterExpiryMiss?.bytes == baseline.bytes
+                  && document.history.undoIndex == historyIndex
+                  && document.history.undoCount == historyCount, cppID: id,
+                  message: "an expired same-key miss preserves MIDI bytes and history")
 }
 
 @MainActor

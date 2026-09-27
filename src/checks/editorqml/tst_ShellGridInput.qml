@@ -167,6 +167,62 @@ TestCase {
 
     function rollInput(surface) { return findChild(surface, "swiftRollInput") }
 
+    function test_headerRenameFocusAndLifecycle() {
+        var session = openRoute101()
+        var surface = selectedSurface()
+        var headers = surface.headersModel
+        var input = findChild(surface, "timelineTrackHeadersInput")
+        var field = findChild(surface, "timelineTrackHeaderRename")
+        var rows = findChild(surface, "timelineTrackHeaderRows")
+        verify(input && field && rows && rows.itemAt(0),
+               "the loaded track header and rename field are mounted")
+        var row = rows.itemAt(0)
+        var title = row.titleRect
+        var x = title.x + title.width / 2
+        var y = title.y + title.height / 2
+        mouseClick(input, x, y)
+        tryCompare(input, "activeFocus", true, 3000,
+                   "a real header click gives the track-header band active focus")
+        verify(input.activeFocus, "A007 the loaded Quick header band accepts real pointer focus")
+        verify(input.activeFocus && !field.activeFocus,
+               "A008 the focused band is the track header rather than the rename editor")
+        function openRename() {
+            mouseDoubleClickSequence(input, x, y, Qt.LeftButton)
+            tryCompare(headers, "renamingTrack", 0, 3000)
+            tryCompare(field, "visible", true, 3000)
+            tryCompare(field, "activeFocus", true, 3000)
+        }
+        openRename()
+        verify(field.visible && field.activeFocus,
+               "A010 the opened rename field is visible and holds active focus")
+        for (var letter of "Rolled")
+            keyClick(letter)
+        compare(field.text, "Rolled",
+                "A009 the focused Quick rename editor contains the literal Rolled draft")
+        keyClick(Qt.Key_Return)
+        tryCompare(field, "visible", false, 3000)
+        compare(row.title, "1 · Rolled",
+                "Return commits the header title through the loaded shell")
+        openRename()
+        verify(field.visible && field.activeFocus,
+               "A012 the reopened rename field is visible and holds active focus")
+        for (var discarded of "Discarded")
+            keyClick(discarded)
+        keyClick(Qt.Key_Escape)
+        tryCompare(field, "visible", false, 3000)
+        compare(row.title, "1 · Rolled",
+                "Escape discards the reopened header draft")
+        openRename()
+        verify(field.visible && field.activeFocus,
+               "A014 the loop-marker guard reopens a visible focused rename field")
+        keyClick(Qt.Key_BracketLeft)
+        compare(field.text, "[", "the third focused rename editor accepts a loop-marker draft")
+        keyClick(Qt.Key_Return)
+        tryCompare(field, "visible", false, 3000)
+        compare(row.title, "1 · Rolled",
+                "the loop-marker guard keeps the committed name")
+    }
+
     function test_loadedRulerAndFixedInputSurfaces() {
         settings.setString("lastProjectDir", "")
         shell = shellComponent.createObject(null)

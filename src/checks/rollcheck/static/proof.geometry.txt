@@ -38,68 +38,39 @@ Verified note-visuals QML SHA-256: 7996c1fcb13cc466741d6c41a92f10ceba34573221fd4
 Command: deno task verify --filter swiftcore-projectsession --verbose (task-105 implementer run)
 Result: PASS; 1/36 ok, including the tick-ceiling walk (proof-only reconciliation ran no lane).
 Verified task-105 Swift SHA-256: 06c442a1b0bc5a0a770ab2811c9fd748ef17ab895e0bd0b04670071cea402885 (src/checks/rollcheck/static/geometry.swift).
+Task-122 frozen source SHA-256: d2ed74de667fa97501bb5fecbd8c362250eb837dbdb89a2bcd7da4e7eeb357ed (src/checks/rollcheck/static/geometry.swift).
+Task-122 frozen source SHA-256: 8effce4631a062c582cf443431108b29ee987a31deefbcfee83cfbb7a803e1ed (src/checks/editorqml/tst_ShellNoteVisuals.qml).
+Task-122 focused evidence (implementer): swiftcore-projectsession 1/36 PASS; shell-note-visuals 1/26 PASS including physical DPR2; full verify 36/36 PASS; full verify:shell 26/26 PASS. This proof-only pass ran no suites.
 
 A001 | PianoRollStaticTest::fallbackCamera | src/checks/rollcheck/static/geometry.cpp:117
 Disposition: RETIRED-REPRESENTATION
 
 A002 | PianoRollStaticTest::fallbackCamera | src/checks/rollcheck/static/geometry.cpp:121
-Disposition: PARTIAL
-Mapping/reason: Related predicate S045 (src/checks/rollcheck/static/camera.swift) observes the same fallback-camera lead-pad home over the 1280/1000/1500 width rows under synthetic EditorCamera limits, with S005 (:33-34) covering the pre-roll floor. Unproved: the native BareView fallback camera reports a positive leadPadPx with no song bound.
-Source context since previous assertion:
-  ;
-      fixture.view.quickView()->quickWindow()->resize(QSize(width, 800));
-      QCoreApplication::processEvents();
-      const double leadPad = fixture.view.camera().leadPadPx();
-Original expression:
-  QVERIFY2(leadPad > 0.0, "fallback lead pad is not positive")
+Disposition: MATCHED
+Mapping: S089, S100 — the fallback camera computes a positive lead pad; the loaded roll also exposes a visible pre-roll pad, without requiring the retired fresh BareView tab.
 
 A003 | PianoRollStaticTest::fallbackCamera | src/checks/rollcheck/static/geometry.cpp:122
-Disposition: PARTIAL
-Mapping/reason: Related predicate S045 (src/checks/rollcheck/static/camera.swift) asserts contentX(tick: 0) equals the lead pad under synthetic limits, and S002 (:26-27) the tick/content round-trip. Unproved: the native fallback camera tick-zero content position sits within 0.5px of its lead pad.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY2(std::abs(fixture.view.camera().contentX(0.0) - leadPad) <= 0.5,
-               "fresh view camera is not at the pre-roll home")
+Disposition: MATCHED
+Mapping: S090, S100 — the Swift camera places tick-zero content within 0.5px of independent lead-pad geometry and the loaded roll visibly retains that pad.
 
 A004 | PianoRollStaticTest::fallbackCamera | src/checks/rollcheck/static/geometry.cpp:124
-Disposition: PARTIAL
-Mapping/reason: Related predicate S062 (src/checks/rollcheck/static/geometry.swift) observes the default beat zoom retained across a 24-TPB bind and S064 (:46-47) across a 48-TPB bind under EditorCamera.Limits defaults. Unproved condition: the unbound native BareView default pxPerBeat equals the default ViewState zoom.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(fixture.view.camera().pxPerBeat(), SongView::ViewState{}.pxPerBeat)
+Disposition: MATCHED
+Mapping: S091 — fallback beat zoom equals the seed-font default.
 
 A005 | PianoRollStaticTest::opaqueResizeBacking | src/checks/rollcheck/static/geometry.cpp:131
 Disposition: RETIRED-REPRESENTATION
 
 A006 | PianoRollStaticTest::opaqueResizeBacking | src/checks/rollcheck/static/geometry.cpp:133
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      const QColor background = themes::color(themes::Role::window_background);
-Original expression:
-  QCOMPARE(window->color(), background)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S082 — the embedded QQuickWindow color property is retired; the mounted ruler pre-roll has a uniform opaque shade.
 
 A007 | PianoRollStaticTest::opaqueResizeBacking | src/checks/rollcheck/static/geometry.cpp:134
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(window->color().alpha(), 255)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S082 — embedded QQuickWindow color alpha is retired with its window; the mounted ruler's sampled backing is uniform.
 
 A008 | PianoRollStaticTest::opaqueResizeBacking | src/checks/rollcheck/static/geometry.cpp:138
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-      window->resize(QSize(1000, 700));
-      QCoreApplication::processEvents();
-Original expression:
-  QCOMPARE(window->color(), background)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S083 — resizing the retired embedded QQuickWindow and reading its color property is not the mounted shell's window ownership; the real ruler pad contrasts with chrome.
 
 A009 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:155
 Disposition: MATCHED
@@ -230,55 +201,20 @@ Disposition: MATCHED
 Mapping: S086
 
 A027 | PianoRollStaticTest::fallbackRulerStemAndBars | src/checks/rollcheck/static/geometry.cpp:233
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      const QRgb backdrop = raster.at(offset + fixture.view.camera().leadPadPx() + 80.0, 2.0);
-      int paintedBars = 0;
-      for (int bar = 0; bar < 6; ++bar) {
-          const Tick tick = Tick(bar) * kBeatsPerBar * kTicksPerBeat;
-          const int expected =
-              raster.deviceX(fixture.view.camera().displayX(double(tick), offset, raster.dpr));
-          const int line = detectedLine(raster, expected, int(raster.image.height() * 0.55),
-                                        raster.image.height() - 3, backdrop);
-Original expression:
-  QVERIFY2(line >= 0, "fresh ruler is missing a fallback bar line")
+Disposition: MATCHED
+Mapping: S092, S101 — fallback bar stems paint at independently calculated physical pixels in normal and executed DPR2 captures.
 
 A028 | PianoRollStaticTest::fallbackRulerStemAndBars | src/checks/rollcheck/static/geometry.cpp:240
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-  ;
-          ++paintedBars;
-          int labelPixels = 0;
-          for (int x = expected + 3; x <= expected + int(34 * raster.dpr); ++x)
-              for (int y = int(raster.image.height() * 0.55); y < raster.image.height() - 3; ++y)
-                  if (channelDelta(raster.image.pixel(x, y), backdrop) > 30)
-                      ++labelPixels;
-Original expression:
-  QVERIFY(labelPixels >= 2)
+Disposition: MATCHED
+Mapping: S093, S101 — at least two actual bar-number glyphs paint in both normal and physical-DPR2 ruler raster.
 
 A029 | PianoRollStaticTest::fallbackRulerStemAndBars | src/checks/rollcheck/static/geometry.cpp:242
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      }
-Original expression:
-  QVERIFY(paintedBars >= 2)
+Disposition: MATCHED
+Mapping: S094, S101 — at least two separately positioned fallback bar groups paint at normal and physical DPR2.
 
 A030 | PianoRollStaticTest::fallbackRulerStemAndBars | src/checks/rollcheck/static/geometry.cpp:246
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      for (int beat = 1; beat <= 3; ++beat) {
-          const int expected = raster.deviceX(
-              fixture.view.camera().displayX(double(beat * kTicksPerBeat), offset, raster.dpr));
-Original expression:
-  QVERIFY(lineAt(raster, expected, int(raster.image.height() * 0.72),
-                         raster.image.height() - 3, backdrop, 6, 1))
+Disposition: MATCHED
+Mapping: S095, S101 — non-bar beat stems paint at independently calculated normal and physical-DPR2 columns.
 
 A031 | PianoRollStaticTest::defaultBindKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:255
 Disposition: RETIRED-REPRESENTATION
@@ -288,17 +224,12 @@ Disposition: MATCHED
 Mapping: S062
 
 A033 | PianoRollStaticTest::defaultBindKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:272
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      const Raster after = captureRuler(fixture.view);
-Original expression:
-  QVERIFY(after.valid())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S096 — validity of the retired native captureRuler probe is a capture prerequisite, not a user-visible raster predicate; the loaded ruler produces a framebuffer.
 
 A034 | PianoRollStaticTest::defaultBindKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:277
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: S063 proves the 4/4 bind keeps bar content geometry; S092 proves loaded fallback raster stems. Unproved: comparing the same six mounted bar columns before and after an explicit 4/4 bind.
 Source context since previous assertion:
   ;
       for (int bar = 0; bar < 6; ++bar) {
@@ -322,21 +253,16 @@ Disposition: MATCHED
 Mapping: S064
 
 A038 | PianoRollStaticTest::ticksPerBeatKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:314
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      const Raster after = captureRuler(fixture.view);
-Original expression:
-  QVERIFY(after.valid())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S096 — native captureRuler validity is retired; the loaded ruler produces a framebuffer.
 
 A039 | PianoRollStaticTest::ticksPerBeatKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:318
 Disposition: MATCHED
 Mapping: S065
 
 A040 | PianoRollStaticTest::ticksPerBeatKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:319
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: S065 proves 48-TPB beat geometry and S095 proves visible mounted beat stems at 24 TPB. Unproved: exact beat-stem raster positions after binding the mounted ruler to 48 TPB.
 Source context since previous assertion:
   ;
 Original expression:
@@ -344,8 +270,8 @@ Original expression:
                          backdrop, 6, 1))
 
 A041 | PianoRollStaticTest::ticksPerBeatKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:326
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: S066 proves 48-TPB content geometry and S092 proves fallback mounted bar stems. Unproved: exact mounted bar columns remain unchanged after the 48-TPB bind.
 Source context since previous assertion:
   ;
       }
@@ -415,20 +341,12 @@ Original expression:
   QCOMPARE(segment.beatsPerBar, 3)
 
 A048 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:363
-Disposition: GAP
-Mapping/reason: GAP; the mounted cases consume gridModel.rulerHeight only as a layout input (src/checks/rollqml/tst_SwiftRollPlots.qml) and none compares the bound view's ruler height across a 3/4 bind, so the transition stays unproved.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(rulerBandHeight(fixture.view), height)
+Disposition: MATCHED
+Mapping: S097 — mounted ruler height remains equal across actual signature binding.
 
 A049 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:364
-Disposition: PARTIAL
-Mapping/reason: Related predicate S045 (src/checks/rollcheck/static/camera.swift) asserts a positive lead pad under synthetic limits, and S015 (:93-94) the unbound home. Unproved: the 3/4-bound native view reports a positive leadPadPx.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(fixture.view.camera().leadPadPx() > 0.0)
+Disposition: MATCHED
+Mapping: S098 — the 3/4-bound camera retains its independently sized positive viewport lead pad.
 
 A050 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:366
 Disposition: MATCHED
@@ -441,46 +359,20 @@ Original expression:
                            beats[size_t(beat - 1)]) <= 1e-6)
 
 A051 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:369
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      const Raster after = captureRuler(fixture.view);
-Original expression:
-  QVERIFY(after.valid())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S096, S092 — native captureRuler validity is retired; mounted signature-bound raster consumers execute.
 
 A052 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:377
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      bool moved = false;
-      for (int bar = 0; bar < 6; ++bar) {
-          const Tick tick = Tick(bar) * 3 * kTicksPerBeat;
-          const int expected =
-              after.deviceX(fixture.view.camera().displayX(double(tick), offset, after.dpr));
-          const int line = detectedLine(after, expected, int(after.image.height() * .55),
-                                        after.image.height() - 3, backdrop);
-Original expression:
-  QVERIFY(line >= 0)
+Disposition: MATCHED
+Mapping: S092, S101 — 3/4 bar stems paint at exact independent physical pixels after binding, also at DPR2.
 
 A053 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:378
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(std::abs(line - expected) <= 1)
+Disposition: MATCHED
+Mapping: S092, S101 — bound bar stems lie within one physical pixel of independent targets at normal and DPR2.
 
 A054 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:381
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-  ;
-          moved = moved || line != fallbackBars[size_t(bar)];
-      }
-Original expression:
-  QVERIFY2(moved, "3/4 binding did not move the signature-dependent bar lines")
+Disposition: MATCHED
+Mapping: S099, S101 — two 3/4 caps occupy new positions while former 4/4 positions show chrome, also at physical DPR2.
 
 Remaining original source (closing sequence and helper bodies):
   ;
@@ -694,3 +586,42 @@ Anchor: message "A018 the tick-ceiling grid walk emits at most one beat"
 
 S088 | checkCeilingGridWalk | src/checks/rollcheck/static/geometry.swift
 Anchor: message "A019 the tick-ceiling grid walk never wraps to a low beat"
+
+S089 | checkFallbackAndSignatureBind | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A002 fallback camera reserves a positive pre-roll lead pad"
+
+S090 | checkFallbackAndSignatureBind | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A003 tick zero starts inside the independently computed lead pad"
+
+S091 | checkFallbackAndSignatureBind | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A004 fallback grid retains the seed-font default beat zoom"
+
+S092 | unsignedRulerCapture | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "the fallback or regrouped bar stem paints at its independently computed physical pixel"
+
+S093 | unsignedRulerCapture | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "at least two bar numbers paint as real native text on chrome"
+
+S094 | unsignedRulerCapture | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "the loaded ruler has at least two independently positioned visible bars"
+
+S095 | unsignedRulerCapture | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "each fallback or bound beat stem paints at its independently computed device pixel"
+
+S096 | unsignedRulerCapture | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "the signature-free loaded ruler produces a framebuffer"
+
+S097 | unsignedRulerJourney | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "A048 binding three-four retains the mounted ruler height"
+
+S098 | checkFallbackAndSignatureBind | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A049 the bound three-four camera retains a positive viewport lead pad"
+
+S099 | unsignedRulerJourney | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "three-four bar caps paint at new ticks and not former four-four bar ticks"
+
+S100 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "tick zero leaves a font-scaled visible pre-roll pad"
+
+S101 | unsignedRulerCapture | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: message "the ruler framebuffer retains native device-pixel dimensions"

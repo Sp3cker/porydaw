@@ -16,6 +16,8 @@ TestCase {
 
     property var shell: null
     property var grabbed: null
+    property bool unsignedSongPrepared: false
+    property int physicalRulerCaptureNumber: 0
 
     ShellQmlBootstrap { id: bootstrap }
     GatedVisualsProbe { id: probe }
@@ -38,8 +40,14 @@ TestCase {
 
     function cleanup() {
         grabbed = null
-        if (!shell)
+        if (!shell) {
+            if (unsignedSongPrepared) {
+                verify(probe.restoreUnsignedSong(bootstrap.projectRoot, "mus_route101"),
+                       "the signature-free song copy is restored after capture")
+                unsignedSongPrepared = false
+            }
             return
+        }
         if (shell.shellPresenter.sceneActive) {
             shell.close()
             verify(waitForNative(function() {
@@ -55,6 +63,11 @@ TestCase {
         shell.destroy()
         shell = null
         wait(0)
+        if (unsignedSongPrepared) {
+            verify(probe.restoreUnsignedSong(bootstrap.projectRoot, "mus_route101"),
+                   "the loaded unsigned song is restored after shell teardown")
+            unsignedSongPrepared = false
+        }
     }
 
     function selectedSurface() {
@@ -205,7 +218,7 @@ TestCase {
                         Math.abs(a[2] - b[2]))
     }
 
-    function openNotes(captureFontPx) {
+    function openNotes(captureFontPx, unsigned) {
         var properties = captureFontPx === undefined
                 ? {} : { typographyCaptureFont: Qt.font({ pixelSize: captureFontPx }) }
         shell = shellComponent.createObject(null, properties)
@@ -213,6 +226,11 @@ TestCase {
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
         var session = shell.shellPresenter.session
+        if (unsigned) {
+            verify(probe.prepareUnsignedSong(bootstrap.projectRoot, "mus_route101"),
+                   "the staged Route 101 copy has a removable explicit signature")
+            unsignedSongPrepared = true
+        }
         session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
         verify(waitForNative(function() {
             return session.songOpen || session.lastSaveError.length > 0
@@ -638,6 +656,167 @@ TestCase {
                "the tiny note paints its face between the thin borders")
     }
 
+    function unsignedRulerCapture(context, expectedBeat, expectedScroll, barTicks, physical) {
+        var ruler = findChild(context.surface, "timelineQuickRuler")
+        verify(ruler, "the signature-free loaded ruler is mounted")
+        var image, dpr, reader = null
+        if (physical) {
+            dpr = Screen.devicePixelRatio
+            var marks = findChild(ruler, "timelineQuickRulerMarks")
+            verify(marks && marks.parent, "the physical ruler has a mounted scrolling content")
+            tryCompare(marks.parent, "x", -Math.round(expectedScroll * dpr) / dpr, 3000,
+                       "the physical ruler applies the requested camera scroll before capture")
+            waitForRendering(ruler, 3000)
+            var capture = null
+            verify(ruler.grabToImage(function(result) { capture = result }),
+                   "the loaded ruler accepts a physical-pixel capture")
+            tryVerify(function() { return capture !== null }, 3000)
+            var file = bootstrap.projectRoot + "/ruler-dpr2-unsigned-"
+                       + (++physicalRulerCaptureNumber) + ".png"
+            verify(capture.saveToFile(file), "the loaded ruler saves its physical-pixel framebuffer")
+            reader = physicalCaptureReader.createObject(ruler)
+            verify(reader, "the physical ruler capture has an image reader")
+            tryCompare(reader, "available", true, 3000,
+                       "the physical image reader has a ready canvas context")
+            var url = "file://" + file
+            reader.loadImage(url)
+            tryVerify(function() { return reader.isImageLoaded(url) }, 3000)
+            var pixels = reader.getContext("2d").createImageData(url)
+            verify(pixels && Math.abs(pixels.width - ruler.width * dpr) <= 1
+                   && Math.abs(pixels.height - ruler.height * dpr) <= 2,
+                   "the ruler framebuffer retains native device-pixel dimensions")
+            image = {
+                width: pixels.width, height: pixels.height,
+                red: function(x, y) { return pixels.data[(y * pixels.width + x) * 4] },
+                green: function(x, y) { return pixels.data[(y * pixels.width + x) * 4 + 1] },
+                blue: function(x, y) { return pixels.data[(y * pixels.width + x) * 4 + 2] }
+            }
+        } else {
+            image = grabShell()
+            dpr = shellDpr(image)
+        }
+        verify(image, "the signature-free loaded ruler produces a framebuffer")
+        function pixelX(x) {
+            return Math.round((physical ? x : win(ruler, x, 0).x) * dpr)
+        }
+        function pixelY(y) {
+            return Math.round((physical ? y : win(ruler, 0, y).y) * dpr)
+        }
+        var gutter = Math.max(1, Math.round(context.grid.baseFontPx * 13 / 3))
+        var background = Helpers.channels(context.session.palette.chromeBackground)
+        var inkChannels = Helpers.channels(context.session.palette.gridLine)
+        var ink = [0, 1, 2].map(function(index) {
+            return Math.round((inkChannels[index] * inkChannels[3]
+                             + background[index] * (255 - inkChannels[3])) / 255)
+        })
+        var text = Helpers.channels(context.session.palette.primaryText)
+        var stemY = pixelY(ruler.height * 0.73)
+        var counted = 0
+        var captions = 0
+        for (var tick of barTicks) {
+            var x = gutter + tick / 24 * expectedBeat - expectedScroll
+            if (x < context.grid.baseFontPx || x > context.plot.width - context.grid.baseFontPx)
+                continue
+            var column = pixelX(x)
+            var stem = false
+            for (var offset = -1; offset <= 1; ++offset)
+                stem = stem || channelDelta(rgb(image, column + offset, stemY), ink) <= 12
+            verify(stem, "the fallback or regrouped bar stem paints at its independently computed physical pixel")
+            var gapX = pixelX(x + expectedBeat * 0.4)
+            verify(channelDelta(rgb(image, gapX, stemY), background) <= 12,
+                   "the bar stem has chrome beside its precise device-pixel position")
+            ++counted
+            var captionFound = false
+            for (var cy = pixelY(ruler.height * 0.55);
+                 cy < pixelY(ruler.height * 0.92); ++cy)
+                for (var cx = column + Math.max(1, Math.round(context.grid.baseFontPx * dpr / 4));
+                     cx < column + Math.round(expectedBeat * dpr * 0.8); ++cx)
+                    captionFound = captionFound || channelDelta(rgb(image, cx, cy), text) <= 12
+            if (captionFound)
+                ++captions
+        }
+        var beatCount = 0
+        for (var beatTick = 24; beatTick <= barTicks[barTicks.length - 1]; beatTick += 24) {
+            if (barTicks.indexOf(beatTick) >= 0)
+                continue
+            var beatX = gutter + beatTick / 24 * expectedBeat - expectedScroll
+            if (beatX < gutter + context.grid.baseFontPx
+                    || beatX > context.plot.width - context.grid.baseFontPx)
+                continue
+            var beatColumn = pixelX(beatX)
+            var beatInk = false
+            for (var beatOffset = -1; beatOffset <= 1; ++beatOffset)
+                beatInk = beatInk
+                    || channelDelta(rgb(image, beatColumn + beatOffset, stemY), ink) <= 12
+            verify(beatInk, "each fallback or bound beat stem paints at its independently computed device pixel")
+            ++beatCount
+        }
+        verify(beatCount > 0, "the loaded ruler paints visible non-bar beat stems")
+        verify(counted >= 2, "the loaded ruler has at least two independently positioned visible bars")
+        verify(captions >= 2, "at least two bar numbers paint as real native text on chrome")
+        if (reader)
+            reader.destroy()
+        return image
+    }
+
+    function unsignedRulerJourney(context, physical) {
+        var grid = context.grid
+        var beat = Math.round(13 * 8 / 3)
+        var lead = Math.min(256, Math.max(48, Math.round(context.plot.width * 0.1)))
+        var ruler = findChild(context.surface, "timelineQuickRuler")
+        var initialHeight = ruler.height
+        grid.setCameraHScroll(-lead)
+        var initial = unsignedRulerCapture(context, beat, -lead,
+                                           [0, 96, 192, 288, 384, 480], physical)
+        context.session.openTimeSigPrompt(0)
+        context.session.acceptTimeSigPrompt(3, 2)
+        compare(ruler.height, initialHeight, "A048 binding three-four retains the mounted ruler height")
+        var bound = unsignedRulerCapture(context, beat, -lead,
+                                         [0, 72, 144, 216, 288, 360], physical)
+        var dpr = physical ? Screen.devicePixelRatio : shellDpr(bound)
+        var gutter = Math.max(1, Math.round(grid.baseFontPx * 13 / 3))
+        var capOffset = grid.baseFontPx / 10
+        var background = Helpers.channels(context.session.palette.chromeBackground)
+        var gridInk = Helpers.channels(context.session.palette.gridLine)
+        var ink = [0, 1, 2].map(function(index) {
+            return Math.round((gridInk[index] * gridInk[3]
+                             + background[index] * (255 - gridInk[3])) / 255)
+        })
+        var allCapsMoved = true
+        for (var pair of [[72, 96], [144, 192]]) {
+            var newPosition = gutter + pair[0] / 24 * beat + lead + capOffset
+            var oldPosition = gutter + pair[1] / 24 * beat + lead + capOffset
+            var movedX = Math.round((physical ? newPosition
+                                    : win(ruler, newPosition, 0).x) * dpr)
+            var oldX = Math.round((physical ? oldPosition
+                                  : win(ruler, oldPosition, 0).x) * dpr)
+            var capMoved = false
+            for (var cy = Math.round((physical ? ruler.height * 0.15
+                                     : win(ruler, 0, ruler.height * 0.15).y) * dpr);
+                 cy < Math.round((physical ? ruler.height * 0.65
+                                  : win(ruler, 0, ruler.height * 0.65).y) * dpr); ++cy) {
+                if (channelDelta(rgb(bound, movedX, cy), ink) <= 12
+                        && channelDelta(rgb(bound, oldX, cy), background) <= 12)
+                    capMoved = true
+            }
+            allCapsMoved = allCapsMoved && capMoved
+        }
+        verify(allCapsMoved, "three-four bar caps paint at new ticks and not former four-four bar ticks")
+        grid.setCameraHScroll(beat * 2)
+        unsignedRulerCapture(context, beat, beat * 2, [0, 72, 144, 216, 288, 360], physical)
+        grid.handleWheel(0, 120, 0, 0, Qt.NoModifier, 0, false, 0, 0)
+        grid.setCameraHScroll(0)
+        unsignedRulerCapture(context, beat * Math.pow(1.0015, 120), 0,
+                             [0, 72, 144, 216, 288, 360], physical)
+        compare(ruler.height, initialHeight, "the zoomed three-four ruler keeps its original height")
+        return initial
+    }
+
+    function test_unsignedRulerBarRasterAfterBindAndPan() {
+        unsignedRulerJourney(openNotes(undefined, true), false)
+    }
+
+
     function test_preRollPadAndRulerRaster() {
         var context = openNotes()
         var grid = context.grid
@@ -1024,14 +1203,17 @@ TestCase {
             skip("the physical border-thinning capture requires dpr2")
             return
         }
-        shell = smallFontShellComponent.createObject(null)
+        shell = shellComponent.createObject(null)
         verify(shell !== null, "the production ShellWindow loads for dpr2")
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
         var session = shell.shellPresenter.session
+        verify(probe.prepareUnsignedSong(bootstrap.projectRoot, "mus_route101"),
+               "the dpr2 song copy has its explicit signature removed")
+        unsignedSongPrepared = true
         session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
         verify(waitForNative(function() { return session.songOpen }, 30000),
-               "Route 101 loads for the dpr2 note capture")
+               "Route 101 loads for the physical dpr2 ruler capture")
         var surface = selectedSurface()
         verify(surface !== null, "the dpr2 roll is mounted")
         var grid = surface.gridModel
@@ -1040,6 +1222,29 @@ TestCase {
         verify(plot !== null && fills !== null, "the dpr2 plot and note fills are mounted")
         verify(waitForNative(function() { return grid.renderedNoteCount > 0 }, 5000),
                "the dpr2 roll publishes notes")
+        var rulerContext = { surface: surface, grid: grid, plot: plot, session: session }
+        var physicalRuler = unsignedRulerJourney(rulerContext, true)
+        var ruler = findChild(surface, "timelineQuickRuler")
+        verify(Math.abs(physicalRuler.width - ruler.width * 2) <= 1,
+               "the mounted unsigned ruler captures its full physical dpr2 width")
+        shell.destroy()
+        shell = smallFontShellComponent.createObject(null)
+        verify(shell !== null, "the production small-font ShellWindow loads for dpr2")
+        shell.requestActivate()
+        tryCompare(shell, "active", true, 3000)
+        session = shell.shellPresenter.session
+        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        verify(waitForNative(function() { return session.songOpen }, 30000),
+               "Route 101 loads for the dpr2 small-font note capture")
+        surface = selectedSurface()
+        verify(surface !== null, "the dpr2 small-font roll is mounted")
+        grid = surface.gridModel
+        plot = findChild(surface, "timelineQuickRollPlot")
+        fills = findChild(surface, "timelineQuickPianoNoteFills")
+        verify(plot !== null && fills !== null,
+               "the dpr2 small-font plot and note fills are mounted")
+        verify(waitForNative(function() { return grid.renderedNoteCount > 0 }, 5000),
+               "the dpr2 small-font roll publishes notes")
         grid.performCommand(4)
         verify(waitForNative(function() {
             var notes = publishedNotes(grid)

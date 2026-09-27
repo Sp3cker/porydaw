@@ -17,6 +17,17 @@ func runGeometryChecks(_ report: CheckReport, session: DocumentSession) {
 private func checkFallbackAndSignatureBind(_ report: CheckReport, session: DocumentSession) {
     let fallbackID = "rollcheck/PianoRollStaticTest::fallbackGrid"
     let bindID = "rollcheck/PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars"
+    let camera = geometryCamera()
+    let width = camera.snapshot.viewportWidth
+    let expectedLead = min(max((width * 0.10).rounded(), 48), 256)
+    report.expect(camera.leadPad > 0 && camera.snapshot.minHScroll < 0, cppID: fallbackID,
+                  message: "A002 fallback camera reserves a positive pre-roll lead pad")
+    report.expect(abs(camera.contentX(tick: 0) - expectedLead) <= 0.5,
+                  cppID: fallbackID,
+                  message: "A003 tick zero starts inside the independently computed lead pad")
+    report.expect(camera.snapshot.pixelsPerBeat == (13 * 8.0 / 3.0).rounded(),
+                  cppID: fallbackID,
+                  message: "A004 fallback grid retains the seed-font default beat zoom")
     let axis = session.grid.axis
     var lines: [(tick: Tick, bar: Bool, barNumber: Int, beatNumber: Int)] = []
     axis.forEachGridLine(from: 0, to: 384) { tick, bar, barNumber, beatNumber in
@@ -58,6 +69,12 @@ private func checkFallbackAndSignatureBind(_ report: CheckReport, session: Docum
                   message: "A046 bound 3/4 segment uses 24 ticks per beat")
     report.expect(bound.beatsPerBar == 3, cppID: bindID,
                   message: "A047 bound 3/4 segment has three beats per bar")
+    let boundWidth = session.camera.snapshot.viewportWidth
+    let boundLead = min(max((boundWidth * 0.10).rounded(), 48), 256)
+    report.expect(bound.beatsPerBar == 3 && session.camera.leadPad > 0
+                  && session.camera.snapshot.minHScroll == -boundLead,
+                  cppID: bindID,
+                  message: "A049 the bound three-four camera retains a positive viewport lead pad")
     report.expect((1...8).allSatisfy {
         abs(session.camera.contentX(tick: Double($0 * 24)) - before[$0 - 1]) <= 1e-6
     }, cppID: bindID, message: "A050 binding 3/4 preserves beat content positions")

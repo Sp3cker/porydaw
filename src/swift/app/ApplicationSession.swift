@@ -137,14 +137,17 @@ public final class ApplicationSession: QmlInstantiableStatus {
         polyphony.attach(audio: audio)
         polyphony.onJump = { [weak self] tick, track, key, dpr in
             guard let session = self?.workspace?.session else { return }
+            let previousNotes = session.selectedNoteOrder
             session.selectPrimaryTrack(track)
-            if let note = session.document.notes(in: track).last(where: {
+            guard let note = session.document.notes(in: track).last(where: {
                 $0.tick <= tick && Int($0.pitch) == key
                     && UInt64(tick) < UInt64($0.tick) + UInt64($0.duration)
-            }) {
-                session.setSelectedNotes([note.id])
-                _ = session.mutateCamera { $0.ensureKeyVisible(key) }
+            }) else {
+                session.setSelectedNotes(previousNotes)
+                return
             }
+            session.setSelectedNotes([note.id])
+            _ = session.mutateCamera { $0.ensureKeyVisible(key) }
             session.editCursor = tick
             _ = session.mutateCamera { $0.ensureTickVisible(UInt64(tick), dpr: dpr) }
         }

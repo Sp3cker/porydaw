@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import QtBridge
+import PorydawCore
 
 @MainActor
 @QtBridgeable
@@ -17,6 +18,41 @@ public final class GatedVisualsProbe: QmlInstantiableStatus {
     private static func backupURL(projectRoot: String, label: String) -> URL {
         songURL(projectRoot: projectRoot, label: label)
             .appendingPathExtension("testbak")
+    }
+    private static func unsignedBackupURL(projectRoot: String, label: String) -> URL {
+        songURL(projectRoot: projectRoot, label: label).appendingPathExtension("unsignedbak")
+    }
+
+    public func prepareUnsignedSong(projectRoot: String, label: String) -> Bool {
+        let song = Self.songURL(projectRoot: projectRoot, label: label)
+        let backup = Self.unsignedBackupURL(projectRoot: projectRoot, label: label)
+        do {
+            let original = try Data(contentsOf: song)
+            var file = try MidiFile.decode(Array(original))
+            guard file.chunks.contains(where: { $0.events.contains(where: { $0.metaType == 0x58 }) })
+            else { return false }
+            for index in file.chunks.indices {
+                file.chunks[index].events.removeAll { $0.metaType == 0x58 }
+            }
+            try original.write(to: backup)
+            try Data(file.encoded()).write(to: song)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    public func restoreUnsignedSong(projectRoot: String, label: String) -> Bool {
+        let song = Self.songURL(projectRoot: projectRoot, label: label)
+        let backup = Self.unsignedBackupURL(projectRoot: projectRoot, label: label)
+        do {
+            guard FileManager.default.fileExists(atPath: backup.path) else { return false }
+            try Data(contentsOf: backup).write(to: song)
+            try FileManager.default.removeItem(at: backup)
+            return true
+        } catch {
+            return false
+        }
     }
 
     public func moveSongAside(projectRoot: String, label: String) -> Bool {

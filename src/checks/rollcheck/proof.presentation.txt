@@ -25,6 +25,10 @@ Command: deno task verify:shell --verbose
 Result: PASS — 11/11 ok (controller-recorded post-change run); no presentation site
 depends on the shell lane. The shell and roll QML runs predate only a
 swiftcore-checks-only commit; no production or QML source changed after them.
+Task-122 frozen source SHA-256: c7d16351926f0e70fd7d167130be01eabdf4b5303e0b6227a717c89b733a8fb3 (src/checks/rollcheck/presentation.swift).
+Task-122 frozen source SHA-256: 7a4d51ac1039b5c359faffd273b2fa91106db59d114f02d0772c70e2ef68c514 (src/swift/app/ApplicationSession.swift).
+Task-122 frozen source SHA-256: 7386ced62079fc780807073e9c65d4f454b26a1e603582c737784c8165132eb6 (src/checks/editorqml/tst_ShellGridInput.qml).
+Task-122 focused evidence (implementer): swiftcore-projectsession 1/36 PASS; shell-grid-input 1/26 PASS; full verify 36/36 PASS; full verify:shell 26/26 PASS. This proof-only pass ran no suites.
 
 A001 | PianoRollTest::headerPanFollow | src/checks/rollcheck/presentation.cpp:45
 Disposition: RETIRED-REPRESENTATION
@@ -49,91 +53,36 @@ A006 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:79
 Disposition: RETIRED-REPRESENTATION
 
 A007 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:85
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/presentation.cpp) no longer builds or runs. Previous native note: Original native input precondition: focusTimelineBand on the Quick SongView. The swiftcore roll lane has no focusable timeline band.
-Source context since previous assertion:
-;
-        return;
-    }
-    const int track = check.track();
-    const QByteArray before = doc.smf().write();
-    const int undo = doc.undoStack()->index();
-
-Original expression:
-QVERIFY2(view.focusTimelineBand(songview::TimelineBand::TrackHeaders, Qt::OtherFocusReason),
-             "the Quick track-header input was unavailable")
+Disposition: MATCHED
+Mapping: S028 — actual pointer focus reaches the loaded mounted header band.
 
 A008 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:87
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/presentation.cpp) no longer builds or runs. Previous native note: Original native focus observation: focusedTimelineBand() == TrackHeaders after the Quick focus route. No Swift roll predicate observes focus routing.
-Source context since previous assertion:
-;
-
-Original expression:
-QTRY_VERIFY2(view.focusedTimelineBand() == songview::TimelineBand::TrackHeaders,
-                 "the Quick track-header input did not take active focus")
+Disposition: MATCHED
+Mapping: S029 — the header band, not the rename field, holds active focus.
 
 A009 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:99
-Disposition: PARTIAL
-Mapping/reason: S007 (presentation.swift) asserts the presenter publishes the typed draft (renameDraft == "Rolled"). Unproved: the native Quick rename field receiving the model draft (its text property and focus).
-Source context since previous assertion:
-;
-    const auto renameIsOpen = [&] {
-        QCoreApplication::processEvents();
-        QObject *const field = renameInput(view);
-        return headers->renamingTrack() == track && field && field->property("visible").toBool() &&
-               field->property("activeFocus").toBool();
-    };
-    const auto typeDraft = [&](QObject &field, const QString &draft) {
-        headers->setRenameDraft(draft);
-        QCoreApplication::processEvents();
-        if (field.property("text").toString() != draft)
-
-Original expression:
-QFAIL("Quick rename input did not receive the model draft")
+Disposition: MATCHED
+Mapping: S030 — real keys put the literal Rolled draft in the focused mounted rename field.
 
 A010 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:102
-Disposition: PARTIAL
-Mapping/reason: S006 (presentation.swift) asserts the presenter rename opens with renamingTrack == the selected track. Unproved: the Quick rename field's visible/activeFocus state that the original renameIsOpen() also requires.
-Source context since previous assertion:
-;
-    };
-    view.renameTrack(track);
-
-Original expression:
-QTRY_VERIFY2(renameIsOpen(), "Quick rename input did not open")
+Disposition: MATCHED
+Mapping: S031, S006 — the mounted rename field is visible and focused on the selected header.
 
 A011 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:108
 Disposition: MATCHED
 Mapping: S008
 
 A012 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:112
-Disposition: PARTIAL
-Mapping/reason: S009 (presentation.swift) asserts the renamed header can reopen its editor (renamingTrack == track). Unproved: the Quick rename field's visible/activeFocus state.
-Source context since previous assertion:
-;
-        return;
-    }
-    view.renameTrack(track);
-
-Original expression:
-QTRY_VERIFY2(renameIsOpen(), "Quick rename input did not reopen")
+Disposition: MATCHED
+Mapping: S032, S009 — the renamed header reopens a visible, focused field.
 
 A013 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:118
 Disposition: MATCHED
 Mapping: S010
 
 A014 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:122
-Disposition: PARTIAL
-Mapping/reason: S011 (presentation.swift) asserts the editor can reopen for the loop-marker guard. Unproved: the Quick rename field's visible/activeFocus state.
-Source context since previous assertion:
-;
-        return;
-    }
-    view.renameTrack(track);
-
-Original expression:
-QTRY_VERIFY2(renameIsOpen(), "Quick rename input did not reopen for the loop-marker guard")
+Disposition: MATCHED
+Mapping: S033, S011 — the marker guard reopens a visible, focused field.
 
 A015 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:129
 Disposition: MATCHED
@@ -144,69 +93,44 @@ Disposition: MATCHED
 Mapping: S014
 
 A017 | PianoRollTest::headerRevealNote | src/checks/rollcheck/presentation.cpp:149
-Disposition: GAP
-Mapping/reason: Feature not yet ported: the polyphony-dock revealNote jump (view.revealNote selecting the losing track and the lost note) has no owner in the Swift roll; no predicate asserts a reveal-note selection or its viewport jump.
-Source context since previous assertion:
-;
-}
-
-void PianoRollTest::headerRevealNote()
-{
-    PianoRollFixture &check = *m_fixture;
-    SongDocument &doc = check.document();
-    SongView &view = check.view();
-    const QByteArray before = doc.smf().write();
-    const int undo = doc.undoStack()->index();
-
-    // Polyphony-dock jump target: revealNote selects the losing track and
-    // the lost note itself (the last note on (track, key) starting at or
-    // before the event tick), without touching the undo stack.
-    {
-        const auto &notes = view.model().notes;
-        if (notes.empty()) {
-
-Original expression:
-QFAIL("no notes in the view model for revealNote")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S034 — the native fixture's no-notes setup guard is retired, not replaced with a nonempty assertion; the loaded event fixture has a real positioned note and miss case.
 
 A018 | PianoRollTest::headerRevealNote | src/checks/rollcheck/presentation.cpp:153
-Disposition: GAP
-Mapping/reason: Feature not yet ported: revealNote's note-lookup outcome (the note at or before the event tick is found) is not implemented in the Swift roll.
+Disposition: PARTIAL
+Mapping/reason: S034, S035 prove the active event selects and reveals the last still-sounding same-key note; S044 rejects an expired earlier note. Unproved: a real mounted polyphony event-row click jointly invokes this selection and reveal consumer.
 Source context since previous assertion:
 ;
         } else {
             const ViewNote target = notes[notes.size() / 2];
             if (!view.revealNote(target.track, target.key, target.startTick))
-
 Original expression:
 QFAIL("revealNote did not find the note")
 
 A019 | PianoRollTest::headerRevealNote | src/checks/rollcheck/presentation.cpp:155
-Disposition: GAP
-Mapping/reason: Feature not yet ported: revealNote's track-selection outcome (primaryTrack becomes the revealed track) has no Swift roll predicate.
+Disposition: PARTIAL
+Mapping/reason: S036 proves the positioned event selects the losing track. Unproved: the mounted polyphony row click reaches this track-selection consumer.
 Source context since previous assertion:
 ;
             if (view.selectionModel().primaryTrack() != int(target.track))
-
 Original expression:
 QFAIL("revealNote did not select the track")
 
 A020 | PianoRollTest::headerRevealNote | src/checks/rollcheck/presentation.cpp:158
-Disposition: GAP
-Mapping/reason: Feature not yet ported: revealNote's single-note selection payload has no Swift roll predicate.
+Disposition: PARTIAL
+Mapping/reason: S037 proves single-note selection of the last still-active same-key note at the event tick. Unproved: the mounted polyphony event-row click selects this note in the roll.
 Source context since previous assertion:
 ;
             const auto &sel = view.selectionModel().noteSelection();
             if (sel.size() != 1 || !(sel[0] == target.noteId))
-
 Original expression:
 QFAIL("revealNote did not select the note")
 
 A021 | PianoRollTest::headerRevealNote | src/checks/rollcheck/presentation.cpp:174
-Disposition: GAP
-Mapping/reason: Feature not yet ported: revealNote miss on an unused key (returns false without selecting a note) has no Swift roll predicate.
+Disposition: PARTIAL
+Mapping/reason: S038 proves an unused-key event leaves existing note selection intact and S044 rejects an expired same-key note; neither miss claims a newly found note. Unproved: the mounted event-row click delivers these misses to the roll consumer.
 Source context since previous assertion:
 ;
-
             // A key the track never plays: no note found, but the track
             // selection sticks (the dock still switches context).
             bool used[128] = {};
@@ -221,38 +145,34 @@ Source context since previous assertion:
             }
             if (freeKey >= 0) {
                 if (view.revealNote(target.track, uint8_t(freeKey), target.startTick))
-
 Original expression:
 QFAIL("revealNote found a note on an unused key")
 
 A022 | PianoRollTest::headerRevealNote | src/checks/rollcheck/presentation.cpp:176
-Disposition: GAP
-Mapping/reason: Feature not yet ported: the revealNote miss keeps the track selection — no Swift roll predicate observes it.
+Disposition: PARTIAL
+Mapping/reason: S039 proves an unused-key event switches to its losing track without finding a note. Unproved: mounted event-row click reaches this miss-context selection.
 Source context since previous assertion:
 ;
                 if (view.selectionModel().primaryTrack() != int(target.track))
-
 Original expression:
 QFAIL("revealNote miss dropped the track selection")
 
 A023 | PianoRollTest::headerRevealNote | src/checks/rollcheck/presentation.cpp:180
-Disposition: GAP
-Mapping/reason: Feature not yet ported: revealNote's no-undo-stack-change guarantee has no Swift roll predicate because revealNote itself is unported.
+Disposition: PARTIAL
+Mapping/reason: S040 and S041 prove hit and unused-key miss leave undo index/count and identity unchanged; S046 proves expired-key miss keeps index/count. Unproved: no undo transaction follows a real mounted polyphony row click through this consumer.
 Source context since previous assertion:
 ;
             }
         }
     }
-
 Original expression:
 QCOMPARE(doc.undoStack()->index(), undo)
 
 A024 | PianoRollTest::headerRevealNote | src/checks/rollcheck/presentation.cpp:181
-Disposition: GAP
-Mapping/reason: Feature not yet ported: revealNote's no-SMF-write guarantee has no Swift roll predicate because revealNote itself is unported.
+Disposition: PARTIAL
+Mapping/reason: S042, S043 and S046 prove hit, unused-key miss and expired-key miss preserve exact exported MIDI bytes. Unproved: no MIDI write follows a real mounted polyphony row click through this consumer.
 Source context since previous assertion:
 ;
-
 Original expression:
 QCOMPARE(doc.smf().write(), before)
 
@@ -260,32 +180,8 @@ A025 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation
 Disposition: RETIRED-REPRESENTATION
 
 A026 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:213
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/presentation.cpp) no longer builds or runs. Previous native note: Original native action-binding precondition: the canonical SoloTracks QAction bound to the Quick view. The Swift check dispatches EditCommand.soloTracks through PianoGrid.performCommand and does not assert the action binding.
-Source context since previous assertion:
-;
-
-    // Keyboard mute/solo changes view masks and the matching model roles
-    // without resetting the retained Quick header structure.
-    {
-        const int preCount = doc.undoStack()->count();
-        int headerResets = 0;
-        const QMetaObject::Connection resetConnection = QObject::connect(
-            headers, &QAbstractItemModel::modelReset, &view, [&headerResets] { ++headerResets; });
-        const auto roleChecked = [&](int track, int role) {
-            const std::optional<int> row = rowForTrack(*headers, track);
-            return row && headers->data(headers->index(*row, 0), role).toBool();
-        };
-        // S is a Window-scope command: the isolated fixture owns no window
-        // shortcut, so the canonical action is the stimulus (the same
-        // treatment the spec gives the isolated Copy fixture stimulus).
-        const songview::EditActions *const actions = view.editActions();
-        QAction *const soloAction =
-            actions ? actions->action(SongView::EditCommand::SoloTracks) : nullptr;
-        if (!soloAction)
-
-Original expression:
-QFAIL("canonical solo action was not bound to the view")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S018 — the deleted QAction pointer-binding prerequisite is retired; canonical Solo authority and published checked header roles remain covered by the executing Swift command predicate.
 
 A027 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:217
 Disposition: MATCHED
@@ -432,3 +328,60 @@ Anchor: message "a larger viewport base repaints the roll hover chip with its ca
 
 S027 | checkPresenterMetrics | src/checks/rollcheck/presentation.swift
 Anchor: message "restoring the viewport base restores the roll hover chip caption"
+
+S028 | test_headerRenameFocusAndLifecycle | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "A007 the loaded Quick header band accepts real pointer focus"
+
+S029 | test_headerRenameFocusAndLifecycle | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "A008 the focused band is the track header rather than the rename editor"
+
+S030 | test_headerRenameFocusAndLifecycle | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "A009 the focused Quick rename editor contains the literal Rolled draft"
+
+S031 | test_headerRenameFocusAndLifecycle | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "A010 the opened rename field is visible and holds active focus"
+
+S032 | test_headerRenameFocusAndLifecycle | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "A012 the reopened rename field is visible and holds active focus"
+
+S033 | test_headerRenameFocusAndLifecycle | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "A014 the loop-marker guard reopens a visible focused rename field"
+
+S034 | checkMountedPolyphonyReveal | src/checks/rollcheck/presentation.swift
+Anchor: message "A018 the positioned event finds the last note on its earlier matching key"
+
+S035 | checkMountedPolyphonyReveal | src/checks/rollcheck/presentation.swift
+Anchor: message "the active positioned event tick is revealed within the roll viewport"
+
+S036 | checkMountedPolyphonyReveal | src/checks/rollcheck/presentation.swift
+Anchor: message "A019 a positioned event selects its losing track"
+
+S037 | checkMountedPolyphonyReveal | src/checks/rollcheck/presentation.swift
+Anchor: message "A020 the positioned event selects exactly its last earlier same-key note"
+
+S038 | checkMountedPolyphonyReveal | src/checks/rollcheck/presentation.swift
+Anchor: message "A021 an unused key retains the previously selected note"
+
+S039 | checkMountedPolyphonyReveal | src/checks/rollcheck/presentation.swift
+Anchor: message "A022 an unused key selects its losing track despite no note match"
+
+S040 | checkMountedPolyphonyReveal | src/checks/rollcheck/presentation.swift
+Anchor: message "A023 a matched event preserves the undo index and count"
+
+S041 | checkMountedPolyphonyReveal | src/checks/rollcheck/presentation.swift
+Anchor: message "the unused-key event preserves the undo index and count"
+
+S042 | checkMountedPolyphonyReveal | src/checks/rollcheck/presentation.swift
+Anchor: message "A024 a matched event preserves exact exported MIDI bytes"
+
+S043 | checkMountedPolyphonyReveal | src/checks/rollcheck/presentation.swift
+Anchor: message "the unused-key event preserves exact exported MIDI bytes"
+
+S044 | checkMountedPolyphonyReveal | src/checks/rollcheck/presentation.swift
+Anchor: message "an expired same-key note does not replace the selection"
+
+S045 | checkMountedPolyphonyReveal | src/checks/rollcheck/presentation.swift
+Anchor: message "an expired same-key event leaves the viewport and cursor untouched"
+
+S046 | checkMountedPolyphonyReveal | src/checks/rollcheck/presentation.swift
+Anchor: message "an expired same-key miss preserves MIDI bytes and history"
