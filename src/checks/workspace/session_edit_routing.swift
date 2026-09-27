@@ -39,7 +39,8 @@ internal func runEditRoutingChecks(report: CheckReport, fixtureRoot: String) {
     page.attach(session: session, palette: GridPalette())
     defer { page.detach() }
     session.onChange = { [weak page] _ in page?.refreshFromDocument() }
-    let router = EditorCommandRouter(session: session, grid: grid, automation: page)
+    let ruler = RulerMenuPresenter(session: session, grid: grid, automation: page)
+    let router = EditorCommandRouter(session: session, grid: grid, automation: page, rulerMenu: ruler)
     let savedClipboard = drawerAutomationPorydawSelectionClipboardState()
     defer { savedClipboard.restore() }
     let clipboard = GridClipboard()
@@ -135,15 +136,13 @@ internal func runEditRoutingChecks(report: CheckReport, fixtureRoot: String) {
     page.clearTimeSelection()
     page.refreshPlayhead(tick: 0, playing: false)
 
-    let ruler = RulerMenuPresenter(session: session, grid: grid, automation: page)
     session.editCursor = span
     ruler.captureRulerPress(contentX: session.camera.contentX(tick: 0),
                             pointerY: grid.rulerHeight * 0.75)
     ruler.openRulerAtRelease()
     report.expect(ruler.isOpen && ruler.menuKind == 1 && ruler.targetTick() == 0 &&
                   session.editCursor == 0 && ruler.rows.count > 0 &&
-                  ruler.rows[0].actionId == 1 && ruler.rows[0].enabled &&
-                  !router.isAvailable(.insertTime),
+                  ruler.rows[0].actionId == 1 && ruler.rows[0].enabled,
                   cppID: rulerID, message: "the insert-time ruler menu anchors the edit cursor")
     let rulerIndex = document.history.undoIndex
     let rulerRevision = document.revision

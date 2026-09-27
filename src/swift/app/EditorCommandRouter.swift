@@ -12,14 +12,17 @@ public struct EditorCommandRouter {
     private unowned let session: DocumentSession
     private unowned let grid: PianoGrid
     private unowned let automation: AutomationPage
+    private unowned let rulerMenu: RulerMenuPresenter
     private let drawer: EditorDrawerPresenter?
     private let velocity: VelocityPage?
 
     public init(session: DocumentSession, grid: PianoGrid, automation: AutomationPage,
-                drawer: EditorDrawerPresenter? = nil, velocity: VelocityPage? = nil) {
+                rulerMenu: RulerMenuPresenter, drawer: EditorDrawerPresenter? = nil,
+                velocity: VelocityPage? = nil) {
         self.session = session
         self.grid = grid
         self.automation = automation
+        self.rulerMenu = rulerMenu
         self.drawer = drawer
         self.velocity = velocity
     }
@@ -30,7 +33,9 @@ public struct EditorCommandRouter {
             || drawer?.resizeActive == true || automation.pointerGestureActive
             || velocity?.hasGesture == true
     }
-    private var modalActive: Bool { automation.menuOpen || automation.promptOpen }
+    private var modalActive: Bool {
+        automation.menuOpen || automation.promptOpen || rulerMenu.insertTimePromptOpen
+    }
 
     private func targetsTimeSelection(_ command: EditCommand) -> Bool {
         timeSelectionActive && editCommandPolicy(command).rangeOperation != .none
@@ -48,6 +53,9 @@ public struct EditorCommandRouter {
             return false
         }
         if command == .delete && automation.hoverDeleteAvailable() { return true }
+        if command == .insertTime {
+            return !session.isClosed && session.editCursor < TimeDefaults.maxTick
+        }
         return grid.commandAvailable(command: command.rawValue)
     }
 
@@ -69,6 +77,10 @@ public struct EditorCommandRouter {
             _ = automation.consumeSelectionCommand(command: command)
             return
         }
+        if command == .insertTime {
+            _ = rulerMenu.openInsertTimePromptAtCursor()
+            return
+        }
         if command == .delete && automation.consumeHoverDelete() { return }
         if command == .pencilMode {
             grid.performCommand(command: command.rawValue)
@@ -86,7 +98,7 @@ extension ApplicationSession {
     var commandRouter: EditorCommandRouter? {
         guard let workspace else { return nil }
         return EditorCommandRouter(session: workspace.session, grid: workspace.grid,
-                                   automation: workspace.automationPage, drawer: workspace.drawer,
-                                   velocity: workspace.velocityPage)
+                                   automation: workspace.automationPage, rulerMenu: workspace.rulerMenu,
+                                   drawer: workspace.drawer, velocity: workspace.velocityPage)
     }
 }

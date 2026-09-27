@@ -98,7 +98,8 @@ internal func editorSelectionCommandChecks(_ report: CheckReport, suite: Documen
     page.attach(session: session, palette: GridPalette())
     defer { page.detach() }
     session.onChange = { [weak page] _ in page?.refreshFromDocument() }
-    let router = EditorCommandRouter(session: session, grid: grid, automation: page)
+    let ruler = RulerMenuPresenter(session: session, grid: grid, automation: page)
+    let router = EditorCommandRouter(session: session, grid: grid, automation: page, rulerMenu: ruler)
     let lane = AutomationParameter.controlChange(track: 0, controller: TimeDefaults.ccPan)
     document.writeLane(track: 0, lane: .controller(TimeDefaults.ccPan), from: 0,
                        through: TimeDefaults.noTick,

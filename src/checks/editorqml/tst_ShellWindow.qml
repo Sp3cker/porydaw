@@ -699,6 +699,138 @@ TestCase {
         compare(tabs.pendingCloseId, -1, "the close-all gate is fully resolved")
     }
 
+    function test_eStandaloneInsertTimeOpensMountedPrompt() {
+        var firstId = openTwoSongShell()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var menu = surface.rulerMenu
+        var timeMenu = findChild(shell, "shellTimeMenu")
+        var insert = findChild(timeMenu, "shellAction_edit.insert_time")
+        verify(insert && menu, "the selected song exposes the window Insert Time command")
+        compare(findChild(shell, "shellAction_edit.delete_time").enabled, false,
+                "an open song without a time selection cannot delete a selected range")
+        var before = grid.appliedRevisionText
+        var notesBefore = grid.noteSummary
+        var cursor = grid.editCursorTick
+        var roll = findChild(surface, "swiftRollInput")
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        keyClick(Qt.Key_I, Qt.ControlModifier | Qt.ShiftModifier)
+        tryCompare(menu, "insertTimePromptOpen", true, 3000,
+                   "the window Insert Time shortcut opens the mounted prompt without a range")
+        compare(grid.appliedRevisionText, before,
+                "opening Insert Time does not edit the selected song")
+        var bars = null
+        var beats = null
+        var fractions = null
+        tryVerify(function() {
+            bars = findChild(surface, "insertTimeBars")
+            beats = findChild(surface, "insertTimeBeats")
+            fractions = findChild(surface, "insertTimeBeatFractions")
+            return !!findChild(surface, "insertTimePrompt") && bars && beats && fractions
+        }, 3000, "the selected editor draws the existing three-field Insert Time form")
+        compare(bars.text, "1", "Insert Time starts with one displayed bar")
+        compare(beats.text, "0", "Insert Time starts with zero displayed beats")
+        compare(fractions.text, "0", "Insert Time starts with zero displayed fractions")
+        tryCompare(bars, "activeFocus", true, 3000)
+        keyClick(Qt.Key_0)
+        compare(bars.text, "0", "Cancel form accepts typed Bars input")
+        keyClick(Qt.Key_Tab)
+        tryCompare(beats, "activeFocus", true, 3000,
+                   "Cancel form Tab moves to Beats")
+        keyClick(Qt.Key_Backspace)
+        keyClick(Qt.Key_2)
+        compare(beats.text, "2", "Cancel form accepts typed Beats input")
+        mouseClick(findChild(surface, "insertTimeCancel"))
+        tryCompare(menu, "insertTimePromptOpen", false, 3000,
+                   "Cancel closes the mounted Insert Time form")
+        tryVerify(function() { return findChild(surface, "insertTimePrompt") === null },
+                  3000, "Cancel unmounts the old prompt before another command")
+        compare(grid.appliedRevisionText, before,
+                "Cancel leaves the selected document unchanged")
+        var editMenu = findChild(shell, "shellEditMenu")
+        editMenu.open()
+        timeMenu.open()
+        tryCompare(insert, "enabled", true, 3000)
+        mouseClick(insert, insert.width / 2, insert.height / 2)
+        tryCompare(menu, "insertTimePromptOpen", true, 3000,
+                   "the actual Time menu row opens the same mounted prompt")
+        tryVerify(function() {
+            return findChild(surface, "insertTimePrompt") !== null
+                && findChild(surface, "insertTimeBars") !== null
+        }, 3000, "the menu-opened form remounts for editing")
+        bars = findChild(surface, "insertTimeBars")
+        beats = findChild(surface, "insertTimeBeats")
+        verify(bars && beats, "the menu-opened form has editable numeric fields")
+        tryCompare(bars, "activeFocus", true, 3000)
+        keyClick(Qt.Key_0)
+        compare(bars.text, "0", "typing replaces the selected Bars value")
+        verify(menu.insertTimePromptMaximumBeats >= 2,
+               "the mounted song admits a two-beat input")
+        keyClick(Qt.Key_Tab)
+        tryCompare(beats, "activeFocus", true, 3000,
+                   "Tab moves editing from Bars to Beats")
+        keyClick(Qt.Key_Backspace)
+        keyClick(Qt.Key_2)
+        compare(beats.text, "2", "typing edits the actual Beats input")
+        keyClick(Qt.Key_Return)
+        tryCompare(menu, "insertTimePromptOpen", false, 3000,
+                   "Return accepts and closes the edited form")
+        tryVerify(function() { return grid.appliedRevisionText !== before }, 3000,
+                  "the accepted nonzero form changes the selected song")
+        compare(grid.editCursorTick, cursor,
+                "accepting a cursor insertion does not move the edit cursor")
+        var shifted = JSON.parse(grid.noteSummary)
+        var original = JSON.parse(notesBefore)
+        verify(original.some(function(note, index) {
+            return note.tick >= cursor && shifted[index].tick > note.tick
+        }), "the accepted form shifts drawn active-song notes")
+        var tabs = shell.shellPresenter.session.songTabs
+        var secondId = tabs.selectedId
+        var firstButton = findChild(shell.sceneLoader.item, "songTabSelect_" + firstId)
+        mouseClick(firstButton, firstButton.width / 3, firstButton.height / 2)
+        tryCompare(tabs, "selectedId", firstId)
+        var otherNotes = selectedSurface().gridModel.noteSummary
+        var secondButton = findChild(shell.sceneLoader.item, "songTabSelect_" + secondId)
+        mouseClick(secondButton, secondButton.width / 3, secondButton.height / 2)
+        tryCompare(tabs, "selectedId", secondId)
+        mouseClick(firstButton, firstButton.width / 3, firstButton.height / 2)
+        tryCompare(tabs, "selectedId", firstId)
+        compare(selectedSurface().gridModel.noteSummary, otherNotes,
+                "insertion leaves the inactive tab unchanged")
+    }
+
+    function test_eStandaloneInsertTimeZeroClickClosesWithoutEdit() {
+        openTwoSongShell()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var menu = surface.rulerMenu
+        var before = grid.appliedRevisionText
+        var notesBefore = grid.noteSummary
+        var editMenu = findChild(shell, "shellEditMenu")
+        var timeMenu = findChild(shell, "shellTimeMenu")
+        var insert = findChild(timeMenu, "shellAction_edit.insert_time")
+        editMenu.open()
+        timeMenu.open()
+        mouseClick(insert, insert.width / 2, insert.height / 2)
+        tryCompare(menu, "insertTimePromptOpen", true, 3000,
+                   "the mounted zero-span form opens through the Time menu")
+        var bars = null
+        tryVerify(function() {
+            bars = findChild(surface, "insertTimeBars")
+            return bars !== null && !!findChild(surface, "insertTimeAccept")
+        }, 3000, "the mounted zero-span form exposes Bars and OK")
+        tryCompare(bars, "activeFocus", true, 3000)
+        keyClick(Qt.Key_0)
+        compare(bars.text, "0", "the zero-span form accepts typed zero Bars")
+        mouseClick(findChild(surface, "insertTimeAccept"))
+        tryCompare(menu, "insertTimePromptOpen", false, 3000,
+                   "clicking OK closes the accepted zero-span form")
+        compare(grid.appliedRevisionText, before,
+                "a zero-span OK click preserves the selected document revision")
+        compare(grid.noteSummary, notesBefore,
+                "a zero-span OK click preserves the selected document notes")
+    }
+
     function test_eTimeAndTracksMenuContainment() {
         var timeIds = ["edit.insert_time", "edit.delete_time", "roll.duplicate_time",
                        "edit.clear_time_selection", "edit.edit_time_signature",
@@ -748,8 +880,8 @@ TestCase {
                 return findChild(editMenu, "shellAction_" + editIds[editIndex]) !== null
             }, 3000, "Edit mounts " + editIds[editIndex])
         editMenu.open()
-        compare(findChild(timeMenu, "shellAction_edit.insert_time").enabled, false,
-                "an open song without a time selection cannot insert a selected range")
+        compare(findChild(timeMenu, "shellAction_edit.insert_time").enabled, true,
+                "an open song offers standalone Insert Time")
         compare(findChild(timeMenu, "shellAction_edit.delete_time").enabled, false,
                 "an open song without a time selection cannot delete a selected range")
         compare(findChild(tracksMenu, "shellAction_roll.solo_tracks").enabled, true,
@@ -1873,7 +2005,8 @@ TestCase {
         verify(!JSON.parse(beforeNotes).some(function(note) { return note.selected }),
                "the lane-only range begins with an empty note selection")
         keySequence(StandardKey.SelectAll)
-        compare(insertTime.enabled, false, "Select All over label focus clears the time range")
+        compare(findChild(shell, "shellAction_edit.delete_time").enabled, false,
+                "Select All over label focus clears the time range")
         var activeNotes = JSON.parse(grid.noteSummary).filter(function(note) {
             return note.track === grid.trackIndex && !note.ghost
         })

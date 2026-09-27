@@ -183,7 +183,9 @@ private func checkCompoundCommandPublication(
     let automation = AutomationPage()
     automation.attach(session: session, palette: GridPalette())
     defer { automation.detach() }
-    let commands = EditorCommandRouter(session: session, grid: grid, automation: automation)
+    let ruler = RulerMenuPresenter(session: session, grid: grid, automation: automation)
+    let commands = EditorCommandRouter(session: session, grid: grid, automation: automation,
+                                       rulerMenu: ruler)
     guard let source = session.document.notes(in: 0).first else {
         report.fail(compoundCommandID, "compound command fixture has no source note")
         return

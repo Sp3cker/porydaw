@@ -27,6 +27,9 @@ Command: deno task verify:shell --filter shellwindow --verbose
 Result: PASS — build ok (0.16s); ok shellwindow (3.74s); verify 1/11 ok (10 skipped);
 run_checks PASS. Controller-run on the same frozen tree; the ledger agent did not run it.
 
+Command: deno task verify --filter swiftcore-projectsession --verbose
+Result: PASS per the Task 81 implementer GREEN lane run; the ledger agent did not run it.
+
 Command: deno task verify:shell --filter shell-transport --verbose
 Result: PASS — shell-transport 1/1 applicable (4.78s).
 
@@ -873,345 +876,88 @@ Original expression:
                     view.grid().segmentAt(source->tick).beatsPerBar == uint64_t{3})
 
 A093 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:499
-Disposition: PARTIAL
-Mapping/reason: Related predicates S192, S193, S194, S195, S196 in src/checks/workspace/session_time_routing.swift (whole-song insertion commits across tracks, shifts both tracks by 24 ticks, advances one revision, records one undo entry, and one undo restores exact bytes); unproved: the standalone Insert Time prompt flow carrying this commit — prompt open, visual defaults, key/Return delivery, advancing-playhead separation, focus restore, and the per-sequence span. Feature not yet ported: standalone Insert Time prompt flow (src/ui/songview/quick/InsertTimePrompt.qml exists but nothing instantiates it). [S192][S193][S194][S195][S196]
-Source context since previous assertion:
-        const songview::Grid::Segment segment = view.grid().segmentAt(source->tick);
-
-        QString insertDiagnostic;
-        const auto insert = [&](bool playing, const QKeySequence &bars, const QKeySequence &beats,
-                                const QKeySequence &fractions, uint64_t expectedSpan,
-                                bool acceptWithReturn) {
-            const QByteArray before = tab.document().smf().write();
-            const QByteArray inactiveBefore = session->a->document().smf().write();
-            const int undoIndex = tab.document().undoStack()->index();
-            const uint64_t revision = tab.document().revision();
-            const auto rollback = [&tab, undoIndex] {
-                while (tab.document().undoStack()->index() > undoIndex &&
-                       tab.document().undoStack()->canUndo())
-                    tab.document().undoStack()->undo();
-            };
-            if (!view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason)) {
-                insertDiagnostic = QStringLiteral("the Roll input could not establish focus");
-                return false;
-            }
-            if (checks::async_wait::waitUntil(
-                    [] { return true; },
-                    [&view] { return view.focusedTimelineBand() == songview::TimelineBand::Roll; },
-                    5000, 10) != checks::async_wait::Result::Ready) {
-                insertDiagnostic =
-                    QStringLiteral("the Roll input did not retain focus before opening");
-                return false;
-            }
-            const std::optional<songview::TimelineBand> origin = view.focusedTimelineBand();
-            if (!origin) {
-                insertDiagnostic = QStringLiteral("Insert Time had no focused timeline origin");
-                return false;
-            }
-            // Insert Time anchors on the edit cursor in every transport
-            // state: park the playhead away from it, and while playing let
-            // the playhead keep advancing under the open form.
-            const uint64_t playheadTick = source->tick == 0 ? segment.beatTicks : 0;
-            if (playing) {
-                view.setEditCursorTick(source->tick);
-                view.setPlayheadSample(tab.timeline()->sampleForTick(playheadTick), true);
-            } else {
-                window.stopPlayback();
-                view.setPlayheadSample(tab.timeline()->sampleForTick(playheadTick), false);
-                view.commitEditCursor(source->tick);
-            }
-            if (view.editCursorTick() != source->tick ||
-                uint64_t(view.playheadTick() + 0.5) == source->tick) {
-                insertDiagnostic =
-                    QStringLiteral("Insert Time could not separate the edit cursor and playhead");
-                return false;
-            }
-
-            action->trigger();
-            const InsertTimePromptSession opened = openedInsertTimePrompt(view);
-            if (!opened.window) {
-                insertDiagnostic = opened.diagnostic;
-                return false;
-            }
-            QQuickItem *const barsInput =
-                quick_popup::promptItem(*opened.popup, QLatin1String("insertTimeBars"));
-            QQuickItem *const beatsInput =
-                quick_popup::promptItem(*opened.popup, QLatin1String("insertTimeBeats"));
-            QQuickItem *const fractionsInput =
-                quick_popup::promptItem(*opened.popup, QLatin1String("insertTimeBeatFractions"));
-            if (!barsInput || !beatsInput || !fractionsInput ||
-                barsInput->property("text").toString() != QStringLiteral("1") ||
-                beatsInput->property("text").toString() != QStringLiteral("0") ||
-                fractionsInput->property("text").toString() != QStringLiteral("0")) {
-                insertDiagnostic = QStringLiteral("the Insert Time visual defaults are incorrect");
-                return false;
-            }
-            if (playing) {
-                // The form captured the edit cursor at open; the advancing
-                // playhead must not retarget the pending insertion.
-                uint64_t advancedTick = playheadTick + segment.beatTicks;
-                if (advancedTick == source->tick)
-                    advancedTick += segment.beatTicks;
-                view.setPlayheadSample(tab.timeline()->sampleForTick(advancedTick), true);
-                if (uint64_t(view.playheadTick() + 0.5) == source->tick) {
-                    insertDiagnostic = QStringLiteral(
-                        "the advancing playhead did not move under the Insert Time form");
-                    return false;
-                }
-            }
-
-            if (!enterInsertTimeValues(*opened.window, bars, beats, fractions)) {
-                insertDiagnostic =
-                    QStringLiteral("Tab did not keep Insert Time editing inside the popup");
-                return false;
-            }
-            if (acceptWithReturn)
-                QTest::keyClick(opened.window, Qt::Key_Return);
-            else if (!quick_popup::clickPromptButton(*opened.popup,
-                                                     QLatin1String("insertTimeAccept"))) {
-                insertDiagnostic = QStringLiteral("the Insert Time prompt has no OK button");
-                return false;
-            }
-            QCoreApplication::processEvents();
-
-            songview::QuickPopupSession *const popup = quick_popup::popupSession(view);
-            DocNote shifted;
-            DocNote wholeSongShifted;
-            const bool sourceFound = tab.document().findNote(source->noteId, &shifted);
-            const bool wholeSongFound =
-                tab.document().findNote(wholeSongNote->noteId, &wholeSongShifted);
-            const int actualUndoIndex = tab.document().undoStack()->index();
-            const int actualUndoCount = tab.document().undoStack()->count();
-            const uint64_t actualRevision = tab.document().revision();
-            const bool committed = popup && !popup->isOpen() && sourceFound && wholeSongFound &&
-                                   actualUndoIndex == undoIndex + 1 &&
-                                   actualRevision == revision + 1 &&
-                                   shifted.tick == source->tick + expectedSpan &&
-                                   wholeSongShifted.tick == wholeSongNote->tick + expectedSpan &&
-                                   session->a->document().smf().write() == inactiveBefore;
-            if (!committed) {
-                rollback();
-                insertDiagnostic =
-                    QStringLiteral("Insert Time commit: source %1 expected %2, whole-song %3 "
-                                   "expected %4, undo index %5 expected %6, undo count %7, "
-                                   "revision %8 expected %9")
-                        .arg(sourceFound ? QString::number(shifted.tick)
-                                         : QStringLiteral("missing"))
-                        .arg(source->tick + expectedSpan)
-                        .arg(wholeSongFound ? QString::number(wholeSongShifted.tick)
-                                            : QStringLiteral("missing"))
-                        .arg(wholeSongNote->tick + expectedSpan)
-                        .arg(actualUndoIndex)
-                        .arg(undoIndex + 1)
-                        .arg(actualUndoCount)
-                        .arg(actualRevision)
-                        .arg(revision + 1);
-                return false;
-            }
-            const bool restored =
-                checks::async_wait::waitUntil(
-                    [] { return true; },
-                    [&view, origin] { return view.focusedTimelineBand() == origin; }, 5000,
-                    10) == checks::async_wait::Result::Ready;
-            rollback();
-            if (!restored || tab.document().smf().write() != before ||
-                tab.document().undoStack()->index() != undoIndex ||
-                session->a->document().smf().write() != inactiveBefore) {
-                insertDiagnostic = QStringLiteral(
-                    "Insert Time did not restore its timeline origin and undo bytes");
-                return false;
-            }
-            return true;
-        };
-
-Original expression:
-        QVERIFY2(insert(false, QKeySequence(Qt::Key_0), QKeySequence(Qt::Key_2),
-                        QKeySequence(Qt::Key_0), 2 * segment.beatTicks, false),
-                 qUtf8Printable(insertDiagnostic))
+Disposition: MATCHED
+Mapping: S268, S269, S270, S271, S272, S273, S274, S275, S276, S277, S278
 
 A094 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:502
-Disposition: PARTIAL
-Mapping/reason: Related predicates S192, S193, S194, S195, S196 in src/checks/workspace/session_time_routing.swift (whole-song insertion commits across tracks, shifts both tracks by 24 ticks, advances one revision, records one undo entry, and one undo restores exact bytes); unproved: the standalone Insert Time prompt flow carrying this commit — prompt open, visual defaults, key/Return delivery, advancing-playhead separation, focus restore, and the per-sequence span. Feature not yet ported: standalone Insert Time prompt flow (src/ui/songview/quick/InsertTimePrompt.qml exists but nothing instantiates it). [S192][S193][S194][S195][S196]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY2(insert(true, QKeySequence(Qt::Key_1), QKeySequence(Qt::Key_0),
-                        QKeySequence(Qt::Key_0), segment.beatTicks * segment.beatsPerBar, false),
-                 qUtf8Printable(insertDiagnostic))
+Disposition: MATCHED
+Mapping: S268, S269, S270, S271, S272, S273, S274, S275, S276, S277, S278, S305, S306, S307
 
 A095 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:505
-Disposition: PARTIAL
-Mapping/reason: Related predicates S192, S193, S194, S195, S196 in src/checks/workspace/session_time_routing.swift (whole-song insertion commits across tracks, shifts both tracks by 24 ticks, advances one revision, records one undo entry, and one undo restores exact bytes); unproved: the standalone Insert Time prompt flow carrying this commit — prompt open, visual defaults, key/Return delivery, advancing-playhead separation, focus restore, and the per-sequence span. Feature not yet ported: standalone Insert Time prompt flow (src/ui/songview/quick/InsertTimePrompt.qml exists but nothing instantiates it). [S192][S193][S194][S195][S196]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY2(insert(true, QKeySequence(Qt::Key_0), QKeySequence(Qt::Key_0),
-                        QKeySequence(Qt::Key_1), (segment.beatTicks + 3) / 4, true),
-                 qUtf8Printable(insertDiagnostic))
+Disposition: MATCHED
+Mapping: S268, S269, S270, S271, S272, S273, S274, S275, S276, S277, S278, S305, S306, S307
 
 A096 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:518
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-
-        const QByteArray beforeZero = tab.document().smf().write();
-        const QByteArray inactiveBeforeZero = session->a->document().smf().write();
-        const int zeroUndo = tab.document().undoStack()->index();
-        const int zeroUndoCount = tab.document().undoStack()->count();
-        const uint64_t zeroRevision = tab.document().revision();
-        window.stopPlayback();
-        view.commitEditCursor(source->tick);
-        action->trigger();
-        const InsertTimePromptSession zero = openedInsertTimePrompt(view);
-Original expression:
-        QVERIFY2(zero.window && zero.popup, qUtf8Printable(zero.diagnostic))
+Disposition: RETIRED-REPRESENTATION
+Mapping: fork-verified native QuickPopupSession/QQuickWindow pointer pair at Reference revision 5f768e3 (openedInsertTimePrompt returns window+popup; QVERIFY2(zero.window && zero.popup) pins pointer identity, not a visible outcome)
 
 A097 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:519
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY2(enterInsertTimeValues(*zero.window, QKeySequence(Qt::Key_0),
-                                       QKeySequence(Qt::Key_0), QKeySequence(Qt::Key_0)),
-                 "the zero-span Insert Time fields could not be edited")
+Disposition: MATCHED
+Mapping: S300, S301, S298, S299
 
 A098 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:522
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY2(quick_popup::clickPromptButton(*zero.popup, QLatin1String("insertTimeAccept")),
-                 "the zero-span Insert Time prompt has no OK button")
+Disposition: MATCHED
+Mapping: S300, S302
 
 A099 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:526
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        QCoreApplication::processEvents();
-        songview::QuickPopupSession *const popup = quick_popup::popupSession(view);
-Original expression:
-        QVERIFY(popup && !popup->isOpen())
+Disposition: MATCHED
+Mapping: S302
 
 A100 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:527
-Disposition: PARTIAL
-Mapping/reason: Related predicates S204, S216 in src/checks/workspace/session_time_routing.swift (zero-span insertion leaves bytes and revision untouched; zero-span insertion records no history); unproved: the standalone Insert Time prompt ingress — no Swift predicate opens the prompt form and accepts a zero span. Feature not yet ported: standalone Insert Time prompt flow (src/ui/songview/quick/InsertTimePrompt.qml exists but nothing instantiates it). [S204][S216]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(tab.document().smf().write(), beforeZero)
+Disposition: MATCHED
+Mapping: S280, S304
 
 A101 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:528
-Disposition: PARTIAL
-Mapping/reason: Related predicates S204, S216 in src/checks/workspace/session_time_routing.swift (zero-span insertion leaves bytes and revision untouched; zero-span insertion records no history); unproved: the standalone Insert Time prompt ingress — no Swift predicate opens the prompt form and accepts a zero span. Feature not yet ported: standalone Insert Time prompt flow (src/ui/songview/quick/InsertTimePrompt.qml exists but nothing instantiates it). [S204][S216]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(tab.document().undoStack()->index(), zeroUndo)
+Disposition: MATCHED
+Mapping: S283
 
 A102 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:529
-Disposition: PARTIAL
-Mapping/reason: Related predicates S204, S216 in src/checks/workspace/session_time_routing.swift (zero-span insertion leaves bytes and revision untouched; zero-span insertion records no history); unproved: the standalone Insert Time prompt ingress — no Swift predicate opens the prompt form and accepts a zero span. Feature not yet ported: standalone Insert Time prompt flow (src/ui/songview/quick/InsertTimePrompt.qml exists but nothing instantiates it). [S204][S216]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(tab.document().undoStack()->count(), zeroUndoCount)
+Disposition: MATCHED
+Mapping: S283
 
 A103 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:530
-Disposition: PARTIAL
-Mapping/reason: Related predicates S204, S216 in src/checks/workspace/session_time_routing.swift (zero-span insertion leaves bytes and revision untouched; zero-span insertion records no history); unproved: the standalone Insert Time prompt ingress — no Swift predicate opens the prompt form and accepts a zero span. Feature not yet ported: standalone Insert Time prompt flow (src/ui/songview/quick/InsertTimePrompt.qml exists but nothing instantiates it). [S204][S216]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(tab.document().revision(), zeroRevision)
+Disposition: MATCHED
+Mapping: S282, S303
 
 A104 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:531
-Disposition: GAP
-Mapping/reason: GAP (feature not yet ported): the standalone no-selection Insert Time bars/beats prompt does not exist in the Swift app — Insert Time is gated on a time selection (ShellPresenter.actionEnabled, matched by S191: an open song without a time selection cannot insert a selected range), so no predicate observes the zero-span accepted prompt leaving the MIDI bytes unchanged.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(session->a->document().smf().write(), inactiveBeforeZero)
+Disposition: MATCHED
+Mapping: S281
 
 A105 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:538
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-
-        const QByteArray beforeCancel = tab.document().smf().write();
-        const int cancelUndo = tab.document().undoStack()->index();
-        const uint64_t cancelRevision = tab.document().revision();
-        action->trigger();
-        const InsertTimePromptSession cancelled = openedInsertTimePrompt(view);
-Original expression:
-        QVERIFY2(cancelled.window && cancelled.popup, qUtf8Printable(cancelled.diagnostic))
+Disposition: RETIRED-REPRESENTATION
+Mapping: fork-verified native QuickPopupSession/QQuickWindow pointer pair at Reference revision 5f768e3 (openedInsertTimePrompt returns window+popup; QVERIFY2(cancelled.window && cancelled.popup) pins pointer identity, not a visible outcome)
 
 A106 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:539
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY2(enterInsertTimeValues(*cancelled.window, QKeySequence(Qt::Key_1),
-                                       QKeySequence(Qt::Key_0), QKeySequence(Qt::Key_0)),
-                 "the cancellation Insert Time fields could not be edited")
+Disposition: MATCHED
+Mapping: S308, S309, S310
 
 A107 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:542
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY2(
-            quick_popup::clickPromptButton(*cancelled.popup, QLatin1String("insertTimeCancel")),
-            "the Insert Time prompt has no Cancel button")
+Disposition: MATCHED
+Mapping: S293
 
 A108 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:546
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        QCoreApplication::processEvents();
-Original expression:
-        QVERIFY(popup && !popup->isOpen())
+Disposition: MATCHED
+Mapping: S293, S294
 
 A109 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:547
-Disposition: GAP
-Mapping/reason: GAP (feature not yet ported): the standalone no-selection Insert Time bars/beats prompt does not exist in the Swift app — Insert Time is gated on a time selection (S191), so no predicate observes the cancelled prompt leaving the MIDI bytes unchanged.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(tab.document().smf().write(), beforeCancel)
+Disposition: MATCHED
+Mapping: S285, S295
 
 A110 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:548
-Disposition: GAP
-Mapping/reason: GAP (feature not yet ported): the standalone no-selection Insert Time bars/beats prompt does not exist in the Swift app — Insert Time is gated on a time selection (S191), so no predicate observes the cancelled prompt leaving the undo-stack index unchanged.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(tab.document().undoStack()->index(), cancelUndo)
+Disposition: MATCHED
+Mapping: S287
 
 A111 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:549
-Disposition: GAP
-Mapping/reason: GAP (feature not yet ported): the standalone no-selection Insert Time bars/beats prompt does not exist in the Swift app — Insert Time is gated on a time selection (S191), so no predicate observes the cancelled prompt leaving the document revision unchanged.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(tab.document().revision(), cancelRevision)
+Disposition: MATCHED
+Mapping: S286
 
 A112 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:553
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-
-        action->trigger();
-        const InsertTimePromptSession stale = openedInsertTimePrompt(view);
-Original expression:
-        QVERIFY2(stale.window && stale.popup, qUtf8Printable(stale.diagnostic))
+Disposition: RETIRED-REPRESENTATION
+Mapping: fork-verified native QuickPopupSession/QQuickWindow pointer pair at Reference revision 5f768e3 (openedInsertTimePrompt returns window+popup; QVERIFY2(stale.window && stale.popup) pins pointer identity, not a visible outcome)
 
 A113 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:554
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S288 in src/checks/workspace/session_time_routing.swift (the stale form accepts after a real intervening time-signature edit and closes with no further change); unproved residue: mounted stale field delivery — no tst_ShellWindow.qml predicate types Tab-separated values into a stale form, and no Swift predicate observes field-level entry. [S288]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1220,8 +966,8 @@ Original expression:
                  "the stale Insert Time fields could not be edited")
 
 A114 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:563
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S288 in src/checks/workspace/session_time_routing.swift (stale acceptance after the intervening edit closes with no further change); unproved residue: mounted stale OK-button delivery — no QML predicate clicks OK on a stale form (the clickPromptButton insertTimeAccept path). [S288]
 Source context since previous assertion:
         tab.document().setTimeSig(source->tick + 1, 3, 5);
         const QByteArray afterInterveningEdit = tab.document().smf().write();
@@ -1235,44 +981,28 @@ Original expression:
                 "the stale Insert Time prompt has no OK button")
 
 A115 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:567
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S288 in src/checks/workspace/session_time_routing.swift (stale acceptance closes the presenter form); unproved residue: native popup closure and mounted stale close delivery — no QML predicate opens a stale form and observes its close. [S288]
 Source context since previous assertion:
         QCoreApplication::processEvents();
 Original expression:
         QVERIFY(popup && !popup->isOpen())
 
 A116 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:568
-Disposition: GAP
-Mapping/reason: GAP (feature not yet ported): the standalone no-selection Insert Time bars/beats prompt does not exist in the Swift app — Insert Time is gated on a time selection (S191), so no predicate observes the stale prompt leaving the MIDI bytes unchanged.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(tab.document().smf().write(), afterInterveningEdit)
+Disposition: MATCHED
+Mapping: S289
 
 A117 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:569
-Disposition: GAP
-Mapping/reason: GAP (feature not yet ported): the standalone no-selection Insert Time bars/beats prompt does not exist in the Swift app — Insert Time is gated on a time selection (S191), so no predicate observes the stale prompt leaving the undo-stack index unchanged.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(tab.document().undoStack()->index(), staleUndo)
+Disposition: MATCHED
+Mapping: S291
 
 A118 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:570
-Disposition: GAP
-Mapping/reason: GAP (feature not yet ported): the standalone no-selection Insert Time bars/beats prompt does not exist in the Swift app — Insert Time is gated on a time selection (S191), so no predicate observes the stale prompt leaving the undo-stack count unchanged.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(tab.document().undoStack()->count(), staleUndoCount)
+Disposition: MATCHED
+Mapping: S292
 
 A119 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:571
-Disposition: GAP
-Mapping/reason: GAP (feature not yet ported): the standalone no-selection Insert Time bars/beats prompt does not exist in the Swift app — Insert Time is gated on a time selection (S191), so no predicate observes the stale prompt leaving the document revision unchanged.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(tab.document().revision(), staleRevision)
+Disposition: MATCHED
+Mapping: S290
 
 A120 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:578
 Disposition: GAP
@@ -2669,7 +2399,7 @@ S190 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/
 Anchor: message "a Volume-only deletion preserves all notes"
 
 S191 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "an open song without a time selection cannot insert a selected range"
+Anchor: message "an open song without a time selection cannot delete a selected range"
 
 S192 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
 Anchor: message "whole-song insertion commits across tracks"
@@ -2898,3 +2628,132 @@ Anchor: message "Paste consumes the time range and disables Insert Time"
 
 S267 | test_timeRangeSelectionKeys | src/checks/editorqml/tst_ShellClipboard.qml
 Anchor: message "Paste consumes the time range and disables Delete Time"
+
+S268 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "\(label) admits standalone Insert Time without a range"
+
+S269 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "\(label) displays the captured 3/64 defaults"
+
+S270 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "\(label) opens at the edit cursor without seeking or editing"
+
+S271 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "\(label) shifts the first track by the exact span"
+
+S272 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "\(label) shifts the second track by the exact span"
+
+S273 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "\(label) commits one revision"
+
+S274 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "\(label) records one undo entry"
+
+S275 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "\(label) leaves the inactive song's bytes unchanged"
+
+S276 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "\(label) acceptance closes the form"
+
+S277 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "\(label) one undo restores exact MIDI bytes"
+
+S278 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "\(label) one undo restores the history index"
+
+S279 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "zero acceptance closes the standalone form"
+
+S280 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "zero acceptance leaves active MIDI bytes unchanged"
+
+S281 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "zero acceptance leaves inactive MIDI bytes unchanged"
+
+S282 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "zero acceptance preserves revision"
+
+S283 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "zero acceptance preserves history"
+
+S284 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "Cancel closes the standalone form"
+
+S285 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "Cancel preserves active MIDI bytes"
+
+S286 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "Cancel preserves revision"
+
+S287 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "Cancel preserves history"
+
+S288 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "stale acceptance closes the form"
+
+S289 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "stale acceptance preserves the intervening MIDI bytes"
+
+S290 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "stale acceptance preserves the intervening revision"
+
+S291 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "stale acceptance preserves the undo index"
+
+S292 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "stale acceptance preserves the undo count"
+
+S293 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Cancel closes the mounted Insert Time form"
+
+S294 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Cancel unmounts the old prompt before another command"
+
+S295 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Cancel leaves the selected document unchanged"
+
+S296 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the menu-opened form has editable numeric fields"
+
+S297 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "typing replaces the selected Bars value"
+
+S298 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Tab moves editing from Bars to Beats"
+
+S299 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "typing edits the actual Beats input"
+
+S300 | test_eStandaloneInsertTimeZeroClickClosesWithoutEdit | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the mounted zero-span form exposes Bars and OK"
+
+S301 | test_eStandaloneInsertTimeZeroClickClosesWithoutEdit | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the zero-span form accepts typed zero Bars"
+
+S302 | test_eStandaloneInsertTimeZeroClickClosesWithoutEdit | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "clicking OK closes the accepted zero-span form"
+
+S303 | test_eStandaloneInsertTimeZeroClickClosesWithoutEdit | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "a zero-span OK click preserves the selected document revision"
+
+S304 | test_eStandaloneInsertTimeZeroClickClosesWithoutEdit | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "a zero-span OK click preserves the selected document notes"
+
+S305 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "\(label) advances the playing playhead under the prompt"
+
+S306 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "\(label) advancing playhead keeps the captured prompt open"
+
+S307 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "\(label) advancing playhead preserves the captured edit cursor"
+
+S308 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Cancel form accepts typed Bars input"
+
+S309 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Cancel form Tab moves to Beats"
+
+S310 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Cancel form accepts typed Beats input"

@@ -263,6 +263,14 @@ public final class RulerMenuPresenter {
         return false
     }
 
+    public func openInsertTimePromptAtCursor() -> Bool {
+        guard !session.isClosed, session.editCursor < TimeDefaults.maxTick,
+              session.timeSelection?.isActive != true else { return false }
+        capturedTick = session.editCursor
+        openInsertTimePrompt()
+        return true
+    }
+
     private func openInsertTimePrompt() {
         let segment = session.projectionCache.timeAxis.segmentAt(capturedTick)
         pendingInsert = (capturedTick, session.document.revision,

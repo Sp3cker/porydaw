@@ -188,7 +188,9 @@ private func checkKeyboardDuplicatePrefersTimeSelection(
         page.applyTimeSelection(AutomationTimeSelection(
             range: TimeRange(startTick: source.tick, endTick: source.tick + fixture.step),
             scope: .tracks([source.track])))
-        let router = EditorCommandRouter(session: session, grid: fixture.grid, automation: page)
+        let ruler = RulerMenuPresenter(session: session, grid: fixture.grid, automation: page)
+        let router = EditorCommandRouter(session: session, grid: fixture.grid, automation: page,
+                                         rulerMenu: ruler)
         let before = session.document.history.currentIdentity
         router.perform(.duplicate)
         let copy = fixture.note(at: source.tick + fixture.step)

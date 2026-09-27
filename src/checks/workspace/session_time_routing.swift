@@ -42,19 +42,125 @@ internal func runTimeRoutingChecks(report: CheckReport, suite: DocumentSession,
     defer { page.detach() }
     session.onChange = { [weak page] _ in page?.refreshFromDocument() }
     session.selectedTrack = 0
-    let router = EditorCommandRouter(session: session, grid: grid, automation: page)
+    let ruler = RulerMenuPresenter(session: session, grid: grid, automation: page)
+    let router = EditorCommandRouter(session: session, grid: grid, automation: page, rulerMenu: ruler)
     guard let source = document.notes(in: 0).first(where: { $0.tick == 0 }),
           let inside = document.notes(in: 0).first(where: { $0.tick == 24 }),
           let seam = document.notes(in: 0).first(where: { $0.tick == 48 }),
           let later = document.notes(in: 0).first(where: { $0.tick == 96 }),
           let otherInside = document.notes(in: 1).first(where: { $0.tick == 24 }),
           let otherLater = document.notes(in: 1).first(where: { $0.tick == 120 }),
-          let original = try? document.state.file.encoded()
+          let original = try? document.state.file.encoded(),
+          let inactiveBytes = try? suite.document.state.file.encoded()
     else {
         report.fail(insertID, "two-track time routing fixture did not encode or project notes")
         return
     }
     let originalIndex = document.history.undoIndex
+    document.setTimeSignature(tick: 0, numerator: 3, denominatorPower: 6)
+    guard let promptBytes = try? document.state.file.encoded() else {
+        report.fail(insertID, "3/64 insertion fixture did not encode")
+        return
+    }
+    session.editCursor = 20
+    for (label, bars, beats, fractions, shift, playing) in [
+        ("stopped two beats", 0, 2, 0, Tick(2), false),
+        ("playing one bar", 1, 0, 0, Tick(3), true),
+        ("playing quarter beat", 0, 0, 1, Tick(1), true),
+    ] {
+        let beforeRevision = document.revision
+        let beforeIndex = document.history.undoIndex
+        page.refreshPlayhead(tick: 96, playing: playing)
+        report.expect(router.isAvailable(.insertTime), cppID: insertID,
+                      message: "\(label) admits standalone Insert Time without a range")
+        router.perform(.insertTime)
+        report.expect(ruler.insertTimePromptOpen && ruler.insertTimePromptInitialBars == 1
+                      && ruler.insertTimePromptInitialBeats == 0
+                      && ruler.insertTimePromptInitialBeatFractions == 0
+                      && ruler.insertTimePromptMaximumBeats == 2,
+                      cppID: insertID, message: "\(label) displays the captured 3/64 defaults")
+        report.expect(document.revision == beforeRevision && session.editCursor == 20
+                      && page.contextTick == (playing ? 96 : 20),
+                      cppID: insertID, message: "\(label) opens at the edit cursor without seeking or editing")
+        if playing {
+            page.refreshPlayhead(tick: 120, playing: true)
+            report.expect(page.contextTick == 120, cppID: insertID,
+                          message: "\(label) advances the playing playhead under the prompt")
+            report.expect(ruler.insertTimePromptOpen, cppID: insertID,
+                          message: "\(label) advancing playhead keeps the captured prompt open")
+            report.expect(session.editCursor == 20, cppID: insertID,
+                          message: "\(label) advancing playhead preserves the captured edit cursor")
+        }
+        ruler.acceptInsertTimePrompt(bars: bars, beats: beats, fractions: fractions)
+        report.expect(document.note(inside.id)?.tick == 24 + shift,
+                      cppID: insertID, message: "\(label) shifts the first track by the exact span")
+        report.expect(document.note(otherInside.id)?.tick == 24 + shift,
+                      cppID: insertID, message: "\(label) shifts the second track by the exact span")
+        report.expectEqual(expected: beforeRevision + 1, actual: document.revision,
+                           cppID: insertID, what: "\(label) commits one revision")
+        report.expectEqual(expected: beforeIndex + 1, actual: document.history.undoIndex,
+                           cppID: insertID, what: "\(label) records one undo entry")
+        report.expect((try? suite.document.state.file.encoded()) == inactiveBytes,
+                      cppID: insertID, message: "\(label) leaves the inactive song's bytes unchanged")
+        report.expect(!ruler.insertTimePromptOpen, cppID: insertID,
+                      message: "\(label) acceptance closes the form")
+        report.expect(document.history.undoDocument()
+                      && (try? document.state.file.encoded()) == promptBytes,
+                      cppID: insertID, message: "\(label) one undo restores exact MIDI bytes")
+        report.expectEqual(expected: beforeIndex, actual: document.history.undoIndex,
+                           cppID: insertID, what: "\(label) one undo restores the history index")
+    }
+    page.refreshPlayhead(tick: 0, playing: false)
+    let noOpRevision = document.revision
+    let noOpIndex = document.history.undoIndex
+    let noOpCount = document.history.undoCount
+    router.perform(.insertTime)
+    ruler.acceptInsertTimePrompt(bars: 0, beats: 0, fractions: 0)
+    report.expect(!ruler.insertTimePromptOpen, cppID: insertID,
+                  message: "zero acceptance closes the standalone form")
+    report.expect((try? document.state.file.encoded()) == promptBytes,
+                  cppID: insertID, message: "zero acceptance leaves active MIDI bytes unchanged")
+    report.expect((try? suite.document.state.file.encoded()) == inactiveBytes,
+                  cppID: insertID, message: "zero acceptance leaves inactive MIDI bytes unchanged")
+    report.expectEqual(expected: noOpRevision, actual: document.revision, cppID: insertID,
+                       what: "zero acceptance preserves revision")
+    report.expect(document.history.undoIndex == noOpIndex
+                  && document.history.undoCount == noOpCount,
+                  cppID: insertID, message: "zero acceptance preserves history")
+    router.perform(.insertTime)
+    ruler.cancelInsertTimePrompt()
+    report.expect(!ruler.insertTimePromptOpen, cppID: insertID,
+                  message: "Cancel closes the standalone form")
+    report.expect((try? document.state.file.encoded()) == promptBytes,
+                  cppID: insertID, message: "Cancel preserves active MIDI bytes")
+    report.expectEqual(expected: noOpRevision, actual: document.revision, cppID: insertID,
+                       what: "Cancel preserves revision")
+    report.expect(document.history.undoIndex == noOpIndex
+                  && document.history.undoCount == noOpCount,
+                  cppID: insertID, message: "Cancel preserves history")
+    router.perform(.insertTime)
+    document.setTimeSignature(tick: 48, numerator: 4, denominatorPower: 2)
+    guard let interveningBytes = try? document.state.file.encoded() else {
+        report.fail(insertID, "intervening time-signature edit did not encode")
+        return
+    }
+    let interveningRevision = document.revision
+    let interveningIndex = document.history.undoIndex
+    let interveningCount = document.history.undoCount
+    ruler.acceptInsertTimePrompt(bars: 1, beats: 0, fractions: 0)
+    report.expect(!ruler.insertTimePromptOpen, cppID: insertID,
+                  message: "stale acceptance closes the form")
+    report.expect((try? document.state.file.encoded()) == interveningBytes,
+                  cppID: insertID, message: "stale acceptance preserves the intervening MIDI bytes")
+    report.expectEqual(expected: interveningRevision, actual: document.revision, cppID: insertID,
+                       what: "stale acceptance preserves the intervening revision")
+    report.expectEqual(expected: interveningIndex, actual: document.history.undoIndex,
+                       cppID: insertID, what: "stale acceptance preserves the undo index")
+    report.expectEqual(expected: interveningCount, actual: document.history.undoCount,
+                       cppID: insertID, what: "stale acceptance preserves the undo count")
+    _ = document.history.undoDocument()
+    _ = document.history.undoDocument()
+
 
     func expectSingleRevisionEntry(revision: UInt64, revisionWhat: String, undoWhat: String, cppID: String) {
         report.expectEqual(expected: revision + 1, actual: document.revision, cppID: cppID, what: revisionWhat)
