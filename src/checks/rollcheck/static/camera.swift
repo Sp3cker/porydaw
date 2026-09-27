@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 
 private let cameraTransformID = "swiftcore/EditorCamera::transformsAndBounds"
@@ -209,6 +209,11 @@ func runEditorCameraChecks(_ report: CheckReport) {
 @MainActor
 private func checkAffineCameraProjection(_ report: CheckReport, limits: EditorCamera.Limits) {
     let id = "swiftcore/EditorCamera::affineCameraProjection"
+    let axis = TimeAxis(map: TimeMap(ticksPerBeat: 24, lengthTicks: 4_800))
+    let metrics = GridMetrics(baseFontPx: 13, dpr: 1, width: 960, height: 320,
+                              timeAxis: axis)
+    var grid = RollGrid(axis: axis, clockTicks: 1, metrics: metrics)
+    grid.setSelection(.musical(16))
     // camera.cpp affineCameraProjection_data: fixture scale/offset and tick 24's x.
     for (pixelsPerBeat, scrollX, expectedX) in [(37.125, 0.375, 36.75),
                                                 (37.375, 13.625, 23.75),
@@ -233,6 +238,32 @@ private func checkAffineCameraProjection(_ report: CheckReport, limits: EditorCa
                 }
             }
         }
+        var inverse = true
+        var advances = true
+        var visible = 0
+        var tick: Tick = 0
+        while tick < TimeDefaults.maxTick {
+            let projected = camera.contentX(tick: Double(tick))
+            if projected >= 960 { break }
+            if projected >= 0 {
+                visible += 1
+                for origin in [0.0, 0.25] {
+                    for dpr in [1.0, 2.0] {
+                        let displayed = camera.displayX(tick: Double(tick), origin: origin, dpr: dpr)
+                        let recovered = camera.tickAtContentX(displayed - origin)
+                        inverse = inverse && grid.snapTick(recovered, camera: camera) == tick
+                    }
+                }
+            }
+            let next = grid.nextSnapTickAfter(tick, camera: camera)
+            advances = advances && next > tick
+            if next <= tick { break }
+            tick = next
+        }
+        report.expect(visible >= 2 && inverse, cppID: id,
+                      message: "A083 all visible affine lattice ticks survive snapped DPR inverse projection")
+        report.expect(advances, cppID: id,
+                      message: "A084 each affine lattice successor strictly advances")
     }
 }
 

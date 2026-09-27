@@ -662,11 +662,15 @@ private func checkDrumPadLabels(_ report: CheckReport) {
         playhead.attach(session: session, audio: nil, grid: grid, drawer: nil)
         playhead.setFollowEnabled(false)
         defer { playhead.detach() }
+        report.expect(currentProgram(at: 0) == 11 && synchronizedLabel() == names?[37],
+                      cppID: id, message: "A079 the initial drum voice still owns pad names after synchronization")
         report.expect(currentProgram(at: 0) == 11
                           && synchronizedLabel() == "fixture_named_pad_long_label_123",
                       cppID: id, message: "A080 the initial program classifies the synchronized pad")
         session.editCursor = later
         grid.refreshCursorPresentation()
+        report.expect(currentProgram(at: session.editCursor) == 0,
+                      cppID: id, message: "A081 the later edit cursor resolves the melodic program")
         report.expect(currentProgram(at: session.editCursor) == 0
                           && synchronizedLabel() == "fixture_named_pad_long_label_123",
                       cppID: id, message: "A082 a later melodic cursor program keeps the initial drum label")
@@ -674,12 +678,18 @@ private func checkDrumPadLabels(_ report: CheckReport) {
         let playback = later + Tick(session.document.ticksPerBeat)
         playhead.observe(sample: session.timeline.sample(for: playback),
                          transport: SharedPlayheadPolicy.playingTransport)
+        report.expect(playhead.playing && playhead.tick >= Double(later),
+                      cppID: id, message: "A083 the playing presenter advances past the later program event")
+        report.expect(currentProgram(at: TimeDefaults.tick(from: playhead.tick)) == 0,
+                      cppID: id, message: "A084 the later playhead resolves the melodic program")
         report.expect(playhead.playing && playhead.tick >= Double(later)
                           && currentProgram(at: TimeDefaults.tick(from: playhead.tick)) == 0
                           && synchronizedLabel() == "fixture_named_pad_long_label_123",
                       cppID: id, message: "A085 a later melodic playhead program keeps the initial drum label")
         playhead.observe(sample: session.timeline.sample(for: 0),
                          transport: SharedPlayheadPolicy.playingTransport)
+        report.expect(currentProgram(at: TimeDefaults.tick(from: playhead.tick)) == 11,
+                      cppID: id, message: "A086 the reset playhead resolves the original drum program")
         report.expect(playhead.playing && playhead.tick == 0
                           && currentProgram(at: TimeDefaults.tick(from: playhead.tick)) == 11
                           && synchronizedLabel() == "fixture_named_pad_long_label_123",

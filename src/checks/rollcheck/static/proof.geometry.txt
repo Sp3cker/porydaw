@@ -35,6 +35,9 @@ Result: PASS; 1/36 ok (implementer-reported GREEN on frozen checks; this proof-o
 Command: deno task verify:shell --filter shell-note-visuals --verbose (task-93 implementer run)
 Result: PASS; 1/26 ok including physical DPR2 ring/border/face pixel readback (implementer-reported GREEN; this proof-only pass ran no lane).
 Verified note-visuals QML SHA-256: 7996c1fcb13cc466741d6c41a92f10ceba34573221fd4fa58dd18069ddae78b9 (src/checks/editorqml/tst_ShellNoteVisuals.qml).
+Command: deno task verify --filter swiftcore-projectsession --verbose (task-105 implementer run)
+Result: PASS; 1/36 ok, including the tick-ceiling walk (proof-only reconciliation ran no lane).
+Verified task-105 Swift SHA-256: 06c442a1b0bc5a0a770ab2811c9fd748ef17ab895e0bd0b04670071cea402885 (src/checks/rollcheck/static/geometry.swift).
 
 A001 | PianoRollStaticTest::fallbackCamera | src/checks/rollcheck/static/geometry.cpp:117
 Disposition: RETIRED-REPRESENTATION
@@ -191,29 +194,12 @@ Original expression:
   QCOMPARE(segment.beatsPerBar, kBeatsPerBar)
 
 A018 | PianoRollStaticTest::tickCeilingDoesNotWrap | src/checks/rollcheck/static/geometry.cpp:177
-Disposition: GAP
-Mapping/reason: GAP; no executing predicate walks grid lines at the tick ceiling. The nearest executed grid-mark predicate (src/checks/rollcheck/EditorGridCameraChecks.swift) culls generated marks inside one viewport and never approaches CoreTimeDefaults kMaxTick, so the ceiling traversal stays unproved.
-Source context since previous assertion:
-  ;
-  }
-
-  void PianoRollStaticTest::tickCeilingDoesNotWrap()
-  {
-      BareView fixture;
-      std::vector<Tick> ticks;
-      fixture.view.forEachGridLine(CoreTimeDefaults::kMaxTick - kTicksPerBeat,
-                                   CoreTimeDefaults::kNoTick,
-                                   [&ticks](Tick tick, bool, int, int) { ticks.push_back(tick); });
-Original expression:
-  QVERIFY(ticks.size() <= 1)
+Disposition: MATCHED
+Mapping: S087 — production TimeAxis.forEachGridLine from maxTick - 24 to the no-tick sentinel emits at most one beat.
 
 A019 | PianoRollStaticTest::tickCeilingDoesNotWrap | src/checks/rollcheck/static/geometry.cpp:178
-Disposition: GAP
-Mapping/reason: GAP; no executing predicate excludes a wrapped ceiling beat. The nearest executed grid-mark predicate (src/checks/rollcheck/EditorGridCameraChecks.swift) never approaches CoreTimeDefaults kMaxTick, so the wrap exclusion stays unproved.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(ticks.empty() || ticks.front() >= CoreTimeDefaults::kMaxTick - kTicksPerBeat)
+Disposition: MATCHED
+Mapping: S088 — the same ceiling walk emits no beat below maxTick - 24.
 
 A020 | PianoRollStaticTest::preRollRulerShade | src/checks/rollcheck/static/geometry.cpp:185
 Disposition: RETIRED-REPRESENTATION
@@ -702,3 +688,9 @@ Anchor: message "the pre-zero ruler has room for a caption probe"
 
 S086 | test_preRollPadAndRulerRaster | src/checks/editorqml/tst_ShellNoteVisuals.qml
 Anchor: message "no placeholder caption paints before tick zero"
+
+S087 | checkCeilingGridWalk | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A018 the tick-ceiling grid walk emits at most one beat"
+
+S088 | checkCeilingGridWalk | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A019 the tick-ceiling grid walk never wraps to a low beat"

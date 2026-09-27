@@ -5,6 +5,7 @@ import PorydawCore
 @MainActor
 func runGeometryChecks(_ report: CheckReport, session: DocumentSession) {
     checkFallbackAndSignatureBind(report, session: session)
+    checkCeilingGridWalk(report)
     checkDefaultBindKeepsGeometry(report)
     checkTicksPerBeatKeepsGeometry(report)
     checkScaleProjectionInvariants(report, session: session)
@@ -60,6 +61,23 @@ private func checkFallbackAndSignatureBind(_ report: CheckReport, session: Docum
     report.expect((1...8).allSatisfy {
         abs(session.camera.contentX(tick: Double($0 * 24)) - before[$0 - 1]) <= 1e-6
     }, cppID: bindID, message: "A050 binding 3/4 preserves beat content positions")
+}
+
+@MainActor
+private func checkCeilingGridWalk(_ report: CheckReport) {
+    let id = "rollcheck/PianoRollStaticTest::tickCeilingDoesNotWrap"
+    let floor = TimeDefaults.maxTick - 24
+    let axis = TimeAxis(map: TimeMap(ticksPerBeat: 24))
+    var count = 0
+    var smallest = TimeDefaults.noTick
+    axis.forEachGridLine(from: floor, to: TimeDefaults.noTick) { tick, _, _, _ in
+        count += 1
+        smallest = min(smallest, tick)
+    }
+    report.expect(count <= 1, cppID: id,
+                  message: "A018 the tick-ceiling grid walk emits at most one beat")
+    report.expect(count == 0 || smallest >= floor, cppID: id,
+                  message: "A019 the tick-ceiling grid walk never wraps to a low beat")
 }
 
 private func geometryCamera(lengthTicks: UInt64? = nil,

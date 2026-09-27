@@ -59,6 +59,7 @@ func runEditorGridCameraChecks(_ report: CheckReport, session: DocumentSession) 
     checkTrackOwnerRemap(report, session: session)
     checkFractionalGridLattice(report, session: session)
     checkContentWindowBoundaryReversal(report)
+    checkScratchDoubleDraw(report, session: session, grid: grid)
 }
 
 @MainActor
@@ -114,6 +115,18 @@ private func checkFractionalGridLattice(_ report: CheckReport, session: Document
     report.expect(session.grid.nextSubdivisionTickAfter(96, camera: session.camera) == 96 + coarse
         && session.grid.nextSubdivisionTickAfter(97, camera: session.camera) == 96 + coarse,
                   cppID: latticeID, message: "subdivision restarts at the segment anchor")
+    var firstOutside: [Tick] = []
+    session.grid.forEachSubdivision(from: 97, to: 98, camera: session.camera) { tick, _ in
+        firstOutside.append(tick)
+    }
+    report.expect(firstOutside.isEmpty, cppID: latticeID,
+                  message: "A032 a first candidate beyond the window emits no subdivision")
+    var crossingBeat: [Tick] = []
+    session.grid.forEachSubdivision(from: 95, to: 110, camera: session.camera) { tick, _ in
+        crossingBeat.append(tick)
+    }
+    report.expect(crossingBeat == [102, 108], cppID: latticeID,
+                  message: "A033 the pre-seam lattice skips the beat but resumes at ticks 102 and 108")
     let midpoint = 96.0 + Double(snap) / 2
     report.expect(session.grid.snapTick(midpoint, camera: session.camera) == 96
         && session.grid.snapTick(midpoint - 0.25, camera: session.camera) == 96
@@ -141,9 +154,69 @@ private func checkFractionalGridLattice(_ report: CheckReport, session: Document
         && session.grid.nextSubdivisionTickAfter(101, camera: session.camera) == 102
         && session.grid.nextSubdivisionTickAfter(102, camera: session.camera) == 102 + coarse,
                   cppID: latticeID, message: "sub-grid restarts at the signature seam")
+    var seamWalk: [Tick] = []
+    session.grid.forEachSubdivision(from: 95, to: 130, camera: session.camera) { tick, _ in
+        seamWalk.append(tick)
+    }
+    report.expect(seamWalk == [108, 120], cppID: latticeID,
+                  message: "A041 the seam walk emits ticks 108 and 120 while skipping the 5/8 beats")
+    var innerSeam: [Tick] = []
+    session.grid.forEachSubdivision(from: 100, to: 110, camera: session.camera) { tick, _ in
+        innerSeam.append(tick)
+    }
+    report.expect(innerSeam == [108], cppID: latticeID,
+                  message: "A042 the short seam window emits only the tick 108 subdivision")
+    report.expect(session.grid.snapTick(103.5, camera: session.camera) == 102,
+                  cppID: latticeID, message: "A047 nearest snap after the seam resolves to tick 102")
+    report.expect(session.grid.snapTick(103.5 + Double(snap), camera: session.camera) == 102 + snap,
+                  cppID: latticeID, message: "A048 nearest snap one stride later resolves to tick 108")
     document.deleteTimeSignature(at: 102)
     report.expect(session.grid.axis.segmentAt(102) == axis.segmentAt(102), cppID: latticeID,
                   message: "A049 deleting the signature restores the plain segment grid")
+}
+
+@MainActor
+private func checkScratchDoubleDraw(
+    _ report: CheckReport, session: DocumentSession, grid: PianoGrid
+) {
+    let id = "rollcheck/PianoRollStaticTest::scratchSpaceDrawGrowsTimeline"
+    let document = session.document
+    guard let bytes = try? document.state.file.encoded() else {
+        report.fail(id, "cannot encode the original MIDI before the scratch draw")
+        return
+    }
+    let camera = session.camera
+    defer { _ = session.mutateCamera { $0 = camera } }
+    grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
+    _ = session.mutateCamera { _ = $0.setHScroll($0.snapshot.maxHScroll) }
+    let length = session.timeline.lengthTicks
+    let x = 320.0
+    let y = 160.0
+    let tick = session.grid.snapTickDown(session.camera.tickAtContentX(x),
+                                         camera: session.camera)
+    guard let key = session.camera.projection.pitch(
+        atY: y, keyHeight: session.camera.snapshot.keyHeight,
+        scrollY: session.camera.snapshot.scrollY, dpr: grid.devicePixelRatio
+    ) else {
+        report.fail(id, "the scratch viewport contains no playable row")
+        return
+    }
+    report.expect(tick >= length, cppID: id,
+                  message: "A102 the double-click scratch cell begins at or beyond the old song end")
+    let beforeIDs = Set(document.notes(in: grid.trackIndex).map(\.id))
+    let history = document.history.undoIndex
+    grid.doublePointer(x: x, y: y)
+    grid.endPointer(x: x, y: y)
+    let drawn = document.notes(in: grid.trackIndex).first { !beforeIDs.contains($0.id) }
+    report.expect(drawn.map { $0.tick == tick && Int($0.pitch) == key } == true,
+                  cppID: id, message: "A103 double-click drawing commits the snapped tick and pitch")
+    report.expect(session.timeline.lengthTicks > length, cppID: id,
+                  message: "A104 the scratch double-click extends the real song timeline")
+    let singleUndo = document.history.undoIndex == history + 1
+        && document.history.undoDocument()
+    report.expect(singleUndo && document.history.undoIndex == history
+        && (try? document.state.file.encoded()) == bytes, cppID: id,
+                  message: "A105 one scratch-draw undo restores the exact original MIDI bytes")
 }
 
 @MainActor

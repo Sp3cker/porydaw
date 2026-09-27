@@ -315,6 +315,43 @@ TestCase {
         var parked = grid.editCursorTick
         mouseClick(roll, center.x, center.y, Qt.LeftButton)
         compare(grid.editCursorTick, parked, "clicking a note never parks the edit cursor")
+
+        grid.setCameraHScroll(1e9)
+        var oldEndScroll = grid.cameraScrollX
+        var pixelsPerTick = grid.beatWidth / grid.ticksPerBeat
+        var oldEndTick = oldEndScroll / pixelsPerTick
+        var scratch = freeLane(grid, surface, 1)
+        verify(scratch !== null, "the scrolled song end has an empty visible pitch row")
+        var scratchTick = scratch.tick
+        var scratchPoint = pointFor(grid, scratchTick + Math.max(1, Math.floor(grid.snapTicks / 4)),
+                                    scratch.pitch)
+        var beforeScratch = gridNotes(grid).map(function(note) {
+            return [note.id, note.tick, note.pitch, note.duration, note.velocity, note.track]
+        })
+        verify(scratchTick >= oldEndTick - 0.001,
+               "A102 the mounted scratch cell lies at or beyond the previous song extent")
+        mouseDoubleClickSequence(roll, scratchPoint.x, scratchPoint.y, Qt.LeftButton)
+        tryVerify(function() {
+            return gridNotes(grid).some(function(note) {
+                return note.tick === scratchTick && note.pitch === scratch.pitch
+                    && note.duration === grid.snapTicks
+            })
+        }, 5000, "A103 the mounted scratch double-click draws at the exact snapped tick and key")
+        grid.setCameraHScroll(1e9)
+        verify(grid.cameraScrollX > oldEndScroll,
+               "A104 the mounted scratch draw strictly expands the scrollable song extent")
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true, 3000)
+        keySequence(StandardKey.Undo)
+        verify(waitForNative(function() {
+            var remaining = gridNotes(grid).map(function(note) {
+                return [note.id, note.tick, note.pitch, note.duration, note.velocity, note.track]
+            })
+            return JSON.stringify(remaining) === JSON.stringify(beforeScratch)
+        }, 5000), "A105 one routed Undo restores every pre-draw note after scratch drawing")
+        grid.setCameraHScroll(1e9)
+        compare(grid.cameraScrollX, oldEndScroll,
+                "one scratch-draw Undo returns the scrollable timeline to its former end")
     }
 
     function test_rightDragUsesPlatformSlop() {

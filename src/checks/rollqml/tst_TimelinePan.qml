@@ -617,13 +617,16 @@ TestCase {
             tryCompare(voice.model, "pickerOpen", false, 5000)
             var laterTick = Math.max(bootstrap.timelineLengthTicks(),
                                      g.ticksPerBeat * 16)
+            tryCompare(voice.model, "contextSlot", 11, 5000,
+                       "A079 the mounted initial drum program supplies voice context eleven")
             g.reloadVisuals()
             verify(padLabel(longName) !== null,
                    "A080 genuine synchronization at the initial program keeps the drum pad")
             g.setEditCursorTick(laterTick)
             tryCompare(g, "editCursorTick", laterTick, 5000,
                        "the production grid moves the real edit cursor beyond the voice event")
-            tryCompare(voice.model, "contextSlot", 0, 5000)
+            tryCompare(voice.model, "contextSlot", 0, 5000,
+                       "A081 the mounted cursor resolves the later melodic voice context")
             g.reloadVisuals()
             verify(padLabel(longName) !== null,
                    "A082 a later melodic cursor program leaves the initial drum pad")
@@ -631,12 +634,18 @@ TestCase {
             tryCompare(g, "editCursorTick", 0, 5000)
             tryCompare(voice.model, "contextSlot", 11, 5000)
             bootstrap.presentPlayheadTick(laterTick, 2)
-            tryCompare(voice.model, "contextSlot", 0, 5000)
+            tryVerify(function() {
+                var playhead = findChild(surface(), "sharedPlayhead").presenter
+                return playhead.playing && playhead.tick >= laterTick - 1
+            }, 5000, "A083 the mounted playing tick passes the later voice program event")
+            tryCompare(voice.model, "contextSlot", 0, 5000,
+                       "A084 the mounted playhead resolves the later melodic voice context")
             g.reloadVisuals()
             verify(padLabel(longName) !== null,
                    "A085 the advanced playhead program leaves the initial drum pad")
             bootstrap.presentPlayheadTick(0, 2)
-            tryCompare(voice.model, "contextSlot", 11, 5000)
+            tryCompare(voice.model, "contextSlot", 11, 5000,
+                       "A086 resetting the mounted playhead restores initial drum voice context")
             g.reloadVisuals()
             verify(padLabel(longName) !== null,
                    "A087 resetting the playhead retains the initial drum pad")
