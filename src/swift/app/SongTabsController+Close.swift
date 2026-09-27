@@ -150,9 +150,13 @@ extension SongTabsController {
     /// Swaps a ready reload into its original row without changing the
     /// selection the user made while the old document was loading.
     func finishReload(_ tab: SongTabSession, restoring state: ReloadedTab) -> Bool {
-        guard reloadsInFlight.remove(state.tabId) != nil,
-              let index = tabIndex(of: state.tabId),
-              state.matches(tabs[index]) else { return false }
+        guard reloadsInFlight.contains(state.tabId),
+              let index = tabIndex(of: state.tabId) else { return false }
+        guard state.matches(tabs[index]) else {
+            cancelReload(tabId: state.tabId)
+            return false
+        }
+        reloadsInFlight.remove(state.tabId)
         let previous = tabs[index]
         let wasSelected = selectedId == state.tabId
         if wasSelected { previous.workspace.deactivate() }
@@ -168,15 +172,20 @@ extension SongTabsController {
     }
 
     func cancelReload(tabId: Int) {
-        reloadsInFlight.remove(tabId)
+        guard reloadsInFlight.remove(tabId) != nil else { return }
+        tab(id: tabId)?.isReady = true
     }
 
-    /// A terminal load failure retires the pending unchanged tab; edits made
-    /// while the old tab remained selectable survive the failed reload.
+    /// A terminal load failure retires the pending unchanged tab. If that
+    /// tab changed in flight, keep its newer document command-ready instead.
     func failReload(restoring state: ReloadedTab) {
-        guard reloadsInFlight.remove(state.tabId) != nil,
-              let index = tabIndex(of: state.tabId),
-              state.matches(tabs[index]) else { return }
+        guard reloadsInFlight.contains(state.tabId),
+              let index = tabIndex(of: state.tabId) else { return }
+        guard state.matches(tabs[index]) else {
+            cancelReload(tabId: state.tabId)
+            return
+        }
+        reloadsInFlight.remove(state.tabId)
         closeTab(index: index)
     }
 

@@ -259,8 +259,8 @@ Original expression:
         QVERIFY(SmfFile::readFile(song->midPath, &stage, &error))
 
 A046 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:186
-Disposition: GAP
-Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
+Disposition: PARTIAL
+Mapping/reason: S299 proves the actual fresh-open path has no command-ready tab before completion. Residue: fork !probe.isReady() checks a newly constructed, unmounted native SongTab before its staged binding protocol; Swift does not instantiate that probe. [S299]
 Source context since previous assertion:
         LoadedVoiceGroup bank = {};
         SongTab probe(name);
@@ -271,8 +271,8 @@ Original expression:
         QVERIFY(!probe.isReady())
 
 A047 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:189
-Disposition: GAP
-Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
+Disposition: PARTIAL
+Mapping/reason: S300 proves the fresh tab becomes ready only after its document and bank load. Residue: fork !probe.isReady() samples the unmounted native tab immediately after applyMidiStage; Swift does not execute that intermediate stage. [S300]
 Source context since previous assertion:
         probe.applyMidiStage(*song, std::move(stage),
                              workspace.projectState().snapshot.trackBudgetFor(*song));
@@ -280,40 +280,36 @@ Original expression:
         QVERIFY(!probe.isReady())
 
 A048 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:190
-Disposition: GAP
-Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(probe.timeline())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork QVERIFY(probe.timeline()) after applyMidiStage (oracle fceecd88) pins the native intermediate timeline pointer in the retired staged-binding protocol; S301 proves a populated playback timeline and bank on the first ready Swift tab. [S301]
 
 A049 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:191
-Disposition: PARTIAL
-Mapping/reason: Related predicate S189 in src/checks/workspace/session_view_state.swift (runSessionViewStateChecks: "a fresh tab carries the shared view state before it is ready" — seeded chrome equals the fresh workspace chrome; evidence-confirmed in the swiftcore-projectsession pass rows); unproved: full Qt EditorViewState equality (lane blob, heights) and the Qt SongView representation — Swift observes drawer chrome only. [S189]
+Disposition: MATCHED
+Mapping: S302
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(probe.view().editorViewState(), global)
 
 A050 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:192
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (view-state store): Qt EditorViewState value/fanout observation; no Swift predicate observes the Qt SongView view state. Verified: neighboring camera/track/drawer/eventlist suites observe EditorCamera/header/drawer/row types, never SongView ViewState; not cited.
+Disposition: MATCHED
+Mapping: S303
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(hasCanonicalFreshViewState(probe.view(), *probe.timeline()))
 
 A051 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:193
-Disposition: GAP
-Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline readinessChanged signal observation; no Swift predicate observes Qt readinessChanged emission.
+Disposition: PARTIAL
+Mapping/reason: S304 proves a fresh open publishes no intermediate command-ready tab. Residue: fork ready.count() at the intermediate MIDI-only stage counts Qt readinessChanged emissions; Swift observes external tab publication, not that signal count. [S304]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(ready.count(), 0)
 
 A052 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:200
-Disposition: GAP
-Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline readinessChanged signal observation; no Swift predicate observes Qt readinessChanged emission.
+Disposition: PARTIAL
+Mapping/reason: S305 proves initial drawer chrome is installed before tab publication. Residue: fork ready.count() after applyBankView counts Qt readinessChanged emissions at that stage; Swift observes installed chrome before publication, not signal count. [S305]
 Source context since previous assertion:
         probe.applyBankView(LoadedBankView{
             .id = *session->b->voicegroupId(),
@@ -325,16 +321,16 @@ Original expression:
         QCOMPARE(ready.count(), 0)
 
 A053 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:202
-Disposition: GAP
-Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
+Disposition: PARTIAL
+Mapping/reason: S306 proves the first ready tab has every seeded lane member. Residue: fork isReady() is sampled specifically after applyVoicegroupBound; Swift asserts the complete lane state on the published tab but not a voicegroup-bound transition. [S306]
 Source context since previous assertion:
         probe.applyVoicegroupBound(*session->b->voicegroupId());
 Original expression:
         QVERIFY(probe.isReady())
 
 A054 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:204
-Disposition: GAP
-Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline readinessChanged signal observation; no Swift predicate observes Qt readinessChanged emission.
+Disposition: PARTIAL
+Mapping/reason: S307 proves initial successful open installs exactly one ready row. Residue: fork ready.count() measures one native readinessChanged notification; Swift observes the installed ready-row count, not Qt signal emissions. [S307]
 Source context since previous assertion:
         checks::support::bindEditActionsForTest(probe.view());
 Original expression:
@@ -392,8 +388,8 @@ Original expression:
         QVERIFY(SmfFile::readFile(song->midPath, &replacement, &error))
 
 A060 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:237
-Disposition: GAP
-Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
+Disposition: MATCHED
+Mapping: S308
 Source context since previous assertion:
         const VoicegroupId identity = *session->b->voicegroupId();
         LoadedVoiceGroup bank = {};
@@ -412,8 +408,8 @@ Original expression:
         QVERIFY(probe.isReady())
 
 A061 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:250
-Disposition: GAP
-Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
+Disposition: MATCHED
+Mapping: S309
 Source context since previous assertion:
         const MidiTimeline *bound = probe.timeline().get();
         SongView::ViewState state = probe.view().viewState();
@@ -431,80 +427,80 @@ Original expression:
         QVERIFY(!probe.isReady())
 
 A062 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:251
-Disposition: GAP
-Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork QCOMPARE(probe.timeline().get(), bound) (oracle fceecd88) pins the native timeline pointer identity during reload; S310 proves the old rendered playback event sequence remains unchanged while pending. [S310]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(probe.timeline().get(), bound)
 
 A063 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:252
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (view-state store): Qt EditorViewState value/fanout observation; no Swift predicate observes the Qt SongView view state. Verified: neighboring camera/track/drawer/eventlist suites observe EditorCamera/header/drawer/row types, never SongView ViewState; not cited.
+Disposition: MATCHED
+Mapping: S311
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(sameViewState(probe.view().viewState(), retained))
 
 A064 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:253
-Disposition: GAP
-Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline readinessChanged signal observation; no Swift predicate observes Qt readinessChanged emission.
+Disposition: PARTIAL
+Mapping/reason: S312 proves the reload remains pending without installing another row. Residue: fork ready.count() observes exactly one native readinessChanged emission on beginMidiReload; Swift asserts pending readiness and tab count, not signal count. [S312]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(ready.count(), 1)
 
 A065 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:255
-Disposition: GAP
-Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
+Disposition: MATCHED
+Mapping: S313
 Source context since previous assertion:
         probe.applyMidiStage(*song, std::move(replacement), budget);
 Original expression:
         QVERIFY(!probe.isReady())
 
 A066 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:256
-Disposition: GAP
-Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork QVERIFY(probe.timeline().get() != bound) (oracle fceecd88) pins replacement pointer identity in the retired native timeline; S314 proves the changed note-on/off playback events are installed by reload. [S314]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(probe.timeline().get() != bound)
 
 A067 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:257
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (view-state store): Qt EditorViewState value/fanout observation; no Swift predicate observes the Qt SongView view state. Verified: neighboring camera/track/drawer/eventlist suites observe EditorCamera/header/drawer/row types, never SongView ViewState; not cited.
+Disposition: MATCHED
+Mapping: S315
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(sameViewState(probe.view().viewState(), retained))
 
 A068 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:258
-Disposition: GAP
-Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline readinessChanged signal observation; no Swift predicate observes Qt readinessChanged emission.
+Disposition: PARTIAL
+Mapping/reason: S316 proves reload replaces the page at the original tab identity. Residue: fork ready.count() == 1 observes a Qt readinessChanged emission after applyMidiStage; Swift proves replacement identity, not Qt signal count. [S316]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(ready.count(), 1)
 
 A069 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:260
-Disposition: GAP
-Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
+Disposition: MATCHED
+Mapping: S317
 Source context since previous assertion:
         probe.applyVoicegroupBound(identity);
 Original expression:
         QVERIFY(probe.isReady())
 
 A070 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:261
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (view-state store): Qt EditorViewState value/fanout observation; no Swift predicate observes the Qt SongView view state. Verified: neighboring camera/track/drawer/eventlist suites observe EditorCamera/header/drawer/row types, never SongView ViewState; not cited.
+Disposition: MATCHED
+Mapping: S318
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(sameViewState(probe.view().viewState(), retained))
 
 A071 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:262
-Disposition: GAP
-Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline readinessChanged signal observation; no Swift predicate observes Qt readinessChanged emission.
+Disposition: PARTIAL
+Mapping/reason: S319 proves selected notes are restored when the replacement is ready and the single tab remains mounted. Residue: fork ready.count() == 2 counts exactly one Qt readinessChanged emission for pending and one for ready; Swift checks pending and ready states separately, not notification count. [S319]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -2001,3 +1997,65 @@ Anchor: message "released empty scrollbar owner cannot erase the roll release ta
 
 S298 | mouseHintOwnershipChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "destroyed tab owner cannot clear the newly claimed sibling hint"
+S299 | runTabReadinessChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "A046 initial real song open has no command-ready tab before completion"
+
+S300 | runTabReadinessChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "A047 a fresh tab is published only after document and bank load"
+
+S301 | runTabReadinessChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "A048 first visible tab has a populated playback timeline and bank lease"
+
+S302 | runTabReadinessChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "A049 fresh tab owns the complete seeded editor state including ordered lanes"
+
+S303 | runTabReadinessChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "A050 first ready workspace starts with canonical camera cursor and empty selection"
+
+S304 | runTabReadinessChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "A051 a fresh open publishes no intermediate command-ready tab"
+
+S305 | runTabReadinessChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "A052 initial drawer chrome is fully installed before tab publication"
+
+S306 | runTabReadinessChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "A053 first ready tab has every seeded lane height range and visibility"
+
+S307 | runTabReadinessChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "A054 initial successful open installs exactly one ready row"
+
+S308 | runTabReadinessChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "A060 the live document is ready with real events before reloading"
+
+S309 | runTabReadinessChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "A061 reload marks the old selectable tab pending exactly once"
+
+S310 | runTabReadinessChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "A062 pending reload retains the old rendered playback event sequence"
+
+S311 | runTabReadinessChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "A063 pending reload retains complete editor camera cursor and selection"
+
+S312 | runTabReadinessChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "A064 pending reload changes readiness once without installing another row"
+
+S313 | runTabReadinessChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "A065 event-loop pending observations never expose partially replaced MIDI"
+
+S314 | runTabReadinessChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "A066 completed reload installs the changed note-on and note-off playback events"
+
+S315 | runTabReadinessChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "A067 the prior tab retains its complete timeline throughout pending publication"
+
+S316 | runTabReadinessChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "A068 reload publishes one replacement at the original tab identity"
+
+S317 | runTabReadinessChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "A069 replacement becomes command-ready only with its new document"
+
+S318 | runTabReadinessChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "A070 completed publication retains full editor drawer lane camera cursor grid scale and mute state"
+
+S319 | runTabReadinessChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "A071 exactly one pending and one ready transition restore selected notes at completion"

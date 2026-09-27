@@ -56,6 +56,7 @@ extension ApplicationSession {
     /// Reload keeps the original row selectable until its replacement opens.
     @QtIgnored
     func reloadApproved(label: String, restoring tab: ReloadedTab) {
+        songTabs.tab(id: tab.tabId)?.isReady = false
         startOpen(label: label, at: nil, restoring: tab)
     }
 
@@ -178,6 +179,19 @@ extension ApplicationSession {
                 session.grid = tab.grid
                 session.grid.axis = session.projectionCache.timeAxis
                 session.grid.setTicksPerClock(session.gridClockTicks)
+                session.setScale(root: tab.scale.root)
+                session.setScale(type: tab.scale.scale)
+                session.setScale(highlight: tab.scale.highlight)
+                session.setScale(fold: tab.scale.fold)
+                let usedTracks = 0..<session.document.engineTracks.usedTrackCount
+                session.selectedTracks = Set(tab.selectedTracks.filter { usedTracks.contains($0) })
+                session.mutedTracks = Set(tab.mutedTracks.filter { usedTracks.contains($0) })
+                session.soloedTracks = Set(tab.soloedTracks.filter { usedTracks.contains($0) })
+                session.applyTimeSelection(tab.timeSelection)
+                if tab.timeSelection == nil {
+                    let validNotes = Set(usedTracks.flatMap { session.document.notes(in: $0).map(\.id) })
+                    session.setSelectedNotes(tab.selectedNoteOrder.filter { validNotes.contains($0) })
+                }
             }
             session.applyEditorViewStateProjection(editorViewState)
             let workspace = DocumentWorkspace(

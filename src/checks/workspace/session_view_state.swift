@@ -1,6 +1,7 @@
 import CoreFoundation
 import Foundation
 import PorydawApp
+import PorydawCore
 import PorydawCoreCheckNative
 
 @MainActor
@@ -122,6 +123,8 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
                        what: "an explicitly empty ordered-song key restores its selected label")
     _ = store.resetPreferences()
     runCompleteEditorViewStateChecks(report: report, store: store, fixtureRoot: fixtureRoot)
+    _ = store.resetPreferences()
+    runTabReadinessChecks(report: report, store: store, fixtureRoot: fixtureRoot)
     _ = store.resetPreferences()
     var seed = EditorDrawerChromeState()
     seed.velocity = .init(visible: true, height: 173)
@@ -366,4 +369,236 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
                   cppID: idStored, message: "reopened tab restores the complete drawer and ordered hidden lanes")
     report.expect(EditorViewStateCodec.loadLanes(store: restored).hiddenLanes == lanes.hiddenLanes,
                   cppID: idStored, message: "reopened editor retains the hidden lane ordering")
+}
+
+@MainActor
+private func runTabReadinessChecks(report: CheckReport, store: PreferencesStore,
+                                   fixtureRoot: String) {
+    let id = "mainwindowrouting/MainWindowRoutingLifecycleTest::freshBind"
+    let reloadID = "mainwindowrouting/MainWindowRoutingLifecycleTest::stagedReload"
+    let root = stageTestProject(in: fixtureRoot, projectName: "swiftcore-tab-readiness")
+    let midiURL = URL(fileURLWithPath: root)
+        .appendingPathComponent("sound/songs/midi/mus_session_test.mid")
+    var seed = EditorViewState()
+    seed.chrome.velocity = .init(visible: true, height: 173)
+    seed.chrome.automation = .init(visible: true, height: 44)
+    seed.chrome.voiceChanges = .init(visible: false, height: 55)
+    seed.chrome.activePage = .automation
+    seed.lanes.laneHeight = 46
+    seed.lanes.laneHeights = ["cc:0:74": 49]
+    seed.lanes.laneRanges = ["cc:0:74": 90, "tempo": 100]
+    seed.lanes.emptyLanes = [.init(track: 0, controller: 74)]
+    seed.lanes.hiddenLanes = [.init(track: 0, controller: 7)]
+    EditorViewStateCodec.save(seed, store: store)
+    let app = ApplicationSession()
+    app.configurePersistence()
+    defer {
+        app.hostClosing()
+        app.acknowledgeGridDetached()
+    }
+    func until(_ predicate: () -> Bool) -> Bool {
+        let deadline = Date().addingTimeInterval(25)
+        while !predicate() && Date() < deadline {
+            _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+        }
+        return predicate()
+    }
+    app.openProjectAndSong(path: root, label: "mus_session_test")
+    report.expect(app.songTabs.tabCount == 0 && !app.songOpen, cppID: id,
+                  message: "A046 initial real song open has no command-ready tab before completion")
+    guard until({ app.songTabs.tabCount == 1 || !app.lastSaveError.isEmpty }),
+          let first = app.songTabs.selectedPage else {
+        report.fail(id, "fresh copied song did not finish opening: \(app.lastSaveError)")
+        return
+    }
+    guard let document = app.selectedDocument else {
+        report.fail(id, "fresh tab did not publish its document")
+        return
+    }
+    let fresh = document.camera.snapshot
+    report.expect(first.isReady && first.songOpen, cppID: id,
+                  message: "A047 a fresh tab is published only after document and bank load")
+    report.expect(!document.timeline.events.isEmpty && document.bankLease.sourcePath != "",
+                  cppID: id, message: "A048 first visible tab has a populated playback timeline and bank lease")
+    report.expect(document.editorViewState == seed, cppID: id,
+                  message: "A049 fresh tab owns the complete seeded editor state including ordered lanes")
+    report.expect(fresh.scrollX == fresh.minHScroll && document.editCursor == 0
+                  && document.selectedNotes.isEmpty && document.timeSelection == nil
+                  && document.selectedTracks == [0], cppID: id,
+                  message: "A050 first ready workspace starts with canonical camera cursor and empty selection")
+    report.expect(app.songTabs.tabCount == 1 && first.isReady, cppID: id,
+                  message: "A051 a fresh open publishes no intermediate command-ready tab")
+    report.expect(first.drawerPresenter().chromeState == seed.chrome, cppID: id,
+                  message: "A052 initial drawer chrome is fully installed before tab publication")
+    report.expect(document.editorViewState.lanes == seed.lanes, cppID: id,
+                  message: "A053 first ready tab has every seeded lane height range and visibility")
+    report.expect(app.songTabs.tabCount == 1, cppID: id,
+                  message: "A054 initial successful open installs exactly one ready row")
+
+    let original = document.timeline.events
+    let oldPage = first
+    let oldSession = document
+    let oldID = first.tabId
+    guard let note = document.document.notes(in: 0).first else {
+        report.fail(reloadID, "real source must contain a selected note")
+        return
+    }
+    document.setSelectedNotes([note.id])
+    document.editCursor = 48
+    document.setScale(root: 2)
+    document.setScale(highlight: true)
+    document.mutedTracks = [0]
+    document.mutateCamera { _ = $0.setHScroll(12) }
+    first.gridPresenter().openGridMenu(kind: 1)
+    first.gridPresenter().activateGridMenuRow(actionId: 16)
+    first.gridPresenter().openGridMenu(kind: 2)
+    first.gridPresenter().activateGridMenuRow(actionId: 1)
+    let priorCamera = document.camera.snapshot
+    let priorScale = document.scaleProjection
+    let priorNotes = document.selectedNoteOrder
+    let priorDivision = first.gridPresenter().gridSelectionMenuId
+    let priorTriplet = first.gridPresenter().tripletGrid
+    let priorEditor = document.editorViewState
+    do {
+        var file = try MidiFile.decode(Array(Data(contentsOf: midiURL)))
+        file.chunks[1].events.insert(.channel(tick: 72, status: 0x90, data0: 74, data1: 95), at: 4)
+        file.chunks[1].events.insert(.channel(tick: 84, status: 0x80, data0: 74), at: 5)
+        try Data(file.encoded()).write(to: midiURL)
+    } catch {
+        report.fail(reloadID, "could not change the copied reload MIDI: \(error)")
+        return
+    }
+    report.expect(first.isReady && original.count > 0, cppID: reloadID,
+                  message: "A060 the live document is ready with real events before reloading")
+    app.openSong(label: "mus_session_test")
+    report.expect(!first.isReady && app.songTabs.selectedPage === oldPage, cppID: reloadID,
+                  message: "A061 reload marks the old selectable tab pending exactly once")
+    report.expect(oldSession.timeline.events == original, cppID: reloadID,
+                  message: "A062 pending reload retains the old rendered playback event sequence")
+    report.expect(oldSession.editorViewState == priorEditor
+                  && oldSession.camera.snapshot == priorCamera
+                  && oldSession.editCursor == 48 && oldSession.selectedNoteOrder == priorNotes,
+                  cppID: reloadID,
+                  message: "A063 pending reload retains complete editor camera cursor and selection")
+    report.expect(!first.isReady && app.songTabs.tabCount == 1, cppID: reloadID,
+                  message: "A064 pending reload changes readiness once without installing another row")
+    var partialPublication = false
+    let arrived = until {
+        if app.songTabs.selectedPage === oldPage {
+            if oldPage.isReady || oldSession.timeline.events != original
+                || oldSession.editorViewState != priorEditor { partialPublication = true }
+            return false
+        }
+        return app.songTabs.selectedPage?.isReady == true
+    }
+    report.expect(!partialPublication, cppID: reloadID,
+                  message: "A065 event-loop pending observations never expose partially replaced MIDI")
+    guard arrived, let landed = app.songTabs.selectedPage else {
+        report.fail(reloadID, "real changed-MIDI reload did not finish: \(app.lastSaveError)")
+        return
+    }
+    guard let replacement = app.selectedDocument else {
+        report.fail(reloadID, "ready tab did not publish its replacement document")
+        return
+    }
+    let addedOn = replacement.timeline.events.contains {
+        $0.tick == 72 && $0.track == 0 && $0.type == 0x9 && $0.data0 == 74 && $0.data1 == 95
+    }
+    let addedOff = replacement.timeline.events.contains {
+        $0.tick == 84 && $0.track == 0 && $0.type == 0x8 && $0.data0 == 74
+    }
+    report.expect(addedOn && addedOff && replacement.timeline.events.count == original.count + 2,
+                  cppID: reloadID,
+                  message: "A066 completed reload installs the changed note-on and note-off playback events")
+    report.expect(!partialPublication && oldSession.timeline.events == original, cppID: reloadID,
+                  message: "A067 the prior tab retains its complete timeline throughout pending publication")
+    report.expect(landed.tabId == oldID && landed !== oldPage, cppID: reloadID,
+                  message: "A068 reload publishes one replacement at the original tab identity")
+    report.expect(landed.isReady && replacement !== oldSession, cppID: reloadID,
+                  message: "A069 replacement becomes command-ready only with its new document")
+    report.expect(replacement.editorViewState == priorEditor
+                  && landed.drawerPresenter().chromeState == seed.chrome
+                  && replacement.camera.snapshot.pixelsPerBeat == priorCamera.pixelsPerBeat
+                  && replacement.editCursor == 48 && replacement.scaleProjection == priorScale
+                  && landed.gridPresenter().gridSelectionMenuId == priorDivision
+                  && landed.gridPresenter().tripletGrid == priorTriplet
+                  && replacement.mutedTracks == [0], cppID: reloadID,
+                  message: "A070 completed publication retains full editor drawer lane camera cursor grid scale and mute state")
+    report.expect(landed.isReady && app.songTabs.tabCount == 1
+                  && !partialPublication && replacement.selectedNoteOrder == priorNotes,
+                  cppID: reloadID,
+                  message: "A071 exactly one pending and one ready transition restore selected notes at completion")
+
+    let recoveryID = "mainwindowrouting/MainWindowRoutingLifecycleTest::reloadRecovery"
+
+    let scopedSelection = AutomationTimeSelection(
+        range: TimeRange(startTick: 24, endTick: 72), scope: .lanes,
+        lanes: [.controlChange(track: 0, controller: 74)], tempo: true)
+    replacement.applyTimeSelection(scopedSelection)
+    app.openSong(label: "mus_session_test")
+    report.expect(!landed.isReady && replacement.timeSelection == scopedSelection,
+                  cppID: recoveryID,
+                  message: "a second pending reload retains its explicit CC74 and Tempo selection scope")
+    guard until({ app.songTabs.selectedPage !== landed
+                  && app.songTabs.selectedPage?.isReady == true }),
+          let scopedPage = app.songTabs.selectedPage,
+          let scopedDocument = app.selectedDocument else {
+        report.fail(recoveryID, "selection-scope reload did not publish a complete document")
+        return
+    }
+    report.expect(scopedDocument.timeSelection == scopedSelection
+                  && scopedDocument.selectedNoteOrder.isEmpty
+                  && scopedDocument.selectedTracks == [0],
+                  cppID: recoveryID,
+                  message: "completed reload restores the explicit lane and Tempo selection scope")
+
+    // fceecd88 workspaceui_tabs.cpp handleSongFailed closes non-rebind reload failures;
+    // openSongFromList enqueues MIDI reload without the bank-rebind skip marker.
+    guard let preservedBytes = try? Data(contentsOf: midiURL) else {
+        report.fail(recoveryID, "changed fixture cannot be preserved for failure recovery")
+        return
+    }
+    do {
+        try FileManager.default.removeItem(at: midiURL)
+        app.openSong(label: "mus_session_test")
+        report.expect(!scopedPage.isReady && scopedPage.gridPresenter().renderedNoteCount > 0
+                      && scopedDocument.timeline.events.count == original.count + 2,
+                      cppID: recoveryID,
+                      message: "missing source leaves its old complete render while pending")
+        report.expect(until({ app.songTabs.tabCount == 0 }),
+                      cppID: recoveryID,
+                      message: "failed non-rebind MIDI reload closes its tab as the fork does")
+        try preservedBytes.write(to: midiURL)
+        app.openSong(label: "mus_session_test")
+        report.expect(until({ app.songTabs.tabCount == 1 })
+                      && app.selectedDocument?.timeline.events == scopedDocument.timeline.events,
+                      cppID: recoveryID,
+                      message: "restoring source reopens a complete changed-MIDI workspace")
+        guard let recoveredPage = app.songTabs.selectedPage,
+              let recoveredDocument = app.selectedDocument else {
+            report.fail(recoveryID, "restored source did not publish a recoverable tab")
+            return
+        }
+        let preEditRevision = recoveredDocument.document.revision
+        app.openSong(label: "mus_session_test")
+        report.expect(!recoveredPage.isReady && app.songTabs.selectedPage === recoveredPage,
+                      cppID: recoveryID,
+                      message: "a third real reload makes the complete source tab pending before an edit")
+        let editedNote = NewNote(track: 0, tick: 132, pitch: 83, duration: 12, velocity: 97)
+        let inserted = try recoveredDocument.document.addNotes([editedNote])
+        report.expect(inserted.count == 1 && recoveredDocument.document.revision > preEditRevision,
+                      cppID: recoveryID,
+                      message: "an in-flight document edit changes the original tab revision")
+        report.expect(until({ recoveredPage.isReady }),
+                      cppID: recoveryID,
+                      message: "discarding a stale reload returns the edited original tab to ready")
+        report.expect(app.songTabs.selectedPage === recoveredPage
+                      && app.selectedDocument === recoveredDocument
+                      && recoveredDocument.document.notes(in: 0).contains {
+                          $0.tick == 132 && $0.pitch == 83 && $0.velocity == 97
+                      }, cppID: recoveryID,
+                      message: "a stale reload leaves the edited document and tab identity intact")
+    } catch {
+        report.fail(recoveryID, "reload recovery/abort fixture failed: \(error)")
+    }
 }

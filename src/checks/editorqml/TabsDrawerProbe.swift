@@ -55,4 +55,32 @@ public final class TabsDrawerProbe: QmlInstantiableStatus {
     public func songPath(projectRoot: String, label: String) -> String {
         projectRoot + "/sound/songs/midi/" + label + ".mid"
     }
+
+    public func moveSongAside(projectRoot: String, label: String) -> Bool {
+        guard !projectRoot.isEmpty, projectRoot == ShellQmlBootstrap().projectRoot,
+              label == "mus_route101" || label == "mus_route102" else { return false }
+        let song = URL(fileURLWithPath: songPath(projectRoot: projectRoot, label: label))
+        let aside = song.appendingPathExtension("reload-check")
+        guard !FileManager.default.fileExists(atPath: aside.path) else { return false }
+        do {
+            try FileManager.default.moveItem(at: song, to: aside)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    public func restoreSong(projectRoot: String, label: String) -> Bool {
+        guard !projectRoot.isEmpty, projectRoot == ShellQmlBootstrap().projectRoot,
+              label == "mus_route101" || label == "mus_route102" else { return false }
+        let song = URL(fileURLWithPath: songPath(projectRoot: projectRoot, label: label))
+        let aside = song.appendingPathExtension("reload-check")
+        guard !FileManager.default.fileExists(atPath: song.path) else { return false }
+        do {
+            try FileManager.default.moveItem(at: aside, to: song)
+            return true
+        } catch {
+            return false
+        }
+    }
 }

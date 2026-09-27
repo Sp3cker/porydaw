@@ -6,6 +6,11 @@ import ShellQmlCheck 1.0
 import Porydaw.Ui
 
 ShellTabsSupport {
+    SignalSpy {
+        id: reloadReadiness
+        signalName: "isReadyChanged"
+    }
+
     function test_pReplaceInPlaceRetainsOneTab() {
         var originalId = openShell(["mus_route101"])[0]
         var originalPage = tabs().selectedPage
@@ -155,6 +160,109 @@ ShellTabsSupport {
         verify(!session().canUndo && !session().canRedo,
                "reload clears the old document's undo and redo history")
     }
+    function test_qAtomicReloadAndMissingSourceRecovery() {
+        function semanticNotes(tabId) {
+            return JSON.stringify(JSON.parse(summaryOf(tabId)).map(function(note) {
+                return [note.tick, note.duration, note.pitch, note.track,
+                        note.velocity, note.ghost]
+            }))
+        }
+        fileProbe.stageCompleteState()
+        var id = openShell(["mus_route101"])[0]
+        var page = tabs().selectedPage
+        var grid = gridOf(id)
+        var song = fileProbe.songPath(bootstrap.projectRoot, "mus_route101")
+        var originalBytes = fileProbe.fileFingerprint(song)
+        var originalNotes = summaryOf(id)
+        compare(page.isReady, true, "fresh visible tab has a fully ready workspace")
+        verify(originalBytes.length > 0 && JSON.parse(originalNotes).length > 0,
+               "fresh copied song has source bytes and rendered notes")
+        compare(fileProbe.savedHiddenOrder(), "1:7,0:80",
+                "fresh workspace retains the complete seeded hidden-lane order")
+        compare(fileProbe.savedLaneRange(0, 74), 90,
+                "fresh workspace retains the seeded CC74 lane range")
+        drawNote(id)
+        var changedNotes = summaryOf(id)
+        verify(changedNotes !== originalNotes, "the real grid edit changes rendered MIDI")
+        session().requestSave()
+        verify(waitForNative(function() {
+            return !session().documentDirty && fileProbe.fileFingerprint(song) !== originalBytes
+        }, 30000), "saving the edited copied MIDI changes its source bytes")
+        grid.setEditCursorTick(96)
+        grid.setCameraHScroll(18)
+        grid.openGridMenu(1)
+        grid.activateGridMenuRow(16)
+        grid.openGridMenu(2)
+        grid.activateGridMenuRow(1)
+        tabs().setSelectedTabEventsVisible(true)
+        var prior = {
+            notes: changedNotes, semanticNotes: semanticNotes(id),
+            x: grid.cameraScrollX, cursor: grid.editCursorTick,
+            division: grid.gridSelectionMenuId, triplet: grid.tripletGrid,
+            events: tabs().selectedTabShowsEvents
+        }
+        reloadReadiness.target = page
+        reloadReadiness.clear()
+        session().openSong("mus_route101")
+        compare(page.isReady, false, "pending reload makes the old tab not command-ready")
+        tryCompare(reloadReadiness, "count", 1, 2000,
+                   "pending reload publishes readiness exactly once")
+        compare(tabs().selectedPage, page, "pending reload keeps the old page selectable")
+        compare(gridOf(id), grid, "pending reload keeps the old rendered grid")
+        compare(summaryOf(id), prior.notes, "pending reload keeps the old MIDI events")
+        compare(grid.cameraScrollX, prior.x, "pending reload keeps the horizontal camera")
+        compare(grid.editCursorTick, prior.cursor, "pending reload keeps the edit cursor")
+        compare(grid.gridSelectionMenuId, prior.division, "pending reload keeps grid division")
+        compare(grid.tripletGrid, prior.triplet, "pending reload keeps grid feel")
+        compare(tabs().selectedTabShowsEvents, prior.events, "pending reload keeps drawer visibility")
+        verify(waitForNative(function() {
+            return tabs().selectedPage !== page && tabs().selectedPage.isReady
+                && gridOf(id) !== grid && semanticNotes(id) === prior.semanticNotes
+        }, 30000), "ready publication installs the saved MIDI and full replacement page together")
+        compare(reloadReadiness.count, 1, "old page publishes no duplicate readiness transition")
+        var landed = tabs().selectedPage
+        compare(landed.tabId, id, "complete reload keeps the original strip identity")
+        compare(gridOf(id).cameraScrollX, prior.x, "complete reload retains the camera")
+        compare(gridOf(id).editCursorTick, prior.cursor, "complete reload retains the cursor")
+        compare(gridOf(id).gridSelectionMenuId, prior.division, "complete reload retains grid division")
+        compare(gridOf(id).tripletGrid, prior.triplet, "complete reload retains grid feel")
+        compare(tabs().selectedTabShowsEvents, prior.events, "complete reload retains Event List visibility")
+        compare(fileProbe.savedHiddenOrder(), "1:7,0:80",
+                "complete reload retains the seeded hidden-lane identities")
+        compare(fileProbe.savedLaneRange(0, 74), 90,
+                "complete reload retains the seeded CC74 range")
+        var completedNotes = summaryOf(id)
+        var editedBytes = fileProbe.fileFingerprint(song)
+        verify(fileProbe.moveSongAside(bootstrap.projectRoot, "mus_route101"),
+               "the copied MIDI source is moved aside for a real missing-source reload")
+        try {
+            reloadReadiness.target = landed
+            reloadReadiness.clear()
+            session().openSong("mus_route101")
+            compare(landed.isReady, false, "missing-source reload enters pending state")
+            tryCompare(reloadReadiness, "count", 1, 2000,
+                       "failed reload publishes exactly one pending transition")
+            compare(summaryOf(id), completedNotes,
+                    "failed pending load keeps its current complete rendered notes")
+            verify(waitForNative(function() { return tabs().tabCount === 0 }, 30000),
+                   "fork non-rebind load failure removes the failed tab")
+        } finally {
+            verify(fileProbe.restoreSong(bootstrap.projectRoot, "mus_route101"),
+                   "the copied MIDI source is restored after the failed reload")
+        }
+        compare(fileProbe.fileFingerprint(song), editedBytes,
+                "restored source retains the saved MIDI change")
+        session().openSong("mus_route101")
+        verify(waitForNative(function() {
+            return tabs().tabCount === 1 && tabs().selectedPage.isReady
+                && tabs().selectedPage.gridPresenter().renderedNoteCount > 0
+        }, 30000), "restored source reopens a fully bound tab")
+        var reopened = tabs().selectedId
+        waitForPage(reopened)
+        compare(semanticNotes(reopened), prior.semanticNotes,
+                "reopened source publishes the changed MIDI rather than an empty fallback")
+    }
+
 
     function test_qRetainedRuntimeStateBelongsToItsTab() {
         var ids = openShell(["mus_route101", "mus_route102"])

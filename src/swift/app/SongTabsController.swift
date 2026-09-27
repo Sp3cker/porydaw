@@ -1,3 +1,4 @@
+import PorydawCore
 import QtBridge
 
 /// One open song's QML-facing facade: the `applicationSession` a page binds.
@@ -30,6 +31,9 @@ public final class SongTabSession {
     /// standalone session's pages, this facade's never fail — they resolve
     /// against a workspace that lives exactly as long as the tab.
     @QtTracked public var songOpen = true
+    /// Whether this tab has completed its most recent load; the old
+    /// presentation stays visible while an in-place reload is pending.
+    @QtTracked public var isReady = true
     /// Whether this tab shows the event list instead of the piano roll. The
     /// View menu's MIDI Event List check mirrors the selected tab's value.
     @QtTracked public var showsEvents = false
@@ -140,6 +144,12 @@ internal struct ReloadedTab {
     let bankLoadName: String
     let camera: EditorCamera.Snapshot
     let selectedTrack: Int?
+    let selectedTracks: Set<Int>
+    let selectedNoteOrder: [NoteID]
+    let timeSelection: AutomationTimeSelection?
+    let mutedTracks: Set<Int>
+    let soloedTracks: Set<Int>
+    let scale: ScaleProjection
     let editCursor: UInt32
     let baseFontPx: Double
     let devicePixelRatio: Double
@@ -154,6 +164,12 @@ internal struct ReloadedTab {
         bankLoadName = tab.workspace.session.bankLoadName
         camera = tab.workspace.session.camera.snapshot
         selectedTrack = tab.workspace.session.selectedTrack
+        selectedTracks = tab.workspace.session.selectedTracks
+        selectedNoteOrder = tab.workspace.session.selectedNoteOrder
+        timeSelection = tab.workspace.session.timeSelection
+        mutedTracks = tab.workspace.session.mutedTracks
+        soloedTracks = tab.workspace.session.soloedTracks
+        scale = tab.workspace.session.scaleProjection
         editCursor = tab.workspace.session.editCursor
         baseFontPx = tab.workspace.grid.baseFontPx
         devicePixelRatio = tab.workspace.grid.devicePixelRatio
