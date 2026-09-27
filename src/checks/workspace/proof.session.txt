@@ -437,7 +437,7 @@ Anchor: message "save preserves the other song's complete midi.cfg line bytes"
 
 S059 | sessionLegacySidecarPersistence | src/checks/workspace/session_save.swift
 Anchor: message "A033 bare document save preserves every literal legacy sidecar byte"
-Line: 241
+Line: 358
 Predicate: report.expect(afterBare == seed, cppID: id, message: "A033 bare document save preserves every literal legacy sidecar byte")
 Note: Corrected from the Swift-invented MIDI sidecar marker to the fork-seeded .porydaw/<label>.json path; exact byte equality replaces contains "protected".
 

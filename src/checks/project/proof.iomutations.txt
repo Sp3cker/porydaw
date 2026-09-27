@@ -2,7 +2,7 @@ Assertion correspondence: project/iomutations.cpp
 
 Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Deleted in: S6 flip cutover (feature/swift-project-store, base 2d1c92d0)
-Retirement: historical deletion record. A003–A026 reconciled for task 133 against the final Swift counterpart snapshot and implementer-reported focused execution; A027–A041 reconciled for task 140 and A042–A056 for task 141 against the final Swift checks and implementer-reported focused execution; remaining entries stay as recorded.
+Retirement: historical deletion record. A003–A026 reconciled for task 133 against the final Swift counterpart snapshot and implementer-reported focused execution; A027–A041 reconciled for task 140 and A042–A056 for task 141 against the final Swift checks and implementer-reported focused execution; A057–A072 reconciled for Task 153 against the final Swift checks and implementer-reported focused execution; remaining entries stay as recorded.
 Original: src/checks/project/iomutations.cpp
 Original SHA-256: 7e9bc82238223d083d9896a86accebbe1892abdf03e38dba935c4507537c35b8
 Swift counterpart: src/checks/workspace/SessionChecks.swift
@@ -29,6 +29,9 @@ Task-133 shell result: PASS, 1/75 (implementer-reported; real mounted failed-ope
 Task-140 SHA-256: src/checks/workspace/session_save.swift dfca705d7d9a9e4dece4a8881fd83f6ab1b6919e1ea98683b8144dc1412745cf
 Task-141 SHA-256: src/checks/workspace/bank_edits.swift ad44473dbcee23b3d47e18ae58f039c702249710fb26c90ec3ed473951b569c5
 Task-141 SHA-256: src/checks/workspace/SessionChecks.swift 51819923a76914a49f327e64ef9793146311df9a217a089eb4a1c8df2839e092
+Task-153 SHA-256: src/checks/workspace/session_save.swift 7e55b3562d3f3ceb4a9d1b1c5ab1d3c9a2869b98dd2aaa2129477fa8bdc3de4d
+Task-153 command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-projectsession --verbose
+Task-153 result: PASS — build: ok (2.15s); ok: swiftcore-projectsession (8.92s); verify: 1/36 ok (8.99s, 35 skipped); run_checks: PASS (all harnesses in 8.99s) (implementer-reported in agent://Task153; not rerun by ledger writer).
 
 Task-140 command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-projectsession --verbose
 Task-140 result: PASS — ok: swiftcore-projectsession (8.68s); verify 1/36 ok, run_checks PASS (implementer-reported in agent://Task140; not rerun by ledger writer).
@@ -892,180 +895,55 @@ Original expression:
   QVERIFY(!applied->materialization.has_value())
 
 A057 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:414
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
-Source context since previous assertion:
-  ;
-  }
-
-  void ProjectIoMutationsTest::semanticSaveBareAndWithRecipe()
-  {
-      QString error;
-      const std::optional<project_check::OpenedProject> opened = m_fixture->open(error);
-
-Original expression:
-  QVERIFY2(opened, qPrintable(error))
-
+Disposition: NATIVE-SETUP
+Mapping/reason: Harness setup guard only; does not assert the bare or recipe save outcome.
 A058 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:419
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
-Source context since previous assertion:
-  ;
-      if (!opened)
-          return;
-      const std::optional<SongLoad> initial =
-          loadSong(*m_fixture, opened->song, SongLoadEntry::Open, nullptr, error);
-
-Original expression:
-  QVERIFY2(initial, qPrintable(error))
-
+Disposition: NATIVE-SETUP
+Mapping/reason: Opening the project is a setup guard; no Swift predicate asserts this fixture precondition.
 A059 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:426
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
-Source context since previous assertion:
-  ;
-      if (!initial)
-          return;
-      const SongSaveSnapshot snapshot = saveSnapshot(*opened, *initial);
-
-      int resultBase = m_fixture->resultCount();
-      m_fixture->io().submit(ProjectCommand{SaveSongInput{opened->song, snapshot, std::nullopt}});
-
-Original expression:
-  QVERIFY2(m_fixture->waitFor(resultBase + 1, error), qPrintable(error))
+Disposition: MATCHED
+Mapping: S027 — persisted MIDI contains the literal edited note after the bare save.
 
 A060 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:427
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(m_fixture->resultCount(), resultBase + 1)
-
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Pins the retired C++ result-queue count; Swift tests the consumer-visible persisted save behavior instead.
 A061 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:429
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
-Source context since previous assertion:
-  ;
-      const auto *const bareSaved = std::get_if<SongSaved>(&m_fixture->results().back());
-
-Original expression:
-  QVERIFY(bareSaved)
-
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Pins the retired SongSaved result-envelope variant; Swift checks observable save outcomes rather than C++ variant identity.
 A062 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:431
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
-Source context since previous assertion:
-  ;
-      if (bareSaved) {
-
-Original expression:
-  QVERIFY(bareSaved->song == opened->song)
-
+Disposition: MATCHED
+Mapping: S028 — bare save retains the exact song label and MIDI destination on reopen.
 A063 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:432
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(bareSaved->savedSnapshot.label, opened->playableSong.label)
-
+Disposition: MATCHED
+Mapping: S029 — bare save writes the literal song flags at the target destination.
 A064 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:433
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(bareSaved->flagsWritten)
-
+Disposition: MATCHED
+Mapping: S030 — bare save receipt reports that song flags were written.
 A065 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:439
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
-Source context since previous assertion:
-  ;
-      }
-
-      resultBase = m_fixture->resultCount();
-      m_fixture->io().submit(ProjectCommand{
-          SaveSongInput{opened->song, snapshot, SaveVoicegroupInput{initial->bankId, {}}}});
-
-Original expression:
-  QVERIFY2(m_fixture->waitFor(resultBase + 2, error), qPrintable(error))
+Disposition: MATCHED
+Mapping: S031 — bank-recipe save retains the edited MIDI bytes and literal flags.
 
 A066 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:440
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(m_fixture->resultCount(), resultBase + 2)
-
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Pins the retired C++ result-queue count across the two-result recipe operation.
 A067 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:443
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
-Source context since previous assertion:
-  ;
-      const auto *const view = std::get_if<LoadedBankView>(&m_fixture->results()[resultBase]);
-      const auto *const recipeSaved = std::get_if<SongSaved>(&m_fixture->results()[resultBase + 1]);
-
-Original expression:
-  QVERIFY(view)
-
+Disposition: MATCHED
+Mapping: S032 — bank-recipe save returns a clean refreshed bank view.
 A068 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:444
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(recipeSaved)
-
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Pins the retired SongSaved envelope variant in the recipe result queue; Swift verifies the observable recipe outcome.
 A069 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:446
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
-Source context since previous assertion:
-  ;
-      if (view)
-
-Original expression:
-  QVERIFY(view->id == initial->bankId)
-
+Disposition: MATCHED
+Mapping: S033 — refreshed bank retains the captured source path and section identity.
 A070 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:448
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
-Source context since previous assertion:
-  ;
-      if (recipeSaved) {
-
-Original expression:
-  QVERIFY(recipeSaved->song == opened->song)
-
+Disposition: MATCHED
+Mapping: S034 — reopened song retains its exact label and MIDI destination, literal flags, and edited note.
 A071 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:449
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(recipeSaved->flagsWritten)
-
+Disposition: MATCHED
+Mapping: S035 — bank-recipe save receipt reports that song flags were written.
 A072 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:454
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
-Source context since previous assertion:
-  ;
-      }
-
-      const std::optional<SongLoad> reloaded =
-          loadSong(*m_fixture, opened->song, SongLoadEntry::Reload, nullptr, error);
-
-Original expression:
-  QVERIFY2(reloaded, qPrintable(error))
-
+Disposition: NATIVE-SETUP
+Mapping/reason: Reload success is a setup guard before later checks; it has no equivalent Swift predicate asserting this precondition.
 A073 | ProjectIoMutationsTest::previewCleanupPrivateResult | src/checks/project/iomutations.cpp:461
 Disposition: GAP
 Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S003) observes reopen timing only, not preview-cleanup completion.
@@ -1488,18 +1366,62 @@ Predicate: report.expect(applied.materializationToken == nil, cppID: id, message
 
 S024 | sessionLegacySidecarPersistence | src/checks/workspace/session_save.swift
 Anchor: message "A033 bare document save preserves every literal legacy sidecar byte"
-Line: 241
+Line: 358
 Predicate: report.expect(afterBare == seed, cppID: id, message: "A033 bare document save preserves every literal legacy sidecar byte")
 Note: Path correction from the Swift-invented sound/songs/midi/*.mid.json marker to the fork's .porydaw/<label>.json sidecar; exact byte equality replaces contains "protected".
 
 S025 | sessionLegacySidecarPersistence | src/checks/workspace/session_save.swift
 Anchor: message "A038 bank-lease song save preserves every literal legacy sidecar byte"
-Line: 258
+Line: 375
 Predicate: report.expect(afterRecipe == seed, cppID: id, message: "A038 bank-lease song save preserves every literal legacy sidecar byte")
 Note: Path correction from the Swift-invented sound/songs/midi/*.mid.json marker to the fork's .porydaw/<label>.json sidecar; exact byte equality replaces contains "protected".
 
 S026 | sessionLegacySidecarPersistence | src/checks/workspace/session_save.swift
 Anchor: message "A041 reopening the saved song preserves every literal legacy sidecar byte"
-Line: 274
+Line: 391
 Predicate: report.expect(afterReload == seed, cppID: id, message: "A041 reopening the saved song preserves every literal legacy sidecar byte")
 Note: Path correction from the Swift-invented sound/songs/midi/*.mid.json marker to the fork's .porydaw/<label>.json sidecar; exact byte equality replaces contains "protected".
+S027 | sessionSaveReceipts | src/checks/workspace/session_save.swift
+Anchor: message "A059 bare save completes with the literal edited note in persisted MIDI"
+Line: 252
+Predicate: report.expect(hasEditedNote, cppID: id, message: "A059 bare save completes with the literal edited note in persisted MIDI")
+
+S028 | sessionSaveReceipts | src/checks/workspace/session_save.swift
+Anchor: message "A062 bare save retains the exact song and MIDI destination"
+Line: 257
+Predicate: report.expect(bareLoaded.label == "mus_session_test" && bareLoaded.midiPath == midiPath, cppID: id, message: "A062 bare save retains the exact song and MIDI destination")
+
+S029 | sessionSaveReceipts | src/checks/workspace/session_save.swift
+Anchor: message "A063 bare save writes the literal song flags at its destination"
+Line: 259
+Predicate: report.expect(configLineBytes(at: cfgPath, label: "mus_session_test") == expectedLine, cppID: id, message: "A063 bare save writes the literal song flags at its destination")
+
+S030 | sessionSaveReceipts | src/checks/workspace/session_save.swift
+Anchor: message "A064 bare save reports that song flags were written"
+Line: 263
+Predicate: report.expect(bare.flagsWritten, cppID: id, message: "A064 bare save reports that song flags were written")
+
+S031 | sessionSaveReceipts | src/checks/workspace/session_save.swift
+Anchor: message "A065 bank-recipe save retains the edited MIDI and literal flags"
+Line: 269
+Predicate: report.expect(recipeMidi == bareMidi && configLineBytes(at: cfgPath, label: "mus_session_test") == expectedLine, cppID: id, message: "A065 bank-recipe save retains the edited MIDI and literal flags")
+
+S032 | sessionSaveReceipts | src/checks/workspace/session_save.swift
+Anchor: message "A067 bank-recipe save returns a clean refreshed bank view"
+Line: 272
+Predicate: report.expect(recipe.bank != nil && recipe.bank?.dirty == false, cppID: id, message: "A067 bank-recipe save returns a clean refreshed bank view")
+
+S033 | sessionSaveReceipts | src/checks/workspace/session_save.swift
+Anchor: message "A069 refreshed bank keeps the captured source and section identity"
+Line: 274
+Predicate: report.expect(recipe.bank?.lease.sourcePath == bankPath && recipe.bank?.lease.sectionLabel == bankSection, cppID: id, message: "A069 refreshed bank keeps the captured source and section identity")
+
+S034 | sessionSaveReceipts | src/checks/workspace/session_save.swift
+Anchor: message "A070 exact saved song reopens with literal flags and edited MIDI note"
+Line: 284
+Predicate: report.expect(reopened.document.source.label == "mus_session_test" && reopened.document.source.midiPath == midiPath && reopened.document.state.config.priority == 42 && reopened.document.notes(in: 0).contains { $0.tick == 288 && $0.pitch == 74 && $0.duration == 24 && $0.velocity == 90 }, cppID: id, message: "A070 exact saved song reopens with literal flags and edited MIDI note")
+
+S035 | sessionSaveReceipts | src/checks/workspace/session_save.swift
+Anchor: message "A071 bank-recipe save reports that song flags were written"
+Line: 277
+Predicate: report.expect(recipe.flagsWritten, cppID: id, message: "A071 bank-recipe save reports that song flags were written")

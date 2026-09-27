@@ -8,6 +8,7 @@ import PorydawProject
 @MainActor
 internal func sessionSavePersistence(report: CheckReport, session: DocumentSession,
                                      service: ProjectService, projectDir: String) {
+    sessionSaveReceipts(report: report, fixtureRoot: projectDir)
     sessionLegacySidecarPersistence(report: report, fixtureRoot: projectDir)
     sessionSaveJourney(report: report, fixtureRoot: projectDir)
     sessionSynthUndoTail(report: report, fixtureRoot: projectDir)
@@ -175,6 +176,121 @@ internal func sessionSavePersistence(report: CheckReport, session: DocumentSessi
     } catch {
         report.fail("vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
                     "lease reuse check failed: \(error)")
+    }
+}
+
+@MainActor
+private func sessionSaveReceipts(report: CheckReport, fixtureRoot: String) {
+    let id = "project-io-mutations/ProjectIoMutationsTest::semanticSaveBareAndWithRecipe"
+    let source = URL(fileURLWithPath: fixtureRoot, isDirectory: true)
+    let root = source.deletingLastPathComponent()
+        .appendingPathComponent("save-receipts-\(UUID().uuidString)", isDirectory: true)
+    let fileManager = FileManager.default
+    do {
+        try fileManager.copyItem(at: source, to: root)
+    } catch {
+        report.fail(id, "Copying the isolated save receipt fixture failed: \(error)")
+        return
+    }
+    defer { try? fileManager.removeItem(at: root) }
+
+    let midiPath = root.appendingPathComponent("sound/songs/midi/mus_session_test.mid").path
+    let cfgPath = root.appendingPathComponent("sound/songs/midi/midi.cfg").path
+    let expectedLine = Data("mus_session_test.mid: -R50 -G_test_vg -V100 -P42".utf8)
+    let service = ProjectService()
+    defer {
+        do {
+            try runBlocking { await service.close() }
+        } catch {
+            report.fail(id, "Closing the isolated save receipt project failed: \(error)")
+        }
+    }
+    do {
+        try runBlocking { try await service.open(root: root.path) }
+        let session = try runBlocking {
+            try await DocumentSession.open(service: service, label: "mus_session_test")
+        }
+        defer {
+            do {
+                _ = try runBlocking { await session.close() }
+            } catch {
+                report.fail(id, "Closing the save receipt session failed: \(error)")
+            }
+        }
+        guard let otherLine = configLineBytes(at: cfgPath, label: "mus_session_test2"),
+              let initialLine = configLineBytes(at: cfgPath, label: "mus_session_test"),
+              initialLine != expectedLine else {
+            report.fail(id, "The save receipt fixture lacks its original song or flags")
+            return
+        }
+        let bank = session.bankLease
+        let bankPath = bank.sourcePath
+        let bankSection = bank.sectionLabel
+        _ = try session.document.addNotes([
+            NewNote(track: 0, tick: 288, pitch: 74, duration: 24, velocity: 90),
+        ])
+        var config = session.document.state.config
+        config.priority = 42
+        session.document.setConfig(config)
+        let snapshot = try session.document.captureSave()
+        guard snapshot.flagsNeeded, snapshot.destination.label == "mus_session_test",
+              snapshot.destination.midiPath == midiPath else {
+            report.fail(id, "The captured save does not target the changed fixture song and flags")
+            return
+        }
+
+        let bare = try runBlocking { try await service.save(snapshot, bank: nil) }
+        let bareMidi = try Data(contentsOf: URL(fileURLWithPath: midiPath))
+        let bareFile = try MidiFile.decode(Array(bareMidi))
+        let hasEditedNote = bareFile.chunks.contains { chunk in
+            chunk.events.contains { event in
+                guard event.tick == 288,
+                      case let .channel(status, pitch, velocity) = event.payload else { return false }
+                return status & 0xF0 == 0x90 && pitch == 74 && velocity == 90
+            }
+        }
+        report.expect(hasEditedNote, cppID: id,
+                      message: "A059 bare save completes with the literal edited note in persisted MIDI")
+        report.expect(bare.bank == nil, cppID: id,
+                      message: "bare save returns no refreshed bank without a recipe")
+        let bareLoaded = try runBlocking { try await service.openSong(label: "mus_session_test") }
+        report.expect(bareLoaded.label == "mus_session_test" && bareLoaded.midiPath == midiPath,
+                      cppID: id, message: "A062 bare save retains the exact song and MIDI destination")
+        report.expect(configLineBytes(at: cfgPath, label: "mus_session_test") == expectedLine,
+                      cppID: id, message: "A063 bare save writes the literal song flags at its destination")
+        report.expect(configLineBytes(at: cfgPath, label: "mus_session_test2") == otherLine,
+                      cppID: id, message: "bare save leaves the other song flags unchanged")
+        report.expect(bare.flagsWritten, cppID: id,
+                      message: "A064 bare save reports that song flags were written")
+
+        let recipe = try runBlocking { try await service.save(snapshot, bank: bank) }
+        let recipeMidi = try Data(contentsOf: URL(fileURLWithPath: midiPath))
+        // Opaque MIDI bytes from immediately before the recipe are a passthrough baseline.
+        report.expect(recipeMidi == bareMidi &&
+                      configLineBytes(at: cfgPath, label: "mus_session_test") == expectedLine,
+                      cppID: id, message: "A065 bank-recipe save retains the edited MIDI and literal flags")
+        report.expect(recipe.bank != nil && recipe.bank?.dirty == false, cppID: id,
+                      message: "A067 bank-recipe save returns a clean refreshed bank view")
+        report.expect(recipe.bank?.lease.sourcePath == bankPath &&
+                      recipe.bank?.lease.sectionLabel == bankSection,
+                      cppID: id, message: "A069 refreshed bank keeps the captured source and section identity")
+        report.expect(recipe.flagsWritten, cppID: id,
+                      message: "A071 bank-recipe save reports that song flags were written")
+        report.expect(configLineBytes(at: cfgPath, label: "mus_session_test2") == otherLine,
+                      cppID: id, message: "bank-recipe save leaves the other song flags unchanged")
+        let reopened = try runBlocking {
+            try await DocumentSession.open(service: service, label: "mus_session_test")
+        }
+        report.expect(reopened.document.source.label == "mus_session_test" &&
+                      reopened.document.source.midiPath == midiPath &&
+                      reopened.document.state.config.priority == 42 &&
+                      reopened.document.notes(in: 0).contains {
+                          $0.tick == 288 && $0.pitch == 74 && $0.duration == 24 && $0.velocity == 90
+                      }, cppID: id,
+                      message: "A070 exact saved song reopens with literal flags and edited MIDI note")
+        _ = try runBlocking { await reopened.close() }
+    } catch {
+        report.fail(id, "Save receipt journey failed: \(error)")
     }
 }
 
