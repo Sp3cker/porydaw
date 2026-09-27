@@ -10,21 +10,19 @@ Additional Swift counterpart: src/checks/automation/domain/gestureNodeDrag.swift
 Additional Swift counterpart: src/checks/automation/domain/gesturePointRange.swift
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
 
-Disposition tally: 31 sites: 11 MATCHED, 18 PARTIAL, 1 GAP, 1 RETIRED-REPRESENTATION.
+Disposition tally: 31 sites: 27 MATCHED, 2 PARTIAL, 1 GAP, 1 RETIRED-REPRESENTATION.
 
-Command: deno task verify --filter swiftcore (implementer run on the counterpart
-hashes pinned above) -> run_checks PASS (1/14 ok, 13 skipped).
-Command: deno task verify:qml (same tree, same implementer run) -> run_checks PASS
-(all harnesses).
-Result: the converted Swift and QML suites are green on the counterpart hashes
-pinned above. This ledger was not re-run here and no per-predicate execution was
-observed beyond that report; predicate presence alone does not close any A entry.
+Earlier converted-suite command (prior source snapshot): deno task verify --filter swiftcore -> run_checks PASS (1/14 ok, 13 skipped).
+Earlier converted-suite command (same prior snapshot): deno task verify:qml -> run_checks PASS (all harnesses).
+Command: deno task verify --filter swiftcore-projectsession --verbose (Task 92 source snapshot) -> run_checks PASS (1/36 ok, 35 skipped).
+Command: deno task verify:shell --filter shell-grid-input --verbose (Task 92 source snapshot) -> run_checks PASS (1/26 ok, 25 skipped).
+Command: deno task verify (Task 92 source snapshot) -> run_checks PASS (36/36 ok).
+Task 92 source SHA-256: gestureNodeDrag.swift e9ab279b85c380550c55745f4405819e00e0643d5a780767366fd287a827d223; xcmd.swift cee84467eb1e9f8ea3804c9ae8e981f7c1809db22a82846f41d7ff363fac1739; automationselection.swift 6809c5b9d2b014e78418be4979874000bcb917e3d208c90a8d0975ee4a2e7747; tst_ShellGridInput.qml ca180d99712361a9dc6e242c62bae8eedcdb4d31114dbabe754250eeef7dd829; AutomationLaneProjection.swift 4a7fff65085bc4c686b78f39f625ced5eb4eebc99f1fe4f0dbbea20874bea402.
+Result: the implementer's final report records the native focused and full lanes passing on these hashes and the mounted shell-grid-input lane passing; the full shell suite failed only in the sibling-owned shell-note-visuals case. Predicate execution is reported by those lanes; this proof-only reconciliation does not rerun them.
 Note: the review-fix hunks have landed in automationcanvasediting.swift since this
 ledger was written (diagnostics enum names, hover-model anchor unwraps, a
 selection-clear guard, and drawerAutomationMenuHintMuting plus
-drawerAutomationHoverResidual appends after line 398); every line pinned here was
-re-verified against the current content, whose hash is pinned above. The appended
-menu-muting and hover-residual predicates are owned by sibling lanes and out of scope here.
+drawerAutomationHoverResidual appends after line 398); their sibling-owned anchors resolve in the current tree, but automationcanvasediting.swift is not among the Task 92 source SHAs above. The appended menu-muting and hover-residual predicates are out of scope here.
 Converted-suite note: the retired automation-gestures C++ harness never runs again;
 candidate model predicates live in the automation lane Swift suite.
 Task-57 reconciliation: S039..S051 index the Task-57 predicates above; S042 and
@@ -40,7 +38,7 @@ stack, mouse rig, document snapshots); cross-lane domain labelling comes from
 
 A001 | expectUnchanged | src/checks/automationgesturecheck/crosslane.cpp:147
 Disposition: PARTIAL
-Mapping/reason: Snapshot-unchanged helper guard; S027 and S028 (stale releases write nothing after a rebuild and leave no interaction live) and S051 (a stale batch release writes nothing) are indexed below; unproved: native cross-lane batch commit path, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Mapping/reason: S027, S028, S051 and S061 guard stale releases; S073 and S074 guard held mixed and Pan+LFO previews against bytes/index changes, while S076 and S077 check mounted displayed Tempo points and revision; unproved: the shared helper's unchanged mixed-selection hover snapshot including revision, SMF and undo index.
 Source context since previous assertion:
   #include "domains.h"
   #include "support.h"
@@ -214,88 +212,32 @@ Disposition: MATCHED
 Mapping: S014, S015
 
 A005 | runBandIsolation | src/checks/automationgesturecheck/crosslane.cpp:210
-Disposition: PARTIAL
-Mapping/reason: S022 (a CC range edit preserves Tempo) asserts cross-lane isolation in the opposite direction; S039 (a cross-lane gesture changes the active lane), S040 (a cross-lane gesture writes nothing outside its lane), S041 (the modulation row keeps its original point), and S042 and S043 (tempo, pan and LFO lanes isolate by band, #1 for the LFO survival and #2 for the tempo survival) prove a CC-lane drag leaves the other bands untouched at model level; unproved: a Tempo-scoped band drag leaving both CC rows untouched, native cross-lane batch commit, and the retired rig fixture.
-Source context since previous assertion:
-
-      const auto beforeTempoDrag = snapshot(rig.document());
-      const auto panBefore = laneValues(rig.document().lanePoints(rig.pan.track, rig.pan.controller));
-      const auto lfoBefore = laneValues(rig.document().lanePoints(rig.lfo.track, rig.lfo.controller));
-      const QPointF tempoDragEnd =
-          shiftDragPreview(rig, LaneHandle{0}, kFixtureTick, kMovedTick, selectedBpm);
-      rig.mouseRelease(tempoDragEnd, Qt::ShiftModifier);
-      rig.pump();
-Original expression:
-      ctx.check.require(
-          isOneEdit(beforeTempoDrag, snapshot(rig.document())) &&
-              sameRawPoints(rig.document().lanePoints(rig.pan.track, rig.pan.controller),
-                            panBefore) &&
-              sameRawPoints(rig.document().lanePoints(rig.lfo.track, rig.lfo.controller), lfoBefore),
-          QStringLiteral("dragging a Tempo band selection moved a CC row"));
+Disposition: MATCHED
+Mapping: S064 (Tempo-only drag commits one revision and applied undo entry while both raw CC rows remain unchanged).
 
 A006 | runBandIsolation | src/checks/automationgesturecheck/crosslane.cpp:230
 Disposition: MATCHED
 Mapping: S016, S013
 
 A007 | expectOneCommittedEdit | src/checks/automationgesturecheck/crosslane.cpp:244
-Disposition: PARTIAL
-Mapping/reason: Committed-edit revision guard; S001 (one revision after a heterogeneous selected drag) and the xcmd range-edit one-edit predicates S035, S036, S037, and S038 and S045 (the selected-range drag commits once) and S046 (a sweep ramp commits one document edit) are indexed below; unproved: native cross-lane batch commit path, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
-Source context since previous assertion:
-  }
-
-  void expectOneCommittedEdit(const Context &ctx, const DocSnapshot &before, const char *label)
-  {
-      auto &document = ctx.rig.document();
-      const auto after = snapshot(document);
-Original expression:
-      ctx.check.require(isOneEdit(before, after),
-                        QStringLiteral("%1 did not commit exactly one revision and one undo")
-                            .arg(QLatin1String(label)));
+Disposition: MATCHED
+Mapping: S001, S035..S038, S063, S065, S075 (mixed, Pan+LFO and XCMD edits advance one revision and one applied undo entry).
 
 A008 | expectOneCommittedEdit | src/checks/automationgesturecheck/crosslane.cpp:249
-Disposition: PARTIAL
-Mapping/reason: Committed-edit outcome; S002 (one undo restores all selected lanes), S033 (a second undo parks the drag again), S034 (exactly one history entry), and S044 (undo restores the isolated lane) are indexed below; unproved: exact cross-lane SMF byte restoration and the retired cross-lane fixture.
-      document.undoStack()->undo();
-      const auto undone = snapshot(document);
-Original expression:
-      ctx.check.require(
-          undone.undoIndex == before.undoIndex && undone.smf == before.smf,
-          QStringLiteral("%1 undo did not restore SMF and undo index").arg(QLatin1String(label)));
+Disposition: MATCHED
+Mapping: S066, S069 (mixed and Pan+LFO undo restore original MIDI bytes and applied undo index).
 
 A009 | expectOneCommittedEdit | src/checks/automationgesturecheck/crosslane.cpp:254
-Disposition: PARTIAL
-Mapping/reason: S030, S031, and S032 (the heterogeneous drag is redoable and redo restores the committed Tempo stream and secondary CC lane) cover the redo outcome; unproved: the committed SMF bytes and undo-index value the original compares.
-Source context since previous assertion:
-      document.undoStack()->redo();
-      const auto redone = snapshot(document);
-Original expression:
-      ctx.check.require(
-          redone.undoIndex == after.undoIndex && redone.smf == after.smf,
-          QStringLiteral("%1 redo did not restore the committed SMF").arg(QLatin1String(label)));
+Disposition: MATCHED
+Mapping: S067, S070 (mixed and Pan+LFO redo restore committed MIDI bytes and applied undo index).
 
 A010 | expectMovedPanGroup | src/checks/automationgesturecheck/crosslane.cpp:263
-Disposition: PARTIAL
-Mapping/reason: Moved-pan-group outcome; S017 (same-tick CC writes keep their order), S018 (a move onto a free tick keeps every occupant in order), and S019 (a move onto an occupied tick evicts its occupant) are indexed below; unproved: the vacated source tick keeps no raw events and a same-tick group keeps its order at the destination, native cross-lane batch commit, and the retired rig fixture.
-Source context since previous assertion:
-  }
-
-  void expectMovedPanGroup(const Context &ctx)
-  {
-      auto &document = ctx.rig.document();
-      const auto &pan = ctx.rig.pan;
-Original expression:
-      ctx.check.require(
-          sameNodePoints(effectiveLane(document, pan.track, pan.controller),
-                         {{0, 80}, {kMovedTick, 20}, {kUnrelatedLate, 110}}) &&
-              rawValuesAt(document, pan.track, pan.controller, kFixtureTick).empty() &&
-              rawValuesAt(document, pan.track, pan.controller, kMovedTick) ==
-                  std::vector<int>{10, 20},
-          QStringLiteral("pan dest occupant survived, source was not emptied, or same-tick group "
-                         "order/effective value changed"));
+Disposition: MATCHED
+Mapping: S052, S053 (mixed Pan drag empties source and retains ordered occupants while evicting collision).
 
 A011 | runTempoPanLfo | src/checks/automationgesturecheck/crosslane.cpp:301
 Disposition: PARTIAL
-Mapping/reason: S025 (an unchanged-value tempo move preserves its microseconds for an exact-BPM source) and S022 (a CC range edit preserves Tempo) are indexed below; unproved: the exact fractional microseconds and the shared tick delta across the mixed selection, native cross-lane batch commit, and the retired rig fixture.
+Mapping/reason: S054 proves moved Tempo's exact 499999 microseconds at tick 144, and S056 proves the translated mixed scope; unproved: the original's complete effective Tempo row, including preserved values at ticks 0 and 384, after this mixed drag.
 Source context since previous assertion:
   }
 
@@ -335,85 +277,32 @@ Original expression:
           QStringLiteral("Tempo did not keep the shared tick delta and exact microseconds"));
 
 A012 | runTempoPanLfo | src/checks/automationgesturecheck/crosslane.cpp:307
-Disposition: PARTIAL
-Mapping/reason: S021 and S024 (a covered modulation lane is cleared and restored by one undo) are indexed below; unproved: a mixed selection drag applying the shared tick delta to the LFO row, native cross-lane batch commit, and the retired rig fixture.
-Source context since previous assertion:
-      expectMovedPanGroup(ctx);
-Original expression:
-      ctx.check.require(
-          sameNodePoints(effectiveLane(rig.document(), rig.lfo.track, rig.lfo.controller),
-                         {{0, 32}, {kMovedTick, 96}, {kUnrelatedLate, 64}}),
-          QStringLiteral("LFO normalized points did not follow the shared tick delta"));
+Disposition: MATCHED
+Mapping: S053 (mixed LFO points follow the selected tick delta and retain unaffected endpoints).
 
 A013 | runTempoPanLfo | src/checks/automationgesturecheck/crosslane.cpp:311
-Disposition: PARTIAL
-Mapping/reason: S021 (a mixed delete clears only every covered lane) and S022 (a CC range edit preserves Tempo) and S049 (the unselected volume lane is excluded, asserting an unselected lane survives a multi-lane drag) are indexed below; unproved: an unrelated volume lane surviving a mixed selection drag, native cross-lane batch commit, and the retired rig fixture.
-Source context since previous assertion:
-Original expression:
-      ctx.check.require(
-          sameRawPoints(rig.document().lanePoints(rig.volume.track, rig.volume.controller), volume),
-          QStringLiteral("unrelated volume points did not survive the selection-drag"));
+Disposition: MATCHED
+Mapping: S055 (unrelated raw Volume events remain byte-identical after the mixed drag).
 
 A014 | runTempoPanLfo | src/checks/automationgesturecheck/crosslane.cpp:314
-Disposition: PARTIAL
-Mapping/reason: S026 (a right-drag band publishes its shared time selection) asserts the published band range; S047 (the selected-range band follows its drag) asserts the translated band range at model level; unproved: the idle check, native cross-lane batch commit, and the retired rig fixture.
-Source context since previous assertion:
-Original expression:
-      ctx.check.require(
-          mixedSelection(rig.view().selectionModel().timeSelection(), kMovedTick,
-                         kMovedTick + (kMovedTick - kFixtureTick), rig) &&
-              rig.isIdle(),
-          QStringLiteral("selection-drag did not keep the mixed range or left a live gesture"));
+Disposition: MATCHED
+Mapping: S056, S057, S078, S079, S080 (mixed interval translates to 144..192 and finishes idle; mounted Tempo, Pan and LFO points follow the selected tick delta).
 
 A015 | runTempoPanLfo | src/checks/automationgesturecheck/crosslane.cpp:328
-Disposition: PARTIAL
-Mapping/reason: S020 (the mixed delete consumes its selection) and S021 and S048 (a selected-range drag deletes through the range, asserting covered-point removal with outside preservation) are indexed below; unproved: a Tempo-scoped mixed delete removing the selected Tempo point (the raw tempoUsAt-zero conjunct), native cross-lane batch commit, and the retired rig fixture.
-Source context since previous assertion:
-      // Restore the seeded points, then Delete through the leftover empty mixed range (no-op).
-      seedMixed(rig);
-      const auto emptyDeleteBefore = snapshot(rig.document());
-      rig.keyToArea(QEvent::KeyPress, Qt::Key_Delete);
-      expectUnchanged(ctx, emptyDeleteBefore, "Delete over the empty leftover mixed range");
-      publishMixedSelection(rig, kFixtureTick, kMovedTick);
-      const auto deleteBefore = snapshot(rig.document());
-      rig.keyToArea(QEvent::KeyPress, Qt::Key_Delete);
-      expectOneCommittedEdit(ctx, deleteBefore, "mixed Delete");
-Original expression:
-      ctx.check.require(
-          sameNodePoints(effectiveTempo(rig.document()), {{0, 80}, {kUnrelatedLate, 64}}) &&
-              tempoUsAt(rig.document(), kFixtureTick) == 0,
-          QStringLiteral("mixed Delete did not remove the selected Tempo point"));
+Disposition: MATCHED
+Mapping: S058, S081 (mixed Delete removes only selected Tempo and mounted translated Tempo).
 
 A016 | runTempoPanLfo | src/checks/automationgesturecheck/crosslane.cpp:332
-Disposition: PARTIAL
-Mapping/reason: S021 (a mixed delete clears every covered lane) and S023 (one undo restores the mixed delete lanes) and S048 (a selected-range drag deletes through the range, asserting covered-point removal with outside preservation) are indexed below; unproved: the removed tick keeps no raw group events while unrelated pan points survive, native cross-lane batch commit, and the retired rig fixture.
-Source context since previous assertion:
-Original expression:
-      ctx.check.require(
-          sameRawPoints(rig.document().lanePoints(rig.pan.track, rig.pan.controller),
-                        {{0, 80}, {kUnrelatedLate, 110}}) &&
-              rawValuesAt(rig.document(), rig.pan.track, rig.pan.controller, kFixtureTick).empty(),
-          QStringLiteral("mixed Delete left pan group events or removed unrelated pan points"));
+Disposition: MATCHED
+Mapping: S059, S060, S082 (mixed Delete clears selected Pan raw group, retains outsiders and removes the mounted translated Pan point).
 
 A017 | runTempoPanLfo | src/checks/automationgesturecheck/crosslane.cpp:337
-Disposition: PARTIAL
-Mapping/reason: S021, S023, and S024 (a mixed delete clears the covered modulation lane and one undo restores it) are indexed below; unproved: unrelated LFO points surviving the deleted range, native cross-lane batch commit, and the retired rig fixture.
-Source context since previous assertion:
-Original expression:
-      ctx.check.require(
-          sameNodePoints(effectiveLane(rig.document(), rig.lfo.track, rig.lfo.controller),
-                         {{0, 32}, {kUnrelatedLate, 64}}),
-          QStringLiteral("mixed Delete left the selected LFO point or removed unrelated LFO points"));
+Disposition: MATCHED
+Mapping: S059, S083 (mixed Delete removes selected LFO, retains outsiders and removes the mounted translated LFO point).
 
 A018 | runTempoPanLfo | src/checks/automationgesturecheck/crosslane.cpp:341
-Disposition: PARTIAL
-Mapping/reason: S020 and S021 (the mixed delete consumes its selection and clears every covered lane) and S049 (the unselected volume lane is excluded) and S050 (a multi-lane drag preserves tempo and CC order) assert unselected-lane survival at model level; unproved: the unrelated volume lane surviving with no live gesture (the idle conjunct), native cross-lane batch commit, and the retired rig fixture.
-Source context since previous assertion:
-Original expression:
-      ctx.check.require(
-          sameRawPoints(rig.document().lanePoints(rig.volume.track, rig.volume.controller), volume) &&
-              rig.isIdle(),
-          QStringLiteral("mixed Delete mutated unrelated volume points or left a live gesture"));
+Disposition: MATCHED
+Mapping: S058, S059 (mixed Delete preserves the unselected raw Volume point and leaves interaction idle).
 
 A019 | runStaleBatch | src/checks/automationgesturecheck/crosslane.cpp:364
 Disposition: MATCHED
@@ -424,69 +313,20 @@ Disposition: MATCHED
 Mapping: S027, S028
 
 A021 | runStaleBatch | src/checks/automationgesturecheck/crosslane.cpp:377
-Disposition: PARTIAL
-Mapping/reason: S029 (a stale release leaves no interaction live) covers the idle outcome; S051 (a stale batch release writes nothing) asserts the snapshot survives a stale release at model level; unproved: the mixed selection range surviving a stale release, native cross-lane batch commit, and the retired rig fixture.
-Source context since previous assertion:
-Original expression:
-      ctx.check.require(
-          mixedSelection(rig.view().selectionModel().timeSelection(), kFixtureTick, kMovedTick,
-                         rig) &&
-              rig.isIdle(),
-          QStringLiteral("stale rebuild release moved the mixed selection or left a live gesture"));
+Disposition: MATCHED
+Mapping: S061 (stale release preserves the original mixed interval, rebuilt bytes and idle state).
 
 A022 | runPanLfoRangeEdit | src/checks/automationgesturecheck/crosslane.cpp:402
-Disposition: PARTIAL
-Mapping/reason: S022 (a CC range edit preserves Tempo) and S025 (an unchanged-value tempo move preserves its microseconds for an exact-BPM source) and S040 (a cross-lane gesture writes nothing outside its lane, asserting a CC-lane gesture leaves Tempo untouched) are indexed below; unproved: the exact fractional microseconds 499999 and the effective Tempo row the original pins.
-Source context since previous assertion:
-      restoreLfo(rig, initialLfo);
-  }
-
-  void runPanLfoRangeEdit(Context &ctx)
-  {
-      auto &rig = ctx.rig;
-      if (!requirePanLfo(ctx))
-          return;
-      const auto panHandle = rig.handleFor(rig.pan);
-      const auto initialLfo = rig.document().lanePoints(rig.lfo.track, rig.lfo.controller);
-      const auto volume =
-          laneValues(rig.document().lanePoints(rig.volume.track, rig.volume.controller));
-      seedMixed(rig, true);
-      publishMixedSelection(rig, kFixtureTick, kMovedTick, false);
-      const auto preservedBpm = tempoBpm(kPreservedTempoUs);
-      const auto before = snapshot(rig.document());
-      const auto end = shiftDragPreview(rig, panHandle, kFixtureTick, kMovedTick, 20);
-      expectUnchanged(ctx, before, "pan+LFO selection-drag preview");
-      rig.mouseRelease(end, Qt::ShiftModifier);
-      expectOneCommittedEdit(ctx, before, "pan+LFO selection-drag");
-Original expression:
-      ctx.check.require(
-          sameNodePoints(effectiveTempo(rig.document()),
-                         {{0, 80}, {kFixtureTick, preservedBpm}, {kUnrelatedLate, 64}}) &&
-              tempoUsAt(rig.document(), kFixtureTick) == kPreservedTempoUs,
-          QStringLiteral("pan+LFO RangeEdit moved Tempo"));
+Disposition: MATCHED
+Mapping: S068, S071 (Pan+LFO drag leaves exact fractional Tempo microseconds and the complete displayed Tempo row unchanged).
 
 A023 | runPanLfoRangeEdit | src/checks/automationgesturecheck/crosslane.cpp:408
-Disposition: PARTIAL
-Mapping/reason: S021 and S024 (a covered modulation lane is cleared by a mixed delete and restored by one undo) are indexed below; unproved: the LFO row following a pan plus LFO shared tick delta.
-Source context since previous assertion:
-      expectMovedPanGroup(ctx);
-Original expression:
-      ctx.check.require(
-          sameNodePoints(effectiveLane(rig.document(), rig.lfo.track, rig.lfo.controller),
-                         {{0, 32}, {kMovedTick, 96}, {kUnrelatedLate, 64}}),
-          QStringLiteral("LFO did not follow the pan+LFO shared tick delta"));
+Disposition: MATCHED
+Mapping: S062 (Pan+LFO drag moves the selected LFO and retains unaffected endpoints).
 
 A024 | runPanLfoRangeEdit | src/checks/automationgesturecheck/crosslane.cpp:412
-Disposition: PARTIAL
-Mapping/reason: S021 and S022 (only covered lanes change and Tempo survives a CC range edit) and S049 (the unselected volume lane is excluded) are indexed below; unproved: the unrelated volume lane and the translated selection range after a pan plus LFO edit, plus the idle check.
-Source context since previous assertion:
-Original expression:
-      ctx.check.require(
-          sameRawPoints(rig.document().lanePoints(rig.volume.track, rig.volume.controller), volume) &&
-              mixedSelection(rig.view().selectionModel().timeSelection(), kMovedTick,
-                             kMovedTick + (kMovedTick - kFixtureTick), rig, false) &&
-              rig.isIdle(),
-          QStringLiteral("pan+LFO RangeEdit mutated volume, dropped the range, or left a gesture"));
+Disposition: MATCHED
+Mapping: S065, S071 (Pan+LFO leaves raw Volume untouched, translates the selected range and finishes idle).
 
 A025 | runXcmdRemoveOnly | src/checks/automationgesturecheck/crosslane.cpp:517
 Disposition: MATCHED
@@ -694,3 +534,99 @@ Anchor: message "a multi-lane drag preserves tempo and CC order"
 
 S051 | drawerAutomationHoverModel | src/checks/automation/automationcanvashover.swift
 Anchor: message "a stale batch release writes nothing"
+
+S052 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+Anchor: message "mixed selected drag publishes ordered Pan collisions and preserves Volume playback"
+
+S053 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+Anchor: message "mixed move preserves exact surviving raw Pan and LFO point order"
+
+S054 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+Anchor: message "mixed selected drag publishes exact 499999-us Tempo at tick 144"
+
+S055 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+Anchor: message "mixed Tempo Pan LFO move leaves unrelated Volume events byte-identical"
+
+S056 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+Anchor: message "mixed selected drag translates its Tempo Pan LFO interval to 144 through 192"
+
+S057 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+Anchor: message "mixed selection drag finishes idle on pointer release"
+
+S058 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection.swift
+Anchor: message "mixed Delete removes only the interval Tempo and leaves gesture idle"
+
+S059 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection.swift
+Anchor: message "mixed Delete removes only selected raw groups and keeps outsiders ordered"
+
+S060 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection.swift
+Anchor: message "selected Delete removes covered Pan playback but leaves later occupants"
+
+S061 | drawerAutomationMixedDragRebuildCancellation | src/checks/automation/automationselection.swift
+Anchor: message "stale release keeps original mixed range and rebuilt bytes while idle"
+
+S062 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection.swift
+Anchor: message "Pan LFO range shifts LFO but never changes unrelated Volume"
+
+S063 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+Anchor: message "mixed drag increments the applied undo index exactly once"
+
+S064 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection.swift
+Anchor: message "Tempo-scoped drag makes exactly one edit and leaves both raw CC rows untouched"
+
+S065 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection.swift
+Anchor: message "Pan LFO range commits one revision and applied undo entry then finishes idle"
+
+S066 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+Anchor: message "mixed move undo restores prior index MIDI bytes and all selected points"
+
+S067 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+Anchor: message "mixed move redo restores committed index MIDI bytes and Pan points"
+
+S068 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection.swift
+Anchor: message "Pan LFO-only range preserves fractional Tempo at source"
+
+S069 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection.swift
+Anchor: message "Pan LFO undo restores original bytes index points and Tempo row"
+
+S070 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection.swift
+Anchor: message "Pan LFO redo restores committed bytes index points and Tempo row"
+
+S071 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection.swift
+Anchor: message "Pan LFO-only edit preserves complete Tempo row and raw Volume events"
+
+S072 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection.swift
+Anchor: message "Pan LFO range shifts LFO but never changes unrelated Volume"
+
+S073 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+Anchor: message "mixed drag preview leaves MIDI bytes index and all selected points unchanged"
+
+S074 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection.swift
+Anchor: message "Pan LFO selected preview does not write raw events"
+
+S075 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+Anchor: message "mixed selected drag publishes one dirty edit and one history entry"
+
+S076 | test_mountedMixedAutomationRangeDragDeleteUndo | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "held mixed Shift drag preserves every displayed Tempo point"
+
+S077 | test_mountedMixedAutomationRangeDragDeleteUndo | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "held mixed Shift drag leaves the document revision unchanged"
+
+S078 | test_mountedMixedAutomationRangeDragDeleteUndo | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "mixed Shift release moves the selected Tempo point"
+
+S079 | test_mountedMixedAutomationRangeDragDeleteUndo | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "mixed Shift release translates Pan by exactly the Tempo tick delta"
+
+S080 | test_mountedMixedAutomationRangeDragDeleteUndo | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "mixed Shift release translates LFO by exactly the Tempo tick delta"
+
+S081 | test_mountedMixedAutomationRangeDragDeleteUndo | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "mounted mixed Delete removes the exact translated Tempo occurrence"
+
+S082 | test_mountedMixedAutomationRangeDragDeleteUndo | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "mounted mixed Delete removes the exact translated Pan occurrence"
+
+S083 | test_mountedMixedAutomationRangeDragDeleteUndo | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "mounted mixed Delete removes the exact translated LFO occurrence"

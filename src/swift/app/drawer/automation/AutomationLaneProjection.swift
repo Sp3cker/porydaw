@@ -240,6 +240,7 @@ public struct AutomationTimeSelection: Equatable, Sendable {
         switch scope {
         case .lanes: return parameter.isTempo ? tempo : lanes.contains(parameter)
         case let .tracks(trackScope):
+            if parameter.isTempo { return coversTempo(usedTracks: usedTracks) }
             guard let track = parameter.track else { return false }
             return trackScope.contains(track) && usedTracks.contains(track)
         }

@@ -307,6 +307,8 @@ func drawerAutomationXcmdLaneEdits(_ report: CheckReport) {
                       cppID: occurrencesID, message: "unmoved occurrence keeps its bytes at tick 192")
         report.expect(occurrences.xcmdBytes(at: 384).elementsEqual(volume36, by: { $0 == $1 }),
                       cppID: occurrencesID, message: "moved occurrence encodes at tick 384")
+        report.expect(occurrences.xcmdBytes(at: 96).isEmpty, cppID: occurrencesID,
+                      message: "moving one logical XCMD occurrence vacates its original protocol group")
     } else {
         report.fail(occurrencesID, "re-added volume occurrence has no identity to move")
     }
