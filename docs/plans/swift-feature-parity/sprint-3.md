@@ -2148,3 +2148,206 @@ build or behavioral suite is run for this documentation-only commit.
   remain open. Transport A009/A010/A013 retain the user's cursor-never-seeks
   decision. Roll keyboard A077–A080 and selection A009 remain outside this
   wave. No silent parity-policy reversal.
+
+## 16. Wave 139–146 — remaining project/host consumers and bounded mapping debt
+
+### Selection and bounded briefs
+
+Waves 123–138 are landed. This wave selects from the current 69-ledger
+census, not the historical §14/15 counts. Planning executed
+`deno task proof list`, per-ledger `proof sites <ledger> --status GAP`
+and `PARTIAL`, and `deno task proof check --strict-mappings`. The strict
+command currently exits 1 with **485 missing message-anchor errors**;
+that is measured debt, not a passing verification result.
+
+Select **168 open rows (134 GAP + 34 PARTIAL)** on seven existing consumer
+surfaces, plus **295 already-MATCHED rows** for the explicitly requested
+strict-mapping exception. A selected setup/envelope row is not a mandate
+to add a setup-only assertion: classify its representation separately
+from its consumer outcome. Complete row inventories and individual fork
+citations live only in the briefs.
+
+| Task | Surface / brief | GAP | PARTIAL | Mapping debt | Route / seat |
+|---|---|---:|---:|---:|---|
+| 139 | [Failed project open retains live state and persisted path](task-139-brief.md) | 13 | 0 | 0 | SDD-track / sdd-implementer — async replacement and isolated preferences |
+| 140 | [Legacy sidecar bytes survive bare/recipe save and reopen](task-140-brief.md) | 0 | 15 | 0 | SDD-track / sdd-implementer — real file preservation through save variants |
+| 141 | [Missing edit basis conflicts; matching bank edit applies](task-141-brief.md) | 0 | 15 | 0 | SDD-track / sdd-implementer — conflict, immutable identity and history |
+| 142 | [Velocity commit values, stale rejection and axis voice context](task-142-brief.md) | 20 | 4 | 0 | SDD-track / sdd-implementer — gesture preview/commit state machine |
+| 143 | [Drawer track commands and tempo-range selection](task-143-brief.md) | 14 | 0 | 0 | SDD-track / sdd-implementer — input routing and track/lane remap |
+| 144 | [Background-tab isolation and fresh-tab identity](task-144-brief.md) | 15 | 0 | 0 | SDD-track / sdd-implementer — cross-tab publication and non-interference |
+| 145 | [Byte-preserving debug sound-list registration](task-145-brief.md) | 72 | 0 | 0 | SDD-track / sdd-implementer — six file-format journeys, one owner |
+| 146 | [Message-anchored predicates in four largest debt ledgers](task-146-brief.md) | 0 | 0 | 295 | SDD-track / sdd-implementer — mechanical shape, but clause-level evidence audit across four surfaces |
+| **Total** | | **134** | **34** | **295** | |
+
+Tasks larger than three files are explicit cohesive-surface sizing
+exceptions: 143 spans the existing drawer command boundary; 144 spans
+tab publication; 145 adds one cohesive scenario file and its manifest/caller;
+146 is the requested bounded four-ledger exception. No open-ended file
+ownership is implied by a conditional production repair: the closed path
+and named declaration limits in each brief still apply.
+
+### Priority census and retirement consequences
+
+| Inspected cluster | Current GAP / PARTIAL | Treatment |
+|---|---:|---|
+| project/workspace | 83 / 17 | 139 takes failed-open/path-retention consumers; loading-refusal and worker protocol deferred |
+| project/iomutations | 48 / 30 | 140/141 take sidecar save preservation and conflict/applied consumers |
+| project/ioflow | 49 / 8 | FIFO/catalog-preemption protocol deferred; no replacement event bus |
+| host/hostintegration | 51 / 13 | 142/144 take gesture and cross-tab/fresh identity consumers |
+| host/hostadapter | 31 / 19 | 142/143 take exact velocity voice context and drawer commands |
+| host/hostseams | 3 / 1 | 143/144 select all three GAPs; remaining PARTIAL is not implicitly closed |
+| mainwindowrouting/lifecycle | 28 / 35 | Preserve landed 138; remaining native/window/policy clauses deferred |
+| onboardcheck/debuglayout | 72 / 0 | 145 takes the full coherent six-scenario cluster |
+| onboardcheck/import | 51 / 0 | Wizard UI is a separate unbuilt surface, not registration proof |
+| onboardcheck/action | 40 / 9 | New-song action surface deferred |
+| samplecheck decoder/editor/integration/project/DSP | 93/0, 80/0, 68/0, 63/0, 61/0 | Larger, but excluded P4 sample studio; no scope expansion |
+
+This favors the project/document/host consumers that remain witnesses for
+`src/core/*`, `src/mainwindow.*` and `src/ui/workspaceui*`, while closing a
+whole eligible 72-row registration cluster. It does **not** pretend the
+largest raw sample counts are authorized. `workspaceui_samples.cpp`
+directly includes sample import/data, sf2reader, sampleeditordialog and
+sf2zonepicker; the deferred sample surfaces therefore remain real
+transitive blockers for `src/audio/sample*`, `sf2reader`, `sampleeditordialog`,
+`sf2zonepicker`, `waveformview` and workspace composition.
+
+Only debuglayout is a planned whole-ledger closure candidate. Its old C++
+check is already absent. Core SongDocument/SongHistory retain project,
+automation, routing and excluded savecore witnesses; mainwindow/workspace
+retain window-close, onboarding and native obligations. Playhead sample
+position/axis model checks do not certify native
+`src/ui/playheadrenderer_macos.mm` rendering or lifetime. The available
+native census is a blocker list, **not a transitive deletion certificate**.
+Accordingly no production C++ deletion is in these eight write sets. Do not
+delete a unit merely because one consumer ledger closes; any later deletion
+must also discharge every remaining open direct/transitive witness and
+respect the retained native boundaries.
+
+Strict debt selected by 146 is 88 sourceediting + 78 clipboardchecks +
+70 voicegroupbank + 59 windowtier-keyboard = 295; the other 190 planning
+errors remain out of scope. This is a one-off user-requested exception to
+the surface-first rule, not authority for general reconciliation. Existing
+checks gain stable message anchors or clause splits only where they really
+prove the fork clause. Uncovered selected clauses retain debt with explicit
+reasons; all four ledgers must show a real reduction. The clipboard source
+is post-fork and absent at `fceecd88`; its brief explicitly cites the ledger's
+`68209547` pin instead of inventing a fork citation.
+
+### Conflict matrix and execution order
+
+`C` = shared production/check file. `L` = shared ledger, disjoint selected
+A-rows. `—` = disjoint complete write sets (including conditional paths).
+Read-only use of the same verification lane is not a write conflict.
+
+| | 139 | 140 | 141 | 142 | 143 | 144 | 145 | 146 |
+|---|---|---|---|---|---|---|---|---|
+| 139 | — | — | — | — | — | — | — | C |
+| 140 | — | — | L | — | — | — | — | C |
+| 141 | — | L | — | — | — | C | — | C |
+| 142 | — | — | — | — | L | L | — | — |
+| 143 | — | — | — | L | — | L | — | — |
+| 144 | — | — | C | L | L | — | — | — |
+| 145 | — | — | — | — | — | — | — | — |
+| 146 | C | C | C | — | — | — | — | — |
+
+- 141 → 144: `src/swift/app/DocumentSession.swift`; checkpoint accepted 141
+  before 144 reuses it. 144 also consumes the accepted project-session
+  contracts of 139/140.
+- 139/140/141 → 146: `session_io.swift`, `session_save.swift`, `bank_edits.swift`.
+  Checkpoint their accepted writers before 146 anchors those files.
+- 140/141 share `project/proof.iomutations.txt`.
+- 142/143 share `host/proof.tst_hostadapter.txt`; 142/144 share
+  `host/proof.tst_hostintegration.txt`; 143/144 share `host/proof.tst_hostseams.txt`.
+  A single ledger writer applies disjoint accepted subsets serially.
+- 145 alone owns the new `SongDebugLayoutChecks.swift` source-list addition
+  in `src/checks/CMakeLists.txt`; it does not grant another manifest writer.
+- 146 uses one implementer for all four debt surfaces; shared
+  VoicegroupEditingChecks/ShellQmlTests/ShellWindow files are not separate
+  concurrently writable slices.
+
+Run group A **139, 140, 141, 142, 143, 145** after the landed-wave gate.
+Run **144** after accepted/checkpointed 139–141. Run **146** after accepted
+139–145, capturing a fresh strict inventory so legitimate earlier
+surface changes are not confused with mapping-only work. Batch checkpoints
+at those ownership boundaries and final handoff, not one commit per brief.
+Never checkpoint failing or unreviewed work just to unblock a successor.
+
+### Shared constraints and verification ownership
+
+The §14/15 contracts continue: fork clauses win; one predicate per clause
+and each A-id on exactly one predicate; independent literal expected
+values rather than runtime read-back replacements; fail-closed fixture
+setup; real production entry points; no copied implementations or mock
+echoes; isolated files/preferences; Swift/QtBridge owns behavior and QML
+owns presentation. Expected identity continuity may compare against the
+identity captured before a transaction, never against the mutated result
+itself. Do not add setup-only, incidental wording or bare not-throw tests.
+Retire only representation, never its observable consumer obligation.
+DPR2 claims gate on the lane's declared DPR. QtBridge queued notifications
+cannot prove same-GUI-pass geometry: those clauses stay PARTIAL.
+
+Reuse the exact commands in the briefs; rediscover only on a concrete
+registration mismatch or scope change, recording the replacement coverage.
+The controller runs shared builds/checks **after writers settle**, once per
+covering lane, with the existing lock/175-second alarm. Implementers may
+perform read-only queries and isolated source-level inspection while peers
+edit; no project-wide build, tests, formatter or linter mid-flight.
+Mounted QML lanes require the existing macOS Qt desktop/test environment.
+Pure service/file changes must execute actual production APIs and observe
+state/disk outcomes; mounted changes require actual input and observed
+surface state. No null-audio result proves physical output.
+
+After accepted source changes settle, run the union of the brief commands,
+deduplicating repeated `swiftcore-projectsession` and shell-songs runs.
+The live additional owners for 146 are projectstore-editing, bankleases,
+swiftcore-bankhistory, shell-clipboard and shellwindow. The controller then
+runs these integration gates once:
+
+```sh
+/usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --verbose
+/usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify:shell --verbose
+deno task proof check --executed
+deno task proof check --strict-mappings
+```
+
+The strict gate's expected nonzero exit is accounted for by an exact
+before/after `(ledger, A-id)` inventory, as specified in 146; do not pipe
+away errors or call remaining debt a pass. The separate ledger writer
+receives settled checks and fresh executed evidence, updates only selected
+rows, and lands those rows with their proving source/check changes.
+
+These are execution requirements, not planning results. This documentation
+commit runs no application build or behavior suite. Planning validation
+checks selected dispositions, fork assertion-start citations, all closed
+write paths, brief links/headings and the computed conflict matrix.
+
+### Deferred and excluded
+
+- **P3 WAV export and P4 sample studio remain user-decision exclusions.**
+  Decoder 93, editor 80, integration 68, project 63, DSP 61, soundfont 22 and
+  analysis 21 GAPs are not permission to build those surfaces. ImageIO and
+  physical audio-output clauses remain unavailable-infrastructure exclusions.
+- Savecore A016–A026 catalog-outage status/path policy; transport
+  A009/A010/A013 cursor-never-seeks ruling; unknown-synth-save and
+  viewcache pending/dirty-close differences remain untouched.
+- Workspace A003/A004 loading refusal has no Swift equivalent: deliberate
+  project opening and startup priority are preserved, not silently reversed.
+  Workspace startup terminal order, catalog-once/duplicate/refresh, plan
+  keying, silent completions, reload phase protocol and remaining bank receipt
+  clauses are deferred. Ioflow FIFO/catalog preemption and bank shadow/view
+  sequences are deferred; no fake worker or stage-injection architecture.
+- Iomutations A057–A072 receipt flags/identity, A073–A076 preview cleanup,
+  A077–A087 creation collisions and A088+ closed-worker shutdown remain
+  outside these bounded consumers.
+- Onboarding action/import/support and remaining regioned-layout rows,
+  New Voicegroup presentation/source-creation clauses and remaining
+  mainwindow lifecycle/state/input/native surfaces are deferred.
+- Hostintegration A174/A176/A177 require actual **window** close acceptance
+  and both-song byte preservation. A tab disappearing is not that clause;
+  no current selected lane delivers a real close to its own harness window.
+  Native focus/grabber/teardown, 120-tick steady-context search, hostadapter
+  A079 centring, A140 loop-marker raster, same-GUI-pass geometry and
+  unselected mutation/signal/sidecar clauses remain open.
+- The 190 strict-mapping errors outside the four named ledgers and any
+  explicitly unproved selected clauses are deferred, not silently upgraded.
+
