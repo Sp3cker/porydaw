@@ -2283,25 +2283,31 @@ owns presentation. Expected identity continuity may compare against the
 identity captured before a transaction, never against the mutated result
 itself. Do not add setup-only, incidental wording or bare not-throw tests.
 Retire only representation, never its observable consumer obligation.
+Setup/failure guards, including `report.fail` messages, carry no A-ids.
+A-ids belong only to behavior predicates; report setup-only guards separately
+for ledger classification.
 DPR2 claims gate on the lane's declared DPR. QtBridge queued notifications
 cannot prove same-GUI-pass geometry: those clauses stay PARTIAL.
 
 Reuse the exact commands in the briefs; rediscover only on a concrete
 registration mismatch or scope change, recording the replacement coverage.
-The controller runs shared builds/checks **after writers settle**, once per
-covering lane, with the existing lock/175-second alarm. Implementers may
-perform read-only queries and isolated source-level inspection while peers
-edit; no project-wide build, tests, formatter or linter mid-flight.
+Each implementer runs its brief's focused lanes under the existing
+lock/175-second alarm before reporting, listing its predicate PASS lines.
+Failures attributable to a sibling are acceptable for that scoped report
+only when every owned predicate passes and each foreign failure is named;
+they do not waive the controller's final integration gate. No project-wide
+build/test suite, formatter or linter runs mid-flight. Read-only queries and
+isolated source-level inspection remain safe while peers edit.
 Mounted QML lanes require the existing macOS Qt desktop/test environment.
 Pure service/file changes must execute actual production APIs and observe
 state/disk outcomes; mounted changes require actual input and observed
 surface state. No null-audio result proves physical output.
 
-After accepted source changes settle, run the union of the brief commands,
-deduplicating repeated `swiftcore-projectsession` and shell-songs runs.
+After accepted source changes settle, the controller owns the project-wide
+gate; focused-lane execution remains each implementer's responsibility.
 The live additional owners for 146 are projectstore-editing, bankleases,
-swiftcore-bankhistory, shell-clipboard and shellwindow. The controller then
-runs these integration gates once:
+swiftcore-bankhistory, shell-clipboard and shellwindow. The controller runs
+these integration gates once:
 
 ```sh
 /usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --verbose

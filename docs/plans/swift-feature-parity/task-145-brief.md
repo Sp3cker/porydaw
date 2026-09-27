@@ -44,7 +44,7 @@ Preserve `SongRegistration.plan`, `status`, `register`, `unregister` and removal
 
 All six real-file journeys preserve the complete literal debug images, correct registration-gap status and unrelated-file bytes through insert/repeat/remove. The existing service/shell registration path remains operational. `SessionChecks.swift` calls `runSongListServiceChecks` from `runProjectSessionSuite`; the first command executes this file-level consumer proof. The second is the existing mounted Songs interaction smoke, not a claim that a new wizard exists.
 
-Controller, after writers settle, runs:
+Implementer runs the focused lanes before reporting, under sprint-3 §16:
 
 ```sh
 /usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-projectsession --verbose
