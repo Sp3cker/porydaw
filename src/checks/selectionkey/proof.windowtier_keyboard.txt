@@ -6,6 +6,14 @@ Original SHA-256: f00861f60ece3fc2b9de78b2c6b886d6139a71f79c7c07aeb5d1c8a69a5730
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
+Additional Swift counterpart: src/checks/editorqml/tst_ShellWindowFocus.qml
+Counterpart SHA-256: f286db5505bd7c70dd0dc801635f4aa80edf8abf16c4c06da58f91158c111c3d
+Additional Swift counterpart: src/checks/editorqml/tst_ShellWindowLabelCommands.qml
+Counterpart SHA-256: b142fa711b25e10d0447bcb8f25ebeebc37b5b5ab7adfbef8532da8c211327b8
+Additional Swift counterpart: src/checks/editorqml/tst_ShellWindowParameterKeys.qml
+Counterpart SHA-256: 9fef0460c40920526108a768ff3861dabe34af817d4f6b51e8487bc1fb705b35
+Additional Swift counterpart: src/checks/selectionkey/localinputtier_window.swift
+Counterpart SHA-256: ff83d6c4114a0023533503c4b31caf6865b36fe2f6e483bb30277dc49c2dd58f
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 
@@ -46,11 +54,11 @@ Original expression:
 
 A003 | SelectionWindowTierTest::windowCopySoloExecutesExactlyOnce | src/checks/selectionkey/windowtier_keyboard.cpp:102
 Disposition: MATCHED
-Mapping: S020, S021
+Mapping: S225
 
 A004 | SelectionWindowTierTest::windowCopySoloExecutesExactlyOnce | src/checks/selectionkey/windowtier_keyboard.cpp:108
 Disposition: MATCHED
-Mapping: S026, S025
+Mapping: S226
 
 A005 | SelectionWindowTierTest::windowCopySoloExecutesExactlyOnce | src/checks/selectionkey/windowtier_keyboard.cpp:109
 Disposition: MATCHED
@@ -58,11 +66,11 @@ Mapping: S027, S036
 
 A006 | SelectionWindowTierTest::windowCopySoloExecutesExactlyOnce | src/checks/selectionkey/windowtier_keyboard.cpp:111
 Disposition: MATCHED
-Mapping: S024, S028
+Mapping: S227
 
 A007 | SelectionWindowTierTest::windowCopySoloExecutesExactlyOnce | src/checks/selectionkey/windowtier_keyboard.cpp:114
 Disposition: MATCHED
-Mapping: S029
+Mapping: S228
 
 A008 | SelectionWindowTierTest::windowCopySoloExecutesExactlyOnce | src/checks/selectionkey/windowtier_keyboard.cpp:115
 Disposition: MATCHED
@@ -94,7 +102,7 @@ Mapping: S182
 
 A015 | SelectionWindowTierTest::chromeGripKeysStayLocal | src/checks/selectionkey/windowtier_keyboard.cpp:155
 Disposition: MATCHED
-Mapping: S071
+Mapping: S229
 Source context since previous assertion:
   ;
       const int copyBefore = m_counts.copy;
@@ -109,7 +117,7 @@ Original expression:
 
 A016 | SelectionWindowTierTest::chromeGripKeysStayLocal | src/checks/selectionkey/windowtier_keyboard.cpp:158
 Disposition: MATCHED
-Mapping: S072
+Mapping: S230
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(quickWindow(), Qt::Key_Down);
@@ -128,7 +136,7 @@ Mapping: S185, S186
 
 A019 | SelectionWindowTierTest::chromeGripKeysStayLocal | src/checks/selectionkey/windowtier_keyboard.cpp:164
 Disposition: MATCHED
-Mapping: S073
+Mapping: S231
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(quickWindow(), Qt::Key_Left);
@@ -158,7 +166,7 @@ Mapping: S201, S202 - the enabled Pan/controller 10 label takes keyboard focus b
 
 A025 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:225
 Disposition: MATCHED
-Mapping: S041
+Mapping: S232
 
 A026 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:229
 Disposition: MATCHED
@@ -204,7 +212,7 @@ Original expression:
 
 A034 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:250
 Disposition: MATCHED
-Mapping: S046
+Mapping: S233
 
 A035 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:251
 Disposition: MATCHED
@@ -212,7 +220,7 @@ Mapping: S132, S133
 
 A036 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:252
 Disposition: MATCHED
-Mapping: S047
+Mapping: S234
 
 A037 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:253
 Disposition: MATCHED
@@ -224,7 +232,7 @@ Mapping: S126, S127, S128, S129, S130, S131
 
 A039 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:258
 Disposition: MATCHED
-Mapping/reason: S119 — test_oEmptySelectionLabelUpEditsNothing (src/checks/editorqml/tst_ShellWindow.qml) stages exactly this row's fixture (a focused Volume parameter label and an asserted empty note selection, "the label-Up fixture has no selected notes"), presses a real Up on it and asserts the no-edit outcome with the label still focused ("label-focus Up with an empty selection edits nothing": the note summary, the applied revision and the label's active focus are all unchanged). Fork law unchanged: Up resolves to roll.transpose_up with Scope::EditorRouted (src/ui/keymap.cpp) and the editor claims the key itself (src/ui/songview/editactions.h), so the pinned empty-selection no-edit clause is the transposable-selection-absent case this journey executes.
+Mapping: S235
 
 A040 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:259
 Disposition: MATCHED
@@ -244,11 +252,11 @@ Mapping: S111
 
 A044 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:275
 Disposition: MATCHED
-Mapping: S094
+Mapping: S236
 
 A045 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:276
 Disposition: MATCHED
-Mapping: S094
+Mapping: S237
 Source context since previous assertion:
   ;
 
@@ -278,7 +286,7 @@ Mapping: S219, S221, S222 - real Copy of the selected "48" reaches the native te
 
 A049 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:286
 Disposition: MATCHED
-Mapping: S098
+Mapping: S238
 Source context since previous assertion:
   ;
 
@@ -287,7 +295,7 @@ Original expression:
 
 A050 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:288
 Disposition: MATCHED
-Mapping: S100
+Mapping: S239
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(quickWindow(), remove->key(), remove->keyboardModifiers());
@@ -297,7 +305,7 @@ Original expression:
 
 A051 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:290
 Disposition: MATCHED
-Mapping: S101
+Mapping: S240
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(quickWindow(), paste->key(), paste->keyboardModifiers());
@@ -315,7 +323,7 @@ Mapping: S141, S142, S143, S144, S145, S146
 
 A054 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:294
 Disposition: MATCHED
-Mapping: S103
+Mapping: S241
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(quickWindow(), Qt::Key_Escape);
@@ -325,7 +333,7 @@ Original expression:
 
 A055 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:295
 Disposition: MATCHED
-Mapping: S104
+Mapping: S242
 Source context since previous assertion:
   ;
 
@@ -361,7 +369,7 @@ Original expression:
 
 A060 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:301
 Disposition: MATCHED
-Mapping: S112
+Mapping: S243
 Source context since previous assertion:
   ;
 
@@ -402,7 +410,7 @@ Mapping: S165, S198
 
 A069 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:313
 Disposition: MATCHED
-Mapping: S116
+Mapping: S244
 Source context since previous assertion:
   ;
 
@@ -447,7 +455,7 @@ Mapping: S174, S175, S176, S177, S178, S193, S194
 
 A079 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:335
 Disposition: MATCHED
-Mapping: S085
+Mapping: S245
 Source context since previous assertion:
   ;
 
@@ -456,7 +464,7 @@ Original expression:
 
 A080 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:336
 Disposition: MATCHED
-Mapping: S086
+Mapping: S246
 Source context since previous assertion:
   ;
 
@@ -465,7 +473,7 @@ Original expression:
 
 A081 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:338
 Disposition: MATCHED
-Mapping: S087
+Mapping: S247
 Source context since previous assertion:
   ;
       }
@@ -486,7 +494,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A085 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:376
 Disposition: MATCHED
-Mapping: S064
+Mapping: S248
 Source context since previous assertion:
   ;
 
@@ -539,19 +547,19 @@ Original expression:
 
 A088 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:398
 Disposition: MATCHED
-Mapping: S050
+Mapping: S249
 
 A089 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:401
 Disposition: MATCHED
-Mapping: S051
+Mapping: S250
 
 A090 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:403
 Disposition: MATCHED
-Mapping: S052
+Mapping: S251
 
 A091 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:404
 Disposition: MATCHED
-Mapping: S065
+Mapping: S252
 Source context since previous assertion:
   ;
 
@@ -568,7 +576,7 @@ Mapping: S211, S212, S065 - two direct tempo taps preserve exact undo count; mou
 
 A094 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:407
 Disposition: MATCHED
-Mapping: S066
+Mapping: S253
 Source context since previous assertion:
   ;
 
@@ -581,11 +589,11 @@ Mapping: S053
 
 A096 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:412
 Disposition: MATCHED
-Mapping: S054
+Mapping: S254
 
 A097 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:418
 Disposition: MATCHED
-Mapping: S055
+Mapping: S255
 
 A098 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:425
 Disposition: MATCHED
@@ -593,15 +601,15 @@ Mapping: S032, S033, S034, S022, S056
 
 A099 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:426
 Disposition: MATCHED
-Mapping: S057
+Mapping: S256
 
 A100 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:427
 Disposition: MATCHED
-Mapping: S058
+Mapping: S257
 
 A101 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:428
 Disposition: MATCHED
-Mapping: S067
+Mapping: S258
 Source context since previous assertion:
   ;
 
@@ -623,7 +631,7 @@ Original expression:
 
 A104 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:433
 Disposition: MATCHED
-Mapping: S060
+Mapping: S259
 
 A105 | SelectionWindowTierTest::chromeToggleRoutesNoteArrows | src/checks/selectionkey/windowtier_keyboard.cpp:447
 Disposition: RETIRED-REPRESENTATION
@@ -653,7 +661,7 @@ Original expression:
 
 A110 | SelectionWindowTierTest::chromeToggleRoutesNoteArrows | src/checks/selectionkey/windowtier_keyboard.cpp:468
 Disposition: MATCHED
-Mapping: S076
+Mapping: S260
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(quickWindow(), Qt::Key_Right);
@@ -670,7 +678,7 @@ Original expression:
 
 A111 | SelectionWindowTierTest::chromeToggleRoutesNoteArrows | src/checks/selectionkey/windowtier_keyboard.cpp:473
 Disposition: MATCHED
-Mapping: S077
+Mapping: S261
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(quickWindow(), Qt::Key_Up);
@@ -691,7 +699,7 @@ Mapping: S190
 
 A114 | SelectionWindowTierTest::chromeToggleRoutesNoteArrows | src/checks/selectionkey/windowtier_keyboard.cpp:496
 Disposition: MATCHED
-Mapping: S078
+Mapping: S262
 Source context since previous assertion:
   ;
       // Enter and Return are the advertised local activation keys: each one
@@ -704,7 +712,7 @@ Original expression:
 
 A115 | SelectionWindowTierTest::chromeToggleRoutesNoteArrows | src/checks/selectionkey/windowtier_keyboard.cpp:499
 Disposition: MATCHED
-Mapping: S079
+Mapping: S263
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(quickWindow(), Qt::Key_Return);
@@ -1032,3 +1040,120 @@ Anchor: message "the closed value prompt permits refocusing the Volume controlle
 S224 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
 Anchor: message "Volume insertion Escape closes its exact 48 draft without a write"
 
+
+S225 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
+Anchor: message "window Copy over a focused parameter label captures the selected note"
+
+S226 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
+Anchor: message "window Copy over label focus preserves the selected note"
+
+S227 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
+Anchor: message "first resumed automation S activates window Solo once"
+
+S228 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
+Anchor: message "first resumed automation S turns on intended Solo"
+
+S229 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
+Anchor: message "the automation grip grows by one step on Up"
+
+S230 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
+Anchor: message "grip Down restores the automation height"
+
+S231 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
+Anchor: message "cross-axis grip arrows never resize the automation section"
+
+S232 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
+Anchor: message "the focused label is not yet active"
+
+S233 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
+Anchor: message "label Return never edits the song"
+
+S234 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
+Anchor: message "label Return never moves the cursor"
+
+S235 | test_oEmptySelectionLabelUpEditsNothing | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
+Anchor: message "label-focus Up with an empty selection edits nothing"
+
+S236 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
+Anchor: message "the mounted prompt owns focus in its real numeric field"
+
+S237 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
+Anchor: message "automation arrows keep numeric focus local"
+
+S238 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
+Anchor: message "Volume insertion Copy never activates the window note Copy"
+
+S239 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
+Anchor: message "Volume insertion Delete removes the selected 48 draft"
+
+S240 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
+Anchor: message "Volume insertion Paste restores exactly 48"
+
+S241 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
+Anchor: message "Escape closes the prompt without a write"
+
+S242 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
+Anchor: message "Escape never commits a document write"
+
+S243 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
+Anchor: message "window Copy over label focus never writes the document"
+
+S244 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
+Anchor: message "Select All over label focus clears the time range"
+
+S245 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
+Anchor: message "label-focus arrows advance the selected note one grid step"
+
+S246 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
+Anchor: message "label-focus Up transposes the selected note"
+
+S247 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindowLabelCommands.qml
+Anchor: message "the active parameter survives label-focus commands"
+
+S248 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
+Anchor: message "the tempo Tap button takes keyboard focus"
+
+S249 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
+Anchor: message "Enter on the focused Tap button registers exactly one tap"
+
+S250 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
+Anchor: message "Return on the focused Tap button adds the second tap"
+
+S251 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
+Anchor: message "tap keys never edit the song"
+
+S252 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
+Anchor: message "tap keys never change the revision or undo availability"
+
+S253 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
+Anchor: message "Return never retargets the active parameter"
+
+S254 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
+Anchor: message "the two-tap session shows the draft readout"
+
+S255 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
+Anchor: message "Shift+Return never registers a tap"
+
+S256 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
+Anchor: message "transport Space never taps"
+
+S257 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
+Anchor: message "tap Space never edits the song"
+
+S258 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
+Anchor: message "tap Space never changes the revision or undo availability"
+
+S259 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindowParameterKeys.qml
+Anchor: message "resetTapTempo drops the draft"
+
+S260 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
+Anchor: message "toggle arrows route to the selected note by one grid step"
+
+S261 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
+Anchor: message "toggle Up transposes the selected note"
+
+S262 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
+Anchor: message "Enter toggles the focused drawer section"
+
+S263 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
+Anchor: message "Return restores the focused drawer section"

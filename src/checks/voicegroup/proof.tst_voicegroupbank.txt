@@ -5,6 +5,7 @@ Deleted in: S6 flip cutover (feature/swift-project-store, base 2d1c92d0)
 Original: src/checks/voicegroup/tst_voicegroupbank.cpp
 Original SHA-256: 478ab4b4f1233477838cc8a2367023c388d10032cd324d960677fa91593a75e4
 Swift counterpart: src/checks/projectstore/BankLeasesChecks.swift
+Swift counterpart SHA-256: a991869c0cbe0cf7031ebda7f7da4f392ccbb46b3f65a2dec4a2c9d370e3606c
 Additional Swift counterpart: src/checks/projectstore/ProjectStoreSaveChecks.swift (write-failure row S04 only, for A089-A093)
 Additional Swift counterpart: src/checks/projectstore/SaveCoreChecks.swift (failed-save re-dirty row S053, for A087/A088)
 Additional Swift counterpart: src/checks/projectstore/VoicegroupEditingChecks.swift (config-resolved baseline row S052, for A077)
@@ -200,7 +201,7 @@ Original expression:
 
 A016 | VoicegroupBankTest::playableSongResolvesOnlyPlayableLabels | src/checks/voicegroup/tst_voicegroupbank.cpp:103
 Disposition: MATCHED
-Mapping: S013, S004
+Mapping: S054
 
 A017 | VoicegroupBankTest::playableSongResolvesOnlyPlayableLabels | src/checks/voicegroup/tst_voicegroupbank.cpp:105
 Disposition: PARTIAL
@@ -214,7 +215,7 @@ Original expression:
 
 A018 | VoicegroupBankTest::playableSongResolvesOnlyPlayableLabels | src/checks/voicegroup/tst_voicegroupbank.cpp:106
 Disposition: MATCHED
-Mapping: S014, S005
+Mapping: S055
 
 A019 | VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup | src/checks/voicegroup/tst_voicegroupbank.cpp:111
 Disposition: MATCHED
@@ -222,7 +223,7 @@ Mapping: S006, S007, S008, S009
 
 A020 | VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup | src/checks/voicegroup/tst_voicegroupbank.cpp:114
 Disposition: MATCHED
-Mapping: S016, S037
+Mapping: S056
 
 A021 | VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup | src/checks/voicegroup/tst_voicegroupbank.cpp:115
 Disposition: MATCHED
@@ -240,11 +241,11 @@ Original expression:
 
 A023 | VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup | src/checks/voicegroup/tst_voicegroupbank.cpp:119
 Disposition: MATCHED
-Mapping: S015
+Mapping: S057
 
 A024 | VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup | src/checks/voicegroup/tst_voicegroupbank.cpp:121
 Disposition: MATCHED
-Mapping: S016, S037
+Mapping: S058
 
 A025 | VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup | src/checks/voicegroup/tst_voicegroupbank.cpp:122
 Disposition: MATCHED
@@ -252,7 +253,7 @@ Mapping: S016, S037
 
 A026 | VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup | src/checks/voicegroup/tst_voicegroupbank.cpp:123
 Disposition: MATCHED
-Mapping: S016
+Mapping: S059
 
 A027 | VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease | src/checks/voicegroup/tst_voicegroupbank.cpp:152
 Disposition: MATCHED
@@ -264,23 +265,23 @@ Mapping: S010, S011
 
 A029 | VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease | src/checks/voicegroup/tst_voicegroupbank.cpp:157
 Disposition: MATCHED
-Mapping: S017, S038
+Mapping: S060
 
 A030 | VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease | src/checks/voicegroup/tst_voicegroupbank.cpp:158
 Disposition: MATCHED
-Mapping: S017, S038
+Mapping: S061
 
 A031 | VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease | src/checks/voicegroup/tst_voicegroupbank.cpp:159
 Disposition: MATCHED
-Mapping: S017
+Mapping: S062
 
 A032 | VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease | src/checks/voicegroup/tst_voicegroupbank.cpp:160
 Disposition: MATCHED
-Mapping: S017, S038
+Mapping: S063
 
 A033 | VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease | src/checks/voicegroup/tst_voicegroupbank.cpp:161
 Disposition: MATCHED
-Mapping: S017, S038
+Mapping: S064
 
 A034 | VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease | src/checks/voicegroup/tst_voicegroupbank.cpp:162
 Disposition: MATCHED
@@ -288,7 +289,7 @@ Mapping: S012, S038
 
 A035 | VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease | src/checks/voicegroup/tst_voicegroupbank.cpp:163
 Disposition: MATCHED
-Mapping: S017, S038
+Mapping: S065
 
 A036 | VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation | src/checks/voicegroup/tst_voicegroupbank.cpp:171
 Disposition: MATCHED
@@ -312,11 +313,11 @@ Mapping: S019, S045
 
 A041 | VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation | src/checks/voicegroup/tst_voicegroupbank.cpp:190
 Disposition: MATCHED
-Mapping: S019, S045
+Mapping: S066
 
 A042 | VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation | src/checks/voicegroup/tst_voicegroupbank.cpp:191
 Disposition: MATCHED
-Mapping: S019, S045
+Mapping: S067
 
 A043 | VoicegroupBankTest::unknownIdentityIsHardError | src/checks/voicegroup/tst_voicegroupbank.cpp:197
 Disposition: MATCHED
@@ -387,7 +388,7 @@ Mapping: S024
 
 A052 | VoicegroupBankTest::previewFailureRollsBackCandidate | src/checks/voicegroup/tst_voicegroupbank.cpp:227
 Disposition: MATCHED
-Mapping: S025
+Mapping: S068
 
 A053 | VoicegroupBankTest::previewFailureRollsBackCandidate | src/checks/voicegroup/tst_voicegroupbank.cpp:230
 Disposition: MATCHED
@@ -395,19 +396,19 @@ Mapping: S027
 
 A054 | VoicegroupBankTest::previewFailureRollsBackCandidate | src/checks/voicegroup/tst_voicegroupbank.cpp:231
 Disposition: MATCHED
-Mapping: S027
+Mapping: S069
 
 A055 | VoicegroupBankTest::previewFailureRollsBackCandidate | src/checks/voicegroup/tst_voicegroupbank.cpp:232
 Disposition: MATCHED
-Mapping: S027
+Mapping: S070
 
 A056 | VoicegroupBankTest::previewFailureRollsBackCandidate | src/checks/voicegroup/tst_voicegroupbank.cpp:233
 Disposition: MATCHED
-Mapping: S027
+Mapping: S071
 
 A057 | VoicegroupBankTest::previewFailureRollsBackCandidate | src/checks/voicegroup/tst_voicegroupbank.cpp:234
 Disposition: MATCHED
-Mapping: S027
+Mapping: S072
 
 A058 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:240
 Disposition: MATCHED
@@ -449,15 +450,15 @@ Original expression:
 
 A065 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:254
 Disposition: MATCHED
-Mapping: S030
+Mapping: S073
 
 A066 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:255
 Disposition: MATCHED
-Mapping: S030, S039
+Mapping: S074
 
 A067 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:256
 Disposition: MATCHED
-Mapping: S030, S039
+Mapping: S075
 
 A068 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:262
 Disposition: MATCHED
@@ -469,19 +470,19 @@ Mapping: S031
 
 A070 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:265
 Disposition: MATCHED
-Mapping: S032, S040
+Mapping: S076
 
 A071 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:266
 Disposition: MATCHED
-Mapping: S032
+Mapping: S077
 
 A072 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:267
 Disposition: MATCHED
-Mapping: S032, S040
+Mapping: S078
 
 A073 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:268
 Disposition: MATCHED
-Mapping: S032
+Mapping: S079
 
 A074 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:272
 Disposition: MATCHED
@@ -512,23 +513,23 @@ Mapping: S035
 
 A079 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:288
 Disposition: MATCHED
-Mapping: S036, S043
+Mapping: S080
 
 A080 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:289
 Disposition: MATCHED
-Mapping: S036, S043
+Mapping: S081
 
 A081 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:290
 Disposition: MATCHED
-Mapping: S036, S043
+Mapping: S082
 
 A082 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:291
 Disposition: MATCHED
-Mapping: S036
+Mapping: S083
 
 A083 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:292
 Disposition: MATCHED
-Mapping: S036, S043
+Mapping: S084
 
 A084 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:294
 Disposition: MATCHED
@@ -536,7 +537,7 @@ Mapping: S036
 
 A085 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:295
 Disposition: MATCHED
-Mapping: S036
+Mapping: S085
 
 A086 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:298
 Disposition: MATCHED
@@ -801,6 +802,102 @@ Anchor: message "the song's configured voicegroup argument resolves and loads th
 
 S053 | saveCoreFailedSaveRedirty | src/checks/projectstore/SaveCoreChecks.swift
 Anchor: message "an edit after a failed save republishes a dirty view"
+
+S054 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "mus_gym resolves to a playable song"
+
+S055 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "mus_absent does not resolve to a playable song"
+
+S056 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "loading mus_gym again reuses its original bank lease"
+
+S057 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "mus_oldale resolves to a playable song"
+
+S058 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "mus_oldale shares mus_gym's original bank lease"
+
+S059 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "the shared voicegroup keeps its original identity"
+
+S060 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "the scalar edit publishes a dirty bank"
+
+S061 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "the scalar edit replaces the original bank lease"
+
+S062 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "the scalar edit preserves every slot kind"
+
+S063 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "the edited DirectSound slot retains a voice"
+
+S064 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "the edited DirectSound voice has key 61"
+
+S065 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "the original bank lease retains DirectSound key 60"
+
+S066 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "each conflicting edit preserves the published bank lease"
+
+S067 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "each conflicting edit leaves the published bank dirty"
+
+S068 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "a rejected preview edit reports a nonempty operation error"
+
+S069 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "preview failure preserves the edited bank lease"
+
+S070 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "preview failure preserves the DirectSound voice"
+
+S071 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "preview failure preserves DirectSound key 61"
+
+S072 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "preview failure preserves the DirectSound symbol from the original lease"
+
+S073 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "materializing slot 13 preserves every other slot kind"
+
+S074 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "materialized slot 13 is editable"
+
+S075 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "materialized slot 13 contains the requested Square 1 voice"
+
+S076 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "reverting slot 13 does not mint another materialization token"
+
+S077 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "reverting slot 13 restores every original slot kind"
+
+S078 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "reverted slot 13 is blank again"
+
+S079 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "reverted slot 13 contains no voice"
+
+S080 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "saving publishes a clean bank lease"
+
+S081 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "saving replaces the dirty edited bank lease"
+
+S082 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "saving preserves DirectSound key 61"
+
+S083 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "saving preserves every slot kind"
+
+S084 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "saving persists a changed source file"
+
+S085 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "reloading after save reuses the clean bank lease"
 
 Shared helpers
 src/checks/projectstore/ProjectStoreCheckSupport.swift (awaitValue) and

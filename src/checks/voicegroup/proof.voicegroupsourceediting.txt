@@ -6,6 +6,8 @@ Retirement: assertion correspondence reconciled on 2026-09-26 against the execut
 Original: src/checks/voicegroup/voicegroupsourceediting.cpp
 Original SHA-256: c837c97a48a868618574a575613652e4e138678f8519528c7f5285d7e905812b
 Swift counterpart: src/checks/projectstore/VoicegroupEditingChecks.swift
+
+Swift counterpart SHA-256: 5659d54713c77964c1b076e00ba2bcb28cf856c21ab9e0193280d7b79fc3d80f
 Shared helper: none; the fixture, snapshot and tone helpers are file-private in the Swift counterpart.
 
 
@@ -114,51 +116,51 @@ Original expression:
 
 A003 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:87
 Disposition: MATCHED
-Mapping: S002
+Mapping: S093
 
 A004 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:94
 Disposition: MATCHED
-Mapping: S003
+Mapping: S094
 
 A005 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:95
 Disposition: MATCHED
-Mapping: S004
+Mapping: S095
 
 A006 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:96
 Disposition: MATCHED
-Mapping: S005
+Mapping: S096
 
 A007 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:97
 Disposition: MATCHED
-Mapping: S006
+Mapping: S097
 
 A008 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:98
 Disposition: MATCHED
-Mapping: S007
+Mapping: S098
 
 A009 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:99
 Disposition: MATCHED
-Mapping: S008
+Mapping: S099
 
 A010 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:100
 Disposition: MATCHED
-Mapping: S009
+Mapping: S100
 
 A011 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:101
 Disposition: MATCHED
-Mapping: S010
+Mapping: S101
 
 A012 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:102
 Disposition: MATCHED
-Mapping: S011
+Mapping: S102
 
 A013 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:103
 Disposition: MATCHED
-Mapping: S012
+Mapping: S103
 
 A014 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:104
 Disposition: MATCHED
-Mapping: S013
+Mapping: S104
 
 A015 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:110
 Disposition: MATCHED
@@ -178,51 +180,51 @@ Mapping: S017
 
 A019 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:131
 Disposition: MATCHED
-Mapping: S018
+Mapping: S105
 
 A020 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:132
 Disposition: MATCHED
-Mapping: S019
+Mapping: S106
 
 A021 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:133
 Disposition: MATCHED
-Mapping: S020
+Mapping: S107
 
 A022 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:134
 Disposition: MATCHED
-Mapping: S021
+Mapping: S108
 
 A023 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:135
 Disposition: MATCHED
-Mapping: S022
+Mapping: S109
 
 A024 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:136
 Disposition: MATCHED
-Mapping: S023
+Mapping: S110
 
 A025 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:137
 Disposition: MATCHED
-Mapping: S024
+Mapping: S111
 
 A026 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:138
 Disposition: MATCHED
-Mapping: S025
+Mapping: S112
 
 A027 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:139
 Disposition: MATCHED
-Mapping: S026
+Mapping: S113
 
 A028 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:140
 Disposition: MATCHED
-Mapping: S027
+Mapping: S114
 
 A029 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:141
 Disposition: MATCHED
-Mapping: S028
+Mapping: S115
 
 A030 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:142
 Disposition: MATCHED
-Mapping: S029
+Mapping: S116
 
 A031 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:145
 Disposition: MATCHED
@@ -230,43 +232,43 @@ Mapping: S030
 
 A032 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:146
 Disposition: MATCHED
-Mapping: S031
+Mapping: S117
 
 A033 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:147
 Disposition: MATCHED
-Mapping: S032
+Mapping: S118
 
 A034 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:148
 Disposition: MATCHED
-Mapping: S033
+Mapping: S119
 
 A035 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:149
 Disposition: MATCHED
-Mapping: S034
+Mapping: S120
 
 A036 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:150
 Disposition: MATCHED
-Mapping: S035
+Mapping: S121
 
 A037 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:151
 Disposition: MATCHED
-Mapping: S036
+Mapping: S122
 
 A038 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:154
 Disposition: MATCHED
-Mapping: S037
+Mapping: S123
 
 A039 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:155
 Disposition: MATCHED
-Mapping: S038
+Mapping: S124
 
 A040 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:156
 Disposition: MATCHED
-Mapping: S039
+Mapping: S125
 
 A041 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:157
 Disposition: MATCHED
-Mapping: S040
+Mapping: S126
 
 A042 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:175
 Disposition: MATCHED
@@ -336,11 +338,11 @@ Mapping: S051
 
 A053 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:255
 Disposition: MATCHED
-Mapping: S052
+Mapping: S127
 
 A054 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:256
 Disposition: MATCHED
-Mapping: S053
+Mapping: S128
 
 A055 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:258
 Disposition: MATCHED
@@ -352,103 +354,103 @@ Mapping: S055
 
 A057 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:273
 Disposition: MATCHED
-Mapping: S056
+Mapping: S129
 
 A058 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:274
 Disposition: MATCHED
-Mapping: S057
+Mapping: S130
 
 A059 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:275
 Disposition: MATCHED
-Mapping: S058
+Mapping: S131
 
 A060 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:277
 Disposition: MATCHED
-Mapping: S059
+Mapping: S132
 
 A061 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:280
 Disposition: MATCHED
-Mapping: S060
+Mapping: S133
 
 A062 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:282
 Disposition: MATCHED
-Mapping: S061
+Mapping: S134
 
 A063 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:284
 Disposition: MATCHED
-Mapping: S062
+Mapping: S135
 
 A064 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:285
 Disposition: MATCHED
-Mapping: S063
+Mapping: S136
 
 A065 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:286
 Disposition: MATCHED
-Mapping: S064
+Mapping: S137
 
 A066 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:289
 Disposition: MATCHED
-Mapping: S065
+Mapping: S138
 
 A067 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:294
 Disposition: MATCHED
-Mapping: S066
+Mapping: S139
 
 A068 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:296
 Disposition: MATCHED
-Mapping: S067
+Mapping: S140
 
 A069 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:298
 Disposition: MATCHED
-Mapping: S068
+Mapping: S141
 
 A070 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:299
 Disposition: MATCHED
-Mapping: S069
+Mapping: S142
 
 A071 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:302
 Disposition: MATCHED
-Mapping: S070
+Mapping: S143
 
 A072 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:303
 Disposition: MATCHED
-Mapping: S071
+Mapping: S144
 
 A073 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:304
 Disposition: MATCHED
-Mapping: S072
+Mapping: S145
 
 A074 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:305
 Disposition: MATCHED
-Mapping: S073
+Mapping: S146
 
 A075 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:306
 Disposition: MATCHED
-Mapping: S074
+Mapping: S147
 
 A076 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:311
 Disposition: MATCHED
-Mapping: S075
+Mapping: S148
 
 A077 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:313
 Disposition: MATCHED
-Mapping: S076
+Mapping: S149
 
 A078 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:314
 Disposition: MATCHED
-Mapping: S077
+Mapping: S150
 
 A079 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:316
 Disposition: MATCHED
-Mapping: S078
+Mapping: S151
 
 A080 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:319
 Disposition: MATCHED
-Mapping: S079
+Mapping: S152
 
 A081 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:322
 Disposition: MATCHED
-Mapping: S080
+Mapping: S092
 
 A082 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:328
 Disposition: MATCHED
@@ -456,15 +458,15 @@ Mapping: S081
 
 A083 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:330
 Disposition: MATCHED
-Mapping: S082
+Mapping: S153
 
 A084 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:331
 Disposition: MATCHED
-Mapping: S083
+Mapping: S154
 
 A085 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:332
 Disposition: MATCHED
-Mapping: S084
+Mapping: S155
 
 A086 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:337
 Disposition: GAP
@@ -545,27 +547,27 @@ Original expression:
 
 A093 | VoicegroupSourceTest::displayNamesAreStable | src/checks/voicegroup/voicegroupsourceediting.cpp:358
 Disposition: MATCHED
-Mapping: S085
+Mapping: S156
 
 A094 | VoicegroupSourceTest::displayNamesAreStable | src/checks/voicegroup/voicegroupsourceediting.cpp:359
 Disposition: MATCHED
-Mapping: S086
+Mapping: S157
 
 A095 | VoicegroupSourceTest::displayNamesAreStable | src/checks/voicegroup/voicegroupsourceediting.cpp:361
 Disposition: MATCHED
-Mapping: S087
+Mapping: S158
 
 A096 | VoicegroupSourceTest::displayNamesAreStable | src/checks/voicegroup/voicegroupsourceediting.cpp:362
 Disposition: MATCHED
-Mapping: S088
+Mapping: S159
 
 A097 | VoicegroupSourceTest::displayNamesAreStable | src/checks/voicegroup/voicegroupsourceediting.cpp:364
 Disposition: MATCHED
-Mapping: S089
+Mapping: S160
 
 A098 | VoicegroupSourceTest::displayNamesAreStable | src/checks/voicegroup/voicegroupsourceediting.cpp:365
 Disposition: MATCHED
-Mapping: S090
+Mapping: S161
 
 Remaining original source (closing sequence and helper bodies):
 
@@ -850,7 +852,219 @@ S090 | editingDisplayNames | src/checks/projectstore/VoicegroupEditingChecks.swi
 Anchor: function
 
 S091 | editingConfiguredBaselineAndSynth | src/checks/projectstore/VoicegroupEditingChecks.swift
+
 Anchor: message "the song's configured voicegroup argument resolves and loads the baseline bank"
+
+S092 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "every unedited native slot remains equal to the baseline"
+
+
+S093 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "fixture_rich retains a materializable blank slot"
+
+S094 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "blank slot produces a draft"
+
+S095 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "draft marks materialization"
+
+S096 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "draft retains the requested voice"
+
+S097 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "blank slot accepts voice"
+
+S098 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "inserted voice is present"
+
+S099 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "inserted voice equals request"
+
+S100 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "materialization marks source dirty"
+
+S101 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "original source bytes restore"
+
+S102 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "restored slot is empty"
+
+S103 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "restored bytes equal original"
+
+S104 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "restoring pristine bytes clears dirty"
+
+S105 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "slot 12 starts blank"
+
+S106 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "slot 80 starts blank"
+
+S107 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "insert before first voice"
+
+S108 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "slot 12 is populated"
+
+S109 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "slot 12 matches inserted voice"
+
+S110 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "original slot is populated"
+
+S111 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "original slot is unchanged"
+
+S112 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "insert after last voice"
+
+S113 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "slot 80 is populated"
+
+S114 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "slot 80 matches inserted voice"
+
+S115 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "sparse source saves"
+
+S116 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "save clears dirty"
+
+S117 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "slot 12 survives reload"
+
+S118 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "slot 12 survives exactly"
+
+S119 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "slot 36 survives reload"
+
+S120 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "slot 36 survives exactly"
+
+S121 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "slot 80 survives reload"
+
+S122 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "slot 80 survives exactly"
+
+S123 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "native loader accepts saved sparse source"
+
+S124 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "inserted slot 12 loads as square 2"
+
+S125 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "original slot 36 loads as square 1"
+
+S126 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "inserted slot 80 loads as noise"
+
+S127 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "edited voice is accepted"
+
+S128 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "edited voice makes source dirty"
+
+S129 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "native loader accepts edited preview"
+
+S130 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "preview resolves edited display name"
+
+S131 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "preview loads the edited voice type"
+
+S132 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "preview aggregate resolves the same playable child as existing aggregate"
+
+S133 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "edited source retains the requested family fields"
+
+S134 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "preview does not modify the original file"
+
+S135 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "edited source saves"
+
+S136 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "save clears dirty"
+
+S137 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "saving the edit changes exactly one source line"
+
+S138 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "saved source loads as native bank"
+
+S139 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "saved bank retains edited native voice type"
+
+S140 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "aggregate has a subgroup"
+
+S141 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "keysplit retains lookup table"
+
+S142 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "saved aggregate resolves unchanged child"
+
+S143 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "native key"
+
+S144 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "native attack"
+
+S145 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "native decay"
+
+S146 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "native sustain"
+
+S147 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "native release"
+
+S148 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "native sample/wave pan flags"
+
+S149 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "square sweep packing"
+
+S150 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "square duty packing"
+
+S151 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "noise period packing"
+
+S152 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "saved bank resolves edited display name"
+
+S153 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "freshly opened source is pristine"
+
+S154 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "edited slot remains populated after reopen"
+
+S155 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "edited voice family fields survive save and reopen"
+
+S156 | editingDisplayNames | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "DirectSound display name"
+
+S157 | editingDisplayNames | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "fixed-pitch sample display name"
+
+S158 | editingDisplayNames | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "reverse sample display name"
+
+S159 | editingDisplayNames | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "native fixed-pitch sample type name"
+
+S160 | editingDisplayNames | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "native reverse sample type name"
+
+S161 | editingDisplayNames | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "native keysplit voice type name"
 
 Shared helpers
 none: the fixture, snapshot and tone helpers are file-private in

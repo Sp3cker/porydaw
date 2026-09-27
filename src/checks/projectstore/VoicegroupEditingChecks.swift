@@ -80,7 +80,7 @@ private func editingBlankSlot(_ report: CheckReport) {
             editingExpect("A014", !source.dirty, report, "restoring pristine bytes clears dirty")
         }
     } catch {
-        report.expect(false, cppID: "voicegroupsourceediting/A001", message: "A001: fixture setup failed: \(error)")
+        report.fail("voicegroupsourceediting/fixture", "blank fixture setup failed: \(error)")
     }
 }
 
@@ -139,7 +139,7 @@ private func editingSparseInsertions(_ report: CheckReport) {
         editingEqual("A041", vgMacroVoiceType(.noise), editingTone(loaded, 80).type, report,
                      "inserted slot 80 loads as noise")
     } catch {
-        report.expect(false, cppID: "voicegroupsourceediting/A015", message: "A015: sparse fixture failed: \(error)")
+        report.fail("voicegroupsourceediting/fixture", "sparse fixture setup failed: \(error)")
     }
 }
 
@@ -398,7 +398,8 @@ private func editingFamily(_ family: Int, _ report: CheckReport) {
                         key: family >= 5 ? 36 : 60), report,
                         "preview aggregate resolves the same playable child as existing aggregate")
                 } else {
-                    editingExpect("A060", false, report, "preview aggregate has no baseline oracle slot")
+                    report.fail("voicegroupsourceediting/fixture",
+                                "preview aggregate has no baseline oracle slot")
                 }
             }
             editingExpect("A061", editingSameVoiceFields(source.voiceAt(slot: slot), edited), report,
@@ -427,7 +428,8 @@ private func editingFamily(_ family: Int, _ report: CheckReport) {
                         key: family >= 5 ? 36 : 60), report,
                         "saved aggregate resolves unchanged child")
                 } else {
-                    editingExpect("A070", false, report, "saved aggregate has no baseline oracle slot")
+                    report.fail("voicegroupsourceediting/fixture",
+                                "saved aggregate has no baseline oracle slot")
                 }
             } else {
                 editingEqual("A071", UInt8(truncatingIfNeeded: edited.key), tone.key, report, "native key")
@@ -453,7 +455,7 @@ private func editingFamily(_ family: Int, _ report: CheckReport) {
                          "saved bank resolves edited display name")
             for untouched in 0..<128 where untouched != slot {
                 editingEqual("A081", editingSnapshot(baseline, untouched), editingSnapshot(reloaded, untouched),
-                             report, "native slot \(untouched) remains equal to baseline")
+                             report, "every unedited native slot remains equal to the baseline")
             }
             let roundTrip = VoicegroupSource()
             var error: String?
@@ -467,7 +469,7 @@ private func editingFamily(_ family: Int, _ report: CheckReport) {
                           "edited voice family fields survive save and reopen")
         }
     } catch {
-        report.expect(false, cppID: "voicegroupsourceediting/A042", message: "A042: family \(family) fixture failed: \(error)")
+        report.fail("voicegroupsourceediting/fixture", "family \(family) fixture failed: \(error)")
     }
 }
 
