@@ -338,7 +338,7 @@ Mapping: S147, S148, S149, S150, S151, S152
 
 A057 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:297
 Disposition: MATCHED
-Mapping: S103, S205, S223 - after the production Volume insertion prompt closes on Escape, a real click returns active focus to the controller 7 Volume label.
+Mapping: S205, S223, S224 - after the production Volume insertion prompt closes on Escape, a real click returns active focus to the controller 7 Volume label.
 
 A058 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:299
 Disposition: MATCHED
@@ -1028,4 +1028,7 @@ Anchor: message "Volume insertion Paste restores exactly 48"
 
 S223 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "the closed value prompt permits refocusing the Volume controller 7 label"
+
+S224 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Volume insertion Escape closes its exact 48 draft without a write"
 
