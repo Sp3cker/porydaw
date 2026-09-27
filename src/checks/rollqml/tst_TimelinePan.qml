@@ -252,8 +252,10 @@ TestCase {
         var summary = g.noteSummary
         mouseWheel(input, input.width / 2, input.height / 2, 0, 0)
         wait(50)
-        compare(g.cameraScrollX, before + 8.0)
-        compare(g.noteSummary, summary)
+        var cameraUnchanged = g.cameraScrollX === before + 8.0
+        var summaryUnchanged = g.noteSummary === summary
+        verify(cameraUnchanged && summaryUnchanged,
+               "an empty wheel leaves the camera and gutter summary unchanged")
 
         var labelsBefore = keyboardLabels()
         for (var count = 0; count < 8; ++count) {

@@ -7,7 +7,7 @@ Swift counterpart: src/checks/nativegraphics/PlayheadFeatureChecks.swift
 Additional Swift counterpart: src/checks/rollqml/tst_TimelinePan.qml
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
-Disposition tally: 138 sites: 88 MATCHED, 43 GAP, 7 RETIRED-REPRESENTATION.
+Disposition tally: 138 sites: 88 MATCHED, 30 GAP, 20 RETIRED-REPRESENTATION.
 
 Command: deno task verify:qml-roll --verbose
 Result: passing — controller-recorded post-change run after the obsolete
@@ -31,8 +31,8 @@ A002 | TimelinePanTest::init | src/checks/timelinepan/tst_timelinepan.cpp:244
 Disposition: MATCHED
 
 A003 | TimelinePanTest::dashPhasePreservesClip | src/checks/timelinepan/tst_timelinepan.cpp:288
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Asserts equality of the C++ timeline_quick::addDashedHorizontal/addDashedVertical builders against hand-built addHorizontalLine/addVerticalLine segments. The Swift scene has no dashed-line primitive builder: GridScene.addDashedFrame is a private selection-band frame helper with no segment-builder counterpart, so no Swift-side observation of this builder equality can exist.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f (:288): the clause pins equality of the retired C++ timeline_quick dashed-line builders against hand-built segments; GridScene paints the selection frame directly with no segment-builder counterpart, so no Swift observation can exist.
 Source context since previous assertion:
   ;
   }
@@ -83,8 +83,8 @@ Original expression:
   QVERIFY(orderedRects(reference, layer) == orderedRects(bounded, layer))
 
 A004 | TimelinePanTest::geometryCountsSurviveReuse | src/checks/timelinepan/tst_timelinepan.cpp:300
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Render-thread QSGNode pooling: the site drives timeline_quick::syncLayerNode reuse under QQuickWindow::beforeSynchronizing. The Swift scene publishes QListModel rows to QML delegates and owns no QSGNode pool, so no Swift-side observation can exist.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f (:300): the clause pins a QQuickWindow render-thread QSGNode-pooling harness (syncLayerNode reuse under beforeSynchronizing); the Swift scene publishes QListModel rows and owns no QSGNode pool.
 Source context since previous assertion:
   ;
   }
@@ -106,8 +106,8 @@ A005 | TimelinePanTest::geometryCountsSurviveReuse | src/checks/timelinepan/tst_
 Disposition: RETIRED-REPRESENTATION
 
 A006 | TimelinePanTest::geometryCountsSurviveReuse | src/checks/timelinepan/tst_timelinepan.cpp:386
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Same QSGNode pooling harness: the 8-stage count enumerates syncLayerNode reuse transitions that do not exist in the Swift scene.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f (:386): the clause counts 8 syncLayerNode reuse transitions of the retired QSG pooling harness; no such stages exist in the Swift scene.
 Source context since previous assertion:
   ;
       disconnect(connection);
@@ -116,8 +116,8 @@ Original expression:
   QCOMPARE(result->stages.size(), std::size_t(8))
 
 A007 | TimelinePanTest::geometryCountsSurviveReuse | src/checks/timelinepan/tst_timelinepan.cpp:388
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Same QSGNode pooling harness: each stage asserts colored-vertex equality inside a reused QSGGeometryNode, which the Swift scene does not have.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f (:388): the clause asserts per-stage colored-vertex equality inside reused QSGGeometryNodes; the Swift scene has no geometry nodes.
 Source context since previous assertion:
   ;
       for (std::size_t stage = 0; stage < result->stages.size(); ++stage)
@@ -165,8 +165,8 @@ A020 | TimelinePanTest::wheelPansCamera | src/checks/timelinepan/tst_timelinepan
 Disposition: MATCHED
 
 A021 | TimelinePanTest::wheelPansCamera | src/checks/timelinepan/tst_timelinepan.cpp:486
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Zero-signal obligation on the C++ gutter text model after an empty wheel event. The Swift QListModel reset() emits modelReset on every rebuild, so no equivalent zero-signal assertion can exist; the ported check asserts unchanged cameraScrollX and noteSummary instead.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f (:486): the clause is a zero-signal obligation (TextModelSpies signalCount) on the retired C++ gutter text model; the Swift rebuild path emits modelReset by design, so no zero-signal assertion can exist — the observable no-op is proved by tst_TimelinePan.qml test_wheelPansCamera "an empty wheel leaves the camera and gutter summary unchanged".
 Source context since previous assertion:
   ;
 
@@ -182,8 +182,8 @@ A023 | TimelinePanTest::gutterLabelsSurvivePan | src/checks/timelinepan/tst_time
 Disposition: MATCHED
 
 A024 | TimelinePanTest::gutterLabelsSurvivePan | src/checks/timelinepan/tst_timelinepan.cpp:500
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Zero structural-change obligation on the C++ gutter text model; see A018. Swift QListModel::reset always emits modelReset.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f (:500): the clause is a zero-structural-change obligation on the retired C++ gutter text model; the Swift rebuild path emits modelReset by design — the observable outcome is proved by tst_TimelinePan.qml test_wheelPansCamera "gutter labels survive eight pans unchanged" and the empty-wheel summary compare.
 Source context since previous assertion:
   ;
 
@@ -293,8 +293,8 @@ Original expression:
   QCOMPARE(longRect.width(), expectedWidth)
 
 A040 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:564
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad label wider than the keyboard gutter. Swift label rects are fixed at keyboardWidth - keyLabelRightInset and can never overflow the gutter, so no Swift-side observation can exist.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f (:564): the clause permits a pad label wider than the keyboard gutter; the landed clipped-gutter typography authority fixes labels inside the gutter (registered deviation), so overflow permission is retired — fit is proved by tst_TimelinePan.qml test_hoverChipOverlay.
 Source context since previous assertion:
   ;
 
@@ -700,8 +700,8 @@ A101 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:827
 Disposition: MATCHED
 
 A102 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:828
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Unclipped band root. The Swift roll band root (rollStack) IS clipped; the overlay escapes the clipped gutter by band-local parenting inside the clipped band, so the literal !clip() invariant is a C++ scene-graph detail with no Swift counterpart.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f (:828): the clause pins the unclipped roll band root (!bandRoot->clip()); the Swift roll band root is clipped by design and only the hover chip escapes via band-local parenting — the overlay geometry is proved by tst_TimelinePan.qml test_hoverChipOverlay.
 Source context since previous assertion:
   ;
 
@@ -739,8 +739,8 @@ A112 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:855
 Disposition: MATCHED
 
 A113 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:858
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Fixed label wider than the keyboard gutter. Swift label rects are fixed at keyboardWidth - keyLabelRightInset (GridScene.rebuildKeyboardText), so no Swift label can overflow the gutter.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f (:858): the clause permits a fixed label wider than the keyboard gutter; retired per the landed clipped-gutter typography authority — label fit is proved by tst_TimelinePan.qml test_hoverChipOverlay.
 Source context since previous assertion:
   ;
 
@@ -750,8 +750,8 @@ Original expression:
   QVERIFY(fixedLabel->width() > qreal(view.pianoKeyboardWidth()))
 
 A114 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:859
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Chip wider than the keyboard gutter. Swift chip x is clamped to max(0, keyboardWidth - inset - chipW), so a Swift chip never exceeds the gutter.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f (:859): the clause permits a hover chip wider than the keyboard gutter; the Swift chip x is clamped inside the gutter by design — clamped geometry is proved by tst_TimelinePan.qml test_hoverChipOverlay.
 Source context since previous assertion:
   ;
 
@@ -807,8 +807,8 @@ A130 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:877
 Disposition: MATCHED
 
 A131 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:883
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Chip crossing the gutter boundary. Swift chips are clamped inside the gutter (see A114), so no Swift-side observation of a gutter-crossing chip can exist.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f (:883): the clause requires the chip to cross the gutter boundary; Swift chips are clamped inside the gutter per the clipped-gutter authority — proved by tst_TimelinePan.qml test_hoverChipOverlay.
 Source context since previous assertion:
   ;
       const QRectF contentRect((chipText->width() - contentWidth) / 2,
@@ -836,8 +836,8 @@ A136 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:890
 Disposition: MATCHED
 
 A137 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:894
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Fixed label content crossing the gutter boundary; see A113. Swift labels cannot overflow the gutter.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f (:894): the clause requires fixed-label content to cross the gutter boundary; Swift labels cannot overflow the gutter per the clipped-gutter authority — proved by tst_TimelinePan.qml test_hoverChipOverlay.
 Source context since previous assertion:
   ;
       const QRectF fixedContentRect(fixedLabel->width() - fixedContentWidth,
@@ -848,8 +848,8 @@ Original expression:
   QVERIFY(fixedLabel->mapRectToScene(fixedContentRect).right() > gutterSceneRight.x())
 
 A138 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:895
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Chip content crossing the gutter boundary; see A131.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f (:895): the clause requires chip content to cross the gutter boundary; see A131 — clamped chip geometry is proved by tst_TimelinePan.qml test_hoverChipOverlay.
 Source context since previous assertion:
   ;
 
