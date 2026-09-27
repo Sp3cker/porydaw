@@ -11,13 +11,16 @@ internal let cellCommitContractID = "swiftcore/EventList::cellCommitContract"
 @MainActor
 internal func runEventListPageChecks(_ report: CheckReport, session suite: DocumentSession,
                                      service: ProjectService) {
-    let file = MidiFile(division: 24, chunks: [MidiChunk(events: [
-        .meta(tick: 0, type: 6, data: Array("mark".utf8)),
-        .channel(tick: 12, status: 0xB0, data0: 7, data1: 80),
-        .channel(tick: 12, status: 0xB0, data0: 10, data1: 40),
-        .channel(tick: 24, status: 0x90, data0: 60, data1: 80),
-        .channel(tick: 48, status: 0x80, data0: 60, data1: 0),
-    ], endTick: 96)])
+    let file = MidiFile(division: 24, chunks: [
+        MidiChunk(events: [
+            .meta(tick: 0, type: 6, data: Array("mark".utf8)),
+            .channel(tick: 12, status: 0xB0, data0: 7, data1: 80),
+            .channel(tick: 12, status: 0xB0, data0: 10, data1: 40),
+            .channel(tick: 24, status: 0x90, data0: 60, data1: 80),
+            .channel(tick: 48, status: 0x80, data0: 60, data1: 0),
+        ], endTick: 96),
+        MidiChunk(events: [.meta(tick: 0, type: 6, data: [3])], endTick: 96),
+    ])
     let document = SongDocument(file: file, config: suite.document.state.config,
                                 source: suite.document.source,
                                 trackBudget: suite.document.trackBudget)
@@ -50,12 +53,17 @@ internal func runEventListPageChecks(_ report: CheckReport, session suite: Docum
                   cppID: pageID, message: "a same-tick insertion gap permits reordering")
     report.expect(!presenter.isLegalDrop(fromRow: firstCC, gap: note + 1),
                   cppID: pageID, message: "a cross-tick insertion gap rejects reordering")
+    let entireDocumentBeforeMove = document.rawChunks.reduce(0) { $0 + $1.events.count }
     presenter.commitDrop(fromRow: firstCC, gap: secondCC + 1)
     report.expect(document.rawChunks[0].events[1].payload
                   == .channel(status: 0xB0, data0: 10, data1: 40)
                   && document.rawChunks[0].events[2].payload
                      == .channel(status: 0xB0, data0: 7, data1: 80),
                   cppID: pageID, message: "legal row drag swaps the two same-tick events")
+    report.expect(document.rawChunks.reduce(0) { $0 + $1.events.count }
+                  == entireDocumentBeforeMove,
+                  cppID: pageID,
+                  message: "same-tick reorder preserves the entire document raw-event population")
     let control = presenter.model.rows.firstIndex { $0.eventIndex == 2 }
     guard let control else { return }
     report.expect(presenter.beginEditing(row: control, column: 3), cppID: pageID,
@@ -100,6 +108,7 @@ internal func runEventListPageChecks(_ report: CheckReport, session suite: Docum
     report.expect(presenter.selectedRows == [firstVictim, secondVictim], cppID: pageID,
                   message: "the two intended victim rows, not the note, are selected")
     let beforeDeletion = document.rawChunks[0].events.count
+    let entireDocumentBeforeDelete = document.rawChunks.reduce(0) { $0 + $1.events.count }
     let beforeRows = presenter.rowCount
     presenter.deleteSelected()
     report.expect(document.rawChunks[0].events.count == beforeDeletion - 2
@@ -107,6 +116,10 @@ internal func runEventListPageChecks(_ report: CheckReport, session suite: Docum
                       $0.isChannel && $0.typeNibble == 0xB
                   }),
                   cppID: pageID, message: "Delete removes exactly the two selected raw rows")
+    report.expect(document.rawChunks.reduce(0) { $0 + $1.events.count }
+                  == entireDocumentBeforeDelete - 2,
+                  cppID: pageID,
+                  message: "two selected raw-event deletions reduce the entire document population by two")
     report.expect(presenter.rowCount == beforeRows - 2, cppID: pageID,
                   message: "Delete removes two visible rows without dropping EOT")
     let survivingNote = document.note(protectedID)

@@ -19,9 +19,8 @@ ShellQmlTests.swift (src/checks/editorqml/ShellQmlTests.swift).
 
 
 Original 272
-Disposition: PARTIAL
-Mapping: No Swift predicate: the binding registry (keymap::Registry::singleStroke for roll.solo_tracks/roll.copy) is C++-only; no production Swift keymap query exists.
-QVERIFY2(solo.has_value() && copy.has_value(), "Solo/Copy have no single-key bindings")
+Disposition: RETIRED-REPRESENTATION
+Mapping: S026 proves local S ownership; fork f3069ef693542bdb63564b80a29773e2f5b2a360:272 solo.has_value() && copy.has_value() only guards the removed C++ binding registry.
 
 Original 284
 Disposition: MATCHED
@@ -66,7 +65,7 @@ QTRY_VERIFY2((prompt = automation_valueprompt::focusedTextInput(*quickWindow)),
 
 Original 332
 Disposition: PARTIAL
-Mapping: Related predicate S047 (:1472) in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): the mounted prompt opens with its drafted Volume value. Unproved: native digit key delivery into the focused QML field (the mounted lane never types digits — it drafts from the production insert path, then Select All/Copy/Delete/Paste) and the exact fixture draft "12".
+Mapping: S070 and S071 deliver digits and keep the mounted written-node prompt open with exact draft 12; S002 proves the CC10 insertion seam opens. Unproved: digits through the absent user-visible CC10 empty-tick insertion ingress.
 QVERIFY2(prompt && prompt->property("text").toString() == QStringLiteral("12"),
              "the delivered digits did not land in the value prompt")
 
@@ -77,7 +76,7 @@ QVERIFY(QMetaObject::invokeMethod(prompt, "selectAll"))
 
 Original 345
 Disposition: PARTIAL
-Mapping: Related predicates S039 (:1476, S040 (:1477) and S041 (:1478) in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): the mounted field keeps its whole selection through the Copy key, the window Copy shortcut never activates, and no song clip is published. Unproved: the system clipboard text bytes (the mounted probe reads the song clip only) and the exact fixture text "12".
+Mapping: S072-S074 select, Copy and Paste exact 12 on the mounted written-node prompt; S057 observes selected-draft replacement in the velocity prompt. Unproved: exact system clipboard Copy/Paste through the absent user-visible CC10 insertion prompt ingress.
 QVERIFY2(numericText == QStringLiteral("12") && copiedFrom == numericText &&
                  copiedText == copiedFrom,
              qPrintable(QStringLiteral("numeric Copy mismatch: field='%1' selected='%2' "
@@ -86,19 +85,19 @@ QVERIFY2(numericText == QStringLiteral("12") && copiedFrom == numericText &&
 
 Original 357
 Disposition: PARTIAL
-Mapping: Related predicates S037 (:1470) and S044 (:1483) in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): the mounted prompt keeps its focus and visibility through the text keys it does receive. Unproved: native Up/Down arrow delivery into the prompt field (the mounted lane delivers Down/Return to the automation menu and Delete/Escape to the prompt, never arrows to the field).
+Mapping: S075 and S076 show Up/Down keep the mounted written-node prompt open and focused; insertion-prompt ingress remains unavailable.
 QVERIFY2(automation_valueprompt::promptVisible(chrome),
              "the value prompt closed while arrow keys were delivered")
 
 Original 359
 Disposition: PARTIAL
-Mapping: Related predicate S044 (:1483) in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): the mounted prompt journey leaves the full grid note summary unchanged across its text keys. Unproved: the note selection after native arrow-key delivery into the focused prompt field (the mounted lane delivers no arrows to the field).
+Mapping: S077 preserves selected NoteIDs and contents across mounted written-node arrows; S052 preserves CC10 insertion selection after cancellation. Unproved: native arrows in the absent mounted insertion prompt.
 QVERIFY2(view.selectionModel().noteSelection() == std::vector<NoteId>{note->id},
              "prompt arrow keys leaked into the note selection")
 
 Original 361
 Disposition: PARTIAL
-Mapping: Related predicate S046 (:1486) in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): Escape never commits a document write from the mounted prompt. Unproved: the song bytes after native arrow-key delivery into the prompt field (the mounted no-write evidence is the applied-revision text for Delete and Escape, not arrows).
+Mapping: S048-S049 prove CC10 draft leaves exact song bytes/history unchanged; S078 observes mounted written-node arrows leave revision unchanged. Unproved: combined arrow delivery and exact byte identity through the absent mounted insertion ingress.
 QVERIFY2(document.smf().write() == before,
              "prompt arrow keys leaked a shared edit command into the song")
 
@@ -109,7 +108,7 @@ QVERIFY(QMetaObject::invokeMethod(prompt, "selectAll"))
 
 Original 380
 Disposition: PARTIAL
-Mapping: Related predicates S042 (:1480) and S043 (:1482) in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): the mounted prompt's own Delete and Paste deliveries clear and restore the numeric draft (S044 bounds the surrounding staged state). Unproved: native Solo-key delivery into the field through the QML validator contract and the exact post-Solo text.
+Mapping: S079 shows mounted written-node S is rejected by the numeric validator with exact text 12. Unproved: S delivery into the absent mounted insertion prompt.
 QVERIFY2(prompt && prompt->property("text").toString() == expectedAfterSolo,
              qPrintable(QStringLiteral("numeric Solo-key contract mismatch: expected='%1' "
                                        "actual='%2'")
@@ -118,7 +117,7 @@ QVERIFY2(prompt && prompt->property("text").toString() == expectedAfterSolo,
 
 Original 385
 Disposition: PARTIAL
-Mapping: Related predicates S040 (:1477) and S041 (:1478) in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): the mounted lane proves a window command never activates while the prompt owns its text keys (the Copy case). Unproved: the Solo-in-field case — no mounted predicate delivers S to the focused prompt field, and no predicate reads a track-solo or window-action state.
+Mapping: S080-S081 prove written-node S neither toggles Solo nor activates the window shortcut; S059 proves velocity-prompt S stays local. Unproved: insertion-prompt S via its absent mounted ingress.
 QVERIFY2(m_counts.solo == soloBefore && !view.trackSoloed(kTrack),
              qPrintable(QStringLiteral("Solo escaped the value prompt: action-delta=%1 "
                                        "track-soloed=%2")
@@ -127,7 +126,7 @@ QVERIFY2(m_counts.solo == soloBefore && !view.trackSoloed(kTrack),
 
 Original 390
 Disposition: PARTIAL
-Mapping: Related predicates S044 (:1483) and S046 (:1486) in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): the mounted prompt text keys leave the staged note state and the applied revision unchanged. Unproved: byte-level song identity — no mounted predicate compares the SMF bytes.
+Mapping: S048-S049 prove CC10 draft preserves serialized bytes/history; S078 proves mounted written-node arrows do not commit a revision. Unproved: typed native insertion-prompt keys paired with exact CC10 song bytes via the absent mounted ingress.
 QVERIFY2(document.smf().write() == before,
              "value prompt typing mutated the automation lane or the song")
 
@@ -138,82 +137,68 @@ QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
 
 Original 397
 Disposition: PARTIAL
-Mapping: Related predicate S046 (:1486) in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): Escape never commits a document write from the mounted prompt. Unproved: byte-level song identity — the mounted predicate pins the applied-revision text and the staged note state, not the SMF bytes.
+Mapping: S050-S052 prove CC10 insertion cancellation preserves song bytes, history and selection; S046 observes mounted written-node Escape does not commit a revision. Unproved: Escape through the absent mounted CC10 insertion ingress paired with byte identity.
 QVERIFY2(document.smf().write() == before, "cancelling the value prompt mutated the song")
 
 Original 399
 Disposition: PARTIAL
-Mapping: No Swift predicate: native band refocus (focusTimelineBand, MouseFocusReason) is a window focus observation.
+Mapping: S082 proves focus returns to the real plot after mounted written-node Escape. Unproved: focus return following an insertion prompt opened through the absent user-visible ingress.
 QVERIFY2(view.focusTimelineBand(songview::TimelineBand::Automation, Qt::MouseFocusReason),
              "could not refocus the automation band after the prompt")
 
 Original 402
 Disposition: PARTIAL
-Mapping: No Swift predicate: Solo action counter and track-solo state after native key delivery on the refocused band.
+Mapping: S088, S084 and S085 prove the mounted written-node prompt resumes exactly one intended Solo activation; unproved: resumption following an insertion prompt opened via the absent user-visible ingress.
 QVERIFY2(m_counts.solo == soloBefore + 1 && view.trackSoloed(kTrack),
              "Solo did not resume after the value prompt closed")
 
 Original 405
 Disposition: PARTIAL
-Mapping: No Swift predicate: track-solo state after a second native Solo delivery.
+Mapping: S086-S087 prove the second mounted written-node S reverses Solo with one more window activation; unproved: reversal after an insertion prompt opened via the absent user-visible ingress.
 QVERIFY2(!view.trackSoloed(kTrack), "Solo did not untoggle after the prompt")
 
 Original 416
-Disposition: PARTIAL
-Mapping: No Swift predicate: the binding registry (keymap::Registry::singleStroke for roll.solo_tracks/roll.copy) is C++-only; no production Swift keymap query exists.
-QVERIFY2(solo.has_value() && copy.has_value(), "Solo/Copy have no single-key bindings")
+Disposition: RETIRED-REPRESENTATION
+Mapping: S026 proves local S ownership; fork f3069ef693542bdb63564b80a29773e2f5b2a360:416 solo.has_value() && copy.has_value() only guards the removed C++ binding registry.
 
 Original 422
 Disposition: MATCHED
 
 Original 432
-Disposition: PARTIAL
-Mapping: No Swift predicate: the QML Quick window and the timelineRollInput item are native surfaces the model check does not mount.
-QVERIFY2(quickWindow && rollInput, "the roll surface is unavailable")
+Disposition: RETIRED-REPRESENTATION
+Mapping: S053 proves the real mounted roll note menu; fork f3069ef693542bdb63564b80a29773e2f5b2a360:432 quickWindow && rollInput only guards C++ fixture discovery.
 
 Original 448
-Disposition: PARTIAL
-Mapping: No Swift predicate: QML item bounds geometry against the live camera is a native rendering observation.
-QVERIFY2(rollInput->bounds().contains(rollPoint),
-             "production roll geometry did not expose the fixture note")
+Disposition: RETIRED-REPRESENTATION
+Mapping: S053 proves a real selected visible note receives the right-click; fork f3069ef693542bdb63564b80a29773e2f5b2a360:448 rollInput->bounds().contains(rollPoint) is a native coordinate precondition.
 
 Original 451
-Disposition: PARTIAL
-Mapping: No Swift predicate: the press point inside the QML Quick window is native geometry.
-QVERIFY2(QRect(QPoint{}, quickWindow->size()).contains(rollPress),
-             "the note menu press left the Quick window")
+Disposition: RETIRED-REPRESENTATION
+Mapping: S053 proves the mounted right-click opens the menu; fork f3069ef693542bdb63564b80a29773e2f5b2a360:451 QRect(QPoint{}, quickWindow->size()).contains(rollPress) is a native coordinate precondition.
 
 Original 465
-Disposition: PARTIAL
-Mapping: No Swift predicate: the note menu opens through native right-click delivery into a QML popup session.
-QVERIFY2(menuSession && menuSession->isOpen(), "right-click did not open the note menu")
+Disposition: MATCHED
+Mapping: S053 opens the production menu by right-clicking the selected visible roll note.
 
 Original 467
-Disposition: PARTIAL
-Mapping: No Swift predicate: the QML menu panel item is a native surface.
-QVERIFY2(panel, "the note menu did not render a panel")
+Disposition: RETIRED-REPRESENTATION
+Mapping: S053 proves the mounted menu opens; fork f3069ef693542bdb63564b80a29773e2f5b2a360:467 panel is a native QML panel lookup, not the menu behavior.
 
 Original 469
-Disposition: PARTIAL
-Mapping: No Swift predicate: the QML menu's typed model is a native object.
-QVERIFY2(model, "the note menu has no typed model")
+Disposition: RETIRED-REPRESENTATION
+Mapping: S054 checks the rendered enabled Set Velocity row; fork f3069ef693542bdb63564b80a29773e2f5b2a360:469 model is the deleted C++ typed menu-model lookup.
 
 Original 472
-Disposition: PARTIAL
-Mapping: No Swift predicate: the velocity row lookup runs on the QML menu model.
-QVERIFY2(velocityRow >= 0, "the note menu has no velocity action")
+Disposition: RETIRED-REPRESENTATION
+Mapping: S054 proves the real Set Velocity row is enabled; fork f3069ef693542bdb63564b80a29773e2f5b2a360:472 velocityRow >= 0 is a native menu-model index lookup.
 
 Original 473
-Disposition: PARTIAL
-Mapping: No Swift predicate: the menu row receives a real native click.
-QVERIFY2(quick_popup::clickMenuRow(*menuSession, velocityRow),
-             "the velocity menu row did not receive a real click")
+Disposition: MATCHED
+Mapping: S054-S056 prove the real enabled Set Velocity row receives a click, closes the menu and opens the prompt.
 
 Original 479
-Disposition: PARTIAL
-Mapping: Related predicate S018 (the production selected-note prompt entry the menu action calls); unproved: the QML popup session's open state and window after the native menu click.
-QVERIFY2(popup && popup->isOpen() && canvas,
-             "the velocity action did not open the canvas prompt")
+Disposition: MATCHED
+Mapping: S056 proves the clicked production Set Velocity menu row opens the prompt on the mounted canvas.
 
 Original 481
 Disposition: MATCHED
@@ -284,25 +269,20 @@ Mapping: S030
 
 Original 574
 Disposition: PARTIAL
-Mapping: Related predicates S007, S008 (cancel leaves snapshot and song unchanged); unproved: song bytes after native Escape delivery.
+Mapping: S063-S064 preserve selected note and document revision after mounted velocity Escape; S050 proves exact bytes for the separate CC10 cancellation. Unproved: exact song bytes after mounted velocity Escape.
 QVERIFY2(document.smf().write() == before, "cancelling the velocity prompt mutated the song")
 
 Original 576
-Disposition: PARTIAL
-Mapping: No Swift predicate: native band refocus (focusTimelineBand, MouseFocusReason) is a window focus observation.
-QVERIFY2(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::MouseFocusReason),
-             "could not refocus the roll band after the prompt")
+Disposition: MATCHED
+Mapping: S065 proves Escape returns focus to the mounted roll after the velocity prompt.
 
 Original 579
-Disposition: PARTIAL
-Mapping: No Swift predicate: Solo action counter and track-solo state after native key delivery on the refocused band.
-QVERIFY2(m_counts.solo == soloBefore + 1 && view.trackSoloed(kTrack),
-             "Solo did not resume after the velocity prompt closed")
+Disposition: MATCHED
+Mapping: S066-S067 prove the first resumed roll S toggles intended Solo on and activates the window shortcut exactly once.
 
 Original 582
-Disposition: PARTIAL
-Mapping: No Swift predicate: track-solo state after a second native Solo delivery.
-QVERIFY2(!view.trackSoloed(kTrack), "Solo did not untoggle after the prompt")
+Disposition: MATCHED
+Mapping: S068-S069 prove the second resumed roll S toggles intended Solo off with exactly one further window activation.
 
 Swift assertion predicates
 
@@ -440,3 +420,126 @@ Anchor: message "Escape never commits a document write"
 S047 | test_mLabelCommandsAndPromptTextOwnership prompt draft value | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "the prompt opens with its drafted Volume value"
 
+
+S048 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "numeric draft leaves every serialized song byte unchanged"
+
+S049 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "numeric draft creates no song history entry"
+
+S050 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "numeric cancellation preserves every serialized song byte"
+
+S051 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "numeric cancellation creates no song history entry"
+
+S052 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "numeric cancellation preserves selected NoteIDs"
+
+S053 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "right-click on the selected visible note opens its real menu"
+
+S054 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the real note menu renders an enabled Set Velocity row"
+
+S055 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "clicking Set Velocity closes the production note menu"
+
+S056 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the clicked Set Velocity row opens the production prompt"
+
+S057 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "numeric Paste replaces the selected draft"
+
+S058 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "numeric validator rejects Solo S without changing text"
+
+S059 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "numeric S never activates the window Solo shortcut"
+
+S060 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "numeric S leaves the value prompt open"
+
+S061 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "velocity arrows retain the selected NoteID and note contents"
+
+S062 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "velocity numeric keys never commit a song revision"
+
+S063 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "velocity prompt cancellation preserves the selected note"
+
+S064 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "velocity prompt cancellation preserves the document revision"
+
+S065 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Escape returns focus to the real roll after the velocity prompt"
+
+S066 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the first resumed roll S turns on the intended track Solo"
+
+S067 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the first resumed S activates the window Solo exactly once"
+
+S068 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the second resumed roll S turns off the intended track Solo"
+
+S069 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the second resumed S activates the window Solo exactly once"
+
+S070 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "actual digits replace automation numeric draft with 12"
+
+S071 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "typing 12 keeps the automation prompt open"
+
+S072 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "prompt Select All selects the drafted text"
+
+S073 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "prompt Copy leaves the draft selected"
+
+S074 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "prompt Paste restores the copied numeric draft"
+
+S075 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "automation arrows leave the numeric prompt open"
+
+S076 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "automation arrows keep numeric focus local"
+
+S077 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "automation arrows preserve selected note IDs and contents"
+
+S078 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "automation arrows do not commit a song revision"
+
+S079 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "automation numeric validator rejects Solo S"
+
+S080 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "automation prompt S leaves Solo off"
+
+S081 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "automation prompt S never activates window Solo"
+
+S082 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Escape returns automation keyboard focus to the production plot"
+
+S083 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the active Qt window resumes automation band commands"
+
+S084 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "first resumed automation S turns on intended Solo"
+
+S085 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "first resumed automation S activates window Solo once"
+
+S086 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "second resumed automation S turns off intended Solo"
+
+S087 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "second resumed automation S activates window Solo once"
+
+S088 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the real Solo shortcut is mounted beside automation"

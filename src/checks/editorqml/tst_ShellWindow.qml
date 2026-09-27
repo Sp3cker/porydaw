@@ -766,8 +766,29 @@ TestCase {
                   "entering the roll note replaces the ruler time-range selection")
         selectDrawnVelocityNote(surface)
 
-        session.performGridCommand(bootstrap.setVelocityCommand())
-        tryCompare(session.velocityPage(), "promptOpen", true, 3000)
+        compare(shell.active, true,
+                "the production Qt window is active before resumed numeric commands")
+        var noteMenu = findChild(shell, "shellGridContextMenu")
+        verify(noteMenu && !noteMenu.visible, "the real note menu starts closed")
+        var selectedVelocityNote = JSON.parse(surface.gridModel.noteSummary).find(function(note) {
+            return note.selected && !note.ghost
+        })
+        verify(selectedVelocityNote, "the velocity menu targets a selected roll note")
+        notePoint = mountedNotePoint(surface, roll, selectedVelocityNote.id)
+        verify(notePoint, "the selected note remains visible for the right-click")
+        mouseClick(roll, notePoint.x, notePoint.y, Qt.RightButton)
+        tryCompare(noteMenu, "visible", true, 3000,
+                   "right-click on the selected visible note opens its real menu")
+        var velocityRow = findChild(noteMenu, "shellContextAction_edit.set_velocity")
+        verify(velocityRow && velocityRow.visible && velocityRow.enabled,
+               "the real note menu renders an enabled Set Velocity row")
+        mouseClick(velocityRow, velocityRow.width / 2, velocityRow.height / 2)
+        tryCompare(noteMenu, "visible", false, 3000,
+                   "clicking Set Velocity closes the production note menu")
+        tryCompare(session.velocityPage(), "promptOpen", true, 3000,
+                   "the clicked Set Velocity row opens the production prompt")
+        var velocityNoteBeforeKeys = surface.gridModel.noteSummary
+        var velocityRevisionBeforeKeys = surface.gridModel.appliedRevisionText
         var field = null
         tryVerify(function() {
             field = findChild(surface, "noteVelocityInput")
@@ -787,12 +808,18 @@ TestCase {
         field.selectAll()
         keySequence(StandardKey.Paste)
         compare(field.text, "12", "native Copy and Paste stay with the text editor")
+        compare(field.selectedText, "", "numeric Paste replaces the selected draft")
         compare(copyActivatedSpy.count, windowCopyBeforePrompt,
                 "prompt Copy/Paste never fire the window Copy action")
         compare(field.activeFocus, true, "local Copy/Paste retains numeric focus")
+        var velocityBeforeSolo = field.text
         keyClick(Qt.Key_S)
+        compare(field.text, velocityBeforeSolo, "numeric validator rejects Solo S without changing text")
         compare(firstTrack.soloChecked, false, "S in a numeric editor never fires Solo")
-        compare(session.velocityPage().promptOpen, true)
+        compare(soloActivatedSpy.count, 4,
+                "numeric S never activates the window Solo shortcut")
+        compare(session.velocityPage().promptOpen, true,
+                "numeric S leaves the value prompt open")
         keyClick(Qt.Key_Up)
         keyClick(Qt.Key_Down)
         compare(field.activeFocus, true, "prompt arrows keep focus in the numeric editor")
@@ -800,6 +827,12 @@ TestCase {
         tryCompare(session.velocityPage(), "selectedCount", 1, 3000,
                    "prompt arrows keep the musical selection")
         compare(session.documentDirty, false, "prompt arrows never edit the song")
+        compare(surface.gridModel.noteSummary, velocityNoteBeforeKeys,
+                "velocity arrows retain the selected NoteID and note contents")
+        compare(surface.gridModel.appliedRevisionText, velocityRevisionBeforeKeys,
+                "velocity numeric keys never commit a song revision")
+        compare(soloActivatedSpy.count, 4,
+                "numeric arrow keys never activate Solo")
         var promptTextAfterArrows = field.text
         var playhead = session.playheadPresenter()
         compare(playhead.playing, false)
@@ -814,6 +847,23 @@ TestCase {
         compare(session.velocityPage().promptOpen, true)
         keyClick(Qt.Key_Escape)
         tryCompare(session.velocityPage(), "promptOpen", false, 3000)
+        compare(surface.gridModel.noteSummary, velocityNoteBeforeKeys,
+                "velocity prompt cancellation preserves the selected note")
+        compare(surface.gridModel.appliedRevisionText, velocityRevisionBeforeKeys,
+                "velocity prompt cancellation preserves the document revision")
+        tryCompare(roll, "activeFocus", true, 3000,
+                   "Escape returns focus to the real roll after the velocity prompt")
+        compare(shell.active, true, "the production Qt window is active for resumed roll Solo")
+        keyClick(Qt.Key_S)
+        tryCompare(firstTrack, "soloChecked", true, 3000,
+                   "the first resumed roll S turns on the intended track Solo")
+        compare(soloActivatedSpy.count, 5,
+                "the first resumed S activates the window Solo exactly once")
+        keyClick(Qt.Key_S)
+        tryCompare(firstTrack, "soloChecked", false, 3000,
+                   "the second resumed roll S turns off the intended track Solo")
+        compare(soloActivatedSpy.count, 6,
+                "the second resumed S activates the window Solo exactly once")
         var drawer = findChild(surface, "editorDrawer")
         verify(drawer, "the production drawer is mounted")
         var velocityToggle = findChild(drawer, "drawerToggle_velocity")
@@ -833,6 +883,14 @@ TestCase {
         keyClick(Qt.Key_Space)
         tryCompare(playhead, "playing", false, 3000,
                    "the second chrome Space stops transport")
+        compare(session.documentDirty, false,
+                "local numeric keys leave the active tab clean before explicit close")
+        shell.close()
+        verify(waitForNative(function() {
+            return shell.shellPresenter.closeReady
+        }, 5000), "the clean key journey closes without a dirty-tab gate")
+        compare(session.songTabs.pendingCloseId, -1,
+                "clean numeric editing leaves no pending dirty-tab close")
     }
 
     function test_cForeignWindowKeepsSoloLocal() {
@@ -2657,22 +2715,60 @@ TestCase {
         }, 3000), "the mounted prompt owns focus in its real numeric field")
         var originalDraft = field.text
         verify(originalDraft.length > 0, "the prompt opens with its drafted Volume value")
+        var promptSoloShortcut = windowShortcut("shellShortcut_roll.solo_tracks")
+        verify(promptSoloShortcut, "the real Solo shortcut is mounted beside automation")
+        soloActivatedSpy.target = promptSoloShortcut
+        soloActivatedSpy.clear()
+        var promptTrack = findChild(surface, "timelineTrackHeaderRows").itemAt(grid.trackIndex)
+        verify(promptTrack && !promptTrack.soloChecked,
+               "automation numeric input begins with the intended track not soloed")
+        field.selectAll()
+        keyClick(Qt.Key_1)
+        keyClick(Qt.Key_2)
+        compare(field.text, "12", "actual digits replace automation numeric draft with 12")
+        compare(model.promptOpen, true, "typing 12 keeps the automation prompt open")
         keySequence(StandardKey.SelectAll)
-        compare(field.selectedText, originalDraft, "prompt Select All selects the drafted text")
+        compare(field.selectedText, "12", "prompt Select All selects the drafted text")
         keySequence(StandardKey.Copy)
-        compare(field.selectedText, originalDraft, "prompt Copy leaves the draft selected")
+        compare(field.selectedText, "12", "prompt Copy leaves the draft selected")
         compare(copyActivatedSpy.count, 1, "prompt Copy never activates the window Copy shortcut")
         compare(clipProbe.readClipJson(), "", "prompt Copy never publishes a song clip")
         keyClick(Qt.Key_Delete)
         compare(field.text, "", "prompt Delete clears only the numeric draft")
         keySequence(StandardKey.Paste)
-        compare(field.text, originalDraft, "prompt Paste restores the copied numeric draft")
+        compare(field.text, "12", "prompt Paste restores the copied numeric draft")
         compare(grid.noteSummary, notesBefore, "prompt text keys preserve the staged note state")
+        keyClick(Qt.Key_Up)
+        keyClick(Qt.Key_Down)
+        compare(model.promptOpen, true, "automation arrows leave the numeric prompt open")
+        compare(field.activeFocus, true, "automation arrows keep numeric focus local")
+        compare(grid.noteSummary, notesBefore,
+                "automation arrows preserve selected note IDs and contents")
+        compare(grid.appliedRevisionText, revisionBefore,
+                "automation arrows do not commit a song revision")
+        keyClick(Qt.Key_S)
+        compare(field.text, "12", "automation numeric validator rejects Solo S")
+        compare(promptTrack.soloChecked, false, "automation prompt S leaves Solo off")
+        compare(soloActivatedSpy.count, 0, "automation prompt S never activates window Solo")
         keyClick(Qt.Key_Escape)
         tryCompare(model, "promptOpen", false, 3000, "Escape closes the prompt without a write")
         compare(grid.appliedRevisionText, revisionBefore, "Escape never commits a document write")
         compare(grid.noteSummary, notesBefore, "Escape keeps the staged note state unchanged")
         compare(insertTime.enabled, true, "Escape keeps the selected time range unchanged")
+        var automationPlot = findChild(page, "automationPlot")
+        tryCompare(automationPlot, "activeFocus", true, 3000,
+                   "Escape returns automation keyboard focus to the production plot")
+        compare(shell.active, true, "the active Qt window resumes automation band commands")
+        keyClick(Qt.Key_S)
+        tryCompare(promptTrack, "soloChecked", true, 3000,
+                   "first resumed automation S turns on intended Solo")
+        compare(soloActivatedSpy.count, 1,
+                "first resumed automation S activates window Solo once")
+        keyClick(Qt.Key_S)
+        tryCompare(promptTrack, "soloChecked", false, 3000,
+                   "second resumed automation S turns off intended Solo")
+        compare(soloActivatedSpy.count, 2,
+                "second resumed automation S activates window Solo once")
     }
 
     function test_nLabelTimeSelectionCommands() {

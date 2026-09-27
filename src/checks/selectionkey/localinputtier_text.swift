@@ -9,8 +9,6 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
     let labelID = "selectionkey/SelectionWindowTierTest::parameterLabelActivationAndSharedCommands"
     let lifetimeID = "selectionkey/SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime"
     // localinputtier_text.cpp: track0 CC10 at48=32 and96=64; insert at144.
-    // These predicates exercise the production Swift transaction. Original
-    // keyboard delivery and focus assertions remain deferred, not simulated.
     let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
                                                      pan: [(48, 32), (96, 64)],
                                                      tailTick: 6000)
@@ -28,6 +26,7 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
         return
     }
     let before = fixture.snapshot
+    let beforeHistory = fixture.document.history.undoIndex
     let beforeBytes = try? fixture.document.state.file.encoded()
     report.expect(beforeBytes != nil, cppID: lifetimeID,
                   message: "the first song serializes before lifetime routing")
@@ -43,16 +42,25 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
                        what: "draft editing does not mutate the song")
     report.expectEqual(expected: selection, actual: fixture.session.selectedNotes, cppID: id,
                        what: "draft editing preserves note selection")
+    report.expectEqual(expected: beforeBytes,
+                       actual: try? fixture.document.state.file.encoded(), cppID: id,
+                       what: "numeric draft leaves every serialized song byte unchanged")
+    report.expect(fixture.document.history.undoIndex == beforeHistory, cppID: id,
+                  message: "numeric draft creates no song history entry")
     page.cancelPrompt()
     report.expect(!page.promptOpen, cppID: id, message: "cancellation closes the prompt")
     report.expectEqual(expected: before, actual: fixture.snapshot, cppID: id,
                        what: "cancellation leaves the original document unchanged")
     report.expect(fixture.document.state == state, cppID: id,
                   message: "draft and cancellation preserve the full song contents")
+    report.expectEqual(expected: beforeBytes,
+                       actual: try? fixture.document.state.file.encoded(), cppID: id,
+                       what: "numeric cancellation preserves every serialized song byte")
+    report.expect(fixture.document.history.undoIndex == beforeHistory, cppID: id,
+                  message: "numeric cancellation creates no song history entry")
+    report.expectEqual(expected: selection, actual: fixture.session.selectedNotes, cppID: id,
+                       what: "numeric cancellation preserves selected NoteIDs")
 
-    // Model facts the original read through the QML canvas: the CC10 lane is
-    // one row of the page's published row stack, and the inserted fixture
-    // note resolves by ID. The QML surfaces themselves stay deferred.
     report.expect(page.rows.contains { $0.parameter == fixture.panLane }, cppID: id,
                   message: "the original CC10 lane is present in the page's row stack")
     report.expect(insertedNotes.first.flatMap { fixture.document.note($0) } != nil, cppID: id,
