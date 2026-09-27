@@ -10,7 +10,10 @@ Additional Swift counterpart: src/checks/automation/domain/gestureNodeDrag.swift
 Additional Swift counterpart: src/checks/automation/domain/gesturePointRange.swift
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
 
-Disposition tally: 31 sites: 27 MATCHED, 2 PARTIAL, 1 GAP, 1 RETIRED-REPRESENTATION.
+Disposition tally: 31 sites: 27 MATCHED, 2 PARTIAL, 0 GAP, 2 RETIRED-REPRESENTATION.
+
+Task-115 frozen source SHA-256: automationcanvasediting.swift 01ab5120e862c56fed885e7134129d3e4c75df810029800798ca4a328049b9e0; tst_ShellDrawerParity.qml b0c3a480064c7ad201d60ddf78361706a3b6c5e36cf435d09468260619122582.
+Task-115 implementer-observed GREEN: swiftcore-projectsession 1/36, shell-drawer-parity 1/26, full verify 36/36; full shell suite 25/26 due to sibling-owned shell-note-visuals DPR2. Proof writer did not rerun them.
 
 Earlier converted-suite command (prior source snapshot): deno task verify --filter swiftcore -> run_checks PASS (1/14 ok, 13 skipped).
 Earlier converted-suite command (same prior snapshot): deno task verify:qml -> run_checks PASS (all harnesses).
@@ -38,7 +41,7 @@ stack, mouse rig, document snapshots); cross-lane domain labelling comes from
 
 A001 | expectUnchanged | src/checks/automationgesturecheck/crosslane.cpp:147
 Disposition: PARTIAL
-Mapping/reason: S027, S028, S051 and S061 guard stale releases; S073 and S074 guard held mixed and Pan+LFO previews against bytes/index changes, while S076 and S077 check mounted displayed Tempo points and revision; unproved: the shared helper's unchanged mixed-selection hover snapshot including revision, SMF and undo index.
+Mapping/reason: S027, S028, S051, S061, S073, S074, S076, S077 and S084 prove staged mixed previews, stale releases and mounted Tempo without writing; unproved: the original shared mixed-selection hover snapshot comparing full-song bytes, revision and undo index after real hover.
 Source context since previous assertion:
   #include "domains.h"
   #include "support.h"
@@ -192,17 +195,8 @@ Original expression:
           QStringLiteral("%1 mutated SMF, revision, or undo").arg(QLatin1String(label)));
 
 A002 | requirePanLfo | src/checks/automationgesturecheck/crosslane.cpp:156
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/crosslane.cpp) no longer builds or runs. Previous native note: Fixture guard: requires native pan or LFO lane bodies on the retired canvas stack.
-Source context since previous assertion:
-  }
-
-  bool requirePanLfo(Context &ctx)
-  {
-      if (ctx.rig.handleFor(ctx.rig.pan).valid() && ctx.rig.handleFor(ctx.rig.lfo).valid())
-          return true;
-Original expression:
-      ctx.check.require(false, QStringLiteral("pan or LFO lane body is missing"));
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S039, S040: retired `rig.handleFor(ctx.rig.pan).valid() && rig.handleFor(ctx.rig.lfo).valid()` native canvas-body fixture guard; the typed Pan/LFO production lanes are exercised.
 
 A003 | runBandIsolation | src/checks/automationgesturecheck/crosslane.cpp:177
 Disposition: RETIRED-REPRESENTATION
@@ -630,3 +624,6 @@ Anchor: message "mounted mixed Delete removes the exact translated Pan occurrenc
 
 S083 | test_mountedMixedAutomationRangeDragDeleteUndo | src/checks/editorqml/tst_ShellGridInput.qml
 Anchor: message "mounted mixed Delete removes the exact translated LFO occurrence"
+
+S084 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "shortcut hover and menu dismissal never edit the song"

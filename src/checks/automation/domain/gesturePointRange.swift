@@ -167,6 +167,9 @@ func drawerAutomationPointRangeAndPencilReplacements(_ report: CheckReport, suit
     committed.page.isPencilMode = true
     let strokeY = committed.y(committed.modulationLane, 60)
     let cursorBeforeStroke = committed.session.editCursor
+    let strokeIndex = committed.document.history.undoIndex
+    let strokeCount = committed.document.history.undoCount
+    let strokeBytes = try! committed.document.captureSave().bytes
     report.expect(committed.page.pointerPress(x: committed.x(24), y: strokeY, surface: 1, button: 1), cppID: drawerAutomationPointRangeID,
                   message: "the pencil press starts a stroke")
     report.expect(committed.page.isPainting, cppID: drawerAutomationPointRangeID,
@@ -183,6 +186,11 @@ func drawerAutomationPointRangeAndPencilReplacements(_ report: CheckReport, suit
                   message: "the released pencil stroke leaves no range preview")
     report.expectEqual(expected: committedBefore.revision + 1, actual: committed.document.revision, cppID: drawerAutomationPointRangeID,
                        what: "one pencil press and release is one revision")
+    report.expect(committed.document.history.undoIndex == strokeIndex + 1
+                  && committed.document.history.undoCount == strokeCount + 1
+                  && (try! committed.document.captureSave().bytes) != strokeBytes,
+                  cppID: drawerAutomationPointRangeID,
+                  message: "pencil release serializes one full-song history entry")
     report.expect(committed.values(committed.modulationLane).contains { $0.hasSuffix(":60") },
                   cppID: drawerAutomationPointRangeID,
                   message: "the released stroke writes the value under the pointer")
@@ -191,6 +199,10 @@ func drawerAutomationPointRangeAndPencilReplacements(_ report: CheckReport, suit
                        what: "one undo restores the pre-stroke lane")
     report.expect(!committed.document.history.canUndo, cppID: drawerAutomationPointRangeID,
                   message: "the released stroke recorded exactly one history entry")
+    report.expect(committed.document.history.undoIndex == strokeIndex
+                  && (try! committed.document.captureSave().bytes) == strokeBytes,
+                  cppID: drawerAutomationPointRangeID,
+                  message: "pencil undo restores exact song bytes and history index")
     let isolated = drawerAutomationAutomationFixture(
         suite: suite, service: service,
         volume: [(24, 60), (72, 80)], pan: [(24, 60)],

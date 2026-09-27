@@ -221,7 +221,8 @@ func drawerAutomationNodeDragAndPhantomOutcomes(_ report: CheckReport, suite: Do
             pan: [(24, 60), (120, 40)],
             tempo: [(24, 600_000), (120, 500_000)])
         scrolled.activate(parameter)
-        let scroll = scrolled.x(24) + scrolled.page.geometry.pointHitRadius * 2
+        let independentHitRadius = max(1, (scrolled.page.baseFontPx * 7 / 12).rounded())
+        let scroll = scrolled.x(24) + independentHitRadius * 2
         _ = scrolled.session.mutateCamera { $0.setHScroll(scroll) }
         guard let projected = scrolled.page.projection?.originPhantom,
               let handle = scrolled.page.publishedNodes.first(where: \.phantom) else {
@@ -250,18 +251,19 @@ func drawerAutomationNodeDragAndPhantomOutcomes(_ report: CheckReport, suite: Do
         let firstCurve = scrolled.page.previewRects.first {
             $0.primitiveName == "automationPreviewCurve"
         }
-        report.expect(firstCurve != nil && (firstCurve?.width ?? 0) > scrolled.page.geometry.pointHitRadius * 2,
+        report.expect(firstCurve != nil && (firstCurve?.width ?? 0) > independentHitRadius * 2,
                       cppID: phantomID,
                       message: "an activated phantom paints a full held-value preview curve")
         _ = scrolled.page.pointerMove(x: 0, y: targetY - 30, buttons: AutomationQtButton.left)
         let movedCurve = scrolled.page.previewRects.first {
             $0.primitiveName == "automationPreviewCurve"
         }
-        report.expect(movedCurve != nil && (movedCurve?.width ?? 0) > scrolled.page.geometry.pointHitRadius * 2,
+        report.expect(movedCurve != nil && (movedCurve?.width ?? 0) > independentHitRadius * 2,
                       cppID: phantomID,
                       message: "a moved phantom retains its full preview curve")
         let curveDelta = (movedCurve?.y ?? -1) - (firstCurve?.y ?? -1)
-        report.expect(abs(curveDelta) > 0.5 && curveDelta * (targetY - y) > 0,
+        report.expect(abs(curveDelta) > 0.5 / scrolled.page.devicePixelRatio
+                      && curveDelta * (targetY - y) > 0,
                       cppID: phantomID,
                       message: "a moved phantom shifts the preview curve toward its target by a pixel")
         report.expectEqual(expected: before, actual: scrolled.snapshot, cppID: phantomID,
@@ -292,6 +294,9 @@ func drawerAutomationNodeDragAndPhantomOutcomes(_ report: CheckReport, suite: Do
         let sourceY = selected.y(parameter, 100)
         let endX = selected.x(144) + 30
         let before = selected.snapshot
+        let beforeIndex = selected.document.history.undoIndex
+        let beforeCount = selected.document.history.undoCount
+        let beforeBytes = try! selected.document.captureSave().bytes
         report.expect(selected.page.pointerPress(x: sourceX, y: sourceY, surface: 1,
                                                  button: AutomationQtButton.left),
                       cppID: rangeID, message: "the selected node takes the group drag")
@@ -311,6 +316,21 @@ func drawerAutomationNodeDragAndPhantomOutcomes(_ report: CheckReport, suite: Do
                            what: "the selected-range band follows its drag")
         report.expectEqual(expected: before.revision + 1, actual: selected.document.revision,
                            cppID: rangeID, what: "the selected-range drag commits once")
+        let movedBytes = try! selected.document.captureSave().bytes
+        report.expect(selected.document.history.undoIndex == beforeIndex + 1
+                      && selected.document.history.undoCount == beforeCount + 1
+                      && movedBytes != beforeBytes, cppID: rangeID,
+                      message: "the selected-range release changes full-song bytes in one history entry")
+        report.expect(selected.undo()
+                      && selected.document.history.undoIndex == beforeIndex
+                      && (try! selected.document.captureSave().bytes) == beforeBytes,
+                      cppID: rangeID,
+                      message: "selected-range undo restores the original full-song bytes and history index")
+        report.expect((try? runBlocking { try await selected.session.redo() }) == true
+                      && selected.document.history.undoIndex == beforeIndex + 1
+                      && (try! selected.document.captureSave().bytes) == movedBytes,
+                      cppID: rangeID,
+                      message: "selected-range redo restores the moved full-song bytes and history index")
         selected.page.selectRange(from: 96, to: 288, lanes: [parameter])
         let beforeDelete = selected.snapshot
         report.expect(selected.page.consumeSelectionCommand(command: .delete), cppID: rangeID,

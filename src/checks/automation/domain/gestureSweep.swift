@@ -51,6 +51,7 @@ func drawerAutomationSweepSteppingAndRampFinish(_ report: CheckReport, suite: Do
     var ramp = AutomationSweepTransaction(facts: facts, mode: .ramp,
                                           mapped: AutomationLanePoint(tick: 0, value: 0),
                                           rawTick: 0, pressX: 0, pressY: 0)
+    ramp.updateRamp(mapped: AutomationLanePoint(tick: 5, value: 0))
     ramp.updateRamp(mapped: AutomationLanePoint(tick: 10, value: 100))
     let rampPoints = ramp.finishedPoints(fine: true, projection: projection)
     report.expectEqual(expected: 11, actual: rampPoints.count, cppID: drawerAutomationSweepStepsID,
@@ -145,6 +146,9 @@ func drawerAutomationSweepFinishRestoresTrailingHeldValue(_ report: CheckReport,
                        what: "the ramp's tail re-anchors the original held value too")
 
     let rampBefore = fixture.snapshot
+    let rampIndex = fixture.document.history.undoIndex
+    let rampCount = fixture.document.history.undoCount
+    let rampBytes = try! fixture.document.captureSave().bytes
     guard let rampEdit else {
         report.fail(drawerAutomationSweepTailID, "the ramp produced no band replacement")
         return
@@ -159,6 +163,11 @@ func drawerAutomationSweepFinishRestoresTrailingHeldValue(_ report: CheckReport,
     report.expectEqual(expected: rampBefore.revision + 1,
                        actual: fixture.document.revision, cppID: drawerAutomationSweepTailID,
                        what: "a sweep ramp commits one document edit")
+    report.expect(fixture.document.history.undoIndex == rampIndex + 1
+                  && fixture.document.history.undoCount == rampCount + 1
+                  && (try! fixture.document.captureSave().bytes) != rampBytes,
+                  cppID: drawerAutomationSweepTailID,
+                  message: "the completed ramp serializes one complete history edit")
     let endFixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(0, 85)],
                                        tailTick: 384)
     let endProjection = AutomationProjection(
@@ -194,6 +203,9 @@ func drawerAutomationSweepFinishRestoresTrailingHeldValue(_ report: CheckReport,
     live.update(mapped: AutomationLanePoint(tick: 144, value: 25), first: 48, last: 144,
                 rawTick: 144, fine: true, projection: committedProjection)
     let beforeRelease = committed.snapshot
+    let sweepIndex = committed.document.history.undoIndex
+    let sweepCount = committed.document.history.undoCount
+    let sweepBytes = try! committed.document.captureSave().bytes
     report.expectEqual(expected: ["48:85", "72:70", "96:55", "120:40", "144:25"], actual: committed.laneValues(live.preview), cppID: drawerAutomationSweepTailID,
                        what: "the sweep preview is the stepped draft alone")
     report.expectEqual(expected: beforeRelease, actual: committed.snapshot, cppID: drawerAutomationSweepTailID,
@@ -208,9 +220,18 @@ func drawerAutomationSweepFinishRestoresTrailingHeldValue(_ report: CheckReport,
                        what: "the committed lane holds the stroke and its restored tail")
     report.expectEqual(expected: beforeRelease.revision + 1, actual: committed.document.revision, cppID: drawerAutomationSweepTailID,
                        what: "one released sweep is one revision")
+    report.expect(committed.document.history.undoIndex == sweepIndex + 1
+                  && committed.document.history.undoCount == sweepCount + 1
+                  && (try! committed.document.captureSave().bytes) != sweepBytes,
+                  cppID: drawerAutomationSweepTailID,
+                  message: "the released sweep serializes one complete history edit")
     report.expect(committed.undo(), cppID: drawerAutomationSweepTailID, message: "the sweep is undoable")
     report.expectEqual(expected: ["0:85"], actual: committed.values(committed.modulationLane), cppID: drawerAutomationSweepTailID,
                        what: "one undo restores the flat lane")
     report.expect(!committed.document.history.canUndo, cppID: drawerAutomationSweepTailID,
                   message: "the released sweep recorded exactly one history entry")
+    report.expect(committed.document.history.undoIndex == sweepIndex
+                  && (try! committed.document.captureSave().bytes) == sweepBytes,
+                  cppID: drawerAutomationSweepTailID,
+                  message: "sweep undo restores full-song bytes and original history index")
 }

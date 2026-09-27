@@ -6,7 +6,10 @@ Original: src/checks/automationgesturecheck/hover.cpp
 Original SHA-256: c0bbc4a68e09aec50cdbfcbf6f3fec04750e3c34fcf6f7c7de7a6e5d495d3bed
 Swift counterpart: src/checks/automation/automationcanvasediting.swift
 
-Disposition tally: 30 sites: 22 MATCHED, 1 PARTIAL, 3 GAP, 4 RETIRED-REPRESENTATION.
+Disposition tally: 30 sites: 23 MATCHED, 2 PARTIAL, 0 GAP, 5 RETIRED-REPRESENTATION.
+
+Task-115 frozen source SHA-256: automationcanvasediting.swift 01ab5120e862c56fed885e7134129d3e4c75df810029800798ca4a328049b9e0; tst_ShellDrawerParity.qml b0c3a480064c7ad201d60ddf78361706a3b6c5e36cf435d09468260619122582; AutomationPage.qml 846b48d0559409db51aa3b922f6260465fb407da7469e4e1ee5e16ebc61aad40.
+Task-115 implementer-observed GREEN: swiftcore-projectsession 1/36, shell-drawer-parity 1/26, full verify 36/36; full shell suite 25/26 due to sibling-owned shell-note-visuals DPR2. Proof writer did not rerun them.
 
 Task-96 GREEN: `deno task verify --filter swiftcore-projectsession --verbose`
 PASS (1/36 selected); `deno task verify:qml --verbose` PASS
@@ -46,15 +49,8 @@ A001 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:330
 Disposition: RETIRED-REPRESENTATION
 
 A002 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:335
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires native window flags on the retired Quick window.
-Source context since previous assertion:
-      if (!quickHost || !quickHost->quickWindow())
-          return;
-
-Original expression:
-      probe.require(!quickHost->quickWindow()->flags().testFlag(Qt::WindowTransparentForInput),
-                    QStringLiteral("native Quick timeline host accepts pointer input"));
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S051: retired native `!quickHost->quickWindow()->flags().testFlag(Qt::WindowTransparentForInput)` window flag; the mounted plot accepts actual pointer input.
 
 A003 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:337
 Disposition: MATCHED
@@ -97,28 +93,18 @@ Disposition: MATCHED
 Mapping: S037
 
 A013 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:412
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires the native grab-release counter on the retired automation host.
-Source context since previous assertion:
-      rig.canvas().inputCancelled(songview::TimelineInputCancelReason::FocusLost);
-      rig.pump();
-      previewUnchanged("focus-lost cancellation");
-Original expression:
-      probe.require(rig.automationHost().grabReleases() == grabsBefore,
-                    QStringLiteral("focus-lost cancellation released the pointer grab"));
+Disposition: PARTIAL
+Mapping: S052, S056, S057 (real keyboard focus moves to the roll while the staged band, transaction and MouseArea grab remain live).
+Missing: The fork's `previewUnchanged("focus-lost cancellation")` compares full-song SMF bytes, revision and undo index immediately after focus loss while the grab is still held. The mounted check compares only the revision after the eventual focused-away right release, not the full document snapshot at the held point.
+Original expression: `previewUnchanged("focus-lost cancellation");` (lambda calls `isUnchanged(before, snapshot(rig.document()))`).
 
 A014 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:420
 Disposition: MATCHED
 Mapping: S038
 
 A015 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:422
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires the native grab-release counter on the retired automation host.
-Source context since previous assertion:
-Original expression:
-      probe.require(rig.automationHost().grabReleases() > grabsBefore,
-                    QStringLiteral("window-deactivation cancellation did not release the pointer "
-                                   "grab"));
+Disposition: MATCHED
+Mapping: S053, S054 (actual window deactivation cancels the held gesture and relinquishes the MouseArea grab).
 
 A016 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:431
 Disposition: MATCHED
@@ -176,7 +162,7 @@ Mapping: S047
 
 A030 | runCase | src/checks/automationgesturecheck/hover.cpp:564
 Disposition: PARTIAL
-Mapping/reason: S016, S017, S035, S041, S048, S049, S050 prove mounted guide/ghost/label/ring clearing on pointer leave, including changed ghost and guide pixels; unproved: full guide/ghost/ring/text and framebuffer clearing immediately on a lane transition without pointer leave.
+Mapping/reason: S016, S017, S035, S041, S048, S049, S050 and S055 prove plot-to-gutter pointer leave clears background hover and hint, then re-entry restores them; unproved: complete guide/ghost/ring/text and framebuffer clearing immediately on lane transition, including the second leave.
 Source context since previous assertion:
       leaveCanvas(rig);
       const auto awaitClear = [&] {
@@ -401,3 +387,24 @@ Anchor: message "leaving clears the mounted held-value ghost"
 
 S050 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "leaving the plot unrings every node"
+
+S051 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "plot entry presents the background hover"
+
+S052 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "ordinary keyboard focus loss retains the held plot pointer grab"
+
+S053 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "deactivation cancels the staged automation gesture"
+
+S054 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "Qt deactivation relinquishes the MouseArea pointer grab"
+
+S055 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "moving from plot to gutter clears the background hover"
+
+S056 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "focus transfer retains the held plot transaction"
+
+S057 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "focus transfer keeps the staged selected-lane band visible"

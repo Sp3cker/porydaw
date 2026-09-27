@@ -289,9 +289,17 @@ func drawerAutomationInflightDragInvalidation(_ report: CheckReport, suite: Docu
     report.expect(!page.hasGesture, cppID: rebuildID,
                   message: "the document rebuild cancels the drag synchronously")
     let afterRebuild = rebuilt.snapshot
+    let rebuiltIndex = rebuilt.document.history.undoIndex
+    let rebuiltCount = rebuilt.document.history.undoCount
+    let rebuiltBytes = try! rebuilt.document.captureSave().bytes
     _ = page.pointerRelease(x: rebuilt.x(24) + 30, y: rebuilt.y(rebuilt.panLane, 64), button: 1)
     report.expectEqual(expected: afterRebuild, actual: rebuilt.snapshot, cppID: rebuildID,
                        what: "releasing the cancelled drag commits nothing")
+    report.expect(rebuilt.document.history.undoIndex == rebuiltIndex
+                  && rebuilt.document.history.undoCount == rebuiltCount
+                  && (try! rebuilt.document.captureSave().bytes) == rebuiltBytes,
+                  cppID: rebuildID,
+                  message: "stale release after document rebuild preserves history and serialized song")
     report.expect(page.pointerPress(x: rebuilt.x(24), y: rebuilt.y(rebuilt.panLane, 64),
                                      surface: 1, button: 1),
                   cppID: rebuildID, message: "a fresh press grabs the node after the rebuild")
@@ -300,12 +308,20 @@ func drawerAutomationInflightDragInvalidation(_ report: CheckReport, suite: Docu
     _ = page.pointerRelease(x: rebuilt.x(24) + 30, y: rebuilt.y(rebuilt.panLane, 90), button: 1)
     report.expectEqual(expected: ["24:90", "120:40", "168:5"], actual: rebuilt.values(rebuilt.panLane),
                        cppID: rebuildID, what: "the recovery drag commits normally")
+    report.expect(rebuilt.document.history.undoIndex == rebuiltIndex + 1
+                  && rebuilt.document.history.undoCount == rebuiltCount + 1
+                  && (try! rebuilt.document.captureSave().bytes) != rebuiltBytes,
+                  cppID: rebuildID,
+                  message: "the recovered node release makes one serialized history edit")
 
     let switchID = "automation/AutomationEditingTest::parameterSwitchCancelsNodeDrag"
     let switched = drawerAutomationAutomationFixture(suite: suite, service: service,
                                                      pan: [(24, 64), (120, 40)])
     switched.activate(switched.panLane)
     let switchedBefore = switched.snapshot
+    let switchedIndex = switched.document.history.undoIndex
+    let switchedCount = switched.document.history.undoCount
+    let switchedBytes = try! switched.document.captureSave().bytes
     report.expect(switched.page.pointerPress(
         x: switched.x(24), y: switched.y(switched.panLane, 64), surface: 1, button: 1),
                   cppID: switchID, message: "a press grabs the node")
@@ -326,6 +342,11 @@ func drawerAutomationInflightDragInvalidation(_ report: CheckReport, suite: Docu
                                       y: switched.y(switched.panLane, 64), button: 1)
     report.expectEqual(expected: switchedBefore, actual: switched.snapshot, cppID: switchID,
                        what: "releasing after the switch commits nothing")
+    report.expect(switched.document.history.undoIndex == switchedIndex
+                  && switched.document.history.undoCount == switchedCount
+                  && (try! switched.document.captureSave().bytes) == switchedBytes,
+                  cppID: switchID,
+                  message: "stale release after parameter switch preserves history and serialized song")
     switched.activate(switched.panLane)
     report.expect(switched.page.pointerPress(
         x: switched.x(24), y: switched.y(switched.panLane, 64), surface: 1, button: 1),
@@ -338,6 +359,11 @@ func drawerAutomationInflightDragInvalidation(_ report: CheckReport, suite: Docu
                                       button: 1)
     report.expectEqual(expected: ["24:90", "120:40"], actual: switched.values(switched.panLane), cppID: switchID,
                        what: "the recovery drag commits normally")
+    report.expect(switched.document.history.undoIndex == switchedIndex + 1
+                  && switched.document.history.undoCount == switchedCount + 1
+                  && (try! switched.document.captureSave().bytes) != switchedBytes,
+                  cppID: switchID,
+                  message: "the post-switch node release makes one serialized history edit")
 
     let ownerID = "automation/AutomationEditingTest::tracksSelectionRings"
     let rings = drawerAutomationAutomationFixture(suite: suite, service: service,

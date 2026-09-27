@@ -13,7 +13,10 @@ Additional Swift counterpart: src/checks/automation/domain/tst_automationdomain.
 Additional Swift counterpart: src/checks/automation/automationselection.swift
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
 
-Disposition tally: 67 sites: 58 MATCHED, 6 PARTIAL, 2 GAP, 1 RETIRED-REPRESENTATION.
+Disposition tally: 67 sites: 60 MATCHED, 2 PARTIAL, 0 GAP, 5 RETIRED-REPRESENTATION.
+
+Task-115 frozen source SHA-256: gestureNodeDrag.swift cfaaea075abbcc227ae3ccc58ea1ca5afb13c933fe358224e370bc11b5ef7a48; automationcanvasediting.swift 01ab5120e862c56fed885e7134129d3e4c75df810029800798ca4a328049b9e0; tst_ShellDrawerParity.qml b0c3a480064c7ad201d60ddf78361706a3b6c5e36cf435d09468260619122582.
+Task-115 implementer-observed GREEN: swiftcore-projectsession 1/36, shell-drawer-parity 1/26, full verify 36/36; full shell suite 25/26 due to sibling-owned shell-note-visuals DPR2. Proof writer did not rerun them.
 
 Earlier converted-suite command (prior source snapshot): deno task verify --filter swiftcore -> run_checks PASS (1/14 ok, 13 skipped).
 Earlier converted-suite command (same prior snapshot): deno task verify:qml -> run_checks PASS (all harnesses).
@@ -37,7 +40,7 @@ keeps its disposition with the unproved half named. At that snapshot A008, A010,
 
 A001 | expectPoints | src/checks/automationgesturecheck/contract.cpp:120
 Disposition: PARTIAL
-Mapping/reason: S023, S024, S028, S037, S042..S057, S061, S064, S067, S078 and S100 index point outcomes, including displayed fractional Tempo nodes and ordered mixed Pan/LFO raw points; unproved: equivalent visible points for every Tempo/CC case of the original shared native NodeLane helper.
+Mapping/reason: S023, S024, S028, S037, S042..S057, S061, S064, S067, S078, S100 and S112 prove exact point outcomes on the covered cases; unproved: displayed point equality for every Tempo/CC case of the original shared native NodeLane helper.
 Source context since previous assertion:
   #include "domains.h"
   #include "support.h"
@@ -248,18 +251,8 @@ Disposition: MATCHED
 Mapping: S089 (unknown Tempo move leaves bytes, revision and undo index intact).
 
 A023 | checkMove | src/checks/automationgesturecheck/contract.cpp:386
-Disposition: PARTIAL
-Mapping/reason: S033 proves a free-tick unchanged-value Tempo move at exact BPM; S090 proves 499999-microsecond retention on a fractional collision; unproved: a fractional free-tick move preserving its untouched sibling in the same two-point Tempo stream.
-Source context since previous assertion:
-          const auto preservedBpm = tempoBpm(kPreservedTempoUs);
-          applyMoves(context, {{uint64_t{96}, NodePoint{192, preservedBpm}}});
-          expectOneEdit(context, before);
-          expectPoints(context, {{192, preservedBpm}, {288, 110}});
-          const auto moved = document.tempoPoints();
-Original expression:
-          context.check.require(moved.size() == 2 && moved.front().tick == 192 &&
-                                    moved.front().microsecondsPerQuarterNote == kPreservedTempoUs,
-                                QStringLiteral("unchanged-value Tempo move discarded microseconds"));
+Disposition: MATCHED
+Mapping: S112, S114, S115, S116 (free-tick Tempo move retains 499999 raw microseconds, untouched 545455 sibling, one history edit and full-song byte undo).
 
 A024 | checkMove | src/checks/automationgesturecheck/contract.cpp:396
 Disposition: MATCHED
@@ -413,90 +406,30 @@ A061 | checkRowRebuildHandles | src/checks/automationgesturecheck/contract.cpp:9
 Disposition: RETIRED-REPRESENTATION
 
 A062 | checkRowRebuildHandles | src/checks/automationgesturecheck/contract.cpp:932
-Disposition: PARTIAL
-Mapping/reason: S074 (the old row belongs to the original track), S075 (activating the pan lane returns its handle), S072 (a track switch rebuilds rows during the pan), and S073 (the rebuilt row keeps its handle and retires the old track row) prove row-handle resolution through the production row stack at model level; unproved: native rowMatches and bodyFor identity on the retired canvas stack.
-Source context since previous assertion:
-          return;
-      }
-
-      const auto tempoBefore = AutomationGestureCheckRig::kTempoHandle;
-      const auto panBefore = rig.handleFor(rig.pan);
-      const auto lfoBefore = rig.handleFor(rig.lfo);
-      const auto rowMatches = [&rig](LaneHandle handle, const EditorAutomationRowId &id) {
-          const auto &rows = rig.canvas().rows();
-          const int row = handle.index - 1;
-          return handle.index > 0 && row < int(rows.size()) && rows[std::size_t(row)].id == id;
-      };
-Original expression:
-      rowCheck.require(rowMatches(panBefore, rig.pan.row) && rowMatches(lfoBefore, rig.lfo.row) &&
-                           !rig.bodyFor(tempoBefore).isEmpty(),
-                       QStringLiteral("initial lane handles did not resolve their row identities"));
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S072, S073, S074, S075: retired `rowMatches(panBefore, rig.pan.row) && rowMatches(lfoBefore, rig.lfo.row) && !rig.bodyFor(tempoBefore).isEmpty()` numeric LaneHandle/body identity; production rows resolve by typed parameters.
 
 A063 | checkRowRebuildHandles | src/checks/automationgesturecheck/contract.cpp:943
 Disposition: PARTIAL
-Mapping/reason: Stale-arm snapshot guard; S058 (a cancelled stale gesture never writes on release) and S059 and S060 (a stale release after a mid-gesture rebuild commits nothing and leaves no interaction live) and S070 (a stale batch release writes nothing) are indexed below; unproved: native row handles, canvas bodies, and the retired rig fixture.
-Source context since previous assertion:
-
-      const auto grabbed = rig.pointAt(rig.lfo, kFixtureTick, 96);
-      const auto activation =
-          grabbed.position + QPointF(rig.geometry().nodeDragActivationDistance + 2, 0.0);
-      const auto before = snapshot(rig.document());
-      rig.mousePress(grabbed.position);
-      rig.mouseMove(activation);
-      rig.pump();
-Original expression:
-      rowCheck.require(isUnchanged(before, snapshot(rig.document())),
-                       QStringLiteral("arming a row-rebuild stale-handle gesture mutated data"));
+Mapping: S117, S118, S119, S120 (the held node drag is live before a parameter switch; switching cancels it, preserves the pre-press model, and the eventual stale release preserves the captured full-song bytes and undo history).
+Missing: The native assertion compares its SMF/revision/undo snapshot immediately after arming the drag but before the row rebuild; the Swift check does not independently compare serialized full-song bytes and undo count at that intermediate staged point. Native numeric row-handle identity is retired.
+Original expression: `rowCheck.require(isUnchanged(before, snapshot(rig.document())), "arming a row-rebuild stale-handle gesture mutated data");`
 
 A064 | checkRowRebuildHandles | src/checks/automationgesturecheck/contract.cpp:951
-Disposition: PARTIAL
-Mapping/reason: S073 (the rebuilt-row predicate in drawerAutomationMiddlePanIsolation, automationcanvaslayout.swift) proves handle validity across a production row-stack rebuild at model level; unproved: native handle ordering and the inserted-lane index on the retired canvas stack.
-Source context since previous assertion:
-
-      rig.page().addEmptyLane(inserted.track, inserted.controller);
-      rig.pump();
-      const auto insertedHandle = rig.handleFor(inserted);
-      const auto panAfter = rig.handleFor(rig.pan);
-      const auto lfoAfter = rig.handleFor(rig.lfo);
-Original expression:
-      rowCheck.require(rowMatches(panAfter, rig.pan.row) && rowMatches(lfoAfter, rig.lfo.row) &&
-                           rowMatches(insertedHandle, inserted.row) &&
-                           lfoAfter.index == lfoBefore.index + 1 &&
-                           !rig.bodyFor(tempoBefore).isEmpty(),
-                       QStringLiteral("row rebuild lost Tempo/CC handle identity or ordering"));
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S072, S073: retired `lfoAfter.index == lfoBefore.index + 1` and numeric `rowMatches`/`bodyFor` checks; typed row identity survives production rebuild without exposing index arithmetic.
 
 A065 | checkRowRebuildHandles | src/checks/automationgesturecheck/contract.cpp:956
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/contract.cpp) no longer builds or runs. Previous native note: Requires native invalid-handle body resolution on the retired canvas stack.
-Source context since previous assertion:
-Original expression:
-      rowCheck.require(rig.bodyFor(LaneHandle{}).isEmpty() && rig.bodyFor(LaneHandle{9999}).isEmpty(),
-                       QStringLiteral("invalid lane handles resolved to a body"));
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S073: retired `rig.bodyFor(LaneHandle{}).isEmpty() && rig.bodyFor(LaneHandle{9999}).isEmpty()` numeric invalid-handle API; production uses typed parameters.
 
 A066 | checkRowRebuildHandles | src/checks/automationgesturecheck/contract.cpp:961
-Disposition: PARTIAL
-Mapping/reason: Stale-release snapshot and idle guard; S058, S059, and S060 (stale releases write nothing and leave no interaction live) and S070 (a stale batch release writes nothing) are indexed below; unproved: native row handles, canvas bodies, and the retired rig fixture.
-Source context since previous assertion:
-
-      rig.mouseRelease(activation);
-      rig.pump();
-Original expression:
-      rowCheck.require(isUnchanged(before, snapshot(rig.document())) && rig.isIdle(),
-                       QStringLiteral("release after a row rebuild committed a stale lane handle "
-                                      "or changed the undo count"));
+Disposition: MATCHED
+Mapping: S118, S120, S121, S122 (parameter switch cancels the staged node gesture; stale release leaves the pre-press document, serialized bytes, undo index/count and idle gesture state unchanged; native numeric row handles are retired).
 
 A067 | checkRowRebuildHandles | src/checks/automationgesturecheck/contract.cpp:967
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/contract.cpp) no longer builds or runs. Previous native note: Requires native CC handle mapping restore on the retired canvas stack.
-Source context since previous assertion:
-
-      rig.page().removeEmptyLane(inserted.track, inserted.controller);
-      rig.pump();
-Original expression:
-      rowCheck.require(rig.handleFor(rig.pan) == panBefore && rig.handleFor(rig.lfo) == lfoBefore &&
-                           rowMatches(rig.handleFor(rig.pan), rig.pan.row) &&
-                           rowMatches(rig.handleFor(rig.lfo), rig.lfo.row),
-                       QStringLiteral("removing the rebuilt row did not restore CC handle mapping"));
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S073, S113: retired `rig.handleFor(rig.pan) == panBefore && rig.handleFor(rig.lfo) == lfoBefore` numeric handle restore and `rowMatches`; typed parameter identities survive rebuild and accept a fresh press.
 
 Remaining original source (closing sequence and helper bodies):
   }
@@ -878,3 +811,36 @@ Anchor: message "changed Tempo move undo restores original index bytes and fract
 
 S111 | drawerAutomationExactNodeContract | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "changed Tempo move redo restores committed index bytes and destination"
+
+S112 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "the free-tick Tempo drag preserves raw fractional microseconds and its sibling"
+
+S113 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "a fresh press grabs the node after the switch"
+
+S114 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "the fractional Tempo release advances the history index once"
+
+S115 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "the fractional Tempo release appends one history entry"
+
+S116 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "undo of fractional Tempo restores the captured full-song bytes and history index"
+
+S117 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "the drag is live"
+
+S118 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "switching parameters cancels the drag"
+
+S119 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "the cancelled drag writes nothing"
+
+S120 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "stale release after parameter switch preserves history and serialized song"
+
+S121 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "releasing after the switch commits nothing"
+
+S122 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "parameter switch removes every provisional node marker rectangle"

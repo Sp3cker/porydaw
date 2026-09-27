@@ -16,6 +16,9 @@ Additional Swift counterpart: src/checks/editorqml/tst_ShellDrawerParity.qml
 Additional Swift counterpart: src/checks/editorqml/EditorQmlTests.swift
 Additional Swift counterpart: src/checks/automation/presentation/painting.swift
 
+Task-115 frozen source SHA-256: automationcanvasediting.swift 01ab5120e862c56fed885e7134129d3e4c75df810029800798ca4a328049b9e0; gestureSweep.swift 30da459163ad89ff2a939be75c383cadb8dbe713e467c211218b8429647d4531; gestureNodeDrag.swift cfaaea075abbcc227ae3ccc58ea1ca5afb13c933fe358224e370bc11b5ef7a48; tst_ShellDrawerParity.qml b0c3a480064c7ad201d60ddf78361706a3b6c5e36cf435d09468260619122582; AutomationPage.qml 846b48d0559409db51aa3b922f6260465fb407da7469e4e1ee5e16ebc61aad40.
+Task-115 implementer-observed GREEN: swiftcore-projectsession 1/36, shell-drawer-parity 1/26, full verify 36/36. Proof writer did not rerun them; full shell suite was 25/26 due to sibling-owned shell-note-visuals DPR2.
+
 Task-96 GREEN: `deno task verify --filter swiftcore-projectsession --verbose`
 PASS (1/36 selected); `deno task verify:qml --verbose` PASS
 (editorqml-drawer 1/1); `deno task verify:shell --verbose` PASS (26/26);
@@ -40,23 +43,12 @@ A001 | AutomationHoverTest::init | src/checks/automation/hover/tst_automationhov
 Disposition: RETIRED-REPRESENTATION
 
 A002 | AutomationHoverTest::init | src/checks/automation/hover/tst_automationhover.cpp:80
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: native TimelineInputItem lookup retired; the QML lane resolves the plot through testCase.automationPlotInput at tst_EditorDrawer.qml and no predicate asserts a native item handle.
-Source context since previous assertion:
-
-      m_fixture = std::move(fixture);
-
-Original expression:
-  QVERIFY(automation_hover::plotInput(*m_fixture));
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S115: retired `automation_hover::plotInput(*m_fixture)` native TimelineInputItem lookup; mounted plot receives real pointer input.
 
 A003 | AutomationHoverTest::init | src/checks/automation/hover/tst_automationhover.cpp:81
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: native gutter input lookup retired; the QML lane resolves the gutter through testCase.automationGutter at tst_EditorDrawer.qml.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(automation_hover::gutterInput(*m_fixture));
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S116: retired `automation_hover::gutterInput(*m_fixture)` native gutter-item lookup; mounted gutter receives real pointer movement.
 
 A004 | AutomationHoverTest::init | src/checks/automation/hover/tst_automationhover.cpp:82
 Disposition: RETIRED-REPRESENTATION
@@ -66,46 +58,12 @@ Disposition: RETIRED-REPRESENTATION
 Mapping: The retired TimelineQuickScene handle is not part of the Swift/QML drawer; the hover ring and value label render through AutomationPage.qml (S050, S052, S095).
 
 A006 | QTest::mouseRelease | src/checks/automation/hover/tst_automationhover.cpp:103
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: native grab cleanup (mouseGrabberItem, ungrabMouse) retired; the QML MouseArea owns the grab and no predicate exposes a grabber item.
-Source context since previous assertion:
-
-  }
-
-  void AutomationHoverTest::cleanup()
-  {
-      bool grabCleared = true;
-      if (m_fixture && automation_hover::quickWindow(*m_fixture)) {
-          QTest::keyClick(automation_hover::quickWindow(*m_fixture), Qt::Key_Escape, Qt::NoModifier);
-          if (m_fixture->heldButton != Qt::NoButton) {
-              QTest::mouseRelease(automation_hover::quickWindow(*m_fixture), m_fixture->heldButton,
-                                  Qt::NoModifier, m_fixture->lastWindowPosition);
-          }
-          if (QQuickItem *grabber = automation_hover::quickWindow(*m_fixture)->mouseGrabberItem())
-              grabber->ungrabMouse();
-          grabCleared = QTest::qWaitFor([this] {
-              return !m_fixture || !automation_hover::quickWindow(*m_fixture) ||
-                     !automation_hover::quickWindow(*m_fixture)->mouseGrabberItem();
-          });
-      }
-      m_fixture.reset();
-
-Original expression:
-  QVERIFY(grabCleared);
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S138, S139, S140: retired cleanup helper's `!quickWindow(*m_fixture)->mouseGrabberItem()` and forced `grabber->ungrabMouse()`; both real focus-retained release and window-deactivation cancellation relinquish the held MouseArea grab without a native grabber-object API.
 
 A007 | AutomationHoverTest::directInputHostRouting | src/checks/automation/hover/tst_automationhover.cpp:109
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native prepareLane precondition (Quick plot geometry, lane body rect, native parameter-tab click); the Swift fixture activates panLane in-process at automationcanvasediting.swift.
-Source context since previous assertion:
-
-  }
-
-  void AutomationHoverTest::directInputHostRouting()
-  {
-      const auto lane = automation_hover::prepareLane(*m_fixture, automation_hover::LaneKind::Cc);
-
-Original expression:
-  QVERIFY(lane.has_value());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S115: retired `lane.has_value()` native prepareLane/Quick geometry fixture guard; the mounted parameter plot is exercised by pointer input.
 
 A008 | AutomationHoverTest::directInputHostRouting | src/checks/automation/hover/tst_automationhover.cpp:115
 Disposition: MATCHED
@@ -132,49 +90,22 @@ Disposition: MATCHED
 Mapping: S013, S051
 
 A014 | AutomationHoverTest::focusLostKeepsGrab | src/checks/automation/hover/tst_automationhover.cpp:130
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native prepareLane precondition; the Swift CC fixture activates panLane in-process at automationcanvasediting.swift.
-Source context since previous assertion:
-
-  }
-
-  void AutomationHoverTest::focusLostKeepsGrab()
-  {
-      const auto lane = automation_hover::prepareLane(*m_fixture, automation_hover::LaneKind::Cc);
-
-Original expression:
-  QVERIFY(lane.has_value());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S115: retired `lane.has_value()` native prepareLane fixture guard; mounted plot input stages a real band.
 
 A015 | AutomationHoverTest::focusLostKeepsGrab | src/checks/automation/hover/tst_automationhover.cpp:134
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native grabber query (QQuickWindow::mouseGrabberItem); the QML MouseArea holds the grab and the production hints case exercises it (S048, S049), but no check exposes the grabber item.
-Source context since previous assertion:
-
-      const auto frozen = automation_hover::documentState(*m_fixture);
-
-      automation_hover::mousePress(*m_fixture, lane->insertionWindowPosition);
-
-Original expression:
-  QTRY_VERIFY(automation_hover::quickWindow(*m_fixture)->mouseGrabberItem());
+Disposition: MATCHED
+Mapping: S141, S142 (a staged mounted band holds the real MouseArea pointer grab before focus transfer).
 
 A016 | automation_hover::canvas | src/checks/automation/hover/tst_automationhover.cpp:141
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native grabber identity and FocusLost cancel reason; no predicate asserts grab retention across focus loss. The cancellation itself is asserted at S001 and S002.
-Source context since previous assertion:
-
-      QQuickItem *const grabber = automation_hover::quickWindow(*m_fixture)->mouseGrabberItem();
-
-      automation_hover::canvas(*m_fixture)
-          ->inputCancelled(songview::TimelineInputCancelReason::FocusLost);
-      QCoreApplication::processEvents();
-
-
-Original expression:
-  QVERIFY(automation_hover::quickWindow(*m_fixture)->mouseGrabberItem() == grabber);
+Disposition: MATCHED
+Mapping: S143, S144, S145 (real focus transfer retains the staged edit, band and held pointer grab; retired native grabber-object identity comparison).
 
 A017 | automation_hover::canvas | src/checks/automation/hover/tst_automationhover.cpp:142
-Disposition: MATCHED
-Mapping: S002
+Disposition: PARTIAL
+Mapping: S144, S145, S159 (focus retains the staged band and pointer grab, and the eventual right release leaves the song revision unchanged).
+Missing: The fork compares its frozen complete document state immediately after focus loss while still held; the mounted check does not compare serialized song bytes and undo history at that intermediate point.
+Original expression: `QVERIFY(automation_hover::documentState(*m_fixture) == frozen);`
 
 A018 | AutomationHoverTest::deactivationClears | src/checks/automation/hover/tst_automationhover.cpp:149
 Disposition: RETIRED-REPRESENTATION
@@ -184,48 +115,24 @@ Disposition: MATCHED
 Mapping: S010
 
 A020 | AutomationHoverTest::deactivationClears | src/checks/automation/hover/tst_automationhover.cpp:155
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native grabber query after a press; the QML MouseArea grab is exercised at S048.
-Source context since previous assertion:
-
-      const auto frozen = automation_hover::documentState(*m_fixture);
-
-      automation_hover::mousePress(*m_fixture, lane->insertionWindowPosition);
-
-Original expression:
-  QTRY_VERIFY(automation_hover::quickWindow(*m_fixture)->mouseGrabberItem());
+Disposition: MATCHED
+Mapping: S146, S147 (real second-window activation starts with a staged visible band and held pointer grab).
 
 A021 | automation_hover::canvas | src/checks/automation/hover/tst_automationhover.cpp:159
 Disposition: MATCHED
 Mapping: S022, S001
 
 A022 | automation_hover::canvas | src/checks/automation/hover/tst_automationhover.cpp:160
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native grabber query after cancellation; the QML MouseArea owns the grab.
-Source context since previous assertion:
-
-
-Original expression:
-  QTRY_VERIFY(!automation_hover::quickWindow(*m_fixture)->mouseGrabberItem());
+Disposition: MATCHED
+Mapping: S148, S139 (native window deactivation cancels the staged edit and releases the MouseArea grab).
 
 A023 | automation_hover::canvas | src/checks/automation/hover/tst_automationhover.cpp:161
 Disposition: MATCHED
 Mapping: S023
 
 A024 | AutomationHoverTest::hoverRevivesAfterCancellation | src/checks/automation/hover/tst_automationhover.cpp:168
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native prepareLane precondition.
-Source context since previous assertion:
-
-      m_fixture->heldButton = Qt::NoButton;
-  }
-
-  void AutomationHoverTest::hoverRevivesAfterCancellation()
-  {
-      const auto lane = automation_hover::prepareLane(*m_fixture, automation_hover::LaneKind::Cc);
-
-Original expression:
-  QVERIFY(lane.has_value());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S115: retired `lane.has_value()` native prepareLane fixture guard; the typed parameter plot receives pointer input.
 
 A025 | AutomationHoverTest::hoverRevivesAfterCancellation | src/checks/automation/hover/tst_automationhover.cpp:170
 Disposition: MATCHED
@@ -248,70 +155,28 @@ Disposition: MATCHED
 Mapping: S006, S024
 
 A030 | AutomationHoverTest::idleCancellationsDoNotMutate | src/checks/automation/hover/tst_automationhover.cpp:188
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native prepareLane precondition.
-Source context since previous assertion:
-
-  }
-
-  void AutomationHoverTest::idleCancellationsDoNotMutate()
-  {
-      const auto lane = automation_hover::prepareLane(*m_fixture, automation_hover::LaneKind::Cc);
-
-Original expression:
-  QVERIFY(lane.has_value());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S115: retired `lane.has_value()` native prepareLane fixture guard; the mounted plot owns real input.
 
 A031 | automation_hover::canvas | src/checks/automation/hover/tst_automationhover.cpp:197
 Disposition: MATCHED
 Mapping: S022, S025
 
 A032 | automation_hover::canvas | src/checks/automation/hover/tst_automationhover.cpp:198
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native grabber query while idle.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!automation_hover::quickWindow(*m_fixture)->mouseGrabberItem());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S140, S139: retired idle `!quickWindow(*m_fixture)->mouseGrabberItem()` native grabber-object query; mounted release/deactivation demonstrate the resulting no-held-pointer lifecycle.
 
 A033 | automation_hover::canvas | src/checks/automation/hover/tst_automationhover.cpp:199
 Disposition: MATCHED
 Mapping: S025
 
 A034 | AutomationHoverTest::guideGhostTextAndRing | src/checks/automation/hover/tst_automationhover.cpp:214
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native prepareLane precondition with the lane kind of the data row selected.
-Source context since previous assertion:
-
-  }
-
-  void AutomationHoverTest::guideGhostTextAndRing_data()
-  {
-      QTest::addColumn<int>("laneKind");
-      QTest::newRow("Tempo") << int(automation_hover::LaneKind::Tempo);
-      QTest::newRow("CC") << int(automation_hover::LaneKind::Cc);
-  }
-
-  void AutomationHoverTest::guideGhostTextAndRing()
-  {
-      QFETCH(int, laneKind);
-      const auto kind = static_cast<automation_hover::LaneKind>(laneKind);
-      const auto prepared = automation_hover::prepareLane(*m_fixture, kind);
-
-Original expression:
-  QVERIFY(prepared.has_value());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S060, S061: retired `prepared.has_value()` native prepareLane fixture guard; mounted Tempo and Pan tabs expose the selected typed parameter.
 
 A035 | AutomationHoverTest::guideGhostTextAndRing | src/checks/automation/hover/tst_automationhover.cpp:218
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native topology harness precondition (topologyFor reporting a clear baseline, guide or leave failure); the converted predicates assert the topology facts directly (S028-S032).
-Source context since previous assertion:
-
-      QString error;
-      const auto topology = automation_hover::topologyFor(*m_fixture, *prepared, error);
-
-
-Original expression:
-  QVERIFY2(error.isEmpty(), qPrintable(error));
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S060, S061: retired `error.isEmpty()` topology-helper success flag; guide/ghost/ring observations are asserted independently.
 
 A036 | AutomationHoverTest::guideGhostTextAndRing | src/checks/automation/hover/tst_automationhover.cpp:219
 Disposition: MATCHED
@@ -350,18 +215,8 @@ Disposition: MATCHED
 Mapping: S044, S011, S068, S069
 
 A045 | AutomationHoverTest::repeatHoverDoesNotChurn | src/checks/automation/hover/tst_automationhover.cpp:233
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native prepareLane precondition.
-Source context since previous assertion:
-
-  }
-
-  void AutomationHoverTest::repeatHoverDoesNotChurn()
-  {
-      const auto lane = automation_hover::prepareLane(*m_fixture, automation_hover::LaneKind::Cc);
-
-Original expression:
-  QVERIFY(lane.has_value());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S014, S063: retired `lane.has_value()` native prepareLane fixture guard; mounted pointer repetition is checked directly.
 
 A046 | AutomationHoverTest::repeatHoverDoesNotChurn | src/checks/automation/hover/tst_automationhover.cpp:236
 Disposition: MATCHED
@@ -380,18 +235,8 @@ Disposition: MATCHED
 Mapping: S015
 
 A050 | AutomationHoverTest::leaveClearsRetainedHover | src/checks/automation/hover/tst_automationhover.cpp:250
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native prepareLane precondition.
-Source context since previous assertion:
-
-  }
-
-  void AutomationHoverTest::leaveClearsRetainedHover()
-  {
-      const auto lane = automation_hover::prepareLane(*m_fixture, automation_hover::LaneKind::Cc);
-
-Original expression:
-  QVERIFY(lane.has_value());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S117: retired `lane.has_value()` native prepareLane fixture guard; plot-to-gutter leave is delivered by the mounted pointer.
 
 A051 | AutomationHoverTest::leaveClearsRetainedHover | src/checks/automation/hover/tst_automationhover.cpp:254
 Disposition: MATCHED
@@ -406,28 +251,16 @@ Disposition: MATCHED
 Mapping: S011, S005, S050
 
 A054 | AutomationHoverTest::leaveClearsRetainedHover | src/checks/automation/hover/tst_automationhover.cpp:260
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native gutter-input pointer delivery (leavePlot through the gutter item); the converted page clears on MouseArea onExited and page.pointerLeave, asserted at S019 and S054.
-Source context since previous assertion:
-
-
-
-Original expression:
-  QVERIFY(automation_hover::leavePlot(*m_fixture));
+Disposition: MATCHED
+Mapping: S117, S118 (pointer moves from plot to gutter and clears the hover and hint).
 
 A055 | AutomationHoverTest::leaveClearsRetainedHover | src/checks/automation/hover/tst_automationhover.cpp:261
 Disposition: MATCHED
 Mapping: S019, S054
 
 A056 | AutomationHoverTest::leaveClearsRetainedHover | src/checks/automation/hover/tst_automationhover.cpp:263
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native gutter-input pointer delivery, second leave.
-Source context since previous assertion:
-
-
-
-Original expression:
-  QVERIFY(automation_hover::leavePlot(*m_fixture));
+Disposition: MATCHED
+Mapping: S117, S020 (repeated gutter leave stays clear without churn).
 
 A057 | AutomationHoverTest::leaveClearsRetainedHover | src/checks/automation/hover/tst_automationhover.cpp:264
 Disposition: MATCHED
@@ -438,51 +271,20 @@ Disposition: MATCHED
 Mapping: S021
 
 A059 | AutomationHoverTest::tempoAndCcTopologyMatch | src/checks/automation/hover/tst_automationhover.cpp:271
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native prepareLane precondition for the Tempo lane (tempo edit plus native parameter-tab click).
-Source context since previous assertion:
-
-  }
-
-  void AutomationHoverTest::tempoAndCcTopologyMatch()
-  {
-      const auto tempo = automation_hover::prepareLane(*m_fixture, automation_hover::LaneKind::Tempo);
-
-Original expression:
-  QVERIFY(tempo.has_value());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S060, S061: retired `tempo.has_value()` native Tempo prepareLane fixture guard; mounted Tempo is activated by pointer.
 
 A060 | AutomationHoverTest::tempoAndCcTopologyMatch | src/checks/automation/hover/tst_automationhover.cpp:274
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native topology harness precondition for the Tempo lane.
-Source context since previous assertion:
-
-      QString tempoError;
-      const auto tempoTopology = automation_hover::topologyFor(*m_fixture, *tempo, tempoError);
-
-Original expression:
-  QVERIFY2(tempoError.isEmpty(), qPrintable(tempoError));
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S060, S062: retired `tempoError.isEmpty()` topology-helper success flag; mounted Tempo hover topology is checked directly.
 
 A061 | AutomationHoverTest::tempoAndCcTopologyMatch | src/checks/automation/hover/tst_automationhover.cpp:277
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native prepareLane precondition for the CC lane.
-Source context since previous assertion:
-
-
-      const auto cc = automation_hover::prepareLane(*m_fixture, automation_hover::LaneKind::Cc);
-
-Original expression:
-  QVERIFY(cc.has_value());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S060, S061: retired `cc.has_value()` native CC prepareLane fixture guard; mounted Pan is activated by pointer.
 
 A062 | AutomationHoverTest::tempoAndCcTopologyMatch | src/checks/automation/hover/tst_automationhover.cpp:280
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native topology harness precondition for the CC lane.
-Source context since previous assertion:
-
-      QString ccError;
-      const auto ccTopology = automation_hover::topologyFor(*m_fixture, *cc, ccError);
-
-Original expression:
-  QVERIFY2(ccError.isEmpty(), qPrintable(ccError));
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S061, S062: retired `ccError.isEmpty()` topology-helper success flag; mounted Pan hover topology is checked directly.
 
 A063 | AutomationHoverTest::tempoAndCcTopologyMatch | src/checks/automation/hover/tst_automationhover.cpp:282
 Disposition: MATCHED
@@ -528,161 +330,68 @@ A073 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/aut
 Disposition: RETIRED-REPRESENTATION
 
 A074 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:301
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native parameter-tab activation (clickVisibleTab); the converted checks activate parameters through page.activateParameter (S044).
-Source context since previous assertion:
-
-      const EditorAutomationRowId panRow{EditorAutomationRowKind::ControlChange, 0, kPanController};
-      const EditorAutomationRowId lfoRow{EditorAutomationRowKind::ControlChange, 0, kLfoController};
-      // The drag targets the LFO node, so its parameter must be the active one.
-
-Original expression:
-  QVERIFY(automation_hover::activateParameter(*m_fixture, lfoRow));
+Disposition: MATCHED
+Mapping: S119 (real LFO tab click selects the lane and a subsequent pointer sweep writes its events).
 
 A075 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:305
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native numeric LaneHandle to row-id mapping (findHandle and rowMatches over canvas row indices); the converted stack addresses rows by AutomationParameter.
-Source context since previous assertion:
-
-      const LaneHandle tempoBefore{0};
-      const LaneHandle panBefore = automation_hover::findHandle(*canvas, panRow);
-      const LaneHandle lfoBefore = automation_hover::findHandle(*canvas, lfoRow);
-
-Original expression:
-  QVERIFY(automation_hover::rowMatches(*canvas, panBefore, panRow));
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S120: retired `rowMatches(*canvas, panBefore, panRow)` numeric LaneHandle-to-row lookup; typed Pan activation is checked.
 
 A076 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:306
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native numeric LaneHandle to row-id mapping, second row.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(automation_hover::rowMatches(*canvas, lfoBefore, lfoRow));
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S119: retired `rowMatches(*canvas, lfoBefore, lfoRow)` numeric LaneHandle-to-row lookup; typed LFO activation is checked.
 
 A077 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:307
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native lane body rect (AutomationCanvas::laneBody); the converted page publishes lane rows and hover geometry rather than body rects.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!canvas->laneBody(tempoBefore).isEmpty());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S060: retired `!canvas->laneBody(tempoBefore).isEmpty()` native body-rectangle lookup; typed Tempo plot accepts real pointer hover.
 
 A078 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:310
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native lane body rect for the drag row.
-Source context since previous assertion:
-
-
-      const QRect lfoBody = canvas->laneBody(lfoBefore);
-
-Original expression:
-  QVERIFY(!lfoBody.isEmpty());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S119: retired `!lfoBody.isEmpty()` native lane-body rectangle; active LFO plot receives pointer input.
 
 A079 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:323
 Disposition: MATCHED
 Mapping: S040
 
 A080 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:331
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native lane body rect across AutomationCanvas::rebuildRows; the converted page rebuilds published rows instead.
-Source context since previous assertion:
-
-
-      // With the fixed nine-identity catalog a structural rebuild no longer
-      // changes row membership; the canvas's own rebuild entry is the honest
-      // mid-gesture trigger, and it must end the pending gesture before the
-      // stale release lands.
-      canvas->rebuildRows();
-      QCoreApplication::processEvents();
-
-Original expression:
-  QVERIFY(!canvas->laneBody(tempoBefore).isEmpty());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S121: retired `!canvas->laneBody(tempoBefore).isEmpty()` native body-rectangle lookup after `canvas->rebuildRows()`; production geometry rebuild cancels held input.
 
 A081 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:332
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native invalid-handle behavior (a default LaneHandle yields an empty body); the converted rows are a typed array with no numeric handle validity API.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(canvas->laneBody(LaneHandle{}).isEmpty());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S122: retired `canvas->laneBody(LaneHandle{}).isEmpty()` invalid numeric handle/body API; typed parameter rows do not expose a numeric handle.
 
 A082 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:333
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native invalid-handle behavior (LaneHandle 9999 yields an empty body).
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(canvas->laneBody(LaneHandle{9999}).isEmpty());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S122: retired `canvas->laneBody(LaneHandle{9999}).isEmpty()` invalid numeric handle/body API; typed parameter rows do not expose a numeric handle.
 
 A083 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:337
 Disposition: MATCHED
 Mapping: S033
 
 A084 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:338
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native grabber query after the stale release.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!automation_hover::quickWindow(*m_fixture)->mouseGrabberItem());
+Disposition: MATCHED
+Mapping: S123, S124 (stale release after mounted geometry rebuild leaves the band cancelled and accepts a new gesture; native grabber-object query is retired).
 
 A085 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:340
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native numeric LaneHandle stability across a rebuild; the converted rows are addressed by parameter.
-Source context since previous assertion:
-
-
-
-Original expression:
-  QVERIFY(automation_hover::findHandle(*canvas, panRow) == panBefore);
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S120, S125: retired `findHandle(*canvas, panRow) == panBefore` numeric LaneHandle stability; production typed parameter identity survives refresh.
 
 A086 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:341
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native numeric LaneHandle stability across a rebuild, second row.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(automation_hover::findHandle(*canvas, lfoRow) == lfoBefore);
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S119, S125: retired `findHandle(*canvas, lfoRow) == lfoBefore` numeric LaneHandle stability; production typed parameter identity survives refresh.
 
 A087 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:342
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native handle-to-row-id resolution after the rebuild.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(automation_hover::rowMatches(*canvas, automation_hover::findHandle(*canvas, panRow),
-                                           panRow));
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S120, S125: retired `rowMatches(*canvas, findHandle(*canvas, panRow), panRow)` numeric row lookup; typed Pan identity survives refresh.
 
 A088 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:344
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native handle-to-row-id resolution after the rebuild, second row.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(automation_hover::rowMatches(*canvas, automation_hover::findHandle(*canvas, lfoRow),
-                                           lfoRow));
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S119, S125: retired `rowMatches(*canvas, findHandle(*canvas, lfoRow), lfoRow)` numeric row lookup; typed LFO identity survives refresh.
 
 A089 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:351
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native prepareLane precondition.
-Source context since previous assertion:
-
-  }
-
-  void AutomationHoverTest::targetAndToolProfilesUpdate()
-  {
-      const auto lane = automation_hover::prepareLane(*m_fixture, automation_hover::LaneKind::Cc);
-
-Original expression:
-  QVERIFY(lane.has_value());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S115: retired `lane.has_value()` native prepareLane fixture guard; mounted plot input receives actual hover and shortcut delivery.
 
 A090 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:356
 Disposition: RETIRED-REPRESENTATION
@@ -711,35 +420,16 @@ A096 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/
 Disposition: RETIRED-REPRESENTATION
 
 A097 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:376
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native QKeySequence shape (one key combination).
-Source context since previous assertion:
-
-      const QKeySequence shortcut = pencil->shortcut();
-
-Original expression:
-  QVERIFY(shortcut.count() == 1);
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S126: retired `shortcut.count() == 1` QKeySequence registry shape; real ShellWindow B delivery arms pencil.
 
 A098 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:378
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native QKeySequence key identity.
-Source context since previous assertion:
-
-      const QKeyCombination combination = shortcut[0];
-
-Original expression:
-  QVERIFY(combination.key() != Qt::Key_unknown);
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S126: retired `combination.key() != Qt::Key_unknown` QKeySequence lookup; real ShellWindow B delivery arms pencil.
 
 A099 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:381
-Disposition: PARTIAL
-Mapping/reason: S026, S027 and S104 show pencil-profile activation and restoration, but no executing check sends the ShellWindow PencilToggle B key command and verifies the mounted tool's mode; the editorqml host has no ShellWindow key dispatcher. Unproved: shortcut activation.
-Source context since previous assertion:
-
-
-      QTest::keyClick(window, combination.key(), combination.keyboardModifiers());
-
-Original expression:
-  QVERIFY(canvas->pencilMode());
+Disposition: MATCHED
+Mapping: S126, S127 (ShellWindow B key arms pencil and changes the mounted hint).
 
 A100 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:382
 Disposition: MATCHED
@@ -758,15 +448,8 @@ Disposition: MATCHED
 Mapping: S026, S018
 
 A104 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:389
-Disposition: PARTIAL
-Mapping/reason: S027 and S104 show pencil-profile restoration after directly clearing isPencilMode; no executing check sends the ShellWindow PencilToggle B key command and observes mode release. Unproved: shortcut deactivation.
-Source context since previous assertion:
-
-
-      QTest::keyClick(window, combination.key(), combination.keyboardModifiers());
-
-Original expression:
-  QVERIFY(!canvas->pencilMode());
+Disposition: MATCHED
+Mapping: S128, S129 (second ShellWindow B key disarms pencil and restores sweep hint).
 
 A105 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:390
 Disposition: MATCHED
@@ -777,23 +460,12 @@ Disposition: MATCHED
 Mapping: S009, S027
 
 A107 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:398
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native lane body rect used to locate the origin-phantom anchor.
-Source context since previous assertion:
-
-
-      // The origin phantom is the lane's leftmost point once it sits left of
-      // the plot origin; scroll far enough that the real node is outside the
-      // hit radius, then hover the phantom's anchor at the plot's left edge.
-      const AutomationGeometry geometry = AutomationGeometry::resolve();
-      const QRect body = canvas->laneBody(lane->handle);
-
-Original expression:
-  QVERIFY(!body.isEmpty());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S107, S106: retired `!body.isEmpty()` native `canvas->laneBody(lane->handle)` rectangle lookup; the origin phantom is resolved from the typed production projection.
 
 A108 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:406
 Disposition: PARTIAL
-Mapping/reason: S105 and S106 show phantom hover instructions on the real mounted plot, and S107 identifies its profile, but MouseHints exposes no current source token. Unproved: `hints.currentSource() == plot`.
+Mapping/reason: S105, S106, S107 and S130 prove origin-phantom instructions from actual mounted plot hover; unproved: native `hints.currentSource() == plot` pointer-token identity (no public MouseHints source token in the converted shell).
 Source context since previous assertion:
 
       m_fixture->rig->view().setEditorHorizontalScroll(geometry.pointHitRadius + 8.0);
@@ -824,18 +496,8 @@ Disposition: MATCHED
 Mapping: S108, S109
 
 A113 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:417
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native prepareLane precondition.
-Source context since previous assertion:
-
-  }
-
-  void AutomationHoverTest::popupDismissalRecoversHover()
-  {
-      const auto lane = automation_hover::prepareLane(*m_fixture, automation_hover::LaneKind::Cc);
-
-Original expression:
-  QVERIFY(lane.has_value());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S131: retired `lane.has_value()` native prepareLane fixture guard; mounted pointer opens the real automation menu.
 
 A114 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:420
 Disposition: RETIRED-REPRESENTATION
@@ -866,7 +528,7 @@ Mapping: S056, S059
 
 A121 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:440
 Disposition: PARTIAL
-Mapping/reason: S110 and S111 show an open menu suppresses the underlay status and hint-service text, but MouseHints exposes no menu owner/source token. Unproved: `menu.session->owns(hints.currentSource())`.
+Mapping/reason: S110, S111, S132 and S133 prove a real pointer-opened menu suppresses the underlying shell hint and owns its modal underlay; unproved: native `menu.session->owns(hints.currentSource())` source-token identity.
 Source context since previous assertion:
 
 
@@ -879,7 +541,7 @@ Mapping: S081, S092
 
 A123 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:447
 Disposition: PARTIAL
-Mapping/reason: S112 shows pointer motion between underlying targets preserves muted status and hint-service text while the menu stays open; MouseHints exposes no menu owner/source token. Unproved: continued `menu.session->owns(hints.currentSource())`.
+Mapping/reason: S112, S134 prove pointer movement on the menu underlay leaves the mounted shell hint muted; unproved: native `menu.session->owns(hints.currentSource())` source-token identity throughout the open menu.
 Source context since previous assertion:
 
 
@@ -901,7 +563,7 @@ Mapping: S057
 
 A126 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:455
 Disposition: PARTIAL
-Mapping/reason: S113 and S114 prove plot hover and underlay hint restoration after pointer movement following dismissal; unproved: `hints.currentSource() == plot` at the stationary pointer immediately on dismissal.
+Mapping/reason: S113, S114 and S135 prove the real menu closes by outside pointer click and the underlay hint recovers without another plot move; unproved: native `hints.currentSource() == plot` source-token identity at the stationary dismissal point.
 Source context since previous assertion:
 
 
@@ -909,43 +571,19 @@ Original expression:
   QTRY_VERIFY(hints.currentSource() == plot);
 
 A127 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:456
-Disposition: PARTIAL
-Mapping/reason: S114 proves the underlay hint returns on subsequent pointer movement; unproved: recovery of `hints.currentText() == sweepText` at the stationary pointer immediately on dismissal.
-Source context since previous assertion:
-
-
-Original expression:
-  QTRY_COMPARE(hints.currentText(), sweepText);
+Disposition: MATCHED
+Mapping: S135, S136 (stationary pointer dismissal restores the exact sweep hint).
 
 A128 | AutomationHoverTest::liveModifierGesturesCommitAndUndo | src/checks/automation/hover/tst_automationhover.cpp:462
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native prepareLane precondition.
-Source context since previous assertion:
-
-  }
-
-  void AutomationHoverTest::liveModifierGesturesCommitAndUndo()
-  {
-      const auto lane = automation_hover::prepareLane(*m_fixture, automation_hover::LaneKind::Cc);
-
-Original expression:
-  QVERIFY(lane.has_value());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S115: retired `lane.has_value()` native prepareLane fixture guard; mounted plot receives modifier gestures.
 
 A129 | AutomationHoverTest::liveModifierGesturesCommitAndUndo | src/checks/automation/hover/tst_automationhover.cpp:467
 Disposition: RETIRED-REPRESENTATION
 
 A130 | AutomationHoverTest::liveModifierGesturesCommitAndUndo | src/checks/automation/hover/tst_automationhover.cpp:472
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native lane body rect.
-Source context since previous assertion:
-
-      ui::MouseHints &hints = ui::MouseHints::instance();
-      const AutomationGeometry geometry = AutomationGeometry::resolve();
-      const AutomationProjection projection(geometry, automationPage);
-      const QRect body = canvas->laneBody(lane->handle);
-
-Original expression:
-  QVERIFY(!body.isEmpty());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S137: retired `!body.isEmpty()` native `canvas->laneBody(lane->handle)` rectangle lookup; the mounted plot handles Shift ramp input.
 
 A131 | AutomationHoverTest::liveModifierGesturesCommitAndUndo | src/checks/automation/hover/tst_automationhover.cpp:476
 Disposition: MATCHED
@@ -956,46 +594,10 @@ Disposition: MATCHED
 Mapping: S047
 
 A133 | AutomationHoverTest::liveModifierGesturesCommitAndUndo | src/checks/automation/hover/tst_automationhover.cpp:511
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native coordinate scan precondition (a window position where the fine snap differs from the coarse snap).
-Source context since previous assertion:
-
-      const QString sweepText = hints.currentText();
-
-      const QPointF pressViewport = lane->pointerViewport;
-      const auto domain = CoreTimeDefaults::laneDomain(kPanController);
-      const int laneMinimum = domain.minimum;
-      const int laneMaximum = domain.maximum;
-
-      // Live Alt: the sweep endpoint lands on the fine grid while the retained
-      // hint keeps the sweep profile for the whole gesture.
-      const int activation = geometry.nodeDragActivationDistance + 4;
-      const QPoint activationWindow =
-          automation_hover::windowPoint(*m_fixture, pressViewport + QPointF(activation, 0.0));
-      const QPointF activationContent = plot->mapFromScene(QPointF(activationWindow));
-      Tick fineTick = 0;
-      QPoint endWindow;
-      QPointF effective;
-      bool found = false;
-      for (int delta = 40; delta <= 400 && !found; delta += 8) {
-          const QPoint candidateWindow = automation_hover::windowPoint(
-              *m_fixture, pressViewport + QPointF(activation + delta, -20.0));
-          const QPointF endContent = plot->mapFromScene(QPointF(candidateWindow));
-          if (!plot->bounds().contains(endContent))
-              continue;
-          const QPointF candidateEffective = pressViewport + (endContent - activationContent);
-          const Tick coarse = projection.snapTickAt(candidateEffective.x(), false);
-          const Tick fine = projection.snapTickAt(candidateEffective.x(), true);
-          if (fine != coarse && candidateEffective.x() > pressViewport.x()) {
-              fineTick = fine;
-              endWindow = candidateWindow;
-              effective = candidateEffective;
-              found = true;
-          }
-      }
-
-Original expression:
-  QVERIFY(found);
+Disposition: PARTIAL
+Mapping: S149, S150, S151, S152, S153 (a bounded Alt endpoint is chosen from an independently computed fine grid, distinct from the coarse grid, and a real stroke publishes a fine-only tick).
+Missing: The native candidate uses `candidateEffective = pressViewport + (endContent - activationContent)` after the activation pointer translation. The mounted check computes its `rawTick` with `candidateX - model.baseFontPx * 3`; it does not assert the actual post-activation effective raw position used by the production sweep matches that independent coordinate before release.
+Original expression: `QVERIFY(found);`
 
 A134 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:521
 Disposition: MATCHED
@@ -1026,85 +628,18 @@ Disposition: MATCHED
 Mapping: S042
 
 A141 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:577
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native coordinate scan precondition for the ramp endpoint.
-Source context since previous assertion:
-
-
-      // Press-captured Shift: the ramp commits the straight line between the
-      // press anchor and the release endpoint even though the pointer dipped
-      // far off that line mid-gesture.
-      moveCursorTo(*m_fixture, lane->insertionWindowPosition);
-      const Tick startTick = projection.snapTickAt(pressViewport.x(), false);
-      const int startValue =
-          std::clamp(qRound(AutomationProjection::valueAtY(body, geometry, laneMinimum, laneMaximum,
-                                                           pressViewport.y())),
-                     laneMinimum, laneMaximum);
-      Tick endTick = 0;
-      Tick midTick = 0;
-      int endValue = 0;
-      QPoint rampEndWindow;
-      bool rampFound = false;
-      std::vector<AutomationGridCell> cells;
-      for (int delta = 240; delta <= 480 && !rampFound; delta += 60) {
-          const QPoint candidateWindow =
-              automation_hover::windowPoint(*m_fixture, pressViewport + QPointF(delta, -40.0));
-          const QPointF candidateViewport = plot->mapFromScene(QPointF(candidateWindow));
-          if (!plot->bounds().contains(candidateViewport))
-              continue;
-          const Tick candidateEnd = projection.snapTickAt(candidateViewport.x(), false);
-          if (candidateEnd <= startTick)
-              continue;
-          const auto &crossed =
-              projection.snapCellsCrossed(cells, projection.rawTickAt(pressViewport.x()),
-                                          projection.rawTickAt(candidateViewport.x()));
-          for (const AutomationGridCell &cell : crossed) {
-              if (cell.tickBegin > startTick && cell.tickBegin < candidateEnd) {
-                  midTick = cell.tickBegin;
-                  break;
-              }
-          }
-          if (midTick == 0)
-              continue;
-          endTick = candidateEnd;
-          endValue = std::clamp(qRound(AutomationProjection::valueAtY(
-                                    body, geometry, laneMinimum, laneMaximum, candidateViewport.y())),
-                                laneMinimum, laneMaximum);
-          rampEndWindow = candidateWindow;
-          rampFound = true;
-      }
-
-Original expression:
-  QVERIFY(rampFound);
+Disposition: MATCHED
+Mapping: S154, S155 (independent grid ticks put an interior dip between snapped ramp endpoints and all three published nodes land at those ticks).
 
 A142 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:586
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native plot-bounds precondition for the dip position.
-Source context since previous assertion:
-
-      const int expectedMidValue =
-          int(std::llround(ui::linearRampValue(double(midTick), double(startTick), double(startValue),
-                                               double(endTick), double(endValue))));
-      const QPoint dipWindow = automation_hover::windowPoint(
-          *m_fixture, {projection.displayX(midTick, plot->devicePixelRatio()),
-                       qMin(qreal(body.bottom() - geometry.valuePlotPadding),
-                            qreal(body.top() + geometry.valuePlotPadding) + 4.0)});
-      const QPointF dipViewport = plot->mapFromScene(QPointF(dipWindow));
-
-Original expression:
-  QVERIFY(plot->bounds().contains(dipViewport));
+Disposition: MATCHED
+Mapping: S156 (the actual dip pointer is within the mounted plot bounds and displaced from the straight endpoint path).
 
 A143 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:590
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: retired native value-mapping precondition (the dip pixel maps away from the linear midpoint).
-Source context since previous assertion:
-
-      const int dipValue = std::clamp(qRound(AutomationProjection::valueAtY(
-                                          body, geometry, laneMinimum, laneMaximum, dipViewport.y())),
-                                      laneMinimum, laneMaximum);
-
-Original expression:
-  QVERIFY(dipValue != expectedMidValue);
+Disposition: PARTIAL
+Mapping: S157, S158 (for the actual in-bounds dip, the computed dip interpolation differs from the interpolated middle node, which publishes a line between the released endpoints).
+Missing: The mounted midpoint derives its endpoint values from the resulting `rampNodes` rather than from independent press/release pointer-to-value mappings, so it does not assert the dip's value against the fork's independently mapped expected midpoint.
+Original expression: `QVERIFY(dipValue != expectedMidValue);`
 
 A144 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:595
 Disposition: MATCHED
@@ -1507,3 +1042,138 @@ Shared helpers: the swiftcore predicates run under drawerAutomationAutomationFix
 suite dispatch in src/checks/automation/AutomationPageChecks.swift; the QML predicates run in the
 editorqml lane through src/checks/editorqml/EditorQmlTests.swift (mountProductionAutomation,
 automationHoverBuilds, automationMenuOpen, automationDocumentRevision).
+
+S115 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the mounted plot and alternate focus target exist"
+
+S116 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "moving from plot to gutter clears the background hover"
+
+S117 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the gutter leave clears the plot's shell hint"
+
+S118 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "returning from gutter restores plot hover"
+
+S119 | test_automationPresentationInactiveInclusionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "a real LFO sweep gives the selection an occupied lane"
+
+S120 | checkAutomationParameter | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message " activates by pointer"
+
+S121 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "a real window layout rebuild cancels the held range band"
+
+S122 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the rebuilt row keeps its handle and retires the old track row"
+
+S123 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the resize-cancelled stale release writes nothing"
+
+S124 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the resized plot accepts a fresh sweep"
+
+S125 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "a fresh press grabs the node after the rebuild"
+
+S126 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the mounted shell dispatches B to arm the pencil"
+
+S127 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the pencil shortcut replaces the shell hint text"
+
+S128 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the second mounted B key returns to sweep mode"
+
+S129 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "sweep hint returns after the second shortcut"
+
+S130 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "plot entry publishes the exact sweep hint in the shell"
+
+S131 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the real node right click opens the automation menu"
+
+S132 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the open menu suppresses the shell's underlying plot hint"
+
+S133 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the open menu composes its modal pointer underlay"
+
+S134 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "menu-owned hint remains muted over another plot position"
+
+S135 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the outside pointer click closes the automation menu"
+
+S136 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the exact sweep hint recovers at the stationary dismissal point"
+
+S137 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "Shift-left drag stages the ramp while held"
+
+S138 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the focused-away right release relinquishes the retained grab"
+
+S139 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "Qt deactivation relinquishes the MouseArea pointer grab"
+
+S140 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the recovered sweep completes on release"
+
+S141 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the held right-button drag stages a visible selection band"
+
+S142 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the mounted plot retains its pointer grab while staging the band"
+
+S143 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "focus transfer retains the held plot transaction"
+
+S144 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "ordinary keyboard focus loss retains the held plot pointer grab"
+
+S145 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "focus transfer keeps the staged selected-lane band visible"
+
+S146 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "a new held band is staged before real window deactivation"
+
+S147 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the second window actually takes activation"
+
+S148 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "deactivation cancels the staged automation gesture"
+
+S149 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the grid exposes a visible Alt endpoint distinct from coarse snap"
+
+S150 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the actual Alt-left sweep stages before its release"
+
+S151 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the mounted Alt sweep commits exactly one song edit"
+
+S152 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the visible Alt stroke follows the fine endpoint within one painted pixel, not coarse snap"
+
+S153 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the held fine-grid sweep has not edited the song"
+
+S154 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the grid places the ramp dip strictly between its snapped endpoints"
+
+S155 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the released ramp publishes the independently snapped endpoint and middle ticks"
+
+S156 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the actual in-bounds dip pointer differs from the endpoint interpolation"
+
+S157 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the in-bounds dip maps away from the independently interpolated midpoint"
+
+S158 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the released middle node follows endpoint interpolation rather than the dip"
+
+S159 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the focus-retained right release does not edit the song"

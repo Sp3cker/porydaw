@@ -10,7 +10,10 @@ Additional Swift counterpart: src/checks/automation/domain/gesturePointRange.swi
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
 Additional Swift counterpart: src/checks/automation/automationselection.swift
 
-Disposition tally: 21 sites: 9 MATCHED, 12 PARTIAL, 0 GAP.
+Disposition tally: 21 sites: 14 MATCHED, 7 PARTIAL, 0 GAP.
+
+Task-115 frozen source SHA-256: gestureSweep.swift 30da459163ad89ff2a939be75c383cadb8dbe713e467c211218b8429647d4531; gestureNodeDrag.swift cfaaea075abbcc227ae3ccc58ea1ca5afb13c933fe358224e370bc11b5ef7a48; gestureNodeDragPhantom.swift bd40d2203e67ba489cbe990a477e981abec2223da571d292e0d7e597cf32827d; gesturePointRange.swift 44faa1defb91a7a19ae71233204803447d4e09f5e1db0b0d582cc28b0c23e530; tst_ShellDrawerParity.qml b0c3a480064c7ad201d60ddf78361706a3b6c5e36cf435d09468260619122582.
+Task-115 implementer-observed GREEN: swiftcore-projectsession 1/36, shell-drawer-parity 1/26, full verify 36/36; full shell suite 25/26 due to sibling-owned shell-note-visuals DPR2. Proof writer did not rerun them.
 
 Task-96 GREEN: `deno task verify --filter swiftcore-projectsession --verbose`
 PASS (1/36 selected); `deno task verify:qml --verbose` PASS
@@ -262,14 +265,8 @@ Disposition: MATCHED
 Mapping: S015, S016
 
 A006 | runNodeDrag | src/checks/automationgesturecheck/parity.cpp:255
-Disposition: PARTIAL
-Mapping/reason: S017 (an unchanged-value tempo move preserves its microseconds) covers an exact-BPM source (500000 microseconds at 120 BPM); unproved: a fractional source where preservation and recomputation differ, plus native pointer delivery.
-Source context since previous assertion:
-          const auto moved = ctx.rig.document().tempoPoints();
-Original expression:
-          ctx.check.require(moved.size() == 2 && moved.front().tick == 192 &&
-                                moved.front().microsecondsPerQuarterNote == kPreservedTempoUs,
-                            QStringLiteral("unchanged-value Tempo drag discarded microseconds"));
+Disposition: MATCHED
+Mapping: S064, S065, S066, S067 (free-tick unchanged-value Tempo move preserves 499999 raw microseconds and the 545455 sibling, creates one serialized history entry, and undo restores the original bytes; the retired native NodeLane fixture is not an additional user-visible requirement).
 
 A007 | runNodeDrag | src/checks/automationgesturecheck/parity.cpp:274
 Disposition: PARTIAL
@@ -300,125 +297,28 @@ Original expression:
           QStringLiteral("CC same-tick drag did not keep the grouped events ordered"));
 
 A008 | runSelection | src/checks/automationgesturecheck/parity.cpp:289
-Disposition: PARTIAL
-Mapping/reason: Selection outcome; S020 (heterogeneous selected drag is one revision), S021 (the drag is redoable), and S022 (redo restores the committed Tempo stream) are indexed below; S047 (the selected-range drag moves both nodes and preserves outside points), S048 (the selected-range band follows its drag), and S049 (the selected-range drag commits once) assert the same outcome list, translated range, and one revision at model level; unproved: the editor undo-index half of the one-edit conjunct, native pointer delivery, and the retired fixture.
-Source context since previous assertion:
-  }
-
-  void runSelection(Context &ctx)
-  {
-      seed(ctx, kMulti);
-      selectRange(ctx, kFixtureTick, 288);
-      auto before = snapshot(ctx.rig.document());
-      activatedDrag(ctx, at(ctx, kFixtureTick, 100).position, at(ctx, 144, 100).position);
-      const auto &moved = ctx.rig.view().selectionModel().timeSelection();
-Original expression:
-      ctx.check.require(
-          isOneEdit(before, snapshot(ctx.rig.document())) &&
-              sameNodePoints(pointsOf(ctx), {{0, 80}, {144, 100}, {240, 64}, {384, 110}}) &&
-              moved.startTick == 144 && moved.endTick == 336,
-          QStringLiteral("selection drag did not move every selected node and range"));
+Disposition: MATCHED
+Mapping: S047, S048, S049, S068, S069, S070 (real selected-range pointer drag moves both selected nodes from [96,288) to [144,336), keeps both outside points, and records one serialized edit with exact byte/index undo and redo).
 
 A009 | runSweepRamp | src/checks/automationgesturecheck/parity.cpp:311
-Disposition: PARTIAL
-Mapping/reason: Sweep-ramp one-edit outcome; S040 (each stepped tick interpolates its value across the stroke) and S015 (a fractional drag commits one edit) and S050 and S051 (a sweep ramp commits its band, #1 the commit call and #2 the band-values assertion) and S052 (a sweep ramp commits one document edit) are indexed below; unproved: the mapped target point list on the retired fixture, the undo-index half of the one-edit conjunct, and native pointer delivery.
-Source context since previous assertion:
-      seed(ctx, kMulti);
-      selectRange(ctx, kFixtureTick, 288);
-      before = snapshot(ctx.rig.document());
-      ctx.rig.keyToArea(QEvent::KeyPress, Qt::Key_Delete);
-      expectOneEdit(ctx, before, {{0, 80}, {384, 110}});
-  }
-
-  void runSweepRamp(Context &ctx)
-  {
-      seed(ctx, kFixture);
-      auto start = at(ctx, 48, 80);
-      auto target = at(ctx, 144, 110);
-      auto before = snapshot(ctx.rig.document());
-      activatedDrag(ctx, start.position, target.position);
-      const auto sweep = pointsOf(ctx);
-      const bool hasTarget =
-          containsPoint(sweep, target.mapped.point.tick, target.mapped.point.value);
-Original expression:
-      ctx.check.require(isOneEdit(before, snapshot(ctx.rig.document())) && hasTarget,
-                        QStringLiteral("sweep did not commit the mapped target in one edit"));
+Disposition: MATCHED
+Mapping: S071, S072, S073 (mapped sweep endpoint 144:25 appears in the actual committed lane, along with its restored tail, in one full-song serialized edit and undoable history entry).
 
 A010 | runSweepRamp | src/checks/automationgesturecheck/parity.cpp:323
 Disposition: PARTIAL
-Mapping/reason: Sweep-ramp outcome; S004 (the ramp midpoint interpolates linearly) and S041 (a ramp sweep fills every lattice tick between its endpoints) and S051 (a sweep ramp commits its band #2, asserting the committed band values) are indexed below; unproved: the committed endpoint pair on the retired fixture and native pointer delivery.
-Source context since previous assertion:
-      seed(ctx, kFixture);
-      start = at(ctx, 48, 80);
-      target = at(ctx, 144, 110);
-      before = snapshot(ctx.rig.document());
-      ctx.rig.mousePress(start.position, Qt::ShiftModifier);
-      ctx.rig.mouseMove(target.position, Qt::LeftButton, Qt::ShiftModifier);
-      ctx.rig.mouseRelease(target.position, Qt::ShiftModifier);
-      const auto ramp = pointsOf(ctx);
-      const bool hasEnds = containsPoint(ramp, start.mapped.point.tick, start.mapped.point.value) &&
-                           containsPoint(ramp, target.mapped.point.tick, target.mapped.point.value);
-Original expression:
-      ctx.check.require(
-          isOneEdit(before, snapshot(ctx.rig.document())) && hasEnds,
-          QStringLiteral("Shift-ramp did not commit both mapped endpoints in one edit"));
+Mapping: S051, S052, S074, S075, S076 (a real mounted Shift-held ramp releases one edit with independently snapped endpoint ticks and interpolated midpoint rather than the deliberately divergent dip; model ramp asserts the released 144:25 target and serialized one-edit outcome).
+Missing: The mounted check finds the published endpoint values but never compares both to independently mapped press/release pointer values; the model's held-value output does not assert the start tick 48 as a separate committed node, unlike the fork's exact two-endpoint assertion.
+Original expression: `ctx.check.require(isOneEdit(before, snapshot(ctx.rig.document())) && hasEnds, "Shift-ramp did not commit both mapped endpoints in one edit");`
 
 A011 | runPencil | src/checks/automationgesturecheck/parity.cpp:342
 Disposition: PARTIAL
-Mapping/reason: Pencil outcome; S006 (one pencil press and release is one revision) and S007 (one undo restores the pre-stroke lane) and S053 (a pencil stroke on an empty lane commits once) and S054 (the tempo pencil click records one revision) assert one-revision commits with undo at model level; unproved: a non-empty committed point list, native pointer delivery, and the retired rig fixture.
-Source context since previous assertion:
-  }
-
-  void runPencil(Context &ctx)
-  {
-      seed(ctx, {});
-      ctx.rig.setPersistentPencil(true);
-      const auto start = at(ctx, 36, 80);
-      const auto end = at(ctx, 144, 110);
-      const auto before = snapshot(ctx.rig.document());
-      ctx.rig.mousePress(start.position);
-      ctx.rig.mouseMove(end.position);
-      ctx.rig.pump();
-      expectUnchanged(ctx, before, "Pencil preview");
-      ctx.rig.mouseRelease(end.position);
-      ctx.rig.commitTimers();
-      const auto after = snapshot(ctx.rig.document());
-Original expression:
-      ctx.check.require(isOneEdit(before, after) && !pointsOf(ctx).empty(),
-                        QStringLiteral("Pencil stroke did not commit one edit"));
+Mapping: S045, S053, S077, S078, S079 (the empty-lane pencil writes nonempty data with one revision and undo, while a separate committed pencil scenario verifies a pointer value, one serialized history entry and exact byte/index undo).
+Missing: The empty-lane pencil's own one-edit assertion does not compare its full-song bytes and undo index/count before and after the release; the byte oracle in S079 belongs to a different, previously written lane.
+Original expression: `ctx.check.require(isOneEdit(before, after) && !pointsOf(ctx).empty(), "Pencil stroke did not commit one edit");`
 
 A012 | runBandSelect | src/checks/automationgesturecheck/parity.cpp:366
-Disposition: PARTIAL
-Mapping/reason: S023 (a right-drag band publishes its shared time selection) asserts the published range; S048 (the selected-range band follows its drag) asserts the translated band range at model level; unproved: the lane set and scope flags of the published selection, plus native pointer delivery.
-Source context since previous assertion:
-      ctx.rig.setPersistentPencil(false);
-  }
-
-  void runBandSelect(Context &ctx)
-  {
-      seed(ctx, kFixture);
-      ctx.rig.view().selectionModel().clearTimeSelection();
-      ctx.rig.pump();
-      const auto start = at(ctx, kFixtureTick, 80);
-      const auto end = at(ctx, 288, 80);
-      const uint64_t expectedStart = ctx.rig.projection().snapTickAt(start.position.x(), false);
-      const uint64_t expectedEnd = ctx.rig.projection().snapTickAt(end.position.x(), false);
-      ctx.rig.mousePress(start.position, Qt::NoModifier, Qt::RightButton);
-      ctx.rig.mouseMove(end.position, Qt::RightButton);
-      ctx.rig.mouseRelease(end.position, Qt::NoModifier, Qt::RightButton);
-      ctx.rig.pump();
-      const auto &selection = ctx.rig.view().selectionModel().timeSelection();
-      const bool tempo = ctx.adapter.kind == AdapterKind::Tempo;
-      const bool lanesMatch = tempo ? selection.lanes.empty()
-                                    : selection.lanes.size() == 1 &&
-                                          selection.lanes.front().first == ctx.track &&
-                                          selection.lanes.front().second == ctx.controller;
-Original expression:
-      ctx.check.require(selection.active() &&
-                            selection.scope == songview::EditorSelectionModel::TimeSelection::Lanes &&
-                            selection.tempo == tempo && lanesMatch &&
-                            selection.startTick == expectedStart && selection.endTick == expectedEnd,
-                        QStringLiteral("right-drag band did not publish the shared time selection"));
+Disposition: MATCHED
+Mapping: S061, S062, S063 (real right press/move/release selects the exact lane-scoped [96,288) band on both Tempo and Pan; fork parity.cpp:397–421 defines a selection, not a document edit).
 
 A013 | runEscapeCancel | src/checks/automationgesturecheck/parity.cpp:387
 Disposition: MATCHED
@@ -430,34 +330,15 @@ Mapping: S025, S026, S027
 
 A015 | runRebuildCancel | src/checks/automationgesturecheck/parity.cpp:414
 Disposition: PARTIAL
-Mapping/reason: S026 (a cancelled stale gesture never writes on release) covers the unchanged conjunct; S046 (a stale batch release writes nothing) asserts the snapshot-unchanged conjunct at model level; unproved: the retired geometry-stack rebuild path and the native band-preview clearing.
-Source context since previous assertion:
-      const QSize size = ctx.rig.automationViewportSize();
-      before = snapshot(ctx.rig.document());
-      ctx.rig.mousePress(at(ctx, kFixtureTick, 100).position);
-      ctx.rig.mouseMove(at(ctx, kFixtureTick, 100).position + QPointF(arm, 0.0));
-      ctx.rig.pump();
-      ctx.rig.resizeAutomationViewport(QSize(size.width() + 48, size.height()));
-      ctx.rig.pump();
-      ctx.rig.mouseRelease(at(ctx, kFixtureTick, 100).position + QPointF(arm, 0.0));
-      ctx.rig.pump();
-Original expression:
-      ctx.check.require(
-          isUnchanged(before, snapshot(ctx.rig.document())) && ctx.rig.isIdle() &&
-              !ctx.rig.canvas().bandPreviewContainsLane(ctx.handle),
-          QStringLiteral("release after a geometry stack rebuild committed a stale handle"));
+Mapping: S080, S081, S082, S083, S085 (mounted node drag first stages a real point preview; resizing cancels it, clears provisional nodes, leaves the plot idle, and its stale release leaves the revision unchanged).
+Missing: The mounted post-resize stale-release journey does not compare pre-press full-song bytes and undo index/count with the values after release. The model's non-geometry cancellation snapshot is not proof of the same mounted geometry path; retired native stack handles and canvas-body identity are representation only.
+Original expression: `ctx.check.require(isUnchanged(before, snapshot(ctx.rig.document())) && ctx.rig.isIdle() && !ctx.rig.canvas().bandPreviewContainsLane(ctx.handle), "release after a geometry stack rebuild committed a stale handle");`
 
 A016 | runRebuildCancel | src/checks/automationgesturecheck/parity.cpp:422
 Disposition: PARTIAL
-Mapping/reason: S028 and S029 (input recovers after a cancellation and the recovered drag commits its move) cover the recovery; unproved: recovery specifically after a stack-rebuild cancellation, plus native pointer delivery.
-Source context since previous assertion:
-      const auto followGrab = at(ctx, kFixtureTick, 100);
-      const auto followTarget = at(ctx, 192, 100);
-      before = snapshot(ctx.rig.document());
-      activatedDrag(ctx, followGrab.position, followTarget.position);
-Original expression:
-      ctx.check.require(isOneEdit(before, snapshot(ctx.rig.document())) && ctx.rig.isIdle(),
-                        QStringLiteral("input did not recover after stack-rebuild cancellation"));
+Mapping: S086, S087 (after real geometry cancellation, a fresh mounted node drag stages, releases and advances the song revision exactly once).
+Missing: The mounted recovery check does not compare full-song bytes and undo index/count against a pre-recovery snapshot, as the fork's `isOneEdit` requires. The domain recovery following a document rebuild is a different interruption from mounted geometry rebuild.
+Original expression: `ctx.check.require(isOneEdit(before, snapshot(ctx.rig.document())) && ctx.rig.isIdle(), "input did not recover after stack-rebuild cancellation");`
 
 A017 | runSemanticNoOp | src/checks/automationgesturecheck/parity.cpp:438
 Disposition: MATCHED
@@ -468,38 +349,8 @@ Disposition: MATCHED
 Mapping: S055, S056
 
 A019 | runOriginPhantom | src/checks/automationgesturecheck/parity.cpp:485
-Disposition: PARTIAL
-Mapping/reason: S057 and S058 assert full-span held-value curves at activation and movement for CC and Tempo, S059 asserts the moved curve shifts in the target direction, and S060 observes changed mounted raster pixels; unproved: deleted native Quick-layer revision comparisons `originalLayer.revision > transientBefore.revision && movedLayer.revision > originalLayer.revision`.
-Source context since previous assertion:
-      const auto before = snapshot(ctx.rig.document());
-      const qreal arm = qreal(ctx.rig.geometry().nodeDragActivationDistance + 2);
-      const QPointF activation = start + QPointF(0.0, target.y() < start.y() ? -arm : arm);
-      const QPointF end = activation + target - start;
-      const qreal minimumCurveSpan = 2.0 * ctx.rig.geometry().pointHitRadius;
-      const auto transientBefore =
-          ctx.rig.quickScene().layer(songview::TimelineQuickLayer::AutomationTransient);
-      ctx.rig.mousePress(start);
-      ctx.rig.mouseMove(activation);
-      ctx.rig.pump();
-      const auto originalLayer =
-          ctx.rig.quickScene().layer(songview::TimelineQuickLayer::AutomationTransient);
-      ctx.rig.mouseMove(end);
-      ctx.rig.pump();
-      const auto movedLayer =
-          ctx.rig.quickScene().layer(songview::TimelineQuickLayer::AutomationTransient);
-      const auto originalCurve = longestHorizontalSpan(originalLayer);
-      const auto movedCurve = longestHorizontalSpan(movedLayer);
-      const qreal targetDelta = target.y() - start.y();
-      const bool curveUpdated =
-          originalCurve && movedCurve && originalCurve->length > minimumCurveSpan &&
-          movedCurve->length > minimumCurveSpan &&
-          std::abs(movedCurve->y - originalCurve->y) > layout::singlePixel() / 2.0 &&
-          (movedCurve->y - originalCurve->y) * targetDelta > 0.0;
-Original expression:
-      ctx.check.require(originalLayer.revision > transientBefore.revision &&
-                            movedLayer.revision > originalLayer.revision && curveUpdated,
-                        QStringLiteral("origin phantom drag did not update its retained Quick "
-                                       "held-value curve"));
+Disposition: MATCHED
+Mapping: S057, S058, S059, S060 (full held-value curve spans and signed physical-pixel motion observed; retired fork `originalLayer.revision > transientBefore.revision && movedLayer.revision > originalLayer.revision` layer counters).
 
 A020 | runOriginPhantom | src/checks/automationgesturecheck/parity.cpp:489
 Disposition: MATCHED
@@ -757,3 +608,87 @@ Anchor: message "a moved phantom shifts the preview curve toward its target by a
 
 S060 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "a moved origin phantom changes the drawn held-value curve"
+
+S061 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "the held right drag visibly stages its time band before release"
+
+S062 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "right-band release selects the snapped range in only its active lane or Tempo"
+
+S063 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "right-band release publishes its selection fill and two edges"
+
+S064 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "the free-tick Tempo drag preserves raw fractional microseconds and its sibling"
+
+S065 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "the fractional Tempo release appends one history entry"
+
+S066 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "the fractional Tempo release changes serialized full-song bytes"
+
+S067 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "undo of fractional Tempo restores the captured full-song bytes and history index"
+
+S068 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
+Anchor: message "the selected-range release changes full-song bytes in one history entry"
+
+S069 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
+Anchor: message "selected-range undo restores the original full-song bytes and history index"
+
+S070 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
+Anchor: message "selected-range redo restores the moved full-song bytes and history index"
+
+S071 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
+Anchor: message "the committed lane holds the stroke and its restored tail"
+
+S072 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
+Anchor: message "the released sweep serializes one complete history edit"
+
+S073 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
+Anchor: message "sweep undo restores full-song bytes and original history index"
+
+S074 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the released ramp publishes the independently snapped endpoint and middle ticks"
+
+S075 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the released middle node follows endpoint interpolation rather than the dip"
+
+S076 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
+Anchor: message "the completed ramp serializes one complete history edit"
+
+S077 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
+Anchor: message "the released stroke writes the value under the pointer"
+
+S078 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gesturePencil.swift
+Anchor: message "the plain stroke writes the empty lane"
+
+S079 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
+Anchor: message "pencil undo restores exact song bytes and history index"
+
+S080 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "a real node drag stages a point preview before geometry changes"
+
+S081 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "resizing the mounted plot cancels its held node drag"
+
+S082 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the geometry rebuild retires the provisional node preview"
+
+S083 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the stale node release after geometry rebuild cannot edit the song"
+
+S084 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the resized plot has no stale range preview"
+
+S085 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the held node preview has not edited the song"
+
+S086 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "a fresh node drag stages on the rebuilt geometry"
+
+S087 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the fresh node drag commits exactly one edit after resize"
+
+S088 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the post-resize fresh sweep commits exactly one song edit"

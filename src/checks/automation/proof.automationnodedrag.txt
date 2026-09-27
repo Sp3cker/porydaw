@@ -11,6 +11,9 @@ Additional Swift counterpart: src/checks/automation/automationcanvasediting.swif
 Additional Swift counterpart: src/checks/automation/automationselection.swift
 
 
+Task-115 frozen source SHA-256: automationcanvasediting.swift 01ab5120e862c56fed885e7134129d3e4c75df810029800798ca4a328049b9e0; gestureNodeDrag.swift cfaaea075abbcc227ae3ccc58ea1ca5afb13c933fe358224e370bc11b5ef7a48; gestureNodeDragPhantom.swift bd40d2203e67ba489cbe990a477e981abec2223da571d292e0d7e597cf32827d; gesturePointRange.swift 44faa1defb91a7a19ae71233204803447d4e09f5e1db0b0d582cc28b0c23e530; tst_ShellDrawerParity.qml b0c3a480064c7ad201d60ddf78361706a3b6c5e36cf435d09468260619122582.
+Task-115 implementer-observed GREEN: swiftcore-projectsession 1/36, shell-drawer-parity 1/26, full verify 36/36; full shell suite 25/26 due to sibling-owned shell-note-visuals DPR2. Proof writer did not rerun them.
+
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — deno task verify --filter swiftcore --verbose on this worktree at 470231af (1/14 harnesses selected; swiftcore green, including drawerAutomationInflightDragInvalidation, drawerAutomationPencilOwnershipAndShift and the gesture predicates cited below). Evidence supplied by the lane controller for this settled source snapshot; this ledger task did not re-run the suite.
 Delta snapshot: the counterpart hashes above were re-pinned for the delta that added the Escape-cancel, Delete-key arbiter and idle-quiescence predicates (drawerAutomationKeyboardIngress, drawerAutomationBandEscape) and restored the double-click-once deletion. The implementing lane reported deno task verify --filter swiftcore --verbose PASS (10.08 s) for its own snapshot; the band-escape, arbiter and quiescence predicates were not covered by a verification result supplied to this ledger task, so no execution claim is made for them here. Task-57 evidence: the controller-supplied build/proof-evidence/swiftcore-projectsession.json pass rows execute the keyboard-ingress escape-cancel predicate cited as S197 and the stale-release rebuild-abort predicate cited as S198 below (both in src/checks/automation/automationcanvasediting.swift, unmodified since that evidence run). Fresh evidence: the controller re-ran verify --filter swiftcore to 12/12 PASS after Task57's final comment-only edit (build/proof-evidence/swiftcore-projectsession.json, newer than all cited Swift sources, messages unchanged); its pass rows execute the node-drag tick/commit, scrolled-origin phantom, and selected-range predicates cited as S199-S202 below, closing A001/A002/A008/A009/A014/A015/A019-A021/A040/A041/A043/A045/A046.
@@ -354,95 +357,40 @@ Disposition: MATCHED
 Mapping: S153, S155
 
 A026 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:339
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: Native pointer feedback (cursor shape) is delivered by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-      const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
-      mouseMove(source, Qt::NoModifier);
-
-Original expression:
-  QCOMPARE(automationInput().cursor().shape(), Qt::ArrowCursor);
+Disposition: MATCHED
+Mapping: S055, S056 (arrow cursor on the hovered origin phantom).
 
 A027 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:348
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationTransient layer revision/triangles/rects and the painted curve probes observe the native mesh. A direct presenter check cannot establish this observation; the converted-window lane is the retained obligation.
-Source context since previous assertion:
-
-      mousePress(Qt::LeftButton, source, Qt::NoModifier);
-      mouseMove(activation, Qt::NoModifier);
-      const auto originalLayer = scene->layer(songview::TimelineQuickLayer::AutomationTransient);
-      mouseMove(end, Qt::NoModifier);
-      const auto movedLayer = scene->layer(songview::TimelineQuickLayer::AutomationTransient);
-      const std::optional<HorizontalSpan> originalCurve = longestHorizontalSpan(originalLayer);
-      const std::optional<HorizontalSpan> movedCurve = longestHorizontalSpan(movedLayer);
-
-
-Original expression:
-  QVERIFY(originalLayer.revision > beforeLayer.revision);
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S057, S058, S203: retired `originalLayer.revision > beforeLayer.revision`; the held curve is observed before and after movement.
 
 A028 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:349
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationTransient layer revision/triangles/rects and the painted curve probes observe the native mesh. A direct presenter check cannot establish this observation; the converted-window lane is the retained obligation.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(movedLayer.revision > originalLayer.revision);
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S057, S058, S203: retired `movedLayer.revision > originalLayer.revision`; the changed curve is observed instead.
 
 A029 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:350
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationTransient layer revision/triangles/rects and the painted curve probes observe the native mesh. A direct presenter check cannot establish this observation; the converted-window lane is the retained obligation.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(originalCurve.has_value());
+Disposition: MATCHED
+Mapping: S057 (activated phantom paints a curve).
 
 A030 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:351
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationTransient layer revision/triangles/rects and the painted curve probes observe the native mesh. A direct presenter check cannot establish this observation; the converted-window lane is the retained obligation.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(movedCurve.has_value());
+Disposition: MATCHED
+Mapping: S058 (moved phantom retains the curve).
 
 A031 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:352
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationTransient layer revision/triangles/rects and the painted curve probes observe the native mesh. A direct presenter check cannot establish this observation; the converted-window lane is the retained obligation.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(originalCurve->length > 2.0 * AutomationGeometry::resolve().pointHitRadius);
+Disposition: MATCHED
+Mapping: S057 (original span exceeds twice independently resolved radius).
 
 A032 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:353
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationTransient layer revision/triangles/rects and the painted curve probes observe the native mesh. A direct presenter check cannot establish this observation; the converted-window lane is the retained obligation.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(movedCurve->length > 2.0 * AutomationGeometry::resolve().pointHitRadius);
+Disposition: MATCHED
+Mapping: S058 (moved span exceeds twice independently resolved radius).
 
 A033 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:354
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationTransient layer revision/triangles/rects and the painted curve probes observe the native mesh. A direct presenter check cannot establish this observation; the converted-window lane is the retained obligation.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(std::abs(movedCurve->y - originalCurve->y) > layout::singlePixel() / 2.0);
+Disposition: MATCHED
+Mapping: S059 (vertical displacement exceeds half a physical pixel).
 
 A034 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:355
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationTransient layer revision/triangles/rects and the painted curve probes observe the native mesh. A direct presenter check cannot establish this observation; the converted-window lane is the retained obligation.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY((movedCurve->y - originalCurve->y) * (targetContent.y() - sourceContent.y()) > 0.0);
+Disposition: MATCHED
+Mapping: S059 (displacement sign follows pointer movement).
 
 A035 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:356
 Disposition: MATCHED
@@ -592,22 +540,12 @@ Disposition: MATCHED
 Mapping: S154, S155
 
 A055 | AutomationEditingTest::escapeCancelsAdapterDrag | src/checks/automation/automationnodedrag.cpp:468
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationTransient layer revision/triangles/rects and the painted curve probes observe the native mesh. A direct presenter check cannot establish this observation; the converted-window lane is the retained obligation.
-Source context since previous assertion:
-
-      const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
-
-      mousePress(Qt::LeftButton, source, Qt::NoModifier);
-      mouseMove(activation, Qt::NoModifier);
-      mouseMove(end, Qt::NoModifier);
-
-Original expression:
-  QTRY_VERIFY(!scene->layer(songview::TimelineQuickLayer::AutomationTransient).triangles.empty());
+Disposition: MATCHED
+Mapping: S057, S058, S204 (held curve and a real mounted node preview are visible before cancellation).
 
 A056 | AutomationEditingTest::escapeCancelsAdapterDrag | src/checks/automation/automationnodedrag.cpp:471
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationTransient layer triangles observe the native mesh after the Escape delivery; a direct presenter check cannot establish this observation, so this row remains the retained native mesh half. The delivery half of the same slot is MATCHED on A058/A059 through drawerAutomationCancellationAndNoOps ([S183],[S184],[S185]) and drawerAutomationKeyboardIngress ([S187],[S188],[S189]).
+Disposition: PARTIAL
+Mapping/reason: S205, S206 prove a staged mounted node preview is absent after a geometry cancellation; S207 proves an Escape clears published primitives, but not after activating a node drag in that same gesture. Unproved: transient removal specifically after Escape of an activated node drag.
 Source context since previous assertion:
 
       keyClick(Qt::Key_Escape, Qt::NoModifier);
@@ -617,11 +555,8 @@ Original expression:
   QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).triangles.empty());
 
 A057 | AutomationEditingTest::escapeCancelsAdapterDrag | src/checks/automation/automationnodedrag.cpp:472
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationTransient layer revision/triangles/rects and the painted curve probes observe the native mesh. A direct presenter check cannot establish this observation; the converted-window lane is the retained obligation.
-Source context since previous assertion:
-
-
+Disposition: PARTIAL
+Mapping/reason: S205, S206 prove a staged mounted node preview is absent after a geometry cancellation; S207 clears all published rectangles on Escape before activation. Unproved: all transient rectangle primitives absent after Escape of an activated node drag.
 Original expression:
   QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).rects.empty());
 
@@ -696,10 +631,7 @@ Mapping: S155
 
 A067 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:523
 Disposition: PARTIAL
-Mapping/reason: drawerAutomationRestoredInteractionContracts asserts the page's band visibility for a pending/activated band, but no predicate asserts that no band preview survives a mid-drag rebuild. Unproved: the cleared band preview after rebuild. [S175]
-Source context since previous assertion:
-
-
+Mapping/reason: S208 proves parameter switch clears a staged node drag's band; S209 proves geometry rebuild clears a staged range band's preview; S205 proves geometry rebuild clears staged node rectangles. Unproved: no selected-lane band preview surviving the geometry rebuild of that same staged node drag.
 Original expression:
   QVERIFY(!m_page->canvas()->bandPreviewContainsLane(findRow(rowId(adapter))));
 
@@ -1340,3 +1272,24 @@ Anchor: message "the selected-range drag moves both nodes and preserves outside 
 
 S202 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
 Anchor: message "the selected-range band follows its drag"
+
+S203 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDragPhantom.swift
+Anchor: message "a moved phantom shifts the preview curve toward its target by a pixel"
+
+S204 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "a real node drag stages a point preview before geometry changes"
+
+S205 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the geometry rebuild retires the provisional node preview"
+
+S206 | test_aAutomationNodeGeometryCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "resizing the mounted plot cancels its held node drag"
+
+S207 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
+Anchor: message "cancel clears every published node preview label band and hover primitive"
+
+S208 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "parameter switch removes the preview readout band and hover overlays"
+
+S209 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: message "the resized plot has no stale range preview"

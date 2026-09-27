@@ -189,6 +189,11 @@ FocusScope {
                                      page.Screen.devicePixelRatio, page.baseFontPx,
                                      Qt.styleHints.startDragDistance)
     }
+    function geometryChanged() {
+        if (plotInput.pressed && page.pageModel.interactionActive)
+            page.pageModel.cancelSectionInteraction()
+        page.pushBodyFacts()
+    }
 
     // Every fact `configureBody` publishes is a dependency: the owner's arrival,
     // the drawn size, the plot origin and the font the page's own geometry is
@@ -197,10 +202,10 @@ FocusScope {
         page.pushBodyFacts()
         page.createModals()
     }
-    onWidthChanged: page.pushBodyFacts()
-    onHeightChanged: page.pushBodyFacts()
-    onPlotOriginChanged: page.pushBodyFacts()
-    onBaseFontPxChanged: page.pushBodyFacts()
+    onWidthChanged: page.geometryChanged()
+    onHeightChanged: page.geometryChanged()
+    onPlotOriginChanged: page.geometryChanged()
+    onBaseFontPxChanged: page.geometryChanged()
     Component.onCompleted: {
         page.pushBodyFacts()
         page.createModals()
@@ -237,6 +242,7 @@ FocusScope {
     function focusOrigin() {
         plot.forceActiveFocus(Qt.OtherFocusReason)
     }
+
 
     // ---- selector column ----------------------------------------------------
 
