@@ -36,16 +36,33 @@ func runMidiExportEquivalence(
     let native = pdc_check_midi_exports()
     for (index, song) in projectSongs.enumerated() {
         let bit = UInt32(1) << UInt32(index)
-        if native.matchingSongBits & bit != 0 {
-            report.pass(song.cppID, row: "mid2agb assembly matches Swift encoding")
+        let name = URL(fileURLWithPath: song.path).deletingPathExtension().lastPathComponent
+        let originalPath = exportRoot.appendingPathComponent("original/\(name).s")
+        let encodedPath = exportRoot.appendingPathComponent("encoded/\(name).s")
+        let compiled = native.projectOpenFailed == 0 && native.missingSongBits & bit == 0
+            && native.originalCompileFailureBits & bit == 0
+            && native.encodedCompileFailureBits & bit == 0
+        let originalAssembly = compiled ? try? Data(contentsOf: originalPath) : nil
+        let encodedAssembly = compiled ? try? Data(contentsOf: encodedPath) : nil
+        if native.matchingSongBits & bit != 0, let originalAssembly, let encodedAssembly {
+            report.expect(originalAssembly == encodedAssembly, cppID: song.cppID,
+                          message: "mid2agb assembly matches Swift encoding")
+            if originalAssembly != encodedAssembly {
+                report.fail(song.cppID, "assembly differs — " +
+                            firstAssemblyDifference(originalAssembly, encodedAssembly))
+            }
         } else {
+            let difference = originalAssembly.flatMap { original in
+                encodedAssembly.map { encoded in firstAssemblyDifference(original, encoded) }
+            } ?? "assembly output unavailable"
             report.fail(
                 song.cppID,
                 "mid2agb assembly mismatch or compile failure " +
                     "(projectOpen=\(native.projectOpenFailed), " +
                     "missing=\(native.missingSongBits & bit), " +
                     "originalCompile=\(native.originalCompileFailureBits & bit), " +
-                    "encodedCompile=\(native.encodedCompileFailureBits & bit))")
+                    "encodedCompile=\(native.encodedCompileFailureBits & bit), " +
+                    "firstDifference=\(difference))")
         }
     }
 
@@ -61,6 +78,17 @@ func runMidiExportEquivalence(
                        what: "xIECL carries value 51")
     report.expectEqual(expected: Int32(0), actual: native.unknown127Count, cppID: xcmdConverterID,
                        what: "unknown selector emits no echo command")
+}
+
+private func firstAssemblyDifference(_ original: Data, _ encoded: Data) -> String {
+    let originalLines = original.split(separator: 0x0A, omittingEmptySubsequences: false)
+    let encodedLines = encoded.split(separator: 0x0A, omittingEmptySubsequences: false)
+    for index in 0..<min(originalLines.count, encodedLines.count)
+        where originalLines[index] != encodedLines[index] {
+        return "line \(index + 1): '\(String(decoding: originalLines[index], as: UTF8.self))' " +
+            "vs '\(String(decoding: encodedLines[index], as: UTF8.self))'"
+    }
+    return "line count \(originalLines.count) vs \(encodedLines.count)"
 }
 
 func compareFixture(relativePath: String, cppID: String,

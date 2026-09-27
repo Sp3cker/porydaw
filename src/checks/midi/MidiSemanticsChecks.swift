@@ -199,17 +199,35 @@ func engineMappingProjection(_ report: CheckReport) {
                            what: "pressure events remain visible")
         report.expectEqual(expected: [0, 0], actual: raw.otherEvents.map(\.track), cppID: cppID,
                            what: "pressure events map to engine zero")
+        let expectedNoteKeys = Array(60...74)
         let noteOns = raw.events.filter { $0.type == 0x9 }
+        let noteOffs = raw.events.filter { $0.type == 0x8 }
         report.expectEqual(expected: 15, actual: noteOns.count, cppID: cppID,
                            what: "mapped note-on event count")
-        for event in noteOns {
+        report.expectEqual(expected: expectedNoteKeys, actual: noteOns.map { Int($0.data0) }.sorted(),
+                           cppID: cppID, what: "all mapped note-on keys")
+        report.expectEqual(expected: [Tick](repeating: 2, count: 15), actual: noteOns.map(\.tick),
+                           cppID: cppID, what: "all mapped note-on ticks")
+        report.expectEqual(expected: 15, actual: noteOffs.count, cppID: cppID,
+                           what: "mapped note-off event count")
+        report.expectEqual(expected: expectedNoteKeys, actual: noteOffs.map { Int($0.data0) }.sorted(),
+                           cppID: cppID, what: "all mapped note-off keys")
+        report.expectEqual(expected: [Tick](repeating: 6, count: 15), actual: noteOffs.map(\.tick),
+                           cppID: cppID, what: "all mapped note-off ticks")
+        var keysMatch = true
+        var routesMatch = true
+        for event in raw.events where event.type == 0x9 || event.type == 0x8 {
             let expected = event.data0 == 60 ? 1 : event.data0 == 61 ? 2 :
                 (62...74).contains(event.data0) ? Int(event.data0) - 59 : -1
-            report.expect(expected >= 0, cppID: cppID,
-                          message: "unexpected note key \(event.data0)")
-            report.expectEqual(expected: expected, actual: Int(event.track), cppID: cppID,
-                               what: "engine routing for note key \(event.data0)")
+            keysMatch = keysMatch && expected >= 0
+            routesMatch = routesMatch && Int(event.track) == expected
         }
+        report.expect(keysMatch, cppID: cppID,
+                      message: "every mapped note-on and note-off has an expected fixture key")
+        report.expect(routesMatch, cppID: cppID,
+                      message: "every mapped note-on and note-off has its expected engine slot")
+        report.expectEqual(expected: 16, actual: document.engineTracks.usedTrackCount,
+                           cppID: cppID, what: "document engine-track count")
         for engine in 0..<16 {
             report.expectEqual(expected: engine + 2, actual: document.engineTracks.tracks[engine].midiChunk,
                                cppID: cppID, what: "document chunk for engine \(engine)")

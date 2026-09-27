@@ -169,8 +169,10 @@ private func unterminatedPairingLargeFixture(_ report: CheckReport) {
     ])
     do {
         let parsed = try MidiFile.decode(file.encoded())
+        let pairingStart = ProcessInfo.processInfo.systemUptime
         let document = SongDocument(file: parsed)
         let notes = document.notes(in: 0)
+        let pairingMilliseconds = (ProcessInfo.processInfo.systemUptime - pairingStart) * 1_000
         report.expectEqual(expected: noteCount, actual: notes.count, cppID: cppID,
                            what: "unterminated note pairing count")
         report.expectEqual(expected: 0, actual: notes.first?.onIndex, cppID: cppID,
@@ -181,6 +183,11 @@ private func unterminatedPairingLargeFixture(_ report: CheckReport) {
                            what: "first note has no end")
         report.expectEqual(expected: true, actual: notes.last?.isUnterminated, cppID: cppID,
                            what: "last note has no end")
+        report.expect(pairingMilliseconds <= 10_000, cppID: cppID,
+                      message: "pairing 300000 unterminated note-ons stays within 10000 ms")
+        if pairingMilliseconds > 10_000 {
+            report.fail(cppID, "pairing 300000 unterminated note-ons took \(pairingMilliseconds) ms")
+        }
     } catch {
         report.fail(cppID, "stress fixture encode or reparse failed: \(error)")
     }
