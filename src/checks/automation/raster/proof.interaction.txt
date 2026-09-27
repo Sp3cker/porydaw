@@ -4,15 +4,33 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 Original: src/checks/automation/raster/interaction.cpp
 Original SHA-256: 00cd17232f6c2c1f17bb91c10ce626c5f935a79d2f41e09292379f3f2c0d10a8
-Swift counterpart: none identified for the retired raster observations; no Swift predicate asserts framebuffer pixels
-Additional Swift counterpart: src/checks/automation/presentation/painting.swift (surviving drawer model predicates)
-Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml (converted QML drawer lane)
-Additional Swift counterpart: src/checks/editorqml/tst_ShellDrawerParity.qml (ported drawer-parity lane: insertion-hover publication, painted hover change, hovering writes nothing)
+Swift counterpart: src/checks/automation/presentation/painting_raster.swift (scrolled-phantom model and transaction predicates; no Swift framebuffer readback).
+Additional Swift counterpart: src/checks/automation/presentation/painting.swift (surviving drawer model predicates).
+Converted QML counterpart: src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml (mounted phantom raster scenario).
+Converted shell counterpart: src/checks/editorqml/tst_ShellDrawerParity.qml and src/checks/editorqml/ShellDrawerParityRasterSupport.js (mounted hover/raster predicates) plus the DPR2 Voice preview helper.
 
+Command: deno task verify --filter swiftcore-projectsession --verbose
+Result: PASS — swiftcore-projectsession 1/36; 35 skipped (Task 119 implementer-reported).
+Command: deno task verify:qml --filter editorqml-drawer --verbose --qt EditorDrawerLane::test_productionAutomationOriginPhantomCurveRaster EditorDrawerLane::test_productionAutomationLeadInStepAndSelectionPixels
+Result: PASS — editorqml-drawer 1/1; both focused production raster tests passed (Task 119 implementer-reported).
+Command: deno task verify:qml --verbose
+Result: PASS — editorqml-drawer 1/1, including all four reference profiles (Task 119 implementer-reported).
+Command: deno task verify:shell --filter shell-drawer-parity --verbose
+Result: PASS — shell-drawer-parity 3/75, including the actual DPR2 child and Voice preview (Task 119 implementer-reported).
+Negative control: Task 119's DPR1 substitution for the DPR2 hover check failed as expected; the required physical DPR2 output differs.
+Evidence provenance: agent://Task119; this ledger pass did not rerun implementation verification.
+QML execution paths: EditorQmlTests.swift:178-180 registers `tst_EditorDrawerAutomationCurves.qml`; ShellQmlEntries.swift:135-136 registers `tst_ShellDrawerParity.qml`, and ShellQmlTests.swift:114-140 launches the DPR2 child.
+Task 119 frozen source SHA-256: 1965b43c184f327836118cd71fda0db6eab6335b278593530865de1d964782bf (src/checks/automation/presentation/painting_raster.swift)
+Task 119 frozen source SHA-256: c3569d9307ee6ae8ef0a2c3ba27554642a1bb9236f5c73aea768de7d4faf9f93 (src/checks/automation/AutomationPageChecks.swift)
+Swift execution path: SessionChecks.swift:84 calls `runAutomationPageChecks`; AutomationPageChecks.swift:339 invokes `drawerAutomationRasterScrolledPhantom` with its C++ proof ID.
+Task 119 frozen source SHA-256: 85645d72d5fa964e8911dfbb441f6aeea55b46616c886ad1ece3dafe84e565ad (src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml)
+Task 119 frozen source SHA-256: 77e42db2b045867df8c78a34a2e93d58768b01631318b93ea7efa2539a4b5eec (src/checks/editorqml/tst_ShellDrawerParity.qml)
+Task 119 frozen source SHA-256: dd89db6c3e61db4a770d24c9c91af4e62c1e125d8732bd26425c3253b6e44046 (src/checks/editorqml/tst_ShellDrawerParityVoiceVelocity.qml)
+Task 119 frozen source SHA-256: 83cf4933302762c070cfd54beb77c095bba21bdcedf297bd79bef2eec751c032 (src/checks/editorqml/ShellQmlTests.swift)
+Task 119 frozen source SHA-256: ac318f8f59c31719470fd43e2617b720d29e26b9c7240e448ef614ded9c24720 (src/checks/editorqml/ShellDrawerParityRasterSupport.js)
+Task 119 frozen source SHA-256: 9b7fd07ab387ae2d8609ff724297c7583389394bcf12ed3eb73ad8c2f7bfc6b7 (src/checks/editorqml/EditorQmlTests.swift)
+Task 119 frozen source SHA-256: 018fe9026672cc5f710a4fc6b59940420a72d564e373855f5dd0f03799f8873e (src/checks/editorqml/ShellQmlEntries.swift)
 
-Command: deno task verify --filter swiftcore --verbose
-Result: no run result is claimed. The harness that produced these observations was deleted in 31ea635f and no lane executes it, so the RETIRED-REPRESENTATION evidence below rests on that no-ingress fact plus the surviving converted-lane predicates (src/checks/editorqml/tst_EditorDrawer.qml; src/checks/automation/presentation/painting.swift).
-Converted-window command: deno task verify:qml --verbose
 
 A001 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:322
 Disposition: RETIRED-REPRESENTATION
@@ -33,8 +51,8 @@ A006 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation
 Disposition: RETIRED-REPRESENTATION
 
 A007 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:341
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: RETIRED-REPRESENTATION
+Mapping: RETIRED-REPRESENTATION — framebufferReady is only a capture-helper readiness guard, not user-visible rendering behavior.
 Source context since previous assertion:
 
 
@@ -50,8 +68,8 @@ A008 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation
 Disposition: RETIRED-REPRESENTATION
 
 A009 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:354
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: RETIRED-REPRESENTATION
+Mapping: RETIRED-REPRESENTATION — framebufferReady is only a capture-helper readiness guard, not user-visible rendering behavior.
 Source context since previous assertion:
 
 
@@ -62,8 +80,8 @@ A010 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation
 Disposition: RETIRED-REPRESENTATION
 
 A011 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:356
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S009, S012 — the mounted shell checks independently projected Route 101 insertion-ghost center ink in the ordinary and actual DPR2 journeys.
 Source context since previous assertion:
 
 
@@ -71,8 +89,8 @@ Original expression:
   QVERIFY(hasFilledNodeAt(insertion.layer, insertionCenter));
 
 A012 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:357
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S009, S012 prove primary ink at the independently projected insertion-ghost center. Missing: neither compares the same target pixel against its idle-frame value as this original assertion does.
 Source context since previous assertion:
 
 
@@ -81,8 +99,8 @@ Original expression:
                              insertionCenter + framebufferOffset));
 
 A013 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:364
-Disposition: GAP
-Mapping/reason: GAP: no executing converted-lane predicate covers this repeated-hover document-stability observation; automation raster harness deleted, converted drawer checked through drawer state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S018 proves the repeated hover-to-leave round trip does not change document revision. Missing: this assertion compares the complete document snapshot immediately after the repeated hover; the QML revision check does not prove bytes or history state at that point.
 Source context since previous assertion:
 
 
@@ -95,8 +113,8 @@ Original expression:
   QVERIFY(snapshot(fixture().document()) == before);
 
 A014 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:365
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: RETIRED-REPRESENTATION
+Mapping: RETIRED-REPRESENTATION — framebufferReady is only a capture-helper readiness guard, not user-visible rendering behavior.
 Source context since previous assertion:
 
 
@@ -104,8 +122,8 @@ Original expression:
   QVERIFY(repeated.framebufferReady);
 
 A015 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:366
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S016 — repeated pointer hover leaves the mounted Pan/Tempo plot pixel-identical at the same fixture target.
 Source context since previous assertion:
 
 
@@ -116,8 +134,8 @@ A016 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation
 Disposition: RETIRED-REPRESENTATION
 
 A017 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:373
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: RETIRED-REPRESENTATION
+Mapping: RETIRED-REPRESENTATION — framebufferReady is only a capture-helper readiness guard, not user-visible rendering behavior.
 Source context since previous assertion:
 
 
@@ -128,8 +146,8 @@ A018 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation
 Disposition: RETIRED-REPRESENTATION
 
 A019 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:375
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: RETIRED-REPRESENTATION
+Mapping: RETIRED-REPRESENTATION — the old `nodeHover.layer.triangles` list is renderer mesh storage, not user-visible behavior; the visible hover annulus is separately checked at A020.
 Source context since previous assertion:
 
 
@@ -137,8 +155,8 @@ Original expression:
   QVERIFY(!nodeHover.layer.triangles.empty());
 
 A020 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:376
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S015 — hovering the independently projected written node paints the expected selection-ink annulus in all four quadrants.
 Source context since previous assertion:
 
 
@@ -148,8 +166,8 @@ Original expression:
           nodelane::hoverRingRadius(fixture().geometry()), 2 * layout::singlePixel()));
 
 A021 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:388
-Disposition: GAP
-Mapping/reason: GAP: no executing converted-lane predicate covers this post-leave document-stability observation; automation raster harness deleted, converted drawer checked through drawer state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S018 proves the mounted hover-and-leave round trip does not change document revision. Missing: the old assertion compares the complete snapshot after two pointer leaves; QML does not assert document bytes or history at that exact point.
 Source context since previous assertion:
 
 
@@ -166,8 +184,8 @@ Original expression:
   QVERIFY(snapshot(fixture().document()) == before);
 
 A022 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:393
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S019 — after the actual plot leave, the captured plot returns exactly to its idle pixels.
 Source context since previous assertion:
 
 
@@ -180,7 +198,7 @@ Original expression:
 
 A023 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:394
 Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Mapping/reason: GAP: the mounted lane checks leave the plot once; no predicate repeats the leave and proves this second clear-state observation.
 Source context since previous assertion:
 
 
@@ -188,8 +206,8 @@ Original expression:
   QVERIFY(isClear(left));
 
 A024 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:395
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S019 — the cleared mounted plot is pixel-identical to the captured idle region at the insertion probe.
 Source context since previous assertion:
 
 
@@ -199,7 +217,7 @@ Original expression:
 
 A025 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:397
 Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Mapping/reason: GAP: the QML round trip checks one leave only; no predicate proves a second leave restores the full target pixel as this original assertion requires.
 Source context since previous assertion:
 
 
@@ -209,7 +227,7 @@ Original expression:
 
 A026 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:410
 Disposition: GAP
-Mapping/reason: GAP: no executing converted-lane predicate covers this drag-activation geometry observation; automation raster harness deleted, converted drawer checked through drawer state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Mapping/reason: GAP: the mounted drag proves a moved node preview, but no predicate checks that this fixture's vertical target exceeds the original node-drag activation distance.
 Source context since previous assertion:
 
 
@@ -228,8 +246,8 @@ Original expression:
   QVERIFY(std::abs(dragTarget.y() - plotOrigin.y()) > qreal(geometry.nodeDragActivationDistance));
 
 A027 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:416
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: RETIRED-REPRESENTATION
+Mapping: RETIRED-REPRESENTATION — framebufferReady is only a capture-helper readiness guard, not user-visible rendering behavior.
 Source context since previous assertion:
 
       fixture().setAutomationScroll(lane.nodeX + 2.0 * geometry.pointHitRadius);
@@ -242,8 +260,8 @@ Original expression:
   QVERIFY(scrolledIdle.framebufferReady);
 
 A028 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:432
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: RETIRED-REPRESENTATION
+Mapping: RETIRED-REPRESENTATION — framebufferReady is only a capture-helper readiness guard, not user-visible rendering behavior.
 Source context since previous assertion:
 
       const DocumentSnapshot scrolled = snapshot(fixture().document());
@@ -269,8 +287,8 @@ A029 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation
 Disposition: RETIRED-REPRESENTATION
 
 A030 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:434
-Disposition: GAP
-Mapping/reason: GAP: no executing QML predicate covers this hover tooltip text (textRows/valueText); automation raster harness deleted, converted drawer checked through drawer state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S006 — the mounted scrolled phantom exposes exactly one source-value text row with no embedded newline.
 Source context since previous assertion:
 
 
@@ -278,8 +296,8 @@ Original expression:
   QCOMPARE(phantomHover.textRows, 1);
 
 A031 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:435
-Disposition: GAP
-Mapping/reason: GAP: no executing QML predicate covers this hover tooltip text (textRows/valueText); automation raster harness deleted, converted drawer checked through drawer state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S001 — the Swift scrolled-phantom fixture formats the exact tick-144 source value and compares it with the published hover text.
 Source context since previous assertion:
 
 
@@ -287,8 +305,8 @@ Original expression:
   QCOMPARE(phantomHover.valueText, laneAdapter.valueText(lane.nodeValue));
 
 A032 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:436
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S007 proves the mounted scrolled phantom paints the expected hover-ring ink in both visible quadrants. Missing: the QML predicate does not compare the phantom's hovered frame against its scrolled-idle frame at that annulus.
 Source context since previous assertion:
 
 
@@ -299,7 +317,7 @@ Original expression:
 
 A033 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:439
 Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Mapping/reason: GAP: the mounted phantom raster checks ring pixels but does not verify that the origin phantom's center fill is present.
 Source context since previous assertion:
 
 
@@ -308,8 +326,8 @@ Original expression:
           fixture().quickScene().layer(songview::TimelineQuickLayer::AutomationNodes), plotOrigin));
 
 A034 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:447
-Disposition: GAP
-Mapping/reason: GAP: no executing converted-lane predicate covers this legacy canvas pointer-press observation arming the vertical drag; automation raster harness deleted, converted drawer checked through drawer state only; the converted drawer is QML. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S002 — the registered Swift check's real pointer press is accepted and captures the scrolled source phantom as a gesture.
 Source context since previous assertion:
 
 
@@ -330,8 +348,8 @@ A036 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation
 Disposition: RETIRED-REPRESENTATION
 
 A037 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:463
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S003 proves node-shaped physical pixels at the independently projected Pan drag target, and the Swift predicate covers Pan and Tempo preview geometry. Missing: the mounted pixel check is Pan-only, while this original row covers both lane adapters.
 Source context since previous assertion:
 
       const auto draggedTransient =
@@ -341,8 +359,8 @@ Original expression:
   QVERIFY(hasFilledNodeAt(draggedTransient, dragTarget));
 
 A038 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:464
-Disposition: GAP
-Mapping/reason: GAP: no executing converted-lane predicate covers this drag-phase document-stability observation; automation raster harness deleted, converted drawer checked through drawer state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S004 — the Swift scrolled-phantom drag preserves the exact pre-gesture document snapshot before release.
 Source context since previous assertion:
 
 
@@ -363,7 +381,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A043 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:481
 Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Mapping/reason: GAP: the mounted phantom case releases the drag without a subsequent pointer-leave assertion; no predicate proves this post-commit hover-clear state.
 Source context since previous assertion:
 
 
@@ -371,8 +389,8 @@ Original expression:
   QVERIFY(isClear(observeHover(fixture())));
 
 A044 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:482
-Disposition: GAP
-Mapping/reason: GAP: no executing converted-lane predicate covers this post-scroll document-stability observation; automation raster harness deleted, converted drawer checked through drawer state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S004 checks the exact document snapshot during the uncommitted drag. Missing: no assertion checks the complete snapshot after the original scrolled pointer-leave transition.
 Source context since previous assertion:
 
 
@@ -384,7 +402,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A046 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:487
 Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Mapping/reason: GAP: no mounted predicate checks that a pointer leave after commit clears hover state in this fixture.
 Source context since previous assertion:
 
       fixture().automationPointerLeave();
@@ -395,8 +413,8 @@ Original expression:
   QVERIFY(isClear(observeHover(fixture())));
 
 A047 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:494
-Disposition: GAP
-Mapping/reason: GAP: no executing converted-lane predicate covers this legacy canvas pointer-press observation committing the drag; automation raster harness deleted, converted drawer checked through drawer state only; the converted drawer is QML. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S005 — the Swift real press/drag/release edits the original tick-144 value once without adding an edge duplicate.
 Source context since previous assertion:
 
 
@@ -439,7 +457,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A057 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:523
 Disposition: GAP
-Mapping/reason: GAP: no executing QML cursor-value predicate covers this voice cursor observation; automation raster harness deleted, converted drawer checked through drawer state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Mapping/reason: GAP: the mounted Voice preview preserves physical pixels and bounds, but no predicate compares the voice cursor's exact model value with the original `cursorValue`.
 Source context since previous assertion:
 
 
@@ -459,8 +477,8 @@ A061 | AutomationRasterTest::voicePressWithoutMoveHasNoPreview | src/checks/auto
 Disposition: RETIRED-REPRESENTATION
 
 A062 | AutomationRasterTest::voicePressWithoutMoveHasNoPreview | src/checks/automation/raster/interaction.cpp:544
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S021 — the DPR2 Voice check proves that a stationary marker press leaves the captured physical plot pixels exactly unchanged.
 Source context since previous assertion:
 
 
@@ -489,8 +507,8 @@ A069 | AutomationRasterTest::voiceDragPreviewsWithoutCommitUntilRelease | src/ch
 Disposition: RETIRED-REPRESENTATION
 
 A070 | AutomationRasterTest::voiceDragPreviewsWithoutCommitUntilRelease | src/checks/automation/raster/interaction.cpp:572
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S023, S024 — the actual DPR2 Voice preview retains both physical framebuffer width and height.
 Source context since previous assertion:
 
 
@@ -498,8 +516,8 @@ Original expression:
   QCOMPARE(preview.size(), idle.size());
 
 A071 | AutomationRasterTest::voiceDragPreviewsWithoutCommitUntilRelease | src/checks/automation/raster/interaction.cpp:573
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/interaction.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S022 — the actual DPR2 Voice preview paints expected selection-edge ink at its independently projected moved target and not at that idle pixel.
 Source context since previous assertion:
 
 
@@ -524,9 +542,130 @@ Remaining original source (closing sequence and helper bodies):
 
 
 Swift assertion predicates
-No Swift counterpart file was identified covering this file. There are no S entries for this file.
+S entries identify literal-anchored predicates in the final Swift or QML test sources. QML shell helper predicates are reached by `test_aAutomationHoverRaster`; DPR2 Voice helper predicates are called by the registered DPR2 raster test.
 
-No shared Swift helper fixture applies to this retired native file.
+S001 | drawerAutomationRasterScrolledPhantom | src/checks/automation/presentation/painting_raster.swift
+Source line: 41
+Predicate: AutomationParameterMetadata(parameter: parameter).valueText(nodeValue) == page.hoverText
+Anchor: message "the fork phantom hover has exactly its original source-value text"
+
+S002 | drawerAutomationRasterScrolledPhantom | src/checks/automation/presentation/painting_raster.swift
+Source line: 47
+Predicate: pressed && page.hasGesture
+Anchor: message "a real plot press captures the scrolled source phantom"
+
+S003 | drawerAutomationRasterScrolledPhantom | src/checks/automation/presentation/painting_raster.swift
+Source line: 57
+Predicate: page.previewPoints.contains { $0.tick == 144 && $0.value == cursorValue } && page.previewRects.contains { $0.primitiveName == "automationPreviewNode" && $0.fillColor == page.palette.selectionEdge && abs($0.y + $0.height / 2 - targetY) <= 1 }
+Anchor: message "the held phantom paints the exact tick-144 cursor-value preview"
+
+S004 | drawerAutomationRasterScrolledPhantom | src/checks/automation/presentation/painting_raster.swift
+Source line: 59
+Predicate: fixture.snapshot == original
+Anchor: message "the scrolled phantom hover and drag do not commit"
+
+S005 | drawerAutomationRasterScrolledPhantom | src/checks/automation/presentation/painting_raster.swift
+Source line: 84
+Predicate: rearmed && committed && values == ["0:\(heldValue)", "144:\(cursorValue)"] && fixture.document.revision == original.revision + 1 && fixture.document.history.undoIndex == originalIndex + 1
+Anchor: message "the fork phantom release changes the original tick-144 cursor value once without an edge duplicate"
+
+S006 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
+Source line: 90
+Predicate: valueRow && valueRow.visible && valueRow.text === AutomationTabsSupport.automationModel(testCase).hoverText && valueRow.text.length > 0 && valueRow.text.indexOf("\n") < 0
+Anchor: message "the scrolled phantom paints exactly one original source-value text row"
+
+S007 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
+Source line: 99
+Predicate: compare(testCase.forkRingQuadrants(phantomFrame, AutomationTabsSupport.automationPlot(testCase), 0, y, AutomationTabsSupport.automationModel(testCase).baseFontPx), 10)
+Anchor: message "the clipped origin phantom paints palette ring ink in both visible quadrants"
+
+S008 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
+Source line: 153
+Predicate: nodeShoulder
+Anchor: message "the scrolled Pan phantom paints node-shaped ink beyond the held preview curve"
+
+S009 | test_dpr2AutomationHoverRaster | src/checks/editorqml/tst_ShellDrawerParity.qml
+Source line: 85
+Predicate: Raster.pixelIs(testCase, ghost, ghostPoint.x, ghostPoint.y, "#302c29")
+Anchor: message "the physical DPR2 Pan insertion ghost paints primary ink"
+
+S010 | test_dpr2AutomationHoverRaster | src/checks/editorqml/tst_ShellDrawerParity.qml
+Source line: 104
+Predicate: Raster.pixelIs(testCase, idle, point.x, point.y, "#302c29")
+Anchor: message "the physical DPR2 Pan node center paints primary ink"
+
+S011 | test_dpr2AutomationHoverRaster | src/checks/editorqml/tst_ShellDrawerParity.qml
+Source line: 114
+Predicate: Raster.ringQuadrants(testCase, hovered, page, input, center, "#b9e8ee") == 15
+Anchor: message "the physical DPR2 Pan ring paints four quadrants"
+
+S012 | checkAutomationParameter | src/checks/editorqml/ShellDrawerParityRasterSupport.js
+Source line: 227
+Predicate: hover && hover.visible && pixelIs(testCase, hovered, hoverPoint.x, hoverPoint.y, "#302c29")
+Anchor: message "the insertion ghost center paints palette primary ink"
+
+S013 | checkAutomationParameter | src/checks/editorqml/ShellDrawerParityRasterSupport.js
+Source line: 257
+Predicate: abs(projected.x - node.at.x) <= 1 && abs(projected.y - node.at.y) <= 1
+Anchor: message "the written node center follows the independent tick and value projection"
+
+S014 | checkAutomationParameter | src/checks/editorqml/ShellDrawerParityRasterSupport.js
+Source line: 261
+Predicate: pixelIs(testCase, idle, fillPoint.x, fillPoint.y, "#302c29")
+Anchor: message "the written node center paints the palette primary fill"
+
+S015 | checkAutomationParameter | src/checks/editorqml/ShellDrawerParityRasterSupport.js
+Source line: 274
+Predicate: ringQuadrants(testCase, ringFrame, capture, input, projected, "#b9e8ee") == 15
+Anchor: message "the written node hover paints selection-ink annulus in four quadrants"
+
+S016 | checkAutomationParameter | src/checks/editorqml/ShellDrawerParityRasterSupport.js
+Source line: 233
+Predicate: changedPixels(testCase, hovered, repeated, inputRegion, 0) == 0
+Anchor: message ": the repeated hover is pixel-stable"
+
+S017 | checkAutomationParameter | src/checks/editorqml/ShellDrawerParityRasterSupport.js
+Source line: 230
+Predicate: testCase.revision() == before
+Anchor: message ": hovering writes nothing"
+
+S018 | checkAutomationParameter | src/checks/editorqml/ShellDrawerParityRasterSupport.js
+Source line: 243
+Predicate: testCase.revision() == before
+Anchor: message ": the hover round trip writes nothing"
+
+S019 | checkAutomationParameter | src/checks/editorqml/ShellDrawerParityRasterSupport.js
+Source line: 241
+Predicate: changedPixels(testCase, idle, cleared, inputRegion, 0) == 0
+Anchor: message ": the cleared plot matches idle"
+
+S020 | checkAutomationParameter | src/checks/editorqml/ShellDrawerParityRasterSupport.js
+Source line: 237
+Predicate: !model.hoverVisible
+Anchor: message ": leaving the plot clears the hover"
+
+S021 | checkDpr2VoicePreviewRaster (called by test_dpr2AutomationHoverRaster) | src/checks/editorqml/tst_ShellDrawerParity.qml
+Source line: 169
+Predicate: Raster.changedPixels(testCase, idle, pressed, region, 0) == 0
+Anchor: message "the DPR2 stationary Voice press retains the idle physical plot pixels"
+
+S022 | checkDpr2VoicePreviewRaster (called by test_dpr2AutomationHoverRaster) | src/checks/editorqml/tst_ShellDrawerParity.qml
+Source line: 189
+Predicate: Raster.pixelIs(testCase, draft, point.x, point.y, "#00cadb", 20) && !Raster.pixelIs(testCase, idle, point.x, point.y, "#00cadb", 20)
+Anchor: message "the DPR2 Voice moved marker paints selection-edge ink at its independent physical target"
+
+S023 | checkDpr2VoicePreviewRaster (called by test_dpr2AutomationHoverRaster) | src/checks/editorqml/tst_ShellDrawerParity.qml
+Source line: 192
+Predicate: draft.width == idle.width
+Anchor: message "the DPR2 Voice moved preview preserves its physical framebuffer width"
+
+S024 | checkDpr2VoicePreviewRaster (called by test_dpr2AutomationHoverRaster) | src/checks/editorqml/tst_ShellDrawerParity.qml
+Source line: 194
+Predicate: draft.height == idle.height
+Anchor: message "the DPR2 Voice moved preview preserves its physical framebuffer height"
+
+Shared helpers
+The historical supplemental native adaptation below is separate from these indexed Swift and QML predicates.
 
 Supplemental converted-window evidence
 
@@ -553,10 +692,11 @@ preview and horizontal cursor without committing; release commits once and one
 completed asynchronous undo restores pixels; Escape cancels with no history
 entry. Both paths end the interaction.
 
-These are adapted native observations, not an exact replay of the original
-fixture. The original assertion dispositions and aggregate parity counts remain
-unchanged. The checks exposed missing Swift node/marker hover-role publication;
-the production publication owners now update the changed rows without rebuilding
+These adapted native observations are not an exact replay of the original
+fixture. They are supplemental context only; current Task 119 dispositions and
+per-site evidence are recorded above, and this report does not alter those rows.
+The checks exposed missing Swift node/marker hover-role publication; the
+production publication owners now update the changed rows without rebuilding
 geometry.
 
 The shared gridcheck::NativeScene lives in swiftrollgated/nativefixture.h.
@@ -566,7 +706,8 @@ embedded host produced window/image DPR 1 while the grid used Screen DPR 2;
 these final-surface assertions no longer depend on that embedding boundary.
 No production QWidget compensation or speculative QML DPR handler was retained.
 
-Verification after integration:
+Historical verification for the supplemental converted-window adaptation
+(not rerun for Task 119):
 - deno task verify: 24/24 harnesses pass.
 - deno task verify:qml: 1/1 lane passes.
 - deno task lsp:swift: 6/6 targets indexed.

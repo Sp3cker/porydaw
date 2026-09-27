@@ -16,6 +16,8 @@ TestCase {
 
     property var shell: null
     readonly property var settings: bootstrap.preferences
+    readonly property string rasterFixtureRoot: bootstrap.projectRoot
+    readonly property bool rasterDpr2Child: bootstrap.rasterDpr2Child
 
     ShellQmlBootstrap { id: bootstrap }
 

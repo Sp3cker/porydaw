@@ -87,9 +87,17 @@ public struct AutomationHover: Equatable, Sendable {
                     nodeMarkersVisible: markersVisible)
             }
             if let phantom = lane.originPhantom {
-                let dy = phantom.point.y - y
+                let point = phantom.point
+                let dy = point.y - y
                 if x * x + dy * dy <= pointHitRadius * pointHitRadius {
-                    hintTarget = .originPhantom
+                    return Self(
+                        parameter: facts.parameter,
+                        tick: point.tick,
+                        value: point.value,
+                        text: facts.metadata.valueText(point.value),
+                        hasPoint: true,
+                        hintTarget: .originPhantom,
+                        nodeMarkersVisible: markersVisible)
                 }
             }
         }

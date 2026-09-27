@@ -111,6 +111,33 @@ enum ShellQmlLane {
             print("note visuals dpr2 artifact: \(artifact.path)")
             return 0
         }
+        if status == 0, entry.name == "shell-drawer-parity",
+           ProcessInfo.processInfo.environment["PORYDAW_DRAWER_RASTER_DPR2"] == nil {
+            let child = Process()
+            child.executableURL = URL(fileURLWithPath: CommandLine.arguments[0])
+            child.arguments = [entry.name, scratch, "--qt",
+                               "ShellDrawerParity::test_dpr2AutomationHoverRaster"]
+            var environment = ProcessInfo.processInfo.environment
+            environment["PORYDAW_DRAWER_RASTER_DPR2"] = "1"
+            environment["QT_SCALE_FACTOR"] = "2"
+            environment["QT_QPA_PLATFORM"] = "offscreen"
+            child.environment = environment
+            let output = Pipe()
+            child.standardOutput = output
+            child.standardError = output
+            do {
+                try child.run()
+            } catch {
+                return fail("drawer raster dpr2: child failed to start: \(error)")
+            }
+            let log = String(decoding: output.fileHandleForReading.readDataToEndOfFile(),
+                             as: UTF8.self)
+            child.waitUntilExit()
+            print("drawer raster dpr2: \(log)")
+            guard child.terminationStatus == 0 else {
+                return fail("drawer raster dpr2: capture failed (\(child.terminationStatus))")
+            }
+        }
         guard status == 0, entry.name == "shell-polyphony",
               ProcessInfo.processInfo.environment["PORYDAW_POLYPHONY_PROFILE"] == nil
         else { return status }
@@ -162,6 +189,7 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
     private static var stagedProjectRoot = ""
 
     public var projectRoot: String = ShellQmlBootstrap.stagedProjectRoot
+    @QtTracked public var rasterDpr2Child = ProcessInfo.processInfo.environment["PORYDAW_DRAWER_RASTER_DPR2"] != nil
     @QtTracked public var preferences = PreferencesStore()
 
     static func stage(projectRoot: String) {

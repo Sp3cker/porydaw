@@ -335,6 +335,8 @@ internal func runAutomationPageChecks(_ report: CheckReport, session: DocumentSe
     drawerAutomationScaleLabelsAndLaneCounts(report, suite: session, service: service)
     drawerAutomationRowStackAndSelectionIndicators(report, suite: session, service: service)
     drawerAutomationPresentationPaintingModel(report, suite: session, service: service)
+    drawerAutomationRasterHalfOpenGeometry(report, suite: session, service: service)
+    drawerAutomationRasterScrolledPhantom(report, suite: session, service: service)
     drawerAutomationParameterSwitchAndGhosts(report, suite: session, service: service)
     drawerAutomationPencilCursorKind(report, suite: session, service: service)
     drawerAutomationHitGeometry(report, suite: session, service: service)

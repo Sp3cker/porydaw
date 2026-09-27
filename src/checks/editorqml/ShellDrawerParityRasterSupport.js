@@ -130,10 +130,67 @@
         return frame
     }
 
+    function nodeCenter(testCase, input, tick, value, parameter) {
+        var grid = testCase.gridModel()
+        var font = testCase.automationModel().baseFontPx
+        var radius = Math.max(font * 3 / 16 + font / 12,
+                              font * 9 / 32 + font / 10)
+        var padding = Math.round(radius)
+        var maximum = parameter === "Tempo" ? 255 : 127
+        var minimum = parameter === "Tempo" ? 20 : 0
+        var x = Math.round((tick * grid.beatWidth / grid.ticksPerBeat
+                            - grid.cameraScrollX) * input.Screen.devicePixelRatio)
+                / input.Screen.devicePixelRatio
+        var y = input.height - padding
+                - (value - minimum) * (input.height - 2 * padding)
+                  / (maximum - minimum)
+        return { x: x, y: y, ringRadius: font * 9 / 32,
+                 ringWidth: Math.max(1, font / 12) }
+    }
+    // Route 101's copied MIDI fixture: held CC10=48 after tick 144 and held
+    // Tempo=120 BPM until the written 132 BPM event at tick 192.
+    function route101Automation(parameter) {
+        return parameter === "Pan"
+            ? { nodeTick: 144, nodeValue: 48, heldValueAt168: 48 }
+            : { nodeTick: 192, nodeValue: 132, heldValueAt168: 120 }
+    }
+
+    function physicalPoint(testCase, capture, image, input, point) {
+        var scene = input.mapToItem(capture, point.x, point.y)
+        return { x: Math.round(scene.x * image.width / capture.width),
+                 y: Math.round(scene.y * image.height / capture.height) }
+    }
+
+    function pixelIs(testCase, image, x, y, color, tolerance) {
+        if (x < 0 || y < 0 || x >= image.width || y >= image.height)
+            return false
+        return pixelDistance(testCase, image, x, y, colorChannels(testCase, color)) <= (tolerance || 3)
+    }
+
+    function ringQuadrants(testCase, image, capture, input, center, color) {
+        var position = physicalPoint(testCase, capture, image, input, center)
+        var scale = image.width / capture.width
+        var radius = center.ringRadius * scale
+        var width = center.ringWidth * scale
+        var bits = 0
+        for (var dy = -Math.ceil(radius + width); dy <= Math.ceil(radius + width); ++dy) {
+            for (var dx = -Math.ceil(radius + width); dx <= Math.ceil(radius + width); ++dx) {
+                var distance = Math.sqrt(dx * dx + dy * dy)
+                if (distance < radius - width / 2 - 0.75
+                        || distance > radius + width / 2 + 0.75)
+                    continue
+                if (pixelIs(testCase, image, position.x + dx, position.y + dy, color, 12))
+                    bits |= 1 << ((dx >= 0 ? 1 : 0) | (dy >= 0 ? 2 : 0))
+            }
+        }
+        return bits
+    }
+
     function checkAutomationParameter(testCase, parameter) {
         var page = testCase.automationPageItem()
         var input = testCase.automationPlotInput()
         var model = testCase.automationModel()
+        var expected = route101Automation(parameter)
         testCase.verify(page && input && model, "the automation page is mounted")
         var tab = null
         for (var i = 0; i < model.tabCount; ++i) {
@@ -155,9 +212,9 @@
         var capture = testCase.shell.contentItem
         var idleRegion = regionOf(testCase, testCase.grabImage(capture), capture, input)
         var idle = grabRegionStable(testCase, capture, idleRegion)
-        testCase.verify(idle.width > 0, "the idle plot composited into an image")
 
-        var insertion = { x: input.width * 0.55, y: input.height * 0.5 }
+        var held = nodeCenter(testCase, input, 168, expected.heldValueAt168, parameter)
+        var insertion = { x: held.x, y: input.height * 0.5 }
         testCase.mouseMove(input, insertion.x, insertion.y)
         testCase.verify(testCase.waitForNative(function() { return model.hoverVisible }, 3000),
                parameter + " publishes its insertion hover")
@@ -165,6 +222,11 @@
         var inputRegion = regionOf(testCase, hovered, capture, input)
         testCase.verify(changedPixels(testCase, idle, hovered, inputRegion, 0) > 0,
                parameter + ": the insertion hover paints")
+        var hover = testCase.findChild(page, "automationHoverGhost")
+        var hoverPoint = physicalPoint(testCase, capture, hovered, input, held)
+        testCase.verify(hover && hover.visible
+                        && pixelIs(testCase, hovered, hoverPoint.x, hoverPoint.y, "#302c29"),
+                        "the insertion ghost center paints palette primary ink")
         testCase.compare(testCase.revision(), before, parameter + ": hovering writes nothing")
         testCase.mouseMove(input, insertion.x, insertion.y)
         var repeated = grabRegionStable(testCase, capture, inputRegion)
@@ -185,26 +247,33 @@
         var node = null
         for (var f = 0; f < fills.length && !node; ++f) {
             var fill = fills[f]
-            if (!fill.visible)
-                continue
-            var center = fill.mapToItem(input, fill.width / 2, fill.height / 2)
-            if (center.x > 12 && center.y > 12
-                    && center.x < input.width - 12 && center.y < input.height - 12)
-                node = { item: fill, at: center }
+            if (fill.visible && fill.parent.model.tick === expected.nodeTick
+                    && fill.parent.model.value === expected.nodeValue)
+                node = { item: fill, at: fill.mapToItem(input, fill.width / 2, fill.height / 2) }
         }
-        testCase.verify(node, "the fixture exposes a written node away from plot edges")
+        testCase.verify(node, "the Route 101 lane exposes its literal written node")
+        var projected = nodeCenter(testCase, input, expected.nodeTick,
+                                   expected.nodeValue, parameter)
+        testCase.verify(Math.abs(projected.x - node.at.x) <= 1
+                        && Math.abs(projected.y - node.at.y) <= 1,
+                        "the written node center follows the independent tick and value projection")
+        var fillPoint = physicalPoint(testCase, capture, idle, input, projected)
+        testCase.verify(pixelIs(testCase, idle, fillPoint.x, fillPoint.y, "#302c29"),
+                        "the written node center paints the palette primary fill")
         var ring = testCase.findChild(node.item.parent, "automationNodeHover")
-        testCase.verify(ring, "the node carries its hover ring")
-        var ringRegion = regionOf(testCase, idle, capture, ring)
-        testCase.mouseMove(input, node.at.x, node.at.y)
+        testCase.verify(ring, "the Route 101 node carries its hover ring")
+        testCase.mouseMove(input, projected.x, projected.y)
         testCase.verify(testCase.waitForNative(function() {
             var rings = testCase.collectByName(testCase.automationPageItem(), "automationNodeHover", [])
             return rings.some(function(item) { return item.visible })
         }, 3000), parameter + ": the node hover ring draws")
         testCase.waitForRendering(testCase.tabsRoot())
-        var ringFrame = grabUntilDifferent(testCase, capture, idle, ringRegion)
-        testCase.verify(changedPixels(testCase, idle, ringFrame, ringRegion, 0) > 0,
+        var ringFrame = grabUntilDifferent(testCase, capture, idle, inputRegion)
+        testCase.verify(changedPixels(testCase, idle, ringFrame, inputRegion, 0) > 0,
                parameter + ": the ring paints")
+        testCase.compare(ringQuadrants(testCase, ringFrame, capture, input,
+                                       projected, "#b9e8ee"), 15,
+                         "the written node hover paints selection-ink annulus in four quadrants")
         testCase.compare(testCase.revision(), before, parameter + ": node hovering writes nothing")
         testCase.mouseMove(roll, 20, 20)
         testCase.verify(testCase.waitForNative(function() {

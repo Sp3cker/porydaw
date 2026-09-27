@@ -4,15 +4,25 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 Original: src/checks/automation/raster/painting.cpp
 Original SHA-256: 4ef6ea6953fe9b60e0ed3654a0645dd5ce99f7f1f1ea9a869c9e9cca59b4365a
-Swift counterpart: src/checks/automation/presentation/painting.swift
-Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml (converted QML drawer lane)
+Swift counterpart: src/checks/automation/presentation/painting.swift (existing drawer predicates).
+Additional Swift counterpart: src/checks/automation/presentation/painting_raster.swift (half-open selection geometry, serialization and interaction predicates).
+Converted QML counterpart: src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml (mounted curve, node and exact A/B/C selection raster scenarios).
 
-
-Command: deno task verify --filter swiftcore --verbose
-Result: no run result is claimed. The harness that produced these observations was deleted in 31ea635f and no lane executes it, so the RETIRED-REPRESENTATION evidence below rests on that no-ingress fact plus the surviving converted-lane predicates (src/checks/automation/presentation/painting.swift; src/checks/editorqml/tst_EditorDrawer.qml).
-Converted-window command: deno task verify:qml --verbose
-Converted-lane evidence: the controller-recorded deno task verify --filter swiftcore --verbose PASS (all harnesses in 10.26s) runs the surviving drawer predicates in src/checks/automation/presentation/painting.swift (called at src/checks/automation/AutomationPageChecks.swift, dispatched through the projectSession slot of tst_swiftcore.cpp); the retired raster pixels themselves stay unexecuted.
-
+Command: deno task verify --filter swiftcore-projectsession --verbose
+Result: PASS — swiftcore-projectsession 1/36; 35 skipped (Task 119 implementer-reported).
+Command: deno task verify:qml --filter editorqml-drawer --verbose --qt EditorDrawerLane::test_productionAutomationOriginPhantomCurveRaster EditorDrawerLane::test_productionAutomationLeadInStepAndSelectionPixels
+Result: PASS — editorqml-drawer 1/1; both focused production raster tests passed (Task 119 implementer-reported).
+Command: deno task verify:qml --verbose
+Result: PASS — editorqml-drawer 1/1, including all four reference profiles (Task 119 implementer-reported).
+Command: deno task verify:shell --filter shell-drawer-parity --verbose
+Result: PASS — shell-drawer-parity 3/75, including the actual DPR2 child (Task 119 implementer-reported).
+Evidence provenance: agent://Task119; this ledger pass did not rerun implementation verification.
+QML execution path: EditorQmlTests.swift:178-180 registers `tst_EditorDrawerAutomationCurves.qml` in `editorqml-drawer`.
+Task 119 frozen source SHA-256: 1965b43c184f327836118cd71fda0db6eab6335b278593530865de1d964782bf (src/checks/automation/presentation/painting_raster.swift)
+Task 119 frozen source SHA-256: c3569d9307ee6ae8ef0a2c3ba27554642a1bb9236f5c73aea768de7d4faf9f93 (src/checks/automation/AutomationPageChecks.swift)
+Swift execution path: SessionChecks.swift:84 calls `runAutomationPageChecks`; AutomationPageChecks.swift:338 invokes `drawerAutomationRasterHalfOpenGeometry` with its C++ proof ID.
+Task 119 frozen source SHA-256: 85645d72d5fa964e8911dfbb441f6aeea55b46616c886ad1ece3dafe84e565ad (src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml)
+Task 119 frozen source SHA-256: 9b7fd07ab387ae2d8609ff724297c7583389394bcf12ed3eb73ad8c2f7bfc6b7 (src/checks/editorqml/EditorQmlTests.swift)
 A001 | AutomationRasterTest::init | src/checks/automation/raster/painting.cpp:218
 Disposition: RETIRED-REPRESENTATION
 
@@ -41,8 +51,8 @@ A009 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/auto
 Disposition: RETIRED-REPRESENTATION
 
 A010 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:319
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/painting.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S035 — the mounted Pan held-step pixel probe finds the palette-derived lane ink at the independent midpoint.
 Source context since previous assertion:
 
 
@@ -51,8 +61,8 @@ Original expression:
                               lineProbe(midX, heldY, 8, lineHalf), geometry.curveColor));
 
 A011 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:321
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/painting.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S036 — the mounted Pan check finds palette-derived lane ink at each independently projected written marker.
 Source context since previous assertion:
 
 
@@ -61,8 +71,8 @@ Original expression:
                               nodeProbe(nodeX, nodeY, nodeRadius), geometry.curveColor));
 
 A012 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:326
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/painting.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: RETIRED-REPRESENTATION
+Mapping: RETIRED-REPRESENTATION — deleted AutomationNodes triangle-buffer structure has no user-visible pixel requirement; visible node ink remains a separate open assertion.
 Source context since previous assertion:
 
 
@@ -73,8 +83,8 @@ Original expression:
   QVERIFY2(error.isEmpty() && !normal.isNull(), qPrintable(error));
 
 A013 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:328
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/painting.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S035 — the mounted raster asserts palette-derived lane ink at the independently projected held-curve midpoint.
 Source context since previous assertion:
 
       const QPointF framebufferOrigin(fixture().automationGutterInput().bounds().width(), 0.0);
@@ -84,8 +94,8 @@ Original expression:
                                       geometry.curveColor));
 
 A014 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:330
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/painting.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S036 — written marker ink is checked on the mounted Pan plot at projected event coordinates.
 Source context since previous assertion:
 
 
@@ -94,8 +104,8 @@ Original expression:
                                       geometry.curveColor));
 
 A015 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:352
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/painting.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S037, S038 — actual selected Tempo and Pan node framebuffer crops contain selection-ring palette ink at independently derived node positions.
 Source context since previous assertion:
 
 
@@ -124,8 +134,8 @@ Original expression:
                               nodeProbe(nodeX, nodeY, ringOuter), highlight));
 
 A016 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:355
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/painting.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: RETIRED-REPRESENTATION
+Mapping: RETIRED-REPRESENTATION — deleted render-helper capture success guard is setup, not user-visible rendering behavior.
 Source context since previous assertion:
 
       const QImage selected = fixture().renderAutomationViewport(&error);
@@ -134,8 +144,8 @@ Original expression:
   QVERIFY2(error.isEmpty() && !selected.isNull(), qPrintable(error));
 
 A017 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:356
-Disposition: GAP
-Mapping/reason: GAP: no executing QML predicate covers this selected-viewport framebuffer observation (palette highlight pixel near the selection ring, captured through the deleted render plumbing); automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/painting.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S037, S038 — the mounted selected Tempo and Pan raster predicates place selection-ring ink at the independently projected selected-node annulus.
 Source context since previous assertion:
 
 
@@ -146,8 +156,8 @@ Original expression:
           highlight));
 
 A018 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:360
-Disposition: GAP
-Mapping/reason: GAP: no executing converted-lane predicate covers this AutomationSelection layer-revision observation in the selected-render sequence; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/painting.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S043 checks the mounted half-open selection reticle endpoint and unchanged node count in the Swift model fixture. Missing: it does not inspect the retired AutomationSelection layer revision counter that this site asserted.
 Source context since previous assertion:
 
 
@@ -196,8 +206,8 @@ Original expression:
                               nodeProbe(nodeX, awayNodeY, nodeRadius), awayGeometry.curveColor));
 
 A025 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:393
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/painting.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: RETIRED-REPRESENTATION
+Mapping: RETIRED-REPRESENTATION — deleted render-helper capture success guard is setup, not user-visible rendering behavior.
 Source context since previous assertion:
 
       const QImage away = fixture().renderAutomationViewport(&error);
@@ -216,8 +226,8 @@ Original expression:
                                       awayGeometry.curveColor));
 
 A027 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:397
-Disposition: GAP
-Mapping/reason: GAP: no executing converted-lane predicate covers this retained time-selection observation in the away-render sequence; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/painting.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S045 asserts the exact retained [48,73) endpoints and track scope, empty lane list and false Tempo flag in the Swift Pan selection fixture. Missing: it does not change to or render the away lane before checking retained selection, as this C++ sequence does.
 Source context since previous assertion:
 
       const auto retained = fixture().view().selectionModel().timeSelection();
@@ -231,8 +241,8 @@ A028 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/auto
 Disposition: RETIRED-REPRESENTATION
 
 A029 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:406
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/painting.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S037, S038 — after the real range selection, the mounted Tempo and Pan frames show the selected node ring in expected palette ink.
 Source context since previous assertion:
 
       fixture().automationPointerLeave();
@@ -243,8 +253,8 @@ Original expression:
                               nodeProbe(nodeX, nodeY, ringOuter), highlight));
 
 A030 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:420
-Disposition: GAP
-Mapping/reason: GAP: no executing converted-lane predicate covers this painting-configuration observation gating the selection render; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/painting.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: RETIRED-REPRESENTATION
+Mapping: RETIRED-REPRESENTATION — configurePainting is retired harness setup and does not specify a user-visible outcome.
 Source context since previous assertion:
 
   }
@@ -273,8 +283,8 @@ A033 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | sr
 Disposition: RETIRED-REPRESENTATION
 
 A034 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:451
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/painting.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: RETIRED-REPRESENTATION
+Mapping: RETIRED-REPRESENTATION — deleted render-helper capture success guard is setup, not user-visible rendering behavior.
 Source context since previous assertion:
 
       CCLaneAdapter panLane(fixture().document(), fixture().pan.track, fixture().pan.controller);
@@ -299,8 +309,8 @@ A036 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | sr
 Disposition: RETIRED-REPRESENTATION
 
 A037 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:470
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/painting.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S046, S049 — both exact half-open ranges render group A's selection-ink annulus in the mounted raster.
 Source context since previous assertion:
 
 
@@ -308,8 +318,8 @@ Original expression:
   QVERIFY(layerHasSelectionRing(nodes, groupAPoint, ringRadius, ringWidth, selectionColor));
 
 A038 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:471
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/painting.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S047, S050 — the mounted raster excludes endpoint group B for [48,72) and includes it for [48,73).
 Source context since previous assertion:
 
 
@@ -318,8 +328,8 @@ Original expression:
                includeEnd);
 
 A039 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:473
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/painting.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S048, S051 — both exact half-open ranges leave group C without selection-ring pixels.
 Source context since previous assertion:
 
 
@@ -327,8 +337,8 @@ Original expression:
   QVERIFY(!layerHasSelectionRing(nodes, groupCPoint, ringRadius, ringWidth, selectionColor));
 
 A040 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:482
-Disposition: GAP
-Mapping/reason: GAP: no executing QML predicate covers this selection-layer structure observation in the ring-render sequence; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/painting.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: RETIRED-REPRESENTATION
+Mapping: RETIRED-REPRESENTATION — timelineQuickAutomationSelection QQuickItem identity is a retired scene-graph container, not a user-visible behavior.
 Source context since previous assertion:
 
 
@@ -344,8 +354,8 @@ Original expression:
   QVERIFY(selectionLayer);
 
 A041 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:489
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/painting.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: RETIRED-REPRESENTATION
+Mapping: RETIRED-REPRESENTATION — deleted render-helper capture success guard is setup, not user-visible rendering behavior.
 Source context since previous assertion:
 
       // A track-range selection also dims unselected nodes and paints a reticle up to the
@@ -359,8 +369,8 @@ Original expression:
   QVERIFY2(error.isEmpty() && !framebuffer.isNull(), qPrintable(error));
 
 A042 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:491
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/painting.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S046, S049 — the actual frame has group A's ring pixels in both exact half-open selection variants.
 Source context since previous assertion:
 
       const int gutterWidth = qRound(fixture().automationGutterInput().bounds().width());
@@ -370,8 +380,8 @@ Original expression:
                                           nodeOuterRadius, ringRadius, ringWidth, selectionColor));
 
 A043 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:493
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/painting.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S047, S050 — the actual frame omits group B's ring at [48,72) and includes it at [48,73).
 Source context since previous assertion:
 
 
@@ -381,8 +391,8 @@ Original expression:
                includeEnd);
 
 A044 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:496
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/painting.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
+Disposition: MATCHED
+Mapping: S048, S051 — the actual frame has no group C ring in either exact half-open selection variant.
 Source context since previous assertion:
 
 
@@ -396,8 +406,7 @@ Remaining original source (closing sequence and helper bodies):
 
 
 Swift assertion predicates
-The S entries are exact predicates called by the paired Swift suite. Their presence alone
-does not close any A entry. Preserve their surrounding setup and order in the paired source.
+S entries anchor exact Swift or QML assertion literals in the final suites. The Swift raster checks run from `SessionChecks.swift:84` through `runAutomationPageChecks` to `drawerAutomationRasterHalfOpenGeometry`; the mounted curves test is registered by `EditorQmlTests.swift:178-180` in `editorqml-drawer`. Predicate presence alone does not prove execution or correspondence.
 
 S001 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "a centered parameter emits maximum, minimum and neutral labels"
@@ -500,3 +509,87 @@ Anchor: message "the pin toggles off again"
 
 S034 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "unpinning drops the ghost label"
+S035 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
+Source line: 391
+Predicate: inkAt(steps, xAt(midway), panY(points[0].value), 2) < 30
+Anchor: message "the held CC step paints the same lane ink"
+
+S036 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
+Source line: 395
+Predicate: inkAt(steps, xAt(points[n].tick) + (points[n].tick === 0 ? 1 : 0), panY(points[n].value) - model.baseFontPx * 3 / 16, 1) < 30
+Anchor: message "each written CC marker paints lane ink"
+
+S037 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
+Source line: 356
+Predicate: PixelSupport.nearestPixel(testCase, selectedTempo, testCase.automationPaintRegion(selectedTempo, plot, xAt(96), yAt(150), model.baseFontPx * 9 / 32 + 1), ringInk).distance < 30
+Anchor: message "the selected Tempo node paints its highlight ring"
+
+S038 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
+Source line: 408
+Predicate: ringDistance(excluded, points[0]) < 30
+Anchor: message "the first half-open Pan node paints its highlight ring"
+
+S039 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
+Source line: 410
+Predicate: ringDistance(excluded, points[1]) > 30
+Anchor: message "the endpoint Pan node paints no highlight ring"
+
+S040 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
+Source line: 412
+Predicate: ringDistance(excluded, points[2]) > 30
+Anchor: message "the later Pan node paints no highlight ring"
+
+S041 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
+Source line: 420
+Predicate: selection && nearestPixel(excluded, edgeRegion, edgeInk).distance < 30
+Anchor: message "the half-open selection paints its reticle edge"
+
+S042 | drawerAutomationRasterHalfOpenGeometry | src/checks/automation/presentation/painting_raster.swift
+Source line: 122
+Predicate: page.publishedNodes.filter(\.selected).allSatisfy { $0.ringRadius > $0.radius && $0.ringColor == page.palette.selectionRing }
+Anchor: message "each selected fork Pan group publishes an outer selection annulus"
+
+S043 | drawerAutomationRasterHalfOpenGeometry | src/checks/automation/presentation/painting_raster.swift
+Source line: 128
+Predicate: page.selectionRects.count == 3 && abs(page.selectionRects[2].x + page.selectionRects[2].width - fixture.x(endTick)) <= 1 && page.publishedNodes.count == normal.count
+Anchor: message "the selection reticle's drawn edge follows the fork half-open endpoint without dropping nodes"
+
+S044 | drawerAutomationRasterHalfOpenGeometry | src/checks/automation/presentation/painting_raster.swift
+Source line: 130
+Predicate: bytes != nil && bytes == (try? fixture.document.captureSave().bytes)
+Anchor: message "changing track range preserves exact serialized song bytes"
+
+S045 | drawerAutomationRasterHalfOpenGeometry | src/checks/automation/presentation/painting_raster.swift
+Source line: 136
+Predicate: fixture.session.timeSelection == AutomationTimeSelection(range: TimeRange(startTick: 48, endTick: 73), scope: .tracks([0]))
+Anchor: message "the retained fork selection has exact endpoints, track scope, empty lane list and false Tempo flag"
+
+S046 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
+Source line: 506
+Predicate: compare(a, 15, fine ? "[48,73) Pan A" : "[48,72) Pan A")
+Anchor: message "the [48,72) Pan A ring paints four exact selection-ink quadrants"
+
+S047 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
+Source line: 508
+Predicate: compare(b, fine ? 15 : 0, fine ? "[48,73) Pan B" : "[48,72) Pan B")
+Anchor: message "the [48,72) Pan B ring paints no selection-ink quadrants"
+
+S048 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
+Source line: 511
+Predicate: compare(c, 0, fine ? "[48,73) Pan C" : "[48,72) Pan C")
+Anchor: message "the [48,72) Pan C ring paints no selection-ink quadrants"
+
+S049 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
+Source line: 506
+Predicate: compare(a, 15, fine ? "[48,73) Pan A" : "[48,72) Pan A")
+Anchor: message "the [48,73) Pan A ring paints four exact selection-ink quadrants"
+
+S050 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
+Source line: 508
+Predicate: compare(b, fine ? 15 : 0, fine ? "[48,73) Pan B" : "[48,72) Pan B")
+Anchor: message "the [48,73) Pan B ring paints four exact selection-ink quadrants"
+
+S051 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
+Source line: 511
+Predicate: compare(c, 0, fine ? "[48,73) Pan C" : "[48,72) Pan C")
+Anchor: message "the [48,73) Pan C ring paints no selection-ink quadrants"

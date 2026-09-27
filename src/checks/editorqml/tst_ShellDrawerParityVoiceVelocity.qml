@@ -38,6 +38,9 @@ ShellDrawerParitySupport {
                 marker = center
         }
         verify(marker, "a voice marker maps inside the plot")
+        var sourceTick = 0
+        compare(line.parent.model.tick, sourceTick,
+                "the Route 101 Voice drag starts at the fixture's written tick-zero marker")
         mouseMove(input, marker.x, marker.y)
         tryCompare(model, "hoverHintProfile", 21, 3000,
                    "the marker hover resolves its hint profile")
@@ -73,6 +76,19 @@ ShellDrawerParitySupport {
         compare(input.cursorShape, Qt.SizeHorCursor, "the plot draws the drag cursor")
         waitForRendering(tabsRoot())
         var draft = Raster.grabUntilDifferent(testCase, capture, idle, inputRegion)
+        var ticksPerBeat = gridModel().ticksPerBeat
+        var deltaTick = target.x > marker.x ? 2 * ticksPerBeat : -2 * ticksPerBeat
+        var expectedTick = Math.round(sourceTick + deltaTick)
+        var expectedX = Math.round((expectedTick * beatWidth / ticksPerBeat
+                                    - gridModel().cameraScrollX) * devicePixelRatioFor(input))
+                        / devicePixelRatioFor(input)
+        verify(Math.abs(model.previewX - expectedX) <= 1,
+               "the moved Voice preview projects its exact source tick plus two beats")
+        var previewPoint = Raster.physicalPoint(testCase, capture, draft, input,
+                                                { x: expectedX, y: input.height * 0.75 })
+        verify(Raster.pixelIs(testCase, draft, previewPoint.x, previewPoint.y, "#00cadb", 20)
+               && !Raster.pixelIs(testCase, idle, previewPoint.x, previewPoint.y, "#00cadb", 20),
+               "the moved Voice preview paints selection-edge ink only at its projected cursor")
         verify(Raster.changedPixels(testCase, idle, draft, inputRegion, 0) > 0, "the draft paints")
         compare(draft.width, idle.width, "the draft keeps the frame size")
         compare(revision(), before, "dragging writes nothing yet")

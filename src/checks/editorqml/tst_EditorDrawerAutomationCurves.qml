@@ -16,16 +16,48 @@ EditorDrawerTestSupport {
     function test_productionAutomationOriginPhantomCurveRaster() {
         if (testCase.containerPhase) skip("the production owner runs in its own process")
         AutomationTabsSupport.mountProductionAutomation(testCase, "automation-origin-phantom-curve")
-        verify(AutomationGestureSupport.writeVolumeLanePoints(testCase, bootstrap.automationVolumeIndex()))
+        var model = AutomationTabsSupport.automationModel(testCase)
         var input = AutomationTabsSupport.automationPlotInput(testCase)
         var grid = testCase.surface.gridModel
-        var written = AutomationGestureSupport.automationLaneNodes(testCase)[AutomationGestureSupport.automationWrittenNodeIndex(testCase)]
-        verify(written, "the written lane provides a source for the origin phantom")
+        var panTab = bootstrap.automationPanIndex()
+        AutomationTabsSupport.clickAutomationTab(testCase, panTab)
+        AutomationMenuSupport.openAutomationTabMenu(testCase, panTab)
+        verify(AutomationMenuSupport.triggerAutomationMenuRow(testCase, 5),
+               "the real Pan Clear removes old points before the exact origin-phantom fixture")
+        tryVerify(function() { return bootstrap.automationLaneEventCount() === 0 }, 2000,
+                  "the origin-phantom Pan fixture starts with an empty lane")
+        var sourceX = 144 * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX
+        var padding = Math.round(Math.max(model.baseFontPx * 3 / 16 + model.baseFontPx / 12,
+                                          model.baseFontPx * 9 / 32 + model.baseFontPx / 10))
+        var y = input.height - padding - 95 * (input.height - 2 * padding) / 127
+        model.isPencilMode = true
+        mousePress(input, sourceX + 1, y, Qt.LeftButton)
+        mouseRelease(input, sourceX + 1, y, Qt.LeftButton)
+        model.isPencilMode = false
+        var transitions = bootstrap.automationLaneValues().split(",").filter(function(pair) {
+            return pair.length > 0 && Number(pair.split(":")[0]) !== 144
+        })
+        for (var step = 0; step < transitions.length; ++step) {
+            var tick = Number(transitions[step].split(":")[0])
+            tryVerify(function() {
+                return AutomationGestureSupport.automationLaneNodes(testCase).some(function(node) {
+                    return node.model.tick === tick
+                })
+            }, 2000, "the trailing pencil transition is drawn before its real node-menu removal")
+            var nodes = AutomationGestureSupport.automationLaneNodes(testCase)
+            var index = nodes.findIndex(function(node) {
+                return !node.model.phantom && node.model.tick === tick
+            })
+            verify(index >= 0 && AutomationMenuSupport.openAutomationNodeMenu(testCase, index)
+                   && AutomationMenuSupport.clickAutomationMenuRow(testCase, 2),
+                   "the real node menu removes a trailing pencil transition from the phantom fixture")
+        }
+        compare(bootstrap.automationLaneValues(), "144:95",
+                "the exact Pan origin-phantom fixture has one written tick-144 value-95 node")
         var status = findChild(testCase.surface, "mouseHintStatus")
         var hint = findChild(status, "mouseHintStatusText")
         verify(hint, "the mounted phantom hint reaches the status strip")
-        var nodePoint = AutomationGestureSupport.automationNodePoint(testCase, written)
-        mouseMove(input, nodePoint.x, nodePoint.y)
+        mouseMove(input, sourceX, y)
         tryVerify(function() { return hint.text.length > 0 }, 2000,
                   "the written node offers an operational hint")
         var nodeHint = hint.text
@@ -35,14 +67,14 @@ EditorDrawerTestSupport {
         tryVerify(function() { return hint.text.length > 0 && hint.text !== nodeHint },
                   2000, "the sweep hint differs from the written-node hint")
         var sweepHint = hint.text
-        grid.setCameraHScroll(grid.cameraScrollX + written.model.x + 18)
+        grid.setCameraHScroll(grid.cameraScrollX + sourceX + 18)
         var phantom = null
         tryVerify(function() {
             var nodes = AutomationTabsSupport.automationNodeItems(testCase)
             phantom = nodes.find(function(node) { return node.model.phantom })
             return phantom !== undefined && phantom !== null
-        }, 2000, "the scrolled lane draws its real origin phantom")
-        var y = phantom.model.y
+                && phantom.model.tick === 144 && phantom.model.value === 95
+        }, 2000, "the scrolled tick-144 value-95 Pan source draws its origin phantom")
         var delta = y < input.height / 2 ? 30 : -30
         mouseMove(input, 1, y)
         tryCompare(input, "cursorShape", Qt.ArrowCursor, 2000,
@@ -50,8 +82,22 @@ EditorDrawerTestSupport {
         tryVerify(function() {
             return hint.text.length > 0 && hint.text !== nodeHint && hint.text !== sweepHint
         }, 2000, "the actual plot owns distinct origin-phantom instructions")
+        var valueRow = findChild(testCase.surface, "automationHoverLabel")
+        tryVerify(function() {
+            return valueRow && valueRow.visible && valueRow.text ===
+                AutomationTabsSupport.automationModel(testCase).hoverText
+                && valueRow.text.length > 0 && valueRow.text.indexOf("\n") < 0
+        }, 2000, "the scrolled phantom paints exactly one original source-value text row")
+        var phantomRing = findChild(phantom, "automationNodeHover")
+        tryVerify(function() { return phantomRing && phantomRing.visible }, 2000,
+                  "the scrolled origin phantom publishes its source-node hover annulus")
+        waitForRendering(testCase.surface)
+        var phantomFrame = grabImage(testCase.surface)
+        compare(testCase.forkRingQuadrants(
+                    phantomFrame, AutomationTabsSupport.automationPlot(testCase),
+                    0, y, AutomationTabsSupport.automationModel(testCase).baseFontPx), 10,
+                "the clipped origin phantom paints palette ring ink in both visible quadrants")
         var phantomHint = hint.text
-        var model = AutomationTabsSupport.automationModel(testCase)
         model.isPencilMode = true
         var pencilPoint = AutomationGestureSupport.automationFreePoint(testCase)
         verify(pencilPoint, "the scrolled lane has a free pencil location")
@@ -71,6 +117,43 @@ EditorDrawerTestSupport {
         mouseMove(input, 1, y + 3 * delta, -1, Qt.LeftButton)
         waitForRendering(input)
         var moved = grabImage(testCase.surface)
+        var target = input.mapToItem(testCase.surface, 1, y + 2 * delta)
+        var targetX = Math.round(target.x * moved.width / testCase.surface.width)
+        var targetY = Math.round(target.y * moved.height / testCase.surface.height)
+        function transientInk(frame, px, py) {
+            return Math.abs(frame.red(px, py)) <= 12
+                && Math.abs(frame.green(px, py) - 202) <= 12
+                && Math.abs(frame.blue(px, py) - 219) <= 12
+        }
+        var targetedInk = false
+        for (var dy = -1; dy <= 1; ++dy) {
+            for (var dx = -1; dx <= 1; ++dx) {
+                var px = targetX + dx, py = targetY + dy
+                targetedInk = targetedInk || (transientInk(moved, px, py)
+                                                && !transientInk(first, px, py))
+            }
+        }
+        var nodeShoulder = false
+        var shoulderOffset = Math.ceil(model.baseFontPx * 3 / 16
+                                       * moved.height / testCase.surface.height)
+        for (var shoulderX = targetX - 1; shoulderX <= targetX + 2; ++shoulderX) {
+            for (var side = -1; side <= 1; side += 2) {
+                var shoulderY = targetY + side * shoulderOffset
+                nodeShoulder = nodeShoulder
+                    || (transientInk(moved, shoulderX, shoulderY)
+                        && !transientInk(first, shoulderX, shoulderY))
+            }
+        }
+        var curveOnlyScene = input.mapToItem(testCase.surface,
+                                             model.baseFontPx * 3, y + 2 * delta)
+        var curveOnlyX = Math.round(curveOnlyScene.x * moved.width / testCase.surface.width)
+        verify(targetedInk,
+               "the scrolled Pan phantom paints selection-edge ink near the independently projected draft target")
+        verify(nodeShoulder,
+               "the scrolled Pan phantom paints node-shaped ink beyond the held preview curve")
+        verify(!transientInk(moved, curveOnlyX, targetY - shoulderOffset)
+               && !transientInk(moved, curveOnlyX, targetY + shoulderOffset),
+               "the held preview curve lacks node-shaped shoulders away from the scrolled Pan phantom")
         var region = PixelSupport.regionOf(testCase, first, testCase.surface, input)
         var sx = (region.x1 - region.x0 + 1) / input.width
         var sy = (region.y1 - region.y0 + 1) / input.height
@@ -141,6 +224,31 @@ EditorDrawerTestSupport {
                  x1: Math.round((origin.x + radius) * sx),
                  y0: Math.round((origin.y - radius) * sy),
                  y1: Math.round((origin.y + radius) * sy) }
+    }
+
+    function forkRingQuadrants(image, plot, x, y, fontPx) {
+        var scene = plot.mapToItem(testCase.surface, x, y)
+        var scale = image.width / testCase.surface.width
+        var centerX = Math.round(scene.x * scale)
+        var centerY = Math.round(scene.y * image.height / testCase.surface.height)
+        var radius = fontPx * 9 / 32 * scale
+        var stroke = Math.max(1, fontPx / 12) * scale
+        var bits = 0
+        for (var dy = -Math.ceil(radius + stroke); dy <= Math.ceil(radius + stroke); ++dy) {
+            for (var dx = -Math.ceil(radius + stroke); dx <= Math.ceil(radius + stroke); ++dx) {
+                var distance = Math.sqrt(dx * dx + dy * dy)
+                if (distance < radius - stroke - 0.75 || distance > radius + 0.75)
+                    continue
+                var px = centerX + dx, py = centerY + dy
+                if (px < 0 || py < 0 || px >= image.width || py >= image.height)
+                    continue
+                if (Math.abs(image.red(px, py) - 185) <= 12
+                        && Math.abs(image.green(px, py) - 232) <= 12
+                        && Math.abs(image.blue(px, py) - 238) <= 12)
+                    bits |= 1 << ((dx >= 0 ? 1 : 0) | (dy >= 0 ? 2 : 0))
+            }
+        }
+        return bits
     }
 
     function test_productionAutomationLeadInStepAndSelectionPixels() {
@@ -321,6 +429,90 @@ EditorDrawerTestSupport {
                "extending the endpoint paints the second highlight ring")
         verify(ringDistance(included, points[2]) > 30,
                "the extended range still excludes the third highlight ring")
+        AutomationMenuSupport.openAutomationTabMenu(testCase, panTab)
+        verify(AutomationMenuSupport.triggerAutomationMenuRow(testCase, 5),
+               "the Pan Clear row receives a real click before the fork-exact groups are written")
+        ++edits
+        tryVerify(function() { return bootstrap.automationLaneEventCount() === 0 },
+                  2000, "the real Pan Clear removes the old fixture nodes")
+        function forkY(value) {
+            var font = model.baseFontPx
+            var padding = Math.round(Math.max(font * 3 / 16 + font / 12,
+                                              font * 9 / 32 + font / 10))
+            return input.height - padding - value * (input.height - 2 * padding) / 127
+        }
+        var forkGroups = [{ tick: 48, value: 40 }, { tick: 72, value: 80 },
+                          { tick: 120, value: 55 }]
+        model.isPencilMode = true
+        for (var group = 0; group < forkGroups.length; ++group) {
+            var source = forkGroups[group]
+            mousePress(input, xAt(source.tick) + 1, forkY(source.value), Qt.LeftButton)
+            mouseRelease(input, xAt(source.tick) + 1, forkY(source.value), Qt.LeftButton)
+            ++edits
+        }
+        model.isPencilMode = false
+        var forkTicks = forkGroups.map(function(group) { return group.tick })
+        var transitions = bootstrap.automationLaneValues().split(",").filter(function(pair) {
+            return pair.length > 0 && forkTicks.indexOf(Number(pair.split(":")[0])) < 0
+        })
+        for (var transition = 0; transition < transitions.length; ++transition) {
+            var tick = Number(transitions[transition].split(":")[0])
+            var nodesToClean = AutomationGestureSupport.automationLaneNodes(testCase)
+            var index = nodesToClean.findIndex(function(node) {
+                return !node.model.phantom && node.model.tick === tick
+            })
+            verify(index >= 0 && AutomationMenuSupport.openAutomationNodeMenu(testCase, index)
+                   && AutomationMenuSupport.clickAutomationMenuRow(testCase, 2),
+                   "the fork setup removes a visible trailing pencil transition")
+            ++edits
+        }
+        tryVerify(function() { return bootstrap.automationLaneEventCount() === 3 }, 3000,
+                  "three fork Pan groups remain after pointer setup")
+        compare(bootstrap.automationLaneValues(), "48:40,72:80,120:55",
+                "the real Pan pointer routes leave exactly the fork A/B/C ticks and values")
+        plot.forceActiveFocus(Qt.OtherFocusReason)
+        keyClick(Qt.Key_Escape)
+        tryVerify(function() { return bootstrap.automationSelectionRange() === "" }, 1000,
+                  "Escape clears the preceding range before the fork's real pointer selection")
+        var forkNodes = AutomationGestureSupport.automationLaneNodes(testCase)
+        for (var group = 0; group < forkGroups.length; ++group) {
+            var expected = forkGroups[group]
+            var handle = forkNodes.find(function(node) {
+                return node.model.tick === expected.tick && !node.model.phantom
+            })
+            verify(handle && !handle.model.selected
+                   && Math.abs(handle.model.x - xAt(expected.tick)) <= 1
+                   && Math.abs(handle.model.y - forkY(expected.value)) <= 1
+                   && Math.abs(handle.model.ringRadius - model.baseFontPx * 9 / 32) <= 0.5,
+                   "each fork Pan group publishes independently projected node and annulus geometry")
+        }
+        function forkSelection(endTick) {
+            var fine = endTick === 73
+            if (fine) keyPress(Qt.Key_Alt)
+            mousePress(input, xAt(48) + 1, bandY, Qt.RightButton,
+                       fine ? Qt.AltModifier : Qt.NoModifier)
+            mouseMove(input, xAt(endTick) + (fine ? 0 : 1), bandY, -1, Qt.RightButton)
+            mouseRelease(input, xAt(endTick) + (fine ? 0 : 1), bandY, Qt.RightButton,
+                         fine ? Qt.AltModifier : Qt.NoModifier)
+            if (fine) keyRelease(Qt.Key_Alt)
+            compare(bootstrap.automationSelectionRange(), "48:" + endTick,
+                    fine ? "the fork Pan pointer selects the exact half-open range [48,73)"
+                         : "the fork Pan pointer selects the exact half-open range [48,72)")
+            waitForRendering(testCase.surface)
+            var raster = grabImage(testCase.surface)
+            var a = testCase.forkRingQuadrants(raster, plot, xAt(48), forkY(40), model.baseFontPx)
+            var b = testCase.forkRingQuadrants(raster, plot, xAt(72), forkY(80), model.baseFontPx)
+            var c = testCase.forkRingQuadrants(raster, plot, xAt(120), forkY(55), model.baseFontPx)
+            compare(a, 15, fine ? "the [48,73) Pan A ring paints four exact selection-ink quadrants"
+                                : "the [48,72) Pan A ring paints four exact selection-ink quadrants")
+            compare(b, fine ? 15 : 0,
+                    fine ? "the [48,73) Pan B ring paints four exact selection-ink quadrants"
+                         : "the [48,72) Pan B ring paints no selection-ink quadrants")
+            compare(c, 0, fine ? "the [48,73) Pan C ring paints no selection-ink quadrants"
+                               : "the [48,72) Pan C ring paints no selection-ink quadrants")
+        }
+        forkSelection(72)
+        forkSelection(73)
         } finally {
             model.isPencilMode = false
             for (var edit = 0; edit < edits; ++edit)

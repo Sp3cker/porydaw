@@ -208,6 +208,7 @@ if(APPLE)
         automation/presentation/painting.swift
         automation/presentation/tst_automationpresentation.swift
         automation/automationcanvaslayout.swift
+        automation/presentation/painting_raster.swift
         automation/automationpointmenus.swift
         automation/automationclipboard.swift
         automation/automationcanvasediting.swift
