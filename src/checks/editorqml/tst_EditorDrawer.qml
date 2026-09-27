@@ -7558,6 +7558,9 @@ TestCase {
         var cursor = testCase.surface.gridModel.editCursorTick
         var split = testCase.surface.timelineSplitX
         var original = section.bodyHeight
+        var rollPlot = findChild(testCase.surface, "timelineQuickRollPlot")
+        verify(rollPlot && rollPlot.width > 0, "the mounted roll has live geometry before resize")
+        var minimumHeight = 0
         try {
             for (var e = 0; e < 2; ++e) {
                 presenter.setSectionBodyHeight(testCase.automationKind, e ? 100000 : 0)
@@ -7566,6 +7569,19 @@ TestCase {
                              "the clamped body extremes follow the drawer's own policy")
                 fuzzyCompare(plot.height, section.bodyHeight, 0.01,
                              "the clamped body extremes follow the drawer's own policy")
+                verify(section.bodyHeight > 0, "automation resize retains a positive viewport")
+                if (!e) {
+                    minimumHeight = section.bodyHeight
+                } else {
+                    verify(section.bodyHeight > minimumHeight,
+                           "automation drawer maximum extent exceeds its positive minimum")
+                }
+                fuzzyCompare(page.width, plot.width + split, 0.01,
+                             "the resized viewport retains its complete width")
+                fuzzyCompare(rollPlot.mapToItem(testCase.surface, 0, 0).x, split, 0.01,
+                             "the roll plot is re-read aligned to the split after resize")
+                verify(scroller.contentHeight > 0,
+                       "the parameter stack retains positive content at both drawer extents")
                 if (!e) {
                     verify(scroller.contentHeight > scroller.height,
                            "at the minimum body the tab stack overflows the scroller")
@@ -7663,8 +7679,13 @@ TestCase {
         var revision = bootstrap.automationDocumentRevision()
         var cursor = grid.editCursorTick
         var split = testCase.surface.timelineSplitX
-        testCase.clickAutomationTab(empty)
-        tryVerify(function() { return bootstrap.automationActiveParameterIndex() === empty },
+        var bend = testCase.automationTabItems().find(function(tab) {
+            return tab.text === "Bend range"
+        })
+        verify(bend && bend.model.eventCount === 0,
+               "the exact BendRange parameter is the empty lane")
+        testCase.clickAutomationTab(bend.model.index)
+        tryVerify(function() { return bootstrap.automationActiveParameterIndex() === bend.model.index },
                   1000, "activating an empty lane preserves the grid resolution")
         compare(grid.snapTicks, snap, "activating an empty lane preserves the grid resolution")
         compare(grid.visibleGridTicks, visible,
@@ -7699,6 +7720,8 @@ TestCase {
         presenter.setSectionBodyHeight(testCase.automationKind, 140)
         testCase.awaitRenderedLayout()
         var height = testCase.section(testCase.automationKind).bodyHeight
+        var viewport = [testCase.automationPageItem().width, testCase.automationPageItem().height]
+        var split = testCase.surface.timelineSplitX
         var revision = bootstrap.automationDocumentRevision()
         testCase.clickToggle(testCase.velocityKind)
         testCase.awaitRenderedLayout()
@@ -7711,6 +7734,10 @@ TestCase {
                 "a drawer page switch preserves the automation view state")
         fuzzyCompare(testCase.section(testCase.automationKind).bodyHeight, height, 0.01,
                      "a drawer page switch preserves the automation view state")
+        compare([testCase.automationPageItem().width, testCase.automationPageItem().height],
+                viewport, "the complete automation viewport survives the drawer page switch")
+        fuzzyCompare(testCase.surface.timelineSplitX, split, 0.01,
+                     "the timeline split survives the drawer page switch")
         compare(bootstrap.automationDocumentRevision(), revision,
                 "a drawer page switch preserves the automation view state")
         testCase.openAutomationTabMenu(index)
@@ -7748,6 +7775,10 @@ TestCase {
         var states = kinds.map(function(kind) {
             return [testCase.section(kind).visible, testCase.section(kind).bodyHeight]
         })
+        var activePage = testCase.snapshotStore("automation-wheel-zoom").activePage
+        var split = testCase.surface.timelineSplitX
+        var viewport = [testCase.automationPageItem().width,
+                        testCase.automationPageItem().height]
         mouseWheel(input, point.x, point.y, 0, 120, Qt.NoButton, Qt.NoModifier)
         tryVerify(function() { return grid.beatWidth > width }, 1000,
                   "wheel zoom keeps the anchor tick under the pointer")
@@ -7762,8 +7793,33 @@ TestCase {
         compare(bootstrap.automationDocumentRevision(), revision,
                 "the zoom preserves the drawer's page state")
         compare(grid.editCursorTick, cursor, "the zoom preserves the drawer's page state")
-        testCase.presenter().setSectionBodyHeight(testCase.automationKind, 0)
+        compare(testCase.snapshotStore("automation-wheel-zoom").activePage, activePage,
+                "wheel zoom retains the active drawer page")
+        compare([testCase.automationPageItem().width, testCase.automationPageItem().height],
+                viewport, "wheel zoom retains the complete automation viewport")
+        fuzzyCompare(testCase.surface.timelineSplitX, split, 0.01,
+                     "wheel zoom retains the timeline split")
+        var beforeResize = testCase.section(testCase.automationKind).bodyHeight
+        var requestedHeight = beforeResize - Math.max(1, Math.floor(beforeResize / 4))
+        testCase.presenter().setSectionBodyHeight(testCase.automationKind, requestedHeight)
         testCase.awaitRenderedLayout()
+        var afterResize = testCase.section(testCase.automationKind).bodyHeight
+        compare(afterResize, requestedHeight,
+                "automation resize resolves the directly requested viewport height")
+        verify(afterResize !== beforeResize, "the requested automation viewport height really changes")
+        fuzzyCompare(testCase.automationPageItem().height, afterResize, 0.01,
+                     "the actual automation viewport height equals the requested drawer height")
+        for (var other = 1; other < kinds.length; ++other) {
+            compare(testCase.section(kinds[other]).visible, states[other][0],
+                    "automation resize retains other drawer section visibility")
+            fuzzyCompare(testCase.section(kinds[other]).bodyHeight, states[other][1], 0.01,
+                         "automation resize retains other drawer section height")
+        }
+        var canonicalPage = activePage === "string:automation" ? "string:automations" : activePage
+        compare(testCase.snapshotStore("automation-wheel-zoom").activePage, canonicalPage,
+                "automation resize retains the active drawer page after canonical preference write")
+        fuzzyCompare(testCase.surface.timelineSplitX, split, 0.01,
+                     "automation resize retains the timeline split")
         fuzzyCompare(testCase.automationPlot().mapToItem(testCase.surface, 0, 0).x,
                      testCase.surface.timelineSplitX, 0.01,
                      "the zoom preserves the drawer's page state")

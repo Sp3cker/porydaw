@@ -260,14 +260,14 @@ extension AutomationPage {
 
 @MainActor
 extension AutomationPage {
-    func openCapturedPrompt(tick: Tick, value: Int) -> Bool {
+    func openCapturedPrompt(tick: Tick, value: Int, insertion: Bool = false) -> Bool {
         guard let facts = frozenFacts(modifiers: .init()) else { return false }
-        let occupants = facts.occupants(at: tick)
+        let source = insertion ? nil : facts.occupants(at: tick).last
         let nextPrompt = AutomationPromptTransaction(
             facts: facts,
             anchor: AutomationLanePoint(tick: tick, value: value),
-            source: occupants.last,
-            forExistingNode: !occupants.isEmpty,
+            source: source,
+            forExistingNode: source != nil,
             metadata: facts.metadata)
         applyPrompt(nextPrompt)
         guard let nextPrompt else { return false }

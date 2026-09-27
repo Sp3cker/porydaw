@@ -893,6 +893,151 @@ TestCase {
                 "clean numeric editing leaves no pending dirty-tab close")
     }
 
+    function test_cAutomationInsertionPrompts() {
+        openTwoSongShell()
+        var surface = selectedSurface()
+        var session = shell.shellPresenter.session
+        var toggle = findChild(surface, "drawerToggle_automation")
+        verify(toggle && toggle.visible, "the automation drawer toggle is mounted")
+        if (!surface.drawerPresenter.automationSection.visible)
+            mouseClick(toggle, toggle.width / 2, toggle.height / 2)
+        var page = null
+        tryVerify(function() {
+            page = findChild(surface, "automationPage")
+            return page && page.visible && page.height > 0
+        }, 3000, "the insertion prompt has a mounted automation page")
+        var model = session.automationPage()
+        var tempo = null
+        for (var i = 0; i < page.pageModel.tabCount; ++i) {
+            var candidate = findChild(page, "automationParameterTab" + i)
+            if (candidate && candidate.text === "Tempo") {
+                tempo = candidate
+                break
+            }
+        }
+        verify(tempo, "the mounted selector offers Tempo")
+        verify(model.activateParameter(tempo.model.index) || tempo.checked,
+               "the production Tempo selector activates")
+        tryCompare(tempo, "checked", true, 3000)
+        var grid = surface.gridModel
+        var beforeTempo = grid.appliedRevisionText
+        verify(model.openInsertionPrompt(24, 140), "the production presenter opens Tempo insertion")
+        var field = null
+        tryVerify(function() {
+            field = findChild(page, "automationPromptInput")
+            return field && field.activeFocus
+        }, 3000, "Tempo insertion focuses the actual numeric input")
+        compare(field.text, "140", "Tempo insertion displays the exact 140 draft")
+        compare(field.selectedText, "140", "Tempo insertion selects the entire 140 draft")
+        keyClick(Qt.Key_9)
+        keyClick(Qt.Key_0)
+        compare(field.text, "90", "real digits replace the selected Tempo draft")
+        keyClick(Qt.Key_Enter)
+        tryCompare(model, "promptOpen", false, 3000)
+        verify(grid.appliedRevisionText !== beforeTempo,
+               "Tempo insertion commits a document revision through Enter")
+        var plot = findChild(page, "automationPlot")
+        tryCompare(plot, "activeFocus", true, 3000,
+                   "accepted insertion returns focus to automation")
+
+        var pan = null
+        for (i = 0; i < page.pageModel.tabCount; ++i) {
+            candidate = findChild(page, "automationParameterTab" + i)
+            if (candidate && candidate.text === "Pan") {
+                pan = candidate
+                break
+            }
+        }
+        verify(pan, "the mounted selector offers CC10 Pan")
+        verify(model.activateParameter(pan.model.index) || pan.checked,
+               "the production Pan selector activates")
+        tryCompare(pan, "checked", true, 3000)
+        var beforePanCancel = grid.appliedRevisionText
+        var beforePanNotes = grid.noteSummary
+        var beforePanUndo = session.canUndo
+        verify(model.openInsertionPrompt(96, 64),
+               "value-prompt CC10 insertion opens at empty tick 96")
+        tryVerify(function() {
+            field = findChild(page, "automationPromptInput")
+            return field && field.activeFocus
+        }, 3000, "tick-96 insertion focuses the mounted numeric field")
+        compare(field.text, "0", "tick-96 CC10 insertion displays exact signed zero")
+        keyClick(Qt.Key_Escape)
+        tryCompare(model, "promptOpen", false, 3000)
+        compare(grid.appliedRevisionText, beforePanCancel,
+                "tick-96 insertion Escape preserves the document revision")
+        compare(grid.noteSummary, beforePanNotes,
+                "tick-96 insertion Escape preserves selected notes")
+        compare(session.canUndo, beforePanUndo,
+                "tick-96 insertion Escape preserves history availability")
+        tryCompare(plot, "activeFocus", true, 3000,
+                   "tick-96 insertion Escape returns automation plot focus")
+        verify(model.openInsertionPrompt(48, 32), "CC10 fixture inserts its tick-48 node")
+        model.updatePromptDraft("-32")
+        verify(model.acceptPromptDraft(), "CC10 fixture records tick-48")
+        verify(model.openInsertionPrompt(96, 64), "CC10 fixture inserts its tick-96 node")
+        model.updatePromptDraft("0")
+        verify(model.acceptPromptDraft(), "CC10 fixture records tick-96")
+        var velocityToggle = findChild(surface, "drawerToggle_velocity")
+        verify(velocityToggle && velocityToggle.visible, "the Littleroot velocity drawer toggle is mounted")
+        if (!surface.drawerPresenter.section(bootstrap.velocitySectionKind()).visible)
+            mouseClick(velocityToggle, velocityToggle.width / 2, velocityToggle.height / 2)
+        selectDrawnVelocityNote(surface)
+        var selectedNotes = JSON.parse(grid.noteSummary).filter(function(note) {
+            return note.selected && !note.ghost
+        })
+        compare(selectedNotes.length, 1, "the tick-144 prompt targets one real selected Littleroot note")
+        var beforeCancel = grid.appliedRevisionText
+        var beforeNotes = grid.noteSummary
+        var beforeUndo = session.canUndo
+        verify(model.openInsertionPrompt(144, 64), "CC10 insertion opens at empty tick 144")
+        tryVerify(function() {
+            field = findChild(page, "automationPromptInput")
+            return field && field.activeFocus
+        }, 3000, "the tick-144 insertion focuses the mounted numeric field")
+        compare(field.text, "0", "CC10 insertion displays stored 64 as signed zero")
+        field.selectAll()
+        keyClick(Qt.Key_1)
+        keyClick(Qt.Key_2)
+        compare(field.text, "12", "actual CC10 numeric keys type the literal 12")
+        keySequence(StandardKey.SelectAll)
+        compare(field.selectedText, "12", "CC10 insertion selects its exact typed draft")
+        keySequence(StandardKey.Copy)
+        keyClick(Qt.Key_Delete)
+        keySequence(StandardKey.Paste)
+        compare(field.text, "12", "CC10 insertion Copy and Paste restore the typed 12")
+        keyClick(Qt.Key_Up)
+        keyClick(Qt.Key_Down)
+        compare(field.activeFocus, true, "CC10 insertion arrows retain numeric focus")
+        var solo = windowShortcut("shellShortcut_roll.solo_tracks")
+        verify(solo, "the window Solo shortcut is mounted")
+        soloActivatedSpy.target = solo
+        soloActivatedSpy.clear()
+        var track = findChild(surface, "timelineTrackHeaderRows").itemAt(grid.trackIndex)
+        var soloBefore = track.soloChecked
+        keyClick(Qt.Key_S)
+        compare(field.text, "12", "local S retains the exact numeric insertion draft")
+        compare(track.soloChecked, soloBefore, "local S does not toggle the track Solo")
+        compare(soloActivatedSpy.count, 0, "local S never activates window Solo")
+        keyClick(Qt.Key_Escape)
+        tryCompare(model, "promptOpen", false, 3000)
+        compare(grid.appliedRevisionText, beforeCancel,
+                "CC10 insertion Escape preserves its document revision")
+        compare(grid.noteSummary, beforeNotes,
+                "CC10 insertion Escape preserves selected note identities")
+        compare(session.canUndo, beforeUndo, "CC10 insertion Escape preserves history availability")
+        tryCompare(plot, "activeFocus", true, 3000,
+                   "CC10 insertion Escape returns automation plot focus")
+        keyClick(Qt.Key_S)
+        tryCompare(track, "soloChecked", !soloBefore, 3000,
+                   "resumed automation S reaches the window Solo command")
+        compare(soloActivatedSpy.count, 1, "resumed window Solo activates once")
+        keyClick(Qt.Key_S)
+        tryCompare(track, "soloChecked", soloBefore, 3000,
+                   "second resumed automation S reverses the Solo toggle")
+        compare(soloActivatedSpy.count, 2, "second resumed window Solo activates exactly once more")
+    }
+
     function test_cForeignWindowKeepsSoloLocal() {
         openTwoSongShell()
         var surface = selectedSurface()

@@ -640,6 +640,12 @@ public final class AutomationPage: EditorDrawerPage {
     public func openPrompt(tick: Tick, value: Int) -> Bool {
         return openCapturedPrompt(tick: tick, value: value)
     }
+    @discardableResult
+    public func openInsertionPrompt(tick: Int, value: Int) -> Bool {
+        guard let tick = Tick(exactly: tick) else { return false }
+        return openCapturedPrompt(tick: tick, value: value, insertion: true)
+    }
+
 
     /// The prompt's acceptance: one commit, or nothing when it changes nothing.
     /// The captured revision is revalidated by the accept policy below.

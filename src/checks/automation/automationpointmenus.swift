@@ -41,7 +41,7 @@ func drawerAutomationPromptTransactions(_ report: CheckReport, suite: DocumentSe
                   message: "one undo consumes the acceptance's single history entry")
 
     // Insertion at an empty tick: one span write, and a duplicate is a no-op.
-    report.expect(fixture.page.openPrompt(tick: 48, value: 40), cppID: drawerAutomationPromptID,
+    report.expect(fixture.page.openInsertionPrompt(tick: 48, value: 40), cppID: drawerAutomationPromptID,
                   message: "a prompt opens on an empty tick")
     report.expect(fixture.page.acceptPrompt(displayedValue: -24), cppID: drawerAutomationPromptID,
                   message: "the empty-tick prompt commits its insertion")

@@ -33,8 +33,12 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
     let state = fixture.document.state
     let selection = fixture.session.selectedNotes
     let page = fixture.page
-    report.expect(page.openPrompt(tick: 144, value: 64), cppID: id,
+    report.expect(page.openInsertionPrompt(tick: 144, value: 64), cppID: id,
                   message: "the original empty-tick numeric prompt opens")
+    report.expect(!page.promptForExistingNode, cppID: id,
+                  message: "the original tick-144 transaction is explicitly an insertion")
+    report.expectEqual(expected: "0", actual: page.promptDraft, cppID: id,
+                       what: "CC10 insertion starts at its signed center value")
     page.updatePromptDraft(draft: "12")
     report.expectEqual(expected: "12", actual: page.promptDraft, cppID: id,
                        what: "the production prompt retains the supplied numeric draft")
@@ -60,6 +64,8 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
                   message: "numeric cancellation creates no song history entry")
     report.expectEqual(expected: selection, actual: fixture.session.selectedNotes, cppID: id,
                        what: "numeric cancellation preserves selected NoteIDs")
+    report.expectEqual(expected: ["48:32", "96:64"], actual: fixture.values(fixture.panLane),
+                       cppID: id, what: "the cancelled CC10 insertion retains both original fixture nodes")
 
     report.expect(page.rows.contains { $0.parameter == fixture.panLane }, cppID: id,
                   message: "the original CC10 lane is present in the page's row stack")
@@ -72,7 +78,7 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
     fixture.activate(fixture.volumeLane)
     report.expect(page.rows.contains { $0.parameter == fixture.volumeLane }, cppID: labelID,
                   message: "the original volume lane is present in the page's row stack")
-    report.expect(page.openPrompt(tick: 5808, value: 48), cppID: labelID,
+    report.expect(page.openInsertionPrompt(tick: 5808, value: 48), cppID: labelID,
                   message: "the original volume-lane insertion prompt opens")
     report.expectEqual(expected: "48", actual: page.promptDraft, cppID: labelID,
                        what: "the volume prompt opens with the plotted value as its draft")
@@ -83,7 +89,7 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
     // routes through cancelSectionInteraction, and a late acceptance writes
     // nothing.
     fixture.activate(fixture.panLane)
-    report.expect(page.openPrompt(tick: 5760, value: 64), cppID: lifetimeID,
+    report.expect(page.openInsertionPrompt(tick: 5760, value: 64), cppID: lifetimeID,
                   message: "the original pan-lane insertion prompt opens")
     page.cancelSectionInteraction()
     report.expect(!page.promptOpen, cppID: lifetimeID,
@@ -219,7 +225,7 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
                   message: "the track-1 pan lane holds no point at the insertion tick")
     let peerBeforeInsert = peer.snapshot
     let trackZeroValues = second.values(second.panLane)
-    report.expect(second.page.openPrompt(tick: 5760, value: 64), cppID: lifetimeID,
+    report.expect(second.page.openInsertionPrompt(tick: 5760, value: 64), cppID: lifetimeID,
                   message: "the track-1 pan-lane insertion prompt opens")
     report.expect(second.page.acceptPrompt(displayedValue: 32), cppID: lifetimeID,
                   message: "the track-1 prompt accepts the displayed value")
@@ -274,21 +280,25 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
     let tempoFixture = drawerAutomationAutomationFixture(suite: suite, service: service)
     tempoFixture.activate(.tempo)
     let tempoBaseRevision = tempoFixture.document.revision
-    report.expect(tempoFixture.page.openPrompt(tick: 24, value: 140), cppID: tempoID,
+    report.expect(tempoFixture.page.openInsertionPrompt(tick: 24, value: 140), cppID: tempoID,
                   message: "tempo insertion prompt opens at tick 24")
+    report.expectEqual(expected: "140", actual: tempoFixture.page.promptDraft, cppID: tempoID,
+                       what: "Tempo tick-24 insertion publishes the exact 140 draft")
+    report.expect(!tempoFixture.page.promptForExistingNode, cppID: tempoID,
+                  message: "Tempo tick-24 prompt captures an insertion transaction")
     report.expect(tempoFixture.page.acceptPrompt(displayedValue: 90), cppID: tempoID,
                   message: "tempo prompt commits 90 BPM")
     report.expectEqual(expected: tempoBaseRevision + 1, actual: tempoFixture.document.revision, cppID: tempoID,
                        what: "A017 one tempo acceptance advances the revision once")
     report.expect(tempoFixture.tempoValues.contains("24:90"), cppID: tempoID,
                   message: "A019 committed tempo reads 90 BPM at tick 24")
-    report.expect(tempoFixture.page.openPrompt(tick: 32, value: 120), cppID: tempoID,
+    report.expect(tempoFixture.page.openInsertionPrompt(tick: 32, value: 120), cppID: tempoID,
                   message: "tempo ceiling prompt opens at tick 32")
     report.expect(tempoFixture.page.acceptPrompt(displayedValue: TimeDefaults.maximumTempoBPM + 1000),
                   cppID: tempoID, message: "over-maximum tempo acceptance commits")
     report.expect(tempoFixture.tempoValues.contains("32:\(TimeDefaults.maximumTempoBPM)"), cppID: tempoID,
                   message: "A024 ceiling acceptance clamps to the maximum BPM")
-    report.expect(tempoFixture.page.openPrompt(tick: 40, value: 120), cppID: tempoID,
+    report.expect(tempoFixture.page.openInsertionPrompt(tick: 40, value: 120), cppID: tempoID,
                   message: "tempo floor prompt opens at tick 40")
     report.expect(tempoFixture.page.acceptPrompt(displayedValue: TimeDefaults.minimumTempoBPM - 1000),
                   cppID: tempoID, message: "under-minimum tempo acceptance commits")
@@ -299,7 +309,7 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
     let tempoDepthFixture = drawerAutomationAutomationFixture(suite: suite, service: service)
     tempoDepthFixture.activate(.tempo)
     let tempoDepthBase = try? coreEditHistoryCountAtTip(tempoDepthFixture.document, report: report, cppID: tempoID)
-    report.expect(tempoDepthFixture.page.openPrompt(tick: 24, value: 140), cppID: tempoID,
+    report.expect(tempoDepthFixture.page.openInsertionPrompt(tick: 24, value: 140), cppID: tempoID,
                   message: "depth tempo prompt opens at tick 24")
     report.expect(tempoDepthFixture.page.acceptPrompt(displayedValue: 90), cppID: tempoID,
                   message: "depth tempo prompt commits 90 BPM")
@@ -310,11 +320,11 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
     } else {
         report.fail(tempoID, "tempo history depth unreadable after one acceptance")
     }
-    report.expect(tempoDepthFixture.page.openPrompt(tick: 32, value: 120), cppID: tempoID,
+    report.expect(tempoDepthFixture.page.openInsertionPrompt(tick: 32, value: 120), cppID: tempoID,
                   message: "depth tempo ceiling prompt opens at tick 32")
     report.expect(tempoDepthFixture.page.acceptPrompt(displayedValue: TimeDefaults.maximumTempoBPM + 1000),
                   cppID: tempoID, message: "depth over-maximum tempo acceptance commits")
-    report.expect(tempoDepthFixture.page.openPrompt(tick: 40, value: 120), cppID: tempoID,
+    report.expect(tempoDepthFixture.page.openInsertionPrompt(tick: 40, value: 120), cppID: tempoID,
                   message: "depth tempo floor prompt opens at tick 40")
     report.expect(tempoDepthFixture.page.acceptPrompt(displayedValue: TimeDefaults.minimumTempoBPM - 1000),
                   cppID: tempoID, message: "depth under-minimum tempo acceptance commits")
@@ -330,8 +340,31 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
     report.expect(ccFixture.page.rows.contains { $0.parameter == ccFixture.panLane }, cppID: ccID,
                   message: "A035 CC10 lane present in the insertion fixture row stack")
     let ccBaseRevision = ccFixture.document.revision
-    report.expect(ccFixture.page.openPrompt(tick: 96, value: 64), cppID: ccID,
+    let beforeCCInsertion = ccFixture.snapshot
+    let beforeCCBytes = try? ccFixture.document.state.file.encoded()
+    let beforeCCHistory = ccFixture.document.history.undoIndex
+    let beforeCCSelection = ccFixture.session.selectedNotes
+    report.expect(beforeCCBytes != nil, cppID: ccID,
+                  message: "tick-96 CC10 fixture serializes before insertion cancellation")
+    report.expect(ccFixture.page.openInsertionPrompt(tick: 96, value: 64), cppID: ccID,
+                  message: "tick-96 CC10 cancellation prompt opens as an insertion")
+    report.expectEqual(expected: "0", actual: ccFixture.page.promptDraft, cppID: ccID,
+                       what: "tick-96 CC10 cancellation prompt displays signed zero")
+    ccFixture.page.cancelPrompt()
+    report.expectEqual(expected: beforeCCBytes, actual: try? ccFixture.document.state.file.encoded(),
+                       cppID: ccID, what: "tick-96 CC10 cancellation preserves exact full-song bytes")
+    report.expectEqual(expected: beforeCCHistory, actual: ccFixture.document.history.undoIndex,
+                       cppID: ccID, what: "tick-96 CC10 cancellation preserves exact history depth")
+    report.expectEqual(expected: beforeCCSelection, actual: ccFixture.session.selectedNotes,
+                       cppID: ccID, what: "tick-96 CC10 cancellation preserves selected NoteIDs")
+    report.expectEqual(expected: beforeCCInsertion, actual: ccFixture.snapshot, cppID: ccID,
+                       what: "tick-96 CC10 cancellation keeps the original tick-24 node")
+    report.expect(ccFixture.page.openInsertionPrompt(tick: 96, value: 64), cppID: ccID,
                   message: "CC insertion prompt opens at empty tick 96")
+    report.expectEqual(expected: "0", actual: ccFixture.page.promptDraft, cppID: ccID,
+                       what: "CC10 tick-96 insertion displays exact signed zero")
+    report.expect(!ccFixture.page.promptForExistingNode, cppID: ccID,
+                  message: "CC10 tick-96 prompt captures an insertion transaction")
     report.expect(ccFixture.page.acceptPrompt(displayedValue: 0), cppID: ccID,
                   message: "displayed 0 commits through the center offset")
     report.expectEqual(expected: ccBaseRevision + 1, actual: ccFixture.document.revision, cppID: ccID,
@@ -361,7 +394,7 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
     let ccDepthFixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
     ccDepthFixture.activate(ccDepthFixture.panLane)
     let ccDepthBase = try? coreEditHistoryCountAtTip(ccDepthFixture.document, report: report, cppID: ccID)
-    report.expect(ccDepthFixture.page.openPrompt(tick: 96, value: 64), cppID: ccID,
+    report.expect(ccDepthFixture.page.openInsertionPrompt(tick: 96, value: 64), cppID: ccID,
                   message: "depth CC insertion prompt opens at tick 96")
     report.expect(ccDepthFixture.page.acceptPrompt(displayedValue: 0), cppID: ccID,
                   message: "depth displayed 0 commits through the center offset")
@@ -429,6 +462,60 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
 
     windowTierKeyboardOutcomes(report, suite: suite, service: service)
     coreEditingKeyboardOutcomes(report, suite: suite, service: service)
+    littlerootVelocityCancellation(report)
+}
+
+@MainActor
+private func littlerootVelocityCancellation(_ report: CheckReport) {
+    let id = "selectionkey/SelectionLocalInputTierTest::numericPromptOwnsKeys"
+    guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
+        report.fail(id, "missing staged Littleroot project root")
+        return
+    }
+    let project = ProjectService()
+    do {
+        try runBlocking { try await project.open(root: fixtureRoot) }
+        let session = try runBlocking {
+            try await DocumentSession.open(service: project, label: "mus_littleroot_test",
+                                           sampleRate: 48_000)
+        }
+        guard let track = (0..<session.document.engineTracks.usedTrackCount).first(where: {
+            !session.document.notes(in: $0).isEmpty
+        }), let note = session.document.notes(in: track).first,
+            !session.bankSlots.isEmpty else {
+            report.fail(id, "Littleroot selected note and parsed voice slots are required")
+            return
+        }
+        session.selectedTrack = track
+        session.setSelectedNotes([note.id])
+        let velocity = VelocityPage()
+        velocity.attach(session: session, palette: GridPalette())
+        let bytesBefore = try session.document.state.file.encoded()
+        let historyBefore = session.document.history.undoIndex
+        let revisionBefore = session.document.revision
+        let selectedBefore = session.selectedNotes
+        report.expect(velocity.openSelectedVelocityPrompt(), cppID: id,
+                      message: "Littleroot selected-note velocity prompt opens through production")
+        velocity.updatePromptDraft(draft: "12")
+        report.expectEqual(expected: "12", actual: velocity.promptDraft, cppID: id,
+                           what: "Littleroot velocity prompt holds the edited numeric draft")
+        velocity.cancelPrompt()
+        report.expect(!velocity.promptOpen, cppID: id,
+                      message: "Littleroot velocity Escape transaction closes without acceptance")
+        report.expectEqual(expected: bytesBefore,
+                           actual: try session.document.state.file.encoded(),
+                           cppID: id,
+                           what: "Littleroot velocity cancellation preserves exact full-song bytes")
+        report.expectEqual(expected: historyBefore, actual: session.document.history.undoIndex,
+                           cppID: id, what: "Littleroot velocity cancellation retains exact history depth")
+        report.expectEqual(expected: revisionBefore, actual: session.document.revision,
+                           cppID: id, what: "Littleroot velocity cancellation retains document revision")
+        report.expectEqual(expected: selectedBefore, actual: session.selectedNotes,
+                           cppID: id, what: "Littleroot velocity cancellation retains selected note identities")
+        velocity.detach()
+    } catch {
+        report.fail(id, "Littleroot velocity cancellation fixture failed: \(error)")
+    }
 }
 
 @MainActor

@@ -20,6 +20,12 @@ func drawerAutomationHitGeometry(_ report: CheckReport, suite: DocumentSession,
                        what: "the requested height is a fifth of the host inside those bounds")
     report.expect(policy.maximumBodyHeight == nil, cppID: drawerAutomationLayoutID,
                   message: "automation declares no page maximum")
+    let minimum = metrics.minimumBody
+    let maximum = metrics.maximumDefaultBodyHeight(hostHeight: 1000)
+    report.expect(minimum > 0, cppID: drawerAutomationLayoutID,
+                  message: "automation drawer minimum section extent is positive")
+    report.expect(maximum > minimum, cppID: drawerAutomationLayoutID,
+                  message: "automation drawer maximum section extent exceeds its positive minimum")
 
     let fixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
     report.expectEqual(expected: 8.0, actual: fixture.page.geometry.pointHitRadius, cppID: drawerAutomationLayoutID,
@@ -167,6 +173,49 @@ func drawerAutomationViewStatePreservation(_ report: CheckReport, suite: Documen
         index: fixture.page.catalogIndex(of: fixture.volumeLane)),
         cppID: id, message: "activating the volume lane returns its handle")
     let page = fixture.page
+    let bendRange = AutomationParameter.controlChange(
+        track: 0, controller: TimeDefaults.ccBendRange)
+    let grid = fixture.session.grid
+    let camera = fixture.session.camera
+    let gridAt48 = grid.gridTicksAt(48, camera: camera)
+    let snapAt48 = grid.snapTicksAt(48, camera: camera)
+    let snapped30 = grid.snapTick(30, camera: camera)
+    let spacing = grid.snapTicksAt(snapped30, camera: camera)
+    report.expect(gridAt48 > 0, cppID: drawerAutomationLayoutID,
+                  message: "the live grid resolution at tick 48 is positive")
+    report.expect(snapAt48 > 0, cppID: drawerAutomationLayoutID,
+                  message: "the live snap resolution at tick 48 is positive")
+    let emptyLane = fixture.page.catalogIndex(of: bendRange)
+    report.expectEqual(expected: 0, actual: fixture.page.catalogEventCount(bendRange), cppID: drawerAutomationLayoutID,
+                       what: "the exact BendRange lane has no written points")
+    report.expect(page.activateParameter(index: emptyLane), cppID: drawerAutomationLayoutID,
+                  message: "the empty BendRange lane is activated before grid comparison")
+    report.expectEqual(expected: gridAt48, actual: grid.gridTicksAt(48, camera: fixture.session.camera),
+                       cppID: drawerAutomationLayoutID,
+                       what: "empty BendRange activation preserves gridTicksAt tick 48")
+    report.expectEqual(expected: snapAt48, actual: grid.snapTicksAt(48, camera: fixture.session.camera),
+                       cppID: drawerAutomationLayoutID,
+                       what: "empty BendRange activation preserves snapTicksAt tick 48")
+    report.expectEqual(expected: snapped30, actual: grid.snapTick(30, camera: fixture.session.camera),
+                       cppID: drawerAutomationLayoutID,
+                       what: "empty BendRange activation preserves the snap at tick 30")
+    report.expectEqual(expected: spacing, actual: grid.snapTicksAt(snapped30, camera: fixture.session.camera),
+                       cppID: drawerAutomationLayoutID,
+                       what: "empty BendRange activation preserves snapped-tick spacing")
+    report.expectEqual(expected: snapped30,
+                       actual: grid.snapTick(Double(snapped30) + 0.1 * Double(spacing),
+                                             camera: fixture.session.camera), cppID: drawerAutomationLayoutID,
+                       what: "empty BendRange activation keeps the 0.1-spacing snap")
+    report.expectEqual(expected: snapped30,
+                       actual: grid.snapTick(Double(snapped30) + 0.4 * Double(spacing),
+                                             camera: fixture.session.camera), cppID: drawerAutomationLayoutID,
+                       what: "empty BendRange activation keeps the 0.4-spacing snap")
+    report.expect(grid.snapTick(Double(snapped30) + 1.1 * Double(spacing),
+                                camera: fixture.session.camera) != snapped30,
+                  cppID: drawerAutomationLayoutID,
+                  message: "empty BendRange activation moves the 1.1-spacing snap")
+    report.expect(page.activateParameter(index: page.catalogIndex(of: fixture.volumeLane)), cppID: id,
+                  message: "the Volume parameter returns after the BendRange grid comparison")
     _ = page.openParameterMenu(index: page.catalogIndex(of: fixture.volumeLane), x: 0, y: 0)
     report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.range64.rawValue),
                   cppID: id, message: "the lane takes the 0-64 range")
