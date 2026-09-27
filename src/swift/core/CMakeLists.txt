@@ -1,6 +1,7 @@
 add_library(PorydawCore STATIC
     MusicTypes.swift
     MidiFile.swift
+    MidiFile+Codec.swift
     NoteProjection.swift
     MidiSemantics.swift
     PlaybackTimeline.swift
@@ -9,7 +10,13 @@ add_library(PorydawCore STATIC
     NoteEditing.swift
     NoteMovement.swift
     EventEditing.swift
+    EventEditing+Helpers.swift
     TimeEditing.swift
+    TimeEditingSupport.swift
+    TimeEditing+Plan.swift
+    TimeEditing+Streams.swift
+    TimeEditing+Collisions.swift
+    TimeEditing+Tempo.swift
     Xcmd.swift
     MidiImport.swift
     MusicalScale.swift

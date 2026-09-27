@@ -71,7 +71,7 @@ public final class DocumentSession {
     public private(set) var document: SongDocument
     internal private(set) lazy var projectionCache = DocumentProjectionCache(session: self)
     /// Current projection, always rebuilt via the state factory.
-    public private(set) var timeline: PlaybackTimeline
+    public internal(set) var timeline: PlaybackTimeline
     public var bankLease: NativeBankLease { sharedBank.value.lease }
     public var bankSlots: [BankSlotView] { sharedBank.value.slots }
     public var bankDirty: Bool { sharedBank.value.dirty }
@@ -80,12 +80,12 @@ public final class DocumentSession {
 
     /// Selection order is authoritative; membership is its cached lookup index.
     /// Both are session-only and never dirty the document or enter history.
-    public private(set) var selectedNoteOrder: [NoteID] = []
-    public private(set) var selectedNotes: Set<NoteID> = []
-    public private(set) var selectedTracks: Set<Int> = []
-    public private(set) var timeSelection: AutomationTimeSelection?
+    public internal(set) var selectedNoteOrder: [NoteID] = []
+    public internal(set) var selectedNotes: Set<NoteID> = []
+    public internal(set) var selectedTracks: Set<Int> = []
+    public internal(set) var timeSelection: AutomationTimeSelection?
     public enum TrackScopeAction { case plain, toggle, range }
-    private var changingPrimaryInternally = false
+    internal var changingPrimaryInternally = false
     public var selectedTrack: Int? {
         didSet {
             guard selectedTrack != oldValue else { return }
@@ -106,7 +106,7 @@ public final class DocumentSession {
             if editCursor != oldValue { publishChange([.cursor]) }
         }
     }
-    public private(set) var camera: EditorCamera
+    public internal(set) var camera: EditorCamera
     var grid: RollGrid
     var gridClockTicks: Tick {
         TimelineSnapPolicy.clockTicks(division: document.ticksPerBeat,
@@ -127,7 +127,7 @@ public final class DocumentSession {
     /// reconciliation, timeline rebuild, and playback publication.
     public var onChange: ((SessionChange) -> Void)?
     public var onPlayback: ((PlaybackTimeline) -> Void)?
-    private var selectionTransitionObservers: [UUID: (SelectionTransition) -> Void] = [:]
+    internal var selectionTransitionObservers: [UUID: (SelectionTransition) -> Void] = [:]
     /// Presentation-only camera publication. The document workspace is the sole subscriber.
     public var onCameraChange: ((EditorCamera.Snapshot) -> Void)?
     /// Camera publication with the field-level delta used by the workspace
@@ -145,19 +145,19 @@ public final class DocumentSession {
     }
 
     /// Borrowed from ApplicationSession, which owns the project service.
-    private unowned let service: ProjectService
-    private let inbox = BankResultInbox()
-    private let sampleRate: Double
-    private var sharedBank: SharedBankState
-    private var pendingBankNotification = false
+    internal unowned let service: ProjectService
+    internal let inbox = BankResultInbox()
+    internal let sampleRate: Double
+    internal var sharedBank: SharedBankState
+    internal var pendingBankNotification = false
     /// A queued bank write owns the session's bank/history lifecycle, but not
     /// ordinary document mutation admission.
-    private var bankPersistenceInFlight = false
+    internal var bankPersistenceInFlight = false
     /// Nested synchronous state changes accumulate one final publication.
-    private var stateChangeDepth = 0
-    private var pendingDomains: SessionChangeDomains = []
-    private var pendingTrackRemap: TrackRemap?
-    private var publishedTrackTime = TrackTimeSelection()
+    internal var stateChangeDepth = 0
+    internal var pendingDomains: SessionChangeDomains = []
+    internal var pendingTrackRemap: TrackRemap?
+    internal var publishedTrackTime = TrackTimeSelection()
 
     public init(document: SongDocument, service: ProjectService,
                 lease: NativeBankLease, slots: [BankSlotView], dirty: Bool,
@@ -190,154 +190,6 @@ public final class DocumentSession {
             self?.handleDocumentChange(change)
         }
         sharedBank.attach(self)
-    }
-
-    public func setSelectedNotes(_ ids: [NoteID]) {
-        var membership = Set<NoteID>()
-        let order = ids.filter { $0.isAssigned && membership.insert($0).inserted }
-        guard order != selectedNoteOrder || (!order.isEmpty && timeSelection?.isActive == true) else { return }
-        withStateChanges {
-            if !order.isEmpty { clearTimeSelection() }
-            guard order != selectedNoteOrder else { return }
-            selectedNoteOrder = order
-            selectedNotes = membership
-            publishChange([.selection])
-        }
-    }
-
-    public func applyTimeSelection(_ selection: AutomationTimeSelection?) {
-        var sanitized = selection?.isActive == true ? selection : nil
-        var nextScope: Set<Int>?
-        if var active = sanitized {
-            switch active.scope {
-            case .lanes:
-                active.lanes = Set(active.lanes.filter {
-                    guard let track = $0.track else { return false }
-                    return (0..<16).contains(track)
-                })
-                sanitized = active.lanes.isEmpty && !active.tempo ? nil : active
-            case let .tracks(scope):
-                let stored = Set(scope.filter { (0..<16).contains($0) })
-                    .union(selectedTrack.map { [$0] } ?? [])
-                nextScope = Set(stored.filter { (0..<document.engineTracks.usedTrackCount).contains($0) })
-                active.scope = .tracks(stored)
-                sanitized = active
-            }
-        }
-        guard timeSelection != sanitized || nextScope.map({ selectedTracks != $0 }) == true else { return }
-        withStateChanges {
-            if let nextScope, selectedTracks != nextScope {
-                selectedTracks = nextScope
-                publishChange([.selection])
-            }
-            timeSelection = sanitized
-            if sanitized != nil { clearSelectedNotes() }
-            publishChange([.selection])
-        }
-    }
-
-    public func clearTimeSelection() { applyTimeSelection(nil) }
-
-    public func timeSelectionCoversTrack(_ track: Int) -> Bool {
-        guard (0..<document.engineTracks.usedTrackCount).contains(track),
-              let selection = timeSelection, selection.isActive,
-              case let .tracks(scope) = selection.scope else { return false }
-        return scope.contains(track)
-    }
-
-    public func timeSelectionCoversTempo() -> Bool {
-        let usedTracks = Set(0..<document.engineTracks.usedTrackCount)
-        guard let selection = timeSelection, selection.isActive else { return false }
-        if case let .tracks(scope) = selection.scope {
-            return !usedTracks.isEmpty && scope.intersection(usedTracks) == usedTracks
-        }
-        return selection.tempo
-    }
-
-    private var trackTimeSelection: TrackTimeSelection {
-        guard let selection = timeSelection, selection.isActive,
-              case .tracks = selection.scope else { return TrackTimeSelection() }
-        return TrackTimeSelection(startTick: selection.range.startTick,
-                                  endTick: selection.range.endTick, trackScope: selectedTracks)
-    }
-
-    public func selectPrimaryTrack(_ track: Int) {
-        guard (0..<document.engineTracks.usedTrackCount).contains(track),
-              selectedTrack != track else { return }
-        adjustTrackScope(track: track, action: .plain)
-    }
-
-    public func adjustTrackScope(track: Int, action: TrackScopeAction) {
-        guard (0..<document.engineTracks.usedTrackCount).contains(track) else { return }
-        var primary = selectedTrack ?? track
-        var scope = selectedTracks
-        var clearNotes = false
-        var clearTime = false
-        switch action {
-        case .plain:
-            clearTime = primary != track
-            primary = track
-            scope = [track]
-            clearNotes = true
-        case .toggle:
-            if scope.contains(track) { scope.remove(track) }
-            else { scope.insert(track) }
-            guard !scope.isEmpty else { return }
-            if !scope.contains(primary) {
-                primary = scope.min()!
-                clearNotes = true
-            }
-        case .range:
-            scope = Set(min(primary, track)...max(primary, track))
-        }
-        withStateChanges {
-            changingPrimaryInternally = true
-            selectedTrack = primary
-            changingPrimaryInternally = false
-            if selectedTracks != scope {
-                selectedTracks = scope
-                publishChange([.selection])
-            }
-            if var selection = timeSelection, case .tracks = selection.scope,
-               selection.scope != .tracks(scope) {
-                selection.scope = .tracks(scope)
-                timeSelection = selection
-                publishChange([.selection])
-            }
-            if clearNotes { clearSelectedNotes() }
-            if clearTime { clearTimeSelection() }
-        }
-    }
-
-    public func addSelectedNote(_ id: NoteID) {
-        guard id.isAssigned, !selectedNotes.contains(id) else { return }
-        withStateChanges {
-            clearTimeSelection()
-            selectedNoteOrder.append(id)
-            selectedNotes.insert(id)
-            publishChange([.selection])
-        }
-    }
-
-    public func removeSelectedNote(_ id: NoteID) {
-        guard selectedNotes.contains(id) else { return }
-        selectedNoteOrder.removeAll { $0 == id }
-        selectedNotes.remove(id)
-        publishChange([.selection])
-    }
-
-    public func removeSelectedNotes(_ ids: Set<NoteID>) {
-        guard !selectedNotes.isDisjoint(with: ids) else { return }
-        selectedNoteOrder.removeAll { ids.contains($0) }
-        selectedNotes.subtract(ids)
-        publishChange([.selection])
-    }
-
-    public func clearSelectedNotes() {
-        guard !selectedNoteOrder.isEmpty else { return }
-        selectedNoteOrder.removeAll()
-        selectedNotes.removeAll()
-        publishChange([.selection])
     }
 
     /// Coalesces synchronous session mutations into one publication. Nested
@@ -405,7 +257,7 @@ public final class DocumentSession {
         publishChange([.scale])
     }
 
-    private func refreshScaleProjection() {
+    internal func refreshScaleProjection() {
         let notes = selectedTrack.map { document.notes(in: $0) } ?? []
         let rows = scaleProjection.projection(notes: notes)
         guard rows != camera.projection else { return }
@@ -608,193 +460,5 @@ public final class DocumentSession {
         return true
     }
 
-    // MARK: - Internals
 
-    private func requireOpen() throws {
-        if isClosed {
-            throw ProjectServiceError.serviceClosed
-        }
-    }
-
-    private func adoptBank(_ result: AppliedBankEdit) {
-        let next = service.bankViews.state(for: result)
-        if next !== sharedBank {
-            sharedBank.detach(self)
-            sharedBank = next
-            next.attach(self)
-        }
-        service.bankViews.publish(result)
-    }
-
-    internal func sharedBankDidChange(_ state: SharedBankState) {
-        guard !isClosed, state === sharedBank else { return }
-        if bankPersistenceInFlight || document.history.bankTransitionInFlight {
-            pendingBankNotification = true
-        } else {
-            publishChange([.bank, .dirty])
-        }
-    }
-
-    private func flushPendingBankNotification() {
-        guard pendingBankNotification, !isClosed else { return }
-        pendingBankNotification = false
-        publishChange([.bank, .dirty])
-    }
-
-    private func publishChange(_ domains: SessionChangeDomains,
-                               trackRemap: TrackRemap? = nil) {
-        guard !domains.isEmpty else { return }
-        if stateChangeDepth > 0 {
-            pendingDomains.formUnion(domains)
-            if let trackRemap {
-                pendingTrackRemap = pendingTrackRemap.map {
-                    composeTrackRemaps($0, followedBy: trackRemap)
-                } ?? trackRemap
-            }
-            return
-        }
-        if domains.contains(.selection) { emitSelectionTransition() }
-        onChange?(SessionChange(revision: document.revision,
-                                trackRemap: trackRemap,
-                                domains: domains))
-    }
-
-    private func flushStateChanges() {
-        guard !pendingDomains.isEmpty else { return }
-        let domains = pendingDomains
-        let trackRemap = pendingTrackRemap
-        pendingDomains = []
-        pendingTrackRemap = nil
-        if domains.contains(.selection) { emitSelectionTransition() }
-        onChange?(SessionChange(revision: document.revision,
-                                trackRemap: trackRemap,
-                                domains: domains))
-    }
-
-    private func emitSelectionTransition() {
-        let previous = publishedTrackTime
-        let next = trackTimeSelection
-        publishedTrackTime = next
-        let transition = SelectionTransition(previousTrackTime: previous, trackTime: next)
-        for observer in Array(selectionTransitionObservers.values) {
-            observer(transition)
-        }
-    }
-
-    /// A batch may contain successive structural document mutations. Compose
-    /// their old-to-new mappings instead of publishing an ambiguous last remap.
-    private func composeTrackRemaps(_ first: TrackRemap,
-                                    followedBy second: TrackRemap) -> TrackRemap {
-        let chunks = first.chunkMap.map { intermediate -> Int? in
-            guard let intermediate, second.chunkMap.indices.contains(intermediate) else {
-                return nil
-            }
-            return second.chunkMap[intermediate]
-        }
-        let tracks = first.engineTrackMap.map { intermediate -> Int? in
-            guard let intermediate,
-                  second.engineTrackMap.indices.contains(intermediate) else {
-                return nil
-            }
-            return second.engineTrackMap[intermediate]
-        }
-        return TrackRemap(chunkMap: chunks, engineTrackMap: tracks,
-                          newChunkCount: second.newChunkCount,
-                          newEngineTrackCount: second.newEngineTrackCount)
-    }
-
-    /// Coordinates selection reconciliation before presentation/playback: dead
-    /// note references are pruned and the track scope follows the remap, then
-    /// the timeline is rebuilt via the state factory, playback is published,
-    /// and the presenter is notified.
-    private func handleDocumentChange(_ change: DocumentChange) {
-        withStateChanges {
-            let priorScope = selectedTracks
-            let priorPrimary = selectedTrack
-            let priorNotes = selectedNoteOrder
-            let priorTimeSelection = timeSelection
-            let survivingSelection = selectedNoteOrder.filter { document.note($0) != nil }
-            if survivingSelection.count != selectedNoteOrder.count {
-                selectedNoteOrder = survivingSelection
-                selectedNotes = Set(survivingSelection)
-                publishChange([.selection])
-            }
-            if let remap = change.trackRemap {
-                // Session playback masks follow engine-track identity through edits
-                // and the inverse remaps history publishes on undo.
-                mutedTracks = Set(mutedTracks.compactMap { track in
-                    remap.engineTrackMap.indices.contains(track)
-                        ? remap.engineTrackMap[track] : nil
-                })
-                soloedTracks = Set(soloedTracks.compactMap { track in
-                    remap.engineTrackMap.indices.contains(track)
-                        ? remap.engineTrackMap[track] : nil
-                })
-            }
-            if let remap = change.trackRemap {
-                let mappedPrimary = priorPrimary.flatMap { track -> Int? in
-                    guard remap.engineTrackMap.indices.contains(track) else { return nil }
-                    return remap.engineTrackMap[track]
-                }
-                let primaryDeleted = priorPrimary != nil && mappedPrimary == nil
-                let nextPrimary = mappedPrimary ?? priorPrimary.map {
-                    min($0, max(0, document.engineTracks.usedTrackCount - 1))
-                }
-                changingPrimaryInternally = true
-                selectedTrack = nextPrimary
-                changingPrimaryInternally = false
-                selectedTracks = Set(priorScope.compactMap { track in
-                    remap.engineTrackMap.indices.contains(track)
-                        ? remap.engineTrackMap[track] : nil
-                })
-                if let selectedTrack { selectedTracks.insert(selectedTrack) }
-                if var selection = timeSelection {
-                    switch selection.scope {
-                    case let .tracks(stored):
-                        if primaryDeleted {
-                            timeSelection = nil
-                        } else {
-                            var mapped = Set(stored.compactMap { track -> Int? in
-                                if remap.engineTrackMap.indices.contains(track) {
-                                    return remap.engineTrackMap[track]
-                                }
-                                return (0..<16).contains(track) ? track : nil
-                            })
-                            if let selectedTrack { mapped.insert(selectedTrack) }
-                            selection.scope = .tracks(mapped)
-                            timeSelection = selection
-                            selectedTracks = Set(mapped.filter {
-                                (0..<document.engineTracks.usedTrackCount).contains($0)
-                            })
-                        }
-                    case .lanes:
-                        selection.lanes = Set(selection.lanes.compactMap { parameter -> AutomationParameter? in
-                            guard let track = parameter.track,
-                                  remap.engineTrackMap.indices.contains(track),
-                                  let destination = remap.engineTrackMap[track] else { return nil }
-                            if case let .controlChange(_, controller) = parameter {
-                                return .controlChange(track: destination, controller: controller)
-                            }
-                            return .pitchBend(track: destination)
-                        })
-                        timeSelection = selection.lanes.isEmpty && !selection.tempo ? nil : selection
-                    }
-                }
-            }
-            if scaleProjection.fold { refreshScaleProjection() }
-            timeline = PlaybackTimeline.build(state: document.state, sampleRate: sampleRate)
-            camera.updateTimeDomain(
-                ticksPerBeat: UInt32(max(1, document.ticksPerBeat)),
-                lengthTicks: UInt64(timeline.lengthTicks))
-            grid.axis = projectionCache.timeAxis
-            grid.setTicksPerClock(gridClockTicks)
-            onPlayback?(timeline)
-            var domains: SessionChangeDomains = [.document, .dirty, .history]
-            if selectedNoteOrder != priorNotes || selectedTrack != priorPrimary
-                || selectedTracks != priorScope || timeSelection != priorTimeSelection {
-                domains.insert(.selection)
-            }
-            publishChange(domains, trackRemap: change.trackRemap)
-        }
-    }
 }

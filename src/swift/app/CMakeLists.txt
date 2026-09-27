@@ -3,16 +3,24 @@ set(SWIFT_GRID_NATIVE_DIR "${SWIFT_GRID_DIR}/native")
 
 add_library(PorydawApp STATIC
     ProjectService.swift
+    ProjectService+Songs.swift
+    ProjectService+Bank.swift
     SharedBankState.swift
     ServiceBankHistory.swift
     DocumentSession.swift
+    DocumentSession+Selection.swift
+    DocumentSession+Internals.swift
     DocumentWorkspace.swift
     NativeAudio.swift
     audio/PolyphonyPanelPresenter.swift
     ApplicationSession.swift
+    ApplicationSession+Tabs.swift
+    ApplicationSession+Close.swift
+    EditorCommandRouter.swift
     typography/Typography.swift
     transport/TransportBarPresenter.swift
     SongTabsController.swift
+    SongTabsController+Close.swift
     eventlist/EventListSelection.swift
     eventlist/EventListEditing.swift
     eventlist/EventListMenus.swift
@@ -27,8 +35,14 @@ add_library(PorydawApp STATIC
     QListModelSync.swift
     QmlEngineAccess.swift
     roll/PianoGrid.swift
+    roll/PianoGrid+Support.swift
+    roll/PianoGrid+Gestures.swift
+    roll/PianoGrid+SceneSync.swift
     roll/GridGesture.swift
     roll/GridScene.swift
+    roll/GridScene+Rebuild.swift
+    roll/GridScene+Notes.swift
+    roll/GridScene+Primitives.swift
     roll/NoteCommands.swift
     roll/NoteNameLabels.swift
     pitchbend/PitchBendGeometry.swift
@@ -173,6 +187,7 @@ add_library(PorydawAppCommands STATIC
     commands/EditKeyArbiter.swift
     commands/KeybindingRegistry.swift
     commands/Clipboard.swift
+    commands/ClipboardSemantics+Paste.swift
 )
 set_target_properties(PorydawAppCommands PROPERTIES
     Swift_MODULE_NAME PorydawAppCommands

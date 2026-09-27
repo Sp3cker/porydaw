@@ -21,19 +21,6 @@ public enum GridCancelReason: Int {
     case windowDeactivated = 3
 }
 
-private enum QtFact {
-    static let shiftModifier = 0x0200_0000
-    static let controlModifier = 0x0400_0000
-}
-
-private enum GridCursorKind: Int {
-    case arrow = 0
-    case openHand = 1
-    case sizeVertical = 2
-    case sizeHorizontal = 3
-    case closedHand = 4
-}
-
 public enum QtScrollPhase: Int {
     case noScroll = 0
     case begin = 1
@@ -45,19 +32,32 @@ public enum QtScrollPhase: Int {
 @MainActor
 @QtBridgeable
 public final class PianoGrid {
-    private let session: DocumentSession
-    private var roleTypography: Typography
-    private let commands: NoteCommands
-    private(set) var notes: [GridNote] = []
-    private var gesture: GridGesture?
-    private var pointerModifiers = 0
-    private var rightGesture: GridGesture?
-    private var rightBandDemoted = false
-    private var suppressedLeftRelease = false
-    private var bandAuditioned: [NoteID: (track: Int, pitch: Int)] = [:]
-    private var pendingControlToggle: NoteID?
-    private var pendingVelocityReanchor: NoteID?
-    private var selectionAtRightPress: [NoteID] = []
+    @QtIgnored
+    let session: DocumentSession
+    @QtIgnored
+    var roleTypography: Typography
+    @QtIgnored
+    let commands: NoteCommands
+    @QtIgnored
+    var notes: [GridNote] = []
+    @QtIgnored
+    var gesture: GridGesture?
+    @QtIgnored
+    var pointerModifiers = 0
+    @QtIgnored
+    var rightGesture: GridGesture?
+    @QtIgnored
+    var rightBandDemoted = false
+    @QtIgnored
+    var suppressedLeftRelease = false
+    @QtIgnored
+    var bandAuditioned: [NoteID: (track: Int, pitch: Int)] = [:]
+    @QtIgnored
+    var pendingControlToggle: NoteID?
+    @QtIgnored
+    var pendingVelocityReanchor: NoteID?
+    @QtIgnored
+    var selectionAtRightPress: [NoteID] = []
     public private(set) var scrollbarGrabActive = false
     @QtIgnored var onCommandAvailabilityChanged: (() -> Void)?
     /// The Set Velocity row's dispatch: the document-bound page opens its own
@@ -66,25 +66,37 @@ public final class PianoGrid {
     @QtIgnored public var onSetVelocityRequested: (() -> Bool)?
     @QtIgnored public var onPitchBendRequested: (() -> Bool)?
     @QtIgnored public var onGridMenuOpened: (() -> Void)?
-    private var lastCommandAvailability: [Bool] = []
-    private var lastCommandGestureActive = false
-    private var keyboardAuditionKey: Int?
-    private var keyboardAuditionTrack: Int?
-    private var keyboardTransposeAuditionActive = false
+    @QtIgnored
+    var lastCommandAvailability: [Bool] = []
+    @QtIgnored
+    var lastCommandGestureActive = false
+    @QtIgnored
+    var keyboardAuditionKey: Int?
+    @QtIgnored
+    var keyboardAuditionTrack: Int?
+    @QtIgnored
+    var keyboardTransposeAuditionActive = false
     /// Receives roll auditions as (track, pitch, velocity), including band entrants.
     @QtIgnored public var onAudition: ((Int, Int, Int) -> Void)?
     private var didApplyInitialHome = false
-    private var contentEndTick = GridMetrics.songLengthTicks
-    private var staticSceneDirty = true
+    @QtIgnored
+    var contentEndTick = GridMetrics.songLengthTicks
+    @QtIgnored
+    var staticSceneDirty = true
     /// Last note/selection state baked into `noteSummary`. The summary string
     /// is a check-facing probe: rebuilding it per pointer sample serialized
     /// the whole document, so it is only re-encoded when its inputs change.
-    private var summaryNotes: [GridNote]?
-    private var summarySelection: [NoteID]?
+    @QtIgnored
+    var summaryNotes: [GridNote]?
+    @QtIgnored
+    var summarySelection: [NoteID]?
     @QtIgnored public var noteSummaryRebuilds = 0
-    private var lastEndTickNotes: [GridNote]?
-    private var lastEndTickPreview: (tick: Int, duration: Int, pitch: Int)?
-    private var lastEndTickLength: Tick?
+    @QtIgnored
+    var lastEndTickNotes: [GridNote]?
+    @QtIgnored
+    var lastEndTickPreview: (tick: Int, duration: Int, pitch: Int)?
+    @QtIgnored
+    var lastEndTickLength: Tick?
 
     @QtTracked public var scene = GridScene()
     /// The palette the roll draws with: assigned once by `init`, either the
@@ -110,7 +122,8 @@ public final class PianoGrid {
     @QtTracked public var ticksPerBeat = GridMetrics.ticksPerBeat
     @QtTracked public var snapTicks = 6
     @QtTracked public var visibleGridTicks = 12
-    public private(set) var activeNoteId: UInt64 = 0
+    @QtIgnored
+    public internal(set) var activeNoteId: UInt64 = 0
     @QtTracked public var cursorKind = 0
     @QtTracked public var statusText = ""
     @QtTracked public var noteSummary = "[]"
@@ -135,9 +148,12 @@ public final class PianoGrid {
     /// standalone grids (checks, fixtures) default both off.
     @QtIgnored public var velocityColorMode = false
     @QtIgnored public var noteNameMode = false
-    private var measurementFonts: [GridFontKind: GridFontSpec] = [:]
-    private var typography: GridTypography?
-    private var typographyKey: (fontPx: Double, dpr: Double, rowHeight: Double)?
+    @QtIgnored
+    var measurementFonts: [GridFontKind: GridFontSpec] = [:]
+    @QtIgnored
+    var typography: GridTypography?
+    @QtIgnored
+    var typographyKey: (fontPx: Double, dpr: Double, rowHeight: Double)?
     @QtIgnored var metrics = GridMetrics(baseFontPx: 13, dpr: 1, width: 0, height: 0)
 
     var drawPreview: (tick: Int, duration: Int, pitch: Int)? {
@@ -145,27 +161,13 @@ public final class PianoGrid {
         return (state.tick, state.duration, state.key)
     }
 
-    private var selectionBand: (x: Double, y: Double, w: Double, h: Double)? {
+    var selectionBand: (x: Double, y: Double, w: Double, h: Double)? {
         guard case .band(let state) = rightGesture else { return nil }
         let x0 = min(state.pressX, state.curX)
         let x1 = max(state.pressX, state.curX)
         let y0 = min(state.pressY, state.curY)
         let y1 = max(state.pressY, state.curY)
         return (x0, y0, x1 - x0, y1 - y0)
-    }
-
-    /// True while a pointer gesture owns the roll. Swift-only: the shared
-    /// playhead suspends follow while a gesture is live, and no gesture state is
-    /// published or duplicated to QML.
-    @QtIgnored
-    public var interactionActive: Bool { gesture != nil || rightGesture != nil }
-
-    @QtIgnored
-    public func previewVelocity(_ id: NoteID) -> Optional<Int> {
-        guard case .velocity(let state) = gesture, let preview = state.preview else { return nil }
-        if state.noteId == id { return preview }
-        guard session.selectedNotes.contains(id), let note = session.document.note(id) else { return nil }
-        return min(127, max(1, Int(note.velocity) + state.delta))
     }
 
     /// Creates the roll presenter for `session`.
@@ -205,86 +207,7 @@ public final class PianoGrid {
     }
 
     @QtIgnored
-    func detach() {
-        inputCancelled(reason: GridCancelReason.hidden.rawValue)
-        onAudition = nil
-    }
-
-    @QtIgnored
-    public func refreshFromSession() {
-        let count = session.document.engineTracks.usedTrackCount
-        if count == 0 {
-            session.selectedTrack = nil
-            if trackIndex != 0 { trackIndex = 0 }
-            notes = []
-        } else {
-            let valid = min(max(0, session.selectedTrack ?? trackIndex), count - 1)
-            session.selectedTrack = valid
-            if trackIndex != valid { trackIndex = valid }
-            let snap = session.grid.snapTicksAt(session.editCursor, camera: session.camera)
-            var projected: [GridNote] = []
-            var noteCount = 0
-            for track in 0..<count { noteCount += session.document.notes(in: track).count }
-            projected.reserveCapacity(noteCount)
-            func emit(track: Int) {
-                for note in session.document.notes(in: track) {
-                    projected.append(GridNote(noteId: note.id, tick: Int(note.tick),
-                        duration: Int(note.isUnterminated ? max(1, snap) : max(1, note.duration)),
-                        pitch: Int(note.pitch), track: note.track,
-                        velocity: Int(note.velocity), ghost: track != valid))
-                }
-            }
-            emit(track: valid)
-            for track in 0..<count where track != valid { emit(track: track) }
-            notes = projected
-        }
-        let revisionText = String(session.document.revision)
-        if appliedRevisionText != revisionText { appliedRevisionText = revisionText }
-        let cursorTick = Int(session.editCursor)
-        if editCursorTick != cursorTick { editCursorTick = cursorTick }
-        updateTimeAxis()
-        refreshGridMenuPresentation()
-        staticSceneDirty = true
-        refreshNotes()
-    }
-    @QtIgnored
-    public func snapTickDown(_ tick: Double) -> Int {
-        Int(session.grid.snapTickDown(tick, camera: session.camera))
-    }
-
-    @QtIgnored
-    public func gridCell(at tick: Int) -> (start: Int, duration: Int) {
-        let cell = session.grid.visibleGridCellContaining(
-            Tick(max(0, tick)), camera: session.camera)
-        return (Int(cell.start), Int(cell.end - cell.start))
-    }
-
-    @QtIgnored
     public var edgeGripReach: Double { metrics.edgeGripReach }
-
-    @QtIgnored
-    public func projectedNoteBox(tick: Int, end: Int, pitch: Int)
-        -> (x: Double, y: Double, w: Double, h: Double)? {
-        guard session.camera.projection.row(forPitch: pitch) != PitchProjection.hiddenRow
-        else { return nil }
-        let x0 = session.camera.displayX(tick: Double(tick), origin: 0, dpr: metrics.dpr)
-        let x1 = session.camera.displayX(tick: Double(end), origin: 0, dpr: metrics.dpr)
-        return metrics.noteBox(camera: session.camera, x0: x0, x1: x1, pitch: pitch)
-    }
-
-
-    /// Applies the session-owned edit cursor without rebuilding document content.
-    @QtIgnored
-    public func refreshCursorPresentation() {
-        let cursorTick = Int(session.editCursor)
-        if editCursorTick != cursorTick { editCursorTick = cursorTick }
-    }
-
-    @QtIgnored
-    public func refreshCamera() {
-        updateTimeAxis()
-        refreshNotes()
-    }
 
     public func setTrack(index: Int) {
         let count = session.document.engineTracks.usedTrackCount
@@ -312,11 +235,6 @@ public final class PianoGrid {
     public func setNoteNameMode(enabled: Bool) {
         guard noteNameMode != enabled else { return }
         noteNameMode = enabled
-        refreshNotes()
-    }
-
-    @QtIgnored
-    public func refreshTimeSelectionHighlight() {
         refreshNotes()
     }
 
@@ -558,36 +476,6 @@ public final class PianoGrid {
         guard changed else { return }
         refreshGridMenuPresentation()
         refreshFromSession()
-    }
-
-    private func gridDivisionText(_ selection: GridSelection) -> String {
-        switch selection {
-        case .auto: "Auto"
-        case .musical(let denominator): "1/\(denominator)"
-        case .clock: "Clock"
-        }
-    }
-
-    private func refreshGridMenuPresentation() {
-        let selection = session.grid.selection
-        gridSelectionMenuId = selection.toMenuId()
-        gridDivisionControlText = gridDivisionText(selection)
-        tripletGrid = session.grid.feel == .triplet
-        gridFeelControlText = tripletGrid ? "Triplet" : "Straight"
-        if gridMenuKind == 1 {
-            gridMenuRows.reset(to: session.grid.selections.map { item in
-                let text = gridDivisionText(item)
-                return GridSubdivisionMenuItem(actionId: item.toMenuId(), text: text,
-                                               checked: item == selection)
-            })
-        } else if gridMenuKind == 2 {
-            gridMenuRows.reset(to: [
-                GridSubdivisionMenuItem(actionId: 0, text: "Straight",
-                                        checked: !tripletGrid),
-                GridSubdivisionMenuItem(actionId: 1, text: "Triplet",
-                                        checked: tripletGrid),
-            ])
-        }
     }
 
     public func focusNoteUnderCursor(x: Double, y: Double) -> Bool {
@@ -935,61 +823,16 @@ public final class PianoGrid {
         stopAudition()
     }
 
-    @QtIgnored
-    public func handleEscape() -> Bool {
-        if scrollbarGrabActive {
-            cancelScrollbarGrab()
-            return true
-        }
-        guard interactionActive else {
-            session.clearSelectedNotes()
-            refreshNotes()
-            return true
-        }
-        cancelInput()
-        return true
-    }
-
     public func setScrollbarGrabActive(active: Bool) {
         guard scrollbarGrabActive != active else { return }
         scrollbarGrabActive = active
         onCommandAvailabilityChanged?()
     }
-    private func cancelScrollbarGrab() {
-        guard scrollbarGrabActive else { return }
-        setScrollbarGrabActive(active: false)
-        scrollbarGrabCancelRequested()
-    }
-
 
     public func inputCancelled(reason: Int) {
         guard let reason = GridCancelReason(rawValue: reason) else { return }
         lastCancelReason = reason.rawValue
         cancelInput()
-    }
-
-    @QtIgnored
-    private func cancelInput() {
-        if case .pan = gesture {
-            if cursorKind != GridCursorKind.arrow.rawValue {
-                cursorKind = GridCursorKind.arrow.rawValue
-            }
-        }
-        if case .band = rightGesture {
-            session.setSelectedNotes(selectionAtRightPress)
-        }
-        stopAudition()
-        releaseBandAudition()
-        pendingControlToggle = nil
-        pendingVelocityReanchor = nil
-        cancelScrollbarGrab()
-        pointerModifiers = 0
-        gesture = nil
-        rightGesture = nil
-        suppressedLeftRelease = false
-        activeNoteId = 0
-        clearKeyboardHover()
-        refreshNotes()
     }
 
     @QtSignal public func scrollbarGrabCancelRequested()
@@ -1003,454 +846,6 @@ public final class PianoGrid {
         return true
     }
 
-    @QtIgnored
-    private func stopAudition() {
-        guard let key = keyboardAuditionKey, let track = keyboardAuditionTrack else { return }
-        onAudition?(track, key, 0)
-        keyboardAuditionKey = nil
-        keyboardAuditionTrack = nil
-        keyboardTransposeAuditionActive = false
-    }
-
-    @QtIgnored
-    private func applyPressSelection(_ id: NoteID, modifiers: Int) {
-        if modifiers & QtFact.controlModifier != 0 {
-            if !session.selectedNotes.contains(id) {
-                addSelectedNoteFromLeftPointer(id)
-            }
-        } else if modifiers & QtFact.shiftModifier != 0 {
-            addSelectedNoteFromLeftPointer(id)
-        } else if !session.selectedNotes.contains(id) {
-            session.setSelectedNotes([id])
-        }
-    }
-
-    @QtIgnored
-    private func addSelectedNoteFromLeftPointer(_ id: NoteID) {
-        session.addSelectedNote(id)
-        if case .band = rightGesture, !rightBandDemoted,
-           !selectionAtRightPress.contains(id) {
-            selectionAtRightPress.append(id)
-        }
-    }
-
-    @QtIgnored
-    private func removeSelectedNoteFromLeftPointer(_ id: NoteID) {
-        session.removeSelectedNote(id)
-        if case .band = rightGesture, !rightBandDemoted {
-            selectionAtRightPress.removeAll { $0 == id }
-        }
-    }
-
-    @QtIgnored
-    private func commitGesture() {
-        guard let gesture else { return }
-        let ids = session.selectedNoteOrder
-        switch gesture {
-        case .pendingDraw:
-            break
-        case .draw(let state):
-            addNote(tick: state.tick, duration: state.duration, pitch: state.key)
-        case .velocity(let state):
-            if state.delta != 0 {
-                var changes: [NoteVelocity] = []
-                for id in session.selectedNoteOrder {
-                    guard let current = session.document.note(id) else { continue }
-                    changes.append(NoteVelocity(
-                        noteID: id, velocity: Int(current.velocity) + state.delta))
-                }
-                if changes.isEmpty {
-                    changes.append(NoteVelocity(
-                        noteID: state.noteId, velocity: state.original + state.delta))
-                }
-                if session.document.setVelocities(
-                    changes, expectedRevision: session.document.revision) != nil {
-                    lastVelocity = min(127, max(1, state.original + state.delta))
-                }
-            }
-        case .move(let state):
-            if session.scaleProjection.fold && state.dKey != 0 {
-                let selected = ids.compactMap { session.document.note($0) }
-                if let pitches = session.scaleProjection.destinations(for: selected, steps: state.dKey) {
-                    _ = session.document.moveNotes(
-                        selected.map(\.id), toPitches: pitches, byTicks: Int64(state.dTick))
-                }
-            } else {
-                session.document.moveNotes(ids, byTicks: Int64(state.dTick), byKeys: state.dKey)
-            }
-        case .resize(let state):
-            session.document.resizeNotes(ids, edge: state.leading ? .leading : .trailing,
-                                         byTicks: Int64(state.delta))
-        case .pendingMenu, .band, .pan:
-            break
-        }
-    }
-
-    @QtIgnored
-    private func addNote(tick: Int, duration: Int, pitch: Int) {
-        guard session.selectedTrack != nil, tick >= 0, duration > 0,
-              (0...127).contains(pitch), tick < Int(TimeDefaults.maxTick),
-              Int64(tick) + Int64(duration) <= Int64(TimeDefaults.maxTick)
-        else { return }
-        guard let ids = try? session.document.addNotes([
-            NewNote(track: trackIndex, tick: Tick(tick), pitch: UInt8(pitch),
-                    duration: Tick(duration), velocity: UInt8(min(127, max(1, lastVelocity))))
-        ]), let id = ids.first else { return }
-        session.setSelectedNotes([id])
-        activeNoteId = id.rawValue
-    }
-
-    @QtIgnored
-    private func applyBandSelection() {
-        guard let band = selectionBand else { return }
-        var covered: [NoteID] = []
-        for note in notes where !note.ghost {
-            let displayed = displayedNote(note)
-            let rect = metrics.noteRect(
-                camera: session.camera,
-                x0: session.camera.displayX(tick: Double(displayed.tick), origin: 0, dpr: metrics.dpr),
-                x1: session.camera.displayX(tick: Double(displayed.end), origin: 0, dpr: metrics.dpr),
-                pitch: displayed.pitch)
-            if rect.x < band.x + band.w, rect.x + rect.w > band.x,
-               rect.y < band.y + band.h, rect.y + rect.h > band.y {
-                covered.append(note.noteId)
-            }
-        }
-        session.setSelectedNotes(selectionAtRightPress + covered)
-    }
-
-    @QtIgnored
-    private func auditionBandEntrants() {
-        guard let band = selectionBand else { return }
-        var covered: [NoteID: (track: Int, pitch: Int)] = [:]
-        for note in notes where !note.ghost {
-            let rect = metrics.noteRect(
-                camera: session.camera,
-                x0: session.camera.displayX(tick: Double(note.tick), origin: 0, dpr: metrics.dpr),
-                x1: session.camera.displayX(
-                    tick: Double(note.tick + note.duration), origin: 0, dpr: metrics.dpr),
-                pitch: note.pitch)
-            if rect.x < band.x + band.w, rect.x + rect.w > band.x,
-               rect.y < band.y + band.h, rect.y + rect.h > band.y {
-                covered[note.noteId] = (note.track, note.pitch)
-                if bandAuditioned[note.noteId] == nil {
-                    onAudition?(note.track, note.pitch, note.velocity)
-                }
-            }
-        }
-        for (id, entry) in bandAuditioned where covered[id] == nil {
-            onAudition?(entry.track, entry.pitch, 0)
-        }
-        bandAuditioned = covered
-    }
-
-    @QtIgnored
-    private func releaseBandAudition() {
-        for (_, entry) in bandAuditioned {
-            onAudition?(entry.track, entry.pitch, 0)
-        }
-        bandAuditioned.removeAll()
-    }
-
-    @QtIgnored
-    private func updateTimeAxis() {
-        metrics.timeAxis = session.projectionCache.timeAxis
-        session.grid.axis = metrics.timeAxis
-    }
-
-    @QtIgnored
-    private func sceneInput() -> GridSceneInput {
-        let visibleNotes: [GridNote]
-        if case .velocity(let state) = gesture, state.preview != nil {
-            visibleNotes = notes.map { note in
-                guard let velocity = previewVelocity(note.noteId) else { return note }
-                return GridNote(
-                    noteId: note.noteId, tick: note.tick, duration: note.duration,
-                    pitch: note.pitch, track: note.track, velocity: velocity,
-                    ghost: note.ghost)
-            }
-        } else {
-            visibleNotes = notes
-        }
-        let showVelocityValues: Bool
-        switch gesture {
-        case .velocity:
-            showVelocityValues = true
-        case .draw, .pendingDraw:
-            showVelocityValues = pointerModifiers & QtFact.controlModifier != 0
-        default:
-            showVelocityValues = false
-        }
-        let geometryStable: Bool
-        switch gesture {
-        case .move, .resize: geometryStable = false
-        default: geometryStable = true
-        }
-        return GridSceneInput(
-            metrics: metrics, grid: session.grid, palette: palette, camera: session.camera,
-            contentEndTick: contentEndTick, scale: session.scaleProjection,
-            rulerHeight: rulerHeight,
-            typography: typography, fontSpec: { self.fontSpec($0) }, notes: visibleNotes,
-            displayedNote: { self.displayedNote($0) },
-            isSelected: { self.session.selectedNotes.contains($0) },
-            drawPreview: drawPreview, lastVelocity: lastVelocity,
-            hoverKey: hoverKey, selectionBand: selectionBand,
-            velocityColorMode: velocityColorMode, noteNameMode: noteNameMode,
-            showVelocityValues: showVelocityValues,
-            noteNameAdvance: { self.typography?.noteNameAdvance(pitch: $0) ?? 0 },
-            noteNameOccupiedHeight: typography?.noteNameOccupiedHeight ?? 0,
-            timeSelection: session.timeSelection,
-            usedTrackCount: session.document.engineTracks.usedTrackCount,
-            selectedTrack: trackIndex, geometryStable: geometryStable)
-    }
-
-    @QtIgnored
-    private func rebuildScene() {
-        let input = sceneInput()
-        scene.invalidateStatic()
-        scene.rebuildStatic(input)
-        staticSceneDirty = false
-        scene.rebuildNotes(input)
-    }
-
-    @QtIgnored
-    private func refreshNotes() {
-        recomputeContentEndTick()
-        let typographyChanged = updateTypography()
-        if typographyChanged { staticSceneDirty = true }
-        let input = sceneInput()
-        if staticSceneDirty {
-            scene.invalidateStatic()
-            staticSceneDirty = false
-        }
-        scene.rebuildStatic(input)
-        scene.rebuildNotes(input)
-        if typographyChanged {
-            scene.rebuildHover(input)
-        } else if hoverKey >= 0 {
-            scene.refreshHoverChip(input)
-        }
-        publishOutputs()
-    }
-
-
-    @QtIgnored
-    private func recomputeContentEndTick() {
-        let length = session.timeline.lengthTicks
-        if notes == lastEndTickNotes, length == lastEndTickLength,
-            drawPreview?.tick == lastEndTickPreview?.tick,
-            drawPreview?.duration == lastEndTickPreview?.duration,
-            drawPreview?.pitch == lastEndTickPreview?.pitch { return }
-        lastEndTickNotes = notes
-        lastEndTickPreview = drawPreview
-        lastEndTickLength = length
-        var end = max(Int(length), GridMetrics.songLengthTicks)
-        for note in notes { end = max(end, note.tick + note.duration) }
-        if let preview = drawPreview { end = max(end, preview.tick + preview.duration) }
-        contentEndTick = end
-    }
-
-    @discardableResult
-    @QtIgnored
-    private func updateTypography() -> Bool {
-        let cameraRowHeight = session.camera.snapshot.keyHeight
-        let key = (fontPx: metrics.baseFontPx, dpr: metrics.dpr,
-                   rowHeight: cameraRowHeight)
-        if let current = typographyKey,
-           current.fontPx == key.fontPx && current.dpr == key.dpr
-            && current.rowHeight == key.rowHeight { return false }
-        measurementFonts = GridTypography.fonts(
-            metrics: metrics, typography: roleTypography)
-        let measured = GridTypography(
-            fonts: measurementFonts, rowHeight: cameraRowHeight, pixel: metrics.pixel)
-        typography = measured
-        typographyKey = key
-        let markerRowHeight = measured.boldHeight + 1
-        if rulerMarkerRowHeight != markerRowHeight {
-            rulerMarkerRowHeight = markerRowHeight
-        }
-        if rulerHeight != markerRowHeight + measured.rulerHeight + 1 {
-            rulerHeight = markerRowHeight + measured.rulerHeight + 1
-        }
-        return true
-    }
-
-    @QtIgnored
-    private func fontSpec(_ kind: GridFontKind) -> [String: QVariantSettable] {
-        typography?.fontMap(kind) ?? measurementFonts[kind]!.map
-    }
-
-    @QtIgnored
-    private func publishGeometry() {
-        let snapshot = session.camera.snapshot
-        if beatWidth != snapshot.pixelsPerBeat { beatWidth = snapshot.pixelsPerBeat }
-        if rowHeight != snapshot.keyHeight { rowHeight = snapshot.keyHeight }
-        if cameraScrollX != snapshot.scrollX { cameraScrollX = snapshot.scrollX }
-        if scaleFold != session.scaleProjection.fold { scaleFold = session.scaleProjection.fold }
-        let rowCount = session.camera.projection.visibleRowCount
-        if visibleRowCount != rowCount { visibleRowCount = rowCount }
-        if cameraScrollY != snapshot.scrollY { cameraScrollY = snapshot.scrollY }
-        if cameraMaxVScroll != snapshot.maxVScroll { cameraMaxVScroll = snapshot.maxVScroll }
-        if cameraMinHScroll != snapshot.minHScroll { cameraMinHScroll = snapshot.minHScroll }
-        if cameraMaxHScroll != snapshot.maxHScroll { cameraMaxHScroll = snapshot.maxHScroll }
-        if keyboardWidth != metrics.keyboardWidth { keyboardWidth = metrics.keyboardWidth }
-        let headerWidth = fontPx(baseFontPx, 17.5)
-        if trackHeaderWidth != headerWidth { trackHeaderWidth = headerWidth }
-        let tpb = Int(max(1, session.document.ticksPerBeat))
-        if ticksPerBeat != tpb { ticksPerBeat = tpb }
-        let snap = Int(session.grid.snapTicksAt(session.editCursor, camera: session.camera))
-        if snapTicks != snap { snapTicks = snap }
-        let gridTicks = Int(session.grid.gridTicksAt(session.editCursor, camera: session.camera))
-        if visibleGridTicks != gridTicks { visibleGridTicks = gridTicks }
-    }
-
-    @QtIgnored
-    private func defaultVerticalScroll(camera: EditorCamera) -> Double {
-        let pitches = notes.map(\.pitch)
-        let middle = pitches.isEmpty ? 60 : (pitches.min()! + pitches.max()!) / 2
-        guard let pitch = camera.projection.nearestVisiblePitch(to: middle) else { return 0 }
-        let centerRow = camera.projection.row(forPitch: pitch)
-        return max(
-            0, Double(centerRow) * camera.snapshot.keyHeight
-                - max(fontPx(metrics.baseFontPx, 50.0 / 3.0),
-                      camera.snapshot.rollHeight) / 2)
-    }
-
-    @QtIgnored
-    private func pitch(atY y: Double) -> Int {
-        let snapshot = session.camera.snapshot
-        return session.camera.projection.pitch(
-            atY: y, keyHeight: snapshot.keyHeight,
-            scrollY: snapshot.scrollY, dpr: metrics.dpr) ?? -1
-    }
-
-    @QtIgnored
-    func displayedNote(_ note: GridNote) -> (tick: Int, end: Int, pitch: Int) {
-        var tick = note.tick
-        var end = note.tick + note.duration
-        var pitch = note.pitch
-        guard let gesture, !note.ghost, session.selectedNotes.contains(note.noteId) else {
-            return (tick, end, pitch)
-        }
-        switch gesture {
-        case .resize(let state) where state.leading:
-            tick = min(max(0, tick + state.delta), end - 1)
-        case .move(let state):
-            tick = max(0, tick + state.dTick)
-            end = max(tick + 1, end + state.dTick)
-            if session.scaleProjection.fold && state.dKey != 0 {
-                let destination = session.scaleProjection.scale.pitch(
-                    pitch, steps: state.dKey, root: session.scaleProjection.root)
-                if destination >= 0 { pitch = destination }
-            } else {
-                pitch = min(127, max(0, pitch + state.dKey))
-            }
-        case .resize(let state):
-            end = max(tick + 1, end + state.delta)
-        default:
-            break
-        }
-        return (tick, end, pitch)
-    }
-
-    private enum HitZone { case none, body, leftEdge, rightEdge }
-
-    @QtIgnored
-    private func hitZone(x: Double, y: Double, note: GridNote) -> (HitZone, Bool) {
-        let reach = metrics.edgeGripReach
-        let rect = metrics.noteRect(
-            camera: session.camera,
-            x0: session.camera.displayX(tick: Double(note.tick), origin: 0, dpr: metrics.dpr),
-            x1: session.camera.displayX(
-                tick: Double(note.tick + note.duration), origin: 0, dpr: metrics.dpr),
-            pitch: note.pitch)
-        guard y >= rect.y, y < rect.y + rect.h else { return (.none, false) }
-        let right = rect.x + rect.w
-        let inside = x >= rect.x && x < right
-        guard inside || (x >= rect.x - reach && x < right + reach) else {
-            return (.none, false)
-        }
-        let inner = metrics.edgeGripInnerReach(rectWidth: rect.w)
-        if x >= right - inner && x <= right + reach { return (.rightEdge, inside) }
-        if x >= rect.x - reach && x <= rect.x + inner { return (.leftEdge, inside) }
-        return (.body, inside)
-    }
-
-    @QtIgnored
-    private func hitNote(x: Double, y: Double) -> (index: Int, zone: HitZone)? {
-        var hit: (index: Int, zone: HitZone)?
-        var hitInside = false
-        var grip: (index: Int, zone: HitZone)?
-        for index in notes.indices {
-            if notes[index].ghost { continue }
-            let (zone, inside) = hitZone(x: x, y: y, note: notes[index])
-            if zone == .none { continue }
-            hit = (index, zone)
-            hitInside = inside
-            if inside && (zone == .leftEdge || zone == .rightEdge) {
-                grip = (index, zone)
-            }
-        }
-        if let grip, !hitInside { return grip }
-        return hit
-    }
-    @QtIgnored
-    private func currentStatusText() -> String {
-        if let gesture {
-            switch gesture {
-            case .pendingDraw(let state):
-                return "Pending draw at tick \(session.grid.snapTick(state.pressTick, camera: session.camera))"
-            case .draw(let state):
-                return "Drawing — tick \(state.tick), duration \(state.duration), pitch \(state.key)"
-            case .velocity:
-                return "Changing velocity"
-            case .move(let state):
-                return "Moving \(session.selectedNotes.count) note(s) — dTick \(state.dTick), dKey \(state.dKey)"
-            case .resize:
-                return "Resizing \(session.selectedNotes.count) note(s)"
-            case .pendingMenu:
-                return "\(notes.count) notes, \(session.selectedNotes.count) selected"
-            case .band:
-                return "Selecting \(session.selectedNotes.count) note(s)"
-            case .pan:
-                return "Panning"
-            }
-        }
-        if case .band = rightGesture {
-            return "Selecting \(session.selectedNotes.count) note(s)"
-        }
-        return "\(notes.count) notes, \(session.selectedNotes.count) selected"
-    }
-
-    @QtIgnored
-    private func publishOutputs() {
-        if renderedNoteCount != notes.count { renderedNoteCount = notes.count }
-        let selection = session.selectedNoteOrder
-        if notes != summaryNotes || selection != summarySelection {
-            summaryNotes = notes
-            summarySelection = selection
-            noteSummaryRebuilds += 1
-            let selectedNotes = session.selectedNotes
-            let parts = notes.map { note -> String in
-                var json = "{\"id\":\(note.noteId.rawValue),\"tick\":\(note.tick)"
-                json += ",\"duration\":\(note.duration),\"pitch\":\(note.pitch)"
-                json += ",\"track\":\(note.track),\"velocity\":\(note.velocity)"
-                json += ",\"ghost\":\(note.ghost)"
-                json += ",\"selected\":\(selectedNotes.contains(note.noteId))}"
-                return json
-            }
-            noteSummary = "[" + parts.joined(separator: ",") + "]"
-        }
-        let status = currentStatusText()
-        if statusText != status { statusText = status }
-        let availability = EditCommand.allCases.map { commands.isAvailable($0) }
-        if availability != lastCommandAvailability || interactionActive != lastCommandGestureActive {
-            lastCommandAvailability = availability
-            lastCommandGestureActive = interactionActive
-            onCommandAvailabilityChanged?()
-        }
-        publishGeometry()
-    }
 }
 
 
