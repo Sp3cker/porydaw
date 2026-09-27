@@ -1,3 +1,4 @@
+import CoreFoundation
 import Foundation
 import PorydawApp
 import PorydawCoreCheckNative
@@ -8,6 +9,103 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
     let id = "swiftcore/ApplicationSession::editorViewState"
     defer { _ = store.resetPreferences() }
     let root = stageTestProject(in: fixtureRoot, projectName: "swiftcore-view-state")
+    let recipeID = "workspace/WorkspaceSessionTest::restoreProjectOnly"
+    let plistPath = URL(fileURLWithPath: fixtureRoot, isDirectory: true)
+        .appendingPathComponent("settings.plist").path
+    _ = store.resetPreferences()
+    store.setString(key: "lastProjectDir", value: root)
+    store.setString(key: "lastSongLabel", value: "mus_session_test")
+    store.setString(key: "songFilterText", value: "filterme")
+    store.setInt(key: "songFilterSort", value: 1)
+    var restoredChrome = EditorDrawerChromeState()
+    restoredChrome.velocity = .init(visible: true, height: 173)
+    restoredChrome.activePage = .velocity
+    EditorViewStateCodec.saveChrome(restoredChrome, store: store)
+    var restoredLanes = EditorLaneState()
+    restoredLanes.hiddenLanes = [.init(track: 1, controller: 7)]
+    EditorViewStateCodec.saveLanes(restoredLanes, store: store)
+    store.synchronize()
+    let legacy = EditorViewStateCodec.loadTabs(store: store)
+    report.expectEqual(expected: ["mus_session_test"], actual: legacy.orderedSongs,
+                       cppID: recipeID, what: "a legacy selected-song-only recipe yields one ordered song")
+    func storedSessionKeys() -> [String: Any] {
+        guard let bytes = FileManager.default.contents(atPath: plistPath),
+              let plist = try? PropertyListSerialization.propertyList(
+                  from: bytes, options: 0, format: nil) as? [String: Any] else { return [:] }
+        return plist.filter { key, _ in
+            key.hasPrefix("last") || key.hasPrefix("songFilter")
+                || key.hasPrefix("editorDrawer") || key.hasPrefix("window")
+        }
+    }
+    let beforeRestore = storedSessionKeys()
+    report.expect(beforeRestore.keys.contains("lastProjectDir")
+                  && beforeRestore.keys.contains("lastSongLabel")
+                  && beforeRestore.keys.contains("songFilterText")
+                  && beforeRestore.keys.contains("songFilterSort")
+                  && beforeRestore.keys.contains("editorDrawer.activePage")
+                  && beforeRestore.keys.contains("editorDrawer.automationLanes"),
+                  cppID: recipeID, message: "the staged plist contains the recipe, filter and editor keys")
+    let restoredShell = ShellPresenter()
+    restoredShell.configureSettings(applicationName: "porydaw")
+    restoredShell.openStartup()
+    let deadline = Date().addingTimeInterval(25)
+    while !restoredShell.session.songOpen && restoredShell.session.lastSaveError.isEmpty
+          && Date() < deadline {
+        _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+    }
+    report.expect(restoredShell.session.songOpen && restoredShell.session.songTabs.tabCount == 1,
+                  cppID: recipeID, message: "startup opens the one legacy selected song as a ready tab")
+    report.expectEqual(expected: "mus_session_test",
+                       actual: restoredShell.session.songTabs.selectedPage?.title,
+                       cppID: recipeID, what: "startup selects the restored legacy song")
+    store.synchronize()
+    report.expect(NSDictionary(dictionary: beforeRestore).isEqual(to: storedSessionKeys()),
+                  cppID: recipeID, message: "successful live-project restore leaves every session and editor preference key unchanged")
+    restoredShell.session.requestCloseAll()
+    let closeDeadline = Date().addingTimeInterval(25)
+    while restoredShell.session.songTabs.tabCount > 0 && Date() < closeDeadline {
+        _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+    }
+    let savedRecipe = EditorViewStateCodec.loadTabs(store: store)
+    report.expectEqual(expected: root, actual: savedRecipe.projectPath,
+                       cppID: recipeID, what: "host close saves the live project path")
+    report.expectEqual(expected: "mus_session_test", actual: savedRecipe.selectedSong,
+                       cppID: recipeID, what: "host close saves the selected song label")
+    report.expect(store.hasValue(key: "lastOpenSongs")
+                  && savedRecipe.orderedSongs == ["mus_session_test"],
+                  cppID: recipeID, message: "host close saves the explicit ordered-song key")
+    restoredShell.session.hostClosing()
+    restoredShell.session.acknowledgeGridDetached()
+    EditorViewStateCodec.saveTabs(
+        WorkspaceTabRecipe(projectPath: root,
+                           orderedSongs: ["missing-song", "mus_session_test", "mus_session_test"],
+                           selectedSong: "other-song"), store: store)
+    let ordered = EditorViewStateCodec.loadTabs(store: store)
+    report.expectEqual(expected: ["missing-song", "mus_session_test", "mus_session_test"],
+                       actual: ordered.orderedSongs, cppID: recipeID,
+                       what: "a present ordered recipe is not extended by its selected label")
+    let available = ordered.normalized(available: ["mus_session_test"])
+    report.expectEqual(expected: ["mus_session_test"], actual: available.orderedSongs,
+                       cppID: recipeID, what: "normalization omits missing and duplicate songs")
+    report.expectEqual(expected: "mus_session_test", actual: available.selectedSong,
+                       cppID: recipeID, what: "a missing selected song falls back to the first live tab")
+    let domain = plistPath.withCString {
+        CFStringCreateWithCString(kCFAllocatorDefault, $0, CFStringBuiltInEncodings.UTF8.rawValue)
+    }
+    let orderedKey = "lastOpenSongs".withCString {
+        CFStringCreateWithCString(kCFAllocatorDefault, $0, CFStringBuiltInEncodings.UTF8.rawValue)
+    }
+    guard let domain, let orderedKey else {
+        preconditionFailure("Staged preferences require UTF-8 key and domain strings")
+    }
+    CFPreferencesSetAppValue(orderedKey, [] as [String] as CFPropertyList, domain)
+    store.setString(key: "lastSongLabel", value: "mus_session_test")
+    report.expect(store.hasValue(key: "lastOpenSongs"), cppID: recipeID,
+                  message: "the explicitly empty ordered-song key is present before load")
+    report.expectEqual(expected: [], actual: EditorViewStateCodec.loadTabs(store: store).orderedSongs,
+                       cppID: recipeID,
+                       what: "an explicitly empty ordered-song key stays empty despite a selected label")
+    _ = store.resetPreferences()
     var seed = EditorDrawerChromeState()
     seed.velocity = .init(visible: true, height: 173)
     seed.automation = .init(visible: false, height: 64)

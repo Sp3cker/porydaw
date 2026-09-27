@@ -491,6 +491,13 @@ public final class ShellPresenter: QmlInstantiableStatus {
         }
     }
 
+    public func projectOpenChanged() {
+        refreshWindowChrome()
+        if session.projectOpen {
+            statusText = "Opened " + session.projectRoot
+        }
+    }
+
     public func songOpenChanged() {
         if session.songOpen { statusText = "Song open" }
         refreshWindowChrome()

@@ -87,6 +87,76 @@ TestCase {
         settings.setString("editorDrawer.activePage", "velocity")
     }
 
+    function test_startupRecipes() {
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "an empty recipe constructs the production shell")
+        compare(shell.title, "porydaw", "an empty recipe keeps the generic title")
+        compare(tabs().tabCount, 0, "an empty recipe opens no song tabs")
+        shell.close()
+        verify(waitForNative(function() { return shell.shellPresenter.closeReady }, 5000),
+               "the empty shell closes before the next recipe")
+        shell.destroy()
+        shell = null
+        settings.setString("lastProjectDir", bootstrap.projectRoot + "/gone")
+        settings.setString("lastSongLabel", "mus_route101")
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "a vanished-project recipe constructs the production shell")
+        verify(waitForNative(function() {
+            return shell.shellPresenter.session.lastSaveError.length > 0
+        }, 30000), "a vanished project reports its failed restore")
+        compare(shell.title, "porydaw", "a vanished project keeps the generic title")
+        compare(tabs().tabCount, 0, "a vanished project opens no phantom song tab")
+        shell.close()
+        verify(waitForNative(function() { return shell.shellPresenter.closeReady }, 5000),
+               "the vanished-project shell closes before the next recipe")
+        shell.destroy()
+        shell = null
+        verify(bootstrap.resetPreferences(), "the project-only recipe begins with an empty store")
+        settings.setString("lastProjectDir", bootstrap.projectRoot)
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "a project-only recipe constructs the production shell")
+        verify(waitForNative(function() { return session().projectOpen }, 30000),
+               "a project-only recipe restores its live project")
+        compare(shell.title, bootstrap.projectRoot.split("/").pop() + " — porydaw",
+                "a project-only restore shows its project title")
+        compare(tabs().tabCount, 0, "a project-only restore creates no song tab")
+        compare(findChild(shell, "shellStatusText").text,
+                "Opened " + bootstrap.projectRoot,
+                "a project-only restore publishes Opened on the mounted status bar")
+    }
+
+    function test_selectedSongOnlyStartupRecipe() {
+        settings.setString("lastProjectDir", bootstrap.projectRoot)
+        settings.setString("lastSongLabel", "mus_route101")
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "a selected-song-only recipe constructs the production shell")
+        verify(waitForNative(function() {
+            return session().songOpen || session().lastSaveError.length > 0
+        }, 30000), "the selected-song-only recipe opens a real document")
+        compare(tabs().tabCount, 1, "a legacy selected song restores one tab")
+        compare(tabs().selectedPage.title, "mus_route101",
+                "a legacy selected song becomes the active tab")
+        waitForPage(tabs().selectedId)
+        var songs = session().songDockController().songListPresenter()
+        verify(songs.selectedSongId >= 0, "the restored song has a visible Songs row")
+        compare(songs.selectedSongId, songs.currentSongId,
+                "the restored selected song is revealed in the Songs dock")
+    }
+
+    function test_missingSongStartupRecipe() {
+        settings.setString("lastProjectDir", bootstrap.projectRoot)
+        settings.setString("lastSongLabel", "mus_deleted_song")
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "a missing-song recipe constructs the production shell")
+        verify(waitForNative(function() { return session().projectOpen }, 30000),
+               "a missing-song recipe still restores its live project")
+        compare(tabs().tabCount, 0, "a deleted recipe song creates no phantom tab")
+        compare(shell.title, bootstrap.projectRoot.split("/").pop() + " — porydaw",
+                "a deleted recipe song leaves the project title visible")
+        compare(settings.string("lastSongLabel", ""), "mus_deleted_song",
+                "successful restore does not rewrite the missing-song recipe")
+    }
+
     function openShell(labels) {
         // Every explicit-open test starts without a stale startup recipe.
         settings.setString("lastProjectDir", "")
@@ -1136,11 +1206,50 @@ TestCase {
         }, 5000), "setting the editor range propagates to the other tab's value axis")
         clickSelectTab(ids[0])
 
+        var search = findChild(shell, "songListSearch")
+        var sort = findChild(shell, "songListSort")
+        var category = findChild(shell, "songListCategory")
+        verify(search && sort && category, "the real Songs controls are mounted before close")
+        mouseClick(category)
+        mouseClick(category.popup.contentItem.itemAtIndex(1))
+        var categoryPrefix = session().songDockController().songListPresenter().categoryPrefix()
+        verify(categoryPrefix.length > 0, "the selected category has a stored prefix")
+        mouseClick(sort)
+        mouseClick(sort.popup.contentItem.itemAtIndex(1))
+        search.forceActiveFocus()
+        for (var key of [Qt.Key_F, Qt.Key_I, Qt.Key_L, Qt.Key_T,
+                        Qt.Key_E, Qt.Key_R, Qt.Key_M, Qt.Key_E]) {
+            search.forceActiveFocus()
+            keyClick(key)
+        }
+        tryCompare(search, "text", "filterme", 3000)
+        var priorWidth = shell.width
+        var priorHeight = shell.height
+        shell.width += shell.shellPresenter.session.baseFontPx * 2
+        shell.height += shell.shellPresenter.session.baseFontPx
+        verify(waitForNative(function() {
+            return shell.normalFrame && shell.normalFrame.width === shell.width
+                && shell.normalFrame.height === shell.height
+                && shell.width > priorWidth && shell.height > priorHeight
+        }, 5000), "the font-relative resize settles its exact normal-frame fields")
+        var savedFrame = shell.normalFrame
+
         shell.close()
-        verify(waitForNative(function() { return shell.shellPresenter.closeReady }, 30000),
-               "the clean host close releases its tab pages")
+        verify(waitForNative(function() {
+            return shell.shellPresenter.closeReady && shell.sessionStatePersisted
+        }, 30000), "the clean host close persists state after releasing its tab pages")
         compare(settings.string("lastSongLabel", ""), "mus_route101",
                 "final-close walk retains the previously selected tab")
+        compare(settings.string("windowGeometry", ""),
+                [savedFrame.x, savedFrame.y, savedFrame.width, savedFrame.height].join(","),
+                "host close saves the exact resized normal frame")
+        compare(settings.string("songFilterText", ""), "filterme",
+                "host close saves the entered Songs search")
+        compare(settings.int("songFilterSort", -1), 1,
+                "host close saves the chosen Songs sort")
+        compare(settings.string("songFilterCategory", ""), categoryPrefix,
+                "host close saves the chosen Songs category")
+
         shell.destroy()
         shell = null
         wait(0)
@@ -1157,6 +1266,16 @@ TestCase {
         compare(pageOf(restored[0]).session.title, "mus_littleroot_test")
         compare(pageOf(restored[1]).session.title, "mus_route101")
         compare(tabs().selectedId, restored[1], "startup restores the selected tab")
+        compare(shell.title, "mus_route101 — " + bootstrap.projectRoot.split("/").pop()
+                + " — porydaw", "restart restores the project and selected-song window title")
+        compare(findChild(shell, "songListSearch").text, "filterme",
+                "restart restores the entered search on the mounted control")
+        compare(findChild(shell, "songListSort").currentIndex, 1,
+                "restart restores the mounted alphabetical sort")
+        compare(session().songDockController().songListPresenter().categoryPrefix(), categoryPrefix,
+                "restart restores the selected Songs category")
+        compare(findChild(shell, "songListCategory").currentIndex, 1,
+                "restart restores the mounted category selection")
         fuzzyCompare(gridOf(restored[1]).cameraScrollY, freshScrollY, 0.01,
                      "reopened tab starts with a fresh camera, not a saved camera")
         verify(waitForNative(function() {
@@ -1364,11 +1483,31 @@ TestCase {
         fresh.setCameraVScroll(shiftedY)
         verify(Math.abs(fresh.cameraScrollY - defaultScrollY) > 1,
                "the fresh tab camera can move away from its default pitch position")
+        fresh.setEditCursorTick(96)
+        fresh.openGridMenu(1)
+        fresh.activateGridMenuRow(16)
+        fresh.openGridMenu(2)
+        fresh.activateGridMenuRow(1)
+        tabs().setSelectedTabEventsVisible(true)
+        verify(fresh.editCursorTick === 96 && fresh.gridSelectionMenuId === 16
+                && fresh.tripletGrid && tabs().selectedTabShowsEvents,
+               "the closing song has non-default cursor, musical grid and event list")
+
         var close = closeButton(ids[1])
         mouseClick(close, close.width / 2, close.height / 2)
         tryCompare(tabs(), "tabCount", 1, 5000)
         verify(waitForNative(function() { return pageOf(ids[1]) === null }, 5000),
                "the previous tab's page is released before reopening its song")
+        compare(tabs().tabCount, 1, "closing one song leaves exactly its sibling")
+        compare(tabOrderIds().join(","), [ids[0]].join(","),
+                "closing one song preserves the sibling's exact strip order")
+        compare(tabs().selectedPage.title, "mus_route101",
+                "closing one song keeps the sibling's named content")
+        verify(!tabOrderIds().includes(ids[1]) && tabs().selectedPage.title !== "mus_route102",
+               "the closed song no longer resolves in the named tab strip")
+        verify(gridOf(ids[0]).renderedNoteCount > 0,
+               "the surviving sibling retains its rendered document")
+
         session().openSong("mus_route102")
         verify(waitForNative(function() {
             return tabs().tabCount === 2 || session().lastSaveError.length > 0
@@ -1378,6 +1517,19 @@ TestCase {
         var reopenedId = tabs().selectedId
         verify(reopenedId !== ids[1], "reopening a closed song creates a fresh tab")
         waitForPage(reopenedId)
+        compare(tabOrderIds().join(","), [ids[0], reopenedId].join(","),
+                "the reopened song appends after the surviving sibling")
+        compare(tabs().selectedPage.title, "mus_route102",
+                "the reopened song publishes its named loaded content")
+        verify(gridOf(reopenedId).renderedNoteCount > 0,
+               "the reopened song has a ready rendered grid")
+        compare(gridOf(reopenedId).beatWidth, first.beatWidth,
+                "reopened song uses the canonical default pixels per beat")
+        compare(gridOf(reopenedId).rowHeight, first.rowHeight,
+                "reopened song uses the canonical default keyboard row height")
+        compare(gridOf(reopenedId).cameraScrollX, gridOf(reopenedId).cameraMinHScroll,
+                "reopened song homes to its canonical horizontal scroll")
+
         fuzzyCompare(gridOf(reopenedId).cameraScrollY, defaultScrollY, 0.01,
                      "a fresh tab starts at its song's canonical vertical scroll")
         fresh = gridOf(reopenedId)
@@ -1424,12 +1576,19 @@ TestCase {
             return summaryOf(id) === beforeNotes
         }, 5000), "undo restores the song before its reload")
         verify(session().canRedo, "the old document has redo history before reload")
+        var defaultBeat = grid.beatWidth
+        var defaultHeight = grid.rowHeight
+        var defaultY = grid.cameraScrollY
         grid.handleWheel(0, 120, 0, 0, 0, 0, false, 100, 20)
+        grid.setTrack(1)
+        verify(grid.trackIndex === 1 && grid.renderedNoteCount > 0,
+               "reload seeds a used alternate track with rendered notes")
+
         grid.handleWheel(0, 120, 0, 0, Qt.ControlModifier, 0, true, 100, 20)
         grid.setCameraHScroll(20)
         grid.setEditCursorTick(96)
         grid.openGridMenu(1)
-        grid.activateGridMenuRow(8)
+        grid.activateGridMenuRow(16)
         grid.openGridMenu(2)
         grid.activateGridMenuRow(1)
         var prior = {
@@ -1439,6 +1598,14 @@ TestCase {
         }
         tabs().setSelectedTabEventsVisible(true)
         prior.events = tabs().selectedTabShowsEvents
+        verify(prior.beat !== defaultBeat, "reload seeds a non-default pixels-per-beat zoom")
+        verify(prior.height !== defaultHeight, "reload seeds a non-default keyboard row height")
+        verify(prior.x !== grid.cameraMinHScroll, "reload seeds a non-default horizontal scroll")
+        verify(prior.y !== defaultY, "reload seeds a non-default vertical camera")
+        compare(prior.track, 1, "reload seeds the alternate used track")
+        compare(prior.division, 16, "reload seeds the musical-16 grid division")
+        verify(prior.triplet, "reload seeds triplet grid feel")
+        verify(prior.events, "reload seeds the visible Event List")
         verify(prior.cursor > 0 && prior.triplet && prior.events,
                "the reloaded tab's view is seeded with non-default cursor, feel and events")
         session().openSong("mus_route101")

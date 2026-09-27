@@ -117,7 +117,7 @@ ThemedWindow {
     Connections {
         target: shell.session
         function onProjectOpenChanged() {
-            shell.refreshWindowChrome()
+            shell.projectOpenChanged()
             ++root.actionRevision
         }
         function onProjectRootChanged() { shell.refreshWindowChrome() }
@@ -204,18 +204,21 @@ ThemedWindow {
             close.accepted = false
             return
         }
-        if (!sessionStatePersisted) {
-            const frame = normalFrame || { x: root.x, y: root.y, width: root.width, height: root.height }
-            shell.persistSessionState(frame.x, frame.y, frame.width, frame.height,
-                                      root.visibility === Window.Maximized, shell.polyphonyVisible)
-            sessionStatePersisted = true
-        }
     }
     Connections {
         target: shell
         function onCloseReadyChanged() {
-            if (shell.closeReady)
-                root.close()
+            if (!shell.closeReady)
+                return
+            if (!root.sessionStatePersisted) {
+                const frame = root.normalFrame || {
+                    x: root.x, y: root.y, width: root.width, height: root.height
+                }
+                shell.persistSessionState(frame.x, frame.y, frame.width, frame.height,
+                                          root.visibility === Window.Maximized, shell.polyphonyVisible)
+                root.sessionStatePersisted = true
+            }
+            root.close()
         }
         function onSceneActiveChanged() { ++root.actionRevision }
     }

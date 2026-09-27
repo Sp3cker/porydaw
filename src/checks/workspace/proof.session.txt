@@ -45,6 +45,10 @@ Result: pending integrated run.
 
 Command: deno task proof check --executed
 Result: PASS — 185 proof files, 9306 anchors resolved, 0 errors, the same 10 pre-existing not-executed entries as before this pass. S189-S193 classify executed from build/proof-evidence/swiftcore-bankhistory.json and S194-S200 from build/proof-evidence/shell-tabs.json (task-37 lane runs; this ledger pass re-ran only the proof reader, no lane, build or formatter).
+Command: deno task verify:shell --filter shell-tabs --verbose
+Result: PASS: shell-tabs, 1/26, 16.54 s on the task-84 settled sources; implementer-run per the task-84 handoff, not re-run by the ledger agent.
+Command: deno task verify --filter swiftcore-projectsession --verbose
+Result: PASS: swiftcore-projectsession, 1/36, 5.16 s on the task-84 settled sources; implementer-run per the task-84 handoff, not re-run by the ledger agent.
 Task 65 note (ledger pass, no lane re-run): the frozen counterpart write set is src/checks/workspace/session_view_state.swift (sha256 10266bc4650d53a0d7f3b61af5a640bb4bff9456b7d0cf4d3f22c892d117879f, runSessionViewStateChecks :35-81) plus src/checks/editorqml/tst_ShellTabs.qml test_sharedDrawerCloseAndReopen (sha256 9c89b6d2a36e5892de2f8e66b33e5fa18094fbc9b7015b0a2eb269bc40346eeb, :789-821). Indexed S201-S210 (swiftcore editorViewState) and S211-S217 (shell-tabs drawer journey); all are executed (swiftcore-projectsession.json passes; shell-tabs.json functions). No disposition flipped to MATCHED: the session open rows assert windowGeometry, lastProjectDir/lastSongLabel/lastOpenSongs/songFilterText, song-list, sidecar, sessionAndEditorSettings and single-object full-state equalities with no exact Task65 predicate, so they stay GAP/PARTIAL with refreshed reasons (A011/A012/A028/A033/A034 now cite the new drawer/round-trip predicates as related and name the unproved single-object half). The ledger is NOT deleted. Lane evidence is the controller-provided frozen task-65 result (all covering lanes passed). This pass ran only read-only evidence queries and deno task proof check variants.
 
 Command: deno task verify:shell --filter shellwindow --verbose
@@ -81,92 +85,31 @@ A001 | WorkspaceSessionTest::init | src/checks/workspace/session.cpp:111
 Disposition: RETIRED-REPRESENTATION
 
 A002 | WorkspaceSessionTest::restoreProjectOnly | src/checks/workspace/session.cpp:145
-Disposition: PARTIAL
-Mapping/reason: S186 covers the title formula: src/checks/editorqml/tst_ShellWindow.qml:1337-1338 (test_zWindowTitleAndStatusMeter, shellwindow lane) mounts the fixture project with no song open and compares shell.title with projectName + " — porydaw", the same "<projectDirName> — porydaw" formula with U+2014 separators and the same last-path-component project name derived from bootstrap.projectRoot; unproved: the lastProjectDir restore ingress this row drives — the entry now reads it through the shared PreferencesStore, but the predicate calls session.openProject explicitly and never re-creates the session from the store, so the restore-specific title clauses also stay GAP at A031/A043. [S186]
-Source context since previous assertion:
-  ;
-  }
-
-  void WorkspaceSessionTest::cleanup()
-  {
-      QSettings settings;
-      settings.clear();
-      settings.sync();
-  }
-
-  void WorkspaceSessionTest::restoreProjectOnly_data()
-  {
-      QTest::addColumn<QString>("recipe");
-      QTest::newRow("nothing") << QStringLiteral("nothing");
-      QTest::newRow("vanished-project") << QStringLiteral("gone");
-      QTest::newRow("project-without-song") << QStringLiteral("project");
-  }
-
-  void WorkspaceSessionTest::restoreProjectOnly()
-  {
-      QFETCH(QString, recipe);
-      QSettings settings;
-      if (recipe == QStringLiteral("gone")) {
-          settings.setValue(QStringLiteral("lastProjectDir"),
-                            m_project.root() + QStringLiteral("/gone"));
-          settings.setValue(QStringLiteral("lastSongLabel"), m_songLabel);
-      } else if (recipe == QStringLiteral("project")) {
-          settings.setValue(QStringLiteral("lastProjectDir"), m_project.root());
-      }
-      settings.sync();
-
-      MainWindow window;
-      if (recipe == QStringLiteral("project")) {
-          const QString title = QStringLiteral("%1 — porydaw").arg(QDir(m_project.root()).dirName());
-Original expression:
-  QTRY_COMPARE(window.windowTitle(), title)
+Disposition: MATCHED
+Mapping: S218
 
 A003 | WorkspaceSessionTest::restoreProjectOnly | src/checks/workspace/session.cpp:146
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner ApplicationSession.openProject with the shell status presentation exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(window.statusBar()->currentMessage().startsWith(QStringLiteral("Opened")))
+Disposition: MATCHED
+Mapping: S219
 
 A004 | WorkspaceSessionTest::restoreProjectOnly | src/checks/workspace/session.cpp:147
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner SongTabsController tabCount (a project without a restored song opens no tab) exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(window.m_workspace->openTabCount(), 0)
+Disposition: MATCHED
+Mapping: S220
 
 A005 | WorkspaceSessionTest::restoreProjectOnly | src/checks/workspace/session.cpp:149
-Disposition: PARTIAL
-Mapping/reason: S187 covers the title literal: src/checks/editorqml/tst_ShellWindow.qml:1331 (test_zWindowTitleAndStatusMeter, shellwindow lane) compares shell.title with "porydaw" for the mounted shell with no project open, the same literal this compare asserts for a session that restores no project; unproved: the preference restore ingress — neither the nothing recipe (cleared preferences) nor the vanished-project recipe (lastProjectDir naming a missing project) is driven by any predicate, and the tab-count sibling A006 stays GAP. [S187]
-Source context since previous assertion:
-  ;
-      } else {
-Original expression:
-  QTRY_COMPARE(window.windowTitle(), QStringLiteral("porydaw"))
+Disposition: MATCHED
+Mapping: S221, S222
 
 A006 | WorkspaceSessionTest::restoreProjectOnly | src/checks/workspace/session.cpp:150
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner SongTabsController tabCount exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(window.m_workspace->openTabCount(), 0)
+Disposition: MATCHED
+Mapping: S223, S224
 
 A007 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:168
 Disposition: RETIRED-REPRESENTATION
 
 A008 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:171
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift song list model/presenter (src/checks/songlist/songlist_checks.swift), which this pairing does not execute, exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-          auto *panel = window.findChild<SongListPanel *>();
-          auto *list = panel ? panel->findChild<QListWidget *>() : nullptr;
-Original expression:
-  QTRY_VERIFY(list && list->currentItem() &&
-                      list->currentItem()->text().startsWith(m_songLabel))
+Disposition: MATCHED
+Mapping: S225, S226, S227
 
 A009 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:174
 Disposition: RETIRED-REPRESENTATION
@@ -213,55 +156,24 @@ Original expression:
   QVERIFY(categoryBox->count() > 1)
 
 A018 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:198
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the windowGeometry/windowState close-time persistence (the native path is the uncompiled MainWindow/WorkspaceUi harness); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-          categoryBox->setCurrentIndex(1);
-          category = categoryBox->currentData().toString();
-          sort->setCurrentIndex(1);
-          search->setText(QStringLiteral("filterme"));
-          window.resize(777, 505);
-          // The legacy contract records a geometry blob on close but does not
-          // assert relaunch dimensions; do not expand this migration with a
-          // geometry-restoration oracle.
-          window.close();
-Original expression:
-  QTRY_VERIFY(!settings.value(QStringLiteral("windowGeometry")).toByteArray().isEmpty())
+Disposition: MATCHED
+Mapping: S228
 
 A019 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:199
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the lastProjectDir session-restore key (the native path is the uncompiled MainWindow/WorkspaceUi harness); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(settings.value(QStringLiteral("lastProjectDir")).toString(), m_project.root())
+Disposition: MATCHED
+Mapping: S229
 
 A020 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:200
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the lastSongLabel session-restore key (the native path is the uncompiled MainWindow/WorkspaceUi harness); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(settings.value(QStringLiteral("lastSongLabel")).toString(), m_songLabel)
+Disposition: MATCHED
+Mapping: S230, S231
 
 A021 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:201
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the lastOpenSongs session-restore key (the native path is the uncompiled MainWindow/WorkspaceUi harness); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(settings.value(QStringLiteral("lastOpenSongs")).toStringList(),
-                   QStringList{m_songLabel})
+Disposition: MATCHED
+Mapping: S232
 
 A022 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:203
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the songFilterText session-restore key (the native path is the uncompiled MainWindow/WorkspaceUi harness); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(settings.value(QStringLiteral("songFilterText")).toString(),
-                   QStringLiteral("filterme"))
+Disposition: MATCHED
+Mapping: S233
 
 A023 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:209
 Disposition: RETIRED-REPRESENTATION
@@ -278,13 +190,8 @@ A025 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/
 Disposition: RETIRED-REPRESENTATION
 
 A026 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:217
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift session restore walk in ApplicationSession/SongTabsController exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-      const std::vector<SongTab *> startupTabs = workspace->tabsInDisplayOrder();
-Original expression:
-  QVERIFY(!startupTabs.empty())
+Disposition: MATCHED
+Mapping: S234, S235
 
 A027 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:219
 Disposition: RETIRED-REPRESENTATION
@@ -298,32 +205,19 @@ Original expression:
   QCOMPARE(tab->view().editorViewState(), complete)
 
 A029 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:222
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the sessionAndEditorSettings close-time invariance (the native path is the uncompiled MainWindow/WorkspaceUi harness); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-      }
-Original expression:
-  QVERIFY(sessionAndEditorSettings() == beforeRestore)
+Disposition: MATCHED
+Mapping: S236, S237
 
 A030 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:227
 Disposition: RETIRED-REPRESENTATION
 
 A031 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:228
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: related predicate S188 (src/checks/editorqml/tst_ShellWindow.qml:1344-1347, test_zWindowTitleAndStatusMeter) asserts shell.title == "mus_route101 — " + projectName + " — porydaw" once the song opens, but no Swift/QML predicate destroys and re-creates the session (the closeReopen restore) before asserting that the restored window title starts with the song label, so the restore-specific clause stays unproved; native harness unexecuted (uncompiled, unregistered). [S188]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(restored.windowTitle().startsWith(m_songLabel))
+Disposition: MATCHED
+Mapping: S235
 
 A032 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:229
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the sessionAndEditorSettings restore invariance (the native path is the uncompiled MainWindow/WorkspaceUi harness); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(sessionAndEditorSettings() == beforeRestore)
+Disposition: MATCHED
+Mapping: S236, S237
 
 A033 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:230
 Disposition: GAP
@@ -351,28 +245,16 @@ A037 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/
 Disposition: RETIRED-REPRESENTATION
 
 A038 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:238
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the songFilterText restore into the song list search (the native path is the uncompiled MainWindow/WorkspaceUi harness); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(search->text(), QStringLiteral("filterme"))
+Disposition: MATCHED
+Mapping: S238
 
 A039 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:239
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the song list sort restore (the native path is the uncompiled MainWindow/WorkspaceUi harness); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(sort->currentIndex(), 1)
+Disposition: MATCHED
+Mapping: S239
 
 A040 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:240
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the song list category restore (the native path is the uncompiled MainWindow/WorkspaceUi harness); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QTRY_COMPARE(categoryBox->currentData().toString(), category)
+Disposition: MATCHED
+Mapping: S240, S241
 
 A041 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:242
 Disposition: RETIRED-REPRESENTATION
@@ -386,32 +268,12 @@ Original expression:
   QVERIFY(sidecarAfterRestore == sidecarBefore)
 
 A043 | WorkspaceSessionTest::deletedRecipeSongIsIgnored | src/checks/workspace/session.cpp:257
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: related predicate S186 (src/checks/editorqml/tst_ShellWindow.qml:1337-1338, test_zWindowTitleAndStatusMeter) asserts the same "<projectDirName> — porydaw" project-only title formula for a project opened with no song, but this site restores settings whose lastOpenSongs/lastSongLabel name a missing song and requires the restore to ignore it; no Swift/QML predicate drives that deleted-recipe-song restore, and its tab-count sibling A044 stays GAP. [S186]
-Source context since previous assertion:
-  ;
-  }
-
-  void WorkspaceSessionTest::deletedRecipeSongIsIgnored()
-  {
-      QSettings settings;
-      settings.setValue(QStringLiteral("lastProjectDir"), m_project.root());
-      settings.setValue(QStringLiteral("lastOpenSongs"), QStringList{QStringLiteral("mus_missing")});
-      settings.setValue(QStringLiteral("lastSongLabel"), QStringLiteral("mus_missing"));
-      settings.sync();
-
-      MainWindow window;
-      const QString title = QStringLiteral("%1 — porydaw").arg(QDir(m_project.root()).dirName());
-Original expression:
-  QTRY_COMPARE(window.windowTitle(), title)
+Disposition: MATCHED
+Mapping: S242
 
 A044 | WorkspaceSessionTest::deletedRecipeSongIsIgnored | src/checks/workspace/session.cpp:258
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: SongTabsController tabCount exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(window.m_workspace->openTabCount(), 0)
+Disposition: MATCHED
+Mapping: S243
 
 Remaining original source (closing sequence and helper bodies):
   ;
@@ -1049,3 +911,81 @@ S216 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: message "a fresh tab carries the retained sibling drawer section"
 S217 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: message "reopening never rewrites the project song bytes"
+
+S218 | test_startupRecipes (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a project-only restore shows its project title"
+
+S219 | test_startupRecipes (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a project-only restore publishes Opened on the mounted status bar"
+
+S220 | test_startupRecipes (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a project-only restore creates no song tab"
+
+S221 | test_startupRecipes (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "an empty recipe keeps the generic title"
+
+S222 | test_startupRecipes (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a vanished project keeps the generic title"
+
+S223 | test_startupRecipes (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "an empty recipe opens no song tabs"
+
+S224 | test_startupRecipes (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a vanished project opens no phantom song tab"
+
+S225 | test_selectedSongOnlyStartupRecipe (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a legacy selected song restores one tab"
+
+S226 | test_selectedSongOnlyStartupRecipe (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a legacy selected song becomes the active tab"
+
+S227 | test_selectedSongOnlyStartupRecipe (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the restored selected song is revealed in the Songs dock"
+
+S228 | test_kStartupRestoresTabsAndFreshCamera (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "host close saves the exact resized normal frame"
+
+S229 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "host close saves the live project path"
+
+S230 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "host close saves the selected song label"
+
+S231 | test_kStartupRestoresTabsAndFreshCamera (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "final-close walk retains the previously selected tab"
+
+S232 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "host close saves the explicit ordered-song key"
+
+S233 | test_kStartupRestoresTabsAndFreshCamera (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "host close saves the entered Songs search"
+
+S234 | test_kStartupRestoresTabsAndFreshCamera (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "startup restores the selected tab"
+
+S235 | test_kStartupRestoresTabsAndFreshCamera (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "restart restores the project and selected-song window title"
+
+S236 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "the staged plist contains the recipe, filter and editor keys"
+
+S237 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "successful live-project restore leaves every session and editor preference key unchanged"
+
+S238 | test_kStartupRestoresTabsAndFreshCamera (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "restart restores the entered search on the mounted control"
+
+S239 | test_kStartupRestoresTabsAndFreshCamera (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "restart restores the mounted alphabetical sort"
+
+S240 | test_kStartupRestoresTabsAndFreshCamera (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "restart restores the selected Songs category"
+
+S241 | test_kStartupRestoresTabsAndFreshCamera (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "restart restores the mounted category selection"
+
+S242 | test_missingSongStartupRecipe (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a deleted recipe song leaves the project title visible"
+
+S243 | test_missingSongStartupRecipe (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a deleted recipe song creates no phantom tab"

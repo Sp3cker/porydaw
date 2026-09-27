@@ -111,10 +111,11 @@ public enum EditorViewStateCodec {
 
     @MainActor
     public static func loadTabs(store: PreferencesStore) -> WorkspaceTabRecipe {
-        WorkspaceTabRecipe(
+        let selected = store.string(key: "lastSongLabel", fallback: "")
+        let ordered = store.strings("lastOpenSongs") ?? (selected.isEmpty ? [] : [selected])
+        return WorkspaceTabRecipe(
             projectPath: store.string(key: "lastProjectDir", fallback: ""),
-            orderedSongs: store.strings("lastOpenSongs") ?? [],
-            selectedSong: store.string(key: "lastSongLabel", fallback: ""))
+            orderedSongs: ordered, selectedSong: selected)
     }
 
     @MainActor
