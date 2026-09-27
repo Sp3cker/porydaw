@@ -272,14 +272,7 @@ ThemedWindow {
             objectName: "shellEditMenu"
             title: qsTr("&Edit")
             onAboutToShow: ++root.actionRevision
-            Component.onCompleted: {
-                editTopItems.active = true
-                editClipboardItems.active = true
-                editTailItems.active = true
-            }
             Instantiator {
-                id: editTopItems
-                active: false
                 model: shell.editTopActionIds
                 delegate: MenuItem {
                     arrow: null
@@ -296,10 +289,11 @@ ThemedWindow {
                 onObjectAdded: (index, object) => editMenu.insertItem(index, object)
                 onObjectRemoved: (index, object) => editMenu.removeItem(object)
             }
-            MenuSeparator { objectName: "shellEditSectionSeparator" }
+            MenuSeparator {
+                id: editSectionSeparator
+                objectName: "shellEditSectionSeparator"
+            }
             Instantiator {
-                id: editClipboardItems
-                active: false
                 model: shell.editClipboardActionIds
                 delegate: MenuItem {
                     arrow: null
@@ -313,8 +307,12 @@ ThemedWindow {
                     }
                     onTriggered: shell.activate(modelData)
                 }
-                onObjectAdded: (index, object) =>
-                    editMenu.insertItem(shell.editTopActionIds.length + 1 + index, object)
+                onObjectAdded: (index, object) => {
+                    let anchor = 0
+                    while (anchor < editMenu.count && editMenu.itemAt(anchor) !== editSectionSeparator)
+                        ++anchor
+                    editMenu.insertItem(anchor + 1 + index, object)
+                }
                 onObjectRemoved: (index, object) => editMenu.removeItem(object)
             }
             Menu {
@@ -486,8 +484,6 @@ ThemedWindow {
             }
             MenuSeparator {}
             Instantiator {
-                id: editTailItems
-                active: false
                 model: shell.editTailActionIds
                 delegate: MenuItem {
                     arrow: null
