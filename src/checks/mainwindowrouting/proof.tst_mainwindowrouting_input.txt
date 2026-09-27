@@ -279,7 +279,7 @@ Mapping: S219
 
 A019 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:138
 Disposition: PARTIAL
-Mapping/reason: Related predicates S220, S221 (the mounted paused ruler seek presents the exact committed target on the shared playhead and preserves the Paused transport); unproved: the original observes the paused playhead immediately after the second requestPlayPauseFrom(tick), a play-then-pause anchored at that tick, while the mounted predicates observe a seek performed while already paused — the paused-at-the-just-started-tick state is not asserted.
+Mapping/reason: Related predicates S220, S221 (test_rulerCommitMovesCursorOnlyInEveryTransportState: the paused press leaves the shared playhead at the pause point and the ruler commit preserves the paused transport); user-ruled deviation 2026-09-26: cursor commits never seek; see tst_ShellTransport.qml test_rulerCommitMovesCursorOnlyInEveryTransportState — unproved: the original observes the paused playhead immediately after the second requestPlayPauseFrom(tick), a play-then-pause anchored at that tick, while the mounted predicates observe a commit performed while already paused.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -2830,11 +2830,11 @@ Anchor: message "Space presents playing when its action completes"
 S219 | test_transportControlTransitionsAndSettings | src/checks/editorqml/tst_ShellTransport.qml
 Anchor: message "the same Space shortcut pauses playback"
 
-S220 | test_rulerSeekPresentsTargetWhilePausedAndGuardsWhileStopped | src/checks/editorqml/tst_ShellTransport.qml
-Anchor: message "the paused press immediately presents the exact target on the shared playhead"
+S220 | test_rulerCommitMovesCursorOnlyInEveryTransportState | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "the paused press leaves the shared playhead at the pause point"
 
-S221 | test_rulerSeekPresentsTargetWhilePausedAndGuardsWhileStopped | src/checks/editorqml/tst_ShellTransport.qml
-Anchor: message "ruler seek preserves the paused transport"
+S221 | test_rulerCommitMovesCursorOnlyInEveryTransportState | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "ruler commit preserves the paused transport"
 
 S222 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
 Anchor: message "the stopped edit cursor is away from the origin"

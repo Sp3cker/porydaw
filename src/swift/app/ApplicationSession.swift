@@ -1060,14 +1060,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 }
                 workspace.grid.refreshCamera()
             }
-            workspace.rulerMenu.onSeek = { [weak self, weak workspace] tick in
-                guard let self, let workspace else { return }
-                self.seekToTick(tick, in: workspace)
-            }
-            workspace.grid.onCommitCursor = { [weak self, weak workspace] tick in
-                guard let self, let workspace else { return }
-                self.seekToTick(tick, in: workspace)
-            }
             workspace.pitchBend.onAuditionFromTick = { [weak self, weak workspace] tick in
                 guard let self, let workspace, self.workspace === workspace,
                       let audio = self.audio, audio.songLoaded else { return }
@@ -1146,6 +1138,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
             },
             timeSignaturePromptInvalidated: { [weak self] session, revision in
                 self?.invalidateTimeSigPrompt(session: session, revision: revision)
+            },
+            transportPlayingChanged: { [weak self] _ in
+                self?.resyncTransportAfterEngineTransition()
             })
     }
 
@@ -1246,6 +1241,20 @@ public final class ApplicationSession: QmlInstantiableStatus {
         refreshTransportPresentation()
     }
 
+    public func goToStart() {
+        guard let workspace else { return }
+        let session = workspace.session
+        session.editCursor = 0
+        _ = session.mutateCamera { $0.setHScroll($0.snapshot.minHScroll) }
+        if let audio, audio.songLoaded,
+           audio.transport != AudioTransportState.stopped.rawValue {
+            publishSeek(tick: 0, timeline: session.timeline, startPlayback: false)
+        } else {
+            playhead.refreshImmediate()
+        }
+        transportBar.refresh()
+    }
+
     private func publishSeek(tick: Tick, timeline: PlaybackTimeline, startPlayback: Bool) {
         guard let audio else { return }
         let target = timeline.sample(for: tick)
@@ -1261,10 +1270,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
         transportBar.refresh()
     }
 
-    private func seekToTick(_ tick: Tick, in origin: DocumentWorkspace) {
-        guard workspace === origin, let audio, audio.songLoaded,
-              audio.transport != AudioTransportState.stopped.rawValue else { return }
-        publishSeek(tick: tick, timeline: origin.session.timeline, startPlayback: false)
+    private func resyncTransportAfterEngineTransition() {
+        guard let audio, audio.songLoaded else { return }
+        guard transportBar.state != Int(audio.transport) + 1 else { return }
+        refreshTransportPresentation()
     }
 
     private func finishProjectSwitch(_ candidate: ProjectSwitchCandidate) async {

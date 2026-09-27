@@ -158,9 +158,8 @@ public final class TransportBarPresenter {
     }
 
     public func goToStart() {
-        guard state != 0, let audio = session?.transportAudio else { return }
-        audio.seek(sample: 0)
-        session?.playheadPresenter().refreshImmediate()
+        guard state != 0 else { return }
+        session?.goToStart()
         refresh()
     }
 

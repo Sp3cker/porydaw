@@ -18,6 +18,7 @@ public final class DocumentWorkspace {
         public var sessionStateChanged: () -> Void
         public var publicationFailed: (String) -> Void
         public var timeSignaturePromptInvalidated: (DocumentSession, UInt64) -> Void
+        public var transportPlayingChanged: (Bool) -> Void
 
         public init(addTrackVoiceRequested: @escaping () -> Void = {},
                     changeTrackVoiceRequested: @escaping (Int) -> Void,
@@ -27,7 +28,8 @@ public final class DocumentWorkspace {
                     gridCommandAvailabilityChanged: @escaping () -> Void,
                     sessionStateChanged: @escaping () -> Void,
                     publicationFailed: @escaping (String) -> Void,
-                    timeSignaturePromptInvalidated: @escaping (DocumentSession, UInt64) -> Void) {
+                    timeSignaturePromptInvalidated: @escaping (DocumentSession, UInt64) -> Void,
+                    transportPlayingChanged: @escaping (Bool) -> Void = { _ in }) {
             self.addTrackVoiceRequested = addTrackVoiceRequested
             self.timeSignaturePromptInvalidated = timeSignaturePromptInvalidated
             self.changeTrackVoiceRequested = changeTrackVoiceRequested
@@ -37,6 +39,7 @@ public final class DocumentWorkspace {
             self.gridCommandAvailabilityChanged = gridCommandAvailabilityChanged
             self.sessionStateChanged = sessionStateChanged
             self.publicationFailed = publicationFailed
+            self.transportPlayingChanged = transportPlayingChanged
         }
     }
 
@@ -62,6 +65,7 @@ public final class DocumentWorkspace {
     private unowned let eventList: EventListPresenter
     private let callbacks: Callbacks
     private var lastPlayheadPresentation: SharedPlayheadPresentation?
+    private var lastPolledPlaying: Bool?
     private var appliedSongConfig: SongConfig
     private var isActive = false
     private var isTornDown = false
@@ -204,6 +208,11 @@ public final class DocumentWorkspace {
         }
         playhead.onPoll = { [weak self] elapsed, playing, presentationChanged in
             guard let self else { return }
+            let previouslyPlaying = lastPolledPlaying
+            lastPolledPlaying = playing
+            if let previouslyPlaying, previouslyPlaying != playing {
+                callbacks.transportPlayingChanged(playing)
+            }
             // Audio telemetry is destructive-read state; drain it even when
             // no presentation or meter publication needs the values.
             let levels = self.audio.consumeTrackActivityLevels()
@@ -231,6 +240,7 @@ public final class DocumentWorkspace {
         }
         eventList.attach(session: session, chunkIndex: initialChunk)
         playhead.attach(session: session, audio: audio, grid: grid, drawer: drawer)
+        lastPolledPlaying = nil
         playhead.startPolling()
     }
 

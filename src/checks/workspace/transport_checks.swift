@@ -156,6 +156,7 @@ private func checkSelectedWorkspaceAudio(_ report: CheckReport, fixtureRoot: Str
         return
     }
     checkTwoTabAudioIsolation(app: app, audio: audio, report: report, id: id, firstID: first.tabId)
+    checkEngineStopResyncsTransportState(app: app, audio: audio, report: report)
 }
 
 @MainActor
@@ -291,4 +292,30 @@ private func checkTwoTabAudioIsolation(app: ApplicationSession, audio: NativeAud
     expectWorkspaceOpeningNote(app: app, audio: audio, report: report, id: id,
                                expected: true,
                                message: "switching back restores the other workspace's native voice")
+}
+
+@MainActor
+private func checkEngineStopResyncsTransportState(app: ApplicationSession, audio: NativeAudio,
+                                                 report: CheckReport) {
+    let checkID = "swiftcore/TransportBar::engineStopResyncsState"
+    audio.setLoopEnabled(false)
+    app.play()
+    guard pollCheckUntil({ audio.transport == 2 }, seconds: 10) else {
+        report.fail(checkID, "fixture song did not start: transport=\(audio.transport)")
+        return
+    }
+    guard let timeline = audio.timeline else {
+        report.fail(checkID, "engine has no timeline after start")
+        return
+    }
+    let tailStop = timeline.lengthSamples + UInt64(3 * audio.sampleRate)
+    audio.seek(sample: tailStop > 2048 ? tailStop - 1024 : 0)
+    guard pollCheckUntil({ audio.transport == 0 }, seconds: 10) else {
+        report.fail(checkID, "engine did not auto-stop past the tail: "
+            + "sample=\(audio.playheadSamples), transport=\(audio.transport)")
+        return
+    }
+    let meter = app.transportBarPresenter()
+    report.expect(pollCheckUntil({ meter.state == 1 }, seconds: 5), cppID: checkID,
+                  message: "engine-initiated stop resyncs cached transport state without a manual refresh")
 }

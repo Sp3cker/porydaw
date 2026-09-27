@@ -116,7 +116,7 @@ Original expression:
 
 A008 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:156
 Disposition: PARTIAL
-Mapping/reason: Related predicate S188 (test_rulerSeekPresentsTargetWhilePausedAndGuardsWhileStopped: the paused audio seek updates the mounted clock and the audio-derived shared playhead lands in the committed target's beat); unproved: the original's 0.25-tick closeness between the presented paused playhead and the audio tick.
+Mapping/reason: Related predicate S187 (test_rulerCommitMovesCursorOnlyInEveryTransportState: the paused press leaves the shared playhead at the pause point); unproved: the original's 0.25-tick closeness between the presented paused playhead and the audio tick.
 Source context since previous assertion:
   ;
       window.synchronizePlayhead();
@@ -127,12 +127,12 @@ Original expression:
   QVERIFY(std::abs(view->playheadTick() - pausedTick) <= toleranceTicks)
 
 A009 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:163
-Disposition: MATCHED
-Mapping: S187
+Disposition: PARTIAL
+Mapping/reason: Related predicate S187 (test_rulerCommitMovesCursorOnlyInEveryTransportState: the paused press leaves the shared playhead at the pause point); user-ruled deviation 2026-09-26: cursor commits never seek; see tst_ShellTransport.qml test_rulerCommitMovesCursorOnlyInEveryTransportState
 
 A010 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:164
 Disposition: PARTIAL
-Mapping/reason: Related predicate S188 (the mounted paused seek presents the audio-derived playhead and clock at the committed target); unproved: the original's 0.25-tick tolerance of the audio position against the committed target — S188 anchors the target beat only.
+Mapping/reason: Related predicate S188 (test_rulerCommitMovesCursorOnlyInEveryTransportState: the paused commit leaves the mounted clock at the pause point); user-ruled deviation 2026-09-26: cursor commits never seek; see tst_ShellTransport.qml test_rulerCommitMovesCursorOnlyInEveryTransportState
 Source context since previous assertion:
   ;
 Original expression:
@@ -157,7 +157,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A013 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:181
 Disposition: PARTIAL
-Mapping/reason: Related predicates S188, S189, S191 (the mounted paused seek moves the real audio position to the committed target, and mounted Play from the committed edit cursor presents Playing with the audio advance passing the cursor); unproved: an edit-cursor commit during active playback — no predicate sweeps the ruler cursor while the transport is Playing or asserts the transport stays Playing through that commit.
+Mapping/reason: Related predicates S189, S191 (mounted Play from the committed edit cursor presents Playing with the audio advance passing the cursor); user-ruled deviation 2026-09-26: cursor commits never seek; see tst_ShellTransport.qml test_rulerCommitMovesCursorOnlyInEveryTransportState — no predicate sweeps the ruler cursor while the transport is Playing.
 Source context since previous assertion:
   ;
       const uint64_t seekTick =
@@ -222,11 +222,11 @@ Swift assertion predicates
 S186 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
 Anchor: message "Pause presents paused when its action completes"
 
-S187 | test_rulerSeekPresentsTargetWhilePausedAndGuardsWhileStopped | src/checks/editorqml/tst_ShellTransport.qml
-Anchor: message "the paused press immediately presents the exact target on the shared playhead"
+S187 | test_rulerCommitMovesCursorOnlyInEveryTransportState | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "the paused press leaves the shared playhead at the pause point"
 
-S188 | test_rulerSeekPresentsTargetWhilePausedAndGuardsWhileStopped | src/checks/editorqml/tst_ShellTransport.qml
-Anchor: message "paused audio seek updates the mounted clock and lands in the target beat"
+S188 | test_rulerCommitMovesCursorOnlyInEveryTransportState | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "the paused commit leaves the mounted clock at the pause point"
 
 S189 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
 Anchor: message "Play presents playing when its action completes"

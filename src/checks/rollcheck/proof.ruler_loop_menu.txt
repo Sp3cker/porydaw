@@ -829,19 +829,19 @@ Anchor: message "a ruler tap emits one seek for the exact snapped anchor"
 S019 | checkRulerSeekEmission | src/checks/rollcheck/ruler_loop_menu.swift
 Anchor: message "the shared playhead presents the sought tick from its sample"
 
-S020 | test_rulerSeekPresentsTargetWhilePausedAndGuardsWhileStopped | src/checks/editorqml/tst_ShellTransport.qml
+S020 | test_rulerCommitMovesCursorOnlyInEveryTransportState | src/checks/editorqml/tst_ShellTransport.qml
 Anchor: message "the stopped press commits the cursor"
 
-S021 | test_rulerSeekPresentsTargetWhilePausedAndGuardsWhileStopped | src/checks/editorqml/tst_ShellTransport.qml
-Anchor: message "the paused press immediately presents the exact target on the shared playhead"
+S021 | test_rulerCommitMovesCursorOnlyInEveryTransportState | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "the paused press leaves the shared playhead at the pause point"
 
-S022 | test_rulerSeekPresentsTargetWhilePausedAndGuardsWhileStopped | src/checks/editorqml/tst_ShellTransport.qml
-Anchor: message "stopped seek leaves the playhead at origin"
+S022 | test_rulerCommitMovesCursorOnlyInEveryTransportState | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "stopped commit leaves the playhead at origin"
 
-S023 | test_rulerSeekPresentsTargetWhilePausedAndGuardsWhileStopped | src/checks/editorqml/tst_ShellTransport.qml
-Anchor: message "paused audio seek updates the mounted clock and lands in the target beat"
+S023 | test_rulerCommitMovesCursorOnlyInEveryTransportState | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "the paused commit leaves the mounted clock at the pause point"
 
-S024 | test_rulerSeekPresentsTargetWhilePausedAndGuardsWhileStopped | src/checks/editorqml/tst_ShellTransport.qml
+S024 | test_rulerCommitMovesCursorOnlyInEveryTransportState | src/checks/editorqml/tst_ShellTransport.qml
 Anchor: message "the stopped ruler menu mounts before keyboard dismissal"
 
 S025 | checkRulerChip | src/checks/rollcheck/ruler_loop_menu.swift

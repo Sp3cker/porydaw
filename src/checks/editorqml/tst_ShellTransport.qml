@@ -184,11 +184,17 @@ TestCase {
             transport.refresh()
             return !clock.text.startsWith("0:00.0 / ")
         }, 3000), "playback advances before comparing the seek routes")
+        var homeSurface = rollSurface()
+        verify(homeSurface !== null, "the roll surface mounts before the home routes")
+        var homeGrid = homeSurface.gridModel
+        homeGrid.setEditCursorTick(homeGrid.ticksPerBeat * 4)
+        verify(homeGrid.editCursorTick > 0, "the edit cursor starts away from the origin")
         mouseClick(button(0), button(0).width / 2, button(0).height / 2)
         verify(waitForNative(function() {
             transport.refresh()
             return clock.text.startsWith("0:00.0 / ")
         }, 3000), "Go to Start button seeks the actual audio playhead")
+        compare(homeGrid.editCursorTick, 0, "Go to Start button homes the edit cursor")
         verify(waitForNative(function() {
             transport.refresh()
             return !clock.text.startsWith("0:00.0 / ")
@@ -198,6 +204,7 @@ TestCase {
             transport.refresh()
             return clock.text.startsWith("0:00.0 / ")
         }, 3000), "Go to Start menu seeks the same audio playhead")
+        compare(homeGrid.editCursorTick, 0, "Go to Start menu keeps the edit cursor at the origin")
         menu(3).triggered()
         tryCompare(transport, "state", 1, 3000)
 
@@ -274,11 +281,17 @@ TestCase {
         tryCompare(bar.presenter, "state", 2, 3000)
         mouseClick(stop, stop.width / 2, stop.height / 2)
         tryCompare(bar.presenter, "state", 1, 3000)
+        var stoppedSurface = rollSurface()
+        verify(stoppedSurface !== null, "the roll surface mounts before the stopped rewind")
+        var stoppedGrid = stoppedSurface.gridModel
+        stoppedGrid.setEditCursorTick(stoppedGrid.ticksPerBeat * 4)
+        verify(stoppedGrid.editCursorTick > 0, "the stopped edit cursor starts away from the origin")
         mouseClick(rewind, rewind.width / 2, rewind.height / 2)
+        compare(stoppedGrid.editCursorTick, 0, "stopped rewind homes the edit cursor without seeking")
         verify(waitForNative(function() {
             bar.presenter.refresh()
             return clock.text.startsWith("0:00.0 / ")
-        }, 3000), "rewind seeks the real audio playhead")
+        }, 3000), "stopped rewind leaves the rewound clock at the origin")
 
         var loop = findChild(bar, "transport.loop")
         var beforeLoop = bar.presenter.loopEnabled
@@ -644,7 +657,7 @@ TestCase {
         return null
     }
 
-    function test_rulerSeekPresentsTargetWhilePausedAndGuardsWhileStopped() {
+    function test_rulerCommitMovesCursorOnlyInEveryTransportState() {
         var bar = openShell()
         var session = shell.shellPresenter.session
         openSong()
@@ -668,9 +681,9 @@ TestCase {
                    "the stopped ruler menu owns Escape focus")
         verify(grid.editCursorTick !== stoppedCursor, "the stopped press commits the cursor")
         verify(Math.abs(session.playheadPresenter().tick) < 0.5,
-               "stopped seek leaves the playhead at origin")
+               "stopped commit leaves the playhead at origin")
         bar.presenter.refresh()
-        verify(clock.text.startsWith("0:00.0 / "), "stopped seek leaves the transport clock")
+        verify(clock.text.startsWith("0:00.0 / "), "stopped commit leaves the transport clock")
         keyClick(Qt.Key_Escape)
         tryCompare(session, "timeSigMenuOpen", false)
         verify(waitForNative(function() {
@@ -694,8 +707,8 @@ TestCase {
         mouseClick(ruler, ruler.width * 0.6, ruler.height * 0.5, Qt.RightButton)
         var targetCursor = grid.editCursorTick
         verify(targetCursor > pausedTick, "the paused ruler target is ahead of playback")
-        verify(Math.abs(session.playheadPresenter().tick - targetCursor) < 0.001,
-               "the paused press immediately presents the exact target on the shared playhead")
+        verify(Math.abs(session.playheadPresenter().tick - pausedTick) < 0.5,
+               "the paused press leaves the shared playhead at the pause point")
         tryCompare(session, "timeSigMenuOpen", true)
         verify(waitForNative(function() {
             return findChild(surface, "quickMenuPanelRoot") !== null
@@ -708,13 +721,10 @@ TestCase {
         verify(waitForNative(function() {
             return findChild(surface, "quickMenuPanelRoot") === null
         }, 3000), "the paused menu panel leaves the visible scene")
-        verify(waitForNative(function() {
-            bar.presenter.refresh()
-            return clock.text !== pausedClock
-                && Math.round(session.playheadPresenter().tick / grid.ticksPerBeat)
-                    === Math.round(targetCursor / grid.ticksPerBeat)
-        }, 3000), "paused audio seek updates the mounted clock and lands in the target beat")
-        compare(bar.presenter.state, 2, "ruler seek preserves the paused transport")
+        bar.presenter.refresh()
+        compare(clock.text, pausedClock,
+                "the paused commit leaves the mounted clock at the pause point")
+        compare(bar.presenter.state, 2, "ruler commit preserves the paused transport")
     }
     function test_backgroundRulerSeekCannotMoveSelectedSong() {
         var bar = openShell()
@@ -817,6 +827,34 @@ TestCase {
                "Space presents playing when its action completes")
         verify(Math.abs(session.playheadPresenter().tick - cursor) < 0.001,
                "Space restarts from the edit cursor instead of the pause point")
+    }
+
+    function test_homeHomesCursorWithoutMovingStoppedPlayhead() {
+        var bar = openShell()
+        var session = shell.shellPresenter.session
+        openSong()
+        verify(waitForNative(function() { return rollSurface() !== null }, 10000),
+               "the roll surface mounts for the Home check")
+        var home = rollSurface()
+        var grid = home.gridModel
+        var rewind = findChild(bar, "transport.go-to-start")
+        var play = findChild(bar, "transport.play")
+        verify(rewind && play, "rewind and play are mounted")
+        grid.setEditCursorTick(grid.ticksPerBeat * 4)
+        var cursor = grid.editCursorTick
+        verify(cursor > 0, "the stopped edit cursor starts away from the origin")
+        mouseClick(rewind, rewind.width / 2, rewind.height / 2)
+        compare(grid.editCursorTick, 0, "Home homes the stopped edit cursor")
+        verify(Math.abs(session.playheadPresenter().tick) < 0.5,
+               "Home leaves the stopped playhead at the origin")
+        mouseClick(play, play.width / 2, play.height / 2)
+        tryCompare(bar.presenter, "state", 3, 3000)
+        verify(session.playheadPresenter().tick < cursor,
+               "Play after Home starts at the homed origin rather than the old cursor")
+        var first = session.playheadPresenter().tick
+        verify(waitForNative(function() {
+            return session.playheadPresenter().tick > first + 8
+        }, 5000), "playback advances from the homed origin")
     }
 
     function test_cancelledSweepAndHiddenMixDoNotPublishIntoSelectedWorkspace() {
