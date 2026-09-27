@@ -139,8 +139,70 @@ private func checkFailedProjectSwitch(report: CheckReport, projectDir: String) {
 }
 
 @MainActor
+private func sessionStartupRestore(report: CheckReport, projectDir: String) {
+    let id = "project-workspace/ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder"
+    let store = PreferencesStore()
+    guard store.resetPreferences() else {
+        report.fail(id, "could not clear isolated preferences before startup restore")
+        return
+    }
+    let seed = WorkspaceTabRecipe(projectPath: projectDir,
+                                  orderedSongs: ["mus_session_test", "mus_session_test2",
+                                                 "porydaw_missing_song"],
+                                  selectedSong: "mus_session_test")
+    EditorViewStateCodec.saveTabs(seed, store: store)
+    store.synchronize()
+    guard EditorViewStateCodec.loadTabs(store: store) == seed else {
+        report.fail(id, "could not seed the complete startup tab recipe")
+        _ = store.resetPreferences()
+        return
+    }
+    let shell = ShellPresenter()
+    shell.configureSettings(applicationName: "porydaw")
+    let app = shell.session
+    defer {
+        app.hostClosing()
+        app.acknowledgeGridDetached()
+        if !store.resetPreferences() {
+            report.fail(id, "could not clear isolated preferences after startup restore")
+        }
+    }
+    shell.openStartup()
+    let deadline = Date().addingTimeInterval(25)
+    while !(app.projectOpen && app.songTabs.tabCount == 2
+            && app.songTabs.selectedPage?.title == "mus_session_test")
+          && app.lastSaveError.isEmpty && Date() < deadline {
+        _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+    }
+    guard app.projectOpen, app.songTabs.tabCount == 2, app.lastSaveError.isEmpty else {
+        report.fail(id, "startup did not restore the staged project and two available tabs: \(app.lastSaveError)")
+        return
+    }
+    report.expect(app.songTabs.selectedPage?.title == "mus_session_test"
+                  && app.songTabs.selectedPage?.isReady == true,
+                  cppID: id, message: "A025 startup restores the saved-selected song as the ready selected tab")
+    report.expect(app.songTabs.tabs.contains { $0.title == "mus_session_test2" && $0.isReady },
+                  cppID: id, message: "A026 startup restores the second saved song as a ready tab")
+    report.expect(!app.songTabs.tabs.contains { $0.title == "porydaw_missing_song" }
+                  && app.songTabs.tabCount == 2,
+                  cppID: id, message: "A027 missing saved song yields no tab without aborting startup restore")
+    report.expectEqual(expected: ["mus_session_test", "mus_session_test2"],
+                       actual: app.songTabs.tabs.map(\.title), cppID: id,
+                       what: "A028 startup restores available song tabs in saved-selected-first order")
+    store.synchronize()
+    report.expectEqual(
+        expected: WorkspaceTabRecipe(projectPath: projectDir,
+                                     orderedSongs: ["mus_session_test", "mus_session_test2",
+                                                    "porydaw_missing_song"],
+                                     selectedSong: "mus_session_test"),
+        actual: EditorViewStateCodec.loadTabs(store: store), cppID: id,
+        what: "startup preserves all three saved recipe labels after restore")
+}
+
+@MainActor
 internal func sessionOpenAndRecovery(report: CheckReport, projectDir: String) -> (service: ProjectService, session: DocumentSession)? {
     checkFailedProjectSwitch(report: report, projectDir: projectDir)
+    sessionStartupRestore(report: report, projectDir: projectDir)
     // 1. Service open and error recovery
     let service = ProjectService()
     let songTablePath = projectDir + "/sound/song_table.inc"

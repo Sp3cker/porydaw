@@ -14,12 +14,16 @@ Task-139 SHA-256: src/checks/workspace/session_io.swift 8b430d23f7c5076503cf7162
 Task-139 SHA-256: src/checks/editorqml/tst_ShellOpenFailure.qml 75a3f26c5465f0b9bcb9ef07e4137097b1e2237d0a3d17f62d0f72de744711f1
 Task-152 SHA-256: src/checks/workspace/bank_edits.swift a868e24ab5f0323d67eb11937b2fe07243fed6f6f1e391f9c816d28f060de519
 Task-152 SHA-256: src/swift/app/ProjectService.swift 8b91d6a9ff0a6ea46cfeabec68fb0f94f160013aabf403d19d772efa1f7456ef
+Task-157 SHA-256: src/checks/workspace/session_io.swift 5ae430b438e9b480d99f232782ce1cf9435480bc7aa373c445046cc8eab7b215
+Task-157 SHA-256: src/swift/app/ApplicationSession+ProjectOpening.swift c7397c8334074d0e9c2bb7f53256b1927e916e1cac3f2a68ffdb39295ec693c4
 
 
 Task-139 project command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-projectsession --verbose
 Task-139 project result: Not provided for frozen session_io.swift SHA-256 8b430d23f7c5076503cf7162a68e0ac79937814be7284dcf200a6bd142437b86. Earlier implementer-reported PASS (1/36) was on the preceding session_io.swift SHA-256 4e2e6fa394d7e20686f711921f74db78ff65871fbbf87d9504542178e046087f.
 Task-139 shell command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify:shell --filter shell-open-failure --verbose
 Task-139 shell result: Not provided for frozen QML SHA-256 75a3f26c5465f0b9bcb9ef07e4137097b1e2237d0a3d17f62d0f72de744711f1. Earlier implementer-reported PASS (1/75) was on this unchanged QML hash; that run does not establish execution of the revised Swift assertions.
+Task-157 project command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-projectsession --verbose
+Task-157 project result: PASS — build: ok (2.41s); ok: swiftcore-projectsession (8.75s); verify: 1/36 ok; run_checks: PASS (all harnesses in 8.84s). Implementer-reported in agent://Task157 for the Task-157 hashes above; ledger writer did not rerun.
 
 A001 | ProjectWorkspaceTest::verifyStateErrorInvariant | src/checks/project/workspace.cpp:252
 Disposition: GAP
@@ -483,8 +487,8 @@ Original expression:
                QDir(m_stagedRoot).absolutePath())
 
 A018 | ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder | src/checks/project/workspace.cpp:332
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Disposition: NATIVE-SETUP
+Mapping/reason: C++ startup fixture creation through startRestoredStartup is harness setup; the Swift scenario seeds saved preferences directly and does not prove this native helper predicate.
 Source context since previous assertion:
   ;
   }
@@ -497,8 +501,8 @@ Original expression:
   QVERIFY2(startRestoredStartup(error), qPrintable(error))
 
 A019 | ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder | src/checks/project/workspace.cpp:337
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Disposition: NATIVE-SETUP
+Mapping/reason: C++ SongName::create route101 validity guard is native fixture setup; Swift supplies its own saved song label and does not test this C++ construction predicate.
 Source context since previous assertion:
   ;
       const std::optional<SongName> route101 = SongName::create(QStringLiteral("mus_route101"));
@@ -510,8 +514,8 @@ Original expression:
   QVERIFY(route101)
 
 A020 | ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder | src/checks/project/workspace.cpp:338
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Disposition: NATIVE-SETUP
+Mapping/reason: C++ SongName::create petalburg validity guard is native fixture setup; Swift supplies different saved song labels and does not test this C++ construction predicate.
 Source context since previous assertion:
   ;
 
@@ -519,8 +523,8 @@ Original expression:
   QVERIFY(petalburg)
 
 A021 | ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder | src/checks/project/workspace.cpp:339
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Disposition: NATIVE-SETUP
+Mapping/reason: C++ SongName::create missing-name validity guard is native fixture setup; Swift uses a saved missing-song label but does not test this C++ construction predicate.
 Source context since previous assertion:
   ;
 
@@ -528,8 +532,8 @@ Original expression:
   QVERIFY(missing)
 
 A022 | ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder | src/checks/project/workspace.cpp:342
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Disposition: NATIVE-SETUP
+Mapping/reason: C++ waitForStartupTerminals guard is native event-loop fixture setup; Swift startup waits on visible session/tab state and does not prove completion of the C++ terminal-publication wait.
 Source context since previous assertion:
   ;
       if (!(route101 && petalburg && missing))
@@ -539,8 +543,8 @@ Original expression:
   QVERIFY2(waitForStartupTerminals(*route101, *petalburg, *missing, error), qPrintable(error))
 
 A023 | ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder | src/checks/project/workspace.cpp:349
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — the C++ Loading state’s index in the ProjectWorkspace publication deque is native event-log ordering; Swift tracks projectOpen, not a state-publication event log.
 Source context since previous assertion:
   ;
 
@@ -554,8 +558,8 @@ Original expression:
   QCOMPARE(loading, 0)
 
 A024 | ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder | src/checks/project/workspace.cpp:350
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — comparing C++ Ready and Loading publication indices depends on the native state-event deque; Swift exposes projectOpen without that publication sequence.
 Source context since previous assertion:
   ;
 
@@ -563,8 +567,8 @@ Original expression:
   QVERIFY(ready > loading)
 
 A025 | ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder | src/checks/project/workspace.cpp:351
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S023 in sessionStartupRestore asserts under the seeded startup recipe that mus_session_test is the selected tab and is ready, covering the saved-selected song’s ready-tab outcome. [S023]
 Source context since previous assertion:
   ;
 
@@ -572,8 +576,8 @@ Original expression:
   QVERIFY(selected > ready)
 
 A026 | ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder | src/checks/project/workspace.cpp:352
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S024 in sessionStartupRestore asserts that mus_session_test2 is present as a ready restored tab under the same startup recipe. [S024]
 Source context since previous assertion:
   ;
 
@@ -581,8 +585,8 @@ Original expression:
   QVERIFY(rest > ready)
 
 A027 | ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder | src/checks/project/workspace.cpp:353
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S025 in sessionStartupRestore asserts that the missing saved label creates no tab while both available tabs remain restored, covering non-aborting missing-song reconciliation. [S025]
 Source context since previous assertion:
   ;
 
@@ -590,8 +594,8 @@ Original expression:
   QVERIFY(failed > ready)
 
 A028 | ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder | src/checks/project/workspace.cpp:354
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S026 in sessionStartupRestore compares the restored tab labels to the expected selected-first order ["mus_session_test", "mus_session_test2"]. [S026]
 Source context since previous assertion:
   ;
 
@@ -599,8 +603,8 @@ Original expression:
   QVERIFY(selected < rest)
 
 A029 | ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder | src/checks/project/workspace.cpp:355
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — relative ordering of terminal SongUpdate publication indices for available and missing songs is native event-log representation; Swift has no equivalent event log.
 Source context since previous assertion:
   ;
 
@@ -1575,6 +1579,17 @@ Anchor: message "matching edit publishes the independent complete edited slot li
 
 S022 | bankMissingBasisAndApplied (line 361: report.expect(session.bankLease.sourcePath == originalPath && session.bankLease.sectionLabel == originalSection, cppID: id, message: "A098: matching edit retains the original published bank source and section")) | src/checks/workspace/bank_edits.swift
 Anchor: message "A098: matching edit retains the original published bank source and section"
+S023 | sessionStartupRestore (line 181: report.expect(app.songTabs.selectedPage?.title == "mus_session_test" && app.songTabs.selectedPage?.isReady == true, cppID: id, message: "A025 startup restores the saved-selected song as the ready selected tab")) | src/checks/workspace/session_io.swift
+Anchor: message "A025 startup restores the saved-selected song as the ready selected tab"
+
+S024 | sessionStartupRestore (line 184: report.expect(app.songTabs.tabs.contains { $0.title == "mus_session_test2" && $0.isReady }, cppID: id, message: "A026 startup restores the second saved song as a ready tab")) | src/checks/workspace/session_io.swift
+Anchor: message "A026 startup restores the second saved song as a ready tab"
+
+S025 | sessionStartupRestore (line 186: report.expect(!app.songTabs.tabs.contains { $0.title == "porydaw_missing_song" } && app.songTabs.tabCount == 2, cppID: id, message: "A027 missing saved song yields no tab without aborting startup restore")) | src/checks/workspace/session_io.swift
+Anchor: message "A027 missing saved song yields no tab without aborting startup restore"
+
+S026 | sessionStartupRestore (line 189: report.expectEqual(expected: ["mus_session_test", "mus_session_test2"], actual: app.songTabs.tabs.map(\.title), cppID: id, what: "A028 startup restores available song tabs in saved-selected-first order")) | src/checks/workspace/session_io.swift
+Anchor: message "A028 startup restores available song tabs in saved-selected-first order"
 
 Task-152 command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-bankhistory --verbose
 Task-152 result: PASS — build: ok (21.89s); ok: swiftcore-bankhistory (2.11s); verify: 1/36 ok (35 skipped); run_checks: PASS (implementer-reported in agent://Task152 for the hashes above; not rerun by ledger writer).
