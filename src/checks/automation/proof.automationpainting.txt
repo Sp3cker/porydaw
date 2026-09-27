@@ -12,24 +12,18 @@ Additional Swift counterpart: src/checks/automation/automationselection.swift
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — deno task verify --filter swiftcore --verbose on this worktree at 470231af (1/14 harnesses selected; swiftcore green, including the predicates cited below). Evidence supplied by the lane controller for this settled source snapshot; this ledger task did not re-run the suite.
 Delta snapshot: the automationcanvasediting.swift and automationselection.swift hashes above were re-pinned for the delta (double-click-once deletion moved the selection file; keyboard-ingress/band-escape predicates extended the canvasediting file), and every indexed S anchor was re-audited against the pinned sources with no drift. Task-57 delta: drawerAutomationPresentationPaintingModel in src/checks/automation/presentation/painting.swift (unmodified since the controller's build/proof-evidence/swiftcore-projectsession.json run, whose pass rows execute it) now composes the empty tempo store with no lead-in, indexed as S040 and closing A004; all other dispositions are unchanged.
-Task-25 delta: drawerAutomationPresentationPaintingModel (src/checks/automation/presentation/painting.swift) now also pins the drawer curve ink — every published active run #EA3C3C and every published pinned-ghost run #80EA3C3C, vanilla — indexed as S038/S039 and cited by A016/A037 for the ink half of those layer-probe clauses. A018/A038 keep GAP because the presenter's node handles still publish palette.primaryText/secondaryText, not the node ink. The added predicates executed in the implementer's deno task verify --filter swiftcore --verbose run on this snapshot; this ledger pass read that evidence (build/proof-evidence/swiftcore-projectsession.json) and did not re-run the lane.
+Task-25 delta (historical): drawerAutomationPresentationPaintingModel pinned active #EA3C3C and pinned-ghost #80EA3C3C curve-run ink as S038/S039; A016/A037 were still PARTIAL and A018/A038 still GAP before Task-104's mounted pixel predicates below. The Task-25 predicates executed in the implementer's `deno task verify --filter swiftcore --verbose` run and this ledger did not rerun that lane.
 Converted-window command: deno task verify:qml --verbose
+Task-104 evidence (final frozen check sources): `deno task verify --filter swiftcore-projectsession --verbose` PASS (1/36), `deno task verify:qml --verbose` PASS (1/1), `deno task verify` PASS (36/36), as reported by the implementer after the raw-tick pencil repair. Full shell was 25/26 while another task's shell check was in flight; no full-shell PASS is claimed. Predicate source SHA-256: painting.swift 76f443a9914cad0a6a0192bf52c782fcd24a5d924d37e1ce109543363257448a; tst_EditorDrawer.qml 965f3ca94ef732845716d735ac9502a57b8c7c77308ff7a2396af95bd184d30b.
+
 
 A001 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:109
 Disposition: MATCHED
 Mapping: S030
 
 A002 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:113
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/body geometry is replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture :: configureBody + activate). This is not a native rendering assertion.
-Source context since previous assertion:
-
-      SongDocument &document = m_tab->document();
-      SongView &view = m_tab->view();
-      const LanePaint tempo = lanePaint(*m_page, LaneKind::Tempo);
-
-Original expression:
-  QVERIFY(!tempo.body.isEmpty());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S041 — fork c17d966f `!tempo.body.isEmpty()` checks retired AutomationCanvas body geometry; S041 observes the mounted empty Tempo plot's absence of curve pixels.
 
 A003 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:116
 Disposition: RETIRED-REPRESENTATION
@@ -52,36 +46,12 @@ Disposition: MATCHED
 Mapping: S035
 
 A007 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:135
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-      const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
-      const qreal x0 = nodePoint(view, *m_automationInput, tempo, 0, CoreTimeDefaults::kTempoBpm).x();
-      const qreal xMid =
-          nodePoint(view, *m_automationInput, tempo, kFirstNodeTick / 2, CoreTimeDefaults::kTempoBpm)
-              .x();
-      const qreal y120 =
-          nodePoint(view, *m_automationInput, tempo, 0, CoreTimeDefaults::kTempoBpm).y();
-      const qreal radius = nodelane::hoverRingRadius(AutomationGeometry::resolve());
-      const qreal lineHalf = std::max(qreal(layout::singlePixel()),
-                                      qreal(AutomationGeometry::resolve().hoverPaintPadding + 1));
-      const auto &curves = scene->layer(songview::TimelineQuickLayer::AutomationCurves);
-      const auto &nodes = scene->layer(songview::TimelineQuickLayer::AutomationNodes);
-
-Original expression:
-  QVERIFY(!checks::support::layerHasColorIn(curves, lineProbe(QPointF(xMid, y120), 8.0, lineHalf),
-                                                tempo.color));
+Disposition: MATCHED
+Mapping: S041
 
 A008 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:137
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!checks::support::layerHasColorIn(nodes, nodeProbe(QPointF(x0, y120), radius),
-                                                tempo.color));
+Disposition: MATCHED
+Mapping: S042
 
 A009 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:139
 Disposition: MATCHED
@@ -92,34 +62,15 @@ Disposition: MATCHED
 Mapping: S030
 
 A011 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:148
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/body geometry is replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture :: configureBody + activate). This is not a native rendering assertion.
-Source context since previous assertion:
-
-      SongDocument &document = m_tab->document();
-      SongView &view = m_tab->view();
-      const LanePaint tempo = lanePaint(*m_page, LaneKind::Tempo);
-
-Original expression:
-  QVERIFY(!tempo.body.isEmpty());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S043 — fork c17d966f `!tempo.body.isEmpty()` checks retired AutomationCanvas body geometry; S043 samples the mounted Tempo lead-in pixels.
 
 A012 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:150
 Disposition: RETIRED-REPRESENTATION
 
 A013 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:156
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationCurves/AutomationNodes/AutomationSelection layer revisions observe the native mesh rebuild. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-
-
-      const quint64 curvesBefore =
-          scene->layer(songview::TimelineQuickLayer::AutomationCurves).revision;
-      setTempo(document,
-               {{kFirstNodeTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoNode)}});
-
-Original expression:
-  QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationCurves).revision >
-                  curvesBefore);
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S043 — fork c17d966f `AutomationCurves).revision > curvesBefore` checks a removed native scene-graph mesh counter; S043 samples the mounted lead-in pixels after the write.
 
 A014 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:160
 Disposition: MATCHED
@@ -130,39 +81,16 @@ Disposition: MATCHED
 Mapping: S035
 
 A016 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:171
-Disposition: PARTIAL
-Mapping/reason: S038 — src/checks/automation/presentation/painting.swift drawerAutomationPresentationPaintingModel asserts every published active curve run carries the lane ink (#EA3C3C vanilla, the role value the probe's tempo.color resolves to), so the ink half of this clause executes on the presented rects; unproved: the rendered lead-in segment at lineProbe(leadMid, ...) and the AutomationCurves layer pixels — no executing predicate observes the rendered mesh.
-Source context since previous assertion:
-
-      const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
-
-      const QPointF leadMid =
-          nodePoint(view, *m_automationInput, tempo, kFirstNodeTick / 2, CoreTimeDefaults::kTempoBpm);
-      const QPointF zero = nodePoint(view, *m_automationInput, tempo, 0, CoreTimeDefaults::kTempoBpm);
-      const QPointF node = nodePoint(view, *m_automationInput, tempo, kFirstNodeTick, kTempoNode);
-      const qreal radius = nodelane::hoverRingRadius(AutomationGeometry::resolve());
-      const qreal lineHalf = std::max(qreal(layout::singlePixel()),
-                                      qreal(AutomationGeometry::resolve().hoverPaintPadding + 1));
-
-Original expression:
-  QVERIFY(checks::support::layerHasColorIn(
-          scene->layer(songview::TimelineQuickLayer::AutomationCurves),
-          lineProbe(leadMid, 8.0, lineHalf), tempo.color));
+Disposition: MATCHED
+Mapping: S043
 
 A017 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:174
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!checks::support::layerHasColorIn(
-          scene->layer(songview::TimelineQuickLayer::AutomationNodes), nodeProbe(zero, radius),
-          tempo.color));
+Disposition: MATCHED
+Mapping: S044
 
 A018 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:177
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: the layerHasColorIn probe observes the rendered node marker's ring, which the fork paints in the lane ink (automationnodelanequick.cpp:503 passes context.color = song_view_automation_node_ink to addNodes; addNode fills the disc with window_background and rings it in that colour). The Swift presenter publishes its node handles with fillColor palette.primaryText/secondaryText and outlineColor palette.noteBorder (src/swift/app/drawer/automation/AutomationContentPublication.swift:297-299) and no predicate observes a published node colour, so this node-ink clause stays unported; the rendered mesh remains the converted-window obligation.
+Disposition: PARTIAL
+Mapping/reason: S045, S060 — the first written Tempo marker publishes lane ink and the mounted scan finds that ink near its independently mapped position, but the step's vertical ink at tick 96 can satisfy the same pixel probe without a painted marker; unproved: isolated node-ring pixels.
 Source context since previous assertion:
 
 
@@ -180,32 +108,15 @@ Disposition: MATCHED
 Mapping: S030
 
 A021 | AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve | src/checks/automation/automationpainting.cpp:189
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/body geometry is replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture :: configureBody + activate). This is not a native rendering assertion.
-Source context since previous assertion:
-
-      SongDocument &document = m_tab->document();
-      SongView &view = m_tab->view();
-      const LanePaint tempo = lanePaint(*m_page, LaneKind::Tempo);
-
-Original expression:
-  QVERIFY(!tempo.body.isEmpty());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S046 — fork c17d966f `!tempo.body.isEmpty()` checks retired AutomationCanvas body geometry; S046 samples the mounted Tempo node's pixels.
 
 A022 | AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve | src/checks/automation/automationpainting.cpp:191
 Disposition: RETIRED-REPRESENTATION
 
 A023 | AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve | src/checks/automation/automationpainting.cpp:196
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationCurves/AutomationNodes/AutomationSelection layer revisions observe the native mesh rebuild. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-
-
-      const quint64 nodesBefore =
-          scene->layer(songview::TimelineQuickLayer::AutomationNodes).revision;
-      setTempo(document, {{0, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoHeld)}});
-
-Original expression:
-  QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationNodes).revision > nodesBefore);
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S046 — fork c17d966f `AutomationNodes).revision > nodesBefore` checks a removed native mesh counter; S046 samples the mounted written origin's pixels after promotion.
 
 A024 | AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve | src/checks/automation/automationpainting.cpp:199
 Disposition: MATCHED
@@ -216,33 +127,12 @@ Disposition: MATCHED
 Mapping: S035
 
 A026 | AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve | src/checks/automation/automationpainting.cpp:208
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-      const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
-      const QPointF zero = nodePoint(view, *m_automationInput, tempo, 0, kTempoHeld);
-      const QPointF leadMid =
-          nodePoint(view, *m_automationInput, tempo, kFirstNodeTick / 2, CoreTimeDefaults::kTempoBpm);
-      const qreal radius = nodelane::hoverRingRadius(AutomationGeometry::resolve());
-      const qreal lineHalf = std::max(qreal(layout::singlePixel()),
-                                      qreal(AutomationGeometry::resolve().hoverPaintPadding + 1));
-
-Original expression:
-  QVERIFY(checks::support::layerHasColorIn(
-          scene->layer(songview::TimelineQuickLayer::AutomationNodes), nodeProbe(zero, radius),
-          tempo.color));
+Disposition: MATCHED
+Mapping: S046
 
 A027 | AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve | src/checks/automation/automationpainting.cpp:211
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!checks::support::layerHasColorIn(
-          scene->layer(songview::TimelineQuickLayer::AutomationCurves),
-          lineProbe(leadMid, 8.0, lineHalf), tempo.color));
+Disposition: MATCHED
+Mapping: S047
 
 A028 | AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve | src/checks/automation/automationpainting.cpp:214
 Disposition: MATCHED
@@ -256,36 +146,12 @@ A030 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation
 Disposition: RETIRED-REPRESENTATION
 
 A031 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:246
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationCurves/AutomationNodes/AutomationSelection layer revisions observe the native mesh rebuild. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-
-      const quint64 curvesBefore =
-          scene->layer(songview::TimelineQuickLayer::AutomationCurves).revision;
-      const quint64 nodesBefore =
-          scene->layer(songview::TimelineQuickLayer::AutomationNodes).revision;
-      if (kind == LaneKind::Tempo) {
-          setTempo(
-              document,
-              {{0, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoHeld)},
-               {kFirstNodeTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoNode)},
-               {kSecondNodeTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoSecond)}});
-      } else {
-          setCc(document, {{0, kCcHeld}, {kFirstNodeTick, kCcNode}, {kSecondNodeTick, kCcSecond}});
-      }
-
-Original expression:
-  QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationCurves).revision >
-                  curvesBefore);
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S048 — fork c17d966f `AutomationCurves).revision > curvesBefore` checks a removed native mesh counter; S048 samples the mounted CC step pixels.
 
 A032 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:248
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationCurves/AutomationNodes/AutomationSelection layer revisions observe the native mesh rebuild. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-
-
-Original expression:
-  QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationNodes).revision > nodesBefore);
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S049 — fork c17d966f `AutomationNodes).revision > nodesBefore` checks a removed native mesh counter; S049 samples the mounted CC marker pixels.
 
 A033 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:251
 Disposition: MATCHED
@@ -296,47 +162,20 @@ Disposition: MATCHED
 Mapping: S035
 
 A035 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:256
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/body geometry is replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture :: configureBody + activate). This is not a native rendering assertion.
-Source context since previous assertion:
-
-      const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
-
-      const LanePaint lane = lanePaint(*m_page, kind);
-
-Original expression:
-  QVERIFY(lane.handle.valid());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S048 — fork c17d966f `lane.handle.valid()` checks the removed AutomationCanvas lane handle; S048 samples the production CC lane step pixels.
 
 A036 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:257
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/body geometry is replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture :: configureBody + activate). This is not a native rendering assertion.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!lane.body.isEmpty());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S049 — fork c17d966f `!lane.body.isEmpty()` checks retired AutomationCanvas body geometry; S049 samples the mounted CC marker pixels.
 
 A037 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:265
-Disposition: PARTIAL
-Mapping/reason: S038 — src/checks/automation/presentation/painting.swift drawerAutomationPresentationPaintingModel asserts every published active curve run carries the lane ink (#EA3C3C vanilla, the role value the probe's lane.color resolves to), so the ink half of this clause executes on the presented rects; unproved: the rendered step-curve segment at lineProbe(mid, ...) and the AutomationCurves layer pixels — no executing predicate observes the rendered mesh.
-Source context since previous assertion:
-
-      const int held = kind == LaneKind::Tempo ? kTempoHeld : kCcHeld;
-      const int node = kind == LaneKind::Tempo ? kTempoNode : kCcNode;
-      const QPointF mid = nodePoint(view, *m_automationInput, lane, kFirstNodeTick / 2, held);
-      const QPointF point = nodePoint(view, *m_automationInput, lane, kFirstNodeTick, node);
-      const qreal radius = nodelane::hoverRingRadius(AutomationGeometry::resolve());
-      const qreal lineHalf = std::max(qreal(layout::singlePixel()),
-                                      qreal(AutomationGeometry::resolve().hoverPaintPadding + 1));
-
-Original expression:
-  QVERIFY(checks::support::layerHasColorIn(
-          scene->layer(songview::TimelineQuickLayer::AutomationCurves), lineProbe(mid, 8.0, lineHalf),
-          lane.color));
+Disposition: MATCHED
+Mapping: S057, S048
 
 A038 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:268
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: the layerHasColorIn probe observes the rendered node marker's ring, which the fork paints in the lane ink (automationnodelanequick.cpp:503 passes context.color = song_view_automation_node_ink to addNodes; addNode fills the disc with window_background and rings it in that colour). The Swift presenter publishes its node handles with fillColor palette.primaryText/secondaryText and outlineColor palette.noteBorder (src/swift/app/drawer/automation/AutomationContentPublication.swift:297-299) and no predicate observes a published node colour, so this node-ink clause stays unported; the rendered mesh remains the converted-window obligation.
+Disposition: PARTIAL
+Mapping/reason: S045, S049, S060, S061 — written Tempo and CC markers publish lane ink and mounted probes find nearby ink, but both positions may also contain vertical step ink; unproved: node-ring pixels isolated from the curve in both parameterized lanes.
 Source context since previous assertion:
 
 
@@ -365,67 +204,24 @@ Disposition: MATCHED
 Mapping: S035
 
 A044 | AutomationEditingTest::selectionRingsAndReticlesComposed | src/checks/automation/automationpainting.cpp:304
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/body geometry is replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture :: configureBody + activate). This is not a native rendering assertion.
-Source context since previous assertion:
-
-      const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
-      const LanePaint lane = lanePaint(*m_page, kind);
-
-Original expression:
-  QVERIFY(!lane.body.isEmpty());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S050 — fork c17d966f `!lane.body.isEmpty()` checks retired AutomationCanvas body geometry; S050 observes the mounted selected Pan node's ring pixels.
 
 A045 | AutomationEditingTest::selectionRingsAndReticlesComposed | src/checks/automation/automationpainting.cpp:320
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationCurves/AutomationNodes/AutomationSelection layer revisions observe the native mesh rebuild. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-
-      const int nodeValue = kind == LaneKind::Tempo ? kTempoNode : kCcNode;
-      const QPointF node = nodePoint(view, *m_automationInput, lane, kFirstNodeTick, nodeValue);
-      songview::EditorSelectionModel::TimeSelection selection;
-      selection.startTick = kFirstNodeTick;
-      selection.endTick = kFirstNodeTick + 1;
-      selection.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
-      if (kind == LaneKind::Tempo)
-          selection.tempo = true;
-      else
-          selection.lanes = {{0, kController}};
-      const quint64 nodesBefore =
-          scene->layer(songview::TimelineQuickLayer::AutomationNodes).revision;
-      const quint64 selectionBefore =
-          scene->layer(songview::TimelineQuickLayer::AutomationSelection).revision;
-      view.selectionModel().setTimeSelection(selection);
-
-Original expression:
-  QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationNodes).revision > nodesBefore);
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S050 — fork c17d966f `AutomationNodes).revision > nodesBefore` checks a removed native mesh counter; S050 samples the mounted selected node's ring after selection.
 
 A046 | AutomationEditingTest::selectionRingsAndReticlesComposed | src/checks/automation/automationpainting.cpp:321
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationCurves/AutomationNodes/AutomationSelection layer revisions observe the native mesh rebuild. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-
-
-Original expression:
-  QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationSelection).revision >
-                  selectionBefore);
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S051 — fork c17d966f `AutomationSelection).revision > selectionBefore` checks a removed native mesh counter; S051 samples the mounted selection edge after selection.
 
 A047 | AutomationEditingTest::selectionRingsAndReticlesComposed | src/checks/automation/automationpainting.cpp:326
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-
-      const QColor highlight = m_automationInput->palette().highlight().color();
-      const AutomationGeometry geometry = AutomationGeometry::resolve();
-
-Original expression:
-  QVERIFY(checks::support::layerHasRingAt(
-          scene->layer(songview::TimelineQuickLayer::AutomationNodes), node,
-          geometry.selectedNodeRingRadius, geometry.selectedNodeRingDipWidth, highlight));
+Disposition: MATCHED
+Mapping: S058, S050
 
 A048 | AutomationEditingTest::selectionRingsAndReticlesComposed | src/checks/automation/automationpainting.cpp:335
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
+Disposition: PARTIAL
+Mapping/reason: S059, S051 — mounted Tempo and Pan selections paint their range endpoint edges, but their probes are at the endpoint rather than the selected node's first-tick reticle or adjacent fill; unproved: edge/fill ink at the selected node's independently mapped reticle position.
 Source context since previous assertion:
 
       const QColor edge = themes::color(themes::Role::song_view_selection_edge);
@@ -458,115 +254,40 @@ Disposition: MATCHED
 Mapping: S035
 
 A053 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:357
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/body geometry is replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture :: configureBody + activate). This is not a native rendering assertion.
-Source context since previous assertion:
-
-      const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
-      const LanePaint lane = lanePaint(*m_page, LaneKind::Cc);
-
-Original expression:
-  QVERIFY(!lane.body.isEmpty());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S050 — fork c17d966f `!lane.body.isEmpty()` checks retired AutomationCanvas body geometry; S050 observes the mounted Pan node's painted selection ring.
 
 A054 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:370
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationCurves/AutomationNodes/AutomationSelection layer revisions observe the native mesh rebuild. A direct presenter check cannot establish this observation.
-Source context since previous assertion:
-
-      const QPointF first = nodePoint(view, *m_automationInput, lane, 48, 40);
-      const QPointF second = nodePoint(view, *m_automationInput, lane, 72, 80);
-      const QPointF third = nodePoint(view, *m_automationInput, lane, 120, 55);
-      const QColor highlight = m_automationInput->palette().highlight().color();
-      const AutomationGeometry geometry = AutomationGeometry::resolve();
-
-      songview::EditorSelectionModel::TimeSelection selection;
-      selection.startTick = 48;
-      selection.endTick = 72;
-      const quint64 initialRevision =
-          scene->layer(songview::TimelineQuickLayer::AutomationNodes).revision;
-      view.selectionModel().setTimeSelection(selection);
-
-Original expression:
-  QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationNodes).revision >
-                  initialRevision);
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S050 — fork c17d966f `AutomationNodes).revision > initialRevision` checks a removed native mesh counter; S050 samples the mounted node's ring after selection.
 
 A055 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:374
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-      const songview::TimelineQuickLayerData excluded =
-          scene->layer(songview::TimelineQuickLayer::AutomationNodes);
-
-Original expression:
-  QVERIFY(checks::support::layerHasRingAt(excluded, first, geometry.selectedNodeRingRadius,
-                                              geometry.selectedNodeRingDipWidth, highlight));
+Disposition: MATCHED
+Mapping: S050
 
 A056 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:376
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!checks::support::layerHasRingAt(excluded, second, geometry.selectedNodeRingRadius,
-                                               geometry.selectedNodeRingDipWidth, highlight));
+Disposition: MATCHED
+Mapping: S052
 
 A057 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:378
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!checks::support::layerHasRingAt(excluded, third, geometry.selectedNodeRingRadius,
-                                               geometry.selectedNodeRingDipWidth, highlight));
+Disposition: MATCHED
+Mapping: S053
 
 A058 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:384
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-
-      selection.endTick = 73;
-      const quint64 excludedRevision = excluded.revision;
-      view.selectionModel().setTimeSelection(selection);
-
-Original expression:
-  QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationNodes).revision >
-                  excludedRevision);
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S055 — fork c17d966f `AutomationNodes).revision > excludedRevision` checks a removed native mesh counter; S055 samples the newly included mounted node's ring pixels.
 
 A059 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:388
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-      const songview::TimelineQuickLayerData included =
-          scene->layer(songview::TimelineQuickLayer::AutomationNodes);
-
-Original expression:
-  QVERIFY(checks::support::layerHasRingAt(included, first, geometry.selectedNodeRingRadius,
-                                              geometry.selectedNodeRingDipWidth, highlight));
+Disposition: MATCHED
+Mapping: S054
 
 A060 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:390
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(checks::support::layerHasRingAt(included, second, geometry.selectedNodeRingRadius,
-                                              geometry.selectedNodeRingDipWidth, highlight));
+Disposition: MATCHED
+Mapping: S055
 
 A061 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:392
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!checks::support::layerHasRingAt(included, third, geometry.selectedNodeRingRadius,
-                                               geometry.selectedNodeRingDipWidth, highlight));
+Disposition: MATCHED
+Mapping: S056
 
 A062 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:395
 Disposition: MATCHED
@@ -700,3 +421,66 @@ Anchor: message "pinned vanilla ghost curve runs use #80EA3C3C half-alpha ink"
 
 S040 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift
 Anchor: message "an empty tempo store composes no lead-in"
+
+S041 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "empty Tempo paints no default lead-in curve pixels"
+
+S042 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "empty Tempo paints no synthetic origin marker pixels"
+
+S043 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the first nonzero Tempo point paints the default 120 BPM lead-in"
+
+S044 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the implicit lead-in paints no origin marker"
+
+S045 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the first written Tempo marker paints lane ink"
+
+S046 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the written Tempo origin paints lane ink"
+
+S047 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "written tick-zero Tempo removes the default lead-in pixels before its restore cell"
+
+S048 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the held CC step paints the same lane ink"
+
+S049 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "each written CC marker paints lane ink"
+
+S050 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the first half-open Pan node paints its highlight ring"
+
+S051 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the half-open selection paints its reticle edge"
+
+S052 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the endpoint Pan node paints no highlight ring"
+
+S053 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the later Pan node paints no highlight ring"
+
+S054 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "extending the range keeps the first highlight ring"
+
+S055 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "extending the endpoint paints the second highlight ring"
+
+S056 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the extended range still excludes the third highlight ring"
+
+S057 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the explicit Tempo held step paints lane ink before its restore cell"
+
+S058 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the selected Tempo node paints its highlight ring"
+
+S059 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the Tempo selection paints its reticle edge"
+
+S060 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift
+Anchor: message "the first written Tempo marker carries lane ink"
+
+S061 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift
+Anchor: message "written CC step markers publish the same lane ink"

@@ -91,7 +91,7 @@ func drawerAutomationPencilCursorKind(_ report: CheckReport, suite: DocumentSess
                        cppID: drawerAutomationCursorKindID, what: "the plot starts with the arrow")
     page.isPencilMode = true
     let pressX = fixture.x(72)
-    let pressY = fixture.y(fixture.panLane, 64)
+    let pressY = fixture.y(fixture.panLane, 96)
     let pencilBefore = fixture.snapshot
     _ = page.pointerPress(x: pressX, y: pressY, surface: 1, button: AutomationQtButton.left)
     _ = page.pointerRelease(x: pressX, y: pressY, button: AutomationQtButton.left)

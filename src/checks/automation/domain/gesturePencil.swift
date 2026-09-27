@@ -307,6 +307,93 @@ func drawerAutomationPencilStrokeModifiers(_ report: CheckReport, suite: Documen
     report.expect(!plain.isEmpty, cppID: altID, message: "the plain stroke writes the empty lane")
     report.expectEqual(expected: plain, actual: altLane.values(altLane.panLane), cppID: altID,
                        what: "the fine modifier leaves the stroke unchanged")
+    func pointerProjection(_ fixture: drawerAutomationAutomationFixture,
+                           parameter: AutomationParameter) -> AutomationProjection {
+        AutomationProjection(
+            camera: fixture.session.camera,
+            bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
+            geometry: fixture.page.geometry,
+            snapPolicy: AutomationProjectionCache().snapPolicy(
+                session: fixture.session, font: fixture.page.baseFontPx, dpr: 1),
+            songEndTick: fixture.songEndTick,
+            displayMaximum: AutomationProjection.displayMaximum(
+                snapshot: fixture.laneSnapshot(parameter), range: fixture.page.laneRanges[parameter]))
+    }
+    let modulation = drawerAutomationAutomationFixture(
+        suite: suite, service: service, modulation: [])
+    modulation.activate(modulation.modulationLane)
+    guard modulation.page.openParameterMenu(
+        index: modulation.page.catalogIndex(of: modulation.modulationLane), x: 0, y: 0),
+        modulation.page.consumeMenuAction(actionId: AutomationMenuAction.range127.rawValue)
+    else {
+        report.fail(altID, "the empty Modulation stroke requires its full value range")
+        return
+    }
+    modulation.page.isPencilMode = true
+    let modulationProjection = pointerProjection(modulation, parameter: modulation.modulationLane)
+    let modulationEndX = modulation.x(144)
+    let modulationEndY = modulation.y(modulation.modulationLane, 96)
+    let modulationTailTick = modulationProjection.insertionTick(atX: modulationEndX, pencil: true)
+    let modulationTailValue = modulationProjection.value(
+        atY: modulationEndY, metadata: modulation.facts(modulation.modulationLane).metadata)
+    guard modulation.page.pointerPress(x: modulation.x(48),
+                                       y: modulation.y(modulation.modulationLane, 40),
+                                       surface: 1, button: 1) else {
+        report.fail(altID, "the empty Modulation pencil stroke did not start")
+        return
+    }
+    _ = modulation.page.pointerMove(x: modulation.x(96),
+                                    y: modulation.y(modulation.modulationLane, 72), buttons: 1)
+    _ = modulation.page.pointerMove(x: modulationEndX, y: modulationEndY, buttons: 1)
+    guard modulation.page.pointerRelease(x: modulationEndX, y: modulationEndY,
+                                         button: 1) else {
+        report.fail(altID, "the empty Modulation pencil stroke did not commit")
+        return
+    }
+    let modulationTail = modulation.lanePoints(modulation.modulationLane)
+        .first { $0.tick == modulationTailTick }
+    let tailMatchesPointer = modulationTail.map {
+        abs(Int($0.value) - modulationTailValue) <= 1
+    } ?? false
+    let playbackMatchesPointer = modulation.playbackValues(modulation.modulationLane,
+                                                            at: modulationTailTick)
+        .contains { abs(Int($0) - modulationTailValue) <= 1 }
+    report.expect(modulationTailTick == 144 && modulationTailValue == 96
+                      && tailMatchesPointer && playbackMatchesPointer,
+                  cppID: altID,
+                  message: "the empty Modulation pencil tail reaches playback within one value")
+    let restoredPan = drawerAutomationAutomationFixture(
+        suite: suite, service: service, pan: [(0, 60), (288, 60)])
+    restoredPan.activate(restoredPan.panLane)
+    restoredPan.page.isPencilMode = true
+    let panY = restoredPan.y(restoredPan.panLane, 96)
+    let panBefore = restoredPan.snapshot
+    let panIndex = restoredPan.document.history.undoIndex
+    let panBytes = try? restoredPan.document.state.file.encoded()
+    let panProjection = pointerProjection(restoredPan, parameter: restoredPan.panLane)
+    let panEndX = restoredPan.x(120)
+    let panCell = panProjection.cell(atRawTick: panProjection.rawTick(atX: panEndX))
+    let panBoundaryTick = panCell.tickEnd
+    report.expect(restoredPan.page.pointerPress(x: restoredPan.x(48), y: panY,
+                                                surface: 1, button: 1),
+                  cppID: altID, message: "the pencil press over written Pan starts a held stroke")
+    _ = restoredPan.page.pointerMove(x: panEndX, y: panY, buttons: 1)
+    report.expect(restoredPan.page.pointerRelease(x: panEndX, y: panY, button: 1),
+                  cppID: altID, message: "the written Pan pencil stroke commits")
+    let panPoints = restoredPan.lanePoints(restoredPan.panLane)
+    report.expect(panBoundaryTick == 126
+                      && panPoints.contains { $0.tick >= 48 && $0.tick < panBoundaryTick && $0.value != 60 }
+                      && panPoints.contains { $0.tick == panBoundaryTick && $0.value == 60 }
+                      && restoredPan.playbackValues(restoredPan.panLane, at: panBoundaryTick)
+                          == [UInt8(60)],
+                  cppID: altID,
+                  message: "the Pan end-cell boundary restores the baseline in playback")
+    report.expect(restoredPan.document.revision == panBefore.revision + 1
+                      && restoredPan.document.history.undoIndex == panIndex + 1,
+                  cppID: altID, message: "the Pan pencil stroke commits one revision and undo index")
+    report.expect(restoredPan.undo() && restoredPan.document.history.undoIndex == panIndex
+                      && (try? restoredPan.document.state.file.encoded()) == panBytes,
+                  cppID: altID, message: "one undo restores the original written Pan bytes")
     report.expectEqual(expected: plainBefore.revision + 1,
                        actual: plainLane.document.revision, cppID: altID,
                        what: "a pencil stroke on an empty lane commits once")

@@ -396,8 +396,8 @@ extension AutomationPage {
         if freehand {
             _ = transaction.applyFreehandSegment(sample)
         } else {
-            _ = transaction.applySnappedSegment(
-                sample, cells: projection.cellsCrossed(from: transaction.previousLogicalX, to: x))
+            _ = transaction.applySnappedSegment(sample, cells: projection.cellsCrossed(
+                from: projection.rawTick(atX: transaction.previousLogicalX), to: sample.rawTick))
         }
     }
 

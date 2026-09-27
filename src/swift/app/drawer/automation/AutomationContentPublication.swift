@@ -298,7 +298,7 @@ extension AutomationPage {
         node.ringRadius = paint.ringRadius
         node.outlineWidth = paint.outlineWidth
         node.fillColor = point.projected ? palette.secondaryText : palette.primaryText
-        node.outlineColor = palette.noteBorder
+        node.outlineColor = palette.automationNodeInk
         node.ringColor = palette.selectionRing
         node.selected = point.selected
         node.hovered = hover?.hasPoint == true && hover?.parameter == parameter

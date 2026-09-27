@@ -8096,13 +8096,230 @@ TestCase {
                    "the pencil preview labels the drafted value")
             compare(bootstrap.automationDocumentRevision(), revision,
                     "the live preview writes nothing")
+            waitForRendering(testCase.surface)
+            var draftImage = grabImage(testCase.surface)
+            var draftNodes = testCase.automationPreviewItems()
+            verify(draftNodes.length > 0, "the held pencil exposes painted draft markers")
+            var previewTint = testCase.channelsOf(testCase.drawerPalette().selectionEdge)
+            verify(testCase.nearestPixel(draftImage,
+                   testCase.regionOf(draftImage, testCase.surface, draftNodes[draftNodes.length - 1]),
+                   previewTint).distance < 30,
+                   "the held pencil paints its draft marker in the selection tint")
             mouseRelease(input, endX, endY, Qt.LeftButton)
             tryVerify(function() { return bootstrap.automationDocumentRevision() === revision + 1 },
                       1000, "the pencil commit lands one edit")
             verify(bootstrap.automationLaneEventCount() > 0,
                    "the pencil commit lands one edit")
+            waitForRendering(testCase.surface)
+            var committed = grabImage(testCase.surface)
+            var written = testCase.automationLaneNodes().filter(function(node) {
+                return !node.model.projected
+            })
+            verify(written.length > 0, "the committed pencil publishes written markers")
+            var committedInk = testCase.channelsOf(testCase.drawerPalette().automationNodeInk)
+            var lastFill = findChild(written[written.length - 1], "automationNodeFill")
+            verify(lastFill && testCase.nearestPixel(committed,
+                   testCase.regionOf(committed, testCase.surface, lastFill),
+                   committedInk).distance < 30,
+                   "the released pencil paints its committed marker in lane ink")
         } finally {
             model.isPencilMode = false
+        }
+    }
+
+    function automationPaintRegion(image, plot, x, y, radius) {
+        var origin = plot.mapToItem(testCase.surface, x, y)
+        var sx = image.width / testCase.surface.width
+        var sy = image.height / testCase.surface.height
+        return { x0: Math.round((origin.x - radius) * sx),
+                 x1: Math.round((origin.x + radius) * sx),
+                 y0: Math.round((origin.y - radius) * sy),
+                 y1: Math.round((origin.y + radius) * sy) }
+    }
+
+    function test_productionAutomationLeadInStepAndSelectionPixels() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionAutomation("automation-curve-raster")
+        var model = testCase.automationModel()
+        var input = testCase.automationPlotInput()
+        var plot = testCase.automationPlot()
+        var grid = testCase.surface.gridModel
+        var ink = testCase.channelsOf(testCase.drawerPalette().automationNodeInk)
+        var ringInk = testCase.channelsOf(testCase.drawerPalette().selectionRing)
+        var edgeInk = testCase.channelsOf(testCase.drawerPalette().selectionEdge)
+        function xAt(tick) { return tick * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX }
+        function yFromAxis(value, highText, lowText, maximum, minimum) {
+            var high = null
+            var low = null
+            for (var i = 0; i < plot.children.length; ++i) {
+                var item = plot.children[i]
+                if (item.text === highText) high = item
+                if (item.text === lowText) low = item
+            }
+            verify(high && low, "the mounted lane axis draws both value endpoints")
+            var top = high.y + high.height / 2
+            var bottom = low.y + low.height / 2
+            return top + (maximum - value) * (bottom - top) / (maximum - minimum)
+        }
+        function yAt(value) { return yFromAxis(value, "255", "20", 255, 20) }
+        function panY(value) {
+            return yFromAxis(value, "c_v+63", "c_v-64", 127, 0)
+        }
+        function writtenPoints() {
+            return bootstrap.automationLaneValues().split(",").filter(function(pair) {
+                return pair.length > 0
+            }).map(function(pair) {
+                var columns = pair.split(":")
+                return { tick: Number(columns[0]), value: Number(columns[1]) }
+            }).sort(function(a, b) { return a.tick - b.tick })
+        }
+        function inkAt(image, x, y, radius) {
+            return testCase.nearestPixel(image,
+                testCase.automationPaintRegion(image, plot, x, y, radius), ink).distance
+        }
+        var tempoTab = model.tabCount - 1
+        testCase.clickAutomationTab(tempoTab)
+        tryVerify(function() { return bootstrap.automationActiveParameterIndex() === tempoTab })
+        var edits = 0
+        try {
+            testCase.openAutomationTabMenu(tempoTab)
+            verify(testCase.triggerAutomationMenuRow(5),
+                   "the rendered Clear Tempo row receives a click")
+            ++edits
+            tryVerify(function() { return bootstrap.automationLaneEventCount() === 0 },
+                      1000, "clearing Tempo empties the lane")
+        waitForRendering(testCase.surface)
+        var empty = grabImage(testCase.surface)
+        verify(inkAt(empty, xAt(48), yAt(120), 2) > 30,
+               "empty Tempo paints no default lead-in curve pixels")
+        verify(testCase.automationNodesAtTick(0).length === 0,
+               "empty Tempo publishes no tick-zero node")
+        verify(inkAt(empty, xAt(0) + 1.5, yAt(120) + 2, 0.4) > 30,
+               "empty Tempo paints no synthetic origin marker pixels")
+        model.isPencilMode = true
+        mousePress(input, xAt(96) + 1, yAt(150), Qt.LeftButton)
+        mouseRelease(input, xAt(96) + 1, yAt(150), Qt.LeftButton)
+        ++edits
+        model.isPencilMode = false
+        tryVerify(function() { return testCase.automationNodesAtTick(96).length > 0 },
+                  1000, "the real Tempo pencil writes its first nonzero marker")
+        waitForRendering(testCase.surface)
+        var implicit = grabImage(testCase.surface)
+        verify(inkAt(implicit, xAt(48), yAt(120), 2) < 30,
+               "the first nonzero Tempo point paints the default 120 BPM lead-in")
+        verify(inkAt(implicit, xAt(0) + 1.5, yAt(120) + 2, 0.4) > 30,
+               "the implicit lead-in paints no origin marker")
+        verify(inkAt(implicit, xAt(96), yAt(150) - model.baseFontPx * 3 / 16, 1) < 30,
+               "the first written Tempo marker paints lane ink")
+        model.isPencilMode = true
+        mousePress(input, xAt(0) + 1, yAt(160), Qt.LeftButton)
+        mouseRelease(input, xAt(0) + 1, yAt(160), Qt.LeftButton)
+        model.isPencilMode = false
+        ++edits
+        tryVerify(function() { return testCase.automationNodesAtTick(0).some(function(node) {
+            return !node.model.projected
+        }) }, 1000, "the real tick-zero pencil promotes the Tempo origin")
+        waitForRendering(testCase.surface)
+        var explicit = grabImage(testCase.surface)
+        verify(inkAt(explicit, xAt(3), yAt(120), 2) > 30,
+               "written tick-zero Tempo removes the default lead-in pixels before its restore cell")
+        verify(inkAt(explicit, xAt(0) + 1, yAt(160) - model.baseFontPx * 3 / 16, 1) < 30,
+               "the written Tempo origin paints lane ink")
+        verify(inkAt(explicit, xAt(3), yAt(159), 2) < 30,
+               "the explicit Tempo held step paints lane ink before its restore cell")
+        var tempoBandY = input.height - model.baseFontPx
+        mousePress(input, xAt(96) + 1, tempoBandY, Qt.RightButton)
+        mouseMove(input, xAt(144) + 1, tempoBandY, -1, Qt.RightButton)
+        mouseRelease(input, xAt(144) + 1, tempoBandY, Qt.RightButton)
+        compare(bootstrap.automationSelectionRange(), "96:144",
+                "the real Tempo drag selects its half-open written node")
+        waitForRendering(testCase.surface)
+        var selectedTempo = grabImage(testCase.surface)
+        verify(testCase.nearestPixel(selectedTempo,
+               testCase.automationPaintRegion(selectedTempo, plot, xAt(96), yAt(150),
+                                              model.baseFontPx * 9 / 32 + 1),
+               ringInk).distance < 30,
+               "the selected Tempo node paints its highlight ring")
+        verify(testCase.nearestPixel(selectedTempo,
+               testCase.automationPaintRegion(selectedTempo, plot, xAt(144) - 0.5,
+                                              input.height * 0.18, 1),
+               edgeInk).distance < 30,
+               "the Tempo selection paints its reticle edge")
+
+        var panTab = bootstrap.automationPanIndex()
+        testCase.clickAutomationTab(panTab)
+        tryVerify(function() { return bootstrap.automationActiveParameterIndex() === panTab })
+        var nodes = testCase.automationLaneNodes().filter(function(node) {
+            return !node.model.projected
+        }).sort(function(a, b) { return a.model.tick - b.model.tick })
+        verify(nodes.length >= 2, "Pan supplies separated written step markers")
+        var first = nodes[0]
+        var second = nodes[1]
+        var thirdTick = second.model.tick + (second.model.tick - first.model.tick)
+        model.isPencilMode = true
+        mousePress(input, xAt(thirdTick) + 1, input.height * 0.7, Qt.LeftButton)
+        mouseRelease(input, xAt(thirdTick) + 1, input.height * 0.7, Qt.LeftButton)
+        ++edits
+        model.isPencilMode = false
+        nodes = testCase.automationLaneNodes().filter(function(node) {
+            return !node.model.projected
+        }).sort(function(a, b) { return a.model.tick - b.model.tick })
+        verify(nodes.length >= 3, "the real pencil writes a third Pan step marker")
+        first = nodes[0]
+        second = nodes[1]
+        var third = nodes[2]
+        waitForRendering(testCase.surface)
+        var steps = grabImage(testCase.surface)
+        var points = writtenPoints()
+        verify(points.length >= 3, "Pan document contains three written step values")
+        var midway = (points[0].tick + points[1].tick) / 2
+        verify(inkAt(steps, xAt(midway), panY(points[0].value), 2) < 30,
+               "the held CC step paints the same lane ink")
+        for (var n = 0; n < 3; ++n)
+            verify(inkAt(steps, xAt(points[n].tick) + (points[n].tick === 0 ? 1 : 0),
+                         panY(points[n].value) - model.baseFontPx * 3 / 16, 1) < 30,
+                   "each written CC marker paints lane ink")
+        var bandY = input.height - model.baseFontPx
+        mousePress(input, xAt(first.model.tick) + 1, bandY, Qt.RightButton)
+        mouseMove(input, xAt(second.model.tick) + 1, bandY, -1, Qt.RightButton)
+        mouseRelease(input, xAt(second.model.tick) + 1, bandY, Qt.RightButton)
+        waitForRendering(testCase.surface)
+        var excluded = grabImage(testCase.surface)
+        function ringDistance(image, point) {
+            return testCase.nearestPixel(image,
+                testCase.automationPaintRegion(image, plot, xAt(point.tick),
+                    panY(point.value) - model.baseFontPx * 9 / 32, 1.5), ringInk).distance
+        }
+        verify(ringDistance(excluded, points[0]) < 30,
+               "the first half-open Pan node paints its highlight ring")
+        verify(ringDistance(excluded, points[1]) > 30,
+               "the endpoint Pan node paints no highlight ring")
+        verify(ringDistance(excluded, points[2]) > 30,
+               "the later Pan node paints no highlight ring")
+        var selection = findChild(testCase.automationPageItem(), "automationSelectionRects")
+        compare(bootstrap.automationSelectionRange(),
+                first.model.tick + ":" + second.model.tick,
+                "the first real Pan drag selects its half-open tick interval")
+        var edgeRegion = testCase.automationPaintRegion(excluded, plot,
+            xAt(second.model.tick) - 0.5, input.height * 0.18, 1)
+        verify(selection && testCase.nearestPixel(excluded, edgeRegion, edgeInk).distance < 30,
+               "the half-open selection paints its reticle edge")
+        mousePress(input, xAt(first.model.tick) + 1, bandY, Qt.RightButton)
+        mouseMove(input, xAt(third.model.tick) + 1, bandY, -1, Qt.RightButton)
+        mouseRelease(input, xAt(third.model.tick) + 1, bandY, Qt.RightButton)
+        waitForRendering(testCase.surface)
+        var included = grabImage(testCase.surface)
+        verify(ringDistance(included, points[0]) < 30,
+               "extending the range keeps the first highlight ring")
+        verify(ringDistance(included, points[1]) < 30,
+               "extending the endpoint paints the second highlight ring")
+        verify(ringDistance(included, points[2]) > 30,
+               "the extended range still excludes the third highlight ring")
+        } finally {
+            model.isPencilMode = false
+            for (var edit = 0; edit < edits; ++edit)
+                verify(bootstrap.requestAutomationUndo(),
+                       "the raster journey restores each staged edit")
         }
     }
 

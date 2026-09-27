@@ -359,6 +359,13 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
                       && emptyComposition.segments.isEmpty,
                   cppID: drawerAutomationPaintingModelID,
                   message: "an empty tempo store composes no lead-in")
+    emptyTempo.activate(.tempo)
+    report.expect(emptyTempo.page.publishedCurveRuns.isEmpty,
+                  cppID: drawerAutomationPaintingModelID,
+                  message: "an empty Tempo lane publishes no curve ink")
+    report.expect(emptyTempo.page.publishedNodes.isEmpty,
+                  cppID: drawerAutomationPaintingModelID,
+                  message: "an empty Tempo lane publishes no origin marker")
     let implicitTempo = drawerAutomationAutomationFixture(
         suite: suite, service: service, tempo: [(96, 400_000)])
     let implicitComposition = implicitTempo.makeProjection(.tempo)
@@ -368,14 +375,41 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
         actual: implicitComposition.segments.first,
         cppID: drawerAutomationPaintingModelID,
         what: "a first-nonzero tempo point composes its implicit lead-in")
+    implicitTempo.activate(.tempo)
+    let leadY = implicitTempo.y(.tempo, 120)
+    let leadX = implicitTempo.x(48)
+    report.expect(implicitTempo.page.publishedCurveRuns.contains {
+        $0.x <= leadX && $0.x + $0.width > leadX
+            && abs($0.y + $0.height / 2 - leadY) <= 2
+            && $0.fillColor == implicitTempo.page.palette.automationNodeInk
+    }, cppID: drawerAutomationPaintingModelID,
+                  message: "the first nonzero Tempo point publishes 120 BPM lead-in ink")
+    report.expect(!implicitTempo.page.publishedNodes.contains { $0.tick == 0 },
+                  cppID: drawerAutomationPaintingModelID,
+                  message: "the implicit Tempo lead-in publishes no origin marker")
+    report.expect(implicitTempo.page.publishedNodes.contains {
+        $0.tick == 96 && $0.outlineColor == implicitTempo.page.palette.automationNodeInk
+    }, cppID: drawerAutomationPaintingModelID,
+                  message: "the first written Tempo marker carries lane ink")
     let explicitTempo = drawerAutomationAutomationFixture(
         suite: suite, service: service,
-        tempo: [(0, 500_000), (96, 400_000)])
+        tempo: [(0, 375_000), (96, 400_000)])
     let explicitComposition = explicitTempo.makeProjection(.tempo)
     report.expect(explicitComposition.leadIn == nil
                       && !explicitComposition.segments.contains(where: \.isLeadIn),
                   cppID: drawerAutomationPaintingModelID,
                   message: "an explicit tick-zero point suppresses the lead-in")
+    explicitTempo.activate(.tempo)
+    report.expect(explicitTempo.page.publishedNodes.contains {
+        $0.tick == 0 && !$0.projected
+            && $0.outlineColor == explicitTempo.page.palette.automationNodeInk
+    }, cppID: drawerAutomationPaintingModelID,
+                  message: "the written tick-zero Tempo marker carries lane ink")
+    report.expect(!explicitTempo.page.publishedCurveRuns.contains {
+        $0.x <= explicitTempo.x(48) && $0.x + $0.width > explicitTempo.x(48)
+            && abs($0.y + $0.height / 2 - explicitTempo.y(.tempo, 120)) <= 2
+    }, cppID: drawerAutomationPaintingModelID,
+                  message: "a written tick-zero Tempo point removes the default lead-in ink")
     let stepComposition = fixture.makeProjection(fixture.panLane)
     report.expectEqual(expected: [Tick(0), 24, 120],
                        actual: stepComposition.segments.map(\.tickBegin),
@@ -385,6 +419,15 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
                        actual: stepComposition.segments.map(\.kind),
                        cppID: drawerAutomationPaintingModelID,
                        what: "step curves compose their nodes")
+    fixture.activate(fixture.panLane)
+    report.expect(page.publishedCurveRuns.contains {
+        $0.fillColor == page.palette.automationNodeInk && $0.width > 0
+    }, cppID: drawerAutomationPaintingModelID,
+                  message: "written CC steps publish the lane's curve ink")
+    report.expect(page.publishedNodes.contains {
+        $0.tick == 24 && $0.outlineColor == page.palette.automationNodeInk
+    }, cppID: drawerAutomationPaintingModelID,
+                  message: "written CC step markers publish the same lane ink")
     let halfOpen = AutomationTimeSelection(range: TimeRange(startTick: 24, endTick: 120),
                                            scope: .lanes, lanes: [fixture.panLane])
     let selectedComposition = fixture.makeProjection(fixture.panLane, selection: halfOpen)
@@ -402,4 +445,12 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
                       && page.selectionRects.count > 0,
                   cppID: drawerAutomationPaintingModelID,
                   message: "selection rings and reticles compose")
+    report.expect(selectedNodes.map(\.tick) == [24]
+                      && page.publishedNodes.first(where: { $0.tick == 120 })?.selected == false,
+                  cppID: drawerAutomationPaintingModelID,
+                  message: "the half-open selection excludes the endpoint marker")
+    page.selectRange(from: 24, to: 121, lanes: [fixture.panLane])
+    report.expect(page.publishedNodes.filter(\.selected).map(\.tick) == [24, 120],
+                  cppID: drawerAutomationPaintingModelID,
+                  message: "extending the endpoint includes the second marker")
 }

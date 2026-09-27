@@ -556,16 +556,23 @@ func drawerAutomationTempoBendClickRestore(_ report: CheckReport, suite: Documen
     tempo.activate(.tempo)
     tempo.page.isPencilMode = true
     let tempoBefore = tempo.snapshot
+    let tempoIndex = tempo.document.history.undoIndex
+    let tempoBytes = try? tempo.document.state.file.encoded()
+    let tempoPan = tempo.values(tempo.panLane)
     report.expect(tempo.page.pointerPress(x: tempo.x(48), y: tempo.y(.tempo, 150),
                                            surface: 1, button: 1),
                   cppID: tempoID, message: "the pencil press on the empty tempo lane starts")
     report.expect(tempo.page.pointerRelease(x: tempo.x(48), y: tempo.y(.tempo, 150), button: 1),
                   cppID: tempoID, message: "the tempo click commits")
-    report.expectEqual(expected: ["48:150", "120:120"], actual: tempo.tempoValues, cppID: tempoID,
+    report.expectEqual(expected: ["48:150", "54:120"], actual: tempo.tempoValues, cppID: tempoID,
                        what: "the click writes its BPM at the cell start and restores default at the end")
     report.expectEqual(expected: tempoBefore.revision + 1,
                        actual: tempo.document.revision, cppID: tempoID,
                        what: "the tempo pencil click records one revision")
+    report.expectEqual(expected: tempoIndex + 1, actual: tempo.document.history.undoIndex,
+                       cppID: tempoID, what: "the tempo click advances the undo index once")
+    report.expectEqual(expected: tempoPan, actual: tempo.values(tempo.panLane),
+                       cppID: tempoID, what: "the tempo click leaves the Pan lane unchanged")
     report.expect(tempo.document.history.canUndo, cppID: tempoID,
                   message: "the tempo pencil click records one undo entry")
     report.expect(tempo.undo(), cppID: tempoID, message: "the tempo pencil click undoes")
@@ -574,24 +581,44 @@ func drawerAutomationTempoBendClickRestore(_ report: CheckReport, suite: Documen
                        what: "one undo restores the empty tempo lane")
     report.expect(tempo.tempoValues.isEmpty, cppID: tempoID,
                   message: "undo removes the tempo click's points")
+    report.expect(tempo.document.history.undoIndex == tempoIndex
+                      && (try? tempo.document.state.file.encoded()) == tempoBytes,
+                  cppID: tempoID, message: "one tempo undo restores its original MIDI bytes")
 
     let bendID = "automation/AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd"
     let bend = drawerAutomationAutomationFixture(suite: suite, service: service)
     bend.activate(bend.bendLane)
     bend.page.isPencilMode = true
+    let bendBefore = bend.snapshot
+    let bendIndex = bend.document.history.undoIndex
+    let bendBytes = try? bend.document.state.file.encoded()
+    let bendPan = bend.values(bend.panLane)
     report.expect(bend.page.pointerPress(x: bend.x(48), y: bend.y(bend.bendLane, 100),
                                           surface: 1, button: 1),
                   cppID: bendID, message: "the pencil press on the empty bend lane starts")
     report.expect(bend.page.pointerRelease(x: bend.x(48), y: bend.y(bend.bendLane, 100), button: 1),
                   cppID: bendID, message: "the bend click commits")
-    report.expectEqual(expected: ["48:100", "120:0"], actual: bend.values(bend.bendLane), cppID: bendID,
+    report.expectEqual(expected: ["48:100", "54:0"], actual: bend.values(bend.bendLane), cppID: bendID,
                        what: "the click writes its value at the cell start and restores center at the end")
+    report.expectEqual(expected: bendBefore.revision + 1, actual: bend.document.revision,
+                       cppID: bendID, what: "the bend pencil click records one revision")
+    report.expectEqual(expected: bendIndex + 1, actual: bend.document.history.undoIndex,
+                       cppID: bendID, what: "the bend click advances the undo index once")
+    report.expectEqual(expected: bendPan, actual: bend.values(bend.panLane),
+                       cppID: bendID, what: "the bend click leaves the Pan lane unchanged")
+    report.expect(bend.undo() && bend.document.history.undoIndex == bendIndex
+                      && (try? bend.document.state.file.encoded()) == bendBytes,
+                  cppID: bendID, message: "one bend undo restores its original MIDI bytes")
 
     let excursionID = "automation/AutomationEditingTest::pencilClickOnExcursionNodeDeletesExcursion"
     let excursion = drawerAutomationAutomationFixture(suite: suite, service: service,
-                                                      pan: [(0, 60), (48, 90), (96, 60)])
+                                                      pan: [(0, 60), (48, 90), (54, 60)])
     excursion.activate(excursion.panLane)
     excursion.page.isPencilMode = true
+    let excursionBefore = excursion.snapshot
+    let excursionIndex = excursion.document.history.undoIndex
+    let excursionBytes = try? excursion.document.state.file.encoded()
+    let excursionTempo = excursion.tempoValues
     report.expect(excursion.page.pointerPress(x: excursion.x(48), y: excursion.y(excursion.panLane, 60),
                                                surface: 1, button: 1),
                   cppID: excursionID, message: "the pencil press at baseline over the excursion starts")
@@ -600,6 +627,15 @@ func drawerAutomationTempoBendClickRestore(_ report: CheckReport, suite: Documen
                   cppID: excursionID, message: "the baseline click commits")
     report.expectEqual(expected: ["0:60"], actual: excursion.values(excursion.panLane), cppID: excursionID,
                        what: "collapsing the excursion leaves the baseline alone")
+    report.expectEqual(expected: excursionBefore.revision + 1, actual: excursion.document.revision,
+                       cppID: excursionID, what: "the excursion click records one revision")
+    report.expectEqual(expected: excursionIndex + 1, actual: excursion.document.history.undoIndex,
+                       cppID: excursionID, what: "the excursion click advances the undo index once")
+    report.expectEqual(expected: excursionTempo, actual: excursion.tempoValues,
+                       cppID: excursionID, what: "the excursion click leaves Tempo unchanged")
+    report.expect(excursion.undo() && excursion.document.history.undoIndex == excursionIndex
+                      && (try? excursion.document.state.file.encoded()) == excursionBytes,
+                  cppID: excursionID, message: "one excursion undo restores the original MIDI bytes")
 }
 
 @MainActor
