@@ -59,13 +59,12 @@ extension ApplicationSession {
         startOpen(label: label, at: nil, restoring: tab)
     }
 
-    /// A document in one tab published a state change: every caption follows its
-    /// own document, and the selected document also feeds the window's flags.
-    /// Hidden tabs publish too, so a background edit still marks its own tab.
+    /// Hidden tabs also refresh the window's global bank Undo/Redo gate;
+    /// only the selected tab refreshes transport and voicegroup views.
     func tabStateChanged(for session: DocumentSession) {
         songTabs.refreshDirty()
-        guard selectedDocument === session else { return }
         refreshDocumentState()
+        guard selectedDocument === session else { return }
         transportBar.refresh()
         refreshVoicegroupDock()
     }

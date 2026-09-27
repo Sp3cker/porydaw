@@ -55,22 +55,26 @@ final class ServiceBankAction: BankHistoryAction {
             switch direction {
             case .undo:
                 if materializedBlank, let live = token {
-                    result = try await service.bankRevert(lease: current.lease, token: live)
+                    result = try await service.bankRevert(lease: current.lease, token: live,
+                                                          publishResult: false)
                     token = nil
                 } else if let restore = before {
                     result = try await service.bankApply(lease: current.lease, slot: slot,
-                                                         value: restore, expected: after)
+                                                         value: restore, expected: after,
+                                                         publishResult: false)
                 } else {
                     throw ProjectServiceError.operationFailed("Bank undo has no pre-edit voice.")
                 }
             case .redo:
                 if materializedBlank, token == nil {
                     result = try await service.bankApply(lease: current.lease, slot: slot,
-                                                         value: after, expected: nil)
+                                                         value: after, expected: nil,
+                                                         publishResult: false)
                     token = result.materializationToken
                 } else if let reapply = before {
                     result = try await service.bankApply(lease: current.lease, slot: slot,
-                                                         value: after, expected: reapply)
+                                                         value: after, expected: reapply,
+                                                         publishResult: false)
                 } else {
                     throw ProjectServiceError.operationFailed("Bank redo has no pre-edit voice.")
                 }

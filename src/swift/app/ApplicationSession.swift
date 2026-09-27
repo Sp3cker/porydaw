@@ -505,9 +505,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
         setNoteNameModeImpl(enabled: enabled)
     }
 
-    /// Republishes the flags the window and the strip read: the song is open
-    /// while any tab is, and the document flags follow the selected tab's
-    /// workspace.
+    /// Follows the selected tab's document, but gates Undo/Redo while any
+    /// tab has a pending bank transition.
     func refreshDocumentState() {
         songOpen = songTabs.tabCount > 0
         songDock.syncSelection()
@@ -520,8 +519,11 @@ public final class ApplicationSession: QmlInstantiableStatus {
         }
         songDocumentDirty = session.document.isDirty
         documentDirty = songDocumentDirty || session.bankDirty
-        canUndo = session.document.history.canUndo
-        canRedo = session.document.history.canRedo
+        let bankPending = songTabs.tabs.contains {
+            $0.workspace.session.document.history.bankTransitionInFlight
+        }
+        canUndo = !bankPending && session.document.history.canUndo
+        canRedo = !bankPending && session.document.history.canRedo
     }
 
 }

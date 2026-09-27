@@ -347,23 +347,30 @@ public final class DocumentSession {
         guard let transition = document.history.beginBankTransition() else {
             throw ProjectServiceError.operationFailed("A bank transition is already in progress.")
         }
+        publishChange([.history])
         var ownsTransition = true
         defer {
-            if ownsTransition { document.history.endBankTransition(transition) }
+            if ownsTransition {
+                document.history.endBankTransition(transition)
+                publishChange([.history])
+            }
             flushPendingBankNotification()
         }
         let result = try await service.bankApply(lease: bankLease, slot: slot,
-                                                 value: value, expected: expected)
-        adoptBank(result)
+                                                 value: value, expected: expected,
+                                                 publishResult: false)
         let materializationToken = expected == nil ? result.materializationToken : nil
-        document.history.finishBankTransition(transition, recording: ServiceBankAction(
-            service: service, slot: slot, before: expected, after: value,
-            token: materializationToken,
-            materializedBlank: materializationToken != nil,
-            current: result, inbox: inbox))
-        ownsTransition = false
-        pendingBankNotification = false
-        publishChange([.bank, .dirty, .history])
+        withStateChanges {
+            document.history.finishBankTransition(transition, recording: ServiceBankAction(
+                service: service, slot: slot, before: expected, after: value,
+                token: materializationToken,
+                materializedBlank: materializationToken != nil,
+                current: result, inbox: inbox))
+            ownsTransition = false
+            adoptBank(result)
+            pendingBankNotification = false
+            publishChange([.bank, .dirty, .history])
+        }
         return result
     }
 

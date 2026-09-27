@@ -589,7 +589,7 @@ Mapping: S010
 
 A046 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:278
 Disposition: GAP
-Mapping/reason: Fork law not ported, and partly divergent: the origin-aware close gate (voicegroupviewcache.cpp:93-96 closeEnabledFor) refuses close only for the pending transition's tab and leaves another tab closable whatever its bank dirt; no Swift predicate exposes that gate. Registered divergence (bank-only close prompt): Swift's per-tab gate refuses close on bank-only dirt (SongTabSession.isDirty = document.isDirty || bankDirty, src/swift/app/SongTabsController.swift:63-66, rendered by the strip at src/ui/songview/quick/swiftroll/SongTabs.qml:185-187) where the fork's requestCloseTab closes a document-clean tab immediately (workspaceui_tabs.cpp:485-500, "Known limitation: users must save bank-only edits before closing the tab"), and Swift refuses no tab for a pending transition. The divergent Swift gate is observed mounted at src/checks/editorqml/tst_ShellTabs.qml test_uSharedBankTwoTabJourney, message "bank-only dirty tab B raises its own close gate".
+Mapping/reason: Pending bank action gate: S027/S028. Remaining close law unported and partly divergent: the origin-aware close gate (voicegroupviewcache.cpp:93-96 closeEnabledFor) refuses close only for the pending transition's tab and leaves another tab closable whatever its bank dirt; no Swift predicate exposes that gate. Registered divergence (bank-only close prompt): Swift's per-tab gate refuses close on bank-only dirt (SongTabSession.isDirty = document.isDirty || bankDirty, src/swift/app/SongTabsController.swift:63-66, rendered by the strip at src/ui/songview/quick/swiftroll/SongTabs.qml:185-187) where the fork's requestCloseTab closes a document-clean tab immediately (workspaceui_tabs.cpp:485-500, "Known limitation: users must save bank-only edits before closing the tab"), and Swift refuses no tab for a pending transition. The divergent Swift gate is observed mounted at src/checks/editorqml/tst_ShellTabs.qml test_uSharedBankTwoTabJourney, message "bank-only dirty tab B raises its own close gate".
 Source context since previous assertion:
 
 
@@ -610,33 +610,15 @@ Original expression:
 
 A048 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:284
 Disposition: MATCHED
-Mapping: S024
-Source context since previous assertion:
-
-    cache.resolveApplied({*identity, std::nullopt}, history);
-
-Original expression:
-    QCOMPARE(stack.count(), 1);
+Mapping: S024, S029
 
 A049 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:285
 Disposition: MATCHED
-Mapping: S024
-Source context since previous assertion:
-
-
-Original expression:
-    QVERIFY(cache.bankActionsEnabled() && !cache.pendingOrigin());
+Mapping: S024, S031, S032
 
 A050 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:288
 Disposition: MATCHED
-Mapping: S025
-Source context since previous assertion:
-
-
-    std::optional<VoicegroupEditInput> undo = draft(history.requestUndo());
-
-Original expression:
-    QVERIFY(undo);
+Mapping: S025, S032
 
 A051 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:289
 Disposition: MATCHED
@@ -649,13 +631,7 @@ Original expression:
 
 A052 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:291
 Disposition: MATCHED
-Mapping: S025
-Source context since previous assertion:
-
-    cache.resolveApplied({*identity, std::nullopt}, history);
-
-Original expression:
-    QCOMPARE(stack.index(), 0);
+Mapping: S025, S033
 
 A053 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:293
 Disposition: MATCHED
@@ -915,3 +891,36 @@ Anchor: message "the session gate routes transitions and prunes stale conflicts"
 
 S026 | bankCoordinatorGate | src/checks/workspace/bank_sharing_history.swift
 Anchor: message "the session gate routes transitions and prunes stale conflicts" #3
+
+S027 | bankUndoPublicationChecks | src/checks/workspace/bank_undo_publication.swift
+Anchor: message "background bank edit disables selected tab Undo while pending"
+
+S028 | bankUndoPublicationChecks | src/checks/workspace/bank_undo_publication.swift
+Anchor: message "background bank edit disables selected tab Redo while pending"
+
+S029 | bankUndoPublicationChecks | src/checks/workspace/bank_undo_publication.swift
+Anchor: message "visible confirmed bank edit has an undo stack entry"
+
+S030 | bankUndoPublicationChecks | src/checks/workspace/bank_undo_publication.swift
+Anchor: message "visible confirmed bank edit has crossed the undo cursor"
+
+S031 | bankUndoPublicationChecks | src/checks/workspace/bank_undo_publication.swift
+Anchor: message "selected tab Undo is restored when the bank edit becomes visible"
+
+S032 | bankUndoPublicationChecks | src/checks/workspace/bank_undo_publication.swift
+Anchor: message "confirmed bank edit enables immediate Undo in its owning tab"
+
+S033 | bankUndoPublicationChecks | src/checks/workspace/bank_undo_publication.swift
+Anchor: message "immediate Undo command crosses the confirmed bank history entry"
+
+S034 | bankUndoPublicationChecks | src/checks/workspace/bank_undo_publication.swift
+Anchor: message "immediate Undo command restores the owning bank view"
+
+S035 | bankUndoPublicationChecks | src/checks/workspace/bank_undo_publication.swift
+Anchor: message "immediate Undo command restores the shared peer bank view"
+
+S036 | bankUndoPublicationChecks | src/checks/workspace/bank_undo_publication.swift
+Anchor: message "immediate Undo leaves the confirmed bank edit redoable"
+
+S037 | bankUndoPublicationChecks | src/checks/workspace/bank_undo_publication.swift
+Anchor: message "immediate Undo preserves the preceding document edit"

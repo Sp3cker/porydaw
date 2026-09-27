@@ -168,7 +168,8 @@ extension ProjectService {
     /// requires the slot to still be blank (materialization); a set expected
     /// value requires an exact match. Mismatches throw bankConflict.
     public func bankApply(lease: NativeBankLease, slot: Int,
-                          value: BankVoice, expected: BankVoice?) async throws -> AppliedBankEdit {
+                          value: BankVoice, expected: BankVoice?,
+                          publishResult: Bool = true) async throws -> AppliedBankEdit {
         let store = try requireStore()
         guard lease.publicationOwner == store.publicationOwner else {
             throw ProjectServiceError.serviceClosed
@@ -180,7 +181,7 @@ extension ProjectService {
                 lease: lease.handle,
                 operation: .set(SetVoicegroupSlot(slot: slot, value: converted, expected: old)))
             let applied = try bankEditResult(result)
-            await publish(applied, from: store)
+            if publishResult { await publish(applied, from: store) }
             return applied
         } catch {
             throw projectFailure(error)
@@ -189,7 +190,8 @@ extension ProjectService {
 
     /// Reverts a blank-slot materialization via its single-shot token. Spent
     /// or unknown tokens throw bankConflict; the source bytes stay untouched.
-    public func bankRevert(lease: NativeBankLease, token: UInt64) async throws -> AppliedBankEdit {
+    public func bankRevert(lease: NativeBankLease, token: UInt64,
+                           publishResult: Bool = true) async throws -> AppliedBankEdit {
         let store = try requireStore()
         guard lease.publicationOwner == store.publicationOwner else {
             throw ProjectServiceError.serviceClosed
@@ -197,7 +199,7 @@ extension ProjectService {
         do {
             let applied = try bankEditResult(
                 await store.revertBlankSlot(lease: lease.handle, materializationToken: token))
-            await publish(applied, from: store)
+            if publishResult { await publish(applied, from: store) }
             return applied
         } catch {
             throw projectFailure(error)

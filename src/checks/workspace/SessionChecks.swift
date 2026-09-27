@@ -104,6 +104,7 @@ internal func runBankHistorySuite(_ report: CheckReport) {
                     "missing --swiftcore fixture root")
         return
     }
+    bankUndoPublicationChecks(report, fixtureRoot: fixtureRoot)
     twoOpenSessionsShareBankEdit(report: report, fixtureRoot: fixtureRoot)
     bankSharedHistoryAndLifecycle(report: report, fixtureRoot: fixtureRoot)
     bankBindingIdentityIsolation(report: report, fixtureRoot: fixtureRoot)
@@ -180,9 +181,10 @@ internal func runBankHistorySuite(_ report: CheckReport) {
         report.expectEqual(expected: oldToken, actual: oldLease.bankToken,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "superseded lease retains its bank token and stays valid")
+        let completedBankPublications = bankPublications.filter { $0.domains.contains(.bank) }
         report.expect(
-            bankPublications.count == 1
-                && bankPublications[0].domains == [.bank, .dirty, .history],
+            completedBankPublications.count == 1
+                && completedBankPublications[0].domains == [.bank, .dirty, .history],
             cppID: "swiftcore/DocumentSession::bankPublicationDomains",
             message: "bank edit publishes bank, dirty, and history exactly once")
 

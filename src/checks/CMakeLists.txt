@@ -292,6 +292,7 @@ if(APPLE)
         workspace/bank_history_probes.swift
         workspace/bank_edits.swift
         workspace/bank_saves.swift
+        workspace/bank_undo_publication.swift
         workspace/bank_sharing.swift
         workspace/bank_sharing_history.swift
         workspace/bank_switching.swift
