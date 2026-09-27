@@ -163,6 +163,28 @@ TestCase {
         tryCompare(shell.shellPresenter.session.velocityPage(), "selectedCount", 1, 3000)
     }
 
+    function selectMountedNotePair(surface) {
+        var grid = surface.gridModel
+        var roll = findChild(surface, "swiftRollInput")
+        selectDrawnVelocityNote(surface)
+        var first = JSON.parse(grid.noteSummary).find(function(note) {
+            return note.selected && !note.ghost
+        })
+        var second = JSON.parse(grid.noteSummary).find(function(note) {
+            var item = findChild(surface, "gridNote_" + note.id)
+            return !note.selected && !note.ghost && item && item.visible
+                   && item.width > 0 && item.height > 0
+        })
+        verify(first && second, "two drawn roll notes are available for the key journey")
+        var target = findChild(surface, "gridNote_" + second.id)
+        var point = target.mapToItem(roll, target.width / 2, target.height / 2)
+        mouseClick(roll, point.x, point.y, Qt.LeftButton, Qt.ShiftModifier)
+        var pair = JSON.parse(grid.noteSummary).filter(function(note) {
+            return note.selected && (note.id === first.id || note.id === second.id)
+        })
+        return pair
+    }
+
     function windowShortcut(name) {
         var delegates = shell.contentItem.children
         for (var i = 0; i < delegates.length; ++i) {
@@ -1821,11 +1843,15 @@ TestCase {
         var surface = selectedSurface()
         var session = shell.shellPresenter.session
         var grid = surface.gridModel
-        selectDrawnVelocityNote(surface)
-        var selected = JSON.parse(grid.noteSummary).find(function(item) { return item.selected })
-        verify(selected, "the real roll click selects a note")
-        function note() {
-            return JSON.parse(grid.noteSummary).find(function(item) { return item.id === selected.id })
+        var pair = selectMountedNotePair(surface)
+        compare(pair.length, 2, "the real roll click selects a note")
+        function note(id) {
+            return JSON.parse(grid.noteSummary).find(function(item) { return item.id === id })
+        }
+        function pairUnchanged(before) {
+            return before.every(function(previous) {
+                return JSON.stringify(note(previous.id)) === JSON.stringify(previous)
+            })
         }
         var drawer = findChild(surface, "editorDrawer")
         var grip = findChild(drawer, "drawerHandle_automation")
@@ -1840,60 +1866,106 @@ TestCase {
             return automationPage && automationPage.activeFocus
         }, 3000, "the automation page receives drawer focus before grip focus")
         grip.forceActiveFocus(Qt.TabFocusReason)
-        tryCompare(grip, "activeFocus", true, 3000)
+        tryCompare(grip, "activeFocus", true, 3000,
+                   "A014 automation resize grip owns active focus before arrows")
         var beforeHeight = section.bodyHeight
-        var beforeNote = note()
+        var beforeNote = pair.map(function(item) { return note(item.id) })
         var beforeRevision = grid.appliedRevisionText
         var beforeSummary = grid.noteSummary
         var beforeUndo = session.canUndo
+        copyActivatedSpy.target = windowShortcut("shellShortcut_roll.copy")
+        soloActivatedSpy.target = windowShortcut("shellShortcut_roll.solo_tracks")
+        verify(copyActivatedSpy.target && soloActivatedSpy.target,
+               "the mounted window Copy and Solo shortcuts are observed")
+        copyActivatedSpy.clear()
+        soloActivatedSpy.clear()
         keyClick(Qt.Key_F24)
         verify(section.bodyHeight === beforeHeight && grid.noteSummary === beforeSummary
                && grid.appliedRevisionText === beforeRevision && session.canUndo === beforeUndo,
                "an unrecognized key changes nothing")
+        compare(copyActivatedSpy.count, 0, "A010 F24 never activates window Copy")
+        compare(soloActivatedSpy.count, 0, "A010 F24 never activates window Solo")
+        verify(pairUnchanged(beforeNote), "F24 retains both selected notes by ID")
         keyClick(Qt.Key_Up)
         compare(section.bodyHeight, beforeHeight + shell.chromeSpacing.two,
                 "the automation grip grows by one step on Up")
+        verify(pairUnchanged(beforeNote), "A017 grip Up leaves both reserved notes byte-identical")
         keyClick(Qt.Key_Down)
         compare(section.bodyHeight, beforeHeight, "grip Down restores the automation height")
+        verify(pairUnchanged(beforeNote), "grip Down leaves both reserved notes byte-identical")
         keyClick(Qt.Key_Left)
+        verify(pairUnchanged(beforeNote), "grip Left leaves both reserved notes byte-identical")
         keyClick(Qt.Key_Right)
+        verify(pairUnchanged(beforeNote), "A020 grip Right leaves both reserved notes byte-identical")
         compare(section.bodyHeight, beforeHeight,
                 "cross-axis grip arrows never resize the automation section")
         compare(grid.appliedRevisionText, beforeRevision,
                 "grip arrows never trigger window actions")
-        verify(note().tick === beforeNote.tick && note().pitch === beforeNote.pitch,
-               "the automation grip keeps the selected note unchanged")
+        verify(pairUnchanged(beforeNote), "the automation grip keeps the selected note unchanged")
+        compare(copyActivatedSpy.count, 0, "A018 grip arrows never activate window Copy")
+        compare(soloActivatedSpy.count, 0, "A018 grip arrows never activate window Solo")
 
         toggle.forceActiveFocus(Qt.TabFocusReason)
-        tryCompare(toggle, "activeFocus", true, 3000)
+        tryCompare(toggle, "activeFocus", true, 3000,
+                   "A108 automation toggle owns active focus before arrows")
         var snap = grid.snapTicks
         keyClick(Qt.Key_Right)
-        verify(note().tick === selected.tick + snap && note().pitch === selected.pitch,
-               "toggle arrows route to the selected note by one grid step")
+        verify(pair.every(function(previous) {
+            var moved = note(previous.id)
+            return moved && moved.tick === previous.tick + snap
+                   && moved.pitch === previous.pitch && moved.selected
+                   && moved.duration === previous.duration
+                   && moved.velocity === previous.velocity && moved.track === previous.track
+                   && moved.ghost === previous.ghost
+        }), "toggle arrows route to the selected note by one grid step")
         keyClick(Qt.Key_Up)
-        verify(note().tick === selected.tick + snap && note().pitch === selected.pitch + 1,
-               "toggle Up transposes the selected note")
-        var beforeActivation = note()
+        verify(pair.every(function(previous) {
+            var moved = note(previous.id)
+            return moved && moved.tick === previous.tick + snap
+                   && moved.pitch === previous.pitch + 1 && moved.selected
+                   && moved.duration === previous.duration
+                   && moved.velocity === previous.velocity && moved.track === previous.track
+                   && moved.ghost === previous.ghost
+        }), "toggle Up transposes the selected note")
+        var beforeActivation = pair.map(function(previous) { return note(previous.id) })
+        var playhead = session.playheadPresenter()
+        compare(playhead.playing, false, "toggle Space starts from stopped transport")
+        var sectionVisible = section.visible
+        keyClick(Qt.Key_Space)
+        tryCompare(playhead, "playing", true, 3000,
+                   "A113 toggle Space activates window transport rather than local chrome")
+        compare(section.visible, sectionVisible, "A113 toggle Space leaves the section visible")
+        verify(pairUnchanged(beforeActivation),
+               "A113 bare Space on the focused toggle retains both note IDs")
+        keyClick(Qt.Key_Space)
+        tryCompare(playhead, "playing", false, 3000,
+                   "the second toggle Space stops window transport")
+        verify(pairUnchanged(beforeActivation), "the second toggle Space retains both note IDs")
         keyClick(Qt.Key_Enter)
         tryCompare(section, "visible", false, 3000,
                    "Enter toggles the focused drawer section")
+        verify(pairUnchanged(beforeActivation),
+               "toggle Enter leaves both reserved notes byte-identical")
         toggle.forceActiveFocus(Qt.TabFocusReason)
         tryCompare(toggle, "activeFocus", true, 3000)
         keyClick(Qt.Key_Return)
         tryCompare(section, "visible", true, 3000,
                    "Return restores the focused drawer section")
-        verify(note().tick === beforeActivation.tick && note().pitch === beforeActivation.pitch,
-               "toggle activation keys never mutate the selected note")
+        verify(pairUnchanged(beforeActivation),
+               "A116 toggle Return leaves both reserved notes byte-identical")
+        verify(pairUnchanged(beforeActivation), "toggle activation keys never mutate the selected note")
+        compare(copyActivatedSpy.count, 0, "toggle activation never fires window Copy")
+        compare(soloActivatedSpy.count, 0, "toggle activation never fires window Solo")
     }
     function test_mLabelCommandsAndPromptTextOwnership() {
         openTwoSongShell()
         var surface = selectedSurface()
         var grid = surface.gridModel
-        selectDrawnVelocityNote(surface)
-        var selected = JSON.parse(grid.noteSummary).find(function(item) { return item.selected })
-        verify(selected, "the mounted roll provides a selected note")
-        function note() {
-            return JSON.parse(grid.noteSummary).find(function(item) { return item.id === selected.id })
+        var pair = selectMountedNotePair(surface)
+        compare(pair.length, 2, "the mounted roll provides a selected note")
+        var selected = pair[0]
+        function note(id) {
+            return JSON.parse(grid.noteSummary).find(function(item) { return item.id === id })
         }
         var toggle = findChild(surface, "drawerToggle_automation")
         if (!surface.drawerPresenter.automationSection.visible)
@@ -1917,7 +1989,17 @@ TestCase {
         mouseClick(tabPress, tabPress.width / 2, tabPress.height / 2)
         tryCompare(volumeTab, "checked", true, 3000)
         volumeTab.forceActiveFocus(Qt.OtherFocusReason)
-        tryCompare(volumeTab, "activeFocus", true, 3000)
+        tryCompare(volumeTab, "activeFocus", true, 3000,
+                   "A031 the Volume label owns active focus before commands")
+        var labelRevision = grid.appliedRevisionText
+        var labelNotes = grid.noteSummary
+        keyClick(Qt.Key_Enter)
+        keyClick(Qt.Key_Return)
+        compare(grid.appliedRevisionText, labelRevision,
+                "A038 label Enter and Return never edit the document")
+        compare(grid.noteSummary, labelNotes,
+                "A038 label activation preserves both selected note identities")
+        compare(volumeTab.activeFocus, true, "A038 label retains focus after Enter and Return")
         var shortcut = windowShortcut("shellShortcut_roll.copy")
         verify(shortcut, "the window Copy shortcut is mounted")
         copyActivatedSpy.target = shortcut
@@ -1927,22 +2009,45 @@ TestCase {
                 "window Copy over a focused parameter label captures the selected note")
         compare(JSON.parse(clipProbe.readClipJson()).tracks[0].notes[0].key, selected.pitch,
                 "window Copy over label focus preserves the selected note")
-        var original = note()
+        var copiedNotes = JSON.parse(clipProbe.readClipJson()).tracks[0].notes
+        compare(copiedNotes.length, 2, "A061 label-focus Copy captures the two selected notes")
+        var firstTick = Math.min(pair[0].tick, pair[1].tick)
+        verify(pair.every(function(previous) {
+            return copiedNotes.some(function(copied) {
+                return copied.relTick === previous.tick - firstTick
+                       && copied.key === previous.pitch
+                       && copied.duration === previous.duration
+                       && copied.velocity === previous.velocity
+            })
+        }), "A061 the copied clip retains both note pitches")
+        compare(volumeTab.activeFocus, true, "A066 label keeps active focus after Copy")
         keyClick(Qt.Key_Right)
-        verify(note().tick === original.tick + grid.snapTicks
-               && note().pitch === original.pitch,
-               "label-focus arrows advance the selected note one grid step")
+        verify(pair.every(function(previous) {
+            var moved = note(previous.id)
+            return moved && moved.tick === previous.tick + grid.snapTicks
+                   && moved.pitch === previous.pitch && moved.selected
+                   && moved.duration === previous.duration
+                   && moved.velocity === previous.velocity && moved.track === previous.track
+                   && moved.ghost === previous.ghost
+        }), "label-focus arrows advance the selected note one grid step")
+        compare(volumeTab.activeFocus, true, "A077 label owns focus before routed arrows")
         keyPress(Qt.Key_Up)
-        verify(note().tick === original.tick + grid.snapTicks
-               && note().pitch === original.pitch + 1,
-               "label-focus Up transposes the selected note")
+        verify(pair.every(function(previous) {
+            var moved = note(previous.id)
+            return moved && moved.tick === previous.tick + grid.snapTicks
+                   && moved.pitch === previous.pitch + 1 && moved.selected
+                   && moved.duration === previous.duration
+                   && moved.velocity === previous.velocity && moved.track === previous.track
+                   && moved.ghost === previous.ghost
+        }), "label-focus Up transposes the selected note")
         verify(shell.shellPresenter.releaseEditorKey(false),
                "real label-focus Up key-down starts a live transpose audition latch")
         keyRelease(Qt.Key_Up)
         keyPress(Qt.Key_Up)
         keyRelease(Qt.Key_Up)
-        compare(note().pitch, original.pitch + 2,
-                "real label-focus Up down/up transposes the note")
+        verify(pair.every(function(previous) {
+            return note(previous.id).pitch === previous.pitch + 2
+        }), "real label-focus Up down/up transposes the note")
         compare(shell.shellPresenter.releaseEditorKey(false), false,
                 "real label-focus Up key-up already ended the audition latch")
         compare(volumeTab.checked, true, "the active parameter survives label-focus commands")
@@ -2076,6 +2181,8 @@ TestCase {
         tryVerify(function() { return page.pageModel.nodeCount > sweepCount }, 3000,
                   "a separate Volume event lies outside the staged range")
         var beforeCount = page.pageModel.nodeCount
+        var pair = selectMountedNotePair(surface)
+        compare(pair.length, 2, "the real click and Shift-click select exactly the two note IDs")
         var beforeNotes = grid.noteSummary
         var revisionBeforeSelection = grid.appliedRevisionText
         mousePress(plot, plot.width / 5, row, Qt.RightButton)
@@ -2085,6 +2192,13 @@ TestCase {
         tryCompare(insertTime, "enabled", true, 3000, "the right-band selects Volume time")
         compare(grid.appliedRevisionText, revisionBeforeSelection,
                 "the right-band alone never writes a lane")
+        beforeNotes = grid.noteSummary
+        verify(pair.every(function(previous) {
+            var retained = JSON.parse(beforeNotes).find(function(note) {
+                return note.id === previous.id
+            })
+            return retained && !retained.selected
+        }), "the real lane range clears the competing pair selection")
         volumeTab.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(volumeTab, "activeFocus", true, 3000)
         var shortcut = windowShortcut("shellShortcut_roll.copy")
@@ -2098,6 +2212,7 @@ TestCase {
                + clipProbe.readClipJson() + "; activations=" + copyActivatedSpy.count)
         compare(grid.appliedRevisionText, revisionBeforeSelection,
                 "window Copy over label focus never writes the document")
+        compare(volumeTab.activeFocus, true, "A066 label retains active focus across range Copy")
         function writtenTicks(item, result) {
             if (item.objectName === "automationNode" && item.model
                     && !item.model.projected && !item.model.phantom)
@@ -2128,6 +2243,14 @@ TestCase {
                && page.pageModel.nodeCount < beforeCount,
                "Delete removes only the lane points inside the staged range")
         compare(grid.noteSummary, beforeNotes, "Volume range Delete preserves the notes")
+        compare(volumeTab.activeFocus, true, "A066 label retains active focus after Delete")
+        verify(pair.every(function(previous) {
+            var retained = JSON.parse(grid.noteSummary).find(function(note) {
+                return note.id === previous.id
+            })
+            return retained && retained.tick === previous.tick
+                   && retained.pitch === previous.pitch
+        }), "A065 Delete leaves both reserved notes at their original tick and pitch")
         compare(insertTime.enabled, true, "Delete keeps the selected time range")
         verify(!JSON.parse(beforeNotes).some(function(note) { return note.selected }),
                "the lane-only range begins with an empty note selection")
@@ -2139,11 +2262,28 @@ TestCase {
         })
         verify(activeNotes.length > 0 && activeNotes.every(function(note) { return note.selected }),
                "Select All over label focus selects the active track's notes")
+        verify(activeNotes.some(function(note) {
+            return note.id === pair[0].id && note.selected
+        }), "A067 Select All includes the first reserved note by its original ID")
+        verify(activeNotes.some(function(note) {
+            return note.id === pair[1].id && note.selected
+        }), "A068 Select All includes the second reserved note by its original ID")
         grid.setEditCursorTick(7680)
         keySequence(StandardKey.Paste)
         tryVerify(function() {
             return page.pageModel.nodeCount > 0 && grid.editCursorTick > 7680
         }, 3000, "Paste over label focus writes the copied Volume lane at the edit cursor")
+        compare(volumeTab.activeFocus, true, "A066 label retains active focus after Paste")
+        verify(pair.every(function(previous) {
+            var retained = JSON.parse(grid.noteSummary).find(function(note) {
+                return note.id === previous.id
+            })
+            return retained && retained.tick === previous.tick
+                   && retained.pitch === previous.pitch
+                   && retained.duration === previous.duration
+                   && retained.velocity === previous.velocity
+                   && retained.track === previous.track
+        }), "A075 lane Paste leaves both original notes unchanged by ID")
         var roll = findChild(surface, "swiftRollInput")
         roll.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(roll, "activeFocus", true, 3000)

@@ -8,6 +8,7 @@ private enum QtKeyCode: Int {
     case delete = 0x0100_0007
     case up = 0x0100_0013
     case space = 0x20
+    case a = 0x41
     case b = 0x42
     case c = 0x43
     case d = 0x44
@@ -16,6 +17,7 @@ private enum QtKeyCode: Int {
     case m = 0x4d
     case s = 0x53
     case u = 0x55
+    case v = 0x56
 }
 
 private enum QtKeyboardModifier: Int {
@@ -72,6 +74,8 @@ public func runKeybindingRegistryChecks(
         "Control still arms detent unlock")
 
     let deliveryScopes = "KeymapCheckTest::deliveryScopes"
+    let pasteID = "roll.paste"
+    let selectAllID = "roll.select_all"
     let scopeRows: [(id: String, expected: KeybindingScope)] = [
         ("edit.insert_time", .window),
         ("edit.delete_time", .window),
@@ -82,8 +86,8 @@ public func runKeybindingRegistryChecks(
         ("roll.duplicate_time", .editorRouted),
         ("roll.split", .editorRouted),
         ("roll.join", .editorRouted),
-        ("roll.paste", .editorRouted),
-        ("roll.select_all", .editorRouted),
+        (pasteID, .editorRouted),
+        (selectAllID, .editorRouted),
         ("roll.delete", .editorRouted),
         ("automation.pencil_mode", .editorRouted),
         ("eventlist.move_up", .editorRouted),
@@ -107,6 +111,24 @@ public func runKeybindingRegistryChecks(
             [[QtKeyCode.b.rawValue]],
         deliveryScopes,
         "Pencil Mode keeps unmodified B")
+    // Qt's portable Control bit resolves to Command for standard keys on macOS.
+    let platformCommand = QtKeyboardModifier.control.rawValue
+    onAssertion(
+        registry.sequences(pasteID).contains {
+            $0.strokes == [QtKeyCode.v.rawValue | platformCommand]
+        },
+        deliveryScopes,
+        "A034 Paste has the platform standard single-key stroke")
+    onAssertion(
+        registry.sequences(selectAllID).contains {
+            $0.strokes == [QtKeyCode.a.rawValue | platformCommand]
+        },
+        deliveryScopes,
+        "A042 Select All has the platform standard single-key stroke")
+    onAssertion(
+        registry.matches(QtKeyCode.a.rawValue, platformCommand, selectAllID),
+        deliveryScopes,
+        "A048 Select All delivers its platform standard stroke")
 
     let defaultMatching = "KeymapCheckTest::defaultMatching"
     let rows: [(name: String, id: String, key: Int, modifiers: Int, expected: Bool)] = [

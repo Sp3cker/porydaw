@@ -39,6 +39,9 @@ exists.
 
 Counts: MATCHED 12, PARTIAL 6, GAP 0, RETIRED-REPRESENTATION 35
 
+Command: deno task verify --filter swiftcore-projectsession --verbose (implementer-observed, task-87 sources)
+Result: PASS; 1/36 ok; run_checks PASS. That run executes the coreediting staging predicates in coreEditingKeyboardOutcomes (src/checks/selectionkey/localinputtier_text.swift) plus the registry stroke predicates in runKeybindingRegistryChecks (src/checks/keyboard/KeybindingRegistryChecks.swift).
+
 A001 | SelectionKeyCoreTest::drawerTransposeAuditionReleasesOnPhysicalKeyUp | src/checks/selectionkey/coreediting.cpp:63
 Disposition: RETIRED-REPRESENTATION
 Mapping/reason: RETIRED-REPRESENTATION - native fixture-creation guard (createFixture(EditorDrawerPage::Automations) plus the m_fixture check) for the drawer-audition fixture; the mounted lane stages its own Route 101 fixture.
@@ -138,26 +141,8 @@ Original expression:
                "automation range start did not reach the Quick input item")
 
 A013 | SelectionKeyCoreTest::automationRangeAndReboundDelete | src/checks/selectionkey/coreediting.cpp:128
-Disposition: PARTIAL
-Mapping/reason: PARTIAL - the right band stages an active lane-scoped Volume range without writing a lane (S017/S018) and the presenter clears the competing note selection when a lane-scoped range commits (S039); unproved as stated: the staged range's exact boundary ticks (kFirstPointTick/kOutsidePointTick) and the replacement of a pre-existing note selection are not asserted (S019 pins the empty-selection precondition form only).
-Source context since previous assertion:
-  ;
-      stageMousePress(Qt::RightButton, points->at(0));
-      stageMouseMove(points->at(1));
-      stageMouseRelease(Qt::RightButton, points->at(1));
-      selectionkey::settle();
-
-      const auto &selection = m_fixture->view().selectionModel().timeSelection();
-      // Hoisted: the lane pair's commas would split the QVERIFY2 macro args.
-      const bool rangeReady =
-          selection.active() && selection.startTick == kFirstPointTick &&
-          selection.endTick == kOutsidePointTick &&
-          selection.scope == songview::EditorSelectionModel::TimeSelection::Lanes &&
-          selection.lanes == std::vector<std::pair<int, uint8_t>>{{kTrack, kController}} &&
-          m_fixture->view().selectionModel().noteSelection().empty();
-
-Original expression:
-  QVERIFY2(rangeReady, "actual automation range did not replace note selection with lane scope")
+Disposition: MATCHED
+Mapping: S052, S053, S054, S055, S056
 
 A014 | SelectionKeyCoreTest::automationRangeAndReboundDelete | src/checks/selectionkey/coreediting.cpp:130
 Disposition: RETIRED-REPRESENTATION
@@ -402,47 +387,12 @@ Original expression:
                "Quick window did not accept the lane-scoped horizontal arrow")
 
 A033 | SelectionKeyCoreTest::laneScopedHorizontalArrowNudgesPointsAndInterval | src/checks/selectionkey/coreediting.cpp:250
-Disposition: PARTIAL
-Mapping/reason: PARTIAL - the mounted lane Right moves the point set and keeps the range active (S022), the presenter's empty lanes-scoped range advances on the camera grid without changing its span and writes nothing (S037/S038), and the same-delta interval translation executes for a track-scoped range (S041); unproved as stated: no predicate asserts a populated lanes-scoped range whose point lands on the snapped destination and whose interval translates by the same delta.
-Source context since previous assertion:
-  ;
-      const auto &moved = m_fixture->view().selectionModel().timeSelection();
-
-Original expression:
-  QVERIFY2(
-          m_fixture->document().findLanePoint(kTrack, kController, destination, nullptr) &&
-              !m_fixture->document().findLanePoint(kTrack, kController, kSecondPointTick, nullptr) &&
-              moved.startTick == destination &&
-              moved.endTick == kOutsidePointTick + destination - kSecondPointTick,
-          "lane-scoped horizontal arrow did not nudge points and the selected interval")
+Disposition: MATCHED
+Mapping: S057, S058, S059, S060
 
 A034 | SelectionKeyCoreTest::keyboardClipboardParity | src/checks/selectionkey/coreediting.cpp:275
-Disposition: PARTIAL
-Mapping/reason: PARTIAL - the production registry pins roll.paste's delivery scope as editor-routed (S044) and the mounted lane delivers the platform standard Paste and asserts its landing (S013, S016, S029); unproved as stated: no predicate asserts the paste single-key stroke itself (the registry checks assert strokes only for transpose-up, play-pause, insert-time, delete-time, pencil-mode and the delete/backspace/copy chords).
-Source context since previous assertion:
-  ;
-  }
-
-  void SelectionKeyCoreTest::keyboardClipboardParity_data()
-  {
-      QTest::addColumn<int>("destinationBand");
-      QTest::newRow("roll") << int(songview::TimelineBand::Roll);
-      QTest::newRow("automation drawer") << int(songview::TimelineBand::Automation);
-  }
-
-  void SelectionKeyCoreTest::keyboardClipboardParity()
-  {
-      QFETCH(int, destinationBand);
-      const auto band = songview::TimelineBand(destinationBand);
-
-      // roll.copy writes the process-global QClipboard; the guard restores it
-      // even when the row aborts, so clipboard state cannot leak across rows.
-      const clipcheck_support::ClipboardStateGuard clipboardGuard;
-
-      const auto paste = firstBinding(QStringLiteral("roll.paste"));
-
-Original expression:
-  QVERIFY2(paste.has_value(), "keyboard Paste has no single-key binding")
+Disposition: MATCHED
+Mapping: S061
 
 A035 | SelectionKeyCoreTest::keyboardClipboardParity | src/checks/selectionkey/coreediting.cpp:278
 Disposition: RETIRED-REPRESENTATION
@@ -516,28 +466,12 @@ Original expression:
                "Quick window did not accept the keyboard Paste binding")
 
 A041 | SelectionKeyCoreTest::keyboardClipboardParity | src/checks/selectionkey/coreediting.cpp:299
-Disposition: PARTIAL
-Mapping/reason: PARTIAL - related: S013 (Paste selects at least one inserted note), S016 (Paste advances the destination cursor past the inserted note) and S029 (Paste over label focus writes the copied Volume lane at the edit cursor, the node count grown past tick 7680); unproved as stated: the exact committed-cursor landing tick of the pasted clip and the pasted note key (the kPasteTick/60 identity).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(noteExists(m_fixture->document(), kTrack, kPasteTick, 60),
-               "keyboard Paste did not land the roll-copied note clip at the committed cursor")
+Disposition: MATCHED
+Mapping: S062
 
 A042 | SelectionKeyCoreTest::selectAllFromEmptySelection | src/checks/selectionkey/coreediting.cpp:306
-Disposition: PARTIAL
-Mapping/reason: PARTIAL - the production registry pins roll.select_all's delivery scope as editor-routed (S045) and the mounted Select All deliveries assert the resulting note selection and the cleared range (S019, S027, S028); unproved as stated: no predicate asserts the select-all single-key stroke itself.
-Source context since previous assertion:
-  ;
-  }
-
-  void SelectionKeyCoreTest::selectAllFromEmptySelection()
-  {
-      const auto shortcut = firstBinding(QStringLiteral("roll.select_all"));
-
-Original expression:
-  QVERIFY2(shortcut.has_value(), "Select All Notes has no single-key binding")
+Disposition: MATCHED
+Mapping: S063
 
 A043 | SelectionKeyCoreTest::selectAllFromEmptySelection | src/checks/selectionkey/coreediting.cpp:309
 Disposition: RETIRED-REPRESENTATION
@@ -600,18 +534,8 @@ Original expression:
                "Select All Notes from empty selection did not select primary-track notes")
 
 A048 | SelectionKeyCoreTest::selectAllReplacesTimeSelectionAfterRulerClick | src/checks/selectionkey/coreediting.cpp:332
-Disposition: PARTIAL
-Mapping/reason: PARTIAL - same clause as A042 in the ruler-click row: the registry pins roll.select_all's delivery scope as editor-routed (S045) and the mounted Select All deliveries assert the selection results (S019, S027, S028); unproved as stated: no predicate asserts the select-all single-key stroke itself.
-Source context since previous assertion:
-  ;
-  }
-
-  void SelectionKeyCoreTest::selectAllReplacesTimeSelectionAfterRulerClick()
-  {
-      const auto shortcut = firstBinding(QStringLiteral("roll.select_all"));
-
-Original expression:
-  QVERIFY2(shortcut.has_value(), "Select All Notes has no single-key binding")
+Disposition: MATCHED
+Mapping: S064
 
 A049 | SelectionKeyCoreTest::selectAllReplacesTimeSelectionAfterRulerClick | src/checks/selectionkey/coreediting.cpp:335
 Disposition: RETIRED-REPRESENTATION
@@ -837,6 +761,45 @@ Anchor: message "autorepeat key-up holds the transpose audition"
 
 S051 | checkMountedTransposeAudition | src/checks/rollcheck/selection_audition.swift
 Anchor: message "physical key-up ends the transpose audition with a zero-velocity release"
+
+S052 | coreEditingKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A013 the committed lane range starts at tick 48"
+
+S053 | coreEditingKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A013 the committed lane range ends at tick 144"
+
+S054 | coreEditingKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A013 the committed selection has lanes scope"
+
+S055 | coreEditingKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A013 the committed scope contains only Pan"
+
+S056 | coreEditingKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A013 committing the lane range replaces selected notes"
+
+S057 | coreEditingKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A033 Right moves the covered Pan point to the snapped destination"
+
+S058 | coreEditingKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A033 Right removes the point from its original tick"
+
+S059 | coreEditingKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A033 Right translates the interval start by the same delta"
+
+S060 | coreEditingKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A033 Right translates the interval end by the same delta"
+
+S061 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: message "A034 Paste has the platform standard single-key stroke"
+
+S062 | coreEditingKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A041 keyboard Paste lands the roll-copied pitch-60 note at the committed cursor"
+
+S063 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: message "A042 Select All has the platform standard single-key stroke"
+
+S064 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: message "A048 Select All delivers its platform standard stroke"
 
 Shared helpers
 selectDrawnVelocityNote (src/checks/editorqml/tst_ShellWindow.qml) and

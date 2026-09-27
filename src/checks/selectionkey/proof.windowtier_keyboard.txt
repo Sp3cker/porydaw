@@ -24,6 +24,13 @@ ShellQmlTests.swift (src/checks/editorqml/ShellQmlTests.swift).
 Command: deno task verify:shell --filter shellwindow --verbose (task-58 sources)
 Result: PASS — implementer-reported 1/26 selected ok, 31 test functions recorded in build/proof-evidence/shellwindow.json (mtime 2026-09-26 16:31, postdating the tst_ShellWindow.qml task-58 additions). That run executes test_oEmptySelectionLabelUpEditsNothing, whose predicate S119 (the empty-selection label-focus Up no-op) closes A039, alongside the test_gEditorRoutedNoteKeysAndChromeArrows grip journeys S037-S039 that the windowtier gestures rows cite. This bookkeeping pass ran no lane, rebuilt nothing and re-ran no check.
 
+Command: deno task verify --filter swiftcore-projectsession --verbose (implementer-observed, task-87 sources)
+Result: PASS; 1/36 ok; run_checks PASS. That run executes the window-tier pair/survival/history predicates in windowTierKeyboardOutcomes and the coreediting staging predicates in coreEditingKeyboardOutcomes (src/checks/selectionkey/localinputtier_text.swift) plus the registry stroke predicates in runKeybindingRegistryChecks (src/checks/keyboard/KeybindingRegistryChecks.swift).
+Command: deno task verify:shell --filter shellwindow --verbose (implementer-observed, task-87 sources)
+Result: PASS; 26/26 ok; run_checks PASS. That run executes the extended pair chrome/label journeys (new predicates in test_lChromeArrowsAndUnknownKey, test_mLabelCommandsAndPromptTextOwnership and test_nLabelTimeSelectionCommands) through the shellwindow entry of ShellQmlTests.swift (src/checks/editorqml/ShellQmlTests.swift).
+Command: deno task verify:shell --filter shellwindow --verbose (controller-observed, task-87 sources)
+Result: PASS. The controller re-ran the shellwindow lane over the final sources.
+
 A001 | SelectionWindowTierTest::windowCopySoloExecutesExactlyOnce | src/checks/selectionkey/windowtier_keyboard.cpp:97
 Disposition: MATCHED
 Mapping: S019, S023, S018
@@ -66,49 +73,16 @@ Disposition: MATCHED
 Mapping: S030
 
 A010 | SelectionWindowTierTest::windowCopySoloExecutesExactlyOnce | src/checks/selectionkey/windowtier_keyboard.cpp:122
-Disposition: PARTIAL
-Mapping/reason: Related predicate S070 (:1323-1325) in src/checks/editorqml/tst_ShellWindow.qml (test_lChromeArrowsAndUnknownKey): F24 over the focused automation grip leaves the section height, the note summary, the applied revision and the undo availability unchanged, so the no-mutation half is exercised. Unproved as stated: the fork's window-action half (the copy/solo action counters still at 1/2) — the mounted journey drives no window-action spy for the unrecognized key and stages no count-free equivalent.
-Source context since previous assertion:
-  ;
-
-      selectionkey::deliverKey(quickWindow(), Qt::Key_F24);
-
-Original expression:
-  QVERIFY2(m_counts.copy == 1 && m_counts.solo == 2 && document().smf().write() == before,
-               "an unrecognized key triggered a window action or mutated the song")
+Disposition: MATCHED
+Mapping: S179, S180, S181
 
 A011 | SelectionWindowTierTest::chromeGripKeysStayLocal | src/checks/selectionkey/windowtier_keyboard.cpp:138
-Disposition: PARTIAL
-Mapping/reason: Related predicate S068 (:1304) in src/checks/editorqml/tst_ShellWindow.qml (test_lChromeArrowsAndUnknownKey): the mounted journey stages one drawn velocity note selected by a real roll click. Unproved as stated: the reserved tick-2400 two-note pair, its insertion and its id resolution.
-Source context since previous assertion:
-  ;
-
-      view.selectionModel().clearNoteSelection();
-  }
-
-  void SelectionWindowTierTest::chromeGripKeysStayLocal()
-  {
-      SongView &view = this->view();
-      SongDocument &document = this->document();
-      const selectionkey::ScenarioRollback rollback(view, document);
-      const FullControlTabTraversal fullControlTabTraversal;
-      view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
-      view.setDrawerSectionHeight(EditorDrawerPage::Automations, 200);
-      view.selectTrack(kTrack);
-      const std::optional<NotePair> pair = addNotePair(document, kTrack, 2400);
-
-Original expression:
-  QVERIFY2(pair.has_value(),
-               "the reserved tick-2400 note pair could not be inserted and resolved")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Native fixture construction `QVERIFY2(pair.has_value(), "the reserved tick-2400 note pair could not be inserted and resolved")` (windowtier_keyboard.cpp:138 at c17d966f) has no Swift counterpart; the fresh mounted journey selects a real two-note pair by click/Shift-click and the Swift lane stages its own reserved pair, so the insertion guard retires.
 
 A012 | SelectionWindowTierTest::chromeGripKeysStayLocal | src/checks/selectionkey/windowtier_keyboard.cpp:140
-Disposition: PARTIAL
-Mapping/reason: Related predicate S069 (:1311) in src/checks/editorqml/tst_ShellWindow.qml (test_lChromeArrowsAndUnknownKey): the automation section is opened through a real toggle click and exposes its focused grip/toggle chrome (drawerHandle_automation, drawerToggle_automation), and the grip's Up resize is exercised (S071). Unproved as stated: the native automation band focus (focusAutomationBand) — the mounted lane force-focuses drawerHandle_automation with Qt.TabFocusReason, and its activeFocus assertion (:1316) carries no message, so no anchor resolves it.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(focusAutomationBand(view), "could not focus the automation band")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Native `focusAutomationBand` (windowtier_keyboard.cpp:140 at c17d966f) has no Swift counterpart; the mounted journeys stage focus through the QML surface (a real toggle click or forceActiveFocus on the real chrome) and assert it (S182 grip active focus, S189 toggle active focus).
 
 A013 | SelectionWindowTierTest::chromeGripKeysStayLocal | src/checks/selectionkey/windowtier_keyboard.cpp:146
 Disposition: PARTIAL
@@ -125,14 +99,8 @@ Original expression:
   QVERIFY2(grip, "Tab traversal never reached the automation resize grip")
 
 A014 | SelectionWindowTierTest::chromeGripKeysStayLocal | src/checks/selectionkey/windowtier_keyboard.cpp:147
-Disposition: PARTIAL
-Mapping/reason: Related predicate S069 (:1311) in src/checks/editorqml/tst_ShellWindow.qml (test_lChromeArrowsAndUnknownKey): the automation resize grip is present and focusable in the mounted drawer. Unproved as stated: the grip's advertised active focus — the mounted activeFocus assertion (:1316) carries no message and no predicate reads the focus border state.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(grip->hasActiveFocus(),
-               "the automation resize grip does not show its advertised active focus")
+Disposition: MATCHED
+Mapping: S182
 
 A015 | SelectionWindowTierTest::chromeGripKeysStayLocal | src/checks/selectionkey/windowtier_keyboard.cpp:155
 Disposition: MATCHED
@@ -161,23 +129,12 @@ Original expression:
   QCOMPARE(heightAfterDown, heightBefore)
 
 A017 | SelectionWindowTierTest::chromeGripKeysStayLocal | src/checks/selectionkey/windowtier_keyboard.cpp:159
-Disposition: PARTIAL
-Mapping/reason: Related predicate S075 (:1338) in src/checks/editorqml/tst_ShellWindow.qml (test_lChromeArrowsAndUnknownKey): after the grip's Up/Down/Left/Right arrows the mounted journey asserts the selected note's tick and pitch are unchanged. Unproved as stated: the reserved tick-2400 note pair (the shell tracks one drawn velocity note) and the drawerAutomationHandle chrome identity.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(notePairUnchanged(document, *pair), "grip arrow keys moved the selected notes")
+Disposition: MATCHED
+Mapping: S183, S184
 
 A018 | SelectionWindowTierTest::chromeGripKeysStayLocal | src/checks/selectionkey/windowtier_keyboard.cpp:160
-Disposition: PARTIAL
-Mapping/reason: Related predicate S074 (:1336) in src/checks/editorqml/tst_ShellWindow.qml (test_lChromeArrowsAndUnknownKey): the grip arrow sequence leaves the applied revision unchanged, which bounds 'no document write'. Unproved as stated: the fork's window-action counters (copy/solo unchanged) — a window Copy/Solo activation would not move the applied revision, and the mounted journey stages no window-action spy across the grip arrows.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(m_counts.copy == copyBefore && m_counts.solo == soloBefore,
-               "grip arrow keys triggered a window action")
+Disposition: MATCHED
+Mapping: S185, S186
 
 A019 | SelectionWindowTierTest::chromeGripKeysStayLocal | src/checks/selectionkey/windowtier_keyboard.cpp:164
 Disposition: MATCHED
@@ -191,48 +148,16 @@ Original expression:
   QCOMPARE(view.drawerSectionHeight(EditorDrawerPage::Automations), heightBefore)
 
 A020 | SelectionWindowTierTest::chromeGripKeysStayLocal | src/checks/selectionkey/windowtier_keyboard.cpp:165
-Disposition: PARTIAL
-Mapping/reason: Related predicate S075 (:1338) in src/checks/editorqml/tst_ShellWindow.qml (test_lChromeArrowsAndUnknownKey): the mounted note tick/pitch equality spans all four grip arrows, including the cross-axis Left/Right pair. Unproved as stated: the reserved tick-2400 note pair (one drawn velocity note) and the drawerAutomationHandle chrome identity.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(notePairUnchanged(document, *pair),
-               "cross-axis arrows on the focused grip moved the selected notes")
+Disposition: MATCHED
+Mapping: S187, S188
 
 A021 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:183
-Disposition: PARTIAL
-Mapping/reason: Related predicate S081 (:1367) in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): the mounted label journey stages one drawn velocity note selected by a real roll click. Unproved as stated: the reserved tick-2400 note pair, the fork's exact fixture geometry, and the three lane points written at tick 5760 (the mounted journey stages its Volume lane by pointer).
-Source context since previous assertion:
-  ;
-  }
-
-  void SelectionWindowTierTest::parameterLabelActivationAndSharedCommands()
-  {
-      SongView &view = this->view();
-      SongDocument &document = this->document();
-      const selectionkey::ScenarioRollback rollback(view, document);
-      view.selectTrack(kTrack);
-      view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
-      view.setDrawerSectionHeight(EditorDrawerPage::Automations, 200);
-      constexpr uint64_t tick = 5760;
-      constexpr uint64_t pasteTick = 7680;
-      document.addLanePoint(kTrack, kController, tick, 32);
-      document.addLanePoint(kTrack, kSecondController, tick, 96);
-      document.addLanePoint(kTrack, 7, tick, 48);
-      const auto pair = addNotePair(document, kTrack, 2400);
-
-Original expression:
-  QVERIFY(pair.has_value())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Native fixture construction `QVERIFY(pair.has_value())` (windowtier_keyboard.cpp:183 at c17d966f) has no Swift counterpart; the fresh mounted journey selects a real two-note pair by click/Shift-click and the Swift lane stages its own reserved pair, so the insertion guard retires.
 
 A022 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:184
-Disposition: PARTIAL
-Mapping/reason: Related predicate S082 (:1388) in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): the automation page is mounted and its real parameter label is available and enabled. Unproved as stated: the native automation band focus (focusAutomationBand) — the mounted lane focuses a parameter label instead, and that activeFocus assertion (:1393) carries no message.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(focusAutomationBand(view))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Native `focusAutomationBand` (windowtier_keyboard.cpp:184 at c17d966f) has no Swift counterpart; the mounted label journey focuses the real parameter label and asserts it (S192) while the Swift lane predicates stage the selection, so the band-focus acquisition retires.
 
 A023 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:187
 Disposition: RETIRED-REPRESENTATION
@@ -312,13 +237,8 @@ Original expression:
   QCOMPARE(parameterChanges.count(), 1)
 
 A030 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:244
-Disposition: PARTIAL
-Mapping/reason: Partial via S044 (:1242, label Enter leaves the full grid note summary unchanged) and S106 (:1488, the staged Volume time range survives the prompt journey). Unproved as stated: the time-selection fields of selectionUnchanged() across the label activation itself (the mounted label journey stages no time selection), the empty note-selection precondition, and byte-level document identity (the dirty flag only, S046).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(selectionUnchanged())
+Disposition: MATCHED
+Mapping: S120, S121, S122, S123, S124, S125
 
 A031 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:245
 Disposition: PARTIAL
@@ -347,13 +267,8 @@ Disposition: MATCHED
 Mapping: S046
 
 A035 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:251
-Disposition: PARTIAL
-Mapping/reason: The label Return/Enter activation executes on the mounted lane (S043 "Enter activates the focused label once", S045 "Return activates the focused second label") and its no-edit markers are asserted (S046 "label Enter never edits the song", S047 "label Enter never moves the cursor", S048 "label Enter never retargets the track" — all in test_kParameterTabActivationAndTapCession). Unproved as stated: this row's exact undo-stack index equality — no mounted predicate reads a history depth (the lane pins the dirty flag for the label route, and the revision/undo-availability pair S065 only for the tempo-tap routes), so the exact `undoStack()->index()` conjunct stays open.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.undoStack()->index(), undoBefore)
+Disposition: MATCHED
+Mapping: S132, S133
 
 A036 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:252
 Disposition: MATCHED
@@ -364,13 +279,8 @@ Disposition: MATCHED
 Mapping: S048
 
 A038 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:254
-Disposition: PARTIAL
-Mapping/reason: Partial via S045 (:1250, the Return activation leaves the Return-target label active and the first label inactive) and S106 (:1488, the staged Volume time range survives the prompt journey). Unproved as stated: the time-selection fields of selectionUnchanged() across the Return activation, the empty note-selection precondition, and byte-level document identity (the dirty flag only, S046).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(selectionUnchanged())
+Disposition: MATCHED
+Mapping: S126, S127, S128, S129, S130, S131
 
 A039 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:258
 Disposition: MATCHED
@@ -381,21 +291,12 @@ Disposition: MATCHED
 Mapping: S049
 
 A041 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:260
-Disposition: PARTIAL
-Mapping/reason: Partial via S086 (tst_ShellWindow.qml:1543, test_mLabelCommandsAndPromptTextOwnership): the routed Up moves the note resolved by id by exactly one semitone, so the routed editor command does not replace the note selection. S119 (test_oEmptySelectionLabelUpEditsNothing) now executes the predicate's empty-note-selection precondition across a label-focus Up (the fixture asserts no selected note and the Up leaves the note summary unchanged). Unproved as stated: the time-selection fields of selectionUnchanged() across a label-focus Up — neither mounted journey stages a time selection alongside label focus, and no predicate reads the session's time-selection fields there.
+Disposition: MATCHED
+Mapping: S134, S135, S136, S137, S138, S139
 
 A042 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:265
-Disposition: PARTIAL
-Mapping/reason: Related predicates S083 (:1400) and S026 in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership, test_cWindowShortcutsAndNumericOwnership): the mounted lane resolves the roll.copy window shortcut and proves it fires over label focus. Unproved as stated: the roll.delete / roll.select_all / roll.paste binding lookups (their keys are delivered by keyClick and keySequence without a binding assertion).
-Source context since previous assertion:
-  ;
-      const auto copy = selectionkey::firstBinding(QStringLiteral("roll.copy"));
-      const auto remove = selectionkey::firstBinding(QStringLiteral("roll.delete"));
-      const auto selectAll = selectionkey::firstBinding(QStringLiteral("roll.select_all"));
-      const auto paste = selectionkey::firstBinding(QStringLiteral("roll.paste"));
-
-Original expression:
-  QVERIFY(copy && remove && selectAll && paste)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Native binding-pointer construction `QVERIFY(copy && remove && selectAll && paste)` (windowtier_keyboard.cpp:265 at c17d966f) has no Swift counterpart; the mounted Copy/Delete/Paste/Select All deliveries plus the production registry scope rows replace it.
 
 A043 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:274
 Disposition: MATCHED
@@ -477,22 +378,12 @@ Original expression:
   QVERIFY(prompt && prompt->property("text").toString() == selectedText)
 
 A052 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:291
-Disposition: PARTIAL
-Mapping/reason: Partial via S102 (:1483, prompt text keys preserve the staged note state) and S104 (:1486, Escape never commits a document write). Unproved as stated: the time-selection fields of selectionUnchanged() across the prompt transaction (the mounted journey stages one Volume lane by pointer and reads the range through the insert-time action, S106), and byte-level document identity (applied-revision text only).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.smf().write(), before)
+Disposition: MATCHED
+Mapping: S140
 
 A053 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:292
-Disposition: PARTIAL
-Mapping/reason: Partial via S102 (:1483, the full grid note summary is unchanged across the prompt text keys) and S106 (:1488, the staged time range survives). Unproved as stated: the two-CC-lane fixture {kController, kSecondController} with the volume lane unselected (the mounted journey stages one Volume lane), the exact Lanes-scope fields, and the empty-note-selection precondition.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(selectionUnchanged())
+Disposition: MATCHED
+Mapping: S141, S142, S143, S144, S145, S146
 
 A054 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:294
 Disposition: MATCHED
@@ -514,13 +405,8 @@ Original expression:
   QCOMPARE(document.smf().write(), before)
 
 A056 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:296
-Disposition: PARTIAL
-Mapping/reason: Partial via S105 (:1487, Escape keeps the staged note state unchanged) and S106 (:1488, the staged Volume time range survives Escape). Unproved as stated: the Lanes-scope time-selection fields and the free-lane note selection of selectionUnchanged() after the cancelled prompt (the mounted lane reads the range through the insert-time action and the note state as one drawn note's summary).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(selectionUnchanged())
+Disposition: MATCHED
+Mapping: S147, S148, S149, S150, S151, S152
 
 A057 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:297
 Disposition: PARTIAL
@@ -560,79 +446,36 @@ Original expression:
   QCOMPARE(document.smf().write(), before)
 
 A061 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:302
-Disposition: PARTIAL
-Mapping/reason: Related predicates S115 (:1563) and S116 (:1565) in src/checks/editorqml/tst_ShellWindow.qml (test_nLabelTimeSelectionCommands): the staged Volume time range is still live after the window Copy (the lane Delete keeps it and Select All then clears it), so the shared command did not drop the range. Unproved as stated: the exact Lanes-scope fields (start/end/scope/lane list) and the empty note selection of selectionUnchanged() across the Copy itself.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(selectionUnchanged())
+Disposition: MATCHED
+Mapping: S153, S154, S155, S156, S157, S158
 
 A062 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:304
-Disposition: PARTIAL
-Mapping/reason: Partial via S113 (:1561, Delete over label focus removes the selected Volume points — the mounted lane asserts the lane's node count fell). Unproved as stated: the fork's two selected CC lanes {kController, kSecondController} at the same tick (the mounted journey stages one Volume lane) and the per-lane point identity.
-Source context since previous assertion:
-  ;
-      selectionkey::deliverKey(quickWindow(), remove->key(), remove->keyboardModifiers());
-
-Original expression:
-  QVERIFY(!document.findLanePoint(kTrack, kController, tick, nullptr))
+Disposition: MATCHED
+Mapping: S159
 
 A063 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:305
-Disposition: PARTIAL
-Mapping/reason: Partial via S113 (:1561, the mounted Delete removes the selected lane's points). Unproved as stated: the second selected CC lane (kSecondController) — the mounted journey stages one Volume lane, so the two-lane scope clause is unproved.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!document.findLanePoint(kTrack, kSecondController, tick, nullptr))
+Disposition: MATCHED
+Mapping: S160
 
 A064 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:306
-Disposition: PARTIAL
-Mapping/reason: Related predicate S115 (:1563) in src/checks/editorqml/tst_ShellWindow.qml (test_nLabelTimeSelectionCommands): the staged time range survives the lane Delete. Unproved as stated: the separate unselected lane's point — the mounted journey deletes the lane it staged, and no predicate asserts a foreign lane's point survival at the same tick (the fork's lane 7 is the lane its selection excludes).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.findLanePoint(kTrack, 7, tick, nullptr))
+Disposition: MATCHED
+Mapping: S161
 
 A065 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:307
-Disposition: PARTIAL
-Mapping/reason: Partial via S114 (:1562, Volume range Delete preserves the notes — the mounted journey compares the full grid note summary). Unproved as stated: the reserved tick-2400 two-note pair (one drawn velocity note) and the per-note id resolution.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(notePairUnchanged(document, *pair))
+Disposition: MATCHED
+Mapping: S162, S163, S196
 
 A066 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:308
-Disposition: PARTIAL
-Mapping/reason: Related predicate S113 (:1561) in src/checks/editorqml/tst_ShellWindow.qml (test_nLabelTimeSelectionCommands): the Delete key is delivered from the focused Volume label and routes to the editor, which requires the label to own focus at delivery. Unproved as stated: the label's own post-command activeFocus — the mounted lane's focus assertions (:1547) carry no message.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(label && label->hasActiveFocus())
+Disposition: MATCHED
+Mapping: S195
 
 A067 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:311
-Disposition: PARTIAL
-Mapping/reason: Partial via S117 (:1570, Select All over label focus selects the active track's notes — the mounted journey asserts every active-track note is selected). Unproved as stated: the reserved tick-2400 pair selected by id (the shell resolves one drawn velocity note).
-Source context since previous assertion:
-  ;
-
-      selectionkey::deliverKey(quickWindow(), selectAll->key(), selectAll->keyboardModifiers());
-
-Original expression:
-  QVERIFY(view.selectionModel().isNoteSelected(pair->ids[0]))
+Disposition: MATCHED
+Mapping: S164, S197
 
 A068 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:312
-Disposition: PARTIAL
-Mapping/reason: Partial via S117 (:1570, the whole active track's notes are selected after Select All). Unproved as stated: the reserved tick-2400 pair's second id (the shell resolves one drawn velocity note).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(view.selectionModel().isNoteSelected(pair->ids[1]))
+Disposition: MATCHED
+Mapping: S165, S198
 
 A069 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:313
 Disposition: MATCHED
@@ -644,97 +487,40 @@ Original expression:
   QVERIFY(!view.selectionModel().timeSelection().active())
 
 A070 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:318
-Disposition: PARTIAL
-Mapping/reason: Partial via S118 (:1575, Paste over label focus writes the copied Volume lane at the edit cursor — the mounted journey asserts the lane's node count is non-zero after the paste and that the edit cursor advanced). Unproved as stated: the two copied CC lanes {kController, kSecondController} (the mounted journey copies one Volume lane), the exact paste tick, and the written point values.
-Source context since previous assertion:
-  ;
-      view.selectionModel().clearBothSelections();
-      view.commitEditCursor(pasteTick);
-      selectionkey::deliverKey(quickWindow(), paste->key(), paste->keyboardModifiers());
-      DocLanePoint point;
-
-Original expression:
-  QVERIFY(document.findLanePoint(kTrack, kController, pasteTick, &point))
+Disposition: MATCHED
+Mapping: S166
 
 A071 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:319
-Disposition: PARTIAL
-Mapping/reason: Related predicate S118 (:1575): the mounted Paste writes the copied Volume lane at the edit cursor. Unproved as stated: the written value 32 (the mounted predicate asserts lane activity, not point values).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(point.value, 32)
+Disposition: MATCHED
+Mapping: S167
 
 A072 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:320
-Disposition: PARTIAL
-Mapping/reason: Partial via S118 (:1575, the copied lane's points land at the edit cursor). Unproved as stated: the second copied CC lane (kSecondController) — the mounted journey copies one Volume lane.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.findLanePoint(kTrack, kSecondController, pasteTick, &point))
+Disposition: MATCHED
+Mapping: S168
 
 A073 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:321
-Disposition: PARTIAL
-Mapping/reason: Related predicate S118 (:1575): the mounted Paste writes the copied Volume lane at the edit cursor. Unproved as stated: the written value 96 (the mounted predicate asserts lane activity, not point values).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(point.value, 96)
+Disposition: MATCHED
+Mapping: S169
 
 A074 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:322
-Disposition: PARTIAL
-Mapping/reason: Related predicate S118 (:1575): the mounted Paste writes only the copied lane's points. Unproved as stated: the unselected third lane's absence at the paste tick (the mounted journey copies its only staged lane; no predicate asserts a foreign lane stays empty).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!document.findLanePoint(kTrack, 7, pasteTick, nullptr))
+Disposition: MATCHED
+Mapping: S170
 
 A075 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:323
-Disposition: PARTIAL
-Mapping/reason: Related predicates S114 (:1562) and S102 (:1483) in src/checks/editorqml/tst_ShellWindow.qml (test_nLabelTimeSelectionCommands) and src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): the mounted journeys compare the full grid note summary across a lane Delete and across the prompt text keys. Unproved as stated: note identity across the Paste itself (no predicate reads the notes after the paste) and the reserved tick-2400 pair.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(notePairUnchanged(document, *pair))
+Disposition: MATCHED
+Mapping: S171, S172, S199
 
 A076 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:324
-Disposition: PARTIAL
-Mapping/reason: Related predicate S087 (:1412) in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): the active parameter survives the mounted label-focus arrow commands. Unproved as stated: the active parameter across the Paste key itself — no mounted predicate reads the active parameter after Paste.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(canvas->parameterRow(canvas->activeParameter()), std::optional{volume})
+Disposition: MATCHED
+Mapping: S173
 
 A077 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:327
-Disposition: PARTIAL
-Mapping/reason: Related predicates S085 (:1407) and S086 (:1411) in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): the Right/Up keys are delivered from the focused Volume label and route to the editor, which requires label focus at delivery. Unproved as stated: the label's own activeFocus precondition — the mounted assertion (:1393) carries no message.
-Source context since previous assertion:
-  ;
-
-      view.selectionModel().setNoteSelection({pair->ids[0], pair->ids[1]});
-
-Original expression:
-  QVERIFY(label && label->hasActiveFocus())
+Disposition: MATCHED
+Mapping: S192
 
 A078 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:334
-Disposition: PARTIAL
-Mapping/reason: Partial via S086 (:1411, the selected note is still resolved by id after the routed arrows). Unproved as stated: the reserved tick-2400 pair (both ids) — the mounted journey tracks one drawn velocity note.
-Source context since previous assertion:
-  ;
-      const uint64_t gridStep =
-          view.grid().snapTickUp(double(pair->notes[0].tick) + 1.0) - pair->notes[0].tick;
-      selectionkey::deliverKey(quickWindow(), Qt::Key_Right);
-      selectionkey::deliverKey(quickWindow(), Qt::Key_Up);
-      for (size_t index = 0; index < pair->ids.size(); ++index) {
-          const auto moved = selectionkey::noteById(document, pair->ids[index]);
-
-Original expression:
-  QVERIFY(moved.has_value())
+Disposition: MATCHED
+Mapping: S174, S175, S176, S177, S178, S193, S194
 
 A079 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:335
 Disposition: MATCHED
@@ -965,36 +751,12 @@ Disposition: MATCHED
 Mapping: S060
 
 A105 | SelectionWindowTierTest::chromeToggleRoutesNoteArrows | src/checks/selectionkey/windowtier_keyboard.cpp:447
-Disposition: PARTIAL
-Mapping/reason: Related predicate S069 (:1311) in src/checks/editorqml/tst_ShellWindow.qml (test_lChromeArrowsAndUnknownKey): the automation section is opened through a real toggle click and its focused chrome is exposed. Unproved as stated: the reserved tick-2400 two-note pair (one drawn velocity note).
-Source context since previous assertion:
-  ;
-      view.selectionModel().clearNoteSelection();
-  }
-
-  void SelectionWindowTierTest::chromeToggleRoutesNoteArrows()
-  {
-      SongView &view = this->view();
-      SongDocument &document = this->document();
-      const selectionkey::ScenarioRollback rollback(view, document);
-      const FullControlTabTraversal fullControlTabTraversal;
-      view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
-      view.setDrawerSectionHeight(EditorDrawerPage::Automations, 200);
-      view.selectTrack(kTrack);
-      const std::optional<NotePair> pair = addNotePair(document, kTrack, 2400);
-
-Original expression:
-  QVERIFY2(pair.has_value(),
-               "the reserved tick-2400 note pair could not be inserted and resolved")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Native fixture construction `QVERIFY2(pair.has_value(), "the reserved tick-2400 note pair could not be inserted and resolved")` (windowtier_keyboard.cpp:447 at c17d966f) has no Swift counterpart; the fresh mounted toggle journey selects a real two-note pair by click/Shift-click and the Swift lane stages its own reserved pair, so the insertion guard retires.
 
 A106 | SelectionWindowTierTest::chromeToggleRoutesNoteArrows | src/checks/selectionkey/windowtier_keyboard.cpp:449
-Disposition: PARTIAL
-Mapping/reason: Related predicate S069 (:1311) in src/checks/editorqml/tst_ShellWindow.qml (test_lChromeArrowsAndUnknownKey): the automation drawer is open with its toggle chrome exposed. Unproved as stated: the native automation band focus (focusAutomationBand).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(focusAutomationBand(view), "could not focus the automation band")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Native `focusAutomationBand` (windowtier_keyboard.cpp:449 at c17d966f) has no Swift counterpart; the mounted toggle journey stages focus through the QML surface and asserts it (S189 toggle active focus).
 
 A107 | SelectionWindowTierTest::chromeToggleRoutesNoteArrows | src/checks/selectionkey/windowtier_keyboard.cpp:457
 Disposition: PARTIAL
@@ -1013,14 +775,8 @@ Original expression:
   QVERIFY2(toggle, "Tab traversal never reached the automation drawer toggle")
 
 A108 | SelectionWindowTierTest::chromeToggleRoutesNoteArrows | src/checks/selectionkey/windowtier_keyboard.cpp:458
-Disposition: PARTIAL
-Mapping/reason: Related predicate S069 (:1311) in src/checks/editorqml/tst_ShellWindow.qml (test_lChromeArrowsAndUnknownKey): the mounted journey focuses drawerToggle_automation for the arrow deliveries. Unproved as stated: the toggle's advertised active focus — its activeFocus assertion (:1341) carries no message.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(toggle->hasActiveFocus(),
-               "the automation drawer toggle does not show its advertised active focus")
+Disposition: MATCHED
+Mapping: S189
 
 A109 | SelectionWindowTierTest::chromeToggleRoutesNoteArrows | src/checks/selectionkey/windowtier_keyboard.cpp:461
 Disposition: MATCHED
@@ -1067,17 +823,8 @@ Disposition: MATCHED
 Mapping: S032, S033, S034, S031, S035
 
 A113 | SelectionWindowTierTest::chromeToggleRoutesNoteArrows | src/checks/selectionkey/windowtier_keyboard.cpp:489
-Disposition: PARTIAL
-Mapping/reason: Related predicates S040 and S059 (:1287) in src/checks/editorqml/tst_ShellWindow.qml (test_hKeyboardFocusAndDrawerSpacePriority, test_kParameterTabActivationAndTapCession): bare Space on the focused drawer chrome or Tap button leaves the focused section visibility and the full grid note summary unchanged. Unproved as stated: the reserved tick-2400 pair resolved by id with per-note tick/key identity (the shell asserts whole-summary string equality over one drawn velocity note), the drawerAutomationToggle chrome, and the time-selection half.
-Source context since previous assertion:
-  ;
-      const std::optional<DocNote> afterSpace = selectionkey::noteById(document, pair->ids[0]);
-
-Original expression:
-  QVERIFY2(afterSpace.has_value() && beforeActivation.has_value() &&
-                   afterSpace->tick == beforeActivation->tick &&
-                   afterSpace->key == beforeActivation->key,
-               "bare Space on the focused toggle moved or edited the selected note")
+Disposition: MATCHED
+Mapping: S190
 
 A114 | SelectionWindowTierTest::chromeToggleRoutesNoteArrows | src/checks/selectionkey/windowtier_keyboard.cpp:496
 Disposition: MATCHED
@@ -1104,383 +851,246 @@ Original expression:
                "Return did not restore the drawer toggle")
 
 A116 | SelectionWindowTierTest::chromeToggleRoutesNoteArrows | src/checks/selectionkey/windowtier_keyboard.cpp:502
-Disposition: PARTIAL
-Mapping/reason: Partial via S080 (:1359, the toggle's Enter/Return activation keys leave the selected note's tick and pitch unchanged). Unproved as stated: the reserved tick-2400 two-note pair (one drawn velocity note).
-Source context since previous assertion:
-  ;
-      const std::optional<DocNote> afterActivation = selectionkey::noteById(document, pair->ids[0]);
+Disposition: MATCHED
+Mapping: S191
 
-Original expression:
-  QVERIFY2(afterActivation.has_value() && beforeActivation.has_value() &&
-                   afterActivation->tick == beforeActivation->tick &&
-                   afterActivation->key == beforeActivation->key,
-               "toggle activation keys moved or edited the selected notes")
+S120 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A030 label activation keeps the selection start"
 
-Remaining original source (closing sequence and helper bodies):
-  ;
+S121 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A030 label activation keeps the selection end"
 
-      view.selectionModel().clearNoteSelection();
-  }
+S122 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A030 label activation keeps the lanes scope"
 
+S123 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A030 label activation keeps both selected CC lanes"
 
-Swift assertion predicates
+S124 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A030 label activation keeps Tempo out of the scope"
 
-S001 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
-Anchor: message "the original selected fixture note exists"
+S125 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A030 label activation keeps the note selection empty"
 
-S002 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
-Anchor: message "the original empty-tick numeric prompt opens"
+S126 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A038 Return activation keeps the selection start"
 
-S003 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
-Anchor: message "the production prompt retains the supplied numeric draft"
+S127 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A038 Return activation keeps the selection end"
 
-S004 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
-Anchor: message "draft editing does not mutate the song"
+S128 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A038 Return activation keeps the lanes scope"
 
-S005 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
-Anchor: message "draft editing preserves note selection"
+S129 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A038 Return activation keeps both selected CC lanes"
 
-S006 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
-Anchor: message "cancellation closes the prompt"
+S130 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A038 Return activation keeps Tempo out of the scope"
 
-S007 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
-Anchor: message "cancellation leaves the original document unchanged"
+S131 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A038 Return activation keeps the note selection empty"
 
-S008 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
-Anchor: message "draft and cancellation preserve the full song contents"
+S132 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A035 label activation keeps the exact undo index"
 
-S009 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
-Anchor: message "the original CC10 lane is present in the page's row stack"
+S133 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A035 prompt Escape keeps the exact undo index"
 
-S010 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
-Anchor: message "the original fixture note resolves by its inserted ID"
+S134 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A041 Up keeps the selection start"
 
-S011 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
-Anchor: message "the original volume lane is present in the page's row stack"
+S135 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A041 Up keeps the selection end"
 
-S012 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
-Anchor: message "the original volume-lane insertion prompt opens"
+S136 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A041 Up keeps the lanes scope"
 
-S013 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
-Anchor: message "the volume prompt opens with the plotted value as its draft"
+S137 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A041 Up keeps both selected CC lanes"
 
-S014 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
-Anchor: message "the original pan-lane insertion prompt opens"
+S138 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A041 Up keeps Tempo out of the scope"
 
-S015 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
-Anchor: message "the document-switch cancellation closes the prompt"
+S139 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A041 Up keeps the note selection empty"
 
-S016 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
-Anchor: message "accepting a closed prompt commits nothing"
+S140 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A052 prompt draft leaves song contents unchanged"
 
-S017 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
-Anchor: message "the closed prompt's late acceptance leaves the document unchanged"
+S141 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A053 prompt draft keeps the selection start"
 
-S018 | openTwoSongShell | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "mus_route101"
+S142 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A053 prompt draft keeps the selection end"
 
-S019 | selectDrawnVelocityNote | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "selectedCount"
+S143 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A053 prompt draft keeps the lanes scope"
 
-S020 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "native Copy is registered as a window shortcut"
+S144 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A053 prompt draft keeps both selected CC lanes"
 
-S021 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "S"
+S145 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A053 prompt draft keeps Tempo excluded"
 
-S022 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "Space"
+S146 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A053 prompt draft keeps the note selection empty"
 
-S023 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the real node click selected one note"
+S147 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A056 prompt Escape keeps the selection start"
 
-S024 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "Copy starts from a clean song"
+S148 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A056 prompt Escape keeps the selection end"
 
-S025 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the Edit menu returned keyboard focus to the roll"
+S149 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A056 prompt Escape keeps the lanes scope"
 
-S026 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "shellShortcut_roll.copy"
+S150 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A056 prompt Escape keeps both selected CC lanes"
 
-S027 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the copied note retains its original key"
+S151 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A056 prompt Escape keeps Tempo excluded"
 
-S028 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the native window Copy never edits the song"
+S152 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A056 prompt Escape keeps the note selection empty"
 
-S029 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "shellShortcut_roll.solo_tracks"
+S153 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A061 window Copy keeps the selection start"
 
-S030 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "second non-text S activates Solo twice total"
+S154 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A061 window Copy keeps the selection end"
 
-S031 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "drawerToggle_velocity"
+S155 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A061 window Copy keeps the lanes scope"
 
-S032 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "bare Space on focused drawer chrome owns transport"
+S156 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A061 window Copy keeps both selected CC lanes"
 
-S033 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "chrome Space never toggles the focused section"
+S157 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A061 window Copy keeps Tempo excluded"
 
-S034 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "chrome Space never edits the song"
+S158 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A061 window Copy keeps the note selection empty"
 
-S035 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the second chrome Space stops transport"
+S159 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A062 Delete removes the selected Pan point"
 
-S036 | copiedClipSummary | src/checks/editorqml/ShellQmlTests.swift
-Anchor: function
+S160 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A063 Delete removes the selected Modulation point"
 
-S037 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: function
+S161 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A064 Delete retains the unselected Volume point"
 
-S038 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "grip Down restores its height"
+S162 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A065 Delete retains the first reserved note by identity"
 
-S039 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "grip arrows never mutate selected notes"
+S163 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A065 Delete retains the second reserved note by identity"
 
-S040 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "chrome Space never changes musical selection"
+S164 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A067 Select All includes the first reserved note by ID"
 
-S041 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the focused label is not yet active"
+S165 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A068 Select All includes the second reserved note by ID"
 
-S042 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "transport Space never moves the selection"
+S166 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A070 Paste lands a Pan point at the committed cursor"
 
-S043 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "Enter activates the focused label once"
+S167 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A071 Paste lands Pan value 32 at the committed cursor"
 
-S044 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "label Enter never moves the selection"
+S168 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A072 Paste lands a Modulation point at the committed cursor"
 
-S045 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "Return activates the focused second label"
+S169 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A073 Paste lands Modulation value 96 at the committed cursor"
 
-S046 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "label Enter never edits the song"
+S170 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A074 Paste keeps the unselected Volume lane empty at the cursor"
 
-S047 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "label Enter never moves the cursor"
+S171 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A075 Paste retains the first reserved note unchanged"
 
-S048 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "label Enter never retargets the track"
+S172 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A075 Paste retains the second reserved note unchanged"
 
-S049 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the active parameter survives label-focus commands"
+S173 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A076 Paste keeps Volume as the active parameter"
 
-S050 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "Enter on the focused Tap button registers exactly one tap"
+S174 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A078 routed Right advances the first reserved note one snap by ID"
 
-S051 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "Return on the focused Tap button adds the second tap"
+S175 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A078 routed Right advances the second reserved note one snap by ID"
 
-S052 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "tap keys never edit the song"
+S176 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A078 routed Up raises the first reserved note one semitone by ID"
 
-S053 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "tap keys never move the selection"
+S177 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A078 routed Up raises the second reserved note one semitone by ID"
 
-S054 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the two-tap session shows the draft readout"
+S178 | windowTierKeyboardOutcomes | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "A078 routed arrows preserve the pair selection"
 
-S055 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "Shift+Return never registers a tap"
-
-S056 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: function
-
-S057 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "transport Space never taps"
-
-S058 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "tap Space never edits the song"
-
-S059 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "tap Space never moves the selection"
-
-S060 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "resetTapTempo drops the draft"
-
-S061 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the first label takes keyboard focus"
-
-S062 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the second label takes keyboard focus"
-
-S063 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "a second activation never stacks"
-
-S064 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the tempo Tap button takes keyboard focus"
-
-S065 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "tap keys never change the revision or undo availability"
-
-S066 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "Return never retargets the active parameter"
-
-S067 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "tap Space never changes the revision or undo availability"
-
-S068 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the real roll click selects a note"
-
-S069 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the automation section exposes its focused chrome"
-
-S070 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+S179 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "an unrecognized key changes nothing"
 
-S071 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the automation grip grows by one step on Up"
+S180 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "A010 F24 never activates window Copy"
 
-S072 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "grip Down restores the automation height"
+S181 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "A010 F24 never activates window Solo"
 
-S073 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "cross-axis grip arrows never resize the automation section"
+S182 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "A014 automation resize grip owns active focus before arrows"
 
-S074 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "grip arrows never trigger window actions"
+S183 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "A017 grip Up leaves both reserved notes byte-identical"
 
-S075 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the automation grip keeps the selected note unchanged"
+S184 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "grip Down leaves both reserved notes byte-identical"
 
-S076 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "toggle arrows route to the selected note by one grid step"
+S185 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "A018 grip arrows never activate window Copy"
 
-S077 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "toggle Up transposes the selected note"
+S186 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "A018 grip arrows never activate window Solo"
 
-S078 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "Enter toggles the focused drawer section"
+S187 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "grip Left leaves both reserved notes byte-identical"
 
-S079 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "Return restores the focused drawer section"
+S188 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "A020 grip Right leaves both reserved notes byte-identical"
 
-S080 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "toggle activation keys never mutate the selected note"
+S189 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "A108 automation toggle owns active focus before arrows"
 
-S081 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the mounted roll provides a selected note"
+S190 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "A113 bare Space on the focused toggle retains both note IDs"
 
-S082 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the real parameter label is available"
+S191 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "A116 toggle Return leaves both reserved notes byte-identical"
 
-S083 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "window Copy over a focused parameter label captures the selected note"
+S192 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "A077 label owns focus before routed arrows"
 
-S084 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "window Copy over label focus preserves the selected note"
-
-S085 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S193 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "label-focus arrows advance the selected note one grid step"
 
-S086 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
+S194 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "label-focus Up transposes the selected note"
 
-S087 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the active parameter survives label-focus commands"
+S195 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "A066 label retains active focus after Delete"
 
-S088 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the pointer sweep commits a written Volume point before the menu press"
+S196 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "A065 Delete leaves both reserved notes at their original tick and pitch"
 
-S089 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the point prompt starts with a selected Volume time range"
+S197 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "A067 Select All includes the first reserved note by its original ID"
 
-S090 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the written node exposes its rendered hit target"
+S198 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "A068 Select All includes the second reserved note by its original ID"
 
-S091 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the real node press publishes its Set Value menu"
-
-S092 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the node opens the real automation point menu"
-
-S093 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the menu keyboard selects its enabled Set Value action"
-
-S094 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the mounted prompt owns focus in its real numeric field"
-
-S095 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the prompt opens with its drafted Volume value"
-
-S096 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "prompt Select All selects the drafted text"
-
-S097 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "prompt Copy leaves the draft selected"
-
-S098 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "prompt Copy never activates the window Copy shortcut"
-
-S099 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "prompt Copy never publishes a song clip"
-
-S100 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "prompt Delete clears only the numeric draft"
-
-S101 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "prompt Paste restores the copied numeric draft"
-
-S102 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "prompt text keys preserve the staged note state"
-
-S103 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "Escape closes the prompt without a write"
-
-S104 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "Escape never commits a document write"
-
-S105 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "Escape keeps the staged note state unchanged"
-
-S106 | test_mLabelCommandsAndPromptTextOwnership | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "Escape keeps the selected time range unchanged"
-
-S107 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the Volume label is available"
-
-S108 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "a real plot sweep writes Volume events"
-
-S109 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the right-band selects Volume time"
-
-S110 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "the right-band alone never writes a lane"
-
-S111 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "window Copy over label focus captures the selected Volume lane; bytes="
-
-S112 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "window Copy over label focus never writes the document"
-
-S113 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "Delete over label focus removes the selected Volume points"
-
-S114 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "Volume range Delete preserves the notes"
-
-S115 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "Delete keeps the selected time range"
-
-S116 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "Select All over label focus clears the time range"
-
-S117 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "Select All over label focus selects the active track's notes"
-
-S118 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "Paste over label focus writes the copied Volume lane at the edit cursor"
-
-S119 | test_oEmptySelectionLabelUpEditsNothing | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "label-focus Up with an empty selection edits nothing"
-
-S119 is the task-58 addition: the empty-selection label-focus Up no-op journey of the shellwindow entry in ShellQmlTests.swift, which closes A039 and executes the empty-note-selection precondition of A041's selectionUnchanged() row.
+S199 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "A075 lane Paste leaves both original notes unchanged by ID"
 
