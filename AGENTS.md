@@ -148,8 +148,8 @@ declares in `--manifest`.
 - UI geometry derives from the resolved base font pixel size through the
   Swift layout policies; hard-coded pixel constants in presenters or QML are a bug.
 - Fonts are unhinted (`PreferNoHinting`) everywhere they are rendered or measured.
-- Do not write code comments. When you touch code with a stale or historical
-  comment, delete the comment; do not rewrite it.
+- Code comments are allowed, at most 2 lines each. Delete stale or historical
+  comments when you touch that code; do not rewrite them.
 - Checks use fixture files locally from repo. All copying and setup is handled by `tools/run_checks.ts`
 
 Checks testing human input often fail because user uses desktop while testing. Do not stress-test checks repeatedly as troubleshooting.

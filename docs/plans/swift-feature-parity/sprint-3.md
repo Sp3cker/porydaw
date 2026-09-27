@@ -17,7 +17,7 @@ blanket token expiry); catalog-outage status path (Swift scan has none). Fork or
 
 ## 1. Objective and success criteria
 
-Same contract as next-sprint.md §1: a mounted Swift/QML surface reproduces fork behavior,
+Contract: a mounted Swift/QML surface reproduces fork behavior,
 its ledger rows move to MATCHED with executing predicates, covering lanes pass. Sprint-3
 success: every authorized family above ~100 open rows has either landed surface tasks or
 a named, evidenced deferral; at least one family (scrollbar, automation gestures,
@@ -274,5 +274,5 @@ parked for the swift-project-store worktree.
 - "workspace" means `src/checks/workspace/` session predicates; `src/checks/project/`
   stays parked. Task-61 touches `src/swift/project/` Swift catalog code only, never
   `src/project/` C++ or ProjectService.
-- No new C++; no comments; one message-anchored predicate per fork clause; WCAG AA beats
+- No new C++; comments at most 2 lines; one message-anchored predicate per fork clause; WCAG AA beats
   parity where they conflict; visual parity with `fceecd88`; base-font sizing only.

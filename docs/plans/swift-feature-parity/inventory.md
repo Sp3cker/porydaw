@@ -1,6 +1,6 @@
 # C++ → Swift feature inventory
 
-Overall execution status and precedence: [plan.md](plan.md). Completed-batch evidence: [current-surfaces.md](current-surfaces.md). Acceptance: [verification.md](verification.md). Untouched rows retain the initial research snapshot and require reinspection before dispatch; they are not newly verified missing features.
+Overall execution status and precedence: [plan.md](plan.md). Acceptance: [verification.md](verification.md). Untouched rows retain the initial research snapshot and require reinspection before dispatch; they are not newly verified missing features.
 
 **Status vocabulary:** Missing = no complete production route/owner identified; Partial = some implementation or route exists, but a required outcome is missing; Present/unverified = production implementation identified, no runtime certification in this planning pass; Evidence gap = related checks exist but do not establish the full original outcome. None means “safe to delete the original checks.”
 
