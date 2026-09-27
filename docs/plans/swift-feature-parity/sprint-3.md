@@ -9,9 +9,20 @@ Status: **in execution.** Landed: 52 (32aa160d), 53 (e7c58e06) + 53b (342dc379),
 (9963c029); 78 (54c7f97a), 79 (64d1ec73), 80 (0d976b08), 81 (a23312fc + 4b3e72eb), 82
 (436fb910), 83 (ad4acc9e), 84 (c96c7cc3), 85 (e13dd126), 86 (2eef29d9), 87 (43143ec6), 88
 (7e87ae82), 89 (bec04d0f), 90 (85f5a931), 91 (1dd9b6cc), 92 (09b19bfb), 93 (58250a35), 94
-(b516afee), 95 + 97 (28b4c04d), 96 (107297f6), 98 (759ee469). Resize sweep 9.9 s → 1.5–2.1 s
-with no per-resize or per-scroll scene rebuild. Next: wave 99–106 (§11). Proof files: 155 →
-111 (fully closed ledgers deleted); open GAP+PARTIAL rows 3703 → 2985.
+(b516afee), 95 + 97 (28b4c04d), 96 (107297f6), 98 (759ee469), 99 (7e268ad3), 100 (ffa79554),
+101 (1ec4681c), 102 (c9370c2a), 103 (cdf38968), 104 (2d12d967), 105 (d8557578), 106 (b18f81b8),
+107 (f191a7e6), 108 (7847b5a6), 109 (a559cbad), 110 (84e346c6), 111 (13527590), 112
+(9fe33068), 113 (0569546e), 114 (60b5784e), 115 (4c29c8de), 116 (9e1a2a3a), 117 (c86d72bf),
+118 (75c352ca), 119 (2658dcc9), 120 (1fcb8d4e), 121 (ee7ef702), 122 (7a6a21ed), 123
+(43cf03ec), 124 (cb00baf7), 125 (787d9bbc), 126 (d83ec31e), 127 (bd9958d9 + 487df50f), 128
+(acdcd7e0), 129 (3b9bdd06), 130 (7c4f393b), 131 (236b8e7d), 132 (c9088d17), 133 (c2fe633e),
+134 (df5d2c3c), 135 (99f51fb7), 136 (8b086787), 137 (97363697), 138 (e4aa0296); bank-edit
+undo gate (3fbfe933). Resize sweep 9.9 s → 1.5–2.1 s with no per-resize or per-scroll scene
+rebuild; user grid rework 7e292570. Next: wave 139+ (§16). Proof files: 155 → 69 (fully
+closed ledgers deleted); open GAP+PARTIAL rows 3703 → 1575 (1246 GAP + 329 PARTIAL).
+Known residues: QtBridge queues property notifications, so same-GUI-pass geometry clauses
+(host A095) stay PARTIAL; lanes use the null audio backend, so physical-output conjuncts
+stay PARTIAL.
 User rulings this sprint: insert-cursor commits never seek or move the playhead in any
 transport state (8f6d41d2, deliberate deviation from fork `mainwindow.cpp:520-528`; Go to
 Start still rewinds); the ~115 ms anti-click settle hold on resume stays; blank-slot undo
