@@ -640,3 +640,316 @@ workspace tabs_transport A062, whose applied-song-volume engine readback
 cannot be replaced by a cfg-value check or a test-only getter. Other
 `selftest_transport` seek/cursor rows are not implicitly owned by toolbar 98.
 No task absorbs these residuals merely because it edits an adjacent surface.
+
+## 11. Wave 99+
+
+### Scope and dispatch gate
+
+Eight surface-first tasks select **367 currently open rows: 178 GAP + 189
+PARTIAL**, each within 35–70 rows. Thirteen scoped ledgers can close completely.
+This is the successor to **all** of 91–98, not an alternative dispatch while
+91–94 implement or 95–97 wait. Task 98's accepted checkpoint is `759ee469`;
+the remaining predecessors must land before any task below starts.
+
+The census below is a **live working-tree planning snapshot**, not the tree
+at `759ee469`: 91–94's proving sources/ledger updates were in flight while it
+was collected. Final read-only queries found **112 ledgers, 108 nonempty,
+2,246 GAP + 834 PARTIAL = 3,080 open rows**. The parked project/sample/onboarding
+families plus MIDI export account for **1,232**; **1,848** are outside those
+parked families, not all immediately eligible. Earlier in-flight counts are
+superseded by this table, not represented as completed/committed work.
+
+Discovery used `deno task proof list --area <area>` for all 31 current areas,
+then paged `proof sites <ledger> --status GAP|PARTIAL --offset <n>` and
+`proof show` for source contexts/provenance. All 367 selected identities were
+rechecked against current open dispositions; none overlaps a selected 91–98
+row. Camera A093 remains GAP and was explicitly confirmed unowned by 93,
+despite the older brief's “already closed” sentence. Source line citations
+are this planning snapshot's navigation aids: refresh them after rebasing.
+
+### Tasks and parallel groups
+
+| Task | Surface | GAP | PARTIAL | Total | Whole-ledger closures |
+|---|---|---:|---:|---:|---:|
+| [99](task-99-brief.md) | Fresh-tab focus, complete Copy payload, exactly-once Solo | 34 | 14 | 48 | 0 |
+| [100](task-100-brief.md) | Automation selection, captured tool mode and ghost ownership | 19 | 28 | 47 | 2 |
+| [101](task-101-brief.md) | Velocity drawer painted context, ruler and stable chrome | 3 | 54 | 57 | 1 |
+| [102](task-102-brief.md) | Track/time selection through remap and real keyboard edits | 26 | 18 | 44 | 1 |
+| [103](task-103-brief.md) | Complete retained drawer state, reload and final-close transport | 32 | 15 | 47 | 1 |
+| [104](task-104-brief.md) | Automation lead-in/step/range raster and pencil commit/undo | 35 | 10 | 45 | 2 |
+| [105](task-105-brief.md) | Exact roll lattice, end draw and synchronized keyboard context | 20 | 16 | 36 | 2 |
+| [106](task-106-brief.md) | Numeric/Event List local keys, cancellation and resumed commands | 9 | 34 | 43 | 4 |
+| **Total** | | **178** | **189** | **367** | **13** |
+
+- **Group A:** 99, 100, 101, 102 — **196 rows**.
+- **Checkpoint A:** accepted sources, fresh verification, task reviews and
+  surface-owned ledger changes land together before any shared file is reused.
+- **Group B:** 103, 104, 105, 106 — **171 rows**, rebased on Checkpoint A.
+- **Checkpoint B:** integrated acceptance and review; no per-task Git churn.
+
+The expanded exact write sets contain 81 existing paths, including every
+conditional production repair and selected ledger. They are pairwise
+disjoint **within each group**. “Conditional” does not exempt a file from
+ownership. No shared fixture, registration, CMake, check-bootstrap or helper
+file is implicitly writable. The controller alone updates this section's
+accepted status alongside the proving group checkpoint; implementers do not
+edit one another's briefs or broaden their write sets.
+
+| Hot write set | Group A owner | Group B owner / handoff |
+|---|---|---|
+| `ShellWindow.qml`, `tst_ShellWindow.qml` | 99 | 106; preserve 99's selected-tab command laws |
+| `AutomationInteraction.swift`, `AutomationContentPublication.swift`, `AutomationOverlayPublication.swift`, `AutomationPage.qml`, `automationselection.swift`, `tst_EditorDrawer.qml` | 100 | 104; preserve 100's captured selection/tool ownership |
+| `PianoGrid.swift`, `keyboard.swift`, `tst_ShellGridInput.qml` | 102 | 105; preserve 102's key/history/ruler laws |
+| Velocity page/context/publication/scene, `EditorDrawerLayout.swift`, `EditorDrawer.qml`, `tst_ShellDrawerParity.qml` | 101 | No Group B writer |
+| Application/tab lifecycle, state codec, `tst_ShellTabs.qml` | None | 103 only |
+| Prompt QML, `DragInput.qml`, key arbiter and Event List sources/checks | None | 106 only |
+
+Incoming rebase dependencies include the actual hot files, not only task
+numbers:
+
+- **91 → 99/106:** input ledger, command router and mounted ShellWindow check.
+  The new rows are Copy/Solo/fresh-tab rows, never 91's range-time rows.
+- **92 → 100/102/104/105:** automation interaction/selection checks and
+  `tst_ShellGridInput.qml`. Preserve fractional Tempo and raw-event identity.
+- **93 → 102/105:** note scene, ruler scene, camera/geometry ledgers and raster
+  contracts. Camera A092/A094–A098 and geometry A020–A026 remain 93's rows.
+- **94 → 101:** `tst_ShellDrawerParity.qml` and the accepted velocity
+  detent/commit behavior. 101 does not take its interaction/transaction owner.
+- **95 → 99/103/106:** ShellWindow, ShellTabs, localinputtier_text and key
+  arbiter; preserve retiring-page and captured-target lifetime laws.
+- **96 → 100/104:** automation interaction/overlay, page QML and drawer checks;
+  preserve hover/hint recovery. Other consumers retain its published behavior.
+- **97 → 102/105/106:** grid/note scene/input and local key outcomes; preserve
+  provisional pointer selection and history commit boundaries.
+- **98 → all:** no overlapping write file, but its accepted toolbar,
+  per-song/global volume split and Space priority are required baseline laws.
+
+### Whole-ledger cutovers
+
+These are deletions **with their proving surface**, after all selected rows
+and retained anchors pass. Original C++ sources are already absent; do not
+recreate them or delete unrelated sources.
+
+| Task | Completed ledgers beneath `src/checks/` |
+|---|---|
+| 100 | `automation/proof.automationownership.txt`, `automation/proof.automationselection.txt` |
+| 101 | `drawerpresentation/proof.velocity.txt` |
+| 102 | `clipboard/proof.selectioncheck_tracks.txt` |
+| 103 | `workspace/proof.selftest_workspace.txt` |
+| 104 | `automation/proof.automationpainting.txt`, `automation/proof.automationpencil.txt` |
+| 105 | `rollcheck/static/proof.camera.txt`, `timelinepan/proof.tst_timelinepan.txt` |
+| 106 | `selectionkey/proof.localinputtier_text.txt`, `selectionkey/proof.localinput.txt`, `selectionkey/proof.localinputtier_eventlist.txt`, `drawerpresentation/proof.valueprompt.txt` |
+
+The text-input ledger uses `Original <line>` identities and covers two named
+methods, not every method from the historical C++ file. Its deletion is a
+closed **scoped ledger**, not a whole-file port certificate. Other ledgers
+move only the exact rows named in their briefs. Native fixture prerequisites
+are individually identified in the briefs and retire only alongside executed
+surface behavior, never as a standalone reconciliation sweep.
+
+### Inherited constraints and verification
+
+**All §10 “Wave constraints and verification,” its fixture/preferences
+lessons, and the preserved §6/§8/§9 boundaries apply verbatim.** Every brief
+links this policy as part of its contract; no omission of a repeated sentence
+grants an exception. In particular:
+
+- No new C++; Swift 6.4 conventions and no avoidable hot-path allocation,
+  copying or computation. Comments are at most two lines. Geometry derives
+  from base font; WCAG AA via GridPalette outranks pixel parity.
+- One keyboard authority. No synthetic forwarding, second dispatcher or
+  focus memory; persistent chrome never claims bare Space. No new
+  `Qt.callLater` coalescing or idempotence guards. Existing touched defects
+  must be repaired at their actual ownership/lifecycle boundary, not hidden
+  by a workaround; workarounds require user approval.
+- Preserve old predicate messages; new anchors are unique complete literals,
+  not interpolated phases. Assert each original behavioral conjunct.
+  Setup/identity/wording checks do not become new permanent behavior tests.
+  Delete obsolete checks rather than re-pin them. No mocks, test-only seams
+  or observation APIs manufactured to close rows.
+- Checked-in fixture content is outside every write set. Runtime builders may
+  use real document APIs. An approved fixture change first requires every
+  exact-content consumer to be found/read, included in the revised write set,
+  and rescheduled. No local-green exception to full consumer verification.
+- Stage and observe preferences through CFPreferences/UserDefaults and
+  synchronize the domain, not plist bytes or a cached plist oracle.
+- RED may be absent: name the already-correct production law, add its missing
+  meaningful consumer conjunct and report that fact honestly. Do not induce a
+  defect, fake RED or add a setup-only assertion to make a ledger move.
+
+The controller waits for settled writers, inspects before/after structure and
+then runs each brief's narrow domain/mounted commands and review gate.
+Every task requires **full `deno task verify:shell --verbose` (all 26 lanes)**
+and **full `deno task verify --verbose`**, plus fresh per-lane execution
+evidence and **`deno task proof check --executed`**. Identical commands may be
+deduplicated across an accepted settled group; predicates, data rows and
+mounted journeys may not. Task 105 also selects `tst_TimelinePan.qml` through
+the existing per-process roll-suite environment.
+
+```sh
+/usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task ...
+```
+
+The lock may wait; after acquisition each invoked command must finish within
+**180 seconds**, with the existing 175-second alarm. No concurrent builds,
+mid-flight shared checks, silent suite narrowing or unapproved timeout
+workarounds. Fresh mounted smoke is mandatory: direct presenter checks alone
+do not prove raster, focus or key delivery. Offscreen Qt window activation
+does not claim physical macOS host behavior. Parallel implementers inspect
+and query proofs; controller-owned verification starts only when the group
+is stable. No builds, tests, formatters or commits were run to author this
+wave; planning validation was read-only proof queries and ownership/count
+inspection.
+
+At dispatch, re-query the selected dispositions after all 91–98 land. If a
+predecessor or user change alters a selected identity or necessary owner,
+resolve the brief and group contract before edits; never silently substitute
+unrelated rows. Bounded task reviews precede the two group checkpoints, and
+proof ledgers change in the same accepted change as the proving sources.
+
+### Explicit exclusions and remaining decisions
+
+Unchanged: parked `project`, `samplecheck`, `onboardcheck` and
+`midi/tst_midiexport`; P3 WAV export awaits the user. Deferred New Song,
+Import MIDI, Export WAV, Register Song, Import Sample and Theme menu rows are
+not selected. No `host` row is selected; physical host/cursor/audio claims
+remain outside mounted offscreen evidence.
+
+The user decision is still `voicegroupsave/proof.savecore.txt` **A016–A026**:
+whether unavailable sound-directory/catalog state must publish a production
+status/error while retaining the last valid catalog. Do not decide it in a
+nearby surface. `workspace/proof.tabs_transport.txt` **A062** remains blocked
+on real applied-song-volume observation, not a cfg proxy or test-only getter.
+
+Technical residuals are not new policy questions: keyboard A077–A080's
+invalid-unused-track Insert Time refusal, roll custom cursor images,
+raw-event conductor promotion and per-owner cosmetics, unselected empty-view
+geometry, endpoint-stack lane selection, corrupt-MIME failure routing and
+the six velocity-detent fixture-geometry rows. Lifecycle sidecar snapshots
+A004/A010/A031 and session A024/A042 still depend on project-store. Event
+view chrome, remaining native/window lifecycle, MIDI, voicegroup and visual
+families stay unselected where they do not fit these bounded mounted
+surfaces; do not pad tasks merely to consume adjacent open rows.
+
+### Recomputed per-ledger census
+
+Paths below are relative to `src/checks/`. “Open” is GAP + PARTIAL, not a
+claim that all those rows are eligible. Zero-row ledgers are included to make
+the 112-file census complete; deleting unrelated closed inventories is not
+part of this wave.
+
+| Ledger | GAP | PARTIAL | Open |
+|---|---:|---:|---:|
+| `audio/proof.tst_audiobackend.txt` | 0 | 0 | 0 |
+| `automation/hover/proof.tst_automationhover.txt` | 46 | 17 | 63 |
+| `automation/presentation/proof.painting.txt` | 5 | 33 | 38 |
+| `automation/presentation/proof.tst_automationpresentation.txt` | 15 | 2 | 17 |
+| `automation/proof.automationcanvaslayout.txt` | 5 | 19 | 24 |
+| `automation/proof.automationnodedrag.txt` | 12 | 1 | 13 |
+| `automation/proof.automationownership.txt` | 16 | 21 | 37 |
+| `automation/proof.automationpainting.txt` | 30 | 2 | 32 |
+| `automation/proof.automationpencil.txt` | 5 | 8 | 13 |
+| `automation/proof.automationselection.txt` | 3 | 7 | 10 |
+| `automation/raster/proof.interaction.txt` | 33 | 0 | 33 |
+| `automation/raster/proof.painting.txt` | 25 | 0 | 25 |
+| `automationgesturecheck/proof.contract.txt` | 3 | 13 | 16 |
+| `automationgesturecheck/proof.crosslane.txt` | 1 | 8 | 9 |
+| `automationgesturecheck/proof.hover.txt` | 18 | 2 | 20 |
+| `automationgesturecheck/proof.parity.txt` | 2 | 11 | 13 |
+| `clipboard/proof.clipmime_test.txt` | 1 | 0 | 1 |
+| `clipboard/proof.laneselection_test.txt` | 19 | 0 | 19 |
+| `clipboard/proof.selectioncheck_tracks.txt` | 16 | 8 | 24 |
+| `drawerpresentation/proof.valueprompt.txt` | 0 | 5 | 5 |
+| `drawerpresentation/proof.velocity.txt` | 3 | 54 | 57 |
+| `editorqml/proof.shell-theme.txt` | 0 | 0 | 0 |
+| `eventviews/proof.chrome.txt` | 0 | 12 | 12 |
+| `eventviews/proof.edits.txt` | 0 | 1 | 1 |
+| `host/proof.tst_hostadapter.txt` | 49 | 17 | 66 |
+| `host/proof.tst_hostintegration.txt` | 51 | 13 | 64 |
+| `host/proof.tst_hostseams.txt` | 3 | 1 | 4 |
+| `keyboard/proof.tst_velocitymodel.txt` | 27 | 0 | 27 |
+| `mainwindowrouting/proof.tst_mainwindowrouting_input.txt` | 67 | 31 | 98 |
+| `mainwindowrouting/proof.tst_mainwindowrouting_lifecycle.txt` | 94 | 45 | 139 |
+| `mainwindowrouting/proof.tst_mainwindowrouting_native.txt` | 28 | 1 | 29 |
+| `mainwindowrouting/proof.tst_mainwindowrouting_state.txt` | 80 | 22 | 102 |
+| `midi/proof.tst_midiexport.txt` | 0 | 13 | 13 |
+| `midi/proof.tst_midiroundtrip.txt` | 0 | 21 | 21 |
+| `midi/proof.tst_midismf.txt` | 20 | 3 | 23 |
+| `nativegraphics/proof.tst_nativewindowing.txt` | 35 | 0 | 35 |
+| `onboardcheck/proof.action.txt` | 40 | 9 | 49 |
+| `onboardcheck/proof.debuglayout.txt` | 72 | 0 | 72 |
+| `onboardcheck/proof.deletion.txt` | 71 | 0 | 71 |
+| `onboardcheck/proof.import.txt` | 51 | 0 | 51 |
+| `onboardcheck/proof.regionedlayout.txt` | 82 | 0 | 82 |
+| `onboardcheck/proof.registration.txt` | 88 | 0 | 88 |
+| `onboardcheck/proof.support.txt` | 13 | 0 | 13 |
+| `pitchbend/proof.curve.txt` | 0 | 1 | 1 |
+| `polyphony/proof.polyphonygate.txt` | 4 | 0 | 4 |
+| `polyphony/proof.polyphonypanel.txt` | 4 | 8 | 12 |
+| `project/proof.identity.txt` | 17 | 35 | 52 |
+| `project/proof.ioflow.txt` | 49 | 16 | 65 |
+| `project/proof.iomutations.txt` | 43 | 54 | 97 |
+| `project/proof.mk.txt` | 36 | 0 | 36 |
+| `project/proof.save.txt` | 1 | 34 | 35 |
+| `project/proof.workspace.txt` | 83 | 17 | 100 |
+| `retained/proof.tst_nativeboundaries.txt` | 18 | 0 | 18 |
+| `rollcheck/proof.identity.txt` | 6 | 0 | 6 |
+| `rollcheck/proof.keyboard.txt` | 14 | 10 | 24 |
+| `rollcheck/proof.note_rendering.txt` | 0 | 0 | 0 |
+| `rollcheck/proof.presentation.txt` | 11 | 4 | 15 |
+| `rollcheck/proof.remap.txt` | 7 | 17 | 24 |
+| `rollcheck/proof.resize.txt` | 7 | 7 | 14 |
+| `rollcheck/proof.scale_editing.txt` | 0 | 3 | 3 |
+| `rollcheck/proof.scale_projection.txt` | 0 | 3 | 3 |
+| `rollcheck/proof.selection.txt` | 13 | 13 | 26 |
+| `rollcheck/static/proof.camera.txt` | 3 | 16 | 19 |
+| `rollcheck/static/proof.gate.txt` | 55 | 6 | 61 |
+| `rollcheck/static/proof.geometry.txt` | 19 | 4 | 23 |
+| `samplecheck/proof.analysis.txt` | 21 | 0 | 21 |
+| `samplecheck/proof.decoder.txt` | 93 | 0 | 93 |
+| `samplecheck/proof.dsp.txt` | 61 | 0 | 61 |
+| `samplecheck/proof.editor.txt` | 80 | 0 | 80 |
+| `samplecheck/proof.integration.txt` | 68 | 0 | 68 |
+| `samplecheck/proof.project.txt` | 63 | 0 | 63 |
+| `samplecheck/proof.soundfont.txt` | 22 | 0 | 22 |
+| `selectionkey/proof.corearrows.txt` | 1 | 0 | 1 |
+| `selectionkey/proof.gesturecommands.txt` | 0 | 4 | 4 |
+| `selectionkey/proof.gesturevelocity.txt` | 4 | 3 | 7 |
+| `selectionkey/proof.localinput.txt` | 7 | 0 | 7 |
+| `selectionkey/proof.localinputtier_eventlist.txt` | 2 | 2 | 4 |
+| `selectionkey/proof.localinputtier_pitchbend.txt` | 4 | 6 | 10 |
+| `selectionkey/proof.localinputtier_text.txt` | 0 | 27 | 27 |
+| `selectionkey/proof.windowtier_keyboard.txt` | 0 | 15 | 15 |
+| `selectionkey/proof.windowtier_lifetime.txt` | 17 | 1 | 18 |
+| `support/corecheck/proof.tst_swiftcore.txt` | 0 | 0 | 0 |
+| `swiftqtml/proof.tst_swiftqtml.txt` | 78 | 0 | 78 |
+| `swiftrollbench/proof.tst_swiftrollbench.txt` | 6 | 0 | 6 |
+| `swiftrollgated/proof.clipboardchecks.txt` | 2 | 0 | 2 |
+| `themelayout/proof.tst_themelayout_color.txt` | 0 | 2 | 2 |
+| `themelayout/proof.tst_themelayout_font.txt` | 7 | 4 | 11 |
+| `themelayout/proof.tst_themelayout_scale.txt` | 3 | 0 | 3 |
+| `themelayout/proof.tst_themelayout_settings.txt` | 33 | 1 | 34 |
+| `timelinepan/proof.tst_timelinepan.txt` | 15 | 0 | 15 |
+| `velocity/proof.tst_velocityediting.txt` | 0 | 5 | 5 |
+| `velocity/proof.velocityclicks.txt` | 0 | 4 | 4 |
+| `velocity/proof.velocitydetentdragging.txt` | 0 | 35 | 35 |
+| `velocity/proof.velocitydetentpainting.txt` | 0 | 6 | 6 |
+| `velocity/proof.velocitypainting.txt` | 0 | 3 | 3 |
+| `velocity/proof.velocityroll.txt` | 0 | 18 | 18 |
+| `velocity/proof.velocityselection.txt` | 2 | 6 | 8 |
+| `visual/proof.browsers.txt` | 5 | 3 | 8 |
+| `visual/proof.chrome.txt` | 3 | 4 | 7 |
+| `visual/proof.dialogs.txt` | 24 | 0 | 24 |
+| `visual/proof.quick.txt` | 5 | 0 | 5 |
+| `voicegroup/proof.tst_voicegroupbank.txt` | 0 | 15 | 15 |
+| `voicegroup/proof.tst_voicegroupviewcache.txt` | 3 | 1 | 4 |
+| `voicegroup/proof.voicegroupsourceediting.txt` | 7 | 0 | 7 |
+| `voicegroupsave/proof.presentation.txt` | 6 | 7 | 13 |
+| `voicegroupsave/proof.savecore.txt` | 45 | 2 | 47 |
+| `workspace/proof.selftest_timeline.txt` | 13 | 0 | 13 |
+| `workspace/proof.selftest_transport.txt` | 3 | 7 | 10 |
+| `workspace/proof.selftest_workspace.txt` | 13 | 0 | 13 |
+| `workspace/proof.session.txt` | 8 | 0 | 8 |
+| `workspace/proof.tabs_scale.txt` | 2 | 4 | 6 |
+| `workspace/proof.tabs_transport.txt` | 1 | 1 | 2 |
+| **Total** | **2,246** | **834** | **3,080** |
