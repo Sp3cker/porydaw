@@ -62,6 +62,13 @@ extension GridScene {
     @QtIgnored
     private func emitNoteSelection(_ input: GridSceneInput) {
         var borders: [SceneRect] = []
+        let band = input.selectionBand.map { rect in
+            let snapshot = input.camera.snapshot
+            let dpr = input.metrics.dpr
+            let scrollX = floor(snapshot.scrollX * dpr + 0.5) / dpr
+            let scrollY = floor(snapshot.scrollY * dpr + 0.5) / dpr
+            return (x: rect.x + scrollX, y: rect.y + scrollY, w: rect.w, h: rect.h)
+        }
         for geometry in cachedNoteGeometries {
             if geometry.ghost {
                 if timeCovers(input, track: geometry.track, tick: geometry.tick, end: geometry.end) {
@@ -69,7 +76,11 @@ extension GridScene {
                 }
                 continue
             }
-            if input.isSelected(geometry.noteId)
+            let swept = band.map {
+                geometry.box.x < $0.x + $0.w && geometry.box.x + geometry.box.w > $0.x
+                    && geometry.box.y < $0.y + $0.h && geometry.box.y + geometry.box.h > $0.y
+            } == true
+            if input.isSelected(geometry.noteId) || swept
                 || timeCovers(input, track: geometry.track, tick: geometry.tick, end: geometry.end) {
                 addSelectionRing(&borders, box: geometry.box, input: input)
             } else {

@@ -28,6 +28,9 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
         return
     }
     let before = fixture.snapshot
+    let beforeBytes = try? fixture.document.state.file.encoded()
+    report.expect(beforeBytes != nil, cppID: lifetimeID,
+                  message: "the first song serializes before lifetime routing")
     let state = fixture.document.state
     let selection = fixture.session.selectedNotes
     let page = fixture.page
@@ -81,6 +84,10 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
                   message: "accepting a closed prompt commits nothing")
     report.expectEqual(expected: before, actual: fixture.snapshot, cppID: lifetimeID,
                        what: "the closed prompt's late acceptance leaves the document unchanged")
+    report.expectEqual(expected: beforeBytes,
+                       actual: try? fixture.document.state.file.encoded(),
+                       cppID: lifetimeID,
+                       what: "the cancelled document-switch prompt preserves first-song bytes")
     let peer = drawerAutomationAutomationFixture(suite: suite, service: service,
                                                  pan: [(48, 32), (96, 64)],
                                                  tailTick: 6000)
@@ -117,17 +124,34 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
     report.expectEqual(expected: fixture.panLane, actual: page.activeParameter, cppID: lifetimeID,
                        what: "the first document keeps pan active while the second shows tempo")
     let firstSteady = fixture.snapshot
+    let firstSteadyBytes = try? fixture.document.state.file.encoded()
+    let peerSteadyBytes = try? peer.document.state.file.encoded()
+    report.expect(firstSteadyBytes != nil && peerSteadyBytes != nil,
+                  cppID: lifetimeID,
+                  message: "both live documents serialize before cross-tab key routing")
     peer.document.nudgeNotes(pairB, byTicks: 24, byKeys: 0)
     report.expect(peer.document.note(pairB[0])?.tick == Tick(984), cppID: lifetimeID,
                   message: "the second document's pair advances under the Right-arrow nudge")
     report.expectEqual(expected: firstSteady, actual: fixture.snapshot, cppID: lifetimeID,
                        what: "the second-document nudge leaves the first document unchanged")
+    report.expectEqual(expected: firstSteadyBytes,
+                       actual: try? fixture.document.state.file.encoded(),
+                       cppID: lifetimeID,
+                       what: "a second-document edit preserves the first song's exact bytes")
+    let peerAfterNudgeBytes = try? peer.document.state.file.encoded()
+    report.expect(peerAfterNudgeBytes != nil && peerSteadyBytes != peerAfterNudgeBytes,
+                  cppID: lifetimeID,
+                  message: "the second-document edit changes its own serialized bytes")
     let peerSteady = peer.snapshot
     fixture.document.nudgeNotes(pairA, byTicks: 0, byKeys: 1)
     report.expect(fixture.document.note(pairA[0])?.pitch == 61, cppID: lifetimeID,
                   message: "the reselected first document transposes one semitone under Up")
     report.expectEqual(expected: peerSteady, actual: peer.snapshot, cppID: lifetimeID,
                        what: "the first-document transpose leaves the second document unchanged")
+    report.expectEqual(expected: peerAfterNudgeBytes,
+                       actual: try? peer.document.state.file.encoded(),
+                       cppID: lifetimeID,
+                       what: "the first-document transpose preserves second-song bytes")
     var layout = EditorDrawerLayout()
     _ = layout.attachPage(page)
     _ = layout.setSectionVisible(.automation, visible: false, drawerOwnsFocus: false)

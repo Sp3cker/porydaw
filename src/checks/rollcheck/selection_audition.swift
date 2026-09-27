@@ -22,12 +22,6 @@ func checkSelectionBandAudition(_ report: CheckReport, session: DocumentSession)
         report.fail(id, "could not seed the two band-audition notes")
         return
     }
-    guard let planted = try? session.document.captureSave() else {
-        report.fail(id, "could not capture the planted MIDI bytes")
-        return
-    }
-    let revision = session.document.revision
-    let history = session.document.history.currentIdentity
     var auditions: [(track: Int, pitch: Int, velocity: Int)] = []
     grid.onAudition = { auditions.append(($0, $1, $2)) }
     defer { grid.onAudition = nil }
@@ -39,6 +33,29 @@ func checkSelectionBandAudition(_ report: CheckReport, session: DocumentSession)
     }
     let p0 = Int(first.pitch)
     let p1 = Int(second.pitch)
+    let pitchRange = (min(p0, p1) + 1)..<max(p0, p1)
+    guard let zeroPitch = pitchRange.first(where: { pitch in
+        !session.document.notes(in: grid.trackIndex).contains {
+            Int($0.pitch) == pitch && $0.tick == first.tick
+        }
+    }) else {
+        report.fail(id, "no free visible pitch between the band-audition notes")
+        return
+    }
+    session.document.insertRawEvent(
+        chunk: first.chunk,
+        event: .channel(tick: first.tick, status: 0x90 | first.channel,
+                        data0: UInt8(zeroPitch), data1: 77))
+    grid.refreshFromSession()
+    guard let zero = session.document.notes(in: grid.trackIndex).first(where: {
+        Int($0.pitch) == zeroPitch && $0.tick == first.tick && $0.duration == 0
+    }), selectionRect(zero.id, grid: grid) != nil,
+        let planted = try? session.document.captureSave() else {
+        report.fail(id, "raw note-on did not publish a visible zero-duration band note")
+        return
+    }
+    let revision = session.document.revision
+    let history = session.document.history.currentIdentity
     session.clearSelectedNotes()
     let ax = seed.rects[0].x + seed.rects[0].width / 2
     let ay = seed.rects[0].y + seed.rects[0].height / 2
@@ -64,6 +81,9 @@ func checkSelectionBandAudition(_ report: CheckReport, session: DocumentSession)
                   message: "re-covering a note re-auditions it")
     report.expect(auditions.contains { $0.pitch == p1 && $0.velocity == 0 }, cppID: id,
                   message: "the drag end releases every auditioned key")
+    report.expect(session.selectedNotes.contains(zero.id)
+                  && !auditions.contains { $0.pitch == zeroPitch && $0.velocity > 0 },
+                  cppID: id, message: "a swept zero-duration note is never auditioned")
     report.expect(session.selectedNotes.isSuperset(of: Set(seed.ids)), cppID: id,
                   message: "band release selects every swept note identity")
     report.expect(session.document.revision == revision

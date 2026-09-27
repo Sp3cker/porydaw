@@ -13,71 +13,12 @@ Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted n
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run.
 Note: Stage B evidence fresh 2026-09-26: the editorqml-drawer lane functions[] pass record lists 86 passing functions including test_productionVelocityMountedInk/TransientInk/DetentRepaint/CoincidentNodePriority/StemGestureCancellation/OverlapTargetsVisibleNode; the shell suite passes 26/26 including test_kVelocityStemEscapeFromRollFocus; swiftcore-projectsession pass rows include KeymapCheckTest::defaultMatching delete and backspace. MATCHED rows below cite anchors in those pass records; PARTIAL/GAP rows name the still-unproved half.
+Command: deno task verify:shell --verbose; deno task verify (task-95 implementer-observed GREEN)
+Result: PASS 26/26 shell and PASS 36/36 full verify, including shellwindow; frozen tst_ShellWindow.qml SHA-256 ce46f5e1dc5e6a76df187f78d67336a66728b765b704b6e6187d3983a8663d71.
 
 A001 | SelectionKeyGestureTest::verifyNodePaintsAboveSelectedStem | src/checks/selectionkey/gesturevelocity.cpp:57
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturevelocity.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the node-pixel paint observation requires native framebuffer
-capture and cannot be established by a presenter-level Swift check.
-Source context since previous assertion:
-  // Velocity-plot gesture scenarios for the selection-keyboard-routing Qt
-  // Test: the visible following node owns overlap hit priority across idle,
-  // hover, selected, and zoomed presentations and wins every press, while a
-  // selected duration-stem drag retains its captured selection and consumes
-  // edit keys until Escape restores it.
-
-  #include "checks/selectionkey/gesturecheck.h"
-
-  #include "checks/support/quickframebuffer.h"
-
-  #include <QApplication>
-  #include <QColor>
-  #include <QImage>
-  #include <QPoint>
-  #include <QPointF>
-  #include <QRect>
-  #include <QSize>
-  #include <QtTest>
-
-  #include <cmath>
-
-  namespace {
-
-  int colorDistance(const QColor &a, const QColor &b)
-  {
-      return std::abs(a.red() - b.red()) + std::abs(a.green() - b.green()) +
-             std::abs(a.blue() - b.blue());
-  }
-
-  } // namespace
-
-  bool SelectionKeyGestureTest::verifyNodePaintsAboveSelectedStem(
-      const VelocityStemPoints &overlapPoints, const char *message)
-  {
-      // velocityquick.cpp paints the following node center with its opaque
-      // track color in idle, hover, selected, and zoomed states. Matching that
-      // color proves the visible node won the stack; merely differing from
-      // highlight would also accept an empty or background pixel.
-      constexpr int kNodeColorTolerance = 12;
-      const QColor expectedNodeColor = SongView::trackColor(kTrack);
-      checks::support::pumpQuick();
-      QString captureError;
-      const QImage frame =
-          checks::support::captureQuickBand(view(), QRect(QPoint{}, window()->size()), &captureError);
-      // Canonical viewport: windowPoint is already Quick-window-local, so the
-      // sampled node pixel reads straight out of the captured frame.
-      const QPoint sampleInView = windowPoint(*mVelocityInput, overlapPoints.followingNode);
-      const QRect sampleRect =
-          checks::support::devicePixelRect(frame, QRect(sampleInView, QSize(1, 1)));
-      const QColor nodePixel = frame.isNull() || !frame.rect().contains(sampleRect.center())
-                                   ? QColor{}
-                                   : frame.pixelColor(sampleRect.center());
-      const bool painted = !frame.isNull() && captureError.isEmpty() && expectedNodeColor.isValid() &&
-                           nodePixel.isValid() &&
-                           colorDistance(nodePixel, expectedNodeColor) <= kNodeColorTolerance;
-      if (!painted) {
-Original expression:
-  QTest::qFail(message, __FILE__, __LINE__)
+Disposition: MATCHED
+Mapping: S036, S037, S038, S039
 
 A002 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:69
 Disposition: MATCHED
@@ -148,7 +89,7 @@ Original expression:
 
 A005 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:117
 Disposition: PARTIAL
-Mapping/reason: The mounted overlap drag selects the visible following node in a passing lane; native userGestureActive delivery and a message-anchored active-interaction predicate are unproved. [S012]
+Mapping/reason: S040 - the mounted overlap drag selects the visible following node while interactionActive is checked without a message; a literal anchor for native active-gesture delivery remains unproved.
 Source context since previous assertion:
   ;
       view().selectionModel().setNoteSelection({mWorld->notes[0]});
@@ -170,7 +111,7 @@ Original expression:
 
 A006 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:124
 Disposition: PARTIAL
-Mapping/reason: The mounted Escape consumes the overlap drag, restores the earlier selection, and leaves the document revision unchanged in a passing lane; the SMF-bytes equality, undo-depth equality, and a message-anchored inactive-gesture predicate are unproved. [S013][S014][S015]
+Mapping/reason: S041, S042, S043, S044 - Escape restores exact earlier-note selection and note content, revision, history tip, and ends interactionActive. PARTIAL: the in-memory SMF-byte equality and exact undo-depth equality remain unproved.
 Source context since previous assertion:
   ;
       // VelocityArea cancellation restores the selection captured before the
@@ -210,21 +151,8 @@ Original expression:
                "an overlap note vanished before its arrow command")
 
 A009 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:142
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the arrow-moved-only-following positions below are pure document
-state a presenter-level Swift check could in principle assert, but none does.
-Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-      QTest::keyClick(window(), Qt::Key_Right);
-      const auto followingAfterArrow = selectionkey::noteById(document(), mWorld->notes[1]);
-      const auto earlierAfterArrow = selectionkey::noteById(document(), mWorld->notes[0]);
-Original expression:
-  QVERIFY2(followingAfterArrow.has_value() && earlierAfterArrow.has_value() &&
-                   followingAfterArrow->tick > followingBeforeArrow->tick &&
-                   earlierAfterArrow->tick == earlierBeforeArrow->tick,
-               "arrow after overlap-node click did not target only the following note")
+Disposition: MATCHED
+Mapping: S045
 
 A010 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:151
 Disposition: RETIRED-REPRESENTATION
@@ -314,7 +242,7 @@ Original expression:
 
 A017 | SelectionKeyGestureTest::velocityStemDragGuardsEdits | src/checks/selectionkey/gesturevelocity.cpp:207
 Disposition: PARTIAL
-Mapping/reason: The mounted stem drag retains its captured note selection in a passing lane; native userGestureActive delivery and a message-anchored active-interaction predicate are unproved. [S023]
+Mapping/reason: S046 - the selected-stem drag retains the same two selected IDs while interactionActive is checked without a message; a literal anchor for native active-gesture delivery remains unproved.
 Source context since previous assertion:
   ;
 
@@ -336,8 +264,8 @@ Original expression:
                    "selected velocity-stem drag did not retain its captured note selection")
 
 A018 | SelectionKeyGestureTest::velocityStemDragGuardsEdits | src/checks/selectionkey/gesturevelocity.cpp:212
-Disposition: GAP
-Mapping/reason: No exact predicate: the mounted shell journey holds the note summary and document revision frozen under routed edit keys in a passing lane, but SMF-bytes equality and undo-depth equality during a live gesture remain unproved. Near miss: [S029][S030]. Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S029, S030, S047, S048, S049 - Right and Delete during capture leave note summary, exact selected IDs, revision and undo/redo availability unchanged. PARTIAL: in-memory SMF bytes and exact undo-stack depth are not observable in this mounted lane.
 Source context since previous assertion:
   ;
       QTest::keyClick(window(), Qt::Key_Right);
@@ -350,8 +278,8 @@ Original expression:
                "an edit key mutated selection or notes during a live velocity gesture")
 
 A019 | SelectionKeyGestureTest::velocityStemDragGuardsEdits | src/checks/selectionkey/gesturevelocity.cpp:219
-Disposition: GAP
-Mapping/reason: No exact predicate: the mounted journeys restore the captured selection, notes, and revision on first Escape in passing lanes, but SMF-bytes equality, undo-depth equality, and a message-anchored inactive-gesture predicate remain unproved. Near miss: [S024][S025][S026][S031][S032][S033]. Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S050, S031, S032, S033, S051, S052 - first Escape ends the gesture, restores the two captured IDs and original notes, revision, and undo/redo availability. PARTIAL: in-memory SMF bytes and exact undo-stack depth are not observable in this mounted lane.
 Source context since previous assertion:
   ;
       QTest::keyClick(window(), Qt::Key_Escape);
@@ -497,3 +425,55 @@ Anchor: message "delete"
 
 S035 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
 Anchor: message "backspace"
+
+S036 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the idle following node pixel paints above the selected earlier stem"
+
+S037 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the hovered following node pixel paints above the earlier stem"
+
+S038 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the selected following node pixel paints above the earlier stem"
+
+S039 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the zoomed following node pixel paints above the earlier stem"
+
+S040 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the live overlap drag captures the painted following node"
+
+S041 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "overlap Escape restores the earlier-note selection and exact note content"
+
+S042 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "overlap Escape preserves document revision"
+
+S043 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "overlap Escape leaves the history tip unchanged"
+
+S044 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "overlap Escape leaves no live gesture after release"
+
+S045 | test_kOverlappingVelocityNodePaintCaptureAndResume | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Right after an overlap click moves only the visible following note"
+
+S046 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the live selected-stem drag retains its two-note capture"
+
+S047 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "held stem edit keys do not push undo history"
+
+S048 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "held stem edit keys do not change redo history"
+
+S049 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "held edit keys cannot replace the captured stem selection"
+
+S050 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "first Escape ends the captured stem gesture"
+
+
+S051 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "stem Escape leaves undo history unchanged"
+
+S052 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "stem Escape restores the exact two-note selection"

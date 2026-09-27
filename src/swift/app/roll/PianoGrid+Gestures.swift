@@ -147,6 +147,9 @@ extension PianoGrid {
         guard let band = selectionBand else { return }
         var covered: [NoteID: (track: Int, pitch: Int)] = [:]
         for note in notes where !note.ghost {
+            guard let source = session.document.note(note.noteId), source.duration > 0 else {
+                continue
+            }
             let rect = metrics.noteRect(
                 camera: session.camera,
                 x0: session.camera.displayX(tick: Double(note.tick), origin: 0, dpr: metrics.dpr),

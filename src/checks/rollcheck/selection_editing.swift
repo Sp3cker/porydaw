@@ -15,6 +15,8 @@ private func establishVelocityLatch(_ report: CheckReport, id: String,
     grid.beginPointer(x: x, y: y, modifiers: control)
     grid.updatePointer(x: x, y: y + 27)
     grid.endPointer(x: x, y: y + 27)
+    report.expect(session.selectedNoteOrder == [seed.ids[1]], cppID: id,
+                  message: "velocity drag on a single selected note leaves only its anchor selected")
     report.expect(session.document.note(seed.ids[1])?.velocity == 73, cppID: id,
                   message: "the modifier drag first lowers note B to velocity 73")
     grid.beginPointer(x: x, y: y, modifiers: control)
@@ -23,6 +25,18 @@ private func establishVelocityLatch(_ report: CheckReport, id: String,
     report.expect(session.document.note(seed.ids[1])?.velocity == 93
                   && grid.lastVelocity == 93, cppID: id,
                   message: "the modifier velocity drag raises note B from 73 to 93 and latches the pencil")
+    let beforeToggle = session.document.history.undoCount
+    grid.beginPointer(x: x, y: y, modifiers: control)
+    grid.endPointer(x: x, y: y)
+    report.expect(session.selectedNoteOrder.isEmpty, cppID: id,
+                  message: "Ctrl click after the velocity drag toggles its sole selection off")
+    grid.beginPointer(x: x, y: y, modifiers: control)
+    grid.updatePointer(x: x, y: y + grid.dragDistance - 1)
+    grid.endPointer(x: x, y: y + grid.dragDistance - 1)
+    report.expect(session.selectedNoteOrder == [seed.ids[1]]
+                      && session.document.note(seed.ids[1])?.velocity == 93
+                      && session.document.history.undoCount == beforeToggle,
+                  cppID: id, message: "subthreshold Ctrl jitter toggles the note on without editing velocity")
 }
 
 @MainActor
@@ -51,6 +65,11 @@ func checkGroupedVelocityDrag(_ report: CheckReport, session: DocumentSession) {
     let plantedIdentity = session.document.history.currentIdentity
     let control = 0x0400_0000
     let aX = seed.rects[0].x + seed.rects[0].width / 2
+    guard let originalA = session.document.note(seed.ids[0]),
+          let originalB = session.document.note(seed.ids[1]) else {
+        report.fail(id, "velocity-drag seed notes disappeared")
+        return
+    }
     let aY = seed.rects[0].y + seed.rects[0].height / 2
     session.setSelectedNotes(seed.ids)
     var noteAuditions: [(pitch: Int, velocity: Int)] = []
@@ -102,30 +121,43 @@ func checkGroupedVelocityDrag(_ report: CheckReport, session: DocumentSession) {
         && (try? session.document.captureSave().bytes) == plantedBytes, cppID: id,
         message: "undo restores both fixture velocities at once")
     session.setSelectedNotes(seed.ids)
+    let repeatIndex = session.document.history.undoIndex
     grid.beginPointer(x: aX, y: aY, modifiers: control)
     grid.updatePointer(x: aX, y: aY + 15)
     grid.endPointer(x: aX, y: aY + 15)
     report.expect(session.document.note(seed.ids[0]).map { Int($0.velocity) } == 78
         && session.document.note(seed.ids[1]).map { Int($0.velocity) } == 78, cppID: id,
         message: "dragging down again reaches the same grouped velocities")
+    report.expect(session.document.history.undoIndex == repeatIndex + 1, cppID: id,
+                  message: "repeated grouped velocity drag pushes exactly one undo command")
+    let oppositeCount = session.document.history.undoCount
     grid.beginPointer(x: aX, y: aY, modifiers: control)
     grid.updatePointer(x: aX, y: aY - 15)
     grid.endPointer(x: aX, y: aY - 15)
+    report.expect(session.document.history.undoCount == oppositeCount + 1, cppID: id,
+                  message: "repeated reverse drag adds one command to grouped velocity history")
+    report.expect(session.document.note(seed.ids[0]) == originalA, cppID: id,
+                  message: "repeating the grouped velocity drag restores the anchor's complete note record")
+    report.expect(session.document.note(seed.ids[1]) == originalB, cppID: id,
+                  message: "repeating the grouped velocity drag restores the other note's complete record")
     report.expect(session.document.note(seed.ids[0]).map { Int($0.velocity) } == 93
-        && session.document.note(seed.ids[1]).map { Int($0.velocity) } == 93, cppID: id,
-        message: "repeating the grouped drag the other way restores both velocities")
+                      && session.document.note(seed.ids[1]).map { Int($0.velocity) } == 93, cppID: id,
+                  message: "repeating the grouped drag the other way restores both velocities")
     report.expect(Set(session.selectedNoteOrder) == Set(seed.ids), cppID: id,
                   message: "the repeated grouped drag preserves the selected notes")
     let chordCount = session.document.history.undoCount
+    let priorNote = session.document.note(seed.ids[1])
     session.setSelectedNotes([seed.ids[1]])
     grid.beginPointer(x: aX, y: aY, modifiers: control)
     grid.updatePointer(x: aX, y: aY + 15)
+    report.expect(session.selectedNoteOrder == [seed.ids[0]], cppID: id,
+                  message: "threshold velocity drag re-anchors to only the grabbed note")
     grid.endPointer(x: aX, y: aY + 15)
     report.expect(session.selectedNoteOrder == [seed.ids[0]], cppID: id,
                   message: "a chord-held drag on another note re-anchors the selection to the grabbed note")
     report.expect(session.document.note(seed.ids[0]).map { Int($0.velocity) } == 78, cppID: id,
                   message: "the chord-held drag adjusts the grabbed note")
-    report.expect(session.document.note(seed.ids[1]).map { Int($0.velocity) } == 93, cppID: id,
+    report.expect(session.document.note(seed.ids[1]) == priorNote, cppID: id,
                   message: "the chord-held drag leaves the prior note untouched")
     report.expect(session.document.history.undoCount == chordCount + 1, cppID: id,
                   message: "the chord-held drag commits one undo entry")
@@ -187,6 +219,10 @@ func checkThresholdDrawCell(_ report: CheckReport, session: DocumentSession) {
     }
     establishVelocityLatch(report, id: id, session: session, grid: grid, seed: seed)
     let plantedIdentity = session.document.history.currentIdentity
+    guard let plantedBytes = try? session.document.captureSave().bytes else {
+        report.fail(id, "could not capture the pre-draw planted MIDI bytes")
+        return
+    }
     let snap = grid.snapTicks
     guard snap >= 8 else {
         report.fail(id, "the fixed eighth grid is not drawable (snap=\(snap))")
@@ -250,12 +286,40 @@ func checkThresholdDrawCell(_ report: CheckReport, session: DocumentSession) {
                   cppID: id, message: "crossing draw slop does not re-attack the sounding press key")
     report.expect(grid.statusText.contains("Drawing"), cppID: id,
                   message: "crossing the draw threshold enters the draw gesture")
+    guard let pendingFace = grid.scene.pianoDrawPreviewFill.asArray.first else {
+        report.fail(id, "pending draw has no rendered preview face")
+        grid.endPointer(x: dragX, y: cell.y)
+        return
+    }
+    grid.setNoteNameMode(enabled: true)
+    report.expect(grid.scene.pianoDrawPreviewFill.asArray.first.map {
+        $0.matches(pendingFace)
+    } == true, cppID: id,
+    message: "toggling note-name mode while drawing leaves the pending note face unchanged")
     grid.endPointer(x: dragX, y: cell.y)
     let drawn = session.document.notes(in: grid.trackIndex).filter {
         Int($0.tick) == cell.tick && Int($0.pitch) == cell.pitch
     }
     report.expect(drawn.count == 1 && drawn.first.map { Int($0.duration) == snap } == true,
                   cppID: id, message: "a threshold drag draws one snap cell")
+    report.expect(session.document.history.undoDocument()
+                      && (try? session.document.captureSave().bytes) == plantedBytes,
+                  cppID: id, message: "undoing the press-grown draw restores exact MIDI bytes")
+    grid.refreshFromSession()
+    grid.setNoteNameMode(enabled: false)
+    let nextDrawIndex = session.document.history.undoIndex
+    grid.beginPointer(x: pressX, y: cell.y, modifiers: 0)
+    grid.updatePointer(x: dragX, y: cell.y)
+    grid.setNoteNameMode(enabled: true)
+    grid.endPointer(x: dragX, y: cell.y)
+    report.expect(session.document.history.undoIndex == nextDrawIndex + 1
+                  && session.document.notes(in: grid.trackIndex).contains {
+                      Int($0.tick) == cell.tick && Int($0.pitch) == cell.pitch
+                  }, cppID: id, message: "note-name readout draw commits one note")
+    report.expect(session.document.history.undoDocument()
+                      && (try? session.document.captureSave().bytes) == plantedBytes,
+                  cppID: id, message: "undoing the note-name readout draw restores exact MIDI bytes")
+    grid.setNoteNameMode(enabled: false)
 }
 
 @MainActor
@@ -312,12 +376,17 @@ func checkOrderedSelection(_ report: CheckReport, session: DocumentSession) {
                        what: "replacement preserves first occurrence and removes duplicates")
     grid.beginRightPointer(x: 0, y: 0)
     grid.updateRightPointer(x: 640, y: 320)
-    report.expect(Array(session.selectedNoteOrder.prefix(2)) == [b, a]
-        && session.selectedNotes.contains(c),
-        cppID: id, message: "band keeps press order before newly covered notes")
+    report.expect(session.selectedNoteOrder == [b, a], cppID: id,
+                  message: "band preview leaves the press-order selection uncommitted")
     grid.inputCancelled(reason: GridCancelReason.pointerUngrabbed.rawValue)
     report.expectEqual(expected: [b, a], actual: session.selectedNoteOrder, cppID: id,
                        what: "band cancellation restores selection order")
+    grid.beginRightPointer(x: 0, y: 0)
+    grid.updateRightPointer(x: 640, y: 320)
+    grid.endRightPointer(x: 640, y: 320)
+    report.expect(Array(session.selectedNoteOrder.prefix(2)) == [b, a]
+        && session.selectedNotes.contains(c),
+        cppID: id, message: "band keeps press order before newly covered notes")
     publications.removeAll()
     session.setSelectedNotes([a, b])
     report.expectEqual(expected: [SessionChangeDomains.selection], actual: publications, cppID: id,

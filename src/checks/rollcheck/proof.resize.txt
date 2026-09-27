@@ -24,48 +24,22 @@ Result: PASS; 1/36 ok (implementer-reported GREEN on frozen checks; this proof-o
 Command: deno task verify:shell --filter shell-note-visuals --verbose (task-93 implementer run)
 Result: PASS; 1/26 ok including physical DPR2 ring/border/face pixel readback (implementer-reported GREEN; this proof-only pass ran no lane).
 Verified note-visuals QML SHA-256: 7996c1fcb13cc466741d6c41a92f10ceba34573221fd4fa58dd18069ddae78b9 (src/checks/editorqml/tst_ShellNoteVisuals.qml).
+Command: deno task verify --filter swiftcore-projectsession --verbose (task-97 frozen checks)
+Result: PASS — 1/36 ok, 35 skipped (implementer-reported GREEN; proof-only pass ran no lane).
+Command: PORYDAW_ROLL_QML_SUITE=tst_SwiftRollSelection.qml deno task verify:qml-roll --verbose (task-97 frozen checks)
+Result: PASS — swiftroll-window 1/1 ok (implementer-reported GREEN; proof-only pass ran no lane).
+Command: deno task verify:shell --filter shell-grid-input --verbose (task-97 frozen checks)
+Result: PASS — shell-grid-input 1/26 ok, 25 skipped (implementer-reported GREEN; proof-only pass ran no lane).
+Command: deno task verify:shell --verbose (task-97 frozen checks)
+Result: PASS — 26/26 ok (implementer-reported GREEN; proof-only pass ran no lane).
+Command: deno task verify (task-97 frozen checks)
+Result: PASS — 36/36 ok (implementer-reported GREEN; proof-only pass ran no lane).
+Verified resize.swift SHA-256: b102ceb0f2e03ea3a387a12b162f1e71f6b506811e4cae79a1ec19f7a787527e (src/checks/rollcheck/resize.swift).
+
 
 A001 | PianoRollTest::resizeOffGrid | src/checks/rollcheck/resize.cpp:35
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-#include "checks/rollcheck/tst_pianoroll.h"
-
-#include <QCursor>
-#include <QEvent>
-#include <QIcon>
-#include <QImage>
-#include <QPixmap>
-#include <QPoint>
-#include <QPointF>
-#include <QRectF>
-#include <QSize>
-#include <QtMath>
-#include <QtTest>
-#include <algorithm>
-#include <optional>
-#include <vector>
-
-#include "checks/rollcheck/rollcheck.h"
-#include "checks/support/eventsynth.h"
-#include "core/songdocument.h"
-#include "ui/layout.h"
-#include "ui/songview.h"
-#include "ui/songview/quick/timelineinputitem.h"
-
-using ::DocNote;
-using checks::rollcheck::Cell;
-using checks::rollcheck::makeVelocitySeed;
-using checks::rollcheck::PencilVelocityFixture;
-using checks::rollcheck::SnappedRows;
-
-void PianoRollTest::resizeOffGrid()
-{
-    auto &check = *m_fixture;
-    const Cell d = check.findFreeCell(88, true);
-
-Original expression:
-QVERIFY2(d.key >= 0, "no free grid cell for the off-grid resize")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S001 — `QVERIFY2(d.key >= 0, "no free grid cell for the off-grid resize")` guards the deleted native findFreeCell fixture search; Swift stages its own note and proves the off-grid resize result at S001.
 
 A002 | PianoRollTest::resizeOffGrid | src/checks/rollcheck/resize.cpp:57
 Disposition: PARTIAL
@@ -133,71 +107,20 @@ Disposition: MATCHED
 Mapping: S002
 
 A007 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:89
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-;
-}
-
-void PianoRollTest::resizeSelection()
-{
-    auto &check = *m_fixture;
-    const std::optional<PencilVelocityFixture> seed = makeVelocitySeed(check);
-
-Original expression:
-QVERIFY(seed.has_value())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S003 — `QVERIFY(seed.has_value())` guards the deleted native makeVelocitySeed optional fixture; Swift stages its own selected notes for the Ctrl+edge journey at S003.
 
 A008 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:99
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-;
-    SongDocument &doc = check.document();
-    SongView &view = check.view();
-    auto &roll = check.rollInput();
-    const int track = check.track();
-    const Cell &b = seed->b;
-    // Leave room for both selected notes to grow. A cell before B can abut
-    // it, in which case the production resize correctly clamps the first note.
-    const int firstProbe = qCeil(view.camera().contentX(double(b.tick + 2 * b.dur)));
-    const Cell d = check.findFreeCell(firstProbe, true);
-
-Original expression:
-QVERIFY2(d.key >= 0, "no free grid cell for the selection resize")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S006 — `QVERIFY2(d.key >= 0, "no free grid cell for the selection resize")` guards the deleted native findFreeCell fixture; Swift stages the grabbed note and checks its grouped growth at S006.
 
 A009 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:102
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-;
-    doc.addNote(track, d.tick, uint8_t(d.key), uint32_t(2 * d.dur), 100);
-    DocNote dBefore;
-
-Original expression:
-QVERIFY(doc.findNote(track, d.tick, uint8_t(d.key), &dBefore))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S006 — `QVERIFY(doc.findNote(track, d.tick, uint8_t(d.key), &dBefore))` guards the deleted native fixture add; Swift uses its planted NoteID to prove grouped growth at S006.
 
 A010 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:116
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-;
-    const QByteArray before = doc.smf().write();
-    const int undo = doc.undoStack()->index();
-    const SnappedRows rows{view, roll};
-    const qreal dpr = roll.devicePixelRatio();
-    const QPointF edge(view.camera().displayX(double(d.tick + 2 * d.dur), 0.0, dpr) -
-                           layout::fontPxF(0.25) / 2.0,
-                       rows.centerY(d.key));
-    checks::events::sendMouse(roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
-                              Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(roll, QEvent::MouseButtonRelease, b.center, Qt::LeftButton,
-                              Qt::NoButton, Qt::NoModifier);
-    const int count = doc.undoStack()->count();
-    DocNote bBefore;
-
-Original expression:
-QVERIFY2(doc.findNote(track, b.tick, uint8_t(b.key), &bBefore),
-             "note B went missing before the Ctrl+edge grab")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S007 — `QVERIFY2(doc.findNote(track, b.tick, uint8_t(b.key), &bBefore), "note B went missing before the Ctrl+edge grab")` guards the deleted native seed lookup; Swift tracks the planted second NoteID and proves its grouped growth at S007.
 
 A011 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:123
 Disposition: MATCHED
@@ -220,32 +143,16 @@ Disposition: MATCHED
 Mapping: S007, S029
 
 A016 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:147
-Disposition: PARTIAL
-Mapping/reason: S008 (src/checks/rollcheck/resize.swift) asserts the selection resize gesture advances the document revision by exactly one and changes the recorded history identity. Unproved: the command-count delta itself — revision advance corroborates a commit but is not history depth, so the single-command claim is asserted only indirectly.
-Source context since previous assertion:
-;
-
-Original expression:
-QCOMPARE(doc.undoStack()->count(), count + 1)
+Disposition: MATCHED
+Mapping: S036 — grouped Ctrl+edge resize increments undoCount by exactly one.
 
 A017 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:151
 Disposition: MATCHED
 Mapping: S009
 
 A018 | PianoRollTest::resizeMinimum | src/checks/rollcheck/resize.cpp:158
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-;
-}
-
-void PianoRollTest::resizeMinimum()
-{
-    auto &check = *m_fixture;
-    const Cell d = check.findFreeCell(88, true);
-
-Original expression:
-QVERIFY2(d.key >= 0, "no free grid cell for the minimum resize")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S010 — `QVERIFY2(d.key >= 0, "no free grid cell for the minimum resize")` guards the deleted native findFreeCell fixture; Swift plants a note and proves the minimum resize at S010.
 
 A019 | PianoRollTest::resizeMinimum | src/checks/rollcheck/resize.cpp:180
 Disposition: MATCHED
@@ -253,7 +160,7 @@ Mapping: S010, S028
 
 A020 | PianoRollTest::resizeMinimum | src/checks/rollcheck/resize.cpp:186
 Disposition: PARTIAL
-Mapping/reason: S022 (src/checks/rollcheck/resize.swift) asserts the note body publishes cursorKind 0 (arrow) once the pointer is clear of the edge grips, and S024 (src/checks/rollqml/tst_SwiftRollSelection.qml) asserts the production roll's cursorShape returns to the arrow over the note body. Unproved: the native Qt.ArrowCursor shape on the legacy input item.
+Mapping/reason: S037 (src/checks/rollcheck/resize.swift:269-271) checks that a too-narrow note body publishes cursorKind 0 (arrow); S022/S024 cover wider note-body arrow behavior. Unproved: legacy input item's actual Qt::ArrowCursor shape/image at the narrow body (the Swift check observes the published cursor kind, not a captured native cursor image).
 Source context since previous assertion:
 ;
     const QPointF middle(view.camera().displayX(double(d.tick + snap), 0.0, dpr) - 6,
@@ -285,23 +192,8 @@ Disposition: MATCHED
 Mapping: S012
 
 A026 | PianoRollTest::resizeAbutting | src/checks/rollcheck/resize.cpp:226
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-;
-}
-
-void PianoRollTest::resizeAbutting()
-{
-    auto &check = *m_fixture;
-    SongDocument &doc = check.document();
-    SongView &view = check.view();
-    auto &roll = check.rollInput();
-    const int track = check.track();
-    const Cell g = check.findFreeCell();
-
-Original expression:
-QVERIFY2(g.key >= 0, "no free grid cell for the abutting-notes resize")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S013 — `QVERIFY2(g.key >= 0, "no free grid cell for the abutting-notes resize")` guards the deleted native findFreeCell fixture; Swift stages an abutting pair and proves the first boundary grip at S013.
 
 A027 | PianoRollTest::resizeAbutting | src/checks/rollcheck/resize.cpp:243
 Disposition: PARTIAL
@@ -481,3 +373,9 @@ Anchor: message "the minimum-zoom narrow note retains its painted face"
 
 S035 | test_ghostEdgesAndMinimumZoomFace | src/checks/editorqml/tst_ShellNoteVisuals.qml
 Anchor: message "the minimum-zoom narrow note paints its top outline in the border role"
+
+S036 | checkResizeSelection | src/checks/rollcheck/resize.swift
+Anchor: message "grouped Ctrl edge resize pushes exactly one undo command"
+
+S037 | checkResizeMinimum | src/checks/rollcheck/resize.swift
+Anchor: message "a too-narrow note body presents the arrow instead of an edge grip"

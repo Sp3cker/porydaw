@@ -706,9 +706,6 @@ public final class PianoGrid {
                     camera: session.camera, scale: session.scaleProjection)
             }
         }
-        if case .band = self.rightGesture, !rightBandDemoted {
-            applyBandSelection()
-        }
         if case .band = self.rightGesture { auditionBandEntrants() }
         refreshNotes()
     }

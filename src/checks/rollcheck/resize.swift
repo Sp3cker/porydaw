@@ -178,6 +178,7 @@ private func checkResizeSelection(_ report: CheckReport, session: DocumentSessio
     grid.beginPointer(x: bX, y: bY, modifiers: 0)
     grid.endPointer(x: bX, y: bY)
     let selected = document.history.currentIdentity
+    let commandCount = document.history.undoCount
     let revision = document.revision
     let edge = session.camera.displayX(tick: Double(d.tick + 2 * d.duration), origin: 0,
                                        dpr: grid.devicePixelRatio) - grid.edgeGripReach / 2
@@ -205,6 +206,8 @@ private func checkResizeSelection(_ report: CheckReport, session: DocumentSessio
     report.expect(document.revision == revision + 1
                       && document.history.currentIdentity != selected,
                   cppID: id, message: "one selection resize gesture commits one transaction")
+    report.expect(document.history.undoCount == commandCount + 1, cppID: id,
+                  message: "grouped Ctrl edge resize pushes exactly one undo command")
     report.expect(document.history.undoDocument()
                       && document.history.currentIdentity == planted
                       && (try? document.captureSave().bytes) == before,
@@ -259,6 +262,13 @@ private func checkResizeMinimum(_ report: CheckReport, session: DocumentSession)
                                                dpr: grid.devicePixelRatio)
     report.expect(narrowRight - narrowLeft <= 3, cppID: id,
                   message: "minimum-duration note spans at most three pixels at narrow zoom")
+    guard let narrow = resizeHandle(noteID, grid: grid) else {
+        report.fail(id, "narrow minimum-duration note is not projected")
+        return
+    }
+    grid.updateHover(x: narrow.x + narrow.width / 2, y: narrow.y + narrow.height / 2)
+    report.expect(grid.cursorKind == 0, cppID: id,
+                  message: "a too-narrow note body presents the arrow instead of an edge grip")
     session.mutateCamera {
         _ = $0.setTimeZoom(originalZoom)
         _ = $0.setHScroll(originalScroll)

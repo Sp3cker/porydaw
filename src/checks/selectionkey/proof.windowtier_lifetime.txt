@@ -23,53 +23,26 @@ Command: deno task verify --filter swiftcore (writer-observed, out-of-range row)
 Result: PASS; verify 1/6 ok (5 skipped, 10.16 s); run_checks PASS. That run executes the extended entry including the S056 out-of-range selectPrimaryTrack row and the reworded S041 message.
 Command: deno task verify:shell --filter shell-tabs --verbose (R16)
 Result: pending controller run. S057-S062 are shell-lane (windowing=offscreen) predicates of test_sMidGestureCloseCancelsHeldBand: the clean selected tab is closed through SongTabsController.requestClose and the same song is reopened.
+Command: deno task verify --filter swiftcore-projectsession --verbose; deno task verify:shell --filter shell-tabs --verbose; deno task verify:shell --verbose; deno task verify (task-95 implementer-observed GREEN after review fixes)
+Result: PASS 1/36 swiftcore-projectsession, PASS 1/26 shell-tabs, PASS 26/26 full shell, PASS 36/36 full verify; frozen check hashes: localinputtier_text.swift 348986513c9c0c8e05732a1be0daf44908e23030264461c628b8eb5534b8f2ed; tst_ShellTabs.qml 4ec55c45d04457539b2d824dbaed5ed968ed09bbee1af7b0b2c1b5c906cea5c3; tst_ShellWindow.qml ce46f5e1dc5e6a76df187f78d67336a66728b765b704b6e6187d3983a8663d71.
 
 A001 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:61
 Disposition: RETIRED-REPRESENTATION
 
 A002 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:63
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      SongTab *const tabA = workspace.songTabFor(*SongName::create(m_songA));
-
-Original expression:
-  QCOMPARE(tabA, m_tab.data())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S063 - the native SongTab pointer identity QCOMPARE(tabA, m_tab.data()) at git show c17d966:src/checks/selectionkey/windowtier_lifetime.cpp:63 has no Swift tab-pointer counterpart; the mounted first-tab identity and retained Pan state replace it.
 
 A003 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:70
 Disposition: RETIRED-REPRESENTATION
 
 A004 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:73
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      AutomationCanvas *const canvasA = automationCanvas(viewA);
-      const EditorAutomationRowId panA{EditorAutomationRowKind::ControlChange, kTrack, kPan};
-
-Original expression:
-  QVERIFY(clickParameter(viewA, panA))
+Disposition: MATCHED
+Mapping: S064
 
 A005 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:81
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-
-      // The per-case scenarios each roll their own edits back, and the explicit
-      // undo-to-clean gate keeps this case self-sufficient, so the second-song
-      // open runs production's genuine clean lifecycle (a dirty tab here is what
-      // turns the open into an unsaved-changes prompt). The clean bytes then
-      // double as the cross-tab mutation baseline.
-      QString error;
-
-Original expression:
-  QVERIFY2(selectionkey::undoTabToClean(workspace, documentA,
-                                            QStringLiteral("the first tab stayed dirty before the "
-                                                           "second-song open"),
-                                            &error),
-               qUtf8Printable(error))
+Disposition: MATCHED
+Mapping: S087 - the mounted first tab's real draw/Undo returns to clean with no undo history before opening the second song, which then opens without a dirty-tab prompt.
 
 A006 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:89
 Disposition: MATCHED
@@ -81,17 +54,8 @@ A008 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/check
 Disposition: RETIRED-REPRESENTATION
 
 A009 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:94
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(workspace.selectedSongTab() == tabB &&
-                   workspace.openTabCount() == tabCountBeforeSecondOpen + 1 &&
-                   workspace.songTabFor(tabA->name()) == tabA,
-               "opening the second song did not add and select a distinct tab while retaining "
-               "the first")
+Disposition: MATCHED
+Mapping: S066, S067, S068
 
 A010 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:104
 Disposition: MATCHED
@@ -100,15 +64,8 @@ A011 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/check
 Disposition: RETIRED-REPRESENTATION
 
 A012 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:111
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      AutomationCanvas *const canvasB = automationCanvas(viewB);
-      const EditorAutomationRowId tempo{EditorAutomationRowKind::Tempo, 0, 0};
-
-Original expression:
-  QVERIFY(clickParameter(viewB, tempo))
+Disposition: MATCHED
+Mapping: S069
 
 A013 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:112
 Disposition: MATCHED
@@ -117,28 +74,16 @@ A014 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/check
 Disposition: MATCHED
 
 A015 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:116
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      viewB.selectionModel().setNoteSelection({pairB->ids[0], pairB->ids[1]});
-
-Original expression:
-  QVERIFY2(focusAutomationBand(viewB), "could not focus the second tab's automation band")
+Disposition: MATCHED
+Mapping: S070
 
 A016 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:118
 Disposition: MATCHED
 Mapping: S019
 
 A017 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:120
-Disposition: PARTIAL
-Mapping/reason: Related predicates S020 and S021 in src/checks/editorqml/tst_ShellWindow.qml: after the destination tab is edited, the source tab note summary is unchanged (S020, "cross-tab Paste leaves the source song unchanged") and only the pasted destination reports unsaved changes (S021). Unproved as stated: the reverse direction this site asserts — an edit delivered to the second tab leaving the first tab document untouched (the shellwindow lane edits the first tab and observes the second).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(documentA.smf().write() == documentAClean,
-               "key delivery to the second tab mutated the first tab's document")
+Disposition: MATCHED
+Mapping: S071, S072
 
 A018 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:126
 Disposition: MATCHED
@@ -154,15 +99,8 @@ A021 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/check
 Disposition: MATCHED
 
 A022 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:133
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      viewA.selectionModel().setNoteSelection({pairA->ids[0], pairA->ids[1]});
-
-Original expression:
-  QVERIFY2(focusAutomationBand(viewA),
-               "could not focus the first tab's automation band after reselecting it")
+Disposition: MATCHED
+Mapping: S073
 
 A023 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:137
 Disposition: MATCHED
@@ -195,13 +133,8 @@ A031 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/check
 Disposition: MATCHED
 
 A032 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:166
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!canvasA->laneBody(*laneTrackOne).isEmpty())
+Disposition: MATCHED
+Mapping: S074
 
 A033 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:168
 Disposition: MATCHED
@@ -230,50 +163,19 @@ Disposition: MATCHED
 Mapping: S019, S020, S021
 
 A041 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:182
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      viewA.selectionModel().setNoteSelection({pairT1->ids[0], pairT1->ids[1]});
-
-Original expression:
-  QVERIFY2(focusAutomationBand(viewA),
-               "could not focus the automation band on the new primary track")
+Disposition: MATCHED
+Mapping: S075
 
 A042 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:186
 Disposition: MATCHED
 
 A043 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:193
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-
-      // Return both tabs to their saved state so the close, the reopen, and the
-      // final window close take production's genuine clean lifecycle instead of
-      // blocking in an unsaved-changes prompt.
-
-Original expression:
-  QVERIFY2(selectionkey::undoTabToClean(workspace, documentA,
-                                            QStringLiteral("the first tab stayed dirty before "
-                                                           "closing the second tab"),
-                                            &error),
-               qUtf8Printable(error))
+Disposition: MATCHED
+Mapping: S065, S076
 
 A044 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:200
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      workspace.selectSongTab(tabB);
-      selectionkey::settle();
-
-Original expression:
-  QVERIFY2(selectionkey::undoTabToClean(workspace, documentB,
-                                            QStringLiteral("the second tab stayed dirty before "
-                                                           "its close"),
-                                            &error),
-               qUtf8Printable(error))
+Disposition: MATCHED
+Mapping: S086, S077
 
 A045 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:213
 Disposition: MATCHED
@@ -292,58 +194,27 @@ Disposition: MATCHED
 Mapping: S059, S060, S061
 
 A049 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:230
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-      SongView &viewR = reopened->view();
-      SongDocument &documentR = reopened->document();
-      viewR.selectTrack(kTrack);
-      viewR.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
-      const std::optional<NotePair> pairR = addNotePair(documentR, kTrack, 960);
-
-Original expression:
-  QVERIFY2(pairR.has_value(),
-               "the reserved tick-960 note pair could not be inserted on the reopened tab")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S078 - the C++ addNotePair seed-helper guard QVERIFY2(pairR.has_value(), "the reserved tick-960 note pair could not be inserted on the reopened tab") at git show c17d966:src/checks/selectionkey/windowtier_lifetime.cpp:230 is superseded by two real pointer-created tick-960 notes on the mounted reopened roll.
 
 A050 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:234
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      songview::TimelineQuickView *const quickR = selectionkey::quickCanvas(viewR);
-      QQuickWindow *const windowR = quickR ? quickR->quickWindow() : nullptr;
-
-Original expression:
-  QVERIFY2(windowR, "the reopened tab Quick window is missing")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S079 - the native Quick-window pointer guard QVERIFY2(windowR, "the reopened tab Quick window is missing") at git show c17d966:src/checks/selectionkey/windowtier_lifetime.cpp:234 is superseded by the mounted reopened automation plot and its delivered input.
 
 A051 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:237
 Disposition: MATCHED
 
 A052 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:239
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      viewR.selectionModel().setNoteSelection({pairR->ids[0], pairR->ids[1]});
-
-Original expression:
-  QVERIFY2(focusAutomationBand(viewR), "could not focus the reopened tab's automation band")
+Disposition: MATCHED
+Mapping: S080
 
 A053 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:241
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-      selectionkey::deliverKey(windowR, Qt::Key_Right);
-
-Original expression:
-  QVERIFY2(!notePairUnchanged(documentR, *pairR),
-               "the reopened tab's routing is stale or dead after document replacement")
+Disposition: MATCHED
+Mapping: S081, S082
 
 A054 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:243
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S083, S084, S088, S089 - the mounted reopened-tab Right/Up leaves the first song's note summary, revision, and saved file bytes unchanged; direct Swift document encoding in S084 proves a separate cross-document transpose. PARTIAL: no mounted in-memory serialized-byte equality for the first document after the reopened-tab edits; its saved-file fingerprint does not establish the unsaved document's bytes.
 Source context since previous assertion:
   ;
 
@@ -351,17 +222,8 @@ Original expression:
   QCOMPARE(documentA.smf().write(), documentABeforeReopen)
 
 A055 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:244
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(selectionkey::undoTabToClean(workspace, documentR,
-                                            QStringLiteral("the reopened tab stayed dirty before "
-                                                           "the window close"),
-                                            &error),
-               qUtf8Printable(error))
+Disposition: MATCHED
+Mapping: S085
 
 Remaining original source (closing sequence and helper bodies):
   ;
@@ -555,6 +417,87 @@ Anchor: message "the reopen retains the survivor tab"
 
 S062 | test_sMidGestureCloseCancelsHeldBand | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: message "the cancelled band left nothing to save"
+
+S063 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "B-to-A selection restores the first song's active Pan lane"
+
+S064 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "clicking the first song activates its Pan lane"
+
+S065 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the first song returns to clean before the second opens again"
+
+S066 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the closed song opens on a fresh timeline"
+
+S067 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "closing one tab keeps its sibling and the project bytes" #1
+
+S068 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "reopening restores the shared drawer state on a fresh timeline"
+
+S069 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "clicking the second song activates its Tempo lane"
+
+S070 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the second song's active Tempo plot accepts keyboard focus"
+
+S071 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "automation-focused Right in B leaves the first song's notes untouched"
+
+S072 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "automation-focused Right in B leaves the first song's saved bytes exact"
+
+S073 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the first song's active Pan plot accepts keyboard focus"
+
+S074 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the new primary track paints its Pan automation lane body"
+
+S075 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the new primary track's Pan plot accepts keyboard focus"
+
+S076 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the track-one Pan journey returns the first song to clean"
+
+S077 | test_sharedAutomationParameterAndTrackFocusAcrossTabs | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "B's automation-focused edits unwind to clean before tab switch"
+
+S078 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the reopened song owns both newly drawn tick-960 notes"
+
+S079 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the reopened tab remounts its real automation plot after drawer restore"
+
+S080 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the reopened tab's automation plot owns the routed keys"
+
+S081 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "reopened-tab Right routes to its newly selected note pair"
+
+S082 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "reopened-tab Up transposes only the new selected pair"
+
+S083 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "reopened-tab Right and Up leave the first document unchanged"
+
+S084 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the first-document transpose preserves second-song bytes"
+
+S085 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "undoing the reopened pair and routed edits returns its song to clean"
+
+S086 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the second song returns to clean before its first close"
+
+S087 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the first song unwinds its initial edit before opening a second tab"
+
+S088 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "reopened-tab keys do not advance the first document revision"
+
+S089 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "reopened-tab keys preserve the first song's saved bytes"
 
 Shared helpers
 selectDrawnVelocityNote (:153) and openTwoSongShell (:88) stage the two-song

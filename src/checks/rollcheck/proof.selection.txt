@@ -26,81 +26,31 @@ Result: PASS — 11/11 ok (controller-recorded post-change run); the shell-grid-
 the real right-drag band, Escape cancel and ungrab cancel slots.
 Command: deno task verify --filter swiftcore-projectsession --verbose (task-86 frozen sources)
 Result: PASS — 1/36 ok, 35 skipped (implementer-recorded run on the frozen tree; it executed the latch-establishment drag S059 through checkGroupedVelocityDrag and checkThresholdDrawCell, and the full native lane passed 36/36. This proof-only reconciliation ran no lane, rebuilt nothing and re-ran no check).
+Command: deno task verify --filter swiftcore-projectsession --verbose (task-97 frozen checks)
+Result: PASS — 1/36 ok, 35 skipped (implementer-reported GREEN; proof-only pass ran no lane).
+Command: PORYDAW_ROLL_QML_SUITE=tst_SwiftRollSelection.qml deno task verify:qml-roll --verbose (task-97 frozen checks)
+Result: PASS — swiftroll-window 1/1 ok (implementer-reported GREEN; proof-only pass ran no lane).
+Command: deno task verify:shell --filter shell-grid-input --verbose (task-97 frozen checks)
+Result: PASS — shell-grid-input 1/26 ok, 25 skipped (implementer-reported GREEN; proof-only pass ran no lane).
+Command: deno task verify:shell --verbose (task-97 frozen checks)
+Result: PASS — 26/26 ok (implementer-reported GREEN; proof-only pass ran no lane).
+Command: deno task verify (task-97 frozen checks)
+Result: PASS — 36/36 ok (implementer-reported GREEN; proof-only pass ran no lane).
+Verified selection_band.swift SHA-256: b2f46a83ad92d0ad1d9059aeb2cb6b37e5bc1c90a39731f52c6e5d1b7821fb03 (src/checks/rollcheck/selection_band.swift).
+Verified selection_audition.swift SHA-256: 6e70f51bdf21532dc434f29d5e08c974e731c9eefb4bc7139733b0ea399ef8b0 (src/checks/rollcheck/selection_audition.swift).
+Verified selection_editing.swift SHA-256: 1106d08387d834e41db0b1532e1be6d52a2b0f7f981295a8014a19d7839f6fdd (src/checks/rollcheck/selection_editing.swift).
+
 
 A001 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:36
 Disposition: RETIRED-REPRESENTATION
 
 A002 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:92
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/selection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
-Source context since previous assertion:
-  ;
-      const PencilVelocityFixture &fixture = *seed;
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      songview::TimelineInputItem *roll = &check.rollInput();
-      const int pianoKeyboardWidth = check.pianoKeyboardWidth();
-      const SnappedRows rows{view, *roll};
-      const Cell &a = fixture.a;
-      const Cell &b = fixture.b;
-      const DocNote &noteA = fixture.noteA;
-      const DocNote &noteB = fixture.noteB;
-      const QByteArray before = doc.smf().write();
-      const int undo = doc.undoStack()->index();
-
-      // Band-sweep audition: notes audition (self-releasing, duration in
-      // samples) as the right-drag rubber band first covers them, release
-      // early when the band leaves them (velocity-0 emission), re-audition on
-      // re-entry, all release at the drag's end, and no undo commands.
-      {
-          std::vector<int> onKeys, offKeys;
-          quint32 minDur = UINT32_MAX;
-          auto conn = QObject::connect(&view, &SongView::auditionNoteTimed, &view,
-                                       [&](int, int key, int velocity, quint32 dur) {
-                                           if (velocity > 0) {
-                                               onKeys.push_back(key);
-                                               minDur = std::min(minDur, dur);
-                                           } else {
-                                               offKeys.push_back(key);
-                                           }
-                                       });
-          const int preBandCount = doc.undoStack()->count();
-          const QPoint sweepStart(1, 0);
-          const QPoint sweepEnd(std::max(a.center.x(), b.center.x()) + 4,
-                                std::max(a.center.y(), b.center.y()) + 4);
-          view.selectionModel().clearNoteSelection();
-          // The band is provisional until release, but covered notes should
-          // use the same selection ring as the velocity drawer's live preview.
-          const qreal previewDpr = roll->devicePixelRatio();
-          const QRectF previewNoteBox = rows.noteBox(rows.noteRect(
-              view.camera().displayX(double(noteA.tick), 0.0, previewDpr),
-              view.camera().displayX(double(noteA.tick + noteA.duration), 0.0, previewDpr),
-              noteA.key));
-          checks::events::sendMouse(*roll, QEvent::MouseButtonPress, sweepStart, Qt::RightButton,
-                                    Qt::RightButton, Qt::NoModifier);
-          checks::events::sendMouse(*roll, QEvent::MouseMove, a.center + QPoint(4, 4), Qt::NoButton,
-                                    Qt::RightButton, Qt::NoModifier);
-          // The gesture queues the retained-layer rebuild through the Quick
-          // host's zero-duration coalescing timer. Drain that synchronization
-          // before captureQuickFramebuffer() requests the frame to sample.
-          checks::support::pumpQuick();
-          const QImage previewImage = check.captureQuickFramebuffer();
-          const qreal previewRasterDpr = previewImage.devicePixelRatio();
-          const int previewCenterX =
-              qRound((pianoKeyboardWidth + previewNoteBox.center().x()) * previewRasterDpr);
-          const int previewBottomY = qRound(previewNoteBox.bottom() * previewRasterDpr) - 1;
-          if (!isSelectionRingColor(previewImage.pixel(previewCenterX, previewBottomY)))
-Original expression:
-  QFAIL("band-dragged note did not show a provisional selection ring")
+Disposition: MATCHED
+Mapping: S060 — mounted framebuffer pixel has the selectionRing color on a swept note during held band.
 
 A003 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:94
-Disposition: PARTIAL
-Mapping/reason: The provisional band is not modelled as the C++ selection ring: the production grid publishes the swept notes as selected while the band is held (S012, src/checks/editorqml/tst_ShellGridInput.qml asserts the preview while held; S010, src/checks/rollqml/tst_SwiftRollSelection.qml asserts the live Selecting status) and every cancel path restores the pre-band selection (S011, src/checks/rollqml/tst_SwiftRollSelection.qml asserts noteSummary unchanged with lastCancelReason 2; S043, src/checks/editorqml/tst_ShellGridInput.qml asserts the ungrab cancel). Unproved: the original observable that the model selection stays empty during the drag — Swift reports the preview as a live selection instead.
-Source context since previous assertion:
-  ;
-          if (!view.selectionModel().noteSelection().empty())
-Original expression:
-  QFAIL("band drag committed selection before release")
+Disposition: MATCHED
+Mapping: S061 — committed note selection remains empty while the band preview is held.
 
 A004 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:97
 Disposition: MATCHED
@@ -124,7 +74,7 @@ Mapping: S002, S004
 
 A009 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:125
 Disposition: PARTIAL
-Mapping/reason: S001/S002 (src/checks/rollcheck/selection.swift, :322) assert the band audition starts and releases. Unproved: the audition's sample duration — the Swift onAudition callback carries (track, pitch, velocity) and exposes no duration, so a non-zero-length audition has no Swift observable.
+Mapping/reason: S062 (src/checks/rollcheck/selection_audition.swift:84-86) verifies a swept zero-duration note is selected but emits no positive audition; S001/S002 verify ordinary audition start/release. Unproved: the emitted sample-duration value for other swept notes, which the Swift onAudition callback does not expose.
 Source context since previous assertion:
   ;
           if (!onKeys.empty() && minDur == 0)
@@ -147,24 +97,8 @@ Disposition: MATCHED
 Mapping: S059 - establishVelocityLatch raises note B from 73 to 93 through the real modifier velocity drag and latches the pencil, so the latch-audition staging establishes the 93 latch through the pointer path rather than the seed
 
 A014 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:171
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/selection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
-Source context since previous assertion:
-  ;
-      const QByteArray before = doc.smf().write();
-      const int undo = doc.undoStack()->index();
-
-      // Empty-space press audition: a plain left press sounds its row at the
-      // latched velocity right away, glisses when the held cursor crosses
-      // rows, and releases on mouse-up — while the release in place still
-      // parks the edit cursor without touching the document. A press that
-      // grows into a draw keeps the already-sounding key ringing instead of
-      // re-attacking it.
-      {
-          const Cell e = check.findFreeCell();
-          if (e.key < 0) {
-Original expression:
-  QFAIL("no free grid cell for the press audition")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S051 — `if (e.key < 0)`/`QFAIL("no free grid cell for the press audition")` is the deleted native findFreeCell fixture precondition; the Swift staged empty-cell press audition executes at S051.
 
 A015 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:191
 Disposition: MATCHED
@@ -272,57 +206,19 @@ Original expression:
   QFAIL("the press-grown draw did not commit its note")
 
 A022 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:231
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-      }
-      while (doc.undoStack()->index() > undo)
-          doc.undoStack()->undo();
-Original expression:
-  QCOMPARE(doc.smf().write(), before)
+Disposition: MATCHED
+Mapping: S063, S080 — press-grown draw undo restores planted MIDI bytes and threshold-draw cleanup restores the pre-seed bytes.
 
 A023 | PianoRollTest::selectionPendingDrawReadout | src/checks/rollcheck/selection.cpp:238
 Disposition: RETIRED-REPRESENTATION
 
 A024 | PianoRollTest::selectionPendingDrawReadout | src/checks/rollcheck/selection.cpp:266
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/selection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
-Source context since previous assertion:
-  ;
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      songview::TimelineInputItem *roll = &check.rollInput();
-      const QByteArray before = doc.smf().write();
-      const int undo = doc.undoStack()->index();
-
-      // The pending draw note ignores note-name mode: nothing may cover the
-      // note while it is being placed, so toggling note-name mode mid-gesture
-      // must leave the preview pixel-identical. The probe uses rows too short
-      // for the settled label font, so the comparison is sensitive only to the
-      // draw preview itself.
-      {
-          const auto readoutPadding = layout::space(layout::Space::Half);
-          auto readoutFont = typography::noteName(roll->font());
-          readoutFont.setPixelSize(
-              std::max(layout::singlePixel(), readoutFont.pixelSize() - 2 * layout::singlePixel()));
-          const auto readoutMetrics = QFontMetrics(readoutFont);
-          const SongView::ViewState viewBeforeReadout = view.viewState();
-          SongView::ViewState readoutShortRows = viewBeforeReadout;
-          // Short rows where the fixed face cannot fit, so no settled name
-          // ever paints on the probed rows.
-          readoutShortRows.keyHeight =
-              double(readoutMetrics.ascent() + readoutMetrics.descent() + 2 * readoutPadding);
-          view.applyViewState(readoutShortRows);
-          view.setNoteNameMode(true);
-          const Cell readoutCell = check.findFreeCell();
-          if (readoutCell.key < 0) {
-Original expression:
-  QFAIL("no free grid cell for the draw readout probe")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S064 — `if (readoutCell.key < 0)`/`QFAIL("no free grid cell for the draw readout probe")` is the deleted native findFreeCell fixture prerequisite; Swift stages the cell for the held pending-face mode toggle at S064.
 
 A025 | PianoRollTest::selectionPendingDrawReadout | src/checks/rollcheck/selection.cpp:282
-Disposition: GAP
-Mapping/reason: Note-name mode is not ported: the production grid paints no note-name labels and exposes no note-name toggle, so the pixel-identical pending-draw comparison across a mid-gesture mode toggle has no Swift counterpart.
+Disposition: PARTIAL
+Mapping/reason: S064 (src/checks/rollcheck/selection_editing.swift:295-298) preserves the pending preview face across note-name mode; S065 (src/checks/editorqml/tst_ShellGridInput.qml:191-207) observes unchanged mounted shell-framebuffer face pixel while held. Unproved: original equality of the two complete captured frames after the mid-gesture mode toggle.
 Source context since previous assertion:
   ;
           } else {
@@ -344,45 +240,15 @@ Original expression:
   QFAIL("note-name mode changed the pending draw-note rendering")
 
 A026 | PianoRollTest::selectionPendingDrawReadout | src/checks/rollcheck/selection.cpp:290
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-              while (doc.undoStack()->index() > undoIndexBeforeReadout && doc.undoStack()->canUndo())
-                  doc.undoStack()->undo();
-          }
-          view.applyViewState(viewBeforeReadout);
-      }
-      while (doc.undoStack()->index() > undo)
-          doc.undoStack()->undo();
-Original expression:
-  QCOMPARE(doc.smf().write(), before)
+Disposition: MATCHED
+Mapping: S066, S067, S063 — readout-mode draw commits one note, undo restores planted MIDI bytes, and deferred unwind restores pre-seed MIDI bytes.
 
 A027 | PianoRollTest::selectionMinimumDrawDistance | src/checks/rollcheck/selection.cpp:297
 Disposition: RETIRED-REPRESENTATION
 
 A028 | PianoRollTest::selectionMinimumDrawDistance | src/checks/rollcheck/selection.cpp:313
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/selection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
-Source context since previous assertion:
-  ;
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      songview::TimelineInputItem *roll = &check.rollInput();
-      const int track = check.track();
-      const QByteArray before = doc.smf().write();
-      const int undo = doc.undoStack()->index();
-
-      // Drawing begins at a layout Space::One horizontal drag; a shorter
-      // gesture remains a click, while one at the threshold creates a
-      // one-snap-cell note.
-      {
-          const int drawStartDistance = layout::space(layout::Space::One);
-          const qreal belowDrawStartDistance = std::max(0.0, double(drawStartDistance) - 0.5);
-          const Cell f = check.findFreeCell();
-          if (f.key < 0) {
-Original expression:
-  QFAIL("no free grid cell for the minimum-distance draw")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S014 — `if (f.key < 0)`/`QFAIL("no free grid cell for the minimum-distance draw")` guards the deleted native findFreeCell fixture; the Swift staged free-cell threshold draw executes at S014.
 
 A029 | PianoRollTest::selectionMinimumDrawDistance | src/checks/rollcheck/selection.cpp:324
 Disposition: MATCHED
@@ -430,51 +296,20 @@ Disposition: MATCHED
 Mapping: S017
 
 A037 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:400
-Disposition: PARTIAL
-Mapping/reason: S019 (src/checks/rollcheck/selection.swift) asserts a grouped drag preserves the selection and S024 (src/checks/rollcheck/selection.swift) asserts a chord-held drag on another note re-anchors it to the grabbed note. Unproved: this slot's exact case — a velocity drag on the only selected note — is not executed, so its 'exactly the anchor stays selected' form is asserted only through the grouped and foreign-anchor cases.
-Source context since previous assertion:
-  ;
-          const NoteId bId = bMod.noteId;
-          if (view.selectionModel().noteSelection() != std::vector<NoteId>{bId})
-Original expression:
-  QFAIL("modifier velocity drag did not leave only its anchor selected")
+Disposition: MATCHED
+Mapping: S068 — the single-note velocity drag leaves exactly its anchor selected.
 
 A038 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:402
 Disposition: MATCHED
 Mapping: S020
 
 A039 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:411
-Disposition: PARTIAL
-Mapping/reason: S029 (src/checks/rollcheck/selection.swift) asserts the deferred Ctrl release toggles the pressed note out of the selection while the other stays. Unproved: the toggle-to-empty result of this slot, since the Swift fixture toggles one of two selected notes.
-Source context since previous assertion:
-  ;
-
-          // Clicks keep their ordinary meaning: a Ctrl+click toggles, deferred
-          // to release, and the release never crosses the drag threshold.
-          checks::events::sendMouse(*roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
-                                    Qt::LeftButton, Qt::ControlModifier);
-          checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, b.center, Qt::LeftButton,
-                                    Qt::NoButton, Qt::ControlModifier);
-          if (view.selectionModel().noteSelection() != std::vector<NoteId>{})
-Original expression:
-  QFAIL("Ctrl+click after a velocity drag did not keep its toggle meaning")
+Disposition: MATCHED
+Mapping: S069 — subsequent Ctrl click toggles the sole selected note off.
 
 A040 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:421
-Disposition: PARTIAL
-Mapping/reason: Related predicate S057 (checkGroupedVelocityDrag, src/checks/rollcheck/selection.swift, message "Ctrl jitter below the published platform slop remains a selection click") moves the live Ctrl press 15 px while grid.dragDistance is 15 + drawThreshold and asserts no velocity preview starts, so the jitter now exists below a published platform-derived slop (S058 covers the exact-slop crossing). Unproved: this site's toggle result itself (selection == {bId}) plus its velocity-unchanged and no-undo conjuncts for the jittered gesture, which the Swift lane asserts only for the pure deferred press/release click (S028/S029).
-Source context since previous assertion:
-  ;
-          // A vertical jitter under the drag threshold is still that click:
-          // it toggles, changes no velocity, and pushes no undo command.
-          checks::events::sendMouse(*roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
-                                    Qt::LeftButton, Qt::ControlModifier);
-          checks::events::sendMouse(*roll, QEvent::MouseMove, b.center + QPoint(0, 2), Qt::NoButton,
-                                    Qt::LeftButton, Qt::ControlModifier);
-          checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, b.center + QPoint(0, 2),
-                                    Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
-          if (view.selectionModel().noteSelection() != std::vector<NoteId>{bId})
-Original expression:
-  QFAIL("a sub-threshold Ctrl-jitter did not act as the toggle click")
+Disposition: MATCHED
+Mapping: S070 — subthreshold Ctrl jitter toggles the note on without changing velocity or history.
 
 A041 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:423
 Disposition: MATCHED
@@ -507,31 +342,16 @@ Original expression:
   QFAIL("a threshold Ctrl-drag did not start the velocity gesture")
 
 A044 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:442
-Disposition: PARTIAL
-Mapping/reason: S024 (src/checks/rollcheck/selection.swift) asserts a chord-held drag on another note re-anchors the selection to the grabbed note alone. Unproved: the threshold-crossing variant of this slot is not executed separately.
-Source context since previous assertion:
-  ;
-          if (view.selectionModel().noteSelection() != std::vector<NoteId>{bId})
-Original expression:
-  QFAIL("the threshold velocity drag did not leave only its anchor selected")
+Disposition: MATCHED
+Mapping: S071 — crossing the velocity threshold re-anchors selection to the grabbed note alone.
 
 A045 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:444
 Disposition: MATCHED
 Mapping: S020
 
 A046 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:451
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/selection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
-Source context since previous assertion:
-  ;
-
-          // With the chord still held, a different note under the cursor is
-          // edited the same way: the new crossing re-anchors the selection to
-          // the grabbed note alone and touches nothing else.
-          DocNote aBefore;
-          if (!doc.findNote(track, a.tick, uint8_t(a.key), &aBefore))
-Original expression:
-  QFAIL("note A went missing before the chord-held velocity drag")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S071 — `if (!doc.findNote(track, a.tick, uint8_t(a.key), &aBefore))` is a deleted native seed lookup before the chord-held drag; Swift holds the planted NoteID and proves re-anchoring at S071.
 
 A047 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:462
 Disposition: MATCHED
@@ -542,34 +362,16 @@ Disposition: MATCHED
 Mapping: S025
 
 A049 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:468
-Disposition: PARTIAL
-Mapping/reason: S026 (src/checks/rollcheck/selection.swift) asserts the prior note keeps velocity 100 after the chord-held drag. Unproved: the full runtime record equality of sameNoteFields (engine/smf track, on/end index, channel), since the Swift predicate observes the MIDI-visible velocity only.
-Source context since previous assertion:
-  ;
-          if (!doc.findNote(track, b.tick, uint8_t(b.key), &bAfterDrag) ||
-              !sameNoteFields(bAfterDrag, bMod))
-Original expression:
-  QFAIL("the chord-held velocity drag also adjusted the prior note")
+Disposition: MATCHED
+Mapping: S072 — the previously selected note's complete Swift note record stays unchanged after chord-held drag.
 
 A050 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:470
 Disposition: MATCHED
 Mapping: S027
 
 A051 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:479
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/selection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
-Source context since previous assertion:
-  ;
-
-          // Decisive regression: the anchor sits inside a multi-note selection.
-          // A chord velocity drag must preserve the selection and apply the
-          // same delta to every selected note from its own original velocity.
-          view.selectionModel().setNoteSelection({aId, bId});
-          DocNote aGrouped, bGrouped;
-          if (!doc.findNote(track, a.tick, uint8_t(a.key), &aGrouped) ||
-              !doc.findNote(track, b.tick, uint8_t(b.key), &bGrouped))
-Original expression:
-  QFAIL("notes A/B went missing before the grouped velocity drag")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S019 — `if (!doc.findNote(track, a.tick, uint8_t(a.key), &aGrouped) || !doc.findNote(track, b.tick, uint8_t(b.key), &bGrouped))` guards deleted native fixture lookups; Swift stages NoteIDs and proves the grouped selection persists at S019.
 
 A052 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:489
 Disposition: MATCHED
@@ -592,118 +394,36 @@ Disposition: MATCHED
 Mapping: S023
 
 A057 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:513
-Disposition: PARTIAL
-Mapping/reason: S022 (src/checks/rollcheck/selection.swift) asserts the opposite-direction repeat restores the anchor to 93 and S021 (src/checks/rollcheck/selection.swift) asserts one undo restores both fixture velocities. Unproved: the full runtime record equality of sameNoteFields beyond the MIDI-visible fields.
-Source context since previous assertion:
-  ;
-          if (!doc.findNote(track, a.tick, uint8_t(a.key), &aRepeated) ||
-              !sameNoteFields(aRepeated, aGrouped))
-Original expression:
-  QFAIL("repeating the grouped velocity drag did not restore its anchor")
+Disposition: MATCHED
+Mapping: S073 — repeated opposite grouped drag restores the anchor's complete Swift note record.
 
 A058 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:516
-Disposition: PARTIAL
-Mapping/reason: S022 (src/checks/rollcheck/selection.swift) asserts the opposite-direction repeat restores the other selected note to 100 and S021 (src/checks/rollcheck/selection.swift) asserts one undo restores both fixture velocities. Unproved: the full runtime record equality of sameNoteFields beyond the MIDI-visible fields.
-Source context since previous assertion:
-  ;
-          if (!doc.findNote(track, b.tick, uint8_t(b.key), &bRepeated) ||
-              !sameNoteFields(bRepeated, bGrouped))
-Original expression:
-  QFAIL("repeating the grouped velocity drag did not restore the other selected note")
+Disposition: MATCHED
+Mapping: S074 — repeated opposite grouped drag restores the other note's complete Swift note record.
 
 A059 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:518
-Disposition: PARTIAL
-Mapping/reason: S049 (src/checks/rollcheck/selection.swift) asserts the repeat down-drag reaches the same grouped velocities, S022 (src/checks/rollcheck/selection.swift) asserts the opposite repeat restores both velocities, S023 (src/checks/rollcheck/selection.swift) asserts the preserved selection, and S021 (src/checks/rollcheck/selection.swift) asserts history restoration. Unproved: no Swift predicate counts the repeated drag's own history entries (S020 covers the first grouped drag's single entry and S027 the chord-held drag's).
-Source context since previous assertion:
-  ;
-          if (doc.undoStack()->count() != repeatCount + 1)
-Original expression:
-  QFAIL("the repeated grouped velocity drag did not push exactly one command")
+Disposition: MATCHED
+Mapping: S075, S076 — repeat and reverse grouped velocity gestures each add exactly one history command.
 
 A060 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:529
 Disposition: MATCHED
 Mapping: S015
 
 A061 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:556
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/selection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
-Source context since previous assertion:
-  ;
-  }
-
-  void PianoRollTest::selectionNonScaleMove()
-  {
-      PianoRollFixture &check = *m_fixture;
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      songview::TimelineInputItem *roll = &check.rollInput();
-      const int track = check.track();
-      const SnappedRows rows{view, *roll};
-      const QByteArray before = doc.smf().write();
-      const int undo = doc.undoStack()->index();
-
-      // Ordinary-mode move release: with Scale Fold forced off, a plain body
-      // press (well clear of the edge resize grips) on a wide note drags the
-      // document's own note, not just a visual preview. The release must
-      // commit the same NoteId at the target position, vacate the old one,
-      // and leave exactly that id selected — and the still-selected note must
-      // answer a standard arrow nudge without being reselected. A release
-      // that only reverts the preview, or strands the next arrow, fails here.
-      {
-          const SongView::ViewState viewBefore = view.viewState();
-          const bool foldBefore = view.scaleFold();
-          view.setScaleFold(false);
-          const Cell cell = check.findFreeCell();
-          if (cell.key < 0) {
-Original expression:
-  QFAIL("no free grid cell for the non-Scale move")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S033 — `if (cell.key < 0)`/`QFAIL("no free grid cell for the non-Scale move")` guards deleted native findFreeCell fixture; Swift stages its own wide note and proves its move release at S033.
 
 A062 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:571
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/selection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
-Source context since previous assertion:
-  ;
-              view.setScaleFold(foldBefore);
-              return;
-          }
-          const Tick snap = view.grid().snapTicksAt(cell.tick);
-          const qreal dpr = roll->devicePixelRatio();
-          const qreal cellPx = view.camera().displayX(double(cell.tick + snap), 0.0, dpr) -
-                               view.camera().displayX(double(cell.tick), 0.0, dpr);
-          Tick widthTicks = snap * 4;
-          while (
-              (view.camera().displayX(double(cell.tick + widthTicks), 0.0, dpr) > roll->width() - 4 ||
-               check.isOccupied(cell.tick, widthTicks, cell.key)) &&
-              widthTicks > snap * 2)
-              widthTicks -= snap;
-          if (check.isOccupied(cell.tick, widthTicks, cell.key)) {
-Original expression:
-  QFAIL("no free span for the non-Scale move")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S033 — `if (check.isOccupied(cell.tick, widthTicks, cell.key))`/`QFAIL("no free span for the non-Scale move")` guards deleted native occupancy probing; Swift stages an unoccupied wide note and proves its move at S033.
 
 A063 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:579
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-              view.setScaleFold(foldBefore);
-              return;
-          }
-          const int undoBase = doc.undoStack()->index();
-          doc.addNote(track, cell.tick, uint8_t(cell.key), uint32_t(widthTicks), 93);
-          QCoreApplication::processEvents(); // the view model must see the note before the press
-          if (doc.undoStack()->index() != undoBase + 1)
-Original expression:
-  QFAIL("the wide non-Scale probe add did not push exactly one command")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S033 — `if (doc.undoStack()->index() != undoBase + 1)`/`QFAIL("the wide non-Scale probe add did not push exactly one command")` guards only the deleted native fixture-add operation; the Swift staged NoteID is moved at S033 and move command count is separately proved at S077.
 
 A064 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:582
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-          DocNote probe;
-          if (!doc.findNote(track, cell.tick, uint8_t(cell.key), &probe))
-Original expression:
-  QFAIL("the wide non-Scale probe note did not commit")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S033 — `if (!doc.findNote(track, cell.tick, uint8_t(cell.key), &probe))`/`QFAIL("the wide non-Scale probe note did not commit")` guards the deleted native fixture add; Swift holds the planted NoteID and proves its move at S033.
 
 A065 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:594
 Disposition: MATCHED
@@ -726,13 +446,8 @@ Disposition: MATCHED
 Mapping: S035
 
 A070 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:615
-Disposition: PARTIAL
-Mapping/reason: S036 (src/checks/rollcheck/selection.swift) asserts the move release records a new history identity, i.e. one undoable edit. Unproved: the command-count delta of undoBase + 2 — a changed history identity corroborates a commit but is not history depth.
-Source context since previous assertion:
-  ;
-          if (doc.undoStack()->index() != undoBase + 2)
-Original expression:
-  QFAIL("the non-Scale move release did not push exactly one command")
+Disposition: MATCHED
+Mapping: S077 — non-Scale move release increases undoCount by exactly one.
 
 A071 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:623
 Disposition: MATCHED
@@ -743,30 +458,12 @@ Disposition: MATCHED
 Mapping: S038
 
 A073 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:627
-Disposition: PARTIAL
-Mapping/reason: S039 (src/checks/rollcheck/selection.swift) asserts the Right nudge records a new history identity. Unproved: the command-count delta of undoBase + 3 — a changed history identity corroborates a commit but is not history depth.
-Source context since previous assertion:
-  ;
-          if (doc.undoStack()->index() != undoBase + 3)
-Original expression:
-  QFAIL("the Right nudge did not push exactly one command")
+Disposition: MATCHED
+Mapping: S078 — Right nudge increases undoCount by exactly one more.
 
 A074 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:637
-Disposition: PARTIAL
-Mapping/reason: S040 (src/checks/rollcheck/selection.swift) asserts the undo drain restores the original NoteID at its original tick, pitch and duration. Unproved: the full serialized-MIDI byte equality of this site (the Swift predicate asserts note identity and position, not the encoded document bytes).
-Source context since previous assertion:
-  ;
-          while (doc.undoStack()->index() > undoBase && doc.undoStack()->canUndo())
-              doc.undoStack()->undo();
-          view.selectionModel().clearNoteSelection();
-          view.setScaleFold(foldBefore);
-          view.applyViewState(viewBefore); // the nudge's keep-in-sight scroll must not leak
-          checks::support::pumpQuick();    // consume the restoration repaint before later probes
-      }
-      while (doc.undoStack()->index() > undo)
-          doc.undoStack()->undo();
-Original expression:
-  QCOMPARE(doc.smf().write(), before)
+Disposition: MATCHED
+Mapping: S079 — unwinding move and Right nudge restores the planted MIDI bytes.
 
 Remaining original source (closing sequence and helper bodies):
   ;
@@ -960,3 +657,66 @@ S059 is the task-86 latch-establishment predicate of establishVelocityLatch: the
 
 S059 | establishVelocityLatch | src/checks/rollcheck/selection_editing.swift
 Anchor: message "the modifier velocity drag raises note B from 73 to 93 and latches the pencil"
+
+S060 | test_bandSelectsSweptNotes | src/checks/rollqml/tst_SwiftRollSelection.qml
+Anchor: message "the held band paints the swept note's provisional selection ring"
+
+S061 | checkSelectionBandSweep | src/checks/rollcheck/selection_band.swift
+Anchor: message "band preview does not commit note selection before release"
+
+S062 | checkSelectionBandAudition | src/checks/rollcheck/selection_audition.swift
+Anchor: message "a swept zero-duration note is never auditioned"
+
+S063 | checkThresholdDrawCell | src/checks/rollcheck/selection_editing.swift
+Anchor: message "threshold draws unwind to the pre-seed MIDI bytes and history"
+
+S064 | checkThresholdDrawCell | src/checks/rollcheck/selection_editing.swift
+Anchor: message "toggling note-name mode while drawing leaves the pending note face unchanged"
+
+S065 | test_exactDrawThreshold | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "note-name mode leaves the held draw face pixel unchanged"
+
+S066 | checkThresholdDrawCell | src/checks/rollcheck/selection_editing.swift
+Anchor: message "note-name readout draw commits one note"
+
+S067 | checkThresholdDrawCell | src/checks/rollcheck/selection_editing.swift
+Anchor: message "undoing the note-name readout draw restores exact MIDI bytes"
+
+S068 | establishVelocityLatch | src/checks/rollcheck/selection_editing.swift
+Anchor: message "velocity drag on a single selected note leaves only its anchor selected"
+
+S069 | establishVelocityLatch | src/checks/rollcheck/selection_editing.swift
+Anchor: message "Ctrl click after the velocity drag toggles its sole selection off"
+
+S070 | establishVelocityLatch | src/checks/rollcheck/selection_editing.swift
+Anchor: message "subthreshold Ctrl jitter toggles the note on without editing velocity"
+
+S071 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
+Anchor: message "threshold velocity drag re-anchors to only the grabbed note"
+
+S072 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
+Anchor: message "the chord-held drag leaves the prior note untouched"
+
+S073 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
+Anchor: message "repeating the grouped velocity drag restores the anchor's complete note record"
+
+S074 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
+Anchor: message "repeating the grouped velocity drag restores the other note's complete record"
+
+S075 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
+Anchor: message "repeated grouped velocity drag pushes exactly one undo command"
+
+S076 | checkGroupedVelocityDrag | src/checks/rollcheck/selection_editing.swift
+Anchor: message "repeated reverse drag adds one command to grouped velocity history"
+
+S077 | checkSelectionNonScaleMove | src/checks/rollcheck/selection_band.swift
+Anchor: message "non-Scale move release pushes exactly one command"
+
+S078 | checkSelectionNonScaleMove | src/checks/rollcheck/selection_band.swift
+Anchor: message "Right nudge after the move pushes exactly one command"
+
+S079 | checkSelectionNonScaleMove | src/checks/rollcheck/selection_band.swift
+Anchor: message "undoing the non-Scale move and Right nudge restores exact MIDI bytes"
+
+S080 | checkThresholdDrawCell | src/checks/rollcheck/selection_editing.swift
+Anchor: message "undoing the press-grown draw restores exact MIDI bytes"

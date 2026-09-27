@@ -165,7 +165,7 @@ TestCase {
     function rollInput(surface) { return findChild(surface, "swiftRollInput") }
 
     function test_exactDrawThreshold() {
-        openRoute101()
+        var session = openRoute101()
         var surface = selectedSurface()
         var grid = surface.gridModel
         var roll = rollInput(surface)
@@ -176,11 +176,35 @@ TestCase {
                             lane.pitch)
         var cursor = grid.editCursorTick
         var before = gridNotes(grid).length
+        var previewX = pointFor(grid, tick + grid.snapTicks / 2, lane.pitch).x
+        var previewPoint = roll.mapToItem(shell.contentItem, previewX, cell.y)
+        waitForRendering(shell.contentItem)
+        var idle = grabImage(shell.contentItem)
+        var dpr = idle.width / shell.contentItem.width
+        var px = Math.floor(previewPoint.x * dpr)
+        var py = Math.floor(previewPoint.y * dpr)
         mousePress(roll, cell.x, cell.y, Qt.LeftButton)
         mouseMove(roll, cell.x + grid.drawThreshold, cell.y, -1, Qt.LeftButton)
         verify(waitForNative(function() {
             return grid.statusText.indexOf("Drawing") !== -1
         }, 5000), "horizontal travel at the font-derived slop enters the draw gesture")
+        verify(grid.scene.pianoDrawPreviewFill.rowCount() > 0,
+               "the mounted pending draw publishes its note face while held")
+        waitForRendering(shell.contentItem)
+        var plain = grabImage(shell.contentItem)
+        var face = [plain.red(px, py), plain.green(px, py), plain.blue(px, py)]
+        verify(plain.red(px, py) !== idle.red(px, py)
+               || plain.green(px, py) !== idle.green(px, py)
+               || plain.blue(px, py) !== idle.blue(px, py),
+               "the held pending note paints a distinct face on the shell framebuffer")
+        shell.shellPresenter.activate("view.note_names")
+        verify(waitForNative(function() { return session.noteNameMode }, 5000),
+               "the menu changes note-name mode during a held draw")
+        waitForRendering(shell.contentItem)
+        var named = grabImage(shell.contentItem)
+        verify(named.red(px, py) === face[0] && named.green(px, py) === face[1]
+               && named.blue(px, py) === face[2],
+               "note-name mode leaves the held draw face pixel unchanged")
         mouseRelease(roll, cell.x + grid.drawThreshold, cell.y, Qt.LeftButton)
         verify(waitForNative(function() {
             return gridNotes(grid).some(function(note) {
@@ -190,6 +214,47 @@ TestCase {
         }, 5000), "the threshold drag commits exactly one grid-sized note")
         compare(gridNotes(grid).length, before + 1, "threshold draw changes the note count once")
         compare(grid.editCursorTick, cursor, "drawing a note never parks the edit cursor")
+        shell.shellPresenter.activate("view.note_names")
+    }
+
+    function test_modifierVelocityToggle() {
+        openRoute101()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var roll = rollInput(surface)
+        var lane = freeLane(grid, surface, 8)
+        verify(lane !== null, "a free lane accepts a modifier velocity note")
+        var snap = grid.snapTicks
+        var inset = Math.max(1, Math.floor(snap / 4))
+        var first = pointFor(grid, lane.tick + inset, lane.pitch)
+        var last = pointFor(grid, lane.tick + 4 * snap - inset, lane.pitch)
+        dragLeft(roll, first.x, first.y, last.x, last.y)
+        var note = gridNotes(grid).find(function(candidate) {
+            return candidate.tick === lane.tick && candidate.pitch === lane.pitch
+                && candidate.duration === 4 * snap
+        })
+        verify(note !== undefined && note.selected, "the draw publishes its selected velocity note")
+        var face = findChild(surface, "gridNote_" + note.id)
+        var center = face.mapToItem(roll, face.width / 2, face.height / 2)
+        var travel = Math.ceil(grid.dragDistance) + 6
+        var velocity = note.velocity
+        mousePress(roll, center.x, center.y, Qt.LeftButton, Qt.ControlModifier)
+        mouseMove(roll, center.x, center.y + travel, -1, Qt.LeftButton, Qt.ControlModifier)
+        mouseRelease(roll, center.x, center.y + travel, Qt.LeftButton, Qt.ControlModifier)
+        verify(waitForNative(function() {
+            var changed = noteById(grid, note.id)
+            return changed && changed.velocity === Math.max(1, velocity - travel)
+                && changed.selected
+        }, 5000), "the mounted Ctrl drag changes only its selected anchor velocity")
+        mouseClick(roll, center.x, center.y, Qt.LeftButton, Qt.ControlModifier)
+        verify(waitForNative(function() { return !noteById(grid, note.id).selected }, 5000),
+               "a Ctrl click after velocity commits toggles the anchor off")
+        mousePress(roll, center.x, center.y, Qt.LeftButton, Qt.ControlModifier)
+        mouseMove(roll, center.x, center.y + 1, -1, Qt.LeftButton, Qt.ControlModifier)
+        mouseRelease(roll, center.x, center.y + 1, Qt.LeftButton, Qt.ControlModifier)
+        var toggled = noteById(grid, note.id)
+        verify(toggled && toggled.selected && toggled.velocity === Math.max(1, velocity - travel),
+               "subthreshold Ctrl jitter toggles on without another velocity edit")
     }
 
     function test_emptyClickSlopAndDoubleDraw() {
@@ -382,6 +447,28 @@ TestCase {
             return leadingId !== 0
         }, 5000), "leading note is drawn")
 
+        var trailingFace = findChild(surface, "gridNote_" + trailingId)
+        var trailingCenter = trailingFace.mapToItem(
+            roll, trailingFace.width / 2, trailingFace.height / 2)
+        mouseClick(roll, trailingCenter.x, trailingCenter.y, Qt.LeftButton)
+        var leadingFace = findChild(surface, "gridNote_" + leadingId)
+        var leadingEdge = leadingFace.mapToItem(
+            roll, leadingFace.width - 1, leadingFace.height / 2)
+        mousePress(roll, leadingEdge.x, leadingEdge.y, Qt.LeftButton, Qt.ControlModifier)
+        mouseRelease(roll, leadingEdge.x, leadingEdge.y, Qt.LeftButton, Qt.ControlModifier)
+        verify(noteById(grid, trailingId).selected && noteById(grid, leadingId).selected,
+               "stationary Ctrl edge joins the grabbed note to the selected note")
+        var growEdge = pointFor(grid, tick + 16 * snap, pitch)
+        mousePress(roll, leadingEdge.x, leadingEdge.y, Qt.LeftButton, Qt.ControlModifier)
+        mouseMove(roll, growEdge.x, growEdge.y, -1, Qt.LeftButton, Qt.ControlModifier)
+        mouseRelease(roll, growEdge.x, growEdge.y, Qt.LeftButton, Qt.ControlModifier)
+        verify(waitForNative(function() {
+            var aNote = noteById(grid, trailingId)
+            var bNote = noteById(grid, leadingId)
+            return aNote && bNote && aNote.duration === 7 * snap
+                && bNote.duration === 7 * snap && aNote.selected && bNote.selected
+        }, 5000), "the mounted Ctrl edge drag commits both selected resize durations")
+
         var trailing = noteById(grid, trailingId)
         var shrinkFrom = pointFor(grid, trailing.tick + trailing.duration, pitch)
         var shrinkTo = pointFor(grid, trailing.tick, pitch)
@@ -487,7 +574,7 @@ TestCase {
         mouseMove(roll, band.ex, band.ey, -1, Qt.RightButton)
         verify(waitForNative(function() {
             var current = noteById(grid, target.id)
-            return current && current.selected
+            return current && !current.selected && grid.statusText.indexOf("Selecting") !== -1
         }, 5000), "the band previews its selection while held")
         roll.forceActiveFocus(Qt.OtherFocusReason)
         keyClick(Qt.Key_Escape)
@@ -564,7 +651,7 @@ TestCase {
         mouseMove(roll, band.ex, band.ey, -1, Qt.RightButton)
         verify(waitForNative(function() {
             var current = noteById(grid, target.id)
-            return current && current.selected
+            return current && !current.selected && grid.statusText.indexOf("Selecting") !== -1
         }, 5000), "the band previews its selection while held")
         return band
     }

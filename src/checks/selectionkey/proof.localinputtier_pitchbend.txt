@@ -34,10 +34,10 @@ test_noteCommandsRouteThroughMenuAndKey, so S009-S012 execute on the current
 tst_ShellMenus.qml; no PASS is re-claimed for that lane by this pass.
 
 Verification: the mapped mounted predicates execute on the shell-pitch-bend lane
-(ShellQmlTests.swift:64-65); this bookkeeping pass read the fresh recording at
-build/proof-evidence/shell-pitch-bend.json and did not execute the lane. The
-now-frozen counterpart src/checks/editorqml/tst_ShellPitchBend.qml carries the
-SHA-256
+(ShellQmlTests.swift:64-65). At the task-41b snapshot, this pass read the
+recording at build/proof-evidence/shell-pitch-bend.json without executing the lane.
+The then-frozen counterpart src/checks/editorqml/tst_ShellPitchBend.qml carried
+the SHA-256
 08ceeb8116bb7780925ce2ce0fea4aa474ac1406713d7c9475b60f74350bba27 (1373 lines,
 re-pinned by task 41b), and the anchors
 cited below resolve to :920 (S013), :925 (S014), :938 (S015), :951 (S016), :956
@@ -54,135 +54,15 @@ observables (A013-A015, A019, A034, A035, A040, A041); the mounted solo, mute an
 transport state replaces native masks and action counters (A019-A021, A031, A034,
 A035); revision or curve equality replaces SMF byte equality (A023, A026, A028,
 A037); and the item's activeFocus replaces the native focus-window identity (A018,
-A029). Six rows stay PARTIAL: A010, A011, A038, A039 (the Roll-focus staging and
-observation carry no message anchor and the native focus-window identity has no
-QML counterpart) and A014, A015 (no check injects an autorepeat event).
+A029). Seven rows stay PARTIAL: A009 (painted range absent, native time-selection identity unproved), A010, A011, A038, A039 (mounted Roll focus now has literal anchors, but native band-focus requests and QGuiApplication focus identities remain unproved), and A014, A015 (no check injects an autorepeat event).
 
-Disposition tally: 41 sites: 25 MATCHED, 6 PARTIAL, 4 GAP, 6 RETIRED-REPRESENTATION.
+Disposition tally: 41 sites: 27 MATCHED, 7 PARTIAL, 0 GAP, 7 RETIRED-REPRESENTATION.
+Command: deno task verify:shell --filter shell-pitch-bend --verbose; deno task verify:shell --verbose; deno task verify (task-95 implementer-observed GREEN after review fixes)
+Result: PASS 1/26 shell-pitch-bend, PASS 26/26 full shell, PASS 36/36 full verify; frozen tst_ShellPitchBend.qml SHA-256 98e78ed43e1fca7e80d2374e4369f7c84e105b2cc577b1e111ec7ed3b17c2769.
 
 A001 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:115
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the live keymap binding queries have no Swift counterpart.
-Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  // Selection keyboard routing, protected-local-input tier: the pitch-bend
-  // overlay. The Quick popup session visibly owns the keyboard: the graph-local
-  // Solo toggles one mask once without touching the window action, Copy and
-  // unrelated roll commands cannot escape to the window owner, graph strokes
-  // push exactly one undoable vertex with popup-local Undo, the numeric
-  // TextInput keeps its own Copy and validator contract, Escape closes the
-  // popup, and window commands resume exactly once afterward (plan 9).
-
-  #include "checks/selectionkey/tst_localinputtier.h"
-
-  #include "checks/support/eventsynth.h"
-
-  #include "ui/pitchbendeditor.hpp"
-  #include "ui/pitchbendgraph.hpp"
-  #include "ui/songview/editactions.h"
-  #include "ui/songview/quick/quickpopupsession.h"
-  #include "ui/songview/quick/timelinequickview.h"
-  #include "ui/songview/timelinebandlayout.h"
-  #include "ui/songviewmodel.h"
-
-  #include <QApplication>
-  #include <QClipboard>
-  #include <QEvent>
-  #include <QGuiApplication>
-  #include <QMetaObject>
-  #include <QPointer>
-  #include <QQuickItem>
-  #include <QQuickWindow>
-  #include <QRect>
-  #include <QSignalSpy>
-
-  #include <QtTest>
-
-  #include <algorithm>
-  #include <cstdint>
-
-  namespace {
-
-  constexpr int kTrack = 0;
-  constexpr uint8_t kBendController = DOC_CC_BEND;
-
-  QQuickItem *findPopupItem(songview::QuickPopupSession *session, const QString &name)
-  {
-      // Popup content is QObject-parented to the session (only visually under
-      // the window), so a window-subtree findChild cannot see it. Search the
-      // session's content instead: the same subtree the retired native view's
-      // rootObject() search covered.
-      QQuickItem *content = session ? session->contentItem() : nullptr;
-      if (!content)
-          return nullptr;
-      if (content->objectName() == name)
-          return content;
-      return content->findChild<QQuickItem *>(name);
-  }
-
-  bool hasCompletedQuickFocus(const QQuickWindow *window, const QQuickItem *item)
-  {
-      return window && item && item->hasActiveFocus() && window->activeFocusItem() == item &&
-             QGuiApplication::focusObject() == item && QGuiApplication::focusWindow() == window;
-  }
-
-  checks::async_wait::Result requestCompletedQuickFocus(QQuickWindow *window, QQuickItem *item,
-                                                        Qt::FocusReason reason)
-  {
-      const QPointer<QQuickWindow> liveWindow(window);
-      const QPointer<QQuickItem> liveItem(item);
-      if (!liveWindow || !liveItem)
-          return checks::async_wait::Result::Destroyed;
-      liveWindow->requestActivate();
-      liveItem->forceActiveFocus(reason);
-      return checks::async_wait::waitUntil([liveWindow, liveItem] { return liveWindow && liveItem; },
-                                           [liveWindow, liveItem] {
-                                               return liveWindow && liveItem &&
-                                                      hasCompletedQuickFocus(liveWindow, liveItem);
-                                           },
-                                           5000, 10);
-  }
-
-  // Delivers the standard platform Undo shortcut through the shared canvas
-  // window, so "the popup claimed Undo" means the real QKeySequence
-  // arbitration, not a synthesized undo call.
-  bool sendStandardUndo(QQuickWindow *window)
-  {
-      if (!window)
-          return false;
-      const auto bindings = QKeySequence::keyBindings(QKeySequence::Undo);
-      if (bindings.empty())
-          return false;
-      const QKeyCombination binding = bindings.front()[0];
-      QKeyEvent overrideEvent(QEvent::ShortcutOverride, binding.key(), binding.keyboardModifiers());
-      QCoreApplication::sendEvent(window, &overrideEvent);
-      if (!overrideEvent.isAccepted())
-          return false;
-      return selectionkey::deliverKey(window, binding.key(), binding.keyboardModifiers());
-  }
-
-  void drainPopupDeletes()
-  {
-      QCoreApplication::processEvents();
-      QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
-  }
-
-  } // namespace
-
-  void SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys()
-  {
-      SongView &view = this->view();
-      SongDocument &document = this->document();
-      const selectionkey::ScenarioRollback rollback(view, document);
-      activateShellForCommands();
-      const auto opener = selectionkey::firstBinding(QStringLiteral("roll.pitch_bend"));
-      const auto solo = selectionkey::firstBinding(QStringLiteral("roll.solo_tracks"));
-      const auto copy = selectionkey::firstBinding(QStringLiteral("roll.copy"));
-      const auto mute = selectionkey::firstBinding(QStringLiteral("roll.mute_tracks"));
-Original expression:
-  QVERIFY2(opener.has_value() && solo.has_value() && copy.has_value() && mute.has_value(),
-               "pitch-bend/Solo/Copy/Mute have no single-key bindings")
+Disposition: MATCHED
+Mapping: S047 - the mounted popup journey requires the registered G, S, Ctrl+C, and M sequences before delivering the bound keys.
 
 A002 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:118
 Disposition: RETIRED-REPRESENTATION
@@ -237,57 +117,19 @@ Original expression:
   QCOMPARE(pitchBendTriggered.count(), 0)
 
 A006 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:137
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the reserved-note insertion below is pure document state a
-presenter-level Swift check could in principle assert, but none does. Original
-predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-      view.selectTrack(kTrack);
-      view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
-      selectionkey::settle();
-      const std::optional<NoteRef> note = addNote(kTrack, 4800, 62, 96);
-Original expression:
-  QVERIFY2(note.has_value(),
-               "the reserved tick-4800 pitch-bend note could not be inserted and resolved")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S038 - the C++ addNote(kTrack, 4800, 62, 96) insertion guard QVERIFY2(note.has_value(), "the reserved tick-4800 pitch-bend note could not be inserted and resolved") at git show a1244957:src/checks/selectionkey/localinputtier_pitchbend.cpp:137 is superseded by the mounted, painted, selected fixture note at a reachable tick (controller-approved tick deviation).
 
 A007 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:140
 Disposition: RETIRED-REPRESENTATION
 
 A008 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:152
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; note publication through the production model observes native
-async state and cannot be established by a presenter-level Swift check.
-Source context since previous assertion:
-  ;
-
-      // The production opener has no tool-mode predicate: its exact inputs are
-      // one selected primary-track note, a published ViewNote, and Roll origin.
-      view.ensureTickVisible(note->note.tick + note->note.duration / 2);
-      const NoteId routedNoteId = note->id;
-      const auto notePublished = [&] {
-          const auto &notes = view.model().notes;
-          return std::any_of(notes.cbegin(), notes.cend(), [routedNoteId](const ViewNote &candidate) {
-              return candidate.noteId == routedNoteId;
-          });
-      };
-Original expression:
-  QVERIFY2(checks::async_wait::waitUntil([] { return true; }, notePublished, 5000, 10) ==
-                   checks::async_wait::Result::Ready,
-               qPrintable(QStringLiteral("pitch-bend note was not published: model-notes=%1 "
-                                         "primary=%2")
-                              .arg(view.model().notes.size())
-                              .arg(view.selectionModel().primaryTrack())))
+Disposition: MATCHED
+Mapping: S038, S039
 
 A009 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:165
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the opener target staging (primary track, selection, no time
-selection) observes production selection state through the native view and
-cannot be established by a presenter-level Swift check.
+Disposition: PARTIAL
+Mapping/reason: S038, S039, S040, S048 - the mounted opener targets the one selected, painted primary-track note, with no painted time-selection range before G. PARTIAL: native global time-selection identity/inactive state is not exposed by the mounted model; absence of a painted range alone does not prove it.
 Source context since previous assertion:
   ;
       view.selectionModel().setNoteSelection({routedNoteId});
@@ -307,13 +149,7 @@ Original expression:
 
 A010 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:171
 Disposition: PARTIAL
-Mapping/reason: PARTIAL - the mounted G journey stages the same Roll-origin
-focus with roll.forceActiveFocus(Qt.OtherFocusReason) and the unmessaged
-tryCompare(roll, "activeFocus", true) (tst_ShellPitchBend.qml:563-564, helper
-openViaG). The fork's clause asserts the native band-focus request returned true
-(focusedTimelineBand(Roll) accepted), an API with no QML counterpart, and the
-mounted stage carries no message anchor, so what remains unproved is the
-messaged focus predicate and the native request half.
+Mapping/reason: S041 - the mounted roll requests focus and confirms activeFocus before G; the native focusTimelineBand(Roll) return value has no QML counterpart, so native band-request success remains unproved.
 Source context since previous assertion:
   ;
 Original expression:
@@ -322,12 +158,7 @@ Original expression:
 
 A011 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:179
 Disposition: PARTIAL
-Mapping/reason: PARTIAL - the Roll-origin focus observation
-(focusedTimelineBand() == Roll plus the native window's activeFocusItem and the
-QGuiApplication::focusObject/focusWindow identity) maps to that same unmessaged
-roll activeFocus stage (tst_ShellPitchBend.qml:563-564). No message-anchored
-predicate asserts the roll's QML focus and the native focus-window identity has
-no QML counterpart, so that half stays unproved.
+Mapping/reason: S041 - the mounted roll has QML activeFocus before G; native focusedTimelineBand and QGuiApplication focusObject/focusWindow identity remain unproved.
 Source context since previous assertion:
   ;
       const auto rollHasFocus = [&] {
@@ -408,15 +239,7 @@ Original expression:
 
 A014 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:226
 Disposition: PARTIAL
-Mapping/reason: S014 - with the graph focused (graph.forceActiveFocus plus the
-unmessaged tryCompare(graph, "activeFocus", true) at tst_ShellPitchBend.qml:921-922)
-the journey re-delivers G and asserts the same popup instance is still mounted
-(:836-838), so a repeated opener key never reopens the editor. PARTIAL: the
-fork's clause is consumption of an autorepeat press (TimelineKeyInput.autoRepeat
-= true); the mounted popup does forward event.isAutoRepeat to the presenter
-(PitchBendPopup.qml:78), but no check injects an autorepeat event (QtTest
-keyClick never sets isAutoRepeat) and the lane has no consumption or
-trigger-count observable, so the autorepeat half stays unproved.
+Mapping/reason: S042, S043 - a second G delivered to the focused graph retains the same popup and revision. PARTIAL: keyClick does not inject autoRepeat=true or establish native handleEditKey consumption for that repeat.
 Source context since previous assertion:
   ;
       const songview::TimelineKeyInput repeatedPitchBend{
@@ -431,12 +254,7 @@ Original expression:
 
 A015 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:228
 Disposition: PARTIAL
-Mapping/reason: S014 - after the second delivered G the journey still shows the
-same single popup (tst_ShellPitchBend.qml:923-925) and the unchanged document
-revision (:839-840), the count-free equivalent of still-one trigger. PARTIAL:
-the fork's QCOMPARE(pitchBendTriggered.count(), 1) has no Swift QAction or
-trigger counter behind it and the second delivery is a plain keyClick rather
-than an autorepeat event, so the autorepeat half stays unproved.
+Mapping/reason: S042, S043, S044 - the repeated ordinary G retains one popup and does not change the document. PARTIAL: no autorepeat event is injected and no native QAction trigger count is observed.
 Source context since previous assertion:
   ;
 Original expression:
@@ -888,14 +706,7 @@ Original expression:
 
 A038 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:406
 Disposition: PARTIAL
-Mapping/reason: PARTIAL - no messaged predicate covers the post-popup Roll-focus
-staging. The mounted journey stages it with
-opened.roll.forceActiveFocus(Qt.OtherFocusReason) and the unmessaged
-tryCompare(opened.roll, "activeFocus", true) (tst_ShellPitchBend.qml:1032-1033)
-before measuring the resumed window Solo, but the fork's clause asserts the
-native band-focus request returned true (an API with no QML counterpart) and the
-mounted stage carries no message anchor, so what remains unproved is the messaged
-focus predicate and the native request half.
+Mapping/reason: S045 - after popup dismissal, the roll regains QML activeFocus without a new explicit request. PARTIAL: the native focusTimelineBand(Roll) request return value is unproved.
 Source context since previous assertion:
   ;
 
@@ -907,12 +718,7 @@ Original expression:
 
 A039 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:408
 Disposition: PARTIAL
-Mapping/reason: PARTIAL - the post-popup Roll-focus observation
-(focusedTimelineBand() == Roll plus the native activeFocusItem and
-QGuiApplication::focusObject/focusWindow identity) maps to that same unmessaged
-roll activeFocus stage (tst_ShellPitchBend.qml:1032-1033); no messaged predicate
-asserts the roll's QML focus and the native focus-window identity has no QML
-counterpart, so that half stays unproved.
+Mapping/reason: S045, S046 - the dismissed popup restores roll activeFocus and routed Right edits the selected note. PARTIAL: native focusedTimelineBand and QGuiApplication focusObject/focusWindow identity remain unproved.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1069,3 +875,39 @@ Anchor: message "the numeric field absorbs Solo"
 
 S036 | test_keyboardUndoWhileOpenRestoresCurve | src/checks/editorqml/tst_ShellPitchBend.qml
 Anchor: message "undo keeps the graph focused"
+
+S037 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: message "pitch-bend"
+
+S038 | test_graphKeyOwnershipAndRepeatedOpener | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the G opener targets the published, selected primary-track note"
+
+S039 | test_graphKeyOwnershipAndRepeatedOpener | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the selected G target remains painted on the mounted roll"
+
+S040 | test_graphKeyOwnershipAndRepeatedOpener | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the pitch opener owns exactly one selected primary-track note"
+
+S041 | openViaG | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the mounted roll takes keyboard focus before the pitch opener G"
+
+S042 | test_graphKeyOwnershipAndRepeatedOpener | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "repeat G never reopens the editor"
+
+S043 | test_graphKeyOwnershipAndRepeatedOpener | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "a second eligible G leaves the captured editor open"
+
+S044 | test_graphKeyOwnershipAndRepeatedOpener | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "a second delivered G never edits the document"
+
+S045 | test_graphKeyOwnershipAndRepeatedOpener | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the dismissed pitch popup returns keyboard focus to the roll"
+
+S046 | test_graphKeyOwnershipAndRepeatedOpener | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "a real roll-focus Right edits the selected note after pitch dismissal"
+
+S047 | test_graphKeyOwnershipAndRepeatedOpener | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the four opener and popup commands bind the delivered single-key sequences"
+
+S048 | openViaG | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the selected pitch opener has no painted time-selection range"

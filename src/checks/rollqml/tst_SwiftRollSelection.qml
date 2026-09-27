@@ -233,14 +233,45 @@ TestCase {
         var surf = surface()
         publishedNoteCount(g)
         verify(clearSelection(roll, surf, g), "the suite starts with nothing selected")
-        var target = firstBandedNote(g, surf, roll, true)
-        verify(target !== null, "a fully visible note takes a band")
-        var band = bandForNote(roll, surf, target.id)
-        verify(band !== null, "the band fits inside the roll")
+        var target = null
+        var band = null
+        for (var candidate of gridNotes(g)) {
+            var candidateItem = noteItem(surf, candidate.id)
+            var candidateBand = bandForNote(roll, surf, candidate.id)
+            if (!candidate.selected && candidateBand && candidateItem
+                    && candidateItem.width >= 8) {
+                target = candidate
+                band = candidateBand
+                break
+            }
+        }
+        verify(target !== null, "a fully visible wide note takes a band")
+        var item = noteItem(surf, target.id)
+        band.ex = band.sx + (item.width + 6) / 2
+        var bordersBefore = g.scene.pianoNoteBordersAndSelection.rowCount()
         sweepBand(roll, band)
         verify(waitForNative(function() {
             return g.statusText.indexOf("Selecting") !== -1
         }, 5000), "the held band previews its selection")
+        var held = noteById(g, target.id)
+        verify(held && !held.selected,
+               "the band ring is provisional while committed selection stays empty")
+        verify(g.scene.pianoNoteBordersAndSelection.rowCount() > bordersBefore,
+               "the held band adds a provisional selection frame to the scene")
+        waitForRendering(testCase)
+        var image = grabImage(testCase)
+        var center = item.mapToItem(testCase, item.width - 3, 0.25)
+        var dpr = image.width / testCase.width
+        var px = Math.floor(center.x * dpr)
+        var py = Math.floor(center.y * dpr)
+        var ink = parseInt(g.palette.selectionRing.slice(1), 16)
+        var red = (ink >> 16) & 255
+        var green = (ink >> 8) & 255
+        var blue = ink & 255
+        verify(Math.abs(image.red(px, py) - red) <= 2
+               && Math.abs(image.green(px, py) - green) <= 2
+               && Math.abs(image.blue(px, py) - blue) <= 2,
+               "the held band paints the swept note's provisional selection ring")
         mouseRelease(roll, band.ex, band.ey, Qt.RightButton)
         verify(waitForNative(function() {
             var current = noteById(g, target.id)

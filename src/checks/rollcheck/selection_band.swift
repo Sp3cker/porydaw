@@ -48,6 +48,8 @@ func checkSelectionBandSweep(_ report: CheckReport, session: DocumentSession) {
     roll.beginRightPointer(x: 1, y: 0)
     roll.updateRightPointer(x: max(a.x + a.width, b.x + b.width) + 4,
                             y: max(a.y + a.height, b.y + b.height) + 4)
+    report.expect(session.selectedNotes.isEmpty, cppID: id,
+                  message: "band preview does not commit note selection before release")
     roll.endRightPointer(x: max(a.x + a.width, b.x + b.width) + 4,
                          y: max(a.y + a.height, b.y + b.height) + 4)
     report.expect(session.selectedNotes.isSuperset(of: Set(added)), cppID: id,
@@ -87,6 +89,7 @@ func checkSelectionNonScaleMove(_ report: CheckReport, session: DocumentSession)
         return
     }
     let addedIdentity = session.document.history.currentIdentity
+    let addedCount = session.document.history.undoCount
     defer {
         session.clearSelectedNotes()
         if session.document.history.currentIdentity != addedIdentity {
@@ -97,6 +100,10 @@ func checkSelectionNonScaleMove(_ report: CheckReport, session: DocumentSession)
         }
         _ = session.document.history.undoDocument()
         session.setSelectedNotes(initialSelection)
+    }
+    guard let plantedBytes = try? session.document.captureSave().bytes else {
+        report.fail(id, "could not capture planted move-note MIDI bytes")
+        return
     }
     let roll = PianoGrid(session: session)
     roll.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
@@ -127,6 +134,8 @@ func checkSelectionNonScaleMove(_ report: CheckReport, session: DocumentSession)
                   message: "move release retains the moved note as the selection")
     report.expect(session.document.history.currentIdentity != previewHistory, cppID: id,
                   message: "move release commits one undoable edit")
+    report.expect(session.document.history.undoCount == addedCount + 1, cppID: id,
+                  message: "non-Scale move release pushes exactly one command")
     let movedIdentity = session.document.history.currentIdentity
     roll.performCommand(command: EditCommand.nudgeRight.rawValue)
     report.expect(session.document.note(noteID).map {
@@ -136,6 +145,8 @@ func checkSelectionNonScaleMove(_ report: CheckReport, session: DocumentSession)
                   message: "right nudge retains the moved note as the selection")
     report.expect(session.document.history.currentIdentity != movedIdentity, cppID: id,
                   message: "right nudge commits an undoable edit")
+    report.expect(session.document.history.undoCount == addedCount + 2, cppID: id,
+                  message: "Right nudge after the move pushes exactly one command")
     if session.document.history.currentIdentity != movedIdentity {
         _ = session.document.history.undoDocument()
     }
@@ -148,6 +159,8 @@ func checkSelectionNonScaleMove(_ report: CheckReport, session: DocumentSession)
             } == true, cppID: id,
             message: "undo restores the original note identity and position")
     }
+    report.expect((try? session.document.captureSave().bytes) == plantedBytes, cppID: id,
+                  message: "undoing the non-Scale move and Right nudge restores exact MIDI bytes")
 }
 
 @MainActor

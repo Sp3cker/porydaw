@@ -758,6 +758,15 @@ TestCase {
         tryVerify(function() {
             return JSON.parse(grid.noteSummary).some(function(n) { return n.selected })
         }, 5000, "the real roll click selects the anchor note")
+        const overlay = grid.scene.pianoOverlay
+        let paintedRange = false
+        for (let row = 0; row < overlay.rowCount() && !paintedRange; ++row) {
+            const rect = overlay.data(overlay.index(row, 0), 0)
+            paintedRange = String(rect.fillColor).toLowerCase()
+                === String(grid.palette.selectionFill).toLowerCase()
+        }
+        verify(!paintedRange,
+               "the selected pitch opener has no painted time-selection range")
         if (hoverNoteEdge) {
             const face = findChild(view, "gridNote_" + note.id)
             const edge = face.mapToItem(roll, face.width - grid.baseFontPx / 6,
@@ -769,7 +778,8 @@ TestCase {
                        "the note-edge cursor binding observes the roll kind")
         }
         roll.forceActiveFocus(Qt.OtherFocusReason)
-        tryCompare(roll, "activeFocus", true)
+        tryCompare(roll, "activeFocus", true, 5000,
+                   "the mounted roll takes keyboard focus before the pitch opener G")
         keyClick(Qt.Key_G)
         const editor = view.pitchBendPresenter
         tryCompare(editor, "isOpen", true)
@@ -1127,15 +1137,34 @@ TestCase {
         const selected = JSON.parse(opened.grid.noteSummary).find(function(note) {
             return note.selected
         })
+        const copySequence = "Ctrl+C"
+        verify(shell.shellPresenter.actionSequences("roll.pitch_bend").indexOf("G") !== -1
+               && shell.shellPresenter.actionSequences("roll.solo_tracks").indexOf("S") !== -1
+               && shell.shellPresenter.actionSequences("roll.copy").indexOf(copySequence) !== -1
+               && shell.shellPresenter.actionSequences("roll.mute_tracks").indexOf("M") !== -1,
+               "the four opener and popup commands bind the delivered single-key sequences")
+        const target = JSON.parse(opened.grid.noteSummary).find(function(note) {
+            return note.id === opened.note.id
+        })
+        verify(target && target.selected && target.track === opened.grid.trackIndex,
+               "the G opener targets the published, selected primary-track note")
+        verify(findChild(opened.view, "gridNote_" + target.id) !== null,
+               "the selected G target remains painted on the mounted roll")
+        compare(JSON.parse(opened.grid.noteSummary).filter(function(note) {
+            return note.selected
+        }).length, 1, "the pitch opener owns exactly one selected primary-track note")
         verify(graph !== null && selected !== undefined, "the delivered G focuses a selected note's graph")
         const revision = opened.grid.appliedRevisionText
         compare(findChild(opened.view, "pitchBendPopup"), opened.popup,
                 "delivered G opens the editor exactly once")
         graph.forceActiveFocus(Qt.OtherFocusReason)
-        tryCompare(graph, "activeFocus", true)
+        tryCompare(graph, "activeFocus", true, 5000,
+                   "the repeated G arrives with the pitch graph focused")
         keyClick(Qt.Key_G)
         compare(findChild(opened.view, "pitchBendPopup"), opened.popup,
                 "repeat G never reopens the editor")
+        compare(opened.editor.isOpen, true,
+                "a second eligible G leaves the captured editor open")
         compare(opened.grid.appliedRevisionText, revision,
                 "a second delivered G never edits the document")
 
@@ -1170,6 +1199,17 @@ TestCase {
         compare(opened.grid.appliedRevisionText, revision,
                 "graph ownership leaves the document unchanged")
         probe.destroy()
+        keyClick(Qt.Key_Escape)
+        tryCompare(opened.editor, "isOpen", false, 5000,
+                   "Escape dismisses the repeated-opener pitch popup")
+        tryCompare(opened.roll, "activeFocus", true, 5000,
+                   "the dismissed pitch popup returns keyboard focus to the roll")
+        keyClick(Qt.Key_Right)
+        tryVerify(function() {
+            return JSON.parse(opened.grid.noteSummary).some(function(note) {
+                return note.id === target.id && note.tick === target.tick + opened.grid.snapTicks
+            })
+        }, 5000, "a real roll-focus Right edits the selected note after pitch dismissal")
     }
 
     function test_graphVertexDeleteUndoAndWindowSoloResumption() {
