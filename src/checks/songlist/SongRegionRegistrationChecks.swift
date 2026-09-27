@@ -34,21 +34,26 @@ private enum RegionImages {
     static let numericMusicTable = "\t.equiv MUSIC_PLAYER_BGM, 0\n\t.equiv MUSIC_PLAYER_SE1, 1\n\ngSongTable::\n\tsong mus_dummy, MUSIC_PLAYER_BGM, 0\n\tsong se_use_item, MUSIC_PLAYER_SE1, 1\n\tsong se_last, MUSIC_PLAYER_SE1, 1\n\tsong dummy_song_header, MUSIC_PLAYER_BGM, 0\n\tsong dummy_song_header, MUSIC_PLAYER_BGM, 0\n\tsong mus_first, MUSIC_PLAYER_BGM, 0\n\tsong mus_last, MUSIC_PLAYER_BGM, 0\n\tsong mus_valcheck, MUSIC_PLAYER_BGM, 0\n\tsong ph_one, MUSIC_PLAYER_SE1, 1\n\tsong ph_two, MUSIC_PLAYER_SE1, 1\n"
     static let numericMusicHeader = "#define MUS_DUMMY           0\n#define SE_USE_ITEM         1\n#define SE_LAST             2\n#define START_MUS           5\n#define MUS_FIRST           5\n#define MUS_LAST            6\n#define MUS_VALCHECK        7\n#define END_MUS             7\n#define PH_ONE              8\n#define PH_TWO              9\n#define MUS_NONE            0xFFFF\n"
     static let numericMusicCharmap = "MUS_DUMMY = 00 00\nSE_USE_ITEM = 01 00\nSE_LAST = 02 00\nMUS_FIRST = 05 00\nMUS_LAST = 06 00\nMUS_VALCHECK = 07 00\nPH_ONE = 08 00\nPH_TWO = 09 00\n"
+    // Fork songregistry.cpp:313-321,382-385,1055-1058 aligns replaced final lines to each list's slash column.
+    static let numericMusicDebug = "#define SOUND_LIST_BGM \\\n    X(MUS_FIRST) \\\n    X(MUS_LAST)  \\\n    X(MUS_VALCHECK)\n\n#define SOUND_LIST_SE \\\n    X(SE_USE_ITEM) \\\n    X(SE_LAST)\n"
     static let numericRemovedTable = "\t.equiv MUSIC_PLAYER_BGM, 0\n\t.equiv MUSIC_PLAYER_SE1, 1\n\ngSongTable::\n\tsong mus_dummy, MUSIC_PLAYER_BGM, 0\n\tsong se_use_item, MUSIC_PLAYER_SE1, 1\n\tsong se_last, MUSIC_PLAYER_SE1, 1\n\tsong dummy_song_header, MUSIC_PLAYER_BGM, 0\n\tsong dummy_song_header, MUSIC_PLAYER_BGM, 0\n\tsong mus_first, MUSIC_PLAYER_BGM, 0\n\tsong mus_last, MUSIC_PLAYER_BGM, 0\n\tsong mus_dummy, MUSIC_PLAYER_BGM, 0\n\tsong ph_one, MUSIC_PLAYER_SE1, 1\n\tsong ph_two, MUSIC_PLAYER_SE1, 1\n"
     static let numericRemovedHeader = "#define MUS_DUMMY           0\n#define SE_USE_ITEM         1\n#define SE_LAST             2\n#define START_MUS           5\n#define MUS_FIRST           5\n#define MUS_LAST            6\n#define END_MUS             6\n#define PH_ONE              8\n#define PH_TWO              9\n#define MUS_NONE            0xFFFF\n"
     static let numericRemovedCharmap = "MUS_DUMMY = 00 00\nSE_USE_ITEM = 01 00\nSE_LAST = 02 00\nMUS_FIRST = 05 00\nMUS_LAST = 06 00\nPH_ONE = 08 00\nPH_TWO = 09 00\n"
     static let numericReuseTable = "\t.equiv MUSIC_PLAYER_BGM, 0\n\t.equiv MUSIC_PLAYER_SE1, 1\n\ngSongTable::\n\tsong mus_dummy, MUSIC_PLAYER_BGM, 0\n\tsong se_use_item, MUSIC_PLAYER_SE1, 1\n\tsong se_last, MUSIC_PLAYER_SE1, 1\n\tsong dummy_song_header, MUSIC_PLAYER_BGM, 0\n\tsong dummy_song_header, MUSIC_PLAYER_BGM, 0\n\tsong mus_first, MUSIC_PLAYER_BGM, 0\n\tsong mus_last, MUSIC_PLAYER_BGM, 0\n\tsong mus_reuse, MUSIC_PLAYER_BGM, 0\n\tsong ph_one, MUSIC_PLAYER_SE1, 1\n\tsong ph_two, MUSIC_PLAYER_SE1, 1\n"
     static let numericReuseHeader = "#define MUS_DUMMY           0\n#define SE_USE_ITEM         1\n#define SE_LAST             2\n#define START_MUS           5\n#define MUS_FIRST           5\n#define MUS_LAST            6\n#define MUS_REUSE           7\n#define END_MUS             7\n#define PH_ONE              8\n#define PH_TWO              9\n#define MUS_NONE            0xFFFF\n"
     static let numericReuseCharmap = "MUS_DUMMY = 00 00\nSE_USE_ITEM = 01 00\nSE_LAST = 02 00\nMUS_FIRST = 05 00\nMUS_LAST = 06 00\nMUS_REUSE = 07 00\nPH_ONE = 08 00\nPH_TWO = 09 00\n"
+    static let numericReuseDebug = "#define SOUND_LIST_BGM \\\n    X(MUS_FIRST) \\\n    X(MUS_LAST)  \\\n    X(MUS_REUSE)\n\n#define SOUND_LIST_SE \\\n    X(SE_USE_ITEM) \\\n    X(SE_LAST)\n"
     static let numericSeTable = "\t.equiv MUSIC_PLAYER_BGM, 0\n\t.equiv MUSIC_PLAYER_SE1, 1\n\ngSongTable::\n\tsong mus_dummy, MUSIC_PLAYER_BGM, 0\n\tsong se_use_item, MUSIC_PLAYER_SE1, 1\n\tsong se_last, MUSIC_PLAYER_SE1, 1\n\tsong se_valcheck, MUSIC_PLAYER_SE1, 1\n\tsong dummy_song_header, MUSIC_PLAYER_BGM, 0\n\tsong mus_first, MUSIC_PLAYER_BGM, 0\n\tsong mus_last, MUSIC_PLAYER_BGM, 0\n\tsong ph_one, MUSIC_PLAYER_SE1, 1\n\tsong ph_two, MUSIC_PLAYER_SE1, 1\n"
     static let numericSeHeader = "#define MUS_DUMMY           0\n#define SE_USE_ITEM         1\n#define SE_LAST             2\n#define SE_VALCHECK         3\n#define START_MUS           5\n#define MUS_FIRST           5\n#define MUS_LAST            6\n#define END_MUS             6\n#define PH_ONE              7\n#define PH_TWO              8\n#define MUS_NONE            0xFFFF\n"
     static let numericSeCharmap = "MUS_DUMMY = 00 00\nSE_USE_ITEM = 01 00\nSE_LAST = 02 00\nSE_VALCHECK = 03 00\nMUS_FIRST = 05 00\nMUS_LAST = 06 00\nPH_ONE = 07 00\nPH_TWO = 08 00\n"
     static let aliasMusicTable = "\t.equiv MUSIC_PLAYER_BGM, 0\n\t.equiv MUSIC_PLAYER_SE1, 1\n\ngSongTable::\n\tsong mus_dummy, MUSIC_PLAYER_BGM, 0\n\tsong se_use_item, MUSIC_PLAYER_SE1, 1\n\tsong se_last, MUSIC_PLAYER_SE1, 1\n\tsong dummy_song_header, MUSIC_PLAYER_BGM, 0\n\tsong dummy_song_header, MUSIC_PLAYER_BGM, 0\n\tsong mus_first, MUSIC_PLAYER_BGM, 0\n\tsong mus_last, MUSIC_PLAYER_BGM, 0\n\tsong mus_oldcheck, MUSIC_PLAYER_BGM, 0\n\tsong ph_one, MUSIC_PLAYER_SE1, 1\n\tsong ph_two, MUSIC_PLAYER_SE1, 1\n"
     static let aliasMusicHeader = "#define MUS_DUMMY           0\n#define SE_USE_ITEM         1\n#define SE_LAST             2\n#define END_SE              SE_LAST\n#define START_MUS           5\n#define MUS_FIRST           5\n#define MUS_LAST            6\n#define MUS_OLDCHECK        7\n#define END_MUS             MUS_OLDCHECK\n#define PH_ONE              8\n#define PH_TWO              9\n#define MUS_NONE            0xFFFF\n"
     static let aliasMusicCharmap = "MUS_DUMMY = 00 00\nSE_USE_ITEM = 01 00\nSE_LAST = 02 00\nMUS_FIRST = 05 00\nMUS_LAST = 06 00\nMUS_OLDCHECK = 07 00\nPH_ONE = 08 00\nPH_TWO = 09 00\n"
+    static let aliasMusicDebug = "static const u8 *const sBGMNames[END_MUS - START_MUS + 1];\n#define SOUND_LIST_BGM \\\n    X(MUS_FIRST) \\\n    X(MUS_LAST)  \\\n    X(MUS_OLDCHECK)\n\n#define SOUND_LIST_SE \\\n    X(SE_USE_ITEM) \\\n    X(SE_LAST)\n"
     static let aliasSeTable = "\t.equiv MUSIC_PLAYER_BGM, 0\n\t.equiv MUSIC_PLAYER_SE1, 1\n\ngSongTable::\n\tsong mus_dummy, MUSIC_PLAYER_BGM, 0\n\tsong se_use_item, MUSIC_PLAYER_SE1, 1\n\tsong se_last, MUSIC_PLAYER_SE1, 1\n\tsong se_oldcheck, MUSIC_PLAYER_SE1, 1\n\tsong dummy_song_header, MUSIC_PLAYER_BGM, 0\n\tsong mus_first, MUSIC_PLAYER_BGM, 0\n\tsong mus_last, MUSIC_PLAYER_BGM, 0\n\tsong mus_oldcheck, MUSIC_PLAYER_BGM, 0\n\tsong ph_one, MUSIC_PLAYER_SE1, 1\n\tsong ph_two, MUSIC_PLAYER_SE1, 1\n"
     static let aliasSeHeader = "#define MUS_DUMMY           0\n#define SE_USE_ITEM         1\n#define SE_LAST             2\n#define SE_OLDCHECK         3\n#define END_SE              SE_OLDCHECK\n#define START_MUS           5\n#define MUS_FIRST           5\n#define MUS_LAST            6\n#define MUS_OLDCHECK        7\n#define END_MUS             MUS_OLDCHECK\n#define PH_ONE              8\n#define PH_TWO              9\n#define MUS_NONE            0xFFFF\n"
     static let aliasSeCharmap = "MUS_DUMMY = 00 00\nSE_USE_ITEM = 01 00\nSE_LAST = 02 00\nSE_OLDCHECK = 03 00\nMUS_FIRST = 05 00\nMUS_LAST = 06 00\nMUS_OLDCHECK = 07 00\nPH_ONE = 08 00\nPH_TWO = 09 00\n"
+    static let aliasSeDebug = "static const u8 *const sBGMNames[END_MUS - START_MUS + 1];\n#define SOUND_LIST_BGM \\\n    X(MUS_FIRST) \\\n    X(MUS_LAST)  \\\n    X(MUS_OLDCHECK)\n\n#define SOUND_LIST_SE \\\n    X(SE_USE_ITEM) \\\n    X(SE_LAST)     \\\n    X(SE_OLDCHECK)\n"
 }
 
 private func stageRegionFixture(_ fixtureRoot: String, name: String, alias: Bool) throws -> RegionFixture {
@@ -114,11 +119,16 @@ private func runNumericRegionChecks(_ report: CheckReport, fixtureRoot: String) 
         report.expectEqual(expected: Data(RegionImages.numericMusicCharmap.utf8),
                            actual: try music.read("charmap.txt"), cppID: id,
                            what: "Numeric music insertion shifts the exact phoneme charmap bytes")
-        report.expectEqual(expected: true, actual: try music.debugEntry("MUS_VALCHECK", inSe: false),
-                           cppID: id, what: "Numeric music debug entry lands in SOUND_LIST_BGM")
+        report.expectEqual(expected: Data(RegionImages.numericMusicDebug.utf8),
+                           actual: try music.read("src/debug.c"), cppID: id,
+                           what: "Numeric music debug entry lands in SOUND_LIST_BGM")
         report.expectEqual(expected: music.linker, actual: try music.read("ld_script.ld"), cppID: id,
                            what: "Numeric music insertion leaves linker bytes untouched")
         try SongRegistration.unregister(root: music.root, label: "mus_valcheck", constant: "MUS_VALCHECK")
+        let removedStatus = SongRegistration.status(root: music.root, label: "mus_valcheck",
+                                                     constant: "MUS_VALCHECK")
+        report.expectEqual(expected: false, actual: removedStatus.inSongTable, cppID: id,
+                           what: "A019 numeric removal unregisters the music table entry")
         report.expectEqual(expected: Data(RegionImages.numericRemovedTable.utf8),
                            actual: try music.read("sound/song_table.inc"), cppID: id,
                            what: "A022 removal restores the fallback table slot before phonemes")
@@ -133,9 +143,11 @@ private func runNumericRegionChecks(_ report: CheckReport, fixtureRoot: String) 
                            what: "A028 removal returns the complete original debug image")
         report.expectEqual(expected: music.linker, actual: try music.read("ld_script.ld"), cppID: id,
                            what: "A030 removal keeps the complete original linker image")
-        report.expectEqual(expected: 7, actual: SongRegistration.plan(root: music.root,
-                           label: "mus_reuse", constant: "MUS_REUSE",
-                           player: "MUSIC_PLAYER_BGM").songId, cppID: id,
+        let reusePlan = SongRegistration.plan(root: music.root, label: "mus_reuse",
+                                               constant: "MUS_REUSE", player: "MUSIC_PLAYER_BGM")
+        report.expectEqual(expected: true, actual: reusePlan.repointEndMus, cppID: id,
+                           what: "A020 numeric removal leaves END_MUS ready to advance on reuse")
+        report.expectEqual(expected: 7, actual: reusePlan.songId, cppID: id,
                            what: "A032 next music registration reuses the removed ID seven")
         report.expectEqual(expected: 7, actual: try SongRegistration.register(root: music.root,
                            label: "mus_reuse", constant: "MUS_REUSE", player: "MUSIC_PLAYER_BGM"),
@@ -149,8 +161,9 @@ private func runNumericRegionChecks(_ report: CheckReport, fixtureRoot: String) 
         report.expectEqual(expected: Data(RegionImages.numericReuseCharmap.utf8),
                            actual: try music.read("charmap.txt"), cppID: id,
                            what: "Music re-registration preserves all charmap entries")
-        report.expectEqual(expected: true, actual: try music.debugEntry("MUS_REUSE", inSe: false),
-                           cppID: id, what: "Music re-registration restores BGM debug-list placement")
+        report.expectEqual(expected: Data(RegionImages.numericReuseDebug.utf8),
+                           actual: try music.read("src/debug.c"), cppID: id,
+                           what: "Music re-registration restores BGM debug-list placement")
         report.expectEqual(expected: music.linker, actual: try music.read("ld_script.ld"), cppID: id,
                            what: "Music re-registration leaves the full linker image intact")
     } catch { report.fail(id, "numeric region scenario failed: \(error)") }
@@ -164,6 +177,9 @@ private func runAliasRegionChecks(_ report: CheckReport, fixtureRoot: String) {
         report.expectEqual(expected: 7, actual: try SongRegistration.register(root: fixture.root,
                            label: "mus_oldcheck", constant: "MUS_OLDCHECK", player: "MUSIC_PLAYER_BGM"),
                            cppID: id, what: "A036 symbolic music registration allocates ID seven")
+        report.expectEqual(expected: true, actual: SongRegistration.status(root: fixture.root,
+                           label: "mus_oldcheck", constant: "MUS_OLDCHECK").inSongTable,
+                           cppID: id, what: "A035 symbolic registration occupies a music table slot")
         report.expectEqual(expected: Data(RegionImages.aliasMusicTable.utf8),
                            actual: try fixture.read("sound/song_table.inc"), cppID: id,
                            what: "Symbolic music registration preserves exact table bytes")
@@ -173,8 +189,9 @@ private func runAliasRegionChecks(_ report: CheckReport, fixtureRoot: String) {
         report.expectEqual(expected: Data(RegionImages.aliasMusicCharmap.utf8),
                            actual: try fixture.read("charmap.txt"), cppID: id,
                            what: "A039 MUS_OLDCHECK charmap entry encodes 07 00")
-        report.expectEqual(expected: true, actual: try fixture.debugEntry("MUS_OLDCHECK", inSe: false),
-                           cppID: id, what: "Symbolic music debug entry lands in the BGM list")
+        report.expectEqual(expected: Data(RegionImages.aliasMusicDebug.utf8),
+                           actual: try fixture.read("src/debug.c"), cppID: id,
+                           what: "Symbolic music debug entry lands in the BGM list")
         report.expectEqual(expected: fixture.linker, actual: try fixture.read("ld_script.ld"), cppID: id,
                            what: "Symbolic music insertion preserves linker image")
         let status = SongRegistration.status(root: fixture.root, label: "mus_oldcheck", constant: "MUS_OLDCHECK")
@@ -192,8 +209,9 @@ private func runAliasRegionChecks(_ report: CheckReport, fixtureRoot: String) {
         report.expectEqual(expected: Data(RegionImages.aliasSeCharmap.utf8),
                            actual: try fixture.read("charmap.txt"), cppID: id,
                            what: "Symbolic SE charmap preserves region adjacency")
-        report.expectEqual(expected: true, actual: try fixture.debugEntry("SE_OLDCHECK", inSe: true),
-                           cppID: id, what: "A044 symbolic SE debug entry lands after SOUND_LIST_SE")
+        report.expectEqual(expected: Data(RegionImages.aliasSeDebug.utf8),
+                           actual: try fixture.read("src/debug.c"), cppID: id,
+                           what: "A044 symbolic SE debug entry lands after SOUND_LIST_SE")
         report.expectEqual(expected: 3, actual: try SongRegistration.register(root: fixture.root,
                            label: "se_oldcheck", constant: "SE_OLDCHECK", player: "MUSIC_PLAYER_SE1"),
                            cppID: id, what: "A046 re-registering symbolic SE keeps the original ID")
@@ -206,13 +224,9 @@ private func runAliasRegionChecks(_ report: CheckReport, fixtureRoot: String) {
         report.expectEqual(expected: Data(RegionImages.aliasSeCharmap.utf8),
                            actual: try fixture.read("charmap.txt"), cppID: id,
                            what: "Re-registering symbolic SE leaves the entire charmap intact")
-        report.expectEqual(expected: true, actual: try fixture.debugEntry("SE_OLDCHECK", inSe: true),
-                           cppID: id, what: "Re-registering symbolic SE retains its debug entry in SOUND_LIST_SE")
-        report.expectEqual(expected: false, actual: try fixture.debugEntry("SE_OLDCHECK", inSe: false),
-                           cppID: id, what: "Re-registering symbolic SE does not place its debug entry in SOUND_LIST_BGM")
-        let repeatedDebug = String(decoding: try fixture.read("src/debug.c"), as: UTF8.self)
-        report.expectEqual(expected: 2, actual: repeatedDebug.components(separatedBy: "X(SE_OLDCHECK)").count,
-                           cppID: id, what: "Re-registering symbolic SE leaves exactly one debug entry")
+        report.expectEqual(expected: Data(RegionImages.aliasSeDebug.utf8),
+                           actual: try fixture.read("src/debug.c"), cppID: id,
+                           what: "Re-registering symbolic SE leaves exactly one debug entry")
         report.expectEqual(expected: fixture.linker, actual: try fixture.read("ld_script.ld"), cppID: id,
                            what: "Re-registering symbolic SE leaves linker bytes intact")
         runStrandedRegionChecks(report, fixtureRoot: fixtureRoot)
@@ -231,6 +245,7 @@ private enum RegionJourneyImages {
     static let vacatedTable = "\t.equiv MUSIC_PLAYER_BGM, 0\n\t.equiv MUSIC_PLAYER_SE1, 1\n\ngSongTable::\n\tsong mus_dummy, MUSIC_PLAYER_BGM, 0\n\tsong se_use_item, MUSIC_PLAYER_SE1, 1\n\tsong se_last, MUSIC_PLAYER_SE1, 1\n\tsong se_oldcheck, MUSIC_PLAYER_SE1, 1\n\tsong dummy_song_header, MUSIC_PLAYER_BGM, 0\n\tsong mus_first, MUSIC_PLAYER_BGM, 0\n\tsong mus_last, MUSIC_PLAYER_BGM, 0\n\tsong mus_oldcheck, MUSIC_PLAYER_BGM, 0\n\tsong mus_dummy, MUSIC_PLAYER_BGM, 0\n\tsong ph_one, MUSIC_PLAYER_SE1, 1\n\tsong ph_two, MUSIC_PLAYER_SE1, 1\n"
     static let vacatedHeader = "#define MUS_DUMMY           0\n#define SE_USE_ITEM         1\n#define SE_LAST             2\n#define SE_OLDCHECK         3\n#define END_SE              SE_OLDCHECK\n#define START_MUS           5\n#define MUS_FIRST           5\n#define MUS_LAST            6\n#define MUS_OLDCHECK        7\n#define END_MUS             MUS_OLDCHECK\n#define PH_ONE              9\n#define PH_TWO              10\n#define MUS_NONE            0xFFFF\n"
     static let vacatedCharmap = "MUS_DUMMY = 00 00\nSE_USE_ITEM = 01 00\nSE_LAST = 02 00\nSE_OLDCHECK = 03 00\nMUS_FIRST = 05 00\nMUS_LAST = 06 00\nMUS_OLDCHECK = 07 00\nPH_ONE = 09 00\nPH_TWO = 0A 00\n"
+    // The stranded input is hand-staged with one-space continuations; fork songregistry.cpp:1254-1255 strips only the removed final entry.
     static let vacatedDebug = "static const u8 *const sBGMNames[END_MUS - START_MUS + 1];\n#define SOUND_LIST_BGM \\\n    X(MUS_FIRST) \\\n    X(MUS_LAST) \\\n    X(MUS_OLDCHECK)\n\n#define SOUND_LIST_SE \\\n    X(SE_USE_ITEM) \\\n    X(SE_LAST) \\\n    X(SE_OLDCHECK)\n"
     static let refillTable = "\t.equiv MUSIC_PLAYER_BGM, 0\n\t.equiv MUSIC_PLAYER_SE1, 1\n\ngSongTable::\n\tsong mus_dummy, MUSIC_PLAYER_BGM, 0\n\tsong se_use_item, MUSIC_PLAYER_SE1, 1\n\tsong se_last, MUSIC_PLAYER_SE1, 1\n\tsong se_oldcheck, MUSIC_PLAYER_SE1, 1\n\tsong dummy_song_header, MUSIC_PLAYER_BGM, 0\n\tsong mus_first, MUSIC_PLAYER_BGM, 0\n\tsong mus_last, MUSIC_PLAYER_BGM, 0\n\tsong mus_oldcheck, MUSIC_PLAYER_BGM, 0\n\tsong mus_refill, MUSIC_PLAYER_BGM, 0\n\tsong ph_one, MUSIC_PLAYER_SE1, 1\n\tsong ph_two, MUSIC_PLAYER_SE1, 1\n"
     static let refillHeader = "#define MUS_DUMMY           0\n#define SE_USE_ITEM         1\n#define SE_LAST             2\n#define SE_OLDCHECK         3\n#define END_SE              SE_OLDCHECK\n#define START_MUS           5\n#define MUS_FIRST           5\n#define MUS_LAST            6\n#define MUS_OLDCHECK        7\n#define MUS_REFILL          8\n#define END_MUS             MUS_REFILL\n#define PH_ONE              9\n#define PH_TWO              10\n#define MUS_NONE            0xFFFF\n"
@@ -239,6 +254,10 @@ private enum RegionJourneyImages {
     static let reuseSourceTable = "\t.equiv MUSIC_PLAYER_BGM, 0\n\t.equiv MUSIC_PLAYER_SE1, 1\n\ngSongTable::\n\tsong mus_dummy, MUSIC_PLAYER_BGM, 0\n\tsong se_use_item, MUSIC_PLAYER_SE1, 1\n\tsong se_last, MUSIC_PLAYER_SE1, 1\n\tsong se_oldcheck, MUSIC_PLAYER_SE1, 1\n\tsong dummy_song_header, MUSIC_PLAYER_BGM, 0\n\tsong mus_first, MUSIC_PLAYER_BGM, 0\n\tsong mus_last, MUSIC_PLAYER_BGM, 0\n\tsong mus_oldcheck, MUSIC_PLAYER_BGM, 0\n\tsong mus_reuse_source, MUSIC_PLAYER_BGM, 0\n\tsong ph_one, MUSIC_PLAYER_SE1, 1\n\tsong ph_two, MUSIC_PLAYER_SE1, 1\n"
     static let reuseSourceHeader = "#define MUS_DUMMY           0\n#define SE_USE_ITEM         1\n#define SE_LAST             2\n#define SE_OLDCHECK         3\n#define END_SE              SE_OLDCHECK\n#define START_MUS           5\n#define MUS_FIRST           5\n#define MUS_LAST            6\n#define MUS_OLDCHECK        7\n#define MUS_REUSE_SOURCE    8\n#define END_MUS             MUS_REUSE_SOURCE\n#define PH_ONE              9\n#define PH_TWO              10\n#define MUS_NONE            0xFFFF\n"
     static let reuseSourceCharmap = "MUS_DUMMY = 00 00\nSE_USE_ITEM = 01 00\nSE_LAST = 02 00\nSE_OLDCHECK = 03 00\nMUS_FIRST = 05 00\nMUS_LAST = 06 00\nMUS_OLDCHECK = 07 00\nMUS_REUSE_SOURCE = 08 00\nPH_ONE = 09 00\nPH_TWO = 0A 00\n"
+    // Unlike the staged image above, these entries were generated by the fork writer's slash-column rule.
+    static let reuseSourceDebug = "static const u8 *const sBGMNames[END_MUS - START_MUS + 1];\n#define SOUND_LIST_BGM \\\n    X(MUS_FIRST) \\\n    X(MUS_LAST)  \\\n    X(MUS_OLDCHECK) \\\n    X(MUS_REUSE_SOURCE)\n\n#define SOUND_LIST_SE \\\n    X(SE_USE_ITEM) \\\n    X(SE_LAST)     \\\n    X(SE_OLDCHECK)\n"
+    static let vacatedProductionDebug = "static const u8 *const sBGMNames[END_MUS - START_MUS + 1];\n#define SOUND_LIST_BGM \\\n    X(MUS_FIRST) \\\n    X(MUS_LAST)  \\\n    X(MUS_OLDCHECK)\n\n#define SOUND_LIST_SE \\\n    X(SE_USE_ITEM) \\\n    X(SE_LAST)     \\\n    X(SE_OLDCHECK)\n"
+    static let refillProductionDebug = "static const u8 *const sBGMNames[END_MUS - START_MUS + 1];\n#define SOUND_LIST_BGM \\\n    X(MUS_FIRST) \\\n    X(MUS_LAST)  \\\n    X(MUS_OLDCHECK) \\\n    X(MUS_REFILL)\n\n#define SOUND_LIST_SE \\\n    X(SE_USE_ITEM) \\\n    X(SE_LAST)     \\\n    X(SE_OLDCHECK)\n"
     static let extraTable = "\t.equiv MUSIC_PLAYER_BGM, 0\n\t.equiv MUSIC_PLAYER_SE1, 1\n\ngSongTable::\n\tsong mus_dummy, MUSIC_PLAYER_BGM, 0\n\tsong se_use_item, MUSIC_PLAYER_SE1, 1\n\tsong se_last, MUSIC_PLAYER_SE1, 1\n\tsong se_oldcheck, MUSIC_PLAYER_SE1, 1\n\tsong se_extra, MUSIC_PLAYER_SE1, 1\n\tsong mus_first, MUSIC_PLAYER_BGM, 0\n\tsong mus_last, MUSIC_PLAYER_BGM, 0\n\tsong mus_oldcheck, MUSIC_PLAYER_BGM, 0\n\tsong mus_refill, MUSIC_PLAYER_BGM, 0\n\tsong ph_one, MUSIC_PLAYER_SE1, 1\n\tsong ph_two, MUSIC_PLAYER_SE1, 1\n"
     static let extraHeader = "#define MUS_DUMMY           0\n#define SE_USE_ITEM         1\n#define SE_LAST             2\n#define SE_OLDCHECK         3\n#define SE_EXTRA            4\n#define END_SE              SE_EXTRA\n#define START_MUS           5\n#define MUS_FIRST           5\n#define MUS_LAST            6\n#define MUS_OLDCHECK        7\n#define MUS_REFILL          8\n#define END_MUS             MUS_REFILL\n#define PH_ONE              9\n#define PH_TWO              10\n#define MUS_NONE            0xFFFF\n"
     static let extraCharmap = "MUS_DUMMY = 00 00\nSE_USE_ITEM = 01 00\nSE_LAST = 02 00\nSE_OLDCHECK = 03 00\nSE_EXTRA = 04 00\nMUS_FIRST = 05 00\nMUS_LAST = 06 00\nMUS_OLDCHECK = 07 00\nMUS_REFILL = 08 00\nPH_ONE = 09 00\nPH_TWO = 0A 00\n"
@@ -287,6 +306,9 @@ private func runStrandedRegionChecks(_ report: CheckReport, fixtureRoot: String)
                            what: "A060 migrated straggler registration is complete")
         try SongRegistration.unregister(root: fixture.root, label: "mus_straggler",
                                         constant: "MUS_STRAGGLER")
+        report.expectEqual(expected: false, actual: SongRegistration.status(root: fixture.root,
+                           label: "mus_straggler", constant: "MUS_STRAGGLER").inSongTable,
+                           cppID: id, what: "A061 migrated song removal unregisters its table entry")
         report.expectEqual(expected: Data(RegionJourneyImages.vacatedTable.utf8),
                            actual: try fixture.read("sound/song_table.inc"), cppID: id,
                            what: "Removing migrated song leaves reusable music slot eight")
@@ -346,8 +368,9 @@ private func runOverflowRegionChecks(_ report: CheckReport, fixtureRoot: String)
         report.expectEqual(expected: Data(RegionJourneyImages.reuseSourceCharmap.utf8),
                            actual: try fixture.read("charmap.txt"), cppID: id,
                            what: "Reuse-source charmap shifts phoneme IDs")
-        report.expectEqual(expected: true, actual: try fixture.debugEntry("MUS_REUSE_SOURCE", inSe: false),
-                           cppID: id, what: "Reuse-source debug entry belongs in the BGM list")
+        report.expectEqual(expected: Data(RegionJourneyImages.reuseSourceDebug.utf8),
+                           actual: try fixture.read("src/debug.c"), cppID: id,
+                           what: "Reuse-source debug entry belongs in the BGM list")
         report.expectEqual(expected: fixture.linker, actual: try fixture.read("ld_script.ld"), cppID: id,
                            what: "Reuse-source does not alter linker image")
         try SongRegistration.unregister(root: fixture.root, label: "mus_reuse_source",
@@ -361,13 +384,9 @@ private func runOverflowRegionChecks(_ report: CheckReport, fixtureRoot: String)
         report.expectEqual(expected: Data(RegionJourneyImages.vacatedCharmap.utf8),
                            actual: try fixture.read("charmap.txt"), cppID: id,
                            what: "Source removal preserves all shifted charmap IDs")
-        let afterSourceRemoval = String(decoding: try fixture.read("src/debug.c"), as: UTF8.self)
-        report.expectEqual(expected: false, actual: afterSourceRemoval.contains("X(MUS_REUSE_SOURCE)"),
-                           cppID: id, what: "Source removal erases the retired debug entry")
-        report.expectEqual(expected: true, actual: try fixture.debugEntry("MUS_OLDCHECK", inSe: false),
-                           cppID: id, what: "Source removal retains the prior BGM entry in its list")
-        report.expectEqual(expected: true, actual: try fixture.debugEntry("SE_OLDCHECK", inSe: true),
-                           cppID: id, what: "Source removal retains the SE entry in its list")
+        report.expectEqual(expected: Data(RegionJourneyImages.vacatedProductionDebug.utf8),
+                           actual: try fixture.read("src/debug.c"), cppID: id,
+                           what: "Source removal erases the retired debug entry")
         report.expectEqual(expected: fixture.linker, actual: try fixture.read("ld_script.ld"), cppID: id,
                            what: "Source removal preserves linker bytes")
         report.expectEqual(expected: 8, actual: SongRegistration.plan(root: fixture.root,
@@ -385,8 +404,9 @@ private func runOverflowRegionChecks(_ report: CheckReport, fixtureRoot: String)
         report.expectEqual(expected: Data(RegionJourneyImages.refillCharmap.utf8),
                            actual: try fixture.read("charmap.txt"), cppID: id,
                            what: "Refill retains exact charmap image")
-        report.expectEqual(expected: true, actual: try fixture.debugEntry("MUS_REFILL", inSe: false),
-                           cppID: id, what: "Refill adds its debug entry to SOUND_LIST_BGM")
+        report.expectEqual(expected: Data(RegionJourneyImages.refillProductionDebug.utf8),
+                           actual: try fixture.read("src/debug.c"), cppID: id,
+                           what: "Refill adds its debug entry to SOUND_LIST_BGM")
         report.expectEqual(expected: fixture.linker, actual: try fixture.read("ld_script.ld"), cppID: id,
                            what: "Refill does not alter linker bytes")
         report.expectEqual(expected: 4, actual: try SongRegistration.register(root: fixture.root,
