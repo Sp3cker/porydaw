@@ -85,6 +85,79 @@ func checkTimelineInsertBlankTimeTracks(_ report: CheckReport, session: Document
 }
 
 @MainActor
+func checkTimelineInsertRejectedScope(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::timelineInsertRejectedScope"
+    withKeyboardSeed(report, session: session, id: id) { _, seed in
+        guard session.document.canAddTrack,
+              let emptyTrack = session.document.addTrack(voice: 0),
+              emptyTrack != seed.track,
+              session.document.notes(in: emptyTrack).isEmpty else {
+            report.fail(id, "could not provision a distinct empty track")
+            return
+        }
+        let unusedTrack = session.document.engineTracks.usedTrackCount
+        guard unusedTrack < 16 else {
+            report.fail(id, "no unallocated track index remains for the rejected scope")
+            return
+        }
+        let originalTrack = session.selectedTrack
+        let originalSelection = session.timeSelection
+        let originalCursor = session.editCursor
+        defer {
+            session.selectedTrack = originalTrack
+            session.applyTimeSelection(originalSelection)
+            session.editCursor = originalCursor
+        }
+        session.selectPrimaryTrack(emptyTrack)
+        let range = TimeRange(startTick: seed.tick + 2 * seed.snap,
+                              endTick: seed.tick + 3 * seed.snap)
+        session.applyTimeSelection(AutomationTimeSelection(
+            range: range, scope: .tracks([emptyTrack])))
+        session.editCursor = range.endTick + seed.snap
+        guard session.selectedTrack == emptyTrack,
+              session.selectedTracks == [emptyTrack],
+              session.timeSelection == AutomationTimeSelection(
+                  range: range, scope: .tracks([emptyTrack])) else {
+            report.fail(id, "could not stage the valid track selection before the refused inputs")
+            return
+        }
+        // Serialized SMF bytes are opaque: capture them before either rejected input.
+        let bytes = coreTimeBytes(session.document)
+        let revision = session.document.revision
+        let history = session.document.history.currentIdentity
+        let undoIndex = session.document.history.undoIndex
+        let undoCount = session.document.history.undoCount
+        let cursor = session.editCursor
+        session.selectPrimaryTrack(unusedTrack)
+        report.expect(session.selectedTrack == emptyTrack
+                      && session.selectedTracks == [emptyTrack]
+                      && session.timeSelection == AutomationTimeSelection(
+                          range: range, scope: .tracks([emptyTrack]))
+                      && session.editCursor == cursor
+                      && coreTimeBytes(session.document) == bytes
+                      && session.document.revision == revision
+                      && session.document.history.currentIdentity == history
+                      && session.document.history.undoIndex == undoIndex
+                      && session.document.history.undoCount == undoCount,
+                      cppID: id,
+                      message: "selecting an unallocated track refuses the primary change without touching selection, cursor, song, or history")
+        session.adjustTrackScope(track: unusedTrack, action: .plain)
+        report.expect(session.selectedTrack == emptyTrack
+                      && session.selectedTracks == [emptyTrack]
+                      && session.timeSelection == AutomationTimeSelection(
+                          range: range, scope: .tracks([emptyTrack]))
+                      && session.editCursor == cursor
+                      && coreTimeBytes(session.document) == bytes
+                      && session.document.revision == revision
+                      && session.document.history.currentIdentity == history
+                      && session.document.history.undoIndex == undoIndex
+                      && session.document.history.undoCount == undoCount,
+                      cppID: id,
+                      message: "adjusting scope to an unallocated track refuses the active range change without touching cursor, song, or history")
+    }
+}
+
+@MainActor
 func checkTimelineInsertBlankTimeLanes(_ report: CheckReport, session: DocumentSession) {
     let id = "swiftcore/PianoRoll::timelineInsertBlankTimeLanes"
     withKeyboardSeed(report, session: session, id: id) { grid, seed in

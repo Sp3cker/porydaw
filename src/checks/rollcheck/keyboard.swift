@@ -9,6 +9,7 @@ func runKeyboardChecks(_ report: CheckReport, session: DocumentSession) {
     checkKeyboardKeepsEditedNoteVisible(report, session: session)
     checkKeyboardResizeNotes(report, session: session)
     checkTimelineInsertBlankTimeTracks(report, session: session)
+    checkTimelineInsertRejectedScope(report, session: session)
     checkTimelineInsertBlankTimeLanes(report, session: session)
     checkKeyboardSkipsGhosts(report, session: session)
     checkTimeSelectionHighlights(report, session: session)
