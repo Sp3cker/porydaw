@@ -84,16 +84,43 @@ internal func bankSwitchingParity(report: CheckReport, fixtureRoot: String) {
                            what: "redoing B still does not write dirty A")
         let beforeFailed = session.bankLease.bankToken
         let indexBeforeFailed = session.document.history.undoIndex
-        let failed: Bool
+        let missingArg = "_not_a_voicegroup"
+        let failure: String
         do {
-            try runBlocking { try await session.selectVoicegroup("_not_a_voicegroup") }
-            failed = false
-        } catch { failed = true }
-        report.expect(failed && session.bankLease.bankToken == beforeFailed
-                      && session.document.history.undoIndex == indexBeforeFailed
-                      && session.document.state.config.voicegroupArgument == "_fixture_alt",
+            try runBlocking { try await session.selectVoicegroup(missingArg) }
+            failure = ""
+        } catch { failure = operationFailureMessage(error) ?? String(describing: error) }
+        report.expect(failure.contains(missingArg)
+                      && session.document.state.config.voicegroupArgument == missingArg
+                      && session.bankLease.bankToken == beforeFailed
+                      && session.bankSlots[0].voice?.macro == BankVoiceMacro.square2,
                       cppID: "vgsavecheck/VoicegroupSaveTest::failedRebindRetainsBinding",
-                      message: "failed source load does not change the lease or history")
+                      message: "missing -G publishes the requested cfg and names itself in the failure while retaining the last valid bank")
+        report.expect(session.document.history.undoIndex == indexBeforeFailed + 1
+                      && session.document.isDirty && !session.bankDirty,
+                      cppID: "vgsavecheck/VoicegroupSaveTest::failedRebindRetainsBinding",
+                      message: "missing -G records one document edit without dirtying the retained bank")
+        try runBlocking { _ = try await session.undo() }
+        report.expect(session.document.state.config.voicegroupArgument == "_fixture_alt"
+                      && session.bankLease.bankToken == beforeFailed
+                      && session.document.history.undoIndex == indexBeforeFailed,
+                      cppID: "vgsavecheck/VoicegroupSaveTest::failedRebindRetainsBinding",
+                      message: "undoing the missing -G returns to the last valid argument and bank")
+        let redoFailure: String
+        do {
+            _ = try runBlocking { try await session.redo() }
+            redoFailure = ""
+        } catch { redoFailure = operationFailureMessage(error) ?? String(describing: error) }
+        report.expect(redoFailure.contains(missingArg)
+                      && session.document.state.config.voicegroupArgument == missingArg
+                      && session.bankLease.bankToken == beforeFailed,
+                      cppID: "vgsavecheck/VoicegroupSaveTest::failedRebindRetainsBinding",
+                      message: "redoing the missing -G reports failure and retains the previous loaded bank")
+        try runBlocking { _ = try await session.undo() }
+        report.expect(session.document.state.config.voicegroupArgument == "_fixture_alt"
+                      && session.document.isDirty,
+                      cppID: "vgsavecheck/VoicegroupSaveTest::failedRebindRetainsBinding",
+                      message: "undo after the failed redo restores the previous cfg while retaining its dirty selector history")
         try runBlocking { _ = try await session.undo() }
         let beforeSave = session.bankLease.bankToken
         try runBlocking { try await session.save() }

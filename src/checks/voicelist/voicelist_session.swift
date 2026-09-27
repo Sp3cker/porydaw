@@ -374,14 +374,35 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
                        what: "-G undo clears the song config dirty state")
     report.expectEqual(expected: original, actual: session.bankSlots[0].voice, cppID: selectorID,
                        what: "-G undo restores the original slot's instrument")
+    let beforeFailedSelection = session.document.history.undoIndex
     list.selectorText = "porydaw_missing_voicegroup"
     list.commitVoicegroupSelection()
-    report.expect(selectionError != nil
-                  && session.document.state.config.voicegroupArgument != "_porydaw_missing_voicegroup"
+    report.expect(selectionError.map { String(describing: $0).contains("_porydaw_missing_voicegroup") } == true,
+                  cppID: selectorID,
+                  message: "missing voicegroup selector publishes the load failure with its argument")
+    report.expect(session.document.state.config.voicegroupArgument == "_porydaw_missing_voicegroup"
+                  && list.selectorText == "porydaw_missing_voicegroup"
+                  && session.document.isDirty
+                  && session.document.history.undoIndex == beforeFailedSelection + 1,
+                  cppID: selectorID,
+                  message: "failed voicegroup selector records the edited song cfg as one dirty undo step")
+    report.expect(session.bankLease.bankToken == originalToken
+                  && session.bankSlots[0].voice == original,
+                  cppID: selectorID,
+                  message: "failed voicegroup selector retains the previous bank lease and voice")
+    do {
+        _ = try runBlocking { try await session.undo() }
+    } catch {
+        report.fail(selectorID, "missing -G undo threw: \(error)")
+        return
+    }
+    list.refresh(from: session)
+    report.expect(session.document.state.config.voicegroupArgument == "_test_vg"
                   && list.selectorText == "test_vg"
                   && session.bankLease.bankToken == originalToken
                   && !session.document.isDirty,
-                  cppID: selectorID, message: "p: a failed switch leaves the home arg standing")
+                  cppID: selectorID,
+                  message: "undo of failed voicegroup selector restores the clean home binding")
     let originID = "swiftcore/VoiceEditorController::queuedOriginSurvivesTabRebind"
     let second: DocumentSession
     do {

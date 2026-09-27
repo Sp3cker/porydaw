@@ -11,6 +11,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtTracked public var saveInProgress = false
     @QtTracked public var lastSaveError = ""
     @QtTracked public var documentDirty = false
+    @QtTracked public var songDocumentDirty = false
     @QtTracked public var projectOpen = false
     @QtTracked public var songOpen = false
     @QtTracked public var canUndo = false
@@ -165,6 +166,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 guard let session else { return }
                 do {
                     try await session.selectVoicegroup(arg)
+                } catch ProjectServiceError.operationFailed(let message) {
+                    self?.lastSaveError = message
                 } catch {
                     self?.lastSaveError = String(describing: error)
                 }
@@ -1181,11 +1184,13 @@ public final class ApplicationSession: QmlInstantiableStatus {
         songDock.syncSelection()
         guard let session = workspace?.session else {
             documentDirty = false
+            songDocumentDirty = false
             canUndo = false
             canRedo = false
             return
         }
-        documentDirty = session.document.isDirty || session.bankDirty
+        songDocumentDirty = session.document.isDirty
+        documentDirty = songDocumentDirty || session.bankDirty
         canUndo = session.document.history.canUndo
         canRedo = session.document.history.canRedo
     }

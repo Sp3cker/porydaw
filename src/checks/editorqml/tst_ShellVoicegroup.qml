@@ -316,6 +316,11 @@ TestCase {
                    && row.typeName === alt[i] && icon.Accessible.name === alt[i],
                    "alternate groups publish alt family names on grey chips")
         }
+        controller.selectSlot(13)
+        rows.positionViewAtIndex(13, ListView.Contain)
+        const altBlank = findChild(panel, "voicegroupRow_13")
+        verify(altBlank && !altBlank.used && altBlank.title.indexOf("[Blank]") >= 0,
+               "the alternate fixture offers a selectable blank bank slot")
         app.requestUndo()
         verify(waitForNative(function() {
             return controller.bankLoadName === "fixture_rich"
@@ -572,6 +577,33 @@ TestCase {
                 "restoration Save preserves the original MIDI")
         compare(fileProbe.fileFingerprint(bankPath), initialBank,
                 "restoration Save writes the original bank")
+        const selector = findChild(shell, "vgArgCombo")
+        selector.editText = "_porydaw_missing_voicegroup"
+        selector.contentItem.forceActiveFocus()
+        keyClick(Qt.Key_Return)
+        verify(waitForNative(function() {
+            return session.lastSaveError.indexOf("_porydaw_missing_voicegroup") >= 0
+        }, 15000), "missing -G publishes the failed bank-load argument")
+        verify(shell.shellPresenter.statusText.indexOf("_porydaw_missing_voicegroup") >= 0,
+               "missing -G failure appears in the mounted shell status")
+        const renderedStatus = findChild(shell, "shellStatusText")
+        verify(renderedStatus !== null && renderedStatus.visible,
+               "missing -G failure renders a visible shell status item")
+        compare(renderedStatus.text, "No voicegroup file declares voicegroup_porydaw_missing_voicegroup.",
+                "missing -G status retains the fork failure wording")
+        compare(renderedStatus.text, session.lastSaveError,
+                "rendered missing -G failure matches the session error")
+        verify(!renderedStatus.truncated,
+               "missing -G argument remains fully visible in the shell status text")
+        compare(voice.selectorText, "porydaw_missing_voicegroup",
+                "missing -G publishes the edited selector display")
+        compare(voice.bankLoadName, "fixture_rich",
+                "missing -G leaves the previously loaded voicegroup available")
+        session.requestUndo()
+        verify(waitForNative(function() {
+            return voice.selectorText === "fixture_rich"
+                   && !shell.shellPresenter.windowModified && !voice.bankDirty
+        }, 15000), "undo of missing -G returns the song to its clean saved binding")
         cleanup()
     }
 
@@ -603,7 +635,7 @@ TestCase {
         const bankPath = bootstrap.projectRoot + "/sound/voicegroups/fixture_rich.inc"
         const persisted = fileProbe.fileFingerprint(bankPath)
         verify(persisted.length > 0, "release fixture bank bytes are readable")
-        release.forceActiveFocus()
+        release.contentItem.forceActiveFocus()
         keyClick(initial === release.to ? Qt.Key_Down : Qt.Key_Up)
         const adjacent = initial === release.to ? initial - 1 : initial + 1
         tryCompare(release, "value", adjacent, 15000,
@@ -612,6 +644,34 @@ TestCase {
                "adjacent release edit dirties the bank")
         compare(shell.shellPresenter.windowModified, false,
                 "adjacent bank edit leaves the document window unmodified")
+        const undoAction = findChild(shell, "shellAction_edit.undo")
+        verify(undoAction && undoAction.enabled && release.contentItem.activeFocus,
+               "focused release field offers the standard window Undo action")
+        keySequence(StandardKey.Undo)
+        verify(waitForNative(function() {
+            return release.value === initial && !voice.bankDirty
+                   && !session.documentDirty && !shell.shellPresenter.windowModified
+        }, 15000), "one focused standard Undo restores the exact release and clean song and bank")
+        compare(fileProbe.fileFingerprint(bankPath), persisted,
+                "focused Undo does not write the previously persisted bank bytes")
+        keyClick(initial === release.to ? Qt.Key_Down : Qt.Key_Up)
+        verify(waitForNative(function() { return release.value === adjacent && voice.bankDirty },
+               15000), "a new release edit remains possible after focused Undo")
+        const settings = shell.shellPresenter.settingsStore
+        settings.open()
+        const editedVolume = settings.masterVolume === 110 ? 111 : 110
+        settings.changeMasterVolume(editedVolume)
+        settings.apply()
+        verify(waitForNative(function() {
+            return !settings.isApplying && shell.shellPresenter.windowModified
+        }, 15000), "song setting application independently marks the document window modified")
+        verify(settings.masterVolume === editedVolume && session.documentDirty && voice.bankDirty,
+               "song setting retains its value and dirties the document while the bank remains dirty")
+        session.requestUndo()
+        verify(waitForNative(function() {
+            return !shell.shellPresenter.windowModified && voice.bankDirty
+        }, 15000), "undo of the song setting clears the window but leaves the separate bank edit dirty")
+        release.contentItem.forceActiveFocus()
         for (let value = adjacent; value > 0; --value)
             keyClick(Qt.Key_Down)
         tryCompare(release, "value", 0, 15000,
@@ -883,6 +943,11 @@ TestCase {
                 "failed rebind retains the selected slot row text")
         app.requestUndo()
         verify(waitForNative(function() {
+            return controller.bankLoadName === "fixture_alt"
+                   && controller.selectorText === "fixture_alt"
+        }, 15000), "first undo of missing -G restores the retained alternate bank")
+        app.requestUndo()
+        verify(waitForNative(function() {
             return controller.bankLoadName === "fixture_rich"
                    && controller.selectorText === "fixture_rich"
         }, 15000), "undo after a failed rebind restores the home voicegroup")
@@ -895,6 +960,29 @@ TestCase {
         controller.selectSlot(0)
         const draft = controller.editorModel()
         compare(controller.canMintSynths, true)
+        draft.changeType(0, "DirectSoundWaveData_fixture_loop")
+        verify(waitForNative(function() {
+            return draft.macro === 0 && !draft.isSynth && controller.currentSlot === 0
+        }, 15000), "slot zero is a non-synth DirectSound voice before Synth selection")
+        const typeControl = findChild(panel, "vgTypeCombo")
+        const samplePicker = findChild(panel, "vgSymbolPicker")
+        const release = findChild(panel, "vgReleaseSpin")
+        verify(typeControl !== null && typeControl.visible && typeControl.enabled
+               && typeControl.indexOfValue(-1) >= 0
+               && samplePicker !== null && samplePicker.visible && samplePicker.enabled
+               && release !== null && release.visible && release.enabled,
+               "DirectSound slot zero offers an enabled Synth type, sample picker, and ADSR release")
+        const waveformBeforeSwitch = findChild(panel, "vgSynthWaveformCombo")
+        const baseDutyBeforeSwitch = findChild(panel, "vgSynthBaseDutySpin")
+        const dutyStepBeforeSwitch = findChild(panel, "vgSynthDutyStepSpin")
+        const modDepthBeforeSwitch = findChild(panel, "vgSynthModDepthSpin")
+        const phaseBeforeSwitch = findChild(panel, "vgSynthPhaseSpin")
+        verify(waveformBeforeSwitch !== null && !waveformBeforeSwitch.visible
+               && baseDutyBeforeSwitch !== null && !baseDutyBeforeSwitch.visible
+               && dutyStepBeforeSwitch !== null && !dutyStepBeforeSwitch.visible
+               && modDepthBeforeSwitch !== null && !modDepthBeforeSwitch.visible
+               && phaseBeforeSwitch !== null && !phaseBeforeSwitch.visible,
+               "non-synth DirectSound keeps preconstructed waveform and pulse fields hidden")
         draft.changeType(-1, draft.symbol)
         verify(waitForNative(function() { return draft.isSynth && controller.bankDirty },
                              15000), "synth type creates an unsaved bank edit")
@@ -1052,12 +1140,13 @@ TestCase {
         controller.selectSlot(4)
         const release = findChild(panel, "vgReleaseSpin")
         const scroll = findChild(panel, "voiceEditorScrollView")
-        verify(release !== null && release.visible && release.enabled && scroll !== null,
-               "mounted release spin is available for the shared bank")
+        verify(scroll !== null, "shared-bank editor scroll is mounted")
         verify(waitForNative(function() {
             return !controller.isLoading && controller.currentSlot === 4
-                   && release.value === controller.editorModel().release
+                   && release !== null && release.value === controller.editorModel().release
         }, 5000), "the newly opened peer publishes its mounted slot-four value")
+        verify(release !== null && release.visible && release.enabled,
+               "mounted release spin is available for the shared bank")
         const peerBefore = release.value
         tabs.selectTab(firstId)
         verify(waitForNative(function() {

@@ -7,6 +7,7 @@ Swift counterpart: src/checks/projectstore/SaveCoreChecks.swift
 Additional Swift counterpart: src/checks/workspace/bank_switching.swift
 Additional Swift counterpart: src/checks/workspace/session_save.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellVoicegroup.qml
+Additional Swift counterpart: src/checks/workspace/bank_saves.swift
 Additional Swift counterpart: src/checks/workspace/bank_sharing.swift
 Shared helper: none; saveCoreBankRoundTrip and saveCoreSourceSaveAndPreview are file-private in SaveCoreChecks.swift.
 
@@ -96,25 +97,12 @@ Original expression:
 QVERIFY(QMetaObject::invokeMethod(selector, "activated", Qt::DirectConnection, Q_ARG(int, 0)))
 
 A003 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:55
-Disposition: PARTIAL
-Mapping/reason: S016 publishes the missing arg in the store error and retains the home lease (token, slots, clean); the original also publishes a cfg edit to the missing arg, which has no store-level counterpart.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(settle([this, &missingArg] {
-                 return !m_failures.isEmpty() && m_document->cfg().voicegroupArg == missingArg;
-             }),
-             "missing -G did not publish its failure and cfg edit")
+Disposition: MATCHED
+Mapping: S004, S046
 
 A004 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:59
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY(m_window->statusBar()->currentMessage().contains(missingArg))
+Disposition: MATCHED
+Mapping: S047, S069, S070, S071, S072
 
 A005 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:60
 Disposition: RETIRED-REPRESENTATION
@@ -210,13 +198,8 @@ QVERIFY2(waitForVoicegroup(m_homeArg, *m_homeId),
              "undo did not restore the pre-failure voicegroup binding")
 
 A015 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:73
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY(!m_document->isDirty())
+Disposition: MATCHED
+Mapping: S048
 
 A016 | VoicegroupSaveTest::catalogOutageRetainsLastValid | src/checks/voicegroupsave/savecore.cpp:81
 Disposition: GAP
@@ -367,27 +350,12 @@ QVERIFY2(release != m_originalVoice.release,
              "fixture release unexpectedly equals boundary row")
 
 A028 | VoicegroupSaveTest::releaseEditDirtiesOnlyBank | src/checks/voicegroupsave/savecore.cpp:129
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-
-    m_browser->selectSlot(m_dsSlot);
-    DragSpinBox *const spin = m_browser->releaseSpinBox();
-
-Original expression:
-QVERIFY(spin)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S049; retires native DragSpinBox* guard (savecore.cpp:129 at c1f165eb); mounted release is checked beside the edit/Undo journey.
 
 A029 | VoicegroupSaveTest::releaseEditDirtiesOnlyBank | src/checks/voicegroupsave/savecore.cpp:131
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-    spin->setValue(release);
-
-Original expression:
-QVERIFY2(waitForBankRelease(m_dsSlot, release, true),
-             "release edit did not dirty the bank and converge in the engine")
+Disposition: MATCHED
+Mapping: S050, S051, S036
 
 A030 | VoicegroupSaveTest::releaseEditDirtiesOnlyBank | src/checks/voicegroupsave/savecore.cpp:133
 Disposition: MATCHED
@@ -399,184 +367,68 @@ Original expression:
 QVERIFY(!m_document->isDirty())
 
 A031 | VoicegroupSaveTest::releaseEditDirtiesOnlyBank | src/checks/voicegroupsave/savecore.cpp:134
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY(!m_window->isWindowModified())
+Disposition: MATCHED
+Mapping: S037
 
 A032 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:143
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-}
-
-void VoicegroupSaveTest::undoShortcutRestoresWithoutWrite()
-{
-    const int edited = adjacentRelease(m_originalVoice.release);
-    m_browser->selectSlot(m_dsSlot);
-    DragSpinBox *const spin = m_browser->releaseSpinBox();
-    QLineEdit *const field = m_browser->releaseField();
-
-Original expression:
-QVERIFY(spin)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S049, S053; retires native DragSpinBox* guard (savecore.cpp:143 at c1f165eb), not mounted focused Undo behavior.
 
 A033 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:144
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY(field)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S052, S053; retires native QLineEdit* releaseField guard (savecore.cpp:144 at c1f165eb), not focused Undo delivery.
 
 A034 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:146
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-    spin->setValue(edited);
-
-Original expression:
-QVERIFY2(waitForBankRelease(m_dsSlot, edited, true), "setup release edit did not converge")
+Disposition: MATCHED
+Mapping: S050, S051, S036
 
 A035 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:149
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-
-    QAction *const undoAction = m_window->m_undoAction;
-
-Original expression:
-QVERIFY(undoAction)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S052, S053; retires native QAction* m_undoAction guard (savecore.cpp:149 at c1f165eb); mounted standard Undo remains checked.
 
 A036 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:150
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-
-Original expression:
-QCOMPARE(undoAction->shortcutContext(), Qt::WindowShortcut)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S052, S053; retires QAction::shortcutContext() == Qt::WindowShortcut (savecore.cpp:150 at c1f165eb), not focused standard Undo.
 
 A037 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:151
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY(!undoAction->shortcuts().isEmpty())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S052, S053; retires QAction::shortcuts() nonempty guard (savecore.cpp:151 at c1f165eb), not mounted standard Undo.
 
 A038 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:153
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-    QSignalSpy triggered(undoAction, &QAction::triggered);
-
-Original expression:
-QVERIFY(triggered.isValid())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S052, S053; retires QSignalSpy validity on native QAction::triggered (savecore.cpp:153 at c1f165eb), not exactly-one Undo behavior.
 
 A039 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:162
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-
-    m_window->show();
-    m_window->activateWindow();
-    m_window->raise();
-    QCoreApplication::processEvents();
-    spin->setFocus(Qt::OtherFocusReason);
-    QCoreApplication::processEvents();
-    QWidget *const target = QApplication::focusWidget();
-
-Original expression:
-QVERIFY(target && (target == spin || spin->isAncestorOf(target)))
+Disposition: MATCHED
+Mapping: S052, S053
 
 A040 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:168
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-
-    const QKeyCombination undoKey = undoAction->shortcuts().constFirst()[0];
-    QKeyEvent overrideEvent(QEvent::ShortcutOverride, undoKey.key(), undoKey.keyboardModifiers());
-    overrideEvent.ignore();
-    QApplication::sendEvent(target, &overrideEvent);
-
-Original expression:
-QVERIFY(!overrideEvent.isAccepted())
+Disposition: MATCHED
+Mapping: S052, S053
 
 A041 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:173
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-    events::sendKey(*target, QEvent::KeyPress, undoKey.key(), undoKey.keyboardModifiers(),
-                    QString(), false, 1);
-    events::sendKey(*target, QEvent::KeyRelease, undoKey.key(), undoKey.keyboardModifiers(),
-                    QString(), false, 1);
-
-Original expression:
-QCOMPARE(triggered.count(), 1)
+Disposition: MATCHED
+Mapping: S053
 
 A042 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:174
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(waitForBankRelease(m_dsSlot, m_originalVoice.release, false),
-             "shortcut undo did not restore the bank and engine")
+Disposition: MATCHED
+Mapping: S053, S067
 
 A043 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:176
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY(!m_document->isDirty())
+Disposition: MATCHED
+Mapping: S053
 
 A044 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:177
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY(!m_window->isWindowModified())
+Disposition: MATCHED
+Mapping: S053
 
 A045 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:178
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-
-Original expression:
-QCOMPARE(readFileBytes(m_voicegroupPath), m_voicegroupBytes)
+Disposition: MATCHED
+Mapping: S054
 
 A046 | VoicegroupSaveTest::unifiedSavePersistsSongAndBank | src/checks/voicegroupsave/savecore.cpp:185
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-}
-
-void VoicegroupSaveTest::unifiedSavePersistsSongAndBank()
-{
-    const int edited = adjacentRelease(m_originalVoice.release);
-    m_browser->selectSlot(m_dsSlot);
-
-Original expression:
-QVERIFY(m_browser->releaseSpinBox())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S055, S043; retires native releaseSpinBox() pointer guard (savecore.cpp:185 at c1f165eb) beside the mounted song-and-bank Save.
 
 A047 | VoicegroupSaveTest::unifiedSavePersistsSongAndBank | src/checks/voicegroupsave/savecore.cpp:187
 Disposition: MATCHED
@@ -589,16 +441,8 @@ Original expression:
 QVERIFY2(waitForBankRelease(m_dsSlot, edited, true), "voice edit did not settle before save")
 
 A048 | VoicegroupSaveTest::unifiedSavePersistsSongAndBank | src/checks/voicegroupsave/savecore.cpp:191
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-
-    const uint64_t tick = appendTick(*m_document);
-    m_document->addNote(m_track, tick, 72, 24, 93);
-
-Original expression:
-QVERIFY(m_window->isWindowModified())
+Disposition: MATCHED
+Mapping: S056, S057, S058
 
 A049 | VoicegroupSaveTest::unifiedSavePersistsSongAndBank | src/checks/voicegroupsave/savecore.cpp:193
 Disposition: MATCHED
@@ -638,29 +482,12 @@ Original expression:
 QCOMPARE(readFileBytes(m_document->midPath()) == m_midiBytes, false)
 
 A053 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:203
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-}
-
-void VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit()
-{
-    const int edited = adjacentRelease(m_originalVoice.release);
-    m_browser->selectSlot(m_dsSlot);
-
-Original expression:
-QVERIFY(m_browser->releaseSpinBox())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S049, S050, S051; retires native releaseSpinBox() pointer guard (savecore.cpp:203 at c1f165eb) beside the queued release-save journey.
 
 A054 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:205
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-    m_browser->releaseSpinBox()->setValue(edited);
-
-Original expression:
-QVERIFY2(waitForBankRelease(m_dsSlot, edited, true), "setup voice edit did not settle")
+Disposition: MATCHED
+Mapping: S050, S051
 
 A055 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:224
 Disposition: MATCHED
@@ -690,24 +517,12 @@ Original expression:
 QVERIFY2(saveSelectedSong(), "stale snapshot save was not submitted")
 
 A056 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:227
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-    m_document->addNote(m_track, newerTick, 76, 24, 89);
-    const QByteArray newerMidi = m_tab->captureSaveSnapshot().smf.write();
-
-Original expression:
-QTRY_VERIFY_WITH_TIMEOUT(turn.heartbeat && m_savedReceipts > receiptsBefore, 5000)
+Disposition: MATCHED
+Mapping: S059, S060
 
 A057 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:228
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY(!turn.completedInline)
+Disposition: MATCHED
+Mapping: S059
 
 A058 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:229
 Disposition: MATCHED
@@ -757,74 +572,28 @@ Original expression:
 QCOMPARE(readFileBytes(m_document->midPath()), newerMidi)
 
 A063 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:238
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-
-    requestUndo();
-
-Original expression:
-QVERIFY2(settle([this] { return m_document->isDirty(); }), "newer probe undo did not apply")
+Disposition: MATCHED
+Mapping: S061
 
 A064 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:240
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-    requestUndo();
-
-Original expression:
-QVERIFY2(settle([this] {
-                 const LoadedBankView *const bank = m_browser->selectedBankView();
-                 return m_document->isDirty() && bank && !bank->dirty;
-             }),
-             "stale probe undo did not leave only the document dirty")
+Disposition: MATCHED
+Mapping: S061, S062
 
 A065 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:247
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-    VoicegroupSource fresh;
-    QString error;
-
-Original expression:
-QVERIFY2(fresh.open(m_project->root(), m_document->cfg().voicegroupArg, &error),
-             qPrintable(error))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S064; retires native VoicegroupSource::open guard (savecore.cpp:247 at c1f165eb), retaining exact freshly reopened release verification.
 
 A066 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:249
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY(fresh.voiceAt(m_dsSlot))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S064; retires native VoicegroupSource::voiceAt pointer guard (savecore.cpp:249 at c1f165eb), retaining exact reopened view/engine release.
 
 A067 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:250
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-
-Original expression:
-QCOMPARE(fresh.voiceAt(m_dsSlot)->release, edited)
+Disposition: MATCHED
+Mapping: S064
 
 A068 | VoicegroupSaveTest::undoSaveRoundTripsBankBytes | src/checks/voicegroupsave/savecore.cpp:257
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-}
-
-void VoicegroupSaveTest::undoSaveRoundTripsBankBytes()
-{
-    const int edited = adjacentRelease(m_originalVoice.release);
-    m_browser->selectSlot(m_dsSlot);
-
-Original expression:
-QVERIFY(m_browser->releaseSpinBox())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S049, S068; retires native releaseSpinBox() pointer guard (savecore.cpp:257 at c1f165eb) beside the saved-bank Undo/round-trip journey.
 
 A069 | VoicegroupSaveTest::undoSaveRoundTripsBankBytes | src/checks/voicegroupsave/savecore.cpp:259
 Disposition: MATCHED
@@ -857,29 +626,12 @@ Original expression:
 QVERIFY2(waitForCleanSave(firstSave), "initial save did not clean both resources")
 
 A072 | VoicegroupSaveTest::undoSaveRoundTripsBankBytes | src/checks/voicegroupsave/savecore.cpp:266
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-
-    requestUndo();
-
-Original expression:
-QVERIFY2(settle([this] { return m_document->isDirty(); }), "note undo did not apply")
+Disposition: MATCHED
+Mapping: S061, S068
 
 A073 | VoicegroupSaveTest::undoSaveRoundTripsBankBytes | src/checks/voicegroupsave/savecore.cpp:268
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-    requestUndo();
-
-Original expression:
-QVERIFY2(settle([this] {
-                 const LoadedBankView *const bank = m_browser->selectedBankView();
-                 return m_document->isDirty() && bank && bank->dirty;
-             }),
-             "undo past save point did not re-dirty both resources")
+Disposition: MATCHED
+Mapping: S063, S067
 
 A074 | VoicegroupSaveTest::undoSaveRoundTripsBankBytes | src/checks/voicegroupsave/savecore.cpp:274
 Disposition: MATCHED
@@ -892,13 +644,8 @@ Original expression:
 QVERIFY(saveSelectedSong())
 
 A075 | VoicegroupSaveTest::undoSaveRoundTripsBankBytes | src/checks/voicegroupsave/savecore.cpp:275
-Disposition: PARTIAL
-Mapping/reason: S019 re-saves past the save point to a clean bank with the original bytes; the clean document half of the receipt is unproved.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(waitForCleanSave(secondSave), "round-trip save did not clean both resources")
+Disposition: MATCHED
+Mapping: S065, S066
 
 A076 | VoicegroupSaveTest::undoSaveRoundTripsBankBytes | src/checks/voicegroupsave/savecore.cpp:276
 Disposition: MATCHED
@@ -924,13 +671,8 @@ Original expression:
 QVERIFY(!m_document->isDirty())
 
 A078 | VoicegroupSaveTest::cleanSaveEmitsNoReceipt | src/checks/voicegroupsave/savecore.cpp:283
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY(m_browser->selectedBankView())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S066, S021; retires native selectedBankView() pointer guard (savecore.cpp:283 at c1f165eb) beside the clean saved-bank journey.
 
 A079 | VoicegroupSaveTest::cleanSaveEmitsNoReceipt | src/checks/voicegroupsave/savecore.cpp:284
 Disposition: MATCHED
@@ -976,7 +718,7 @@ S003 | saveCoreBankRoundTrip | src/checks/projectstore/SaveCoreChecks.swift
 Anchor: message "A076: partial — bank-only reversal and save restore the original voicegroup bytes"
 
 S004 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
-Anchor: message "failed source load does not change the lease or history"
+Anchor: message "missing -G publishes the requested cfg and names itself in the failure while retaining the last valid bank"
 
 S005 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
 Anchor: message "save of song and edited home bank refreshes the clean lease"
@@ -1039,7 +781,7 @@ S024 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
 Anchor: message "p: the selector commit resolves display text to the alternate arg"
 
 S025 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
-Anchor: message "p: a failed switch leaves the home arg standing"
+Anchor: message "failed voicegroup selector records the edited song cfg as one dirty undo step"
 
 S026 | test_zySelectorFailurePreservesBinding | src/checks/editorqml/tst_ShellVoicegroup.qml
 Anchor: message "a missing -G names itself in the failure"
@@ -1100,3 +842,84 @@ Anchor: message "undo restoration Save completes one clean receipt"
 
 S045 | sessionSaveJourney | src/checks/workspace/session_save.swift
 Anchor: message "retry writes the exact newer MIDI snapshot bytes"
+
+S046 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
+Anchor: message "missing -G records one document edit without dirtying the retained bank"
+
+S047 | test_zzzzzUnifiedSaveAndUndoRestorationReceipts | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "missing -G failure appears in the mounted shell status"
+
+S048 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "undo of failed voicegroup selector restores the clean home binding"
+
+S049 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "sample release spin is mounted"
+
+S050 | bankQueuedSave | src/checks/workspace/bank_saves.swift
+Anchor: message "queued release edit dirties only the bank before any song note"
+
+S051 | bankQueuedSave | src/checks/workspace/bank_saves.swift
+Anchor: message "queued release edit reaches the exact engine release byte"
+
+S052 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "focused release field offers the standard window Undo action"
+
+S053 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "one focused standard Undo restores the exact release and clean song and bank"
+
+S054 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "focused Undo does not write the previously persisted bank bytes"
+
+S055 | test_zzzzzUnifiedSaveAndUndoRestorationReceipts | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "mounted bank Save handles the unified dirty journey"
+
+S056 | test_zzzzzUnifiedSaveAndUndoRestorationReceipts | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "mounted song config edit dirties the document: "
+
+S057 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "song setting application independently marks the document window modified"
+
+S058 | test_zzzzzzReleaseBoundaryEditsLeaveSongClean | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "song setting retains its value and dirties the document while the bank remains dirty"
+
+S059 | bankQueuedSave | src/checks/workspace/bank_saves.swift
+Anchor: message "queued save yields before its asynchronous receipt"
+
+S060 | bankQueuedSave | src/checks/workspace/bank_saves.swift
+Anchor: message "queued save receipt arrives after the captured newer edit"
+
+S061 | bankQueuedSave | src/checks/workspace/bank_saves.swift
+Anchor: message "undoing past the retry save point is dirty"
+
+S062 | bankQueuedSave | src/checks/workspace/bank_saves.swift
+Anchor: message "note undos leave the saved bank clean"
+
+S063 | bankQueuedSave | src/checks/workspace/bank_saves.swift
+Anchor: message "undo past the bank release edit leaves both document and bank dirty"
+
+S064 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift
+Anchor: message "freshly reopened bank carries the exact saved release in its view and engine"
+
+S065 | bankQueuedSave | src/checks/workspace/bank_saves.swift
+Anchor: message "second save cleans both resources and writes the intended restored snapshot"
+
+S066 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift
+Anchor: message "restoring bank round-trip Save leaves both records clean"
+
+S067 | bankQueuedSave | src/checks/workspace/bank_saves.swift
+Anchor: message "bank undo restores the original engine release without writing disk"
+
+S068 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift
+Anchor: message "first bank round-trip Save cleans the song and the bank together"
+
+S069 | test_zzzzzUnifiedSaveAndUndoRestorationReceipts | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "missing -G failure renders a visible shell status item"
+
+S070 | test_zzzzzUnifiedSaveAndUndoRestorationReceipts | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "missing -G status retains the fork failure wording"
+
+S071 | test_zzzzzUnifiedSaveAndUndoRestorationReceipts | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "rendered missing -G failure matches the session error"
+
+S072 | test_zzzzzUnifiedSaveAndUndoRestorationReceipts | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "missing -G argument remains fully visible in the shell status text"

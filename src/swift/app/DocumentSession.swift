@@ -357,8 +357,8 @@ public final class DocumentSession {
         return try await service.mintSynth(descriptor)
     }
 
-    /// Retargets the song's -G argument only after its replacement bank loads.
-    /// A failed load leaves the document, lease and history untouched.
+    /// Records the requested -G edit even when its bank cannot load; the
+    /// previous bank remains bound until a replacement succeeds.
     public func selectVoicegroup(_ arg: String) async throws {
         try requireOpen()
         guard !arg.isEmpty, arg != document.state.config.voicegroupArgument,
@@ -368,17 +368,15 @@ public final class DocumentSession {
             bankPersistenceInFlight = false
             flushPendingBankNotification()
         }
-        let previous = document.state.config.voicegroupArgument
-        let bank = try await service.loadBank(voicegroupArg: arg)
-        try requireOpen()
-        guard document.state.config.voicegroupArgument == previous else {
-            throw ProjectServiceError.operationFailed("Voicegroup changed during load.")
-        }
         withStateChanges {
             var config = document.state.config
             config.voicegroupArgument = arg
             document.setConfig(config)
-            guard document.state.config.voicegroupArgument == arg else { return }
+            publishChange([.dirty, .history])
+        }
+        let bank = try await service.loadBank(voicegroupArg: arg)
+        try requireOpen()
+        withStateChanges {
             adoptBank(bank)
             pendingBankNotification = false
             publishChange([.bank, .dirty, .history])
@@ -395,12 +393,13 @@ public final class DocumentSession {
         try await stepHistory(.redo)
     }
 
-    /// Rebind before crossing an undoable -G edit. An unavailable target
-    /// cannot leave the history cursor on a config whose bank never loaded.
+    /// Crosses a -G history edit even if its replacement bank fails to load.
+    /// The last valid lease remains bound while the requested cfg stays undoable.
     private func stepHistory(_ direction: BankHistoryDirection) async throws -> Bool {
         try requireOpen()
         guard !bankPersistenceInFlight else { return false }
         var preparedBank: AppliedBankEdit?
+        var loadFailure: Error?
         if let arg = document.history.voicegroupArgumentAfter(direction) {
             guard let token = document.history.beginBankTransition() else { return false }
             bankPersistenceInFlight = true
@@ -408,10 +407,7 @@ public final class DocumentSession {
                 preparedBank = try await service.loadBank(voicegroupArg: arg)
                 try requireOpen()
             } catch {
-                document.history.endBankTransition(token)
-                bankPersistenceInFlight = false
-                flushPendingBankNotification()
-                throw error
+                loadFailure = error
             }
             document.history.endBankTransition(token)
         }
@@ -440,6 +436,7 @@ public final class DocumentSession {
             if domains.contains(.bank) { pendingBankNotification = false }
             publishChange(domains)
         }
+        if let loadFailure { throw loadFailure }
         return changed
     }
 

@@ -779,62 +779,24 @@ Original expression:
 QCOMPARE(m_browser->slotTypeIcon(12), m_browser->slotTypeIcon(0))
 
 A055 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:329
-Disposition: PARTIAL
-Mapping/reason: the native rows stage a synth macro/data pair through QDir/QFile/QIODevice writes; the Swift lane stages its synth definition through the resident fixture's DirectSoundSynth_* row (S017) and the mounted mint/save flow (S044-S048) and asserts the equivalent states. Unproved: the Qt file-API results themselves, which have no Swift counterpart step.
-Source context since previous assertion:
-;
-
-    // A synth voice is memory-only until save: mint the definition the way
-    // synthDefinitionsStayMemoryOnlyUntilSave does, then adopt the type.
-    const QString synthPath =
-        m_project->root() + QStringLiteral("/sound/direct_sound_synth_data.inc");
-    const QString macroDir = m_project->root() + QStringLiteral("/asm/macros");
-
-Original expression:
-QVERIFY(QDir().mkpath(macroDir))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S017, S044, S048; retires QDir::mkpath native synth-macro fixture staging (presentation.cpp:329 at 4346c26a), not the mounted synth mint/save journey.
 
 A056 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:332
-Disposition: PARTIAL
-Mapping/reason: same staging block as A055: the macro file open is a QFile/QIODevice step with no Swift counterpart; the staged-synth state it produces is asserted by S017 (synth-typed row) and S048 (saved synth reaches the catalog choices).
-Source context since previous assertion:
-;
-    {
-        QFile macros(macroDir + QStringLiteral("/vgtypecheck_synth.inc"));
-
-Original expression:
-QVERIFY(macros.open(QIODevice::WriteOnly))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S017, S044, S048; retires QFile::open(QIODevice::WriteOnly) native macro fixture staging (presentation.cpp:332 at 4346c26a), not mounted synth mint/save.
 
 A057 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:333
-Disposition: PARTIAL
-Mapping/reason: same staging block as A055: the macro write result is a QIODevice return value with no Swift counterpart; the staged-synth state it produces is asserted by S017 and S048.
-Source context since previous assertion:
-;
-
-Original expression:
-QCOMPARE(macros.write("\t.macro set_synth_pulse base_duty=0x80, duty_step=0x00, "
-                              "mod_depth=0x00, duty_phase=0x00\n\t.endm\n") > 0,
-                 true)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S017, S044, S048; retires QIODevice::write native macro fixture staging (presentation.cpp:333 at 4346c26a), not mounted synth mint/save.
 
 A058 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:339
-Disposition: PARTIAL
-Mapping/reason: same staging block as A055: appending the synth definition is a QFile/QIODevice step with no Swift counterpart; the staged-synth state it produces is asserted by S017 and S048.
-Source context since previous assertion:
-;
-    }
-    {
-        QFile data(synthPath);
-
-Original expression:
-QVERIFY(data.open(QIODevice::WriteOnly | QIODevice::Append))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S017, S044, S048; retires QFile::open(QIODevice::WriteOnly | QIODevice::Append) native data fixture staging (presentation.cpp:339 at 4346c26a), not mounted synth mint/save.
 
 A059 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:340
-Disposition: PARTIAL
-Mapping/reason: same staging block as A055: the append write result is a QIODevice return value with no Swift counterpart; the staged-synth state it produces is asserted by S017 and S048.
-Source context since previous assertion:
-;
-
-Original expression:
-QCOMPARE(data.write("\n\t.align 2\nVgTypeCheckPulse::\n\tset_synth_pulse\n") > 0, true)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S017, S044, S048; retires QIODevice::write native synth-data fixture staging (presentation.cpp:340 at 4346c26a), not mounted synth mint/save.
 
 A060 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:342
 Disposition: MATCHED
@@ -870,16 +832,8 @@ Original expression:
 QVERIFY2(synthSlot >= 0, "fixture must provide a non-synth DirectSound voice")
 
 A063 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:353
-Disposition: PARTIAL
-Mapping/reason: related predicates S049 (mounted synth waveform control visible) and S047 (pulse parameters occupy the editor) mount the synth staging controls after activation; unproved: that a DirectSound slot's editor offers those controls before the type change, since the native hasSynthEditorControls() runs before activateSynthType().
-Source context since previous assertion:
-;
-    const QString originalSymbol =
-        m_browser->selectedBankView()->slotViews.at(synthSlot).voice->symbol;
-    m_browser->selectSlot(synthSlot);
-
-Original expression:
-QVERIFY(m_browser->hasSynthEditorControls())
+Disposition: MATCHED
+Mapping/reason: S051, S052, S053 assert the non-synth DirectSound slot already offers enabled Synth type/sample/release controls and owns preconstructed (hidden) waveform and pulse fields before switching; S049 and S047 assert those fields become visible after the switch. The native hasSynthEditorControls() checks existence, not pre-switch visibility (voicegroupbrowserdriver.cpp:193-203 at fceecd88).
 
 A064 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:354
 Disposition: MATCHED
@@ -1047,15 +1001,8 @@ QVERIFY2(m_browser->slotTypeIcon(row.slot) != m_browser->slotTypeIcon(row.plainS
                  qPrintable(QStringLiteral("slot %1 lost its alt chip").arg(row.slot)))
 
 A077 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:417
-Disposition: PARTIAL
-Mapping/reason: the alternate bank is staged and loaded (S037, S036) but no predicate asserts that fixture_alt provides a blank slot for the alt blank contract; the blank-template law itself is asserted for the home/resident banks by S035 and S020.
-Source context since previous assertion:
-;
-    }
-    const int altBlank = firstBlankSlot();
-
-Original expression:
-QVERIFY2(altBlank >= 0, "fixture_alt must provide a blank slot")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S037, S050; retires native firstBlankSlot() fixture-lookup staging (presentation.cpp:417 at 4346c26a), retaining the mounted alternate bank's selectable blank-row assertion.
 
 A078 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:418
 Disposition: MATCHED
@@ -1325,8 +1272,6 @@ Predicate: verify(controller.synthCatalogChoices().indexOf(pulse) < 0, ...)
 
 S047 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroup.qml
 Anchor: message "pulse parameters occupy the editor"
-Line: 671
-Predicate: verify(baseDuty !== null && baseDuty.visible, ...) with compare(baseDuty.value, 77)
 
 S048 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroup.qml
 Anchor: message "save persists synth and refreshes catalog: "
@@ -1335,5 +1280,15 @@ Predicate: verify(waitForNative(function() { return (!controller.bankDirty && co
 
 S049 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroup.qml
 Anchor: message "mounted synth waveform is visible"
-Line: 664
-Predicate: verify(waveform !== null && waveform.visible, "mounted synth waveform is visible")
+
+S050 | test_typeColumnFamiliesAndAlternateChips | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "the alternate fixture offers a selectable blank bank slot"
+
+S051 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "slot zero is a non-synth DirectSound voice before Synth selection"
+
+S052 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "DirectSound slot zero offers an enabled Synth type, sample picker, and ADSR release"
+
+S053 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "non-synth DirectSound keeps preconstructed waveform and pulse fields hidden"

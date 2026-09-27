@@ -131,6 +131,11 @@ ThemedWindow {
             ++root.actionRevision
         }
         function onDocumentDirtyChanged() { shell.refreshWindowChrome() }
+        function onSongDocumentDirtyChanged() { shell.refreshWindowChrome() }
+        function onLastSaveErrorChanged() {
+            if (shell.session.lastSaveError.length > 0)
+                shell.statusText = shell.session.lastSaveError
+        }
         function onCanUndoChanged() { ++root.actionRevision }
         function onCanRedoChanged() { ++root.actionRevision }
         function onGridCommandAvailabilityChanged() { ++root.actionRevision }
@@ -729,6 +734,8 @@ ThemedWindow {
         readonly property int statusTopInset: 3
         readonly property int statusBottomInset: 2
         readonly property int statusGripHeight: 13 + 4
+        readonly property bool showingFailure: shell.session.lastSaveError.length > 0
+                                                && shell.statusText === shell.session.lastSaveError
         implicitHeight: Math.max(captionMetrics.height, bodyMetrics.height, statusGripHeight)
                         + statusTopInset + statusBottomInset
         color: shell.session.palette.windowBackground
@@ -736,7 +743,10 @@ ThemedWindow {
             objectName: "shellStatusText"
             id: shellStatus
             anchors.left: parent.left
-            width: Math.max(0, Math.min(implicitWidth, parent.width / 4 - root.chromeSpacing.two))
+            width: Math.max(0, Math.min(implicitWidth, parent.showingFailure
+                ? parent.width - (polyMeter.visible ? polyMeter.width : 0)
+                  - root.chromeSpacing.two * 3
+                : parent.width / 4 - root.chromeSpacing.two))
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             anchors.topMargin: parent.statusTopInset
@@ -750,6 +760,7 @@ ThemedWindow {
         }
         Text {
             objectName: "shellMouseHintText"
+            visible: !parent.showingFailure
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: parent.top
             anchors.bottom: parent.bottom
