@@ -318,6 +318,13 @@ ShellEventListSupport {
         compare(presenter.currentRow, sourceRow, "the row menu captures its selected row")
         compare(page.currentColumn, 5,
                 "the row menu opens from the original control row's Data column")
+        const grid = fixture.session.songTabs.selectedPage.gridPresenter()
+        const sourceNotes = grid.noteSummary
+        const sourceRevision = grid.appliedRevisionText
+        const sourceTrack = grid.trackIndex
+        verify(grid.renderedNoteCount > 0 && JSON.parse(sourceNotes).some(function(note) {
+            return !note.ghost && note.track === sourceTrack
+        }), "the original source notes are visible before the raw Event List insertion")
         const beforeCount = presenter.rowCount
         let insert = null
         tryVerify(function() {
@@ -329,14 +336,24 @@ ShellEventListSupport {
         tryCompare(presenter, "menuOpen", false, 3000)
         compare(presenter.rowCount, beforeCount + 1,
                 "activating Insert closes the menu and inserts one event")
+        compare(grid.trackIndex, sourceTrack,
+                "mounted insertion keeps the roll bound to its original engine owner")
+        compare(grid.noteSummary, sourceNotes,
+                "mounted raw insertion preserves the source note projections")
+        verify(grid.appliedRevisionText !== sourceRevision,
+               "mounted raw insertion publishes the edited document revision")
         verify(fixture.session.canUndo, "the Insert action is undoable")
         fixture.session.requestUndo()
         verify(waitForNative(function() { return fixture.session.canRedo }, 3000),
                "the Insert action has one undo transition")
         compare(presenter.rowCount, beforeCount, "undo restores the previous row count")
+        compare(grid.trackIndex, sourceTrack, "raw insertion undo restores the header owner")
+        compare(grid.noteSummary, sourceNotes, "raw insertion undo restores the visible notes")
         fixture.session.requestRedo()
         verify(waitForNative(function() { return presenter.rowCount === beforeCount + 1 }, 3000),
                "redo restores the inserted row")
+        compare(grid.trackIndex, sourceTrack, "raw insertion redo rebinds the header owner")
+        compare(grid.noteSummary, sourceNotes, "raw insertion redo retains the source note values")
         const target = cellAt(fixture.table, sourceRow === 0 ? 1 : 0, 5)
         mouseClick(target, target.width / 2, target.height / 2, Qt.RightButton)
         tryCompare(presenter, "menuOpen", true, 3000)
@@ -359,5 +376,58 @@ ShellEventListSupport {
         compare(presenter.currentRow, selected,
                 "the paired outside right release preserves the original event cursor")
         compare(presenter.menuOpen, false, "the paired right release reopens nothing")
+    }
+    function test_mountedConductorPromotionRebindsRoll() {
+        const fixture = openEventListFixture()
+        const presenter = fixture.presenter
+        const grid = fixture.session.songTabs.selectedPage.gridPresenter()
+        const originalTrack = grid.trackIndex
+        const originalNotes = grid.noteSummary
+        const originalRevision = grid.appliedRevisionText
+        const promotedNotes = JSON.parse(originalNotes)
+        verify(promotedNotes.length > 0 && promotedNotes.some(function(note) {
+            return !note.ghost && note.track === originalTrack
+        }), "mounted promotion starts with the original owner's exact visible source note set")
+        for (let index = 0; index < promotedNotes.length; ++index)
+            promotedNotes[index].track += 1
+        const expectedPromotedNotes = JSON.stringify(promotedNotes)
+        presenter.setChunk(0, false)
+        let sourceRow = -1
+        for (let row = 0; row < presenter.rowCount - 1; ++row) {
+            if (presenter.rowType(row) === 10 && presenter.isCellEditable(row, 1)) {
+                sourceRow = row
+                break
+            }
+        }
+        verify(sourceRow >= 0, "the mounted conductor has a retypable raw metadata event")
+        const typeCell = cellAt(fixture.table, sourceRow, 1)
+        mouseDoubleClickSequence(typeCell, typeCell.width / 2, typeCell.height / 2)
+        tryCompare(presenter, "menuOpen", true, 3000)
+        let typeMenu = null
+        tryVerify(function() {
+            typeMenu = findChild(fixture.page, "quickMenuPanelRoot")
+            const controlChange = typeMenu && typeMenu.rowItem(3)
+            return controlChange && controlChange.active
+                && controlChange.itemData.text === "Control change"
+        }, 3000, "the rendered Type menu offers the channel control event")
+        const controlChange = typeMenu.rowItem(3)
+        mouseClick(controlChange, controlChange.width / 2, controlChange.height / 2)
+        tryCompare(presenter, "menuOpen", false, 3000)
+        compare(grid.trackIndex, originalTrack + 1,
+                "the mounted roll follows its old owner to the new engine address")
+        compare(grid.noteSummary, expectedPromotedNotes,
+                "mounted promotion retains every source note ID time pitch velocity and ghost flag at its new owner")
+        verify(grid.appliedRevisionText !== originalRevision,
+               "conductor promotion publishes a new roll projection")
+        fixture.session.requestUndo()
+        verify(waitForNative(function() { return fixture.session.canRedo }, 3000),
+               "one history undo restores conductor metadata")
+        compare(grid.trackIndex, originalTrack, "promotion undo rebinds the original roll owner")
+        compare(grid.noteSummary, originalNotes, "promotion undo restores original note projections")
+        fixture.session.requestRedo()
+        verify(waitForNative(function() { return grid.trackIndex === originalTrack + 1 }, 3000),
+               "one history redo restores the promoted owner")
+        compare(grid.noteSummary, expectedPromotedNotes,
+                "mounted promotion redo restores every remapped source note value")
     }
 }

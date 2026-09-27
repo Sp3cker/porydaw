@@ -40,6 +40,18 @@ extension SongDocument {
                           newEngineTrackCount: newEngine.usedTrackCount)
     }
 
+    func rawTrackRemap(before: MidiFile, after: MidiFile) -> TrackRemap? {
+        let old = before.engineTracks()
+        let new = after.engineTracks()
+        let sameOwners = old.usedTrackCount == new.usedTrackCount
+            && (0..<old.usedTrackCount).allSatisfy {
+                old.tracks[$0].midiChunk == new.tracks[$0].midiChunk
+            }
+        guard !sameOwners else { return nil }
+        return makeTrackRemap(before: before, after: after,
+                              chunkMap: before.chunks.indices.map(Optional.some))
+    }
+
     func editedTempo(_ current: [TempoPoint], _ edit: TempoEdit) -> [TempoPoint] {
         let removedTicks = Set(edit.remove.map(\.tick))
         let combined = current.filter { !removedTicks.contains($0.tick) } + edit.add

@@ -7,23 +7,21 @@ Swift counterpart: src/checks/rollcheck/identity.swift
 Additional Swift counterpart: src/checks/rollcheck/presentation.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Disposition tally: 14 sites: 5 MATCHED, 0 PARTIAL, 6 GAP, 3 RETIRED-REPRESENTATION.
+Disposition tally: 14 sites: 10 MATCHED, 1 PARTIAL, 0 GAP, 0 NATIVE, 3 RETIRED-REPRESENTATION.
 
-Command: deno task verify --filter swiftcore --verbose
-Result: PASS — 1/14 ok (controller-recorded post-change run); the swiftcore
-projectSession suite executed runIdentityChecks and the S001-S005 predicates.
-Command: deno task verify:qml-roll --verbose
-Result: PASS — 1/1 ok (controller-recorded post-change run); no identity site
-depends on the roll QML lane.
-Command: deno task verify:shell --verbose
-Result: PASS — 11/11 ok (controller-recorded post-change run); no identity site
-depends on the shell lane. The shell and roll QML runs predate only a
-swiftcore-checks-only commit; no production or QML source changed after them.
+Command: /usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-projectsession --verbose
+Result: PASS — swiftcore-projectsession 1/36 ok, 35 skipped (task-125 implementer-recorded); identity.swift SHA-256 4ee65b4137d7ad4e373b3fae2a942cbdd7e73525f26512c19688c7ad2835fb52.
+Command: /usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify:shell --filter shell-event-list-menus --filter shell-tabs-reload --verbose
+Result: PASS — 2/75 ok, 73 skipped (task-125 implementer-recorded); selected identity rows cite shell-tabs-reload for S009-S021. tst_ShellTabsReload.qml SHA-256 3f1b3b2a26e784adc12946382f3f342676707f81923998ee828522bb2225abab.
+Prior controller runs: swiftcore 1/14, qml-roll 1/1, shell 11/11; task-125 projectSession supports new S006-S008 and task-125 shell execution supports S009-S021.
 
-PianoRollTest::timelineProjection and PianoRollTest::viewStateRoundTrip slots have
-no counterpart in the Swift roll lane and stay GAP below. Shared fixture:
-the DocumentSession supplied by the projectSession suite; the original slot seeded
-its own LoadedSong/SongView from the staged project root.
+The original hand-built MidiTimeline's unassigned NoteId field in A010 is
+retired representation only: Swift assigns a stable NoteID when the source
+MIDI is adopted. S007 compares the assigned document identity to the visible
+roll identity and independently checks interval [240,288), key 65, velocity
+83, and owner 2; no original visible/projected note fact is retired.
+The projectSession fixture supplies the duplicate-note checks; the new
+ordinary-note fixture uses its own document and mounted PianoGrid.
 
 A001 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:27
 Disposition: RETIRED-REPRESENTATION
@@ -66,64 +64,21 @@ Original expression:
   QFAIL("switching track headers did not clear note selection");
 
 A009 | PianoRollTest::timelineProjection | src/checks/rollcheck/identity.cpp:131
-Disposition: GAP
-Mapping/reason: Feature not yet ported: no executing Swift roll predicate projects a hand-built MidiTimeline with an unassigned note ID. DocumentProjectionCache and NoteProjection are internal (no public projection seam) and TimeAxis is a coordinate axis, so the ordinary-timeline note-count observable has no equivalent assertion.
-Source context since previous assertion:
-      }
-  }
-
-  void PianoRollTest::timelineProjection()
-  {
-      MidiTimeline ordinaryTimeline;
-      ordinaryTimeline.lengthTicks = 288;
-      ordinaryTimeline.events = {
-          {0, 240, 0x9, 2, 65, 83, NoteId{}},
-          {0, 288, 0x8, 2, 65, 0, NoteId{}},
-      };
-      const SongViewModel ordinary = buildSongViewModel(ordinaryTimeline);
-      if (ordinary.notes.size() != 1) {
-Original expression:
-  QFAIL("ordinary unassigned timeline note did not project");
+Disposition: MATCHED
+Mapping: S006
 
 A010 | PianoRollTest::timelineProjection | src/checks/rollcheck/identity.cpp:137
-Disposition: GAP
-Mapping/reason: Feature not yet ported: the same unported projection step. No executing Swift predicate asserts the projected note's unassigned ID, startTick 240, endTick 288, key 65, velocity 83 and track 2.
-Source context since previous assertion:
-      }
-
-      const ViewNote &note = ordinary.notes.front();
-      if (note.noteId.isAssigned() || note.startTick != 240 || note.endTick() != 288 ||
-          note.key != 65 || note.velocity != 83 || note.track != 2) {
-Original expression:
-  QFAIL("ordinary unassigned timeline note changed during projection");
+Disposition: MATCHED
+Mapping: S007
 
 A011 | PianoRollTest::viewStateRoundTrip | src/checks/rollcheck/identity.cpp:155
-Disposition: GAP
-Mapping/reason: Feature not yet ported: the typed cosmetic EditorViewState (laneHeight, per-lane heights and ranges, empty lanes) has no Swift type and no predicate asserts its retention.
-Source context since previous assertion:
-      }
-  }
-
-  void PianoRollTest::viewStateRoundTrip()
-  {
-      SongView &view = m_fixture->view();
-      songview::TimelineInputItem &rollInput = m_fixture->rollInput();
-      const SongView::ViewState before = view.viewState();
-      const int track = m_fixture->track();
-      const EditorAutomationRowId lane{EditorAutomationRowKind::ControlChange, uint8_t(track), 7};
-      EditorViewState cosmetics;
-      cosmetics.laneHeight = 64;
-      cosmetics.laneHeights.emplace(lane, 96);
-      cosmetics.laneRanges.emplace(lane, 91);
-      cosmetics.emptyLanes.emplace(lane);
-      view.applyEditorViewState(cosmetics);
-      if (view.editorViewState() != cosmetics)
-Original expression:
-  QFAIL("SongView did not retain typed cosmetic EditorViewState");
+Disposition: MATCHED
+Mapping: S008
 
 A012 | PianoRollTest::viewStateRoundTrip | src/checks/rollcheck/identity.cpp:215
-Disposition: GAP
-Mapping/reason: The perturbation guard spans SongView::ViewState fields (pxPerBeat, keyHeight, scroll, selectedTrack, editCursorTick, gridSelection, gridTriplet, eventList) that the Swift EditorCamera value type does not model; no counterpart predicate asserts the guard.
+Disposition: MATCHED
+Mapping: S009
+Mapping/reason: The registered tab-reload check asserts that perturbing the live tab changes all nine retained camera, selection, grid, and visibility fields (S009); the original guard checks all nine fields change.
 Source context since previous assertion:
       view.setEditCursorTick(view.grid().snapTick(96.0));
       const SongView::ViewState snapshot = view.viewState();
@@ -187,8 +142,9 @@ Original expression:
   QFAIL("ViewState perturbation did not change every retained field");
 
 A013 | PianoRollTest::viewStateRoundTrip | src/checks/rollcheck/identity.cpp:218
-Disposition: GAP
-Mapping/reason: Feature not yet ported: the whole-ViewState apply/normalize compare has no Swift counterpart, and a full retention assertion over the perturbed fields (pxPerBeat, keyHeight, scrollPx, scrollY, selectedTrack, editCursorTick, eventList) plus the grid fields is absent. The grid half is no longer the blocker: gridSelection/gridTriplet now live on the shared DocumentSession.grid (menu-id identity and feel predicates exist in the eventviews and host grid ledgers), while no predicate applies a perturbed ViewState and re-reads every other field; EditorCamera exposes setHScroll/setVScroll/updateViewport with its own reclamp only.
+Disposition: MATCHED
+Mapping: S010, S011
+Mapping/reason: The registered tab-reload check applies the perturbed view, independently checks normalized time/key zoom and horizontal/vertical clamps, and verifies alternate track, cursor, grid division/feel, and hidden Event List (S010), matching the original normalized-field outcome.
 Source context since previous assertion:
       }
       if (!sameViewState(applied, expected))
@@ -196,8 +152,9 @@ Original expression:
   QFAIL("ViewState apply did not retain every normalized perturbed field");
 
 A014 | PianoRollTest::viewStateRoundTrip | src/checks/rollcheck/identity.cpp:223
-Disposition: GAP
-Mapping/reason: Feature not yet ported: EditorCamera is a value type with no view-state round-trip; no Swift predicate captures, perturbs, restores and compares a full SongView::ViewState with its typed cosmetic EditorViewState.
+Disposition: PARTIAL
+Mapping: S008, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021
+Mapping/reason: S008 verifies complete lane cosmetics separately; S012 verifies the captured runtime state is restored without changing MIDI notes; S013-S021 independently assert each runtime field survives reload. Still unproved: no predicate observes the cosmetics retained together with those runtime fields across the actual reload.
 Source context since previous assertion:
       view.applyViewState(snapshot);
       const SongView::ViewState restored = view.viewState();
@@ -210,9 +167,10 @@ Remaining original source (closing sequence and helper bodies):
   }
 
 Counterpart executable predicate index
-S001..S005 are report.expect predicates in the registered swiftcore check identity.swift,
-executed by deno task verify --filter swiftcore --verbose (PASS, 1/14 ok,
-controller-recorded). Their presence alone does not close any A entry.
+S001..S005 are the earlier registered swiftcore duplicate-note predicates
+(controller-recorded PASS, swiftcore 1/14). S006..S008 are the task-125
+projectSession predicates (implementer-recorded PASS, projectSession 1/36).
+Their presence alone does not close any A entry.
 
 S001 | checkDuplicateNoteIdentity | src/checks/rollcheck/identity.swift
 Anchor: message "equal-visible notes receive distinct assigned IDs"
@@ -228,3 +186,50 @@ Anchor: message "undo restores both duplicate values without replacing their ide
 
 S005 | checkDuplicateNoteIdentity | src/checks/rollcheck/identity.swift
 Anchor: message "switching track headers clears duplicate-note selection"
+
+S006 | checkOrdinaryProjection | src/checks/rollcheck/identity.swift
+Anchor: message "ordinary source note projects once into the visible roll"
+
+S007 | checkOrdinaryProjection | src/checks/rollcheck/identity.swift
+Anchor: message "adopted source note retains tick interval key velocity and track two"
+
+S008 | checkRetainedCosmetics (identity.swift:155) | src/checks/rollcheck/identity.swift
+Anchor: message "typed lane cosmetics retain base 64 CC7 height 96 range 91 and empty membership without MIDI edits"
+S009 | test_qReloadPreservesViewAndClearsHistory (tst_ShellTabsReload.qml:94) | src/checks/editorqml/tst_ShellTabsReload.qml
+Anchor: message "perturbing the live tab changes all nine retained camera selection grid and visibility fields"
+
+S010 | test_qReloadPreservesViewAndClearsHistory (tst_ShellTabsReload.qml:96) | src/checks/editorqml/tst_ShellTabsReload.qml
+Anchor: message "time zoom applies the independently calculated normalized wheel factor"
+
+S011 | test_qReloadPreservesViewAndClearsHistory (tst_ShellTabsReload.qml:106) | src/checks/editorqml/tst_ShellTabsReload.qml
+Anchor: message "applying the perturbed view retains the alternate owner cursor grid feel and hidden Event List"
+
+S012 | test_qReloadPreservesViewAndClearsHistory (tst_ShellTabsReload.qml:127) | src/checks/editorqml/tst_ShellTabsReload.qml
+Anchor: message "restoring the captured runtime view preserves all fields and the original MIDI notes"
+
+S013 | test_qReloadPreservesViewAndClearsHistory (tst_ShellTabsReload.qml:154) | src/checks/editorqml/tst_ShellTabsReload.qml
+Anchor: message "reload retains event list visibility"
+
+S014 | test_qReloadPreservesViewAndClearsHistory (tst_ShellTabsReload.qml:141) | src/checks/editorqml/tst_ShellTabsReload.qml
+Anchor: message "reload retains the seeded pixels per beat"
+
+S015 | test_qReloadPreservesViewAndClearsHistory (tst_ShellTabsReload.qml:143) | src/checks/editorqml/tst_ShellTabsReload.qml
+Anchor: message "reload retains the seeded key height"
+
+S016 | test_qReloadPreservesViewAndClearsHistory (tst_ShellTabsReload.qml:145) | src/checks/editorqml/tst_ShellTabsReload.qml
+Anchor: message "reload retains the seeded horizontal scroll"
+
+S017 | test_qReloadPreservesViewAndClearsHistory (tst_ShellTabsReload.qml:147) | src/checks/editorqml/tst_ShellTabsReload.qml
+Anchor: message "reload retains the seeded vertical scroll"
+
+S018 | test_qReloadPreservesViewAndClearsHistory (tst_ShellTabsReload.qml:148) | src/checks/editorqml/tst_ShellTabsReload.qml
+Anchor: message "reload retains the selected track"
+
+S019 | test_qReloadPreservesViewAndClearsHistory (tst_ShellTabsReload.qml:149) | src/checks/editorqml/tst_ShellTabsReload.qml
+Anchor: message "reload retains the edit cursor"
+
+S020 | test_qReloadPreservesViewAndClearsHistory (tst_ShellTabsReload.qml:151) | src/checks/editorqml/tst_ShellTabsReload.qml
+Anchor: message "reload retains the selected grid division identity"
+
+S021 | test_qReloadPreservesViewAndClearsHistory (tst_ShellTabsReload.qml:152) | src/checks/editorqml/tst_ShellTabsReload.qml
+Anchor: message "reload retains triplet grid feel"

@@ -11,17 +11,20 @@ Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted n
 EditorGridCameraChecks ::trackOwnerRemap supplies the remap-before-publication payload
 predicate (S025) and the per-owner sequences. The original two-signal emission order
 (tracksRemapped before documentChanged) has no Swift counterpart — SongView Qt signals
-do not exist in Swift — so the twelve pure-ordering sites stay GAP; the shell-grid-input lane runs test_trackFollowReload (S030) for header
+do not exist in Swift — so the twelve pure-ordering sites remain
+RETIRED-REPRESENTATION; the shell-grid-input lane runs test_trackFollowReload (S030) for header
 follow and session replacement. That predicate asserts the projected primary/ghost
 partition (track-1 faces unghosted, other-track faces ghosted) in place of the superseded
 primary-only face list, so the cited follow clauses rest on its trackIndex,
 rendered-note-completeness and session-replacement conjuncts, not on a single-track face list.
 The original SongView editorViewState cosmetics and
-time-selection lanes are not modelled in the Swift roll, so every site whose original
-conjunction includes them stays PARTIAL. The raw metadata-to-engine promotion family
-stays GAP because insertRawEvent never promotes or remaps a conductor in Swift.
-Disposition tally: 67 sites: 19 MATCHED, 17 PARTIAL, 7 GAP, 12 NATIVE, 12 RETIRED-REPRESENTATION (task-90 signal-order retirements: A004, A007, A010, A017, A020, A023, A030, A033, A036, A042, A046, A050).
-
+time-selection lanes were not modelled in the earlier Swift roll checks; task-125
+adds complete cosmetics predicates to selected structural edits. A044/A048 remain
+PARTIAL because the note/time-selection fixture conjuncts cannot coexist; A045's
+stored scope and A049's full surviving-owner state lack dedicated unique-literal
+assertions. A056-A058 remain PARTIAL because metadata projection delivery is unobserved.
+Raw-promotion rows A061-A067 are matched.
+Disposition tally: 67 sites: 36 MATCHED, 7 PARTIAL, 0 GAP, 12 NATIVE, 12 RETIRED-REPRESENTATION.
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — 1/14 ok (controller-recorded post-change run); the swiftcore
 projectSession suite executed runRemapChecks, runEditorGridCameraChecks
@@ -42,6 +45,13 @@ Command: deno task verify:shell --verbose (task-90 implementer run)
 Result: PASS; 26/26 ok (implementer-reported GREEN; this ledger pass ran no lane).
 Command: deno task verify --verbose (task-90 implementer full-tree run)
 Result: PASS; 36/36 ok (implementer-reported GREEN; this ledger pass ran no lane).
+Command: /usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-projectsession --verbose
+Result: PASS — swiftcore-projectsession 1/36 ok, 35 skipped (task-125 implementer-recorded); remap.swift SHA-256 756ddec1550110d193cdd6bd8698cba6f7192e888c63f30200c2a8253a0e4cf3.
+Command: /usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify:shell --filter shell-event-list-menus --filter shell-tabs-reload --verbose
+Result: PASS — 2/75 ok, 73 skipped (task-125 implementer-recorded); tst_ShellEventListMenus.qml SHA-256 1c236db3cceb32ce80ac3695638f7c6c7e84f65c09841a595ae51c09025ce321.
+Task-125 core verification provenance: implementer reported swiftcore-projectsession 1/36 PASS with verbose run after check source froze. Task-125 shell lanes passed 2/75; neither proof check rerun verifies semantic parity.
+
+
 
 A001 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:170
 Disposition: RETIRED-REPRESENTATION
@@ -88,16 +98,8 @@ Disposition: MATCHED
 Mapping: S004, S030
 
 A006 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:204
-Disposition: PARTIAL
-Mapping/reason: S003 (remap.swift), S008 (remap.swift) and S024 (EditorGridCameraChecks.swift) assert the moved mute/solo/selection owners and the moved note owners, with S007 (remap.swift) for the accepted move and S002 (remap.swift) for the fixture restoration. Unproved: the original hasMovedTrackState cosmetic remap (editorViewState lane heights/ranges) and the time-selection lanes ({{1,7},{0,10}}), which the Swift roll does not model.
-Source context since previous assertion:
-;
-    fixture.clearOrder();
-    if (!hasMovedTrackState(fixture.view) ||
-        !hasTimeSelectionLanes(fixture.view, {{1, 7}, {0, 10}})) {
-
-Original expression:
-QFAIL("move did not re-address complete SongView track state")
+Disposition: MATCHED
+Mapping: S003, S031
 
 A007 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:209
 Disposition: RETIRED-REPRESENTATION
@@ -117,17 +119,8 @@ Disposition: MATCHED
 Mapping: S004, S030
 
 A009 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:215
-Disposition: PARTIAL
-Mapping/reason: S003 body (remap.swift) at the move-undo call (remap.swift), S009 (remap.swift) and S026 (EditorGridCameraChecks.swift) assert the inverse remap and the restored document state/identity. Unproved: the original hasOriginalTrackState cosmetic remap and the time-selection lane remap, which the Swift roll does not model.
-Source context since previous assertion:
-;
-    fixture.clearOrder();
-    if (!hasOriginalTrackState(fixture.view) ||
-        !hasTimeSelectionLanes(fixture.view, {{0, 7}, {1, 10}})) {
-
-Original expression:
-QFAIL("move undo did not restore remapped owners")
-
+Disposition: MATCHED
+Mapping: S003, S032
 A010 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:220
 Disposition: RETIRED-REPRESENTATION
 Mapping/reason: RETIRED-REPRESENTATION — QFAIL("move redo did not remap before documentChanged") pins the fork tracksRemapped-then-documentChanged two-signal emission order (remapPrecedesDocument); Swift publishes one coalesced SessionChange(trackRemap:) (DocumentSession+Internals.swift:41-68, composeTrackRemaps at :83), with the move-redo remap reconciliation executed by S003.
@@ -146,17 +139,8 @@ Disposition: MATCHED
 Mapping: S004, S030
 
 A012 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:226
-Disposition: PARTIAL
-Mapping/reason: S003 body (remap.swift) at the move-redo call (remap.swift), S010 (remap.swift) and S024 (EditorGridCameraChecks.swift) assert the redo owner state. Unproved: the original hasMovedTrackState cosmetic remap and the time-selection lane remap, which the Swift roll does not model.
-Source context since previous assertion:
-;
-    fixture.clearOrder();
-    if (!hasMovedTrackState(fixture.view) ||
-        !hasTimeSelectionLanes(fixture.view, {{1, 7}, {0, 10}})) {
-
-Original expression:
-QFAIL("move redo did not restore remapped owners")
-
+Disposition: MATCHED
+Mapping: S003, S033
 A013 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:235
 Disposition: RETIRED-REPRESENTATION
 
@@ -186,18 +170,8 @@ Disposition: MATCHED
 Mapping: S004, S030
 
 A019 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:262
-Disposition: PARTIAL
-Mapping/reason: S003 body (remap.swift) at the insert call (remap.swift), S011 (remap.swift) and S023 (EditorGridCameraChecks.swift) assert the inserted track inherits no mute/solo/selection owner state and the pre-existing owners are retained. Unproved: the original hasNoOwnerCosmetics(inserted) cosmetic conjunct, which the Swift roll does not model.
-Source context since previous assertion:
-;
-    fixture.clearOrder();
-    if (fixture.view.trackMuted(inserted) || fixture.view.trackSoloed(inserted) ||
-        (fixture.view.selectionModel().storedTrackScope() & (1u << inserted)) ||
-        !hasOriginalTrackState(fixture.view) ||
-        !hasNoOwnerCosmetics(fixture.view.editorViewState(), inserted)) {
-
-Original expression:
-QFAIL("inserted track inherited existing SongView state")
+Disposition: MATCHED
+Mapping: S003, S034, S011
 
 A020 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:267
 Disposition: RETIRED-REPRESENTATION
@@ -217,16 +191,8 @@ Disposition: MATCHED
 Mapping: S004, S030
 
 A022 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:272
-Disposition: PARTIAL
-Mapping/reason: S003 body (remap.swift) at the insert-undo call (remap.swift) and S012 (remap.swift) assert the insert undo restores the document, history identity and the surviving owners. Unproved: the original hasNoOwnerCosmetics conjunct, which the Swift roll does not model.
-Source context since previous assertion:
-;
-    fixture.clearOrder();
-    if (!hasOriginalTrackState(fixture.view))
-
-Original expression:
-QFAIL("insert undo did not restore existing SongView state")
-
+Disposition: MATCHED
+Mapping: S003, S035
 A023 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:276
 Disposition: RETIRED-REPRESENTATION
 Mapping/reason: RETIRED-REPRESENTATION — QFAIL("insert redo did not remap before documentChanged") pins the fork tracksRemapped-then-documentChanged two-signal emission order (remapPrecedesDocument); Swift publishes one coalesced SessionChange(trackRemap:) (DocumentSession+Internals.swift:41-68, composeTrackRemaps at :83), with the insert-redo remap reconciliation executed by S003.
@@ -244,16 +210,8 @@ Disposition: MATCHED
 Mapping: S004, S030
 
 A025 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:281
-Disposition: PARTIAL
-Mapping/reason: S003 body (remap.swift) at the insert-redo call (remap.swift) and S013 (remap.swift) assert the redo reinstates the inserted track with the pre-existing owner state. Unproved: the original hasNoOwnerCosmetics conjunct, which the Swift roll does not model.
-Source context since previous assertion:
-;
-    fixture.clearOrder();
-    if (!hasOriginalTrackState(fixture.view))
-
-Original expression:
-QFAIL("insert redo did not preserve existing SongView state")
-
+Disposition: MATCHED
+Mapping: S003, S036
 A026 | PianoRollTest::trackRemapDuplicate | src/checks/rollcheck/remap.cpp:289
 Disposition: RETIRED-REPRESENTATION
 
@@ -283,19 +241,8 @@ Disposition: MATCHED
 Mapping: S004, S030
 
 A032 | PianoRollTest::trackRemapDuplicate | src/checks/rollcheck/remap.cpp:316
-Disposition: PARTIAL
-Mapping/reason: S003 body (remap.swift) at the duplicate call (remap.swift), S014 (remap.swift) and S027 (EditorGridCameraChecks.swift) assert the duplicated track keeps the owners on the source track and inherits none. Unproved: the original hasNoOwnerCosmetics(duplicate) conjunct, which the Swift roll does not model.
-Source context since previous assertion:
-;
-    fixture.clearOrder();
-    if (fixture.view.trackMuted(duplicate) || fixture.view.trackSoloed(duplicate) ||
-        (fixture.view.selectionModel().storedTrackScope() & (1u << duplicate)) ||
-        !hasOriginalTrackState(fixture.view) ||
-        !hasNoOwnerCosmetics(fixture.view.editorViewState(), duplicate)) {
-
-Original expression:
-QFAIL("duplicated track inherited existing SongView state")
-
+Disposition: MATCHED
+Mapping: S003, S037, S014
 A033 | PianoRollTest::trackRemapDuplicate | src/checks/rollcheck/remap.cpp:321
 Disposition: RETIRED-REPRESENTATION
 Mapping/reason: RETIRED-REPRESENTATION — QFAIL("duplicate undo did not remap before documentChanged") pins the fork tracksRemapped-then-documentChanged two-signal emission order (remapPrecedesDocument); Swift publishes one coalesced SessionChange(trackRemap:) (DocumentSession+Internals.swift:41-68, composeTrackRemaps at :83), with the duplicate-undo remap reconciliation executed by S003.
@@ -314,16 +261,8 @@ Disposition: MATCHED
 Mapping: S004, S030
 
 A035 | PianoRollTest::trackRemapDuplicate | src/checks/rollcheck/remap.cpp:326
-Disposition: PARTIAL
-Mapping/reason: S003 body (remap.swift) at the duplicate-undo call (remap.swift) and S015 (remap.swift) assert the duplicate undo restores the document, history identity and the source-owner state. Unproved: the original cosmetic conjuncts, which the Swift roll does not model.
-Source context since previous assertion:
-;
-    fixture.clearOrder();
-    if (!hasOriginalTrackState(fixture.view))
-
-Original expression:
-QFAIL("duplicate undo did not restore existing SongView state")
-
+Disposition: MATCHED
+Mapping: S003, S038
 A036 | PianoRollTest::trackRemapDuplicate | src/checks/rollcheck/remap.cpp:330
 Disposition: RETIRED-REPRESENTATION
 Mapping/reason: RETIRED-REPRESENTATION — QFAIL("duplicate redo did not remap before documentChanged") pins the fork tracksRemapped-then-documentChanged two-signal emission order (remapPrecedesDocument); Swift publishes one coalesced SessionChange(trackRemap:) (DocumentSession+Internals.swift:41-68, composeTrackRemaps at :83), with the duplicate-redo remap reconciliation executed by S003.
@@ -341,16 +280,8 @@ Disposition: MATCHED
 Mapping: S004, S030
 
 A038 | PianoRollTest::trackRemapDuplicate | src/checks/rollcheck/remap.cpp:335
-Disposition: PARTIAL
-Mapping/reason: S003 body (remap.swift) at the duplicate-redo call (remap.swift) and S016 (remap.swift) assert the duplicate redo reinstates the duplicate with the source-owner state. Unproved: the original cosmetic conjuncts, which the Swift roll does not model.
-Source context since previous assertion:
-;
-    fixture.clearOrder();
-    if (!hasOriginalTrackState(fixture.view))
-
-Original expression:
-QFAIL("duplicate redo did not preserve existing SongView state")
-
+Disposition: MATCHED
+Mapping: S003, S039
 A039 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:343
 Disposition: RETIRED-REPRESENTATION
 
@@ -400,7 +331,8 @@ Mapping: S004, S030
 
 A044 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:383
 Disposition: PARTIAL
-Mapping/reason: S003 body (remap.swift) at the delete call (remap.swift), S017 (remap.swift) and S028 (EditorGridCameraChecks.swift) assert the removed owner's note and note-selection clear and the mute/solo/scope fallback. Unproved: the original inactive time-selection and removed-owner empty-lane cosmetic conjuncts, which the Swift roll does not model.
+Mapping: S017, S055
+Mapping/reason: S017 proves deletion clears the selected removed-owner note, controls, and complete cosmetics; S055 separately proves an actively selected CC74 lane loses its time selection and cosmetics. PARTIAL remains because the original combined fixture conjunct is not exercised together: DocumentSession cannot simultaneously hold the note selection and lane time selection.
 Source context since previous assertion:
 ;
     fixture.clearOrder();
@@ -409,13 +341,13 @@ Source context since previous assertion:
         fixture.view.selectionModel().timeSelection().active() ||
         fixture.view.trackMuted(removed) || fixture.view.trackSoloed(removed) ||
         hasEmptyLane(fixture.view.editorViewState(), removed, 74)) {
-
 Original expression:
 QFAIL("deleted track left SongView-owned state behind")
 
 A045 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:390
 Disposition: PARTIAL
-Mapping/reason: S003 body (remap.swift) at the delete call (remap.swift) and S028 (EditorGridCameraChecks.swift) assert the fallback selection, the single-owner scope and the mute/solo drop. Unproved: the original hasNoOwnerCosmetics conjunct, which the Swift roll does not model.
+Mapping: S003, S017, S052
+Mapping/reason: S017 proves fallback primary track, surviving mute/solo state, and empty owner cosmetics; S052 proves the deleted owner note and CC74 cosmetics are dropped. The delete publication helper checks stored scope through S003 but uses a shared interpolated phase message, not a unique literal predicate for this clause; stored-scope retention remains unproved under the task's one-predicate/unique-literal contract.
 Source context since previous assertion:
 ;
     }
@@ -424,10 +356,8 @@ Source context since previous assertion:
         fixture.view.selectionModel().storedTrackScope() != (1u << fallback) ||
         !fixture.view.trackMuted(0) || fixture.view.trackSoloed(0) ||
         !hasNoOwnerCosmetics(fixture.view.editorViewState(), removed)) {
-
 Original expression:
 QFAIL("delete did not drop cosmetic state from its removed owner")
-
 A046 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:395
 Disposition: RETIRED-REPRESENTATION
 Mapping/reason: RETIRED-REPRESENTATION — QFAIL("delete undo did not remap before documentChanged") pins the fork tracksRemapped-then-documentChanged two-signal emission order (remapPrecedesDocument); Swift publishes one coalesced SessionChange(trackRemap:) (DocumentSession+Internals.swift:41-68, composeTrackRemaps at :83), with the delete-undo remap reconciliation executed by S003.
@@ -447,7 +377,8 @@ Mapping: S004, S030
 
 A048 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:403
 Disposition: PARTIAL
-Mapping/reason: S003 body (remap.swift) at the delete-undo call (remap.swift), S018 (remap.swift) and S029 (EditorGridCameraChecks.swift) assert the restored track does not revive the dropped note selection and that the surviving owner state returns. Unproved: the original inactive time-selection and cosmetic conjuncts, which the Swift roll does not model.
+Mapping: S018, S056
+Mapping/reason: S018 proves delete-undo drops removed-owner note selection, controls, and cosmetics; S056 separately proves undo after active-time deletion does not revive the removed-lane selection or cosmetics. PARTIAL remains because the original combined note-selection and active-time-selection fixture is not representable together.
 Source context since previous assertion:
 ;
     fixture.clearOrder();
@@ -455,13 +386,14 @@ Source context since previous assertion:
         fixture.view.selectionModel().timeSelection().active() ||
         fixture.view.trackMuted(removed) || fixture.view.trackSoloed(removed) ||
         hasEmptyLane(fixture.view.editorViewState(), removed, 74)) {
-
 Original expression:
 QFAIL("restored track inherited dropped SongView state")
 
+
 A049 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:409
 Disposition: PARTIAL
-Mapping/reason: S003 body (remap.swift) at the delete-undo call (remap.swift), S018 (remap.swift) and S029 (EditorGridCameraChecks.swift) assert the restored document, history identity and surviving owners. Unproved: the original cosmetic conjuncts, which the Swift roll does not model.
+Mapping: S054
+Mapping/reason: S054 proves the restored document/history identity, dropped selection, and absent removed-owner cosmetics. Unproved: the primary-track, stored-scope, mute, and solo state conjunct; the only candidate is the shared interpolated S003 message, not a dedicated unique-literal predicate for this fork clause.
 Source context since previous assertion:
 ;
     }
@@ -469,10 +401,8 @@ Source context since previous assertion:
         fixture.view.selectionModel().storedTrackScope() != 0x1 || !fixture.view.trackMuted(0) ||
         fixture.view.trackSoloed(0) ||
         !hasNoOwnerCosmetics(fixture.view.editorViewState(), removed)) {
-
 Original expression:
 QFAIL("delete undo did not restore surviving SongView state")
-
 A050 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:414
 Disposition: RETIRED-REPRESENTATION
 Mapping/reason: RETIRED-REPRESENTATION — QFAIL("delete redo did not remap before documentChanged") pins the fork tracksRemapped-then-documentChanged two-signal emission order (remapPrecedesDocument); Swift publishes one coalesced SessionChange(trackRemap:) (DocumentSession+Internals.swift:41-68, composeTrackRemaps at :83), with the delete-redo remap reconciliation executed by S003.
@@ -491,19 +421,8 @@ Disposition: MATCHED
 Mapping: S004, S030
 
 A052 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:422
-Disposition: PARTIAL
-Mapping/reason: S003 body (remap.swift) at the delete-redo call (remap.swift), S019 (remap.swift) and S028 (EditorGridCameraChecks.swift) assert the redo removes the owner again without reviving its state. Unproved: the original cosmetic conjuncts, which the Swift roll does not model.
-Source context since previous assertion:
-;
-    fixture.clearOrder();
-    if (fixture.view.selectionModel().primaryTrack() != 0 ||
-        fixture.view.selectionModel().storedTrackScope() != 0x1 || !fixture.view.trackMuted(0) ||
-        fixture.view.trackSoloed(0) ||
-        !hasNoOwnerCosmetics(fixture.view.editorViewState(), removed)) {
-
-Original expression:
-QFAIL("delete redo did not keep dropped SongView state absent")
-
+Disposition: MATCHED
+Mapping: S003, S040
 A053 | PianoRollTest::trackRemapMetadata | src/checks/rollcheck/remap.cpp:431
 Disposition: RETIRED-REPRESENTATION
 
@@ -516,7 +435,7 @@ Mapping: S001
 
 A056 | PianoRollTest::trackRemapMetadata | src/checks/rollcheck/remap.cpp:464
 Disposition: PARTIAL
-Mapping/reason: S003 body (remap.swift) at the metadata-edit call (remap.swift) asserts the metadata publication reports remapped == false with every owner value unchanged, and S020 (remap.swift) asserts the header rows are not reset. Unproved: the original documentOnly() timeline-rebuild observation and the editorViewState cosmetic equality, which the Swift roll does not model.
+Mapping/reason: S003 at metadata edit proves the single document publication with remapped == false and unchanged owner state, S020 observes stable header records, and S041 compares complete CC and Tempo cosmetics. The original documentOnly() additionally required timeline-rebuild delivery; no executing predicate observes that projection rebuild after metadata rename.
 Source context since previous assertion:
 ;
 
@@ -551,7 +470,7 @@ QFAIL("metadata-only edit changed SongView owner state")
 
 A057 | PianoRollTest::trackRemapMetadata | src/checks/rollcheck/remap.cpp:468
 Disposition: PARTIAL
-Mapping/reason: S003 body (remap.swift) at the metadata-undo call (remap.swift) asserts the metadata-undo publication reports remapped == false with every owner value unchanged; S021 (remap.swift) asserts the restored document. Unproved: the original documentOnly() observation and the editorViewState cosmetic equality.
+Mapping/reason: S003 at metadata undo proves the single document publication with remapped == false and unchanged owner state, S021 checks history and S042 compares complete CC and Tempo cosmetics. The original documentOnly() additionally required timeline-rebuild delivery, not observed by this Swift predicate.
 Source context since previous assertion:
 ;
     fixture.clearOrder();
@@ -563,7 +482,7 @@ QFAIL("metadata-only undo changed SongView owner state")
 
 A058 | PianoRollTest::trackRemapMetadata | src/checks/rollcheck/remap.cpp:472
 Disposition: PARTIAL
-Mapping/reason: S003 body (remap.swift) at the metadata-redo call (remap.swift) asserts the metadata-redo publication reports remapped == false with every owner value unchanged; S022 (remap.swift) asserts the restored name. Unproved: the original documentOnly() observation and the editorViewState cosmetic equality.
+Mapping/reason: S003 at metadata redo proves the single document publication with remapped == false and unchanged owner state, S022 checks history and S043 compares complete CC and Tempo cosmetics. The original documentOnly() additionally required timeline-rebuild delivery, not observed by this Swift predicate.
 Source context since previous assertion:
 ;
     fixture.clearOrder();
@@ -580,8 +499,9 @@ A060 | PianoRollTest::trackRemapEnginePromotion | src/checks/rollcheck/remap.cpp
 Disposition: RETIRED-REPRESENTATION
 
 A061 | PianoRollTest::trackRemapEnginePromotion | src/checks/rollcheck/remap.cpp:503
-Disposition: GAP
-Mapping/reason: No Swift predicate asserts that a raw metadata-only track becomes the sole engine owner; the Swift raw-insert path never promotes or reclassifies a conductor track.
+Disposition: MATCHED
+Mapping: S044
+Mapping/reason: The executed raw-promotion fixture asserts the pre-edit document has exactly one engine owner and that it is chunk one (S044).
 Source context since previous assertion:
 ;
     if (fixture.document.engineTrackCount() != 1)
@@ -590,8 +510,9 @@ Original expression:
 QFAIL("raw metadata-to-engine fixture did not start with one engine owner")
 
 A062 | PianoRollTest::trackRemapEnginePromotion | src/checks/rollcheck/remap.cpp:525
-Disposition: GAP
-Mapping/reason: No Swift predicate observes a remap publication for a raw metadata-to-engine edit: insertRawEvent in Swift never emits TrackRemap.
+Disposition: MATCHED
+Mapping: S003, S045
+Mapping/reason: S045 asserts exactly one DocumentChange, remapped true, and selected owner one; the raw-promotion call to S003 checks complete selected/scope/mute/solo owner state at that publication. This does not assert the retired Qt two-signal ordering.
 Source context since previous assertion:
 ;
 
@@ -620,8 +541,9 @@ Original expression:
 QFAIL("metadata-to-engine raw edit did not remap before documentChanged")
 
 A063 | PianoRollTest::trackRemapEnginePromotion | src/checks/rollcheck/remap.cpp:533
-Disposition: GAP
-Mapping/reason: No Swift predicate observes the engine-to-metadata owner rebinding after a raw edit; the promotion mechanism is absent from the Swift raw-event path.
+Disposition: MATCHED
+Mapping: S003, S045, S046
+Mapping/reason: S046 proves complete CC and Tempo cosmetics and track-scoped active time readdressed to owner one; S045 proves the remap publication, while its S003 call checks selected/scope/mute/solo owners at the publication.
 Source context since previous assertion:
 ;
     fixture.clearOrder();
@@ -636,8 +558,9 @@ Original expression:
 QFAIL("metadata-to-engine raw edit did not remap SongView owners")
 
 A064 | PianoRollTest::trackRemapEnginePromotion | src/checks/rollcheck/remap.cpp:541
-Disposition: GAP
-Mapping/reason: No Swift predicate observes a raw-undo remap publication; insertRawEvent undo carries no TrackRemap in Swift.
+Disposition: MATCHED
+Mapping: S003, S047
+Mapping/reason: S047 asserts exactly one inverse remap publication and selected owner zero; the undo call to S003 checks the complete owner scope/mute/solo state at publication. No obsolete Qt emission ordering is claimed.
 Source context since previous assertion:
 ;
     }
@@ -652,8 +575,9 @@ Original expression:
 QFAIL("engine-to-metadata raw undo did not remap before documentChanged")
 
 A065 | PianoRollTest::trackRemapEnginePromotion | src/checks/rollcheck/remap.cpp:548
-Disposition: GAP
-Mapping/reason: No Swift predicate observes the engine-to-metadata fallback rebinding of owner state; the promotion mechanism is absent from the Swift raw-event path.
+Disposition: MATCHED
+Mapping: S003, S048
+Mapping/reason: S048 verifies original MIDI state/bytes, history identity/index/count and revision, original owner cosmetics, and no revived time selection; the undo call to S003 asserts fallback selected/scope/mute/solo owners.
 Source context since previous assertion:
 ;
     fixture.clearOrder();
@@ -667,8 +591,9 @@ Original expression:
 QFAIL("engine-to-metadata fallback rebound SongView state to the wrong owner")
 
 A066 | PianoRollTest::trackRemapEnginePromotion | src/checks/rollcheck/remap.cpp:553
-Disposition: GAP
-Mapping/reason: No Swift predicate observes a raw-redo remap publication; insertRawEvent redo carries no TrackRemap in Swift.
+Disposition: MATCHED
+Mapping: S003, S049
+Mapping/reason: S049 asserts exactly one redo remap publication and selected owner one; the redo call to S003 checks selected/scope/mute/solo owners at publication. No obsolete Qt emission ordering is claimed.
 Source context since previous assertion:
 ;
     }
@@ -680,8 +605,9 @@ Original expression:
 QFAIL("metadata-to-engine raw redo did not remap before documentChanged")
 
 A067 | PianoRollTest::trackRemapEnginePromotion | src/checks/rollcheck/remap.cpp:561
-Disposition: GAP
-Mapping/reason: No Swift predicate observes the re-applied engine owner state after a raw redo; the dynamic conductor promotion that this site pins does not exist in the Swift raw-event path.
+Disposition: MATCHED
+Mapping: S003, S050
+Mapping/reason: S050 verifies independently specified promoted MIDI bytes, revision, history index/count, complete readdressed owner cosmetics, and no transient time selection; the redo call to S003 asserts selected/scope/mute/solo owner state.
 Source context since previous assertion:
 ;
     fixture.clearOrder();
@@ -701,10 +627,10 @@ Remaining original source (closing sequence and helper bodies):
 }
 
 Swift assertion predicates
-The S entries are exact report.expect/fail predicates already executed by
-runRemapChecks and runEditorGridCameraChecks (swiftcore projectSession suite), plus the
-shell-grid-input lane predicate (deno task verify --filter swiftcore --verbose PASS
-1/14 ok; deno task verify:shell --verbose PASS 11/11; both controller-recorded).
+S001..S030 were executed in the earlier projectSession and shell-grid-input
+lanes (controller-recorded swiftcore 1/14 and shell 11/11). Task-125
+S031..S043 were executed in the focused projectSession lane (implementer-
+recorded PASS, 1/36). Presence alone does not establish correspondence.
 
 S001 | runRemapChecks | src/checks/rollcheck/remap.swift
 Anchor: function
@@ -712,7 +638,7 @@ Anchor: function
 S002 | runRemapChecks fixture restoration | src/checks/rollcheck/remap.swift
 Anchor: message "remap fixture leaves the supplied song unchanged"
 
-S003 | expectPublication | src/checks/rollcheck/remap.swift
+S003 | expectPublication (remap.swift:120) | src/checks/rollcheck/remap.swift
 Anchor: message "\(phase): owner state is reconciled before the single document publication"
 
 S004 | expectPublication | src/checks/rollcheck/remap.swift
@@ -754,22 +680,22 @@ Anchor: message "one undo removes the duplicate"
 S016 | checkRemapDuplicate redo | src/checks/rollcheck/remap.swift
 Anchor: message "redo reinstates the duplicate"
 
-S017 | checkRemapDelete note and selection | src/checks/rollcheck/remap.swift
-Anchor: message "deleting an owner removes its note and selected-note reference"
+S017 | checkRemapDelete (remap.swift:315) | src/checks/rollcheck/remap.swift
+Anchor: message "delete clears the selected removed-owner note controls and complete owner cosmetics"
 
-S018 | checkRemapDelete undo | src/checks/rollcheck/remap.swift
-Anchor: message "one undo restores the document, not the dropped session selection"
+S018 | checkRemapDelete (remap.swift:327) | src/checks/rollcheck/remap.swift
+Anchor: message "delete undo does not revive removed-owner note selection controls or cosmetics"
 
 S019 | checkRemapDelete redo | src/checks/rollcheck/remap.swift
 Anchor: message "redo removes the owner again"
 
-S020 | checkRemapMetadata header stability | src/checks/rollcheck/remap.swift
+S020 | checkRemapMetadata (remap.swift:377) | src/checks/rollcheck/remap.swift
 Anchor: message "metadata edit updates the header without resetting its records"
 
-S021 | checkRemapMetadata undo | src/checks/rollcheck/remap.swift
+S021 | checkRemapMetadata (remap.swift:387) | src/checks/rollcheck/remap.swift
 Anchor: message "one metadata undo restores the original name"
 
-S022 | checkRemapMetadata redo | src/checks/rollcheck/remap.swift
+S022 | checkRemapMetadata (remap.swift:394) | src/checks/rollcheck/remap.swift
 Anchor: message "redo restores the metadata name"
 
 S023 | checkTrackOwnerRemap | src/checks/rollcheck/remap.swift
@@ -795,3 +721,77 @@ Anchor: message "undo restores the track without reviving dropped owner state"
 
 S030 | test_trackFollowReload | src/checks/editorqml/tst_ShellGridInputCancel.qml
 Anchor: message "setTrack follows track 1 with other tracks as ghosts"
+
+S031 | checkRemapMove | src/checks/rollcheck/remap.swift
+Anchor: message "move maps both CC lane cosmetics and retained time-selection lanes"
+
+S032 | checkRemapMove | src/checks/rollcheck/remap.swift
+Anchor: message "move undo restores both CC lane cosmetics and original time-selection lanes"
+
+S033 | checkRemapMove | src/checks/rollcheck/remap.swift
+Anchor: message "move redo remaps both CC lane cosmetics and time-selection lanes again"
+
+S034 | checkRemapInsert | src/checks/rollcheck/remap.swift
+Anchor: message "insert preserves old lane cosmetics without giving new owner cosmetics"
+
+S035 | checkRemapInsert | src/checks/rollcheck/remap.swift
+Anchor: message "insert undo retains original lane cosmetics without time selection"
+
+S036 | checkRemapInsert | src/checks/rollcheck/remap.swift
+Anchor: message "insert redo leaves the new owner without inherited lane cosmetics"
+
+S037 | checkRemapDuplicate | src/checks/rollcheck/remap.swift
+Anchor: message "duplicate preserves original lane cosmetics without inheriting them"
+
+S038 | checkRemapDuplicate | src/checks/rollcheck/remap.swift
+Anchor: message "duplicate undo retains original lane cosmetics and no time selection"
+
+S039 | checkRemapDuplicate | src/checks/rollcheck/remap.swift
+Anchor: message "duplicate redo still leaves its new owner without lane cosmetics"
+
+S040 | checkRemapDelete | src/checks/rollcheck/remap.swift
+Anchor: message "delete redo drops active removed-owner time selection and lane cosmetics"
+
+S041 | checkRemapMetadata (remap.swift:374) | src/checks/rollcheck/remap.swift
+Anchor: message "metadata rename retains exact CC and Tempo cosmetics at original owners"
+
+S042 | checkRemapMetadata (remap.swift:384) | src/checks/rollcheck/remap.swift
+Anchor: message "metadata undo retains exact CC and Tempo cosmetics at original owners"
+
+S043 | checkRemapMetadata (remap.swift:392) | src/checks/rollcheck/remap.swift
+Anchor: message "metadata redo retains exact CC and Tempo cosmetics at original owners"
+
+S044 | checkRawPromotion (remap.swift:429) | src/checks/rollcheck/remap.swift
+Anchor: message "raw metadata-to-engine fixture begins with exactly one owner on chunk one"
+
+S045 | checkRawPromotion (remap.swift:448) | src/checks/rollcheck/remap.swift
+Anchor: message "raw promotion publishes one remap with the prior owner reconciled"
+
+S046 | checkRawPromotion (remap.swift:461) | src/checks/rollcheck/remap.swift
+Anchor: message "raw promotion readdresses complete cosmetics and active time to owner one"
+
+S047 | checkRawPromotion (remap.swift:469) | src/checks/rollcheck/remap.swift
+Anchor: message "raw promotion undo publishes one inverse remap to the original owner"
+
+S048 | checkRawPromotion (remap.swift:477) | src/checks/rollcheck/remap.swift
+Anchor: message "raw undo restores original bytes and owner cosmetics without reviving cleared time"
+
+S049 | checkRawPromotion (remap.swift:483) | src/checks/rollcheck/remap.swift
+Anchor: message "raw promotion redo publishes one remap to the promoted owner"
+
+S050 | checkRawPromotion (remap.swift:491) | src/checks/rollcheck/remap.swift
+Anchor: message "raw redo restores edited bytes and owner cosmetics without transient selection"
+
+
+S052 | checkRemapDelete (remap.swift:318) | src/checks/rollcheck/remap.swift
+Anchor: message "deleting an owner removes its note selected-note reference and CC74 lane cosmetics"
+
+
+S054 | checkRemapDelete (remap.swift:330) | src/checks/rollcheck/remap.swift
+Anchor: message "one undo restores the document without reviving dropped lane cosmetics"
+
+S055 | checkRemapDelete (remap.swift:347) | src/checks/rollcheck/remap.swift
+Anchor: message "deleting an actively selected CC74 lane drops its time selection and cosmetics"
+
+S056 | checkRemapDelete (remap.swift:351) | src/checks/rollcheck/remap.swift
+Anchor: message "undoing active-time deletion restores the MIDI owner without reviving removed-lane selection"

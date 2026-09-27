@@ -71,6 +71,60 @@ ShellTabsSupport {
         verify(prior.events, "reload seeds the visible Event List")
         verify(prior.cursor > 0 && prior.triplet && prior.events,
                "the reloaded tab's view is seeded with non-default cursor, feel and events")
+        const retainedNotes = grid.noteSummary
+        grid.handleWheel(0, -120, 0, 0, 0, 0, false, 100, 20)
+        grid.handleWheel(0, -120, 0, 0, Qt.ControlModifier, 0, true, 100, 20)
+        grid.setCameraHScroll(1000000)
+        grid.setCameraVScroll(1000000)
+        grid.setTrack(0)
+        grid.setEditCursorTick(0)
+        grid.openGridMenu(1)
+        grid.activateGridMenuRow(4)
+        grid.openGridMenu(2)
+        grid.activateGridMenuRow(0)
+        tabs().setSelectedTabEventsVisible(false)
+        verify(Math.abs(grid.beatWidth - prior.beat) > 0.01
+               && Math.abs(grid.rowHeight - prior.height) > 0.01
+               && Math.abs(grid.cameraScrollX - prior.x) > 0.01
+               && Math.abs(grid.cameraScrollY - prior.y) > 0.01
+               && grid.trackIndex !== prior.track && grid.editCursorTick !== prior.cursor
+               && grid.gridSelectionMenuId !== prior.division
+               && grid.tripletGrid !== prior.triplet
+               && tabs().selectedTabShowsEvents !== prior.events,
+               "perturbing the live tab changes all nine retained camera selection grid and visibility fields")
+        fuzzyCompare(grid.beatWidth, prior.beat * Math.pow(1.0015, -120), 0.01,
+                     "time zoom applies the independently calculated normalized wheel factor")
+        fuzzyCompare(grid.rowHeight, prior.height * Math.pow(2, -0.1), 0.01,
+                     "key zoom applies the independently calculated normalized wheel factor")
+        compare(grid.cameraScrollX, grid.cameraMaxHScroll,
+                "oversized horizontal scroll clamps to the projected song maximum")
+        compare(grid.cameraScrollY, grid.cameraMaxVScroll,
+                "oversized vertical scroll clamps to the projected key maximum")
+        verify(grid.trackIndex === 0 && grid.editCursorTick === 0
+               && grid.gridSelectionMenuId === 4 && !grid.tripletGrid
+               && !tabs().selectedTabShowsEvents,
+               "applying the perturbed view retains the alternate owner cursor grid feel and hidden Event List")
+        grid.handleWheel(0, 120, 0, 0, 0, 0, false, 100, 20)
+        grid.handleWheel(0, 120, 0, 0, Qt.ControlModifier, 0, true, 100, 20)
+        grid.setCameraHScroll(prior.x)
+        grid.setCameraVScroll(prior.y)
+        grid.setTrack(prior.track)
+        grid.setEditCursorTick(prior.cursor)
+        grid.openGridMenu(1)
+        grid.activateGridMenuRow(prior.division)
+        grid.openGridMenu(2)
+        grid.activateGridMenuRow(1)
+        tabs().setSelectedTabEventsVisible(prior.events)
+        verify(Math.abs(grid.beatWidth - prior.beat) < 0.01
+               && Math.abs(grid.rowHeight - prior.height) < 0.01
+               && Math.abs(grid.cameraScrollX - prior.x) < 0.01
+               && Math.abs(grid.cameraScrollY - prior.y) < 0.01
+               && grid.trackIndex === prior.track && grid.editCursorTick === prior.cursor
+               && grid.gridSelectionMenuId === prior.division
+               && grid.tripletGrid === prior.triplet
+               && tabs().selectedTabShowsEvents === prior.events
+               && grid.noteSummary === retainedNotes,
+               "restoring the captured runtime view preserves all fields and the original MIDI notes")
         session().openSong("mus_route101")
         verify(waitForNative(function() {
             return tabs().tabCount === 1 && tabs().selectedId === id
@@ -100,6 +154,50 @@ ShellTabsSupport {
                 "reload retains event list visibility")
         verify(!session().canUndo && !session().canRedo,
                "reload clears the old document's undo and redo history")
+    }
+
+    function test_qRetainedRuntimeStateBelongsToItsTab() {
+        var ids = openShell(["mus_route101", "mus_route102"])
+        clickSelectTab(ids[0])
+        var firstGrid = gridOf(ids[0])
+        firstGrid.setTrack(1)
+        firstGrid.setEditCursorTick(96)
+        firstGrid.openGridMenu(1)
+        firstGrid.activateGridMenuRow(16)
+        firstGrid.openGridMenu(2)
+        firstGrid.activateGridMenuRow(1)
+        tabs().setSelectedTabEventsVisible(true)
+        var first = {
+            track: firstGrid.trackIndex, cursor: firstGrid.editCursorTick,
+            division: firstGrid.gridSelectionMenuId, feel: firstGrid.tripletGrid,
+            events: tabs().selectedTabShowsEvents
+        }
+        clickSelectTab(ids[1])
+        var secondGrid = gridOf(ids[1])
+        var second = {
+            track: secondGrid.trackIndex, cursor: secondGrid.editCursorTick,
+            division: secondGrid.gridSelectionMenuId, feel: secondGrid.tripletGrid,
+            events: tabs().selectedTabShowsEvents, notes: summaryOf(ids[1])
+        }
+        clickSelectTab(ids[0])
+        session().openSong("mus_route101")
+        verify(waitForNative(function() {
+            return gridOf(ids[0]) !== firstGrid && gridOf(ids[0]).renderedNoteCount > 0
+        }, 30000), "the selected tab replaces its document while the sibling stays open")
+        var restored = gridOf(ids[0])
+        compare(restored.trackIndex, first.track, "reload restores the first tab's selected owner")
+        compare(restored.editCursorTick, first.cursor, "reload restores the first tab's cursor")
+        compare(restored.gridSelectionMenuId, first.division, "reload restores the first tab's grid identity")
+        compare(restored.tripletGrid, first.feel, "reload restores the first tab's grid feel")
+        compare(tabs().selectedTabShowsEvents, first.events, "reload restores the first tab's Event List")
+        clickSelectTab(ids[1])
+        compare(gridOf(ids[1]), secondGrid, "reload retains the sibling's live presenter")
+        compare(secondGrid.trackIndex, second.track, "sibling track remains independent")
+        compare(secondGrid.editCursorTick, second.cursor, "sibling cursor remains independent")
+        compare(secondGrid.gridSelectionMenuId, second.division, "sibling grid remains independent")
+        compare(secondGrid.tripletGrid, second.feel, "sibling grid feel remains independent")
+        compare(tabs().selectedTabShowsEvents, second.events, "sibling Event List remains independent")
+        compare(summaryOf(ids[1]), second.notes, "reload leaves the sibling MIDI projection unchanged")
     }
 
     function test_qSelectionDuringReloadKeepsExplicitTarget() {

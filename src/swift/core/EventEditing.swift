@@ -210,7 +210,8 @@ extension SongDocument {
         if stored.isNoteOn { stored.noteID = mintNoteID() }
         var mutation = DocumentMutation(state)
         mutation.insert(stored, chunk: chunk)
-        commit(mutation, group: nil, operation: .insertRawEvent)
+        commit(mutation, group: nil, operation: .insertRawEvent,
+               trackRemap: rawTrackRemap(before: state.file, after: mutation.state.file))
     }
 
     public func modifyRawEvent(chunk: Int, index: Int, event: MidiEvent) {
@@ -231,7 +232,8 @@ extension SongDocument {
         } else {
             mutation.apply(removing: [index], inserting: [replacement], chunk: chunk)
         }
-        commit(mutation, group: nil, operation: .modifyRawEvent)
+        commit(mutation, group: nil, operation: .modifyRawEvent,
+               trackRemap: rawTrackRemap(before: state.file, after: mutation.state.file))
     }
 
     public func deleteRawEvents(chunk: Int, indices: [Int]) {
@@ -241,7 +243,8 @@ extension SongDocument {
         guard !valid.isEmpty else { return }
         var mutation = DocumentMutation(state)
         mutation.apply(removing: Array(valid), inserting: [], chunk: chunk)
-        commit(mutation, group: nil, operation: .deleteRawEvents)
+        commit(mutation, group: nil, operation: .deleteRawEvents,
+               trackRemap: rawTrackRemap(before: state.file, after: mutation.state.file))
     }
 
     public func rawMoveBounds(chunk: Int, index: Int) -> ClosedRange<Int>? {
@@ -291,7 +294,8 @@ extension SongDocument {
         mutation.apply(removing: Array(valid), inserting: event.map { [$0] } ?? [],
                        chunk: chunk)
         mutation.setTempo(editedTempo(state.tempo, tempo))
-        commit(mutation, group: nil, operation: .editRawAndTempo)
+        commit(mutation, group: nil, operation: .editRawAndTempo,
+               trackRemap: rawTrackRemap(before: state.file, after: mutation.state.file))
     }
 
     public func setLoop(end: Bool, tick: Int64?) {
