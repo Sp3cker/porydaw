@@ -39,7 +39,7 @@ Item {
         readonly property int horizontalAlignment: (alignment & Text.AlignRight)
                                                   ? Text.AlignRight : Text.AlignLeft
 
-        implicitWidth: tableOwner.columnWidth(column)
+        implicitWidth: page.columnWidth(column)
         implicitHeight: page.rowHeight
 
         function focusEditor() {

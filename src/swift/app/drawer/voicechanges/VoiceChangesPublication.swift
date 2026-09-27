@@ -200,6 +200,7 @@ extension VoiceChangesPage {
             let hovered = marker.identity == hoverIdentity
             if marker.hovered != hovered {
                 marker.hovered = hovered
+                marker.refreshSpec()
                 markers[index] = marker
             }
         }

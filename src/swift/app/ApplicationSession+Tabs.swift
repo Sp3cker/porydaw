@@ -187,7 +187,6 @@ extension ApplicationSession {
                 session.selectedTracks = Set(tab.selectedTracks.filter { usedTracks.contains($0) })
                 session.mutedTracks = Set(tab.mutedTracks.filter { usedTracks.contains($0) })
                 session.soloedTracks = Set(tab.soloedTracks.filter { usedTracks.contains($0) })
-                session.applyTimeSelection(tab.timeSelection)
                 if tab.timeSelection == nil {
                     let validNotes = Set(usedTracks.flatMap { session.document.notes(in: $0).map(\.id) })
                     session.setSelectedNotes(tab.selectedNoteOrder.filter { validNotes.contains($0) })

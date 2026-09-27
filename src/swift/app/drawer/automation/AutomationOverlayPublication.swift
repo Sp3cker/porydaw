@@ -47,6 +47,7 @@ extension AutomationPage {
             let hovered = hoveredTick == node.tick
             if node.hovered != hovered {
                 node.hovered = hovered
+                node.refreshSpec()
                 nodes[index] = node
             }
         }

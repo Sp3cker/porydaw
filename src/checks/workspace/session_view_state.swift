@@ -546,11 +546,11 @@ private func runTabReadinessChecks(report: CheckReport, store: PreferencesStore,
         report.fail(recoveryID, "selection-scope reload did not publish a complete document")
         return
     }
-    report.expect(scopedDocument.timeSelection == scopedSelection
+    report.expect(scopedDocument.timeSelection == nil
                   && scopedDocument.selectedNoteOrder.isEmpty
                   && scopedDocument.selectedTracks == [0],
                   cppID: recoveryID,
-                  message: "completed reload restores the explicit lane and Tempo selection scope")
+                  message: "completed reload clears time and note selection as the fork's song swap does")
 
     // fceecd88 workspaceui_tabs.cpp handleSongFailed closes non-rebind reload failures;
     // openSongFromList enqueues MIDI reload without the bank-rebind skip marker.

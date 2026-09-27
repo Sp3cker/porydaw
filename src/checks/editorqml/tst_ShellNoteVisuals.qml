@@ -267,7 +267,7 @@ ShellNoteVisualsSupport {
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
         var session = shell.shellPresenter.session
-        verify(probe.prepareUnsignedSong(bootstrap.projectRoot, "mus_route101"),
+        verify(probe.prepareUnsignedSong(bootstrap.projectRoot, "mus_route101", 24),
                "the dpr2 song copy has its explicit signature removed")
         unsignedSongPrepared = true
         session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
