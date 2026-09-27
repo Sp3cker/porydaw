@@ -68,3 +68,45 @@ func drawerAutomationHistoryUndoRedo(_ report: CheckReport, suite: DocumentSessi
     report.expect(!beforeBlank && !blank.lanePoints(blank.panLane).contains { $0.tick == unwrittenTick },
                   cppID: drawerAutomationHistoryID, message: "an unwritten tick holds no point")
 }
+
+@MainActor
+func drawerAutomationCcPointerDragPlayback(_ report: CheckReport, suite: DocumentSession,
+                                           service: ProjectService) {
+    let id = "automation/AutomationEditingTest::ccDragCommitsOnce"
+    let fixture = drawerAutomationAutomationFixture(
+        suite: suite, service: service, pan: [(48, 40), (96, 100)])
+    fixture.activate(fixture.panLane)
+    let sourceX = fixture.x(48)
+    let sourceY = fixture.y(fixture.panLane, 40)
+    let activationY = sourceY - fixture.page.geometry.nodeDragActivationDistance - 2
+    let endY = activationY + fixture.y(fixture.panLane, 84) - sourceY
+    let before = fixture.snapshot
+    let history = fixture.document.history.undoCount
+    _ = fixture.page.pointerPress(x: sourceX, y: sourceY, surface: 1,
+                                  button: AutomationQtButton.left)
+    _ = fixture.page.pointerMove(x: sourceX, y: activationY, buttons: AutomationQtButton.left)
+    _ = fixture.page.pointerMove(x: sourceX, y: endY, buttons: AutomationQtButton.left)
+    report.expect(fixture.snapshot == before
+                  && fixture.playbackValues(fixture.panLane, at: 48) == [40]
+                  && fixture.playbackValues(fixture.panLane, at: 96) == [100], cppID: id,
+                  message: "held CC pointer drag keeps both playback events unchanged")
+    let committed = fixture.page.pointerRelease(x: sourceX, y: endY,
+                                                 button: AutomationQtButton.left)
+    report.expect(committed && fixture.values(fixture.panLane) == ["48:84", "96:100"]
+                  && fixture.document.history.undoCount == history + 1, cppID: id,
+                  message: "the CC pointer drag commits 84 once without replacing the independent point")
+    report.expect(fixture.playbackValues(fixture.panLane, at: 48) == [84], cppID: id,
+                  message: "dragged CC playback commits value 84 at tick 48")
+    report.expect(fixture.playbackValues(fixture.panLane, at: 96) == [100], cppID: id,
+                  message: "independent CC playback stays 100 at tick 96 after drag")
+    let undid = fixture.undo()
+    report.expect(undid && fixture.playbackValues(fixture.panLane, at: 48) == [40], cppID: id,
+                  message: "undo restores dragged CC playback value 40 at tick 48")
+    report.expect(fixture.playbackValues(fixture.panLane, at: 96) == [100], cppID: id,
+                  message: "undo preserves independent CC playback value 100 at tick 96")
+    let redid = (try? runBlocking { try await fixture.session.redo() }) ?? false
+    report.expect(redid && fixture.playbackValues(fixture.panLane, at: 48) == [84], cppID: id,
+                  message: "redo restores dragged CC playback value 84 at tick 48")
+    report.expect(fixture.playbackValues(fixture.panLane, at: 96) == [100], cppID: id,
+                  message: "redo preserves independent CC playback value 100 at tick 96")
+}

@@ -16,7 +16,9 @@ swiftcore (9.85s) — ********* Finished testing of SwiftCoreTest *********; ver
 (9.87s, 13 skipped); run_checks: PASS (all harnesses in 9.87s). The controller ran it in
 this worktree on HEAD 19aca868 plus the uncommitted automationcanvasediting.swift,
 Converted-window command: deno task verify:qml --verbose.
-Disposition tally: MATCHED 55, PARTIAL 6, GAP 0, NATIVE 0, RETIRED-REPRESENTATION 16 (77 sites).
+Task-79 command: deno task verify --filter swiftcore-projectsession --verbose. Result: implementer-reported GREEN (same-commit surface evidence for the six selected rows).
+Task-79 shell command: deno task verify:shell --filter shell-grid-input --verbose. Result: implementer-reported GREEN (mounted Automation pointer/selection/Delete/Undo smoke).
+Disposition tally: MATCHED 61, PARTIAL 0, GAP 0, NATIVE 0, RETIRED-REPRESENTATION 16 (77 sites).
 
 A001 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:45
 Disposition: RETIRED-REPRESENTATION
@@ -96,16 +98,12 @@ Disposition: MATCHED
 Mapping: S030
 
 A018 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:79
-Disposition: PARTIAL
-Mapping/reason: The document lane write is asserted (S030), but no Swift predicate re-reads the compiled playback timeline's CC value that the original's timelineCcValue observes.
-Original expression:
-  QTRY_COMPARE(timelineCcValue(kDraggedTick), kCommittedValue)
+Disposition: MATCHED
+Mapping: S042
 
 A019 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:80
-Disposition: PARTIAL
-Mapping/reason: The document lane write is asserted (S030), but no Swift predicate re-reads the compiled playback timeline's independent CC value.
-Original expression:
-  QCOMPARE(timelineCcValue(kIndependentTick), kIndependentValue)
+Disposition: MATCHED
+Mapping: S043
 
 A020 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:82
 Disposition: MATCHED
@@ -124,16 +122,12 @@ Disposition: MATCHED
 Mapping: S033
 
 A024 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:86
-Disposition: PARTIAL
-Mapping/reason: The restored document lane is asserted (S033), but no Swift predicate re-reads the compiled playback timeline's CC value after the undo.
-Original expression:
-  QTRY_COMPARE(timelineCcValue(kDraggedTick), kDraggedValue)
+Disposition: MATCHED
+Mapping: S044
 
 A025 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:87
-Disposition: PARTIAL
-Mapping/reason: The restored document lane is asserted (S033), but no Swift predicate re-reads the compiled playback timeline's independent CC value after the undo.
-Original expression:
-  QCOMPARE(timelineCcValue(kIndependentTick), kIndependentValue)
+Disposition: MATCHED
+Mapping: S045
 
 A026 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:89
 Disposition: MATCHED
@@ -152,16 +146,12 @@ Disposition: MATCHED
 Mapping: S011
 
 A030 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:93
-Disposition: PARTIAL
-Mapping/reason: The redone document lane is asserted (S011), but no Swift predicate re-reads the compiled playback timeline's CC value after the redo.
-Original expression:
-  QTRY_COMPARE(timelineCcValue(kDraggedTick), kCommittedValue)
+Disposition: MATCHED
+Mapping: S046
 
 A031 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:94
-Disposition: PARTIAL
-Mapping/reason: The redone document lane is asserted (S011), but no Swift predicate re-reads the compiled playback timeline's independent CC value after the redo.
-Original expression:
-  QCOMPARE(timelineCcValue(kIndependentTick), kIndependentValue)
+Disposition: MATCHED
+Mapping: S047
 
 A032 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:100
 Disposition: RETIRED-REPRESENTATION
@@ -496,3 +486,21 @@ Anchor: message "a cancelled stale gesture never writes on release"
 
 S041 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
 Anchor: message "an unwritten tick holds no point"
+
+S042 | drawerAutomationCcPointerDragPlayback | src/checks/automation/tst_automationediting.swift
+Anchor: message "dragged CC playback commits value 84 at tick 48"
+
+S043 | drawerAutomationCcPointerDragPlayback | src/checks/automation/tst_automationediting.swift
+Anchor: message "independent CC playback stays 100 at tick 96 after drag"
+
+S044 | drawerAutomationCcPointerDragPlayback | src/checks/automation/tst_automationediting.swift
+Anchor: message "undo restores dragged CC playback value 40 at tick 48"
+
+S045 | drawerAutomationCcPointerDragPlayback | src/checks/automation/tst_automationediting.swift
+Anchor: message "undo preserves independent CC playback value 100 at tick 96"
+
+S046 | drawerAutomationCcPointerDragPlayback | src/checks/automation/tst_automationediting.swift
+Anchor: message "redo restores dragged CC playback value 84 at tick 48"
+
+S047 | drawerAutomationCcPointerDragPlayback | src/checks/automation/tst_automationediting.swift
+Anchor: message "redo preserves independent CC playback value 100 at tick 96"

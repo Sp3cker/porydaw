@@ -85,7 +85,8 @@ let drawerAutomationPointRangeID =
 
 func drawerAutomationAutomationMidi(division: UInt16 = 24, volume: [(Tick, UInt8)] = [],
                             pan: [(Tick, UInt8)] = [], modulation: [(Tick, UInt8)] = [],
-                            echo: [(Tick, UInt8)] = [], tempo: [(Tick, UInt32)] = [(0, 500_000)],
+                            lfo: [(Tick, UInt8)] = [], echo: [(Tick, UInt8)] = [],
+                            tempo: [(Tick, UInt32)] = [(0, 500_000)],
                             endTick: Tick = 192, tailTick: Tick? = nil) -> MidiFile {
     var conductor: [MidiEvent] = tempo.map { tick, microseconds in
         .meta(tick: tick, type: 0x51, data: [UInt8((microseconds >> 16) & 0xFF),
@@ -100,6 +101,8 @@ func drawerAutomationAutomationMidi(division: UInt16 = 24, volume: [(Tick, UInt8
     events += volume.map { .channel(tick: $0.0, status: 0xB0, data0: 0x07, data1: $0.1) }
     events += pan.map { .channel(tick: $0.0, status: 0xB0, data0: 0x0A, data1: $0.1) }
     events += modulation.map { .channel(tick: $0.0, status: 0xB0, data0: 0x01, data1: $0.1) }
+    events += lfo.map { .channel(tick: $0.0, status: 0xB0,
+                                 data0: TimeDefaults.ccLFOSpeed, data1: $0.1) }
     // A note ending at the requested tail keeps the document's musical length
     // at least that long, which every lane stroke's restored seam is measured
     // against.
@@ -124,12 +127,13 @@ struct drawerAutomationAutomationFixture {
 
     init(suite: DocumentSession, service: ProjectService, division: UInt16 = 24,
          volume: [(Tick, UInt8)] = [], pan: [(Tick, UInt8)] = [],
-         modulation: [(Tick, UInt8)] = [], echo: [(Tick, UInt8)] = [],
+         modulation: [(Tick, UInt8)] = [], lfo: [(Tick, UInt8)] = [],
+         echo: [(Tick, UInt8)] = [],
          tempo: [(Tick, UInt32)] = [(0, 500_000)], baseFontPx: Double = 13,
          plotted: Bool = true, config: SongConfig? = nil, tailTick: Tick? = 576) {
         let document = SongDocument(
             file: drawerAutomationAutomationMidi(division: division, volume: volume, pan: pan,
-                                 modulation: modulation, echo: echo, tempo: tempo,
+                                 modulation: modulation, lfo: lfo, echo: echo, tempo: tempo,
                                  tailTick: tailTick),
             config: config ?? suite.document.state.config, source: suite.document.source,
             trackBudget: suite.document.trackBudget)
@@ -178,6 +182,9 @@ struct drawerAutomationAutomationFixture {
     }
     var bendLane: AutomationParameter { .pitchBend(track: 0) }
     var echoLane: AutomationParameter { .controlChange(track: 0, controller: Xcmd.echoVolumeLane) }
+    var lfoLane: AutomationParameter {
+        .controlChange(track: 0, controller: TimeDefaults.ccLFOSpeed)
+    }
 
     func lanePoints(_ parameter: AutomationParameter) -> [LanePoint] {
         guard let track = parameter.track, let lane = parameter.lane else { return [] }
@@ -198,6 +205,20 @@ struct drawerAutomationAutomationFixture {
                 forMicrosecondsPerQuarterNote: point.microsecondsPerQuarterNote).rounded())
             return "\(point.tick):\(bpm)"
         }
+    }
+    func playbackValues(_ parameter: AutomationParameter, at tick: Tick) -> [UInt8] {
+        guard case let .controlChange(track, controller) = parameter else { return [] }
+        return session.timeline.events.compactMap { event in
+            event.type == 0xB && event.track == UInt8(track)
+                && event.data0 == controller && event.tick == tick ? event.data1 : nil
+        }
+    }
+
+    func playbackTempo(at tick: Tick) -> (microseconds: UInt32, bpm: Double)? {
+        guard let point = session.timeline.tempoMap.first(where: { $0.tick == tick }) else {
+            return nil
+        }
+        return (point.microsecondsPerQuarterNote, point.beatsPerMinute)
     }
 
     func laneSnapshot(_ parameter: AutomationParameter) -> AutomationLaneSnapshot {
@@ -335,6 +356,7 @@ internal func runAutomationPageChecks(_ report: CheckReport, session: DocumentSe
     drawerAutomationKeyboardIngress(report, suite: session, service: service)
     drawerAutomationBandEscape(report, suite: session, service: service)
     drawerAutomationHistoryUndoRedo(report, suite: session, service: service)
+    drawerAutomationCcPointerDragPlayback(report, suite: session, service: service)
     drawerAutomationHoverModel(report, suite: session, service: service)
     drawerAutomationMenuHintMuting(report, suite: session, service: service)
     drawerAutomationHoverResidual(report, suite: session, service: service)
@@ -359,6 +381,10 @@ internal func runAutomationPageChecks(_ report: CheckReport, session: DocumentSe
     drawerAutomationBandIsolatesTempoAndCc(report, suite: session, service: service)
     drawerAutomationMultiCcDragExcludesOthers(report, suite: session, service: service)
     drawerAutomationSelectionDeleteCommand(report, suite: session, service: service)
+    drawerAutomationTempoOnlyHorizontalPlayback(report, suite: session, service: service)
+    drawerAutomationMixedSelectionDragPlayback(report, suite: session, service: service)
+    drawerAutomationMixedSelectionDeletePlayback(report, suite: session, service: service)
+    drawerAutomationMixedDragRebuildCancellation(report, suite: session, service: service)
     drawerAutomationGhostViewOnlyAndSurvives(report, suite: session, service: service)
     drawerAutomationPencilOwnershipAndShift(report, suite: session, service: service)
     drawerAutomationDetailThresholdPrecedence(report, suite: session, service: service)

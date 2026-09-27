@@ -9,6 +9,8 @@ Additional Swift counterpart: src/checks/automation/presentation/tst_automationp
 Additional Swift counterpart: src/checks/automation/tst_automationediting.swift
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
 Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml
+Command: deno task verify --filter swiftcore-projectsession --verbose. Result: implementer-reported GREEN (same-commit surface evidence for the 18 selected rows).
+Converted-window command: deno task verify:shell --filter shell-grid-input --verbose. Result: implementer-reported GREEN (mounted Automation pointer/selection/Delete/Undo smoke).
 
 A001 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:189
 Disposition: RETIRED-REPRESENTATION
@@ -68,10 +70,8 @@ Disposition: MATCHED
 Mapping: S038
 
 A015 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:241
-Disposition: PARTIAL
-Mapping/reason: Partial: no executing Swift predicate asserts that a live tempo drag preview leaves the document unchanged; S038 covers the banding gesture itself and the drag predicates assert only gesture liveness (S039). Unproved condition: mid-drag preview freeze.
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == beforeTempoDrag)
+Disposition: MATCHED
+Mapping: S090
 
 A016 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:244
 Disposition: MATCHED
@@ -90,11 +90,8 @@ Disposition: MATCHED
 Mapping: S040
 
 A020 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:248
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the playback timeline projects the moved tempo (timelineHasTempo). No executing Swift predicate in this lane reads the PlaybackTimeline projection; the document tempo stream is asserted at S040. Unproved condition: timeline projection.
-Original expression:
-  QTRY_VERIFY(
-          timelineHasTempo(tab(), kDestinationTick, CoreTimeDefaults::tempoBpm(kPreservedTempoUs)))
+Disposition: MATCHED
+Mapping: S091
 
 A021 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:251
 Disposition: MATCHED
@@ -165,20 +162,16 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: S004, S008
 
 A039 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:318
-Disposition: PARTIAL
-Mapping/reason: Partial: no executing Swift predicate asserts a live selected-drag preview leaves the document unchanged; the cancellation predicates cover cancelled gestures only. Unproved condition: mid-drag preview freeze.
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == preview)
+Disposition: MATCHED
+Mapping: S082
 
 A040 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:321
 Disposition: MATCHED
 Mapping: S004
 
 A041 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:322
-Disposition: PARTIAL
-Mapping/reason: Partial: the SongTab-level edited/dirty publication count has no executing Swift predicate; S004 asserts the single document revision. Unproved condition: tab edited publication count.
-Original expression:
-  QCOMPARE(edited.count(), 1)
+Disposition: MATCHED
+Mapping: S083
 
 A042 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:323
 Disposition: MATCHED
@@ -221,31 +214,20 @@ Disposition: MATCHED
 Mapping: S046
 
 A052 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:334
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the time selection itself shifts by the drag delta; no executing Swift predicate reads page.selection after a completed selected drag (S032 reads it after the duplicate command). Unproved condition: post-drag selection shift.
-Original expression:
-  QVERIFY(selectionMatches(tab().view().selectionModel().timeSelection(), kDestinationTick,
-                               kDestinationTick + (kDestinationTick - kSelectionTick), true,
-                               {{kTrack, kPanController}, {kTrack, kLfoController}}))
+Disposition: MATCHED
+Mapping: S084
 
 A053 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:340
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the playback timeline projects the moved lane values for the covered CC lane. No executing Swift predicate in this lane reads the PlaybackTimeline projection; the document values are asserted at S001/S002. Unproved condition: timeline projection.
-Original expression:
-  QTRY_VERIFY(timelineValuesAt(tab(), kPanController, kDestinationTick) == movedPan)
+Disposition: MATCHED
+Mapping: S085
 
 A054 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:341
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the playback timeline projects the second covered CC lane. No executing Swift predicate in this lane reads the PlaybackTimeline projection; the document values are asserted at S002. Unproved condition: timeline projection.
-Original expression:
-  QTRY_VERIFY(timelineValuesAt(tab(), kLfoController, kDestinationTick) == movedLfo)
+Disposition: MATCHED
+Mapping: S086
 
 A055 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:342
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the playback timeline projects the moved tempo. No executing Swift predicate in this lane reads the PlaybackTimeline projection; the document tempo stream is asserted at S003. Unproved condition: timeline projection.
-Original expression:
-  QTRY_VERIFY(
-          timelineHasTempo(tab(), kDestinationTick, CoreTimeDefaults::tempoBpm(kPreservedTempoUs)))
+Disposition: MATCHED
+Mapping: S087
 
 A056 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:345
 Disposition: MATCHED
@@ -268,10 +250,8 @@ Disposition: MATCHED
 Mapping: S006
 
 A061 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:351
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the playback timeline is restored after the undo. No executing Swift predicate in this lane reads the PlaybackTimeline projection; the document restoration is asserted at S006/S007. Unproved condition: timeline projection.
-Original expression:
-  QTRY_VERIFY(timelineValuesAt(tab(), kPanController, kSelectionTick) == movedPan)
+Disposition: MATCHED
+Mapping: S088
 
 A062 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:353
 Disposition: MATCHED
@@ -294,10 +274,8 @@ Disposition: MATCHED
 Mapping: S067
 
 A067 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:358
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the playback timeline is restored after the redo. No executing Swift predicate in this lane reads the PlaybackTimeline projection; the document restoration is asserted at S067. Unproved condition: timeline projection.
-Original expression:
-  QTRY_VERIFY(timelineValuesAt(tab(), kPanController, kDestinationTick) == movedPan)
+Disposition: MATCHED
+Mapping: S089
 
 A068 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:363
 Disposition: RETIRED-REPRESENTATION
@@ -324,11 +302,8 @@ Disposition: MATCHED
 Mapping: S043
 
 A075 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:383
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the LFO lane is covered by the seeded mixed selection. No Swift predicate covers an LFO lane in a selection (the band and multiCc fixtures select Pan, Modulation and Tempo). Unproved condition: LFO lane coverage.
-Original expression:
-  QVERIFY(covered.contains(checks::support::automationParameterIndex(
-          *page().canvas(), {EditorAutomationRowKind::ControlChange, kTrack, kLfoController})))
+Disposition: MATCHED
+Mapping: S092
 
 A076 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:385
 Disposition: MATCHED
@@ -353,10 +328,8 @@ Disposition: MATCHED
 Mapping: S075
 
 A081 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:399
-Disposition: PARTIAL
-Mapping/reason: Partial: the SongTab-level edited/dirty publication count has no executing Swift predicate; S004 asserts the single document revision. Unproved condition: tab edited publication count.
-Original expression:
-  QCOMPARE(edited.count(), 1)
+Disposition: MATCHED
+Mapping: S093
 
 A082 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:400
 Disposition: MATCHED
@@ -383,16 +356,12 @@ Disposition: MATCHED
 Mapping: S010
 
 A088 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:407
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the playback timeline no longer projects the deleted lane values. No executing Swift predicate in this lane reads the PlaybackTimeline projection; the document deletion is asserted at S009. Unproved condition: timeline projection.
-Original expression:
-  QTRY_VERIFY(timelineValuesAt(tab(), kPanController, kSelectionTick) == noValues)
+Disposition: MATCHED
+Mapping: S094
 
 A089 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:408
-Disposition: PARTIAL
-Mapping/reason: Partial: same PlaybackTimeline projection condition for the second covered CC lane; the document deletion is asserted at S009. Unproved condition: timeline projection.
-Original expression:
-  QTRY_VERIFY(timelineValuesAt(tab(), kLfoController, kSelectionTick) == noValues)
+Disposition: MATCHED
+Mapping: S095
 
 A090 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:410
 Disposition: MATCHED
@@ -415,11 +384,8 @@ Disposition: MATCHED
 Mapping: S077, S078
 
 A095 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:416
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the restored tempo projects through the playback timeline. No executing Swift predicate in this lane reads the PlaybackTimeline projection; the document restoration is asserted at S007. Unproved condition: timeline projection.
-Original expression:
-  QTRY_VERIFY(
-          timelineHasTempo(tab(), kSelectionTick, CoreTimeDefaults::tempoBpm(kPreservedTempoUs)))
+Disposition: MATCHED
+Mapping: S096
 
 A096 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:419
 Disposition: MATCHED
@@ -434,10 +400,8 @@ Disposition: MATCHED
 Mapping: S067
 
 A099 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:423
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the playback timeline no longer projects the deleted lane after redo. No executing Swift predicate in this lane reads the PlaybackTimeline projection; the document state after redo is asserted at S067. Unproved condition: timeline projection.
-Original expression:
-  QTRY_VERIFY(timelineValuesAt(tab(), kPanController, kSelectionTick) == noValuesAfterRedo)
+Disposition: MATCHED
+Mapping: S097
 
 A100 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:435
 Disposition: MATCHED
@@ -500,18 +464,12 @@ Disposition: MATCHED
 Mapping: S069, S071
 
 A116 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:491
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the seeded time selection survives the aborted drag. No executing Swift predicate reads page.selection after a rebuild-cancelled drag (S068/S069 assert gesture and document state only). Unproved condition: selection survival across the abort.
-Original expression:
-  QVERIFY(selectionMatches(tab().view().selectionModel().timeSelection(), kSelectionTick,
-                               kDestinationTick, true,
-                               {{kTrack, kPanController}, {kTrack, kLfoController}}))
+Disposition: MATCHED
+Mapping: S098
 
 A117 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:495
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the playback timeline still projects the original lane values after the abort. No executing Swift predicate in this lane reads the PlaybackTimeline projection; the document state is asserted at S069. Unproved condition: timeline projection.
-Original expression:
-  QTRY_VERIFY(timelineValuesAt(tab(), kPanController, kSelectionTick) == originalPan)
+Disposition: MATCHED
+Mapping: S099
 
 A118 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:500
 Disposition: RETIRED-REPRESENTATION
@@ -986,3 +944,57 @@ Anchor: message "an empty Delete writes nothing"
 
 S081 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the Delete key routes to the active time selection"
+
+S082 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+Anchor: message "mixed selected Tempo drag keeps document and playback frozen while held"
+
+S083 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+Anchor: message "mixed selected drag publishes one dirty edit and one history entry"
+
+S084 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+Anchor: message "mixed selected drag translates its Tempo Pan LFO interval to 144 through 192"
+
+S085 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+Anchor: message "mixed selected drag publishes ordered Pan collisions and preserves Volume playback"
+
+S086 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+Anchor: message "mixed selected drag publishes the selected LFO into playback"
+
+S087 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+Anchor: message "mixed selected drag publishes exact 499999-us Tempo at tick 144"
+
+S088 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+Anchor: message "one undo restores both original Pan playback groups"
+
+S089 | drawerAutomationMixedSelectionDragPlayback | src/checks/automation/automationselection.swift
+Anchor: message "one redo restores ordered moved Pan playback"
+
+S090 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection.swift
+Anchor: message "Tempo-only horizontal drag freezes document and playback while held"
+
+S091 | drawerAutomationTempoOnlyHorizontalPlayback | src/checks/automation/automationselection.swift
+Anchor: message "Tempo-only horizontal drag publishes exact moved Tempo without touching Pan"
+
+S092 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection.swift
+Anchor: message "displayed Tempo Delete covers the selected Pan and LFO lanes"
+
+S093 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection.swift
+Anchor: message "selected Delete publishes exactly one dirty edit"
+
+S094 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection.swift
+Anchor: message "selected Delete removes covered Pan playback but leaves later occupants"
+
+S095 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection.swift
+Anchor: message "selected Delete removes covered LFO playback but leaves later events"
+
+S096 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection.swift
+Anchor: message "Delete undo restores exact raw Tempo in playback"
+
+S097 | drawerAutomationMixedSelectionDeletePlayback | src/checks/automation/automationselection.swift
+Anchor: message "Delete redo removes all three selected playback streams again"
+
+S098 | drawerAutomationMixedDragRebuildCancellation | src/checks/automation/automationselection.swift
+Anchor: message "document rebuild cancels the drag without changing its selected scope"
+
+S099 | drawerAutomationMixedDragRebuildCancellation | src/checks/automation/automationselection.swift
+Anchor: message "release after rebuild retains original Pan LFO and Tempo playback"

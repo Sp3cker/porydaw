@@ -1001,4 +1001,95 @@ TestCase {
                "released thumb permits the selected-note Delete edit")
     }
 
+    function test_mountedAutomationDragDeleteUndoPreservesRoll() {
+        openRoute101()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var notesBefore = grid.noteSummary
+        var toggle = findChild(surface, "drawerToggle_automation")
+        verify(toggle && toggle.visible, "the mounted Automation toggle is available")
+        if (!surface.drawerPresenter.automationSection.visible)
+            mouseClick(toggle, toggle.width / 2, toggle.height / 2)
+        var page = null
+        tryVerify(function() {
+            page = findChild(surface, "automationPage")
+            return page && page.visible && page.height > 0
+        }, 3000, "the production Automation page opens")
+        var plot = findChild(page, "automationPlotInput")
+        verify(plot && plot.width > 0 && plot.height > 0,
+               "the mounted Automation plot accepts input")
+        var volumeTab = null
+        for (var index = 0; index < page.pageModel.tabCount; ++index) {
+            var candidate = findChild(page, "automationParameterTab" + index)
+            if (candidate && candidate.text === "Volume") {
+                volumeTab = candidate
+                break
+            }
+        }
+        verify(volumeTab && volumeTab.enabled, "Volume is available in the mounted drawer")
+        var tabPress = findChild(volumeTab,
+                                 "automationParameterTabPress" + volumeTab.model.index)
+        verify(tabPress, "the Volume label accepts the real pointer")
+        mouseClick(tabPress, tabPress.width / 2, tabPress.height / 2)
+        tryCompare(volumeTab, "checked", true, 3000)
+        var row = plot.height / 2
+        var start = plot.width * 0.3
+        var stop = plot.width * 0.55
+        dragLeft(plot, start, row, stop, row)
+        tryVerify(function() { return page.pageModel.nodeCount > 1 }, 3000,
+                  "a real Volume sweep writes nodes")
+        function writtenNodes(item, result) {
+            if (item.objectName === "automationNode" && item.model
+                && !item.model.projected && !item.model.phantom)
+                result.push({tick: item.model.tick, x: item.model.x,
+                             y: item.model.y, selected: item.model.selected})
+            for (var child = 0; child < item.children.length; ++child)
+                writtenNodes(item.children[child], result)
+            return result
+        }
+        var written = writtenNodes(page, [])
+        verify(written.length > 1, "the sweep exposes multiple written nodes")
+        var grabbed = written[Math.floor(written.length / 2)]
+        var movedY = grabbed.y < plot.height / 2
+                     ? grabbed.y + plot.height / 4 : grabbed.y - plot.height / 4
+        var armY = grabbed.y + (movedY > grabbed.y ? 1 : -1)
+                   * (Qt.styleHints.startDragDistance + 2)
+        var releaseY = armY + movedY - grabbed.y
+        mousePress(plot, grabbed.x, grabbed.y, Qt.LeftButton)
+        mouseMove(plot, grabbed.x, armY, -1, Qt.LeftButton)
+        mouseMove(plot, grabbed.x, releaseY, -1, Qt.LeftButton)
+        mouseRelease(plot, grabbed.x, releaseY, Qt.LeftButton)
+        tryVerify(function() {
+            return writtenNodes(page, []).some(function(node) {
+                return node.tick === grabbed.tick && Math.abs(node.y - grabbed.y) > 4
+            })
+        }, 3000, "the mounted pointer drag moves the written automation node")
+        var moved = writtenNodes(page, []).find(function(node) {
+            return node.tick === grabbed.tick && Math.abs(node.y - grabbed.y) > 4
+        })
+        var bandStart = Math.max(1, start - Qt.styleHints.startDragDistance * 2)
+        var bandEnd = Math.min(plot.width - 1, stop + Qt.styleHints.startDragDistance * 2)
+        dragRight(plot, bandStart, moved.y, bandEnd, moved.y)
+        tryVerify(function() {
+            return writtenNodes(page, []).some(function(node) { return node.selected })
+        }, 3000, "the real right drag highlights a selected Automation node")
+        plot.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(plot, "activeFocus", true, 3000)
+        keyClick(Qt.Key_Delete)
+        verify(waitForNative(function() {
+            return !writtenNodes(page, []).some(function(node) { return node.tick === grabbed.tick })
+        }, 5000), "Delete routes to the selected automation node")
+        var undoAction = findChild(shell, "shellAction_edit.undo")
+        verify(undoAction && undoAction.enabled,
+               "the deleted Automation transaction enables the production Undo action")
+        keySequence(StandardKey.Undo)
+        verify(waitForNative(function() {
+            return writtenNodes(page, []).some(function(node) {
+                return node.tick === grabbed.tick && Math.abs(node.y - moved.y) < 4
+            })
+        }, 5000), "Undo restores the deleted visible automation node")
+        compare(grid.noteSummary, notesBefore,
+                "Automation pointer and Delete Undo leave all roll notes unchanged")
+    }
+
 }
