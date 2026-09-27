@@ -12,10 +12,14 @@ Swift counterpart: src/checks/workspace/session_io.swift
 Swift counterpart SHA-256: c26d5ee7f1f0b19e0664c5e914c736972a9548398b1384f2b541a6f133d3de19
 Swift counterpart: src/checks/workspace/session_playback.swift
 Swift counterpart: src/checks/workspace/session_save.swift
+Swift counterpart: src/checks/songlist/songlist_service.swift
+Swift counterpart SHA-256: 7c0256d2de6a01fe1223492138410fd94d08bba2b08931b9019f74b426ebcf52
 
 
 Command: Task 134 prescribed lanes: projectstore-open, swiftcore-projectsession, shell-open-failure. Exact executed invocations were not provided in the handoff.
 Result: Implementer handoff reports projectstore-open PASS; Task 134 predicates PASS in swiftcore-projectsession, while the full lane fails on sibling Task 127/128 registration tests; shell-open-failure PASS. This ledger agent did not rerun these lanes.
+Task 151 command: deno task verify --filter swiftcore-projectsession --verbose
+Task 151 result: PASS (1/36 selected), full filtered lane, controller-reported on the unchanged songlist_service.swift SHA-256 7c0256d2de6a01fe1223492138410fd94d08bba2b08931b9019f74b426ebcf52. The proof writer did not rerun the lane; this result supersedes the earlier red sibling-row handoff.
 
 A001 | ProjectIoFlowTest::init | src/checks/project/ioflow.cpp:49
 Disposition: GAP
@@ -282,8 +286,8 @@ Original expression:
   QVERIFY(catalog)
 
 A021 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:109
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Disposition: MATCHED
+Mapping/reason: S025 proves the requested-plan label identity for the fixed song request; the keyed result-envelope identity is retired per Task 151 brief, with no envelope field added.
 Source context since previous assertion:
   ;
       if (!(registration && deletion && catalog))
@@ -294,8 +298,8 @@ Original expression:
   QCOMPARE(registration->song.value(), opened->playableSong.label)
 
 A022 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:110
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Disposition: MATCHED
+Mapping/reason: S026 checks the second fixed-label request returns its exact requested service-plan label.
 Source context since previous assertion:
   ;
 
@@ -303,8 +307,8 @@ Original expression:
   QCOMPARE(registration->plan.label, opened->playableSong.label)
 
 A023 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:111
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Disposition: MATCHED
+Mapping/reason: S027 checks the first registration plan constant against the independent seeded literal; the companion second-song predicate checks its own constant.
 Source context since previous assertion:
   ;
 
@@ -312,8 +316,8 @@ Original expression:
   QCOMPARE(registration->plan.constant, opened->constant)
 
 A024 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:112
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Disposition: MATCHED
+Mapping/reason: S028 checks the first registration plan player against the seeded literal; the companion second-song predicate checks its own player.
 Source context since previous assertion:
   ;
 
@@ -321,8 +325,8 @@ Original expression:
   QCOMPARE(registration->plan.player, opened->playableSong.player)
 
 A025 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:113
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Disposition: MATCHED
+Mapping/reason: S029 checks exact song ID zero (strengthening the nonnegative-ID clause); the companion second-song predicate checks exact ID one.
 Source context since previous assertion:
   ;
 
@@ -330,8 +334,8 @@ Original expression:
   QVERIFY(registration->plan.songId >= 0)
 
 A026 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:114
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Disposition: MATCHED
+Mapping/reason: S030 checks the complete seeded song-table row (strengthening the contains-label clause); the companion second-song predicate checks its independent row.
 Source context since previous assertion:
   ;
 
@@ -339,8 +343,8 @@ Original expression:
   QVERIFY(registration->plan.songTableLine.contains(opened->playableSong.label))
 
 A027 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:115
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Disposition: MATCHED
+Mapping/reason: S031 checks the first requested song reports inSongTable true; the companion second-song predicate checks the second status.
 Source context since previous assertion:
   ;
 
@@ -348,8 +352,8 @@ Original expression:
   QVERIFY(registration->status.inSongTable)
 
 A028 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:117
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Disposition: MATCHED
+Mapping/reason: S032 checks the first fixed-label deletion plan targets table index zero, distinct from the second request index one (S033); the keyed deletion-envelope identity is retired per Task 151 brief because DeletionPlan has no label field.
 Source context since previous assertion:
   ;
 
@@ -358,8 +362,8 @@ Original expression:
   QVERIFY(deletion->song == opened->song)
 
 A029 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:118
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Disposition: MATCHED
+Mapping/reason: S033 checks the second fixed-label deletion plan targets exact table index one, strengthening the nonnegative-index clause.
 Source context since previous assertion:
   ;
 
@@ -367,8 +371,8 @@ Original expression:
   QVERIFY(deletion->plan.tableIndex >= 0)
 
 A030 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:119
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Disposition: MATCHED
+Mapping/reason: S034 checks exact table count eleven, greater than the demonstrated target indices zero and one; the companion second-song predicate confirms the same count.
 Source context since previous assertion:
   ;
 
@@ -376,8 +380,8 @@ Original expression:
   QVERIFY(deletion->plan.tableCount > deletion->plan.tableIndex)
 
 A031 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:120
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Disposition: MATCHED
+Mapping/reason: S035 checks the shared voicegroup has no deletable name (nil), the protected state; the companion second-song predicate checks the same protection.
 Source context since previous assertion:
   ;
 
@@ -385,8 +389,8 @@ Original expression:
   QVERIFY(deletion->deletableVoicegroupName.isEmpty())
 
 A032 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:121
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Disposition: MATCHED
+Mapping/reason: S036 checks the exact independently written catalog group-argument literal, strengthening the nonempty clause; source-byte preservation is separately asserted.
 Source context since previous assertion:
   ;
 
@@ -869,3 +873,38 @@ Anchor: message "failed replacement retains the original selected song source"
 S024 | sessionOpenAndRecovery (lines 65-79: report.expect(before.1.label == after.1.label && before.1.midiPath == after.1.midiPath && before.1.constant == after.1.constant && before.1.player == after.1.player && before.1.trackBudget == after.1.trackBudget && before.1.hasMid == after.1.hasMid && before.1.hasCfg == after.1.hasCfg && before.1.registered == after.1.registered && before.1.config == after.1.config && before.1.bankLoadName == after.1.bankLoadName && before.1.bankDirty == after.1.bankDirty && before.1.midiBytes == after.1.midiBytes && before.1.bankSlots == after.1.bankSlots)) | src/checks/workspace/session_io.swift
 Anchor: message "failed replacement still opens the original song with identical complete metadata"
 
+S025 | runSongListServiceChecks (lines 224-225: report.expectEqual(expected: "mus_session_test", actual: firstServicePlan.label, cppID: planId, what: "A021 first requested registration returns its own service label")) | src/checks/songlist/songlist_service.swift
+Anchor: message "A021 first requested registration returns its own service label"
+
+S026 | runSongListServiceChecks (lines 226-227: report.expectEqual(expected: "mus_session_test2", actual: secondServicePlan.label, cppID: planId, what: "A022 second requested registration returns its own service label")) | src/checks/songlist/songlist_service.swift
+Anchor: message "A022 second requested registration returns its own service label"
+
+S027 | runSongListServiceChecks (lines 228-229: report.expectEqual(expected: "MUS_SESSION_TEST", actual: firstServicePlan.constant, cppID: planId, what: "A023 first registration uses the seeded song constant")) | src/checks/songlist/songlist_service.swift
+Anchor: message "A023 first registration uses the seeded song constant"
+
+S028 | runSongListServiceChecks (lines 232-233: report.expectEqual(expected: "MUSIC_PLAYER_BGM", actual: firstServicePlan.player, cppID: planId, what: "A024 first registration uses the seeded song player")) | src/checks/songlist/songlist_service.swift
+Anchor: message "A024 first registration uses the seeded song player"
+
+S029 | runSongListServiceChecks (lines 236-237: report.expectEqual(expected: 0, actual: firstServicePlan.songId, cppID: planId, what: "A025 first registration proposes the exact table ID zero")) | src/checks/songlist/songlist_service.swift
+Anchor: message "A025 first registration proposes the exact table ID zero"
+
+S030 | runSongListServiceChecks (lines 240-242: report.expectEqual(expected: "    song mus_session_test, MUSIC_PLAYER_BGM, 0", actual: firstStorePlan.songTableLine, cppID: planId, what: "A026 first registration contains the complete seeded table row")) | src/checks/songlist/songlist_service.swift
+Anchor: message "A026 first registration contains the complete seeded table row"
+
+S031 | runSongListServiceChecks (lines 246-247: report.expectEqual(expected: true, actual: firstStatus.inSongTable, cppID: planId, what: "A027 first requested song is registered in the song table")) | src/checks/songlist/songlist_service.swift
+Anchor: message "A027 first requested song is registered in the song table"
+
+S032 | runSongListServiceChecks (lines 250-251: report.expectEqual(expected: 0, actual: firstServiceRemoval.tableIndex, cppID: planId, what: "A028 first requested deletion targets its own fallback table entry")) | src/checks/songlist/songlist_service.swift
+Anchor: message "A028 first requested deletion targets its own fallback table entry"
+
+S033 | runSongListServiceChecks (lines 252-253: report.expectEqual(expected: 1, actual: secondServiceRemoval.tableIndex, cppID: planId, what: "A029 second requested deletion targets its own table index one")) | src/checks/songlist/songlist_service.swift
+Anchor: message "A029 second requested deletion targets its own table index one"
+
+S034 | runSongListServiceChecks (lines 254-255: report.expectEqual(expected: 11, actual: firstServiceRemoval.tableCount, cppID: planId, what: "A030 first deletion reports all eleven seeded table entries")) | src/checks/songlist/songlist_service.swift
+Anchor: message "A030 first deletion reports all eleven seeded table entries"
+
+S035 | runSongListServiceChecks (lines 258-259: report.expectEqual(expected: nil, actual: firstServiceRemoval.deletableVoicegroupName, cppID: planId, what: "A031 first deletion protects its shared voicegroup")) | src/checks/songlist/songlist_service.swift
+Anchor: message "A031 first deletion protects its shared voicegroup"
+
+S036 | runSongListServiceChecks (lines 268-269: report.expectEqual(expected: ["_test_vg"], actual: args, cppID: id, what: "voicegroupArgs publishes the catalog group args")) | src/checks/songlist/songlist_service.swift
+Anchor: message "voicegroupArgs publishes the catalog group args"

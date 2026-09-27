@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
+import PorydawProject
 import PorydawPlayback
 
 // Fixture-backed ProjectService song-listing checks: the staged decomp
@@ -172,6 +173,93 @@ internal func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: Strin
         report.expectEqual(expected: false, actual: presenter.canRegister(songId: registered.id), cppID: id,
                            what: "service-fed registered song does not")
 
+        let planId = "swiftcore/SongList::requestedPlans"
+        let diskImages: () throws -> [String: Data] = {
+            guard let entries = FileManager.default.enumerator(atPath: projectDir) else {
+                throw CocoaError(.fileReadNoSuchFile)
+            }
+            var images: [String: Data] = [:]
+            for case let relative as String in entries {
+                let path = projectDir + "/" + relative
+                var isDirectory: ObjCBool = false
+                guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) else {
+                    throw CocoaError(.fileReadNoSuchFile)
+                }
+                if !isDirectory.boolValue {
+                    images[relative] = try Data(contentsOf: URL(fileURLWithPath: path))
+                }
+            }
+            return images
+        }
+        // Opaque source images are captured before the read-only queries for byte-for-byte passthrough.
+        let beforePlans = try diskImages()
+        let firstServicePlan = try runBlocking {
+            try await service.songRegistrationPlan(label: "mus_session_test")
+        }
+        let secondServicePlan = try runBlocking {
+            try await service.songRegistrationPlan(label: "mus_session_test2")
+        }
+        let store = ProjectStore(projectRoot: URL(fileURLWithPath: projectDir, isDirectory: true))
+        try runBlocking { _ = try await store.open() }
+        let firstStorePlan = try runBlocking {
+            try await store.registrationPlan(label: "mus_session_test",
+                                             constant: "MUS_SESSION_TEST", player: "MUSIC_PLAYER_BGM")
+        }
+        let secondStorePlan = try runBlocking {
+            try await store.registrationPlan(label: "mus_session_test2",
+                                             constant: "MUS_SESSION_TEST2", player: "MUSIC_PLAYER_BGM")
+        }
+        let firstStatus = try runBlocking {
+            try await store.registrationStatus(label: "mus_session_test", constant: "MUS_SESSION_TEST")
+        }
+        let secondStatus = try runBlocking {
+            try await store.registrationStatus(label: "mus_session_test2", constant: "MUS_SESSION_TEST2")
+        }
+        let firstServiceRemoval = try runBlocking {
+            try await service.songDeletionPlan(label: "mus_session_test")
+        }
+        let secondServiceRemoval = try runBlocking {
+            try await service.songDeletionPlan(label: "mus_session_test2")
+        }
+        report.expectEqual(expected: "mus_session_test", actual: firstServicePlan.label, cppID: planId,
+                           what: "A021 first requested registration returns its own service label")
+        report.expectEqual(expected: "mus_session_test2", actual: secondServicePlan.label, cppID: planId,
+                           what: "A022 second requested registration returns its own service label")
+        report.expectEqual(expected: "MUS_SESSION_TEST", actual: firstServicePlan.constant, cppID: planId,
+                           what: "A023 first registration uses the seeded song constant")
+        report.expectEqual(expected: "MUS_SESSION_TEST2", actual: secondServicePlan.constant, cppID: planId,
+                           what: "second registration uses the seeded song constant")
+        report.expectEqual(expected: "MUSIC_PLAYER_BGM", actual: firstServicePlan.player, cppID: planId,
+                           what: "A024 first registration uses the seeded song player")
+        report.expectEqual(expected: "MUSIC_PLAYER_BGM", actual: secondServicePlan.player, cppID: planId,
+                           what: "second registration uses the seeded song player")
+        report.expectEqual(expected: 0, actual: firstServicePlan.songId, cppID: planId,
+                           what: "A025 first registration proposes the exact table ID zero")
+        report.expectEqual(expected: 1, actual: secondServicePlan.songId, cppID: planId,
+                           what: "second registration proposes the exact table ID one")
+        report.expectEqual(expected: "    song mus_session_test, MUSIC_PLAYER_BGM, 0",
+                           actual: firstStorePlan.songTableLine, cppID: planId,
+                           what: "A026 first registration contains the complete seeded table row")
+        report.expectEqual(expected: "    song mus_session_test2, MUSIC_PLAYER_BGM, 0",
+                           actual: secondStorePlan.songTableLine, cppID: planId,
+                           what: "second registration contains the complete seeded table row")
+        report.expectEqual(expected: true, actual: firstStatus.inSongTable, cppID: planId,
+                           what: "A027 first requested song is registered in the song table")
+        report.expectEqual(expected: true, actual: secondStatus.inSongTable, cppID: planId,
+                           what: "second requested song is registered in the song table")
+        report.expectEqual(expected: 0, actual: firstServiceRemoval.tableIndex, cppID: planId,
+                           what: "A028 first requested deletion targets its own fallback table entry")
+        report.expectEqual(expected: 1, actual: secondServiceRemoval.tableIndex, cppID: planId,
+                           what: "A029 second requested deletion targets its own table index one")
+        report.expectEqual(expected: 11, actual: firstServiceRemoval.tableCount, cppID: planId,
+                           what: "A030 first deletion reports all eleven seeded table entries")
+        report.expectEqual(expected: 11, actual: secondServiceRemoval.tableCount, cppID: planId,
+                           what: "second deletion reports all eleven seeded table entries")
+        report.expectEqual(expected: nil, actual: firstServiceRemoval.deletableVoicegroupName,
+                           cppID: planId, what: "A031 first deletion protects its shared voicegroup")
+        report.expectEqual(expected: nil, actual: secondServiceRemoval.deletableVoicegroupName,
+                           cppID: planId, what: "second deletion protects its shared voicegroup")
+
         // The voice-list selector's choice feed (voice proof U001): the
         // catalog's groupArgs, sorted.
         let args = try runBlocking {
@@ -179,6 +267,9 @@ internal func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: Strin
         }
         report.expectEqual(expected: ["_test_vg"], actual: args, cppID: id,
                            what: "voicegroupArgs publishes the catalog group args")
+        let afterPlans = try diskImages()
+        report.expectEqual(expected: beforePlans, actual: afterPlans, cppID: planId,
+                           what: "registration deletion and catalog plans preserve all staged source bytes")
 
         // The loaded-tone fallback feed (voice proof U005): the staged cry
         // line is a read-only slot, so the bank publishes its immutable
