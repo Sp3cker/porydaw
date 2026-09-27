@@ -21,6 +21,7 @@ Item {
                     width: root.gridModel.keyboardWidth
                     height: parent.height
                     rects: root.gridModel.scene.rulerGutterChrome
+                    batched: true
                 }
 
                 Item {
@@ -33,6 +34,7 @@ Item {
                         anchors.fill: parent
                         objectName: "timelineQuickRulerChrome"
                         rects: root.gridModel.scene.rulerChrome
+                        batched: true
                     }
                     Item {
                         id: rulerContent
@@ -51,15 +53,14 @@ Item {
                         parent: rulerContent
                         model: root.gridModel.scene.rulerTextModel
                         delegate: Text {
-                            required property var labelRect
+                            required property var labelSpec
                             required property string labelText
-                            required property string labelColor
                             required property var labelFont
-                            x: labelRect.x
-                            y: labelRect.y
-                            width: labelRect.width
-                            height: labelRect.height
-                            color: labelColor
+                            x: labelSpec.x
+                            y: labelSpec.y
+                            width: labelSpec.width
+                            height: labelSpec.height
+                            color: labelSpec.color
                             text: labelText
                             font: Qt.font(labelFont)
                             textFormat: Text.PlainText

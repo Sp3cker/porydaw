@@ -204,22 +204,19 @@ FocusScope {
             model: (page.pageModel ? page.pageModel.axisLabels : [])
 
             delegate: Text {
-                required property var labelRect
+                required property var labelSpec
                 required property string labelText
-                required property string labelColor
                 required property var labelFont
-                required property int labelHorizontalAlignment
-                required property int labelVerticalAlignment
 
-                x: labelRect.x
-                y: labelRect.y
-                width: labelRect.width
-                height: labelRect.height
+                x: labelSpec.x
+                y: labelSpec.y
+                width: labelSpec.width
+                height: labelSpec.height
                 text: labelText
-                color: labelColor
+                color: labelSpec.color
                 font: Qt.font(labelFont)
-                horizontalAlignment: labelHorizontalAlignment
-                verticalAlignment: labelVerticalAlignment
+                horizontalAlignment: labelSpec.horizontal
+                verticalAlignment: labelSpec.vertical
                 textFormat: Text.PlainText
                 renderType: Text.NativeRendering
                 elide: Text.ElideNone
@@ -328,6 +325,9 @@ FocusScope {
                 id: node
 
                 required property var model
+                // One packed spec per handle: every child binding reads the
+                // local map instead of paying a metaCall per property.
+                readonly property var s: model ? model.spec : ({})
 
                 x: 0
                 y: 0
@@ -335,51 +335,51 @@ FocusScope {
                 height: plot.height
 
                 Rectangle {
-                    objectName: node.model.primitiveName + "Stem"
-                    x: Math.min(node.model.x, node.model.endX)
-                    y: node.model.y - node.model.stemWidth / 2
-                    width: Math.max(1, Math.abs(node.model.endX - node.model.x))
-                    height: node.model.stemWidth
-                    color: node.model.stemColor
+                    objectName: node.s.primitiveName + "Stem"
+                    x: Math.min(node.s.x, node.s.endX)
+                    y: node.s.y - node.s.stemWidth / 2
+                    width: Math.max(1, Math.abs(node.s.endX - node.s.x))
+                    height: node.s.stemWidth
+                    color: node.s.stemColor
                 }
 
                 Rectangle {
-                    objectName: node.model.primitiveName + "Ring"
-                    visible: node.model.selected
-                    x: node.model.x - node.model.ringRadius
-                    y: node.model.y - node.model.ringRadius
-                    width: 2 * node.model.ringRadius
-                    height: 2 * node.model.ringRadius
-                    radius: node.model.ringRadius
+                    objectName: node.s.primitiveName + "Ring"
+                    visible: node.s.selected
+                    x: node.s.x - node.s.ringRadius
+                    y: node.s.y - node.s.ringRadius
+                    width: 2 * node.s.ringRadius
+                    height: 2 * node.s.ringRadius
+                    radius: node.s.ringRadius
                     color: "transparent"
-                    border.color: node.model.ringColor
-                    border.width: node.model.ringWidth
+                    border.color: node.s.ringColor
+                    border.width: node.s.ringWidth
                 }
 
                 Rectangle {
-                    objectName: node.model.primitiveName + "Fill"
-                    x: node.model.x - node.model.nodeRadius
-                    y: node.model.y - node.model.nodeRadius
-                    width: 2 * node.model.nodeRadius
-                    height: 2 * node.model.nodeRadius
-                    radius: node.model.nodeRadius
-                    color: node.model.fillColor
-                    border.width: node.model.selected || !node.model.dimmed
-                                  ? node.model.outlineWidth : 0
-                    border.color: node.model.outlineColor
+                    objectName: node.s.primitiveName + "Fill"
+                    x: node.s.x - node.s.nodeRadius
+                    y: node.s.y - node.s.nodeRadius
+                    width: 2 * node.s.nodeRadius
+                    height: 2 * node.s.nodeRadius
+                    radius: node.s.nodeRadius
+                    color: node.s.fillColor
+                    border.width: node.s.selected || !node.s.dimmed
+                                  ? node.s.outlineWidth : 0
+                    border.color: node.s.outlineColor
                 }
 
                 Rectangle {
-                    objectName: node.model.primitiveName + "Hover"
-                    visible: node.model.hovered && !node.model.selected
-                    x: node.model.x - node.model.outlineRadius
-                    y: node.model.y - node.model.outlineRadius
-                    width: 2 * node.model.outlineRadius
-                    height: 2 * node.model.outlineRadius
-                    radius: node.model.outlineRadius
+                    objectName: node.s.primitiveName + "Hover"
+                    visible: node.s.hovered && !node.s.selected
+                    x: node.s.x - node.s.outlineRadius
+                    y: node.s.y - node.s.outlineRadius
+                    width: 2 * node.s.outlineRadius
+                    height: 2 * node.s.outlineRadius
+                    radius: node.s.outlineRadius
                     color: "transparent"
-                    border.color: node.model.ringColor
-                    border.width: node.model.ringWidth
+                    border.color: node.s.ringColor
+                    border.width: node.s.ringWidth
                 }
             }
         }

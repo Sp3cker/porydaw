@@ -97,6 +97,26 @@ public final class VelocityHandle {
 
     public init() {}
 
+    /// Everything a delegate needs, packed into one map: the delegate's
+    /// model-data object exposes stored properties only, so this is a stored
+    /// role — `refreshSpec()` must run after fields are assigned.
+    public var spec: [String: QVariantSettable] = [:]
+
+    @QtIgnored
+    func refreshSpec() {
+        spec = [
+            "x": x, "endX": endX, "y": y,
+            "stemWidth": stemWidth, "stemColor": stemColor,
+            "nodeRadius": nodeRadius, "fillColor": fillColor,
+            "outlineRadius": outlineRadius, "outlineWidth": outlineWidth,
+            "outlineColor": outlineColor,
+            "ringRadius": ringRadius, "ringWidth": ringWidth,
+            "ringColor": ringColor,
+            "selected": selected, "hovered": hovered, "dimmed": dimmed,
+            "primitiveName": primitiveName,
+        ]
+    }
+
     /// The model's no-op rule: an unchanged handle stays in place, so an
     /// unchanged row emits nothing.
     @QtIgnored

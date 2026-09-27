@@ -320,6 +320,7 @@ extension AutomationPage {
         node.projected = point.projected
         node.phantom = phantom
         node.identity = Self.identityText(point.identity)
+        node.refreshSpec()
         return node
     }
 

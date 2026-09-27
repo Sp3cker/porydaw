@@ -16,6 +16,22 @@ public final class OtherEventsMarkerHandle {
         x = marker.x
         color = marker.color
         label = marker.label
+        refreshSpec()
+    }
+
+    /// Everything the delegate needs in one map: the delegate's model-data
+    /// object exposes stored properties only, so this is a stored role.
+    public var spec: [String: QVariantSettable] = [:]
+
+    @QtIgnored
+    func refreshSpec() {
+        spec = ["x": x, "color": color]
+    }
+
+    @QtIgnored
+    func matches(_ other: OtherEventsMarkerHandle) -> Bool {
+        tick == other.tick && track == other.track && x == other.x
+            && color == other.color && label == other.label
     }
 }
 
@@ -103,7 +119,19 @@ public final class OtherEventsBandPresenter {
             plotWidth: plotWidth, baseFontPx: baseFontPx, palette: colors)
         if next != publishedMarkers {
             publishedMarkers = next
-            markers.reset(to: next.map(OtherEventsMarkerHandle.init))
+            // In-place writes keep existing delegates alive; reset(to:) would
+            // destroy them all on every zoom tick.
+            let fresh = next.map(OtherEventsMarkerHandle.init)
+            let common = min(markers.count, fresh.count)
+            for i in 0..<common where !markers[i].matches(fresh[i]) {
+                markers[i] = fresh[i]
+            }
+            if markers.count > fresh.count {
+                markers.replaceSubrange(fresh.count..<markers.count, with: [])
+            } else if fresh.count > markers.count {
+                markers.replaceSubrange(
+                    markers.count..<markers.count, with: fresh[markers.count...])
+            }
             markerCount = next.count
         }
     }

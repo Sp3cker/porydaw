@@ -12,6 +12,12 @@ public final class SceneRect {
     public var fillColor: String
     public var primitiveName: String
 
+    /// Geometry packed as one map: a delegate binding `frame` pays a single
+    /// bridge read per model change instead of one read per numeric property.
+    /// @QtBridgeable only exports stored properties; rebuilds always construct
+    /// fresh rows, so populating once in init is correct.
+    public var frame: [String: QVariantSettable]
+
     public init(
         x: Double, y: Double, width: Double, height: Double,
         fillColor: String, primitiveName: String = ""
@@ -22,6 +28,7 @@ public final class SceneRect {
         self.height = height
         self.fillColor = fillColor
         self.primitiveName = primitiveName
+        self.frame = ["x": x, "y": y, "width": width, "height": height]
     }
 
     @QtIgnored
@@ -44,6 +51,10 @@ public final class SceneText {
     public var labelBackground: String
     public var labelHorizontalAlignment: Int
     public var labelVerticalAlignment: Int
+    /// Everything a text delegate needs besides text and font, packed into one
+    /// map so a model change costs a single bridge read instead of ~8. Stored
+    /// because @QtBridgeable only exports stored properties.
+    public var labelSpec: [String: QVariantSettable]
 
     public init(
         rect: (x: Double, y: Double, w: Double, h: Double),
@@ -67,6 +78,14 @@ public final class SceneText {
         labelBackground = background
         labelHorizontalAlignment = horizontal
         labelVerticalAlignment = vertical
+        labelSpec = [
+            "x": rect.x, "y": rect.y, "width": rect.w, "height": rect.h,
+            "clipWidth": 0.0, "clipHeight": 0.0,
+            "backgroundX": backgroundRect.x, "backgroundY": backgroundRect.y,
+            "backgroundWidth": backgroundRect.w, "backgroundHeight": backgroundRect.h,
+            "background": background, "color": color,
+            "horizontal": horizontal, "vertical": vertical,
+        ]
     }
 
     @QtIgnored

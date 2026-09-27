@@ -54,22 +54,19 @@ Item {
             model: root.timelineScene.pianoNoteTextModel
 
             delegate: Text {
-                required property var labelRect
+                required property var labelSpec
                 required property string labelText
-                required property string labelColor
                 required property var labelFont
-                required property int labelHorizontalAlignment
-                required property int labelVerticalAlignment
 
-                x: labelRect.x
-                y: labelRect.y
-                width: labelRect.width
-                height: labelRect.height
+                x: labelSpec.x
+                y: labelSpec.y
+                width: labelSpec.width
+                height: labelSpec.height
                 text: labelText
-                color: labelColor
+                color: labelSpec.color
                 font: Qt.font(labelFont)
-                horizontalAlignment: labelHorizontalAlignment
-                verticalAlignment: labelVerticalAlignment
+                horizontalAlignment: labelSpec.horizontal
+                verticalAlignment: labelSpec.vertical
                 textFormat: Text.PlainText
                 renderType: Text.NativeRendering
                 elide: Text.ElideNone
@@ -103,6 +100,7 @@ Item {
         anchors.fill: parent
         rects: root.timelineScene.pianoKeyboardKeys
         z: 0
+        batched: true
     }
 
     TimelineQuickItem {
@@ -111,6 +109,7 @@ Item {
         anchors.fill: parent
         rects: root.timelineScene.pianoKeyboardHighlights
         z: 1
+        batched: true
     }
 
     Rectangle {
@@ -145,36 +144,35 @@ Item {
             model: root.timelineScene.pianoKeyboardTextModel
 
             delegate: Item {
-                required property var labelRect
+                required property var labelSpec
                 required property string labelText
-                required property string labelColor
                 required property var labelFont
-                required property int labelHorizontalAlignment
-                required property int labelVerticalAlignment
-                required property string labelBackground
+                // Checks identify keyboard labels by these roles; keep them
+                // declared even though drawing reads labelSpec.
+                required property var labelRect
                 required property var labelBackgroundRect
 
-                x: labelRect.x
-                y: labelRect.y
-                width: labelRect.width
-                height: labelRect.height
+                x: labelSpec.x
+                y: labelSpec.y
+                width: labelSpec.width
+                height: labelSpec.height
 
                 Rectangle {
-                    x: labelBackgroundRect.x - labelRect.x
-                    y: labelBackgroundRect.y - labelRect.y
-                    width: labelBackgroundRect.width
-                    height: labelBackgroundRect.height
-                    visible: labelBackgroundRect.width > 0 && labelBackgroundRect.height > 0
-                    color: labelBackground
+                    x: labelSpec.backgroundX - labelSpec.x
+                    y: labelSpec.backgroundY - labelSpec.y
+                    width: labelSpec.backgroundWidth
+                    height: labelSpec.backgroundHeight
+                    visible: labelSpec.backgroundWidth > 0 && labelSpec.backgroundHeight > 0
+                    color: labelSpec.background
                 }
 
                 Text {
                     anchors.fill: parent
                     text: labelText
-                    color: labelColor
+                    color: labelSpec.color
                     font: Qt.font(labelFont)
-                    horizontalAlignment: labelHorizontalAlignment
-                    verticalAlignment: labelVerticalAlignment
+                    horizontalAlignment: labelSpec.horizontal
+                    verticalAlignment: labelSpec.vertical
                     textFormat: Text.PlainText
                     renderType: Text.NativeRendering
                     elide: Text.ElideNone
@@ -215,22 +213,19 @@ Item {
             model: root.timelineScene.pianoLoadingTextModel
 
             delegate: Text {
-                required property var labelRect
+                required property var labelSpec
                 required property string labelText
-                required property string labelColor
                 required property var labelFont
-                required property int labelHorizontalAlignment
-                required property int labelVerticalAlignment
 
-                x: labelRect.x
-                y: labelRect.y
-                width: labelRect.width
-                height: labelRect.height
+                x: labelSpec.x
+                y: labelSpec.y
+                width: labelSpec.width
+                height: labelSpec.height
                 text: labelText
-                color: labelColor
+                color: labelSpec.color
                 font: Qt.font(labelFont)
-                horizontalAlignment: labelHorizontalAlignment
-                verticalAlignment: labelVerticalAlignment
+                horizontalAlignment: labelSpec.horizontal
+                verticalAlignment: labelSpec.vertical
                 textFormat: Text.PlainText
                 renderType: Text.NativeRendering
                 elide: Text.ElideNone

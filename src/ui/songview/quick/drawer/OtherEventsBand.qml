@@ -75,13 +75,16 @@ Rectangle {
             model: band.presenter.markers
             delegate: Shape {
                 required property var model
+                // One packed spec per marker: a single bridge read per model
+                // change instead of a metaCall per property.
+                readonly property var s: model ? model.spec : ({})
                 objectName: "timelineOtherEventsMarker"
-                x: model.x - band.presenter.markerHalfWidth
+                x: s.x - band.presenter.markerHalfWidth
                 y: (band.height - height) / 2
                 width: 2 * band.presenter.markerHalfWidth
                 height: 2 * band.presenter.markerHalfHeight
                 ShapePath {
-                    fillColor: model.color
+                    fillColor: s.color
                     strokeWidth: 0
                     startX: band.presenter.markerHalfWidth
                     startY: 0

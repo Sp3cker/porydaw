@@ -226,17 +226,19 @@ FocusScope {
             model: (page.pageModel ? page.pageModel.gutterTexts : [])
 
             delegate: Text {
-                required property var model
+                required property var labelSpec
+                required property string labelText
+                required property var labelFont
 
-                x: model.labelRect.x
-                y: model.labelRect.y
-                width: model.labelRect.width
-                height: model.labelRect.height
-                text: model.labelText
-                color: model.labelColor
-                font: Qt.font(model.labelFont)
-                horizontalAlignment: model.labelHorizontalAlignment
-                verticalAlignment: model.labelVerticalAlignment
+                x: labelSpec.x
+                y: labelSpec.y
+                width: labelSpec.width
+                height: labelSpec.height
+                text: labelText
+                color: labelSpec.color
+                font: Qt.font(labelFont)
+                horizontalAlignment: labelSpec.horizontal
+                verticalAlignment: labelSpec.vertical
                 textFormat: Text.PlainText
                 renderType: Text.NativeRendering
                 elide: Text.ElideRight
@@ -296,6 +298,9 @@ FocusScope {
                 id: marker
 
                 required property var model
+                // One packed spec per marker: every child binding reads the
+                // local map instead of paying a metaCall per property.
+                readonly property var s: model ? model.spec : ({})
 
                 x: 0
                 y: 0
@@ -303,35 +308,35 @@ FocusScope {
                 height: plot.height
 
                 Rectangle {
-                    objectName: marker.model.primitiveName + "Line"
-                    x: marker.model.x
-                    y: marker.model.lineTop
-                    width: marker.model.lineWidth
-                    height: Math.max(0, marker.model.lineBottom - marker.model.lineTop)
-                    color: marker.model.lineColor
+                    objectName: marker.s.primitiveName + "Line"
+                    x: marker.s.x
+                    y: marker.s.lineTop
+                    width: marker.s.lineWidth
+                    height: Math.max(0, marker.s.lineBottom - marker.s.lineTop)
+                    color: marker.s.lineColor
                 }
 
                 Rectangle {
-                    objectName: marker.model.primitiveName + "Selection"
-                    visible: marker.model.selected || marker.model.hovered
-                    x: marker.model.x - marker.model.lineWidth
-                    y: marker.model.lineTop
-                    width: 3 * marker.model.lineWidth
-                    height: Math.max(0, marker.model.lineBottom - marker.model.lineTop)
+                    objectName: marker.s.primitiveName + "Selection"
+                    visible: marker.s.selected || marker.s.hovered
+                    x: marker.s.x - marker.s.lineWidth
+                    y: marker.s.lineTop
+                    width: 3 * marker.s.lineWidth
+                    height: Math.max(0, marker.s.lineBottom - marker.s.lineTop)
                     color: "transparent"
-                    border.width: marker.model.lineWidth
+                    border.width: marker.s.lineWidth
                     border.color: page.gridPalette.selectionRing
                 }
 
                 Text {
-                    objectName: marker.model.primitiveName + "Label"
+                    objectName: marker.s.primitiveName + "Label"
 
-                    x: marker.model.labelRect.x
-                    y: marker.model.labelRect.y
-                    width: marker.model.labelRect.width
-                    height: marker.model.labelRect.height
-                    visible: !marker.model.offscreen
-                    text: marker.model.label
+                    x: marker.s.labelX
+                    y: marker.s.labelY
+                    width: marker.s.labelWidth
+                    height: marker.s.labelHeight
+                    visible: !marker.s.offscreen
+                    text: marker.s.label
                     color: page.gridPalette.primaryText
                     font: Qt.font(page.pageModel ? page.pageModel.captionFont : {})
                     textFormat: Text.PlainText

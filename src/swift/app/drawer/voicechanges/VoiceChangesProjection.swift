@@ -29,6 +29,26 @@ public final class VoiceMarkerHandle: QVariantGettable {
     public var offscreen: Bool = false
     public var primitiveName: String = "voiceChangeMarker"
 
+    /// Everything the marker delegate needs in one map: the delegate's
+    /// model-data object exposes stored properties only, so this is a stored
+    /// role — `refreshSpec()` must run after fields are assigned.
+    /// `labelRect` flattens to scalar keys so the map stays one level deep.
+    public var spec: [String: QVariantSettable] = [:]
+
+    @QtIgnored
+    func refreshSpec() {
+        spec = [
+            "x": x, "lineTop": lineTop, "lineBottom": lineBottom,
+            "lineWidth": lineWidth, "lineColor": lineColor,
+            "selected": selected, "hovered": hovered, "offscreen": offscreen,
+            "label": label, "labelColor": labelColor,
+            "labelX": labelRect["x"] ?? 0.0, "labelY": labelRect["y"] ?? 0.0,
+            "labelWidth": labelRect["width"] ?? 0.0,
+            "labelHeight": labelRect["height"] ?? 0.0,
+            "primitiveName": primitiveName,
+        ]
+    }
+
     static func rect(_ x: Double, _ y: Double, _ w: Double, _ h: Double)
         -> [String: QVariantSettable]
     {
@@ -500,6 +520,7 @@ enum VoiceChangesProjection {
             handle.hovered = input.hoverIdentity == entry.identity
             handle.preview = input.previewIdentity == entry.identity
             handle.offscreen = offscreen
+            handle.refreshSpec()
             values.append(handle)
         }
         return values

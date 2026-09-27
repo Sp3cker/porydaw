@@ -300,6 +300,7 @@ struct VelocitySceneSnapshot {
             handle.ringColor = input.palette.selectionRing
             handle.outlineColor = input.palette.noteBorder
             handle.primitiveName = "velocityNode"
+            handle.refreshSpec()
             result.append(handle)
         }
         return result

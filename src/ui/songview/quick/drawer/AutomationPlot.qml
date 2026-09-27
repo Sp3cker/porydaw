@@ -60,20 +60,22 @@ Item {
         model: (plot.pageModel ? plot.pageModel.valueLabels : [])
 
         delegate: Text {
-            required property var model
+            required property var labelSpec
+            required property string labelText
+            required property var labelFont
             objectName: "automationScaleLabel"
 
-            x: model.labelRect.x
-            y: model.labelRect.y
-            width: model.labelRect.width
-            height: model.labelRect.height
-            text: model.labelText
+            x: labelSpec.x
+            y: labelSpec.y
+            width: labelSpec.width
+            height: labelSpec.height
+            text: labelText
             color: plot.gridPalette.primaryText
-            font: Qt.font(model.labelFont)
+            font: Qt.font(labelFont)
             textFormat: Text.PlainText
             renderType: Text.NativeRendering
-            horizontalAlignment: model.labelHorizontalAlignment
-            verticalAlignment: model.labelVerticalAlignment
+            horizontalAlignment: labelSpec.horizontal
+            verticalAlignment: labelSpec.vertical
             elide: Text.ElideRight
             maximumLineCount: 1
             clip: true
@@ -95,21 +97,23 @@ Item {
     Repeater {
         model: (plot.pageModel ? plot.pageModel.ghostNameLabels : [])
         delegate: Rectangle {
-            required property var model
+            required property var labelSpec
+            required property string labelText
+            required property var labelFont
             property alias text: ghostCaption.text
             objectName: "automationGhostNameLabel"
-            x: model.labelRect.x
-            y: model.labelRect.y
-            width: model.labelRect.width
-            height: model.labelRect.height
+            x: labelSpec.x
+            y: labelSpec.y
+            width: labelSpec.width
+            height: labelSpec.height
             color: plot.gridPalette.chromeBackground
             Text {
                 id: ghostCaption
                 objectName: "automationGhostCaption"
                 anchors.fill: parent
-                text: model.labelText
+                text: labelText
                 color: plot.gridPalette.windowText
-                font: Qt.font(model.labelFont)
+                font: Qt.font(labelFont)
                 textFormat: Text.PlainText
                 renderType: Text.NativeRendering
                 verticalAlignment: Text.AlignVCenter
@@ -153,8 +157,11 @@ Item {
             id: node
 
             required property var model
+            // One packed spec per node: every child binding reads the local
+            // map instead of paying a metaCall per property.
+            readonly property var s: model ? model.spec : ({})
 
-            objectName: node.model.primitiveName + (node.model.phantom ? "Phantom" : "")
+            objectName: node.s.primitiveName + (node.s.phantom ? "Phantom" : "")
             x: 0
             y: 0
             width: plot.width
@@ -163,42 +170,42 @@ Item {
 
             Rectangle {
                 objectName: "automationNodeRing"
-                visible: node.model.selected
-                x: node.model.x - node.model.ringRadius
-                y: node.model.y - node.model.ringRadius
-                width: 2 * node.model.ringRadius
-                height: 2 * node.model.ringRadius
-                radius: node.model.ringRadius
+                visible: node.s.selected
+                x: node.s.x - node.s.ringRadius
+                y: node.s.y - node.s.ringRadius
+                width: 2 * node.s.ringRadius
+                height: 2 * node.s.ringRadius
+                radius: node.s.ringRadius
                 color: "transparent"
-                border.width: Math.max(1, node.model.outlineWidth)
-                border.color: node.model.ringColor
+                border.width: Math.max(1, node.s.outlineWidth)
+                border.color: node.s.ringColor
             }
 
             Rectangle {
                 objectName: "automationNodeHover"
                 visible: plot.pageModel.hoverDisplay.hasNode
-                         && plot.pageModel.hoverDisplay.nodeTick === node.model.tick
-                         && !node.model.selected
-                x: node.model.x - node.model.ringRadius
-                y: node.model.y - node.model.ringRadius
-                width: 2 * node.model.ringRadius
-                height: 2 * node.model.ringRadius
-                radius: node.model.ringRadius
+                         && plot.pageModel.hoverDisplay.nodeTick === node.s.tick
+                         && !node.s.selected
+                x: node.s.x - node.s.ringRadius
+                y: node.s.y - node.s.ringRadius
+                width: 2 * node.s.ringRadius
+                height: 2 * node.s.ringRadius
+                radius: node.s.ringRadius
                 color: "transparent"
-                border.width: Math.max(1, node.model.outlineWidth)
-                border.color: node.model.ringColor
+                border.width: Math.max(1, node.s.outlineWidth)
+                border.color: node.s.ringColor
             }
 
             Rectangle {
                 objectName: "automationNodeFill"
-                x: node.model.x - node.model.radius
-                y: node.model.y - node.model.radius
-                width: 2 * node.model.radius
-                height: 2 * node.model.radius
-                radius: node.model.radius
-                color: node.model.fillColor
-                border.width: Math.max(1, node.model.outlineWidth)
-                border.color: node.model.outlineColor
+                x: node.s.x - node.s.radius
+                y: node.s.y - node.s.radius
+                width: 2 * node.s.radius
+                height: 2 * node.s.radius
+                radius: node.s.radius
+                color: node.s.fillColor
+                border.width: Math.max(1, node.s.outlineWidth)
+                border.color: node.s.outlineColor
             }
         }
     }

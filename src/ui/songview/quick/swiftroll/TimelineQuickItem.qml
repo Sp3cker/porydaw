@@ -23,16 +23,18 @@ Item {
     Repeater {
         model: root.batchingActive ? null : root.rects
 
+        // One dict role for geometry: three role reads per model change instead
+        // of a model fetch plus per-property metaCall round-trips.
         delegate: Rectangle {
-            required property var model
+            required property var frame
             required property string fillColor
             required property string primitiveName
 
             objectName: primitiveName
-            x: model.x
-            y: model.y
-            width: model.width
-            height: model.height
+            x: frame.x
+            y: frame.y
+            width: frame.width
+            height: frame.height
             color: fillColor
         }
     }

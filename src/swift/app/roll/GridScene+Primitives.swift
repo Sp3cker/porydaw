@@ -15,17 +15,26 @@ func sceneTextDictSignature(_ dict: [String: QVariantSettable]) -> String {
 @MainActor
 extension GridScene {
 
-    /// QListModel.reset always emits modelReset, which tears down every text
-    /// delegate. Rebuilds run per pointer sample, so skip the reset when the
-    /// published records are unchanged.
+    /// Signatures bail out when nothing changed. Changed rows write in place
+    /// (per-row dataChanged, delegates persist) instead of reset(to:), which
+    /// destroyed every delegate on every zoom tick.
     func syncText(
         _ model: QListModel<SceneText>, _ records: [SceneText],
         signatures: inout [String]
     ) {
         let next = records.map(\.signature)
         guard next != signatures else { return }
+        let common = min(model.count, records.count)
+        for i in 0..<common where signatures[i] != next[i] {
+            model[i] = records[i]
+        }
+        if model.count > records.count {
+            model.replaceSubrange(records.count..<model.count, with: [])
+        } else if records.count > model.count {
+            model.replaceSubrange(
+                model.count..<model.count, with: records[model.count...])
+        }
         signatures = next
-        model.reset(to: records)
     }
 
     func sync(_ model: QListModel<SceneRect>, _ rects: [SceneRect]) {
