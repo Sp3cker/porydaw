@@ -17,6 +17,7 @@ TestCase {
     property var shell: null
 
     ShellQmlBootstrap { id: bootstrap }
+    readonly property var settings: bootstrap.preferences
     GatedVisualsProbe { id: probe }
     SignalSpy { id: openFailedSpy; signalName: "openFailed" }
     SignalSpy { id: criticalSpy; signalName: "criticalRequested" }
@@ -148,6 +149,8 @@ TestCase {
         tryCompare(session.songTabs, "tabCount", 1)
         var firstId = session.songTabs.selectedId
         var firstPage = session.songTabs.selectedPage
+        verify(waitForNative(function() { return firstPage.grid.noteSummary.length > 2 }, 5000),
+               "the first song publishes its source notes before project replacement")
         session.openSong("mus_littleroot_test")
         verify(waitForNative(function() {
             return session.songTabs.tabCount === 2 || session.lastSaveError.length > 0
@@ -164,6 +167,11 @@ TestCase {
         var selectedDocument = selectedPage.grid
         verify(waitForNative(function() { return selectedDocument.noteSummary.length > 2 }, 5000),
                "the selected document publishes loaded notes before project replacement")
+        settings.synchronize()
+        compare(settings.string("lastProjectDir", ""), bootstrap.projectRoot,
+                "the two live songs persist their original project path before failure")
+        compare(settings.string("lastSongLabel", ""), "mus_littleroot_test",
+                "the selected second song persists before failure")
         var originalNotes = selectedDocument.noteSummary
 
         openFailedSpy.target = session
@@ -180,6 +188,15 @@ TestCase {
         verify(dialog !== null, "the production critical dialog exists")
         verify(waitForNative(function() { return dialog.visible }, 3000),
                "the project-open failure dialog is shown")
+        verify(session.lastSaveError.length > 0,
+               "the failed project replacement publishes a nonempty explanation")
+        compare(session.projectOpen, true,
+                "the failed project replacement leaves the original project open")
+        settings.synchronize()
+        compare(settings.string("lastProjectDir", ""), bootstrap.projectRoot,
+                "the failed project replacement does not persist the missing path")
+        compare(settings.string("lastSongLabel", ""), "mus_littleroot_test",
+                "the failed project replacement retains the persisted selection")
         dialog.close()
         compare(tabs.selectedId, selectedId,
                 "failed project replacement preserves the selected tab")
@@ -196,5 +213,38 @@ TestCase {
         verify(findChild(shell.sceneLoader.item, "songTab_" + firstId) !== null
                && firstPage.songOpen,
                "failed project replacement keeps the background document ready")
+
+        session.openSong("mus_route101")
+        compare(tabs.selectedId, firstId,
+                "the retained project can select its original first song")
+        compare(tabs.selectedPage, firstPage,
+                "selecting the original song reuses its retained live page")
+        compare(firstPage.title, "mus_route101",
+                "the original song remains available by its registered label")
+        compare(selectedPage.songOpen, true,
+                "selecting the first song keeps the second prior document ready")
+
+        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        verify(waitForNative(function() {
+            return tabs.tabCount === 1 && tabs.selectedPage !== firstPage
+                && tabs.selectedPage !== null && tabs.selectedPage.title === "mus_route101"
+                && session.songOpen
+        }, 30000), "reopening releases the old pages and mounts a new ready song")
+        var selector = findChild(shell, "vgArgCombo")
+        verify(selector !== null, "the reopened project's voicegroup selector is mounted")
+        verify(waitForNative(function() { return selector.count === 5 }, 5000),
+               "the reopened project's five staged fixture voicegroups reach the selector")
+        verify(session.projectOpen && session.songOpen
+               && selector.textAt(0) === "fixture_bass"
+               && selector.textAt(1) === "fixture_drums_a"
+               && selector.textAt(2) === "fixture_drums_b"
+               && selector.textAt(3) === "fixture_keys"
+               && selector.textAt(4) === "fixture_rich",
+               "A016 recovered project is ready with its exact nonempty staged voicegroup catalog")
+        settings.synchronize()
+        verify(settings.string("lastProjectDir", "") === bootstrap.projectRoot
+               && settings.string("lastSongLabel", "") === "mus_route101"
+               && tabs.tabCount === 1,
+               "A017 recovered project persists its staged path and complete selected tab recipe")
     }
 }

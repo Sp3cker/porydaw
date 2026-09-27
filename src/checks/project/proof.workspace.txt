@@ -2,16 +2,22 @@ Assertion correspondence: project/workspace.cpp
 
 Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Deleted in: S6 flip cutover (feature/swift-project-store, base 2d1c92d0)
-Retirement: historical deletion record only; the deleted C++ source above is recoverable from the Reference revision and Original SHA-256, never from HEAD. The dispositions and S citations below were established while the file was live and were not re-verified in this cutover; no execution or parity claim is made by this record.
+Retirement: historical deletion record only; the deleted C++ source above is recoverable from the Reference revision and Original SHA-256, never from HEAD. A003–A017 were reconciled for Task139 against the frozen counterpart hashes below. Verification results for the exact frozen hashes were not provided; no execution claim is made.
 Original: src/checks/project/workspace.cpp
 Original SHA-256: 0a6cdc0225c40a0fcc81df7eeef22ecdfeeffd7dad740d4fdfc1dc3b6a43a2e9
 Swift counterpart: src/checks/workspace/SessionChecks.swift
 Swift counterpart: src/checks/workspace/bank_edits.swift
 Swift counterpart: src/checks/workspace/session_playback.swift
+Swift counterpart: src/checks/workspace/session_io.swift
+Swift/QML counterpart: src/checks/editorqml/tst_ShellOpenFailure.qml
+Task-139 SHA-256: src/checks/workspace/session_io.swift 8b430d23f7c5076503cf7162a68e0ac79937814be7284dcf200a6bd142437b86
+Task-139 SHA-256: src/checks/editorqml/tst_ShellOpenFailure.qml 75a3f26c5465f0b9bcb9ef07e4137097b1e2237d0a3d17f62d0f72de744711f1
 
 
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run.
+Task-139 project command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-projectsession --verbose
+Task-139 project result: Not provided for frozen session_io.swift SHA-256 8b430d23f7c5076503cf7162a68e0ac79937814be7284dcf200a6bd142437b86. Earlier implementer-reported PASS (1/36) was on the preceding session_io.swift SHA-256 4e2e6fa394d7e20686f711921f74db78ff65871fbbf87d9504542178e046087f.
+Task-139 shell command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify:shell --filter shell-open-failure --verbose
+Task-139 shell result: Not provided for frozen QML SHA-256 75a3f26c5465f0b9bcb9ef07e4137097b1e2237d0a3d17f62d0f72de744711f1. Earlier implementer-reported PASS (1/75) was on this unchanged QML hash; that run does not establish execution of the revised Swift assertions.
 
 A001 | ProjectWorkspaceTest::verifyStateErrorInvariant | src/checks/project/workspace.cpp:252
 Disposition: GAP
@@ -327,8 +333,8 @@ Original expression:
   QCOMPARE(stateCount(m_log), 1)
 
 A005 | ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten | src/checks/project/workspace.cpp:285
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S003 in src/checks/workspace/session_io.swift asserts that the missing-root attempt reaches a failed-open result while projectOpen remains false; the function has completed the until predicate before this assertion. [S003]
 Source context since previous assertion:
   ;
 
@@ -339,8 +345,8 @@ Original expression:
                qPrintable(error))
 
 A006 | ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten | src/checks/project/workspace.cpp:288
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — the C++ ProjectState pointer null guard is test-harness setup for dereferencing a publication-log value, not user-visible project-open behavior.
 Source context since previous assertion:
   ;
       const ProjectState *const failed = lastState(m_log);
@@ -349,8 +355,8 @@ Original expression:
   QVERIFY(failed)
 
 A007 | ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten | src/checks/project/workspace.cpp:290
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S004 in src/checks/workspace/session_io.swift asserts that the failed project open publishes a nonempty lastSaveError, matching the original nonempty failure explanation. [S004]
 Source context since previous assertion:
   ;
       if (failed)
@@ -359,8 +365,8 @@ Original expression:
   QVERIFY(failed->error && !failed->error->isEmpty())
 
 A008 | ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten | src/checks/project/workspace.cpp:292
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S005 in src/checks/workspace/session_io.swift compares the complete persisted WorkspaceTabRecipe to the independently seeded recipe after the failed initial open. [S005]
 Source context since previous assertion:
   ;
       const QSettings settings;
@@ -369,8 +375,8 @@ Original expression:
   QVERIFY(!settings.contains(QStringLiteral("lastProjectDir")))
 
 A009 | ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten | src/checks/project/workspace.cpp:295
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S006 in src/checks/workspace/session_io.swift asserts the staged project is published with one tab after the open completes and the selected song is observed open. [S006]
 Source context since previous assertion:
   ;
 
@@ -381,8 +387,8 @@ Original expression:
                qPrintable(error))
 
 A010 | ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten | src/checks/project/workspace.cpp:297
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S007 in src/checks/workspace/session_io.swift compares the persisted WorkspaceTabRecipe, including the staged project path, opened song, and selection, to its exact expected value. [S007]
 Source context since previous assertion:
   ;
 
@@ -391,8 +397,8 @@ Original expression:
                QDir(m_stagedRoot).absolutePath())
 
 A011 | ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot | src/checks/project/workspace.cpp:304
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — openReady(error) is a C++ event-loop/publication-log fixture prerequisite that creates the prior project for later assertions, not a standalone user-visible behavior.
 Source context since previous assertion:
   ;
   }
@@ -405,8 +411,8 @@ Original expression:
   QVERIFY2(openReady(error), qPrintable(error))
 
 A012 | ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot | src/checks/project/workspace.cpp:307
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S010 in src/checks/workspace/session_io.swift asserts the missing-root failure includes the attempted path and retains two live songs, matching the failed-open outcome. [S010]
 Source context since previous assertion:
   ;
       const QString goneRoot = m_stagedRoot + QStringLiteral("/gone");
@@ -417,8 +423,8 @@ Original expression:
                qPrintable(error))
 
 A013 | ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot | src/checks/project/workspace.cpp:310
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — the C++ ProjectState pointer null guard is test-harness setup for dereferencing a publication-log value, not user-visible project-open behavior.
 Source context since previous assertion:
   ;
       const ProjectState *const failed = lastState(m_log);
@@ -427,8 +433,8 @@ Original expression:
   QVERIFY(failed)
 
 A014 | ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot | src/checks/project/workspace.cpp:312
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S011 in src/checks/workspace/session_io.swift asserts projectRoot remains equal to the prior staged project path after the failed replacement. [S011]
 Source context since previous assertion:
   ;
       if (failed) {
@@ -437,8 +443,8 @@ Original expression:
   QCOMPARE(failed->snapshot.root(), QDir(m_stagedRoot).absolutePath())
 
 A015 | ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot | src/checks/project/workspace.cpp:313
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S012 in src/checks/workspace/session_io.swift asserts projectOpen remains true after the failed replacement. [S012]
 Source context since previous assertion:
   ;
 
@@ -446,8 +452,8 @@ Original expression:
   QVERIFY(failed->snapshot.isOpen())
 
 A016 | ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot | src/checks/project/workspace.cpp:317
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S008 in the mounted shell-open-failure test asserts projectOpen and songOpen together with the exact five-entry staged voicegroup catalog. [S008]
 Source context since previous assertion:
   ;
       }
@@ -465,8 +471,8 @@ Original expression:
                qPrintable(error))
 
 A017 | ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot | src/checks/project/workspace.cpp:325
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 in the mounted shell-open-failure test asserts the recovered project path and selected song are persisted, with exactly one reopened tab. [S009]
 Source context since previous assertion:
   ;
 
@@ -1509,3 +1515,31 @@ Anchor: message "document mutation invokes session presenter callback"
 
 S002 | bankConflicts | src/checks/workspace/bank_edits.swift
 Anchor: message "materializing occupied slot triggers bankConflict"
+S003 | checkFailedProjectSwitch (line 40: report.expect(firstFailure && !app.projectOpen, cppID: id, message: "A005 missing project reaches a failed-open result without opening a project")) | src/checks/workspace/session_io.swift
+Anchor: message "A005 missing project reaches a failed-open result without opening a project"
+
+S004 | checkFailedProjectSwitch (line 46: report.expect(!app.lastSaveError.isEmpty(), cppID: id, message: "A007 failed project open publishes a nonempty explanation")) | src/checks/workspace/session_io.swift
+Anchor: message "A007 failed project open publishes a nonempty explanation"
+
+S005 | checkFailedProjectSwitch (line 49: report.expectEqual(expected: seed, actual: EditorViewStateCodec.loadTabs(store: store), cppID: id, what: "A008 failed initial open preserves the seeded complete tab recipe")) | src/checks/workspace/session_io.swift
+Anchor: message "A008 failed initial open preserves the seeded complete tab recipe"
+
+S006 | checkFailedProjectSwitch (line 60: report.expect(app.projectOpen && app.songTabs.tabCount == 1, cppID: id, message: "A009 recovery publishes the staged project with its first ready tab")) | src/checks/workspace/session_io.swift
+Anchor: message "A009 recovery publishes the staged project with its first ready tab"
+
+S007 | checkFailedProjectSwitch (lines 65-70: report.expectEqual(expected: WorkspaceTabRecipe(projectPath: projectDir, orderedSongs: ["mus_session_test"], selectedSong: "mus_session_test"), actual: EditorViewStateCodec.loadTabs(store: store), cppID: id, what: "A010 recovery persists the staged root and its selected song")) | src/checks/workspace/session_io.swift
+Anchor: message "A010 recovery persists the staged root and its selected song"
+
+S008 | test_liveTabCleanBeforeFailedProjectOpen (lines 237-243: verify(session.projectOpen && session.songOpen && selector.textAt(0) === "fixture_bass" && selector.textAt(1) === "fixture_drums_a" && selector.textAt(2) === "fixture_drums_b" && selector.textAt(3) === "fixture_keys" && selector.textAt(4) === "fixture_rich", "A016 recovered project is ready with its exact nonempty staged voicegroup catalog")) | src/checks/editorqml/tst_ShellOpenFailure.qml
+Anchor: message "A016 recovered project is ready with its exact nonempty staged voicegroup catalog"
+
+S009 | test_liveTabCleanBeforeFailedProjectOpen (lines 245-248: verify(settings.string("lastProjectDir", "") === bootstrap.projectRoot && settings.string("lastSongLabel", "") === "mus_route101" && tabs.tabCount === 1, "A017 recovered project persists its staged path and complete selected tab recipe")) | src/checks/editorqml/tst_ShellOpenFailure.qml
+Anchor: message "A017 recovered project persists its staged path and complete selected tab recipe"
+S010 | checkFailedProjectSwitch (lines 94-96: report.expect(secondFailure && app.lastSaveError.contains(missingRoot) && app.songTabs.tabCount == 2, cppID: id, message: "A012 missing replacement reports its path failure with two live songs")) | src/checks/workspace/session_io.swift
+Anchor: message "A012 missing replacement reports its path failure with two live songs"
+
+S011 | checkFailedProjectSwitch (lines 101-102: report.expectEqual(expected: projectDir, actual: app.projectRoot, cppID: id, what: "A014 failed replacement retains the prior project root")) | src/checks/workspace/session_io.swift
+Anchor: message "A014 failed replacement retains the prior project root"
+
+S012 | checkFailedProjectSwitch (lines 103-104: report.expectEqual(expected: true, actual: app.projectOpen, cppID: id, what: "A015 failed replacement leaves the prior project open")) | src/checks/workspace/session_io.swift
+Anchor: message "A015 failed replacement leaves the prior project open"

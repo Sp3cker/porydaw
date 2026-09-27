@@ -7,7 +7,140 @@ import PorydawPlayback
 // MARK: - Session I/O Scenarios
 
 @MainActor
+private func checkFailedProjectSwitch(report: CheckReport, projectDir: String) {
+    let id = "project-workspace/ProjectWorkspaceTest::failedOpenRetainsLiveProject"
+    let store = PreferencesStore()
+    guard store.resetPreferences() else {
+        report.fail(id, "could not clear isolated preferences before the project-open journey")
+        return
+    }
+    let seed = WorkspaceTabRecipe(projectPath: projectDir + "/seeded-project",
+                                  orderedSongs: ["mus_session_test2"],
+                                  selectedSong: "mus_session_test2")
+    EditorViewStateCodec.saveTabs(seed, store: store)
+    let app = ApplicationSession()
+    app.configurePersistence()
+    defer {
+        app.hostClosing()
+        app.acknowledgeGridDetached()
+        if !store.resetPreferences() {
+            report.fail(id, "could not clear isolated preferences after the project-open journey")
+        }
+    }
+    func until(_ predicate: () -> Bool) -> Bool {
+        let deadline = Date().addingTimeInterval(25)
+        while !predicate() && Date() < deadline {
+            _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+        }
+        return predicate()
+    }
+    let missingRoot = projectDir + "/missing-project"
+    app.openProject(path: missingRoot)
+    let firstFailure = until { !app.lastSaveError.isEmpty }
+    report.expect(firstFailure && !app.projectOpen, cppID: id,
+                  message: "A005 missing project reaches a failed-open result without opening a project")
+    guard firstFailure else {
+        report.fail(id, "missing project did not reach a failed-open result")
+        return
+    }
+    report.expect(!app.lastSaveError.isEmpty, cppID: id,
+                  message: "A007 failed project open publishes a nonempty explanation")
+    store.synchronize()
+    report.expectEqual(expected: seed, actual: EditorViewStateCodec.loadTabs(store: store),
+                       cppID: id, what: "A008 failed initial open preserves the seeded complete tab recipe")
+    report.expectEqual(expected: false, actual: app.projectOpen,
+                       cppID: id, what: "failed initial open does not publish a project")
+
+    app.openProjectAndSong(path: projectDir, label: "mus_session_test")
+    let firstReady = until { app.songOpen }
+    guard firstReady, app.songOpen, let first = app.selectedDocument else {
+        report.fail(id, "staged project and first song did not open after failure")
+        return
+    }
+    report.expect(app.projectOpen && app.songTabs.tabCount == 1, cppID: id,
+                  message: "A009 recovery publishes the staged project with its first ready tab")
+    report.expectEqual(expected: ["_test_vg"], actual: app.settingsVoicegroupArgs(),
+                       cppID: id, what: "recovery publishes the fixture's exact voicegroup catalog")
+    store.synchronize()
+    report.expectEqual(
+        expected: WorkspaceTabRecipe(projectPath: projectDir,
+                                     orderedSongs: ["mus_session_test"],
+                                     selectedSong: "mus_session_test"),
+        actual: EditorViewStateCodec.loadTabs(store: store), cppID: id,
+        what: "A010 recovery persists the staged root and its selected song")
+    let firstID = app.songTabs.selectedId
+    // Compare opaque MIDI and bank payloads against bytes and slots captured before the failed open.
+    guard let midiBeforeFailure = try? first.document.state.file.encoded() else {
+        report.fail(id, "could not capture the original song's MIDI payload before replacement")
+        return
+    }
+    let bankSlotsBeforeFailure = first.bankSlots
+    app.openSong(label: "mus_session_test2")
+    guard until({ app.songTabs.tabCount == 2 || !app.lastSaveError.isEmpty }),
+          app.songTabs.tabCount == 2, let second = app.selectedDocument else {
+        report.fail(id, "second staged song did not open before retained-project check")
+        return
+    }
+    let selectedID = app.songTabs.selectedId
+    let priorRecipe = WorkspaceTabRecipe(projectPath: projectDir,
+                                         orderedSongs: ["mus_session_test", "mus_session_test2"],
+                                         selectedSong: "mus_session_test2")
+    guard app.lastSaveError.isEmpty else {
+        report.fail(id, "the successful song open did not clear the prior project-open error")
+        return
+    }
+    app.openProject(path: missingRoot)
+    let secondFailure = until { !app.lastSaveError.isEmpty }
+    report.expect(secondFailure && app.lastSaveError.contains(missingRoot)
+                  && app.songTabs.tabCount == 2, cppID: id,
+                  message: "A012 missing replacement reports its path failure with two live songs")
+    guard secondFailure else {
+        report.fail(id, "missing replacement did not report failure")
+        return
+    }
+    report.expectEqual(expected: projectDir, actual: app.projectRoot,
+                       cppID: id, what: "A014 failed replacement retains the prior project root")
+    report.expectEqual(expected: true, actual: app.projectOpen,
+                       cppID: id, what: "A015 failed replacement leaves the prior project open")
+    report.expect(app.songTabs.tabCount == 2 && app.songTabs.selectedId == selectedID
+                  && app.selectedDocument === second, cppID: id,
+                  message: "failed replacement retains both tabs and their live selection")
+    report.expectEqual(expected: ["_test_vg"], actual: app.settingsVoicegroupArgs(),
+                       cppID: id, what: "failed replacement retains the complete prior voicegroup catalog")
+    store.synchronize()
+    report.expectEqual(expected: priorRecipe, actual: EditorViewStateCodec.loadTabs(store: store),
+                       cppID: id, what: "failed replacement preserves the prior root and complete persisted selection")
+    app.songTabs.selectTab(tabId: firstID)
+    let listings = app.songDockController().songListPresenter().songListings
+    let expectedFirstListing = SongListing(
+        id: 0, label: "mus_session_test", constant: "", player: "MUSIC_PLAYER_BGM",
+        midiPath: projectDir + "/sound/songs/midi/mus_session_test.mid",
+        trackBudget: 16, hasMid: true, hasCfg: true, registered: true,
+        registrationGaps: ["songs.h"])
+    let retainedListing = listings.map(\.label) == [
+        "mus_session_test", "mus_session_test2", "mus_vgid_absolute",
+        "mus_vgid_empty", "mus_vgid_nested_parent", "mus_vgid_normalizes_root",
+        "mus_vgid_parent_file", "mus_vgid_parent", "mus_vgid_project_root",
+    ] && listings.first == expectedFirstListing
+    let retainedMetadata = first.document.source == SongSource(
+        label: "mus_session_test",
+        midiPath: projectDir + "/sound/songs/midi/mus_session_test.mid",
+        hasConfig: true)
+        && first.document.trackBudget == 16
+        && first.document.state.config == SongConfig(
+            rawFlags: ["-R50", "-G_test_vg", "-V100"],
+            voicegroupArgument: "_test_vg", masterVolume: 100, reverb: 50)
+        && first.bankLoadName == "test_vg" && !first.bankDirty
+    let retainedPayload = (try? first.document.state.file.encoded()) == midiBeforeFailure
+        && first.bankSlots == bankSlotsBeforeFailure
+    report.expect(app.selectedDocument === first && retainedListing
+                  && retainedMetadata && retainedPayload, cppID: id,
+                  message: "retained project exposes all nine songs and the first song's complete metadata and opaque payloads")
+}
+
+@MainActor
 internal func sessionOpenAndRecovery(report: CheckReport, projectDir: String) -> (service: ProjectService, session: DocumentSession)? {
+    checkFailedProjectSwitch(report: report, projectDir: projectDir)
     // 1. Service open and error recovery
     let service = ProjectService()
     let songTablePath = projectDir + "/sound/song_table.inc"
