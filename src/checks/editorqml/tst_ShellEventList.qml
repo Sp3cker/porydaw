@@ -17,6 +17,7 @@ TestCase {
     property var shell: null
     readonly property var settings: bootstrap.preferences
     property var typographyPage: null
+    FontInfo { id: tickEditorFontInfo; font: Qt.application.font }
     FontMetrics { id: eventTableMetrics; font: typographyPage ? typographyPage.tableFont : Qt.application.font }
     ShellQmlBootstrap { id: bootstrap }
     SignalSpy { id: copySpy; signalName: "activated" }
@@ -1041,7 +1042,10 @@ TestCase {
         toggle.forceActiveFocus(Qt.MouseFocusReason)
         tryCompare(toggle, "activeFocus", true, 3000,
                    "the focused velocity drawer control owns active focus")
-        tryCompare(presenter, "editing", false, 3000)
+        tryCompare(presenter, "editing", false, 3000,
+                   "drawer focus loss commits and closes the mounted tick edit transaction")
+        verify(findChild(page, "eventListTickEditor") === null,
+               "drawer focus loss leaves no active mounted tick editor")
         let committed = false
         for (let row = 0; row < presenter.rowCount - 1; ++row) {
             if (presenter.tickString(row) === "60"
@@ -1115,30 +1119,46 @@ TestCase {
         }, 3000, "the rebuilt menu updates the activated category")
         tryCompare(findChild(fixture.page, "quickMenuPanelRoot"), "highlightedRow", 0, 3000,
                    "the rebuilt menu restores the highlight by id")
+        const maskBeforeEscape = presenter.filterMask
         keyClick(Qt.Key_Escape)
         tryCompare(presenter, "menuOpen", false, 3000,
                    "Escape cancels the filter menu without activating")
+        compare(presenter.filterMask, maskBeforeEscape,
+                "Escape preserves the filter mask after the highlighted category changed")
+        const cell = cellAt(fixture.table, 0, 5)
+        mouseClick(cell, cell.width / 2, cell.height / 2)
+        compare(presenter.currentRow, 0, "a bare Data-cell click selects the original event row")
+        compare(fixture.page.currentColumn, 5,
+                "the bare Data-cell click makes Data the active event column")
+        compare(presenter.editing, false,
+                "selecting the event row without editing leaves the cell editor closed")
         mouseClick(filter, filter.width / 2, filter.height / 2)
         tryCompare(presenter, "menuOpen", true, 3000)
-        const cell = cellAt(fixture.table, 0, 0)
-        const priorEditing = presenter.editing
+        const sourceRow = presenter.currentRow
+        const maskBeforePress = presenter.filterMask
         let reopened = null
         tryVerify(function() {
             reopened = findChild(fixture.page, "quickMenuPanelRoot")
             return reopened !== null
         }, 3000, "the reopened filter menu is rendered")
-        const position = cell.mapToItem(fixture.page, cell.width / 2, cell.height / 2)
+        const pressX = cell.width - 1
+        const position = cell.mapToItem(fixture.page, pressX, cell.height / 2)
         verify(position.x < reopened.menuOrigin.x
                || position.x > reopened.menuOrigin.x + reopened.menuWidth
                || position.y < reopened.menuOrigin.y
                || position.y > reopened.menuOrigin.y + reopened.menuHeight,
                "the table-cell press is outside the menu frame")
-        mousePress(cell, cell.width / 2, cell.height / 2)
+        mousePress(cell, pressX, cell.height / 2)
         tryCompare(presenter, "menuOpen", false, 3000,
                    "a table-cell press while the menu is open only closes the menu")
-        compare(presenter.editing, priorEditing)
-        mouseRelease(cell, cell.width / 2, cell.height / 2)
-        compare(presenter.editing, priorEditing,
+        compare(presenter.currentRow, sourceRow,
+                "the menu-underlay Data cell press preserves the original event cursor")
+        compare(presenter.editing, false,
+                "the menu-underlay Data cell press does not open an editor")
+        compare(presenter.filterMask, maskBeforePress,
+                "the menu-underlay Data cell press activates no filter category")
+        mouseRelease(cell, pressX, cell.height / 2)
+        compare(presenter.editing, false,
                 "the paired release never starts an editor")
     }
 
@@ -1244,6 +1264,7 @@ TestCase {
         const fixture = openEventListFixture()
         const presenter = fixture.presenter
         const page = fixture.page
+        const capturedBasePx = fixture.session.baseFontPx
         const handle = findChild(page, "eventListColumnResizeHandle1")
         verify(handle && handle.visible, "the Type handle is rendered")
         const before = presenter.savedColumnWidth(1)
@@ -1269,6 +1290,16 @@ TestCase {
         mouseDoubleClickSequence(cell, cell.width / 2, cell.height / 2)
         tryCompare(presenter, "editing", true, 3000,
                    "double-click opens the tick cell editor")
+        let editor = null
+        tryVerify(function() {
+            editor = findChild(page, "eventListTickEditor")
+            return editor !== null && editor.visible
+        }, 3000, "double-click instantiates the real tick editor")
+        tickEditorFontInfo.font = editor.font
+        compare(tickEditorFontInfo.family, "Atkinson Hyperlegible Mono",
+                "the instantiated tick editor resolves the captured mono family")
+        verify(Math.abs(editor.font.letterSpacing + capturedBasePx / 26) < 1 / 64 + 1e-6,
+               "the instantiated tick editor uses absolute pixel tracking from the base font")
         verify(presenter.finishEditing("", false), "the editor cancels after its open proof")
     }
 
@@ -1276,11 +1307,21 @@ TestCase {
         const fixture = openEventListFixture()
         const presenter = fixture.presenter
         const page = fixture.page
-        const first = cellAt(fixture.table, 0, 0)
+        let sourceRow = -1
+        for (let row = 0; row < presenter.rowCount - 1; ++row) {
+            if (presenter.rowType(row) === 3 && presenter.tickString(row) === "0") {
+                sourceRow = row
+                break
+            }
+        }
+        verify(sourceRow >= 0, "the mounted fixture has its tick-zero control row")
+        const first = cellAt(fixture.table, sourceRow, 5)
         mouseClick(first, first.width / 2, first.height / 2, Qt.RightButton)
         tryCompare(presenter, "menuOpen", true, 3000,
                    "right-clicking a row opens its menu on that row")
-        compare(presenter.currentRow, 0, "the row menu captures its selected row")
+        compare(presenter.currentRow, sourceRow, "the row menu captures its selected row")
+        compare(page.currentColumn, 5,
+                "the row menu opens from the original control row's Data column")
         const beforeCount = presenter.rowCount
         let insert = null
         tryVerify(function() {
@@ -1300,9 +1341,11 @@ TestCase {
         fixture.session.requestRedo()
         verify(waitForNative(function() { return presenter.rowCount === beforeCount + 1 }, 3000),
                "redo restores the inserted row")
-        const target = cellAt(fixture.table, 1, 0)
+        const target = cellAt(fixture.table, sourceRow === 0 ? 1 : 0, 5)
         mouseClick(target, target.width / 2, target.height / 2, Qt.RightButton)
         tryCompare(presenter, "menuOpen", true, 3000)
+        compare(page.currentColumn, 5,
+                "the outside-cancel row menu originates from a Data-column cell")
         const selected = presenter.currentRow
         let menu = null
         tryVerify(function() {
@@ -1317,6 +1360,8 @@ TestCase {
                    "an outside right press cancels the menu without moving the current row")
         compare(presenter.currentRow, selected)
         mouseRelease(page, page.width - 1, page.height - 1, Qt.RightButton)
+        compare(presenter.currentRow, selected,
+                "the paired outside right release preserves the original event cursor")
         compare(presenter.menuOpen, false, "the paired right release reopens nothing")
     }
 

@@ -356,6 +356,7 @@ internal func eventListRowMenuContract(_ report: CheckReport, suite: DocumentSes
     let source = document.rawChunks[0].events[0]
     let originals = document.rawChunks[0].events.filter { $0 == source }.count
     let beforeInsert = document.history.undoIndex
+    let revisionBeforeInsert = document.revision
     session.editCursor = 72
     presenter.activateMenuAction(actionId: 1)
     report.expect(document.rawChunks[0].events.filter { $0 == source }.count == originals + 1
@@ -364,6 +365,8 @@ internal func eventListRowMenuContract(_ report: CheckReport, suite: DocumentSes
                       $0.tick == 72 && $0.payload == source.payload
                   }),
                   cppID: id, message: "row-menu Insert copies the source at its own tick in one step")
+    report.expect(document.revision == revisionBeforeInsert + 1, cppID: id,
+                  message: "rendered row-menu raw Insert advances the document revision exactly once")
     _ = document.history.undoDocument()
     presenter.selectRow(row: 0, modifiers: 0)
     presenter.openRowMenu(x: 0, y: 0)
@@ -476,13 +479,18 @@ private func eventListMenuInvalidation(_ report: CheckReport, suite: DocumentSes
     presenter.setChunk(index: 1)
     report.expect(!presenter.menuOpen && presenter.chunkIndex == 1, cppID: id,
                   message: "a chunk switch retires the row menu")
+    presenter.setChunk(index: 0)
     presenter.selectRow(row: 0, modifiers: 0)
     presenter.openRowMenu(x: 0, y: 0)
-    document.editTempo(TempoEdit(add: [
-        TempoPoint(tick: 36, microsecondsPerQuarterNote: 600_000),
-    ]))
+    let revisionBeforeRawInsert = document.revision
+    let undoBeforeRawInsert = document.history.undoIndex
+    document.insertRawEvent(chunk: 0, event: .channel(
+        tick: 118, status: 0xB0, data0: 7, data1: 64))
     report.expect(!presenter.menuOpen, cppID: id,
                   message: "a document edit retires the row menu")
+    report.expect(document.revision == revisionBeforeRawInsert + 1
+                  && document.history.undoIndex == undoBeforeRawInsert + 1,
+                  cppID: id, message: "a raw insertion under an open row menu advances revision and undo once")
     presenter.openFilterMenu(x: 0, y: 0)
     presenter.focusRow(row: 1)
     report.expect(presenter.menuOpen && presenter.currentRow == 1,
