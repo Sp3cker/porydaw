@@ -39,7 +39,9 @@ Item {
                     text: model.label
                     font: Qt.font(root.pageModel.captionFont)
                     padding: root.inset
-                    rightPadding: tempoParameter ? root.inset + tapControl.width : root.inset
+                    rightPadding: tempoParameter
+                        ? root.inset + tapControl.width + root.pageModel.pipExtent
+                        : root.inset
                     Layout.fillWidth: true
                     Layout.preferredWidth: tempoParameter ? scroller.width : scroller.width / 2
                     Layout.minimumHeight: root.pageModel.minimumCellHeight
@@ -95,7 +97,7 @@ Item {
                         width: tapLabel.implicitWidth + 2 * root.inset
                         height: root.pageModel.minimumCellHeight
                         anchors.right: parent.right
-                        anchors.rightMargin: root.inset
+                        anchors.rightMargin: root.inset + root.pageModel.pipExtent
                         anchors.verticalCenter: parent.verticalCenter
                         activeFocusOnTab: true
                         Rectangle {

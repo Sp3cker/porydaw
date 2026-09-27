@@ -144,6 +144,8 @@ public final class AutomationPage: EditorDrawerPage {
     public var valueLines: QListModel<SceneRect> = QListModel()
     /// The value axis labels, at the plot's left edge and curve-true height.
     public var valueLabels: QListModel<SceneText> = QListModel()
+    /// Labels for pinned curves, measured and placed at their own curve heights.
+    public var ghostNameLabels: QListModel<SceneText> = QListModel()
     /// The explicit time selection's band, per covered lane.
     public var selectionRects: QListModel<SceneRect> = QListModel()
     /// The live gesture's draft nodes.
@@ -598,7 +600,12 @@ public final class AutomationPage: EditorDrawerPage {
     /// hover. A held button never starts a hover.
     @discardableResult
     public func pointerMove(x: Double, y: Double, buttons: Int, modifiers: Int = 0) -> Bool {
-        return dispatchPointerMove(x: x, y: y, buttons: buttons, modifiers: modifiers)
+        let previousHover = hover
+        let consumed = dispatchPointerMove(x: x, y: y, buttons: buttons, modifiers: modifiers)
+        if consumed && buttons == 0 && !ghostParameters.isEmpty && previousHover == hover {
+            publishHover()
+        }
+        return consumed
     }
 
     /// One release: the frozen draft resolves into at most one commit, a right

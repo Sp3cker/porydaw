@@ -54,10 +54,10 @@ enum EditorQmlLane {
                                  "voice-picker", "automation-tabs", "track-headers"]),
     ]
 
-    /// The one suite case a profile child runs. Qt Quick Test selects a case by
-    /// its qualified `TestCase::function` name, so the child's payload names the
-    /// suite's own `name` property.
+    /// Qt Quick Test selects a case by qualified `TestCase::function` name.
+    /// Profile children run both capture and real-pencil cursor cases.
     static let profileCaseName = "EditorDrawerLane::test_referenceProfileCapture"
+    static let profilePencilCaseName = "EditorDrawerLane::test_referenceProfileBeforeCapturePencilCursorScale"
 
     /// One reference pane's production identity: the composition component the
     /// pane is authoritative for, and the drawn root the capture grabs. Every
@@ -182,9 +182,8 @@ enum EditorQmlLane {
             .appendingPathComponent("settings.plist").path)
 
         if let profileName = ProcessInfo.processInfo.environment[childEnvironmentKey] {
-            // Profile child: one DPR, one font, the named profile case only. The
-            // scale factor is fixed before `QTestAppCpp` creates the application,
-            // which is the only moment it can be fixed at all.
+            // Fix the DPR before `QTestAppCpp` creates the application;
+            // each child runs the capture and cursor cases at one DPR/font.
             guard let profile = referenceProfiles.first(where: { $0.name == profileName }) else {
                 return fail("unknown reference profile: \(profileName)")
             }
@@ -192,7 +191,8 @@ enum EditorQmlLane {
             setenv("QT_SCALE_FACTOR", String(profile.dpr), 1)
             EditorQmlBootstrap.stageProfile(profile: profile.name, dpr: profile.dpr,
                                             fontPx: profile.fontPx, panes: profile.panes)
-            return runSuite(scratch: scratch, payload: [profileCaseName])
+            return runSuite(scratch: scratch,
+                            payload: [profilePencilCaseName, profileCaseName])
         }
 
         if ProcessInfo.processInfo.environment[phaseEnvironmentKey] != nil {

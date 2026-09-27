@@ -162,6 +162,8 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
              colors.tabHoverBackground),
             ("resting label/count on resting tab", colors.windowText,
              colors.automationTabBackground),
+            ("pinned ghost name on its opaque chrome card", colors.windowText,
+             colors.chromeBackground),
         ] {
             let ratio = PaletteMath.contrastRatio(text, background)
             report.expect(ratio >= 4.5, cppID: drawerAutomationPaintingModelID,
@@ -233,6 +235,44 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
                   message: "Tempo pins as a ghost under the active lane")
     report.expectEqual(expected: ["Tempo (BPM) · 2 Events"], actual: page.ghostLabels, cppID: drawerAutomationPaintingModelID,
                        what: "the ghost label names the curve and its event count")
+    report.expect(page.ghostNameLabels.count == 1
+                      && page.ghostNameLabels[0].labelText == "Tempo (BPM) · 2 Events",
+                  cppID: drawerAutomationPaintingModelID,
+                  message: "pinning Tempo publishes its drawn name and exact event count")
+    if page.ghostNameLabels.count == 1 {
+        let rect = page.ghostNameLabels[0].labelRect
+        let x = rect["x"] as? Double ?? -1
+        let y = rect["y"] as? Double ?? -1
+        let width = rect["width"] as? Double ?? -1
+        let height = rect["height"] as? Double ?? -1
+        report.expect(x > page.plotWidth / 2 && x + width <= page.plotWidth,
+                      cppID: drawerAutomationPaintingModelID,
+                      message: "the pinned Tempo name stays within the plot's right half")
+        report.expect(abs(y + height / 2 - fixture.y(.tempo, 150)) <= height,
+                      cppID: drawerAutomationPaintingModelID,
+                      message: "the pinned Tempo name follows its own held curve height")
+        report.expect((0..<page.valueLabels.count).allSatisfy {
+            let label = page.valueLabels[$0].labelRect
+            return x >= (label["x"] as? Double ?? 0) + (label["width"] as? Double ?? 0)
+        }, cppID: drawerAutomationPaintingModelID,
+                      message: "the pinned Tempo name remains clear of left scale text")
+    }
+    let ghostHoverX = fixture.x(72)
+    let ghostHoverY = fixture.y(.tempo, 150)
+    _ = page.pointerMove(x: ghostHoverX, y: ghostHoverY, buttons: 0)
+    let ghostHoverRect = page.hoverLabelRect
+    report.expect(page.hoverText == "Tempo" && page.hoverVisible,
+                  cppID: drawerAutomationPaintingModelID,
+                  message: "hovering the pinned Tempo curve draws its exact name")
+    report.expect(abs((ghostHoverRect["x"] as? Double ?? 0)
+                      + (ghostHoverRect["width"] as? Double ?? 0) / 2 - ghostHoverX)
+                      <= (ghostHoverRect["width"] as? Double ?? 0),
+                  cppID: drawerAutomationPaintingModelID,
+                  message: "the pinned Tempo hover follows the pointer's plot column")
+    report.expect((ghostHoverRect["y"] as? Double ?? page.plotHeight)
+                      + (ghostHoverRect["height"] as? Double ?? 0) <= ghostHoverY,
+                  cppID: drawerAutomationPaintingModelID,
+                  message: "the pinned Tempo hover sits above its own curve")
     report.expect(page.publishedCurveRuns.count > activeRuns, cppID: drawerAutomationPaintingModelID,
                   message: "pinning a ghost adds its curve under the active lane")
     report.expect(page.publishedCurveRuns.last?.primitiveName == "automationCurve",
@@ -254,6 +294,12 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
                   message: "pinned vanilla ghost curve runs use #80EA3C3C half-alpha ink")
     report.expect(page.toggleGhostParameter(index: tempoIndex), cppID: drawerAutomationPaintingModelID,
                   message: "the ghost unpins")
+    report.expect(page.ghostNameLabels.count == 0,
+                  cppID: drawerAutomationPaintingModelID,
+                  message: "unpinning Tempo removes the drawn curve-name label")
+    report.expect(page.hoverText != "Tempo",
+                  cppID: drawerAutomationPaintingModelID,
+                  message: "unpinning Tempo removes the hovered ghost name")
     report.expectEqual(expected: activeRuns, actual: page.publishedCurveRuns.count, cppID: drawerAutomationPaintingModelID,
                        what: "unpinning drops the ghost curve")
     let tempoProjection = fixture.makeProjection(.tempo)
@@ -288,10 +334,23 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
     let volumeHeight = page.plotHeight
     let volumeGrid = (0..<page.gridLines.count).map { page.gridLines[$0].x }
     fixture.activate(.tempo)
+    report.expect(page.publishedCurveRuns.contains {
+        $0.primitiveName == "automationCurve" && $0.fillColor == "#EA3C3C"
+    }, cppID: drawerAutomationPaintingModelID,
+                  message: "active Tempo draws its full curve in independent vanilla node ink")
+    report.expect(page.publishedCurveRuns.allSatisfy {
+        $0.fillColor != "#CD5454"
+    }, cppID: drawerAutomationPaintingModelID,
+                  message: "active Tempo never substitutes track-identity ink for its curve")
     report.expectEqual(expected: volumeWidth, actual: page.plotWidth, cppID: drawerAutomationPaintingModelID,
                        what: "Tempo shares the active lane's plot width")
     report.expectEqual(expected: volumeHeight, actual: page.plotHeight, cppID: drawerAutomationPaintingModelID,
                        what: "Tempo shares the active lane's plot height")
+    report.expect(volumeWidth > 0 && volumeHeight > 0
+                      && page.plotWidth == volumeWidth && page.plotHeight == volumeHeight
+                      && (page.gridLines.count == 0 || page.gridLines[0].y == 0),
+                  cppID: drawerAutomationPaintingModelID,
+                  message: "Tempo and Volume share the complete plot body including its top edge")
     report.expectEqual(expected: volumeGrid, actual: (0..<page.gridLines.count).map { page.gridLines[$0].x },
                        cppID: drawerAutomationPaintingModelID,
                        what: "Tempo shares the active lane's grid centers")
@@ -300,15 +359,32 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
     let shortGrid = page.gridLines.count > 0 ? (0..<page.gridLines.count).map { page.gridLines[$0].x } : []
     report.expect(!shortGrid.isEmpty, cppID: drawerAutomationPaintingModelID,
                   message: "the plot draws its time grid")
+    let beforeHeight = page.plotHeight
     page.configureBody(width: 480, height: 240, gutter: 0, devicePixelRatio: 1,
                        baseFontPx: 13, dragDistance: 10)
     report.expect(page.projection?.points.first(where: { $0.tick == 24 })?.y != shortY,
                   cppID: drawerAutomationPaintingModelID,
                   message: "drawer growth moves the value axis")
+    report.expect(page.plotHeight > beforeHeight, cppID: drawerAutomationPaintingModelID,
+                  message: "drawer growth increases the lane body's own height")
     let tallGrid = (0..<page.gridLines.count).map { page.gridLines[$0].x }
     report.expectEqual(expected: shortGrid, actual: tallGrid, cppID: drawerAutomationPaintingModelID,
                        what: "drawer growth keeps every grid line's horizontal center")
-    report.expectEqual(expected: 3, actual: page.valueLines.count, cppID: drawerAutomationPaintingModelID,
+    let drawnGrid = (0..<page.gridLines.count).map { page.gridLines[$0] }
+    report.expect(drawnGrid.contains {
+        $0.primitiveName == "automationFrameTop" && $0.y == 0
+            && $0.width == page.plotWidth && $0.fillColor == page.palette.separator
+    }, cppID: drawerAutomationPaintingModelID,
+                  message: "the resized top frame spans the new body in separator ink")
+    report.expect(drawnGrid.contains {
+        $0.primitiveName == "automationFrameBottom"
+            && $0.y + $0.height == page.plotHeight
+            && $0.width == page.plotWidth && $0.fillColor == page.palette.separator
+    }, cppID: drawerAutomationPaintingModelID,
+                  message: "the resized bottom frame spans the new body in separator ink")
+    report.expectEqual(expected: 3, actual: (0..<page.valueLines.count).filter {
+        page.valueLines[$0].primitiveName == "automationValueRule"
+    }.count, cppID: drawerAutomationPaintingModelID,
                        what: "the centered lane keeps its three value rules")
     report.expectEqual(expected: ["c_v+63", "c_v-64", "c_v+0"], actual: (0..<page.valueLabels.count).map { page.valueLabels[$0].labelText },
                        cppID: drawerAutomationPaintingModelID,
@@ -317,14 +393,38 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
     report.expect(labelTop[0] < labelTop[2] && labelTop[2] < labelTop[1],
                   cppID: drawerAutomationPaintingModelID,
                   message: "maximum, neutral and minimum stack top to bottom without overlap")
+    report.expect((0..<page.valueLabels.count).allSatisfy {
+        (page.valueLabels[$0].labelRect["x"] as? Double ?? page.plotWidth) < page.plotWidth / 4
+    }, cppID: drawerAutomationPaintingModelID,
+                  message: "each drawn scale label hugs the left quarter of the plot")
+    let ticks = (0..<page.valueLines.count).map { page.valueLines[$0] }
+        .filter { $0.primitiveName == "automationEdgeTick" }
+    let heights = page.projection?.scaleLabels.map(\.y) ?? []
+    report.expect(ticks.count == 3 && heights.count == 3 && ticks.allSatisfy {
+        $0.x == 0 && $0.width > 0 && $0.width < page.plotWidth / 4
+    }, cppID: drawerAutomationPaintingModelID,
+                  message: "exactly three short left-edge ticks mark maximum neutral and minimum")
+    report.expect(heights.allSatisfy { y in
+        ticks.filter { abs($0.y + $0.height / 2 - y) <= 2 }.count == 1
+    }, cppID: drawerAutomationPaintingModelID,
+                  message: "every edge tick aligns with its own scale value after growth")
     let labelsBefore = (0..<page.valueLabels.count).map { page.valueLabels[$0].labelText }
     if let probe = fixture.projection(fixture.panLane).points.first {
         _ = page.pointerMove(x: probe.x, y: probe.y, buttons: 0)
         report.expectEqual(expected: labelsBefore, actual: (0..<page.valueLabels.count).map { page.valueLabels[$0].labelText },
                            cppID: drawerAutomationPaintingModelID,
                            what: "a hover pass preserves the scale labels")
-        report.expectEqual(expected: 3, actual: page.valueLines.count, cppID: drawerAutomationPaintingModelID,
+        report.expectEqual(expected: 3, actual: (0..<page.valueLines.count).filter {
+            page.valueLines[$0].primitiveName == "automationValueRule"
+        }.count, cppID: drawerAutomationPaintingModelID,
                            what: "a hover pass appends no duplicate value rules")
+        report.expect(heights.allSatisfy { y in
+            (0..<page.valueLines.count).map { page.valueLines[$0] }.filter {
+                $0.primitiveName == "automationEdgeTick"
+                    && abs($0.y + $0.height / 2 - y) <= 2
+            }.count == 1
+        }, cppID: drawerAutomationPaintingModelID,
+                      message: "hovering preserves each left-edge tick at its label height")
         page.pointerLeave()
     } else {
         report.fail(drawerAutomationPaintingModelID, "the pan lane projected no hover probe")

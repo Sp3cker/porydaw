@@ -91,6 +91,7 @@ FocusScope {
         readonly property var gridLines: []
         readonly property var valueLines: []
         readonly property var valueLabels: []
+        readonly property var ghostNameLabels: []
         readonly property var selectionRects: []
         readonly property var previewRects: []
         readonly property var menuRows: []
@@ -313,6 +314,7 @@ FocusScope {
 
             delegate: Text {
                 required property var model
+                objectName: "automationScaleLabel"
 
                 x: model.labelRect.x
                 y: model.labelRect.y
@@ -341,6 +343,32 @@ FocusScope {
             objectName: "automationCurveRuns"
             anchors.fill: parent
             rects: (page.pageModel ? page.pageModel.curveRuns : [])
+        }
+
+        Repeater {
+            model: (page.pageModel ? page.pageModel.ghostNameLabels : [])
+            delegate: Rectangle {
+                required property var model
+                property alias text: ghostCaption.text
+                objectName: "automationGhostNameLabel"
+                x: model.labelRect.x
+                y: model.labelRect.y
+                width: model.labelRect.width
+                height: model.labelRect.height
+                color: page.gridPalette.chromeBackground
+                Text {
+                    id: ghostCaption
+                    objectName: "automationGhostCaption"
+                    anchors.fill: parent
+                    text: model.labelText
+                    color: page.gridPalette.windowText
+                    font: Qt.font(model.labelFont)
+                    textFormat: Text.PlainText
+                    renderType: Text.NativeRendering
+                    verticalAlignment: Text.AlignVCenter
+                    elide: Text.ElideRight
+                }
+            }
         }
 
         Rectangle {

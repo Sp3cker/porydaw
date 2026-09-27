@@ -100,6 +100,24 @@ func drawerAutomationPencilCursorKind(_ report: CheckReport, suite: DocumentSess
                        what: "a pencil release arms the pencil cursor")
     report.expectEqual(expected: pencilBefore.revision + 1, actual: fixture.document.revision,
                        cppID: drawerAutomationCursorKindID, what: "the pencil stroke is one revision")
+    let moveX = fixture.x(72)
+    let moveY = fixture.y(fixture.panLane, 96)
+    report.expect(page.pointerMove(x: moveX, y: moveY, buttons: 0)
+                      && page.cursorKind == AutomationCursorKind.pencil.rawValue,
+                  cppID: drawerAutomationCursorKindID,
+                  message: "the plot consumes a pencil pointer move at device pixel ratio one")
+    page.configureBody(width: 480, height: 120, gutter: 0, devicePixelRatio: 2,
+                       baseFontPx: page.baseFontPx, dragDistance: 10)
+    report.expect(page.pointerMove(x: moveX, y: moveY, buttons: 0)
+                      && page.cursorKind == AutomationCursorKind.pencil.rawValue,
+                  cppID: drawerAutomationCursorKindID,
+                  message: "the DPR-two plot consumes the pencil pointer move")
+    page.configureBody(width: 480, height: 120, gutter: 0, devicePixelRatio: 1,
+                       baseFontPx: page.baseFontPx, dragDistance: 10)
+    report.expect(page.pointerMove(x: moveX, y: moveY, buttons: 0)
+                      && page.cursorKind == AutomationCursorKind.pencil.rawValue,
+                  cppID: drawerAutomationCursorKindID,
+                  message: "the restored DPR-one plot consumes the pencil pointer move")
     page.isPencilMode = false
     page.cancelSectionInteraction()
     if let node = fixture.projection(fixture.panLane).points.first(where: { $0.tick == 24 }) {

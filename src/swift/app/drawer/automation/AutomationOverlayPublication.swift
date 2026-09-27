@@ -65,6 +65,32 @@ extension AutomationPage {
             hoverLabelRect = Self.rect(0, 0, 0, 0)
             return
         }
+        if !hover.hasPoint && !ghostParameters.isEmpty {
+            let tracks = usedTracks()
+            for parameter in ghostParameters {
+                let facts = facts(parameter: parameter, modifiers: .init(), session: session)
+                let cameraProjection = makeProjection(facts: facts, camera: session.camera)
+                let lane = cameraProjection.project(
+                    facts.snapshot, selection: selection, usedTracks: tracks)
+                guard let value = lane.heldValue(at: hover.tick) else { continue }
+                let curveY = cameraProjection.y(value, metadata: lane.metadata)
+                guard abs(curveY - hoverY) <= geometry.pointHitRadius else { continue }
+                let label = parameter.isTempo ? "Tempo" : AutomationCatalog.tabLabel(parameter)
+                let rect = hoverGhostRect(text: label, x: hoverX, curveY: curveY)
+                hoverVisible = true
+                hoverText = label
+                hoverTick = Double(hover.tick)
+                hoverLabelRect = rect
+                hoverDisplay = [
+                    "visible": true, "text": label, "hasNode": false,
+                    "nodeTick": 0.0, "guideX": 0.0, "ghostY": 0.0,
+                    "hasGhost": false, "x": rect["x"] ?? 0.0,
+                    "y": rect["y"] ?? 0.0, "width": rect["width"] ?? 0.0,
+                    "height": rect["height"] ?? 0.0,
+                ]
+                return
+            }
+        }
         let facts = facts(parameter: hover.parameter, modifiers: .init(), session: session)
         let projection = makeProjection(facts: facts, camera: session.camera)
         let metadata = facts.metadata
@@ -146,6 +172,40 @@ extension AutomationPage {
             text: previewText, tick: last.tick,
             x: projection.x(last.tick),
             valueY: projection.y(last.value, metadata: facts.metadata))
+    }
+
+    func publishGhostNames(_ session: DocumentSession) {
+        let height = captionMetrics?.height ?? fontPx(baseFontPx, 1)
+        let pad = fontPx(baseFontPx, 0.5)
+        let projected = ghostProjections(session)
+        var labels: [SceneText] = []
+        for (index, lane) in projected.enumerated() {
+            guard let value = lane.heldValue(at: lane.points.last?.tick ?? 0),
+                  index < ghostLabels.count else { continue }
+            let text = ghostLabels[index]
+            let width = min(max(0, plotWidth - 2 * pad),
+                            max(fontPx(baseFontPx, 2),
+                                (captionMetrics?.advance(text) ?? 0).rounded()))
+            let projection = makeProjection(
+                facts: facts(parameter: lane.parameter, modifiers: .init(), session: session),
+                camera: session.camera)
+            let curveY = projection.y(value, metadata: lane.metadata)
+            let y = min(max(0, curveY - height / 2), max(0, plotHeight - height))
+            labels.append(SceneText(rect: (max(0, plotWidth - width - pad), y, width, height),
+                                    text: text, color: palette.primaryText, font: captionFont))
+        }
+        syncTexts(ghostNameLabels, labels)
+    }
+
+    func hoverGhostRect(text: String, x: Double, curveY: Double) -> [String: QVariantSettable] {
+        let height = noteNameMetrics?.height ?? fontPx(baseFontPx, 1)
+        let pad = fontPx(baseFontPx, 0.5)
+        let width = min(max(0, plotWidth - 2 * pad),
+                        max(fontPx(baseFontPx, 2),
+                            (noteNameMetrics?.advance(text) ?? 0).rounded()))
+        return Self.rect(min(max(0, x - width / 2), max(0, plotWidth - width)),
+                         min(max(0, curveY - height - pad), max(0, plotHeight - height)),
+                         width, height)
     }
 
 

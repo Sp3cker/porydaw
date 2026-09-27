@@ -6,10 +6,8 @@ Original SHA-256: 0d15772061c1b3e0e74b1e55c3bcdc8b0823d965504346fba2a8cc010170b0
 Swift counterpart: src/checks/automation/presentation/tst_automationpresentation.swift
 
 A001 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:176
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Native EditorRig adoption of the presentation SMF (fallible adoptSmf into a shown EditorRig window); the Swift/QML lane constructs the document directly and mounts the production page (S031), so no fallible adoption ingress exists to assert.
-Original expression:
-  QVERIFY2(m_document->adoptSmf(presentationSmf(), song, &error), qPrintable(error))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S031 — fork `QVERIFY2(m_document->adoptSmf(presentationSmf(), song, &error), qPrintable(error))` guarded deleted native EditorRig adoption; the mounted Swift document has no such ingress.
 
 A002 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:192
 Disposition: RETIRED-REPRESENTATION
@@ -30,52 +28,38 @@ A007 | AutomationPresentationTest::init | src/checks/automation/presentation/tst
 Disposition: RETIRED-REPRESENTATION
 
 A008 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:205
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Native plot input bounds precondition; see A001.
-Original expression:
-  QTRY_VERIFY(!m_plotInput->bounds().isEmpty())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S031 — fork `QTRY_VERIFY(!m_plotInput->bounds().isEmpty())` guarded deleted native plot input bounds; mounted pointer behavior is exercised separately.
 
 A009 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:206
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Native gutter input bounds precondition; see A001.
-Original expression:
-  QTRY_VERIFY(!m_gutterInput->bounds().isEmpty())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S032 — fork `QTRY_VERIFY(!m_gutterInput->bounds().isEmpty())` guarded deleted native gutter input bounds; the mounted gutter cursor is exercised separately.
 
 A010 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:207
 Disposition: RETIRED-REPRESENTATION
 
 A011 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:208
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Native input-item/window identity precondition; see A001.
-Original expression:
-  QCOMPARE(m_gutterInput->window(), m_quickWindow.data())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S032 — fork `QCOMPARE(m_gutterInput->window(), m_quickWindow.data())` guarded deleted native window identity; mounted gutter cursor behavior remains checked.
 
 A012 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:209
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Native TimelineInputItem to AutomationCanvas interaction wiring, retired with the rig; AutomationPage owns pointer input and the QML lane drives the production plot input.
-Original expression:
-  QVERIFY(m_plotInput->interaction() == page()->canvas())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S035 — fork `QVERIFY(m_plotInput->interaction() == page()->canvas())` guarded deleted native plot-to-canvas pointer wiring; Swift pointer consumption remains checked.
 
 A013 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:210
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Native input-item to canvas interaction wiring; see A012.
-Original expression:
-  QVERIFY(m_gutterInput->interaction() == page()->canvas())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S032 — fork `QVERIFY(m_gutterInput->interaction() == page()->canvas())` guarded deleted native gutter-to-canvas pointer wiring; mounted cursor behavior remains checked.
 
 A014 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:211
 Disposition: RETIRED-REPRESENTATION
 
 A015 | AutomationPresentationTest::cleanup | src/checks/automation/presentation/tst_automationpresentation.cpp:232
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Native mouse-grab cleanup precondition (Escape, release and ungrab until no grabber remains).
-Original expression:
-  QVERIFY(mouseGrabCleared)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S031 — fork `QVERIFY(mouseGrabCleared)` guarded deleted native mouse-grab cleanup fixture, not the mounted automation surface.
 
 A016 | AutomationPresentationTest::mouseMove | src/checks/automation/presentation/tst_automationpresentation.cpp:307
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Native input-item window identity inside the mouse-move helper; see A011.
-Original expression:
-  QCOMPARE(input.window(), m_quickWindow.data())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S032 — fork `QCOMPARE(input.window(), m_quickWindow.data())` guarded deleted native helper window identity; mounted pointer movement remains checked.
 
 A017 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:325
 Disposition: MATCHED
@@ -86,36 +70,28 @@ Disposition: MATCHED
 Mapping: S001
 
 A019 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:330
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Native AutomationCanvas LaneHandle row lookup: no Swift handle exists to validate; the pencil predicate drives the Pan lane by AutomationParameter (S027).
-Original expression:
-  QVERIFY(pan.valid())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S027 — fork `QVERIFY(pan.valid())` guarded deleted native AutomationCanvas LaneHandle lookup; Swift selects Pan by parameter.
 
 A020 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:332
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Native canvas lane-body geometry (a non-empty lane body rect for the Pan row).
-Original expression:
-  QVERIFY(!plot.isEmpty())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S032 — fork `QVERIFY(!plot.isEmpty())` guarded deleted native lane-body geometry object; mounted input and gutter behavior is checked.
 
 A021 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:336
 Disposition: MATCHED
 Mapping: S027
 
 A022 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:339
-Disposition: PARTIAL
-Mapping/reason: S026 — tst_automationpresentation.swift, "the plot starts with the arrow", and S030 — :119, "releasing the drag reverts to the arrow"; unproved: the gutter surface's own arrow cursor (no predicate drives the gutter input).
-Original expression:
-  QCOMPARE(m_gutterInput->cursor().shape(), Qt::ArrowCursor)
+Disposition: MATCHED
+Mapping: S032
 
 A023 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:341
 Disposition: MATCHED
 Mapping: S021
 
 A024 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:343
-Disposition: PARTIAL
-Mapping/reason: S027 — tst_automationpresentation.swift asserts the pencil cursor kind for the Pan lane; unproved: the pencil cursor persisting across a switch to the Tempo row.
-Original expression:
-  QVERIFY(!m_plotInput->cursor().pixmap().isNull())
+Disposition: MATCHED
+Mapping: S027, S033, S034, S039, S042, S043
 
 A025 | AutomationPresentationTest::pencilCursorUsesInputDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:349
 Disposition: MATCHED
@@ -143,22 +119,16 @@ A031 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRati
 Disposition: RETIRED-REPRESENTATION
 
 A032 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:367
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Native input-item to canvas interaction wiring; see A012.
-Original expression:
-  QVERIFY(m_plotInput->interaction() == canvas)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S035 — fork `QVERIFY(m_plotInput->interaction() == canvas)` guarded deleted injected-host native pointer wiring; Swift move consumption is checked.
 
 A033 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:370
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Native AutomationCanvas LaneHandle row lookup; see A019.
-Original expression:
-  QVERIFY(pan.valid())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S035 — fork `QVERIFY(pan.valid())` guarded deleted native AutomationCanvas LaneHandle lookup; Swift input moves are checked.
 
 A034 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:378
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Retired canvas input route: canvas->pointerMove through the injected TimelineInputHost has no Swift counterpart; the Swift page's pointerMove is driven by the QML lane and by the pencil predicate, neither of which asserts the accepted flag.
-Original expression:
-  QVERIFY(canvas->pointerMove(plotPointerInput(plotPoint, host)))
+Disposition: MATCHED
+Mapping: S035, S038, S039, S040, S042, S043, S044, S045
 
 A035 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:380
 Disposition: RETIRED-REPRESENTATION
@@ -169,8 +139,8 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: S026, S027, S028, S029, S030
 
 A037 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:384
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Retired canvas input route; see A034.
+Disposition: PARTIAL
+Mapping/reason: S036/S038/S039/S040/S041/S042/S043/S044/S045/S046 prove DPR-two move acceptance, visible cursor, decoded 32-pixel scale and two real pointer positions in registered DPR2 children; unproved: permanent physical DPR2 pencil ink-pixel predicate. One-off PNG observation from Task111: `/tmp/task111-dpr2-font12.png`, 1800x1400, independently mapped pencil center (1172,1056)=(246,246,246,255), exterior (1220,1056)=(212,204,199,255), logical (586,528)=(176,166,161,255); QtTest `grabImage` reported logical 900x700 and temporary PNG checks were removed, so this observation does not close the raster conjunct.
 Original expression:
   QVERIFY(canvas->pointerMove(plotPointerInput(plotPoint, host)))
 
@@ -181,10 +151,8 @@ A039 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRati
 Disposition: RETIRED-REPRESENTATION
 
 A040 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:390
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Retired canvas input route; see A034.
-Original expression:
-  QVERIFY(canvas->pointerMove(plotPointerInput(plotPoint, host)))
+Disposition: MATCHED
+Mapping: S037, S038, S039, S040, S041, S042, S043, S044, S045
 
 A041 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:392
 Disposition: RETIRED-REPRESENTATION
@@ -299,3 +267,48 @@ Anchor: message "releasing the drag reverts to the arrow"
 
 S031 | mountProductionAutomation | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "the production Automation page attaches to its slot"
+
+S032 | test_automationPresentationGhostAxisAndResize | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "moving into the parameter gutter presents the arrow cursor"
+
+S033 | test_automationPresentationGhostAxisAndResize | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "pencil mode remains visibly armed across the Tempo switch"
+
+S034 | test_automationPresentationGhostAxisAndResize | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the switched Tempo lane uses the custom pencil cursor"
+
+S035 | drawerAutomationPencilCursorKind | src/checks/automation/presentation/tst_automationpresentation.swift
+Anchor: message "the plot consumes a pencil pointer move at device pixel ratio one"
+
+S036 | drawerAutomationPencilCursorKind | src/checks/automation/presentation/tst_automationpresentation.swift
+Anchor: message "the DPR-two plot consumes the pencil pointer move"
+
+S037 | drawerAutomationPencilCursorKind | src/checks/automation/presentation/tst_automationpresentation.swift
+Anchor: message "the restored DPR-one plot consumes the pencil pointer move"
+
+S038 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "real profile pointer movement enters the plotted automation input"
+
+S039 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the profiled plot displays its custom pencil after real movement"
+
+S040 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the 16-pixel pencil artwork decodes at the profile's physical width"
+
+S041 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the profiled pencil keeps its horizontal and vertical decoded scale"
+
+S042 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the profiled pencil's horizontal origin follows the mapped pointer"
+
+S043 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the profiled pencil's vertical tip follows the mapped pointer"
+
+S044 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the profiled pencil moves horizontally with a second real pointer move"
+
+S045 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the profiled pencil moves vertically with a second real pointer move"
+
+S046 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the profiled pencil replaces the native plot cursor"

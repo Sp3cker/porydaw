@@ -108,6 +108,7 @@ extension AutomationPage {
         guard let session, let lane = projection else {
             syncRects(gridLines, [])
             syncRects(valueLines, [])
+            syncTexts(ghostNameLabels, [])
             syncTexts(valueLabels, [])
             syncRects(curveRuns, [])
             curveRunSnapshots = []
@@ -120,6 +121,7 @@ extension AutomationPage {
             camera: session.camera)
         publishGrid(session)
         publishValueAxis(lane)
+        publishGhostNames(session)
         var runs: [SceneRect] = []
         for ghost in ghostProjections(session) {
             appendCurve(ghost, projection: projection, isGhost: true, into: &runs)
@@ -143,6 +145,7 @@ extension AutomationPage {
         }
         projection = lane
         publishGrid(session)
+        publishGhostNames(session)
         var runs: [SceneRect] = []
         for ghost in ghostProjections(session) {
             appendCurve(ghost, projection: cameraProjection, isGhost: true,
@@ -200,6 +203,11 @@ extension AutomationPage {
                     : finest ? palette.gridLineBeatFine : palette.gridLineBeat,
                 primitiveName: "automationGrid"))
         }
+        let frame = max(1 / devicePixelRatio, fontPxF(baseFontPx, 1.0 / 12.0))
+        rects.append(SceneRect(x: 0, y: 0, width: plotWidth, height: frame,
+                               fillColor: palette.separator, primitiveName: "automationFrameTop"))
+        rects.append(SceneRect(x: 0, y: plotHeight - frame, width: plotWidth, height: frame,
+                               fillColor: palette.separator, primitiveName: "automationFrameBottom"))
         syncRects(gridLines, rects)
     }
 
@@ -221,6 +229,12 @@ extension AutomationPage {
             labels.append(SceneText(rect: (Double(pad), y.rounded(), width, height),
                                     text: label.text, color: palette.primaryText,
                                     font: captionFont))
+        }
+        let tickLength = Typography(baseFontPx: Int(baseFontPx.rounded())).space(.half) * 3
+        for label in lane.scaleLabels {
+            lines.append(SceneRect(x: 0, y: (label.y - stroke / 2).rounded(),
+                                   width: Double(tickLength), height: stroke,
+                                   fillColor: palette.separator, primitiveName: "automationEdgeTick"))
         }
         syncRects(valueLines, lines)
         syncTexts(valueLabels, labels)
