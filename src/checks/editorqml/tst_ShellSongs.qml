@@ -15,11 +15,13 @@ TestCase {
     visible: true
 
     property var shell: null
+    property string originalProjectRoot: ""
     ShellQmlBootstrap { id: bootstrap }
     TabsDrawerProbe { id: fileProbe }
     Component { id: shellComponent; ShellWindow { width: 1100; height: 550; visible: true } }
 
     function init() {
+        originalProjectRoot = bootstrap.projectRoot
         verify(bootstrap.resetPreferences(), "each shell starts with fresh window and filter state")
     }
 
@@ -29,8 +31,10 @@ TestCase {
 
 
     function cleanup() {
-        if (!shell)
+        if (!shell) {
+            bootstrap.projectRoot = originalProjectRoot
             return
+        }
         if (shell.shellPresenter.sceneActive) {
             shell.close()
             for (let step = 0; step < 12 && !shell.shellPresenter.closeReady; ++step) {
@@ -46,6 +50,7 @@ TestCase {
         }
         shell.destroy()
         shell = null
+        bootstrap.projectRoot = originalProjectRoot
         wait(0)
     }
 
@@ -109,6 +114,77 @@ TestCase {
         verify(Math.abs(actual.y - expected.y) <= tolerance, name + " y: " + actual.y)
         verify(Math.abs(item.width - expected.w) <= tolerance, name + " width: " + item.width)
         verify(Math.abs(item.height - expected.h) <= tolerance, name + " height: " + item.height)
+    }
+
+    function test_deleteSongConfirmationBranches() {
+        for (const branch of ["cancel", "opt-out", "opt-in"]) {
+            verify(bootstrap.prepareSongDeletionFixture(branch),
+                   "the mounted deletion branch uses its own copied project")
+            const paths = ["sound/song_table.inc", "include/constants/songs.h",
+                           "sound/songs/midi/midi.cfg", "sound/voice_groups.inc",
+                           "sound/voicegroups/fixture_songs_dock.inc"]
+            const expected = ["780:cd265cf93bb70ec3", "423:7e4eec643bee2aa", "672:c98052dc8895c041",
+                              "52:3bb1c28fd6f7ab72", "73:922bb3bdc6282dd5"]
+            shell = shellComponent.createObject(null)
+            verify(shell !== null, "a mounted production shell opens the copied deletion project")
+            shell.shellPresenter.session.openProject(bootstrap.projectRoot)
+            verify(waitForNative(function() { return shell.shellPresenter.session.projectOpen }, 30000),
+                   "the mounted deletion project opens before dialog input")
+            verify(waitForNative(function() { return presenter().rowCount === 10 }, 5000),
+                   "the deletion fixture exposes its stray MIDI in the mounted list")
+            let deletedId = -1
+            for (let index = 0; index < presenter().rowCount; ++index) {
+                const candidate = presenter().songId(index)
+                if (row(candidate).song.label === "mus_stray_test") {
+                    deletedId = candidate
+                    break
+                }
+            }
+            verify(deletedId >= 0, "the mounted stray is located by its song label")
+            mouseClick(row(deletedId), row(deletedId).width / 2,
+                       row(deletedId).height / 2, Qt.RightButton)
+            menuAction("delete")
+            verify(waitForNative(function() { return controller().confirmation === "delete" }, 5000),
+                   "the real menu opens its mounted deletion confirmation")
+            compare(JSON.stringify(paths.map(path => fileProbe.fileFingerprint(bootstrap.projectRoot + "/" + path))),
+                    JSON.stringify(expected), "staging deletion preserves the literal project and bank images")
+            compare(bootstrap.dockSongMidiExists(), true, "staging keeps the original MIDI at its path")
+            const dialog = findChild(shell, "songConfirmationDialog")
+            const checkbox = findChild(dialog, "songDeleteVoicegroup")
+            compare(checkbox.checked, true, "the mounted deletion checkbox initially opts into unused-bank removal")
+            if (branch === "cancel") {
+                mouseClick(dialog.standardButton(Dialog.Cancel))
+                compare(controller().confirmation, "", "Cancel dismisses the mounted deletion confirmation")
+                compare(JSON.stringify(paths.map(path => fileProbe.fileFingerprint(bootstrap.projectRoot + "/" + path))),
+                        JSON.stringify(expected), "Cancel preserves literal registration, flags and bank images")
+                compare(bootstrap.dockSongMidiExists(), true, "Cancel preserves MIDI at the original path")
+                compare(bootstrap.dockTrashedMidiExists(), false, "Cancel creates no MIDI trash entry")
+            } else {
+                if (branch === "opt-out") {
+                    mouseClick(checkbox)
+                    compare(checkbox.checked, false, "clicking the mounted checkbox opts out of bank deletion")
+                }
+                clickConfirmation()
+                verify(waitForNative(function() {
+                    return !controller().busy && presenter().rowCount === 9
+                }, 30000), "confirmed deletion refreshes the mounted song listing")
+                compare(row(deletedId), null, "confirmed deletion removes the selected row")
+                compare(bootstrap.dockSongMidiExists(), false, "confirmed deletion removes the original MIDI path")
+                compare(fileProbe.fileFingerprint(bootstrap.projectRoot + "/.porydaw/trash/mus_stray_test.mid"),
+                        "471:d31e7c4a0a32a53f", "the disclosed trash destination contains the original MIDI bytes")
+                if (branch === "opt-out") {
+                    compare(fileProbe.fileFingerprint(bootstrap.projectRoot + "/sound/voicegroups/fixture_songs_dock.inc"),
+                            expected[4], "opt-out preserves the literal complete bank source")
+                } else {
+                    compare(bootstrap.dockVoicegroupExists(), false, "opt-in removes the unused bank source")
+                }
+                // Removing the sole include leaves one newline byte in the hub.
+                const expectedHub = branch === "opt-in" ? "1:af63c74c8601c8dd" : expected[3]
+                compare(fileProbe.fileFingerprint(bootstrap.projectRoot + "/sound/voice_groups.inc"),
+                        expectedHub, "acceptance removes exactly the optional bank include-hub entry")
+            }
+            cleanup()
+        }
     }
 
     function test_mountedSongDockAndConfirmationRoundTrips() {

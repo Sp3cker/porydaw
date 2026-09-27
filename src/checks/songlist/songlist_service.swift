@@ -16,6 +16,7 @@ import PorydawPlayback
 @MainActor
 internal func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: String) {
     runSongRegistrationChecks(report, fixtureRoot: fixtureRoot)
+    runSongDeletionChecks(report, fixtureRoot: fixtureRoot)
     runSongRegionRegistrationChecks(report, fixtureRoot: fixtureRoot)
     let id = "swiftcore/SongList::serviceFeed"
     let projectDir = stageTestProject(in: fixtureRoot, projectName: "swiftcore-songlist-test")

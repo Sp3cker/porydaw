@@ -184,6 +184,7 @@ if(APPLE)
         songlist/songlist_checks.swift
         songlist/songlist_service.swift
         songlist/SongRegistrationChecks.swift
+        songlist/SongDeletionChecks.swift
         songlist/SongRegionRegistrationChecks.swift
         voicelist/VoiceListChecks.swift
         voicelist/VoiceListIntentChecks.swift

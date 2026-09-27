@@ -227,6 +227,28 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
         return (try? String(contentsOf: file, encoding: .utf8)) ?? ""
     }
 
+    public func prepareSongDeletionFixture(branch: String) -> Bool {
+        guard ["cancel", "opt-out", "opt-in"].contains(branch) else { return false }
+        let source = URL(fileURLWithPath: Self.stagedProjectRoot, isDirectory: true)
+        let target = source.deletingLastPathComponent()
+            .appendingPathComponent(source.lastPathComponent + "-deletion-" + branch, isDirectory: true)
+        do {
+            if FileManager.default.fileExists(atPath: target.path) {
+                try FileManager.default.removeItem(at: target)
+            }
+            try FileManager.default.copyItem(at: source, to: target)
+            projectRoot = target.path
+            guard prepareSongDockFixture() else { return false }
+            let bank = target.appendingPathComponent("sound/voicegroups/fixture_songs_dock.inc")
+            try "\tvoice_group fixture_songs_dock\n\tvoice_square_1 60, 0, 2, 2, 2, 3, 12, 4\n"
+                .write(to: bank, atomically: true, encoding: .utf8)
+            let hub = target.appendingPathComponent("sound/voice_groups.inc")
+            try ".include \"sound/voicegroups/fixture_songs_dock.inc\"\n"
+                .write(to: hub, atomically: true, encoding: .utf8)
+            return true
+        } catch { return false }
+    }
+
     /// Creates a stray and a partial song in this entry's isolated scratch project.
     public func prepareSongDockFixture() -> Bool {
         let root = URL(fileURLWithPath: projectRoot, isDirectory: true)
