@@ -2,7 +2,7 @@ Assertion correspondence: project/iomutations.cpp
 
 Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Deleted in: S6 flip cutover (feature/swift-project-store, base 2d1c92d0)
-Retirement: historical deletion record only; the deleted C++ source above is recoverable from the Reference revision and Original SHA-256, never from HEAD. The dispositions and S citations below were established while the file was live and were not re-verified in this cutover; no execution or parity claim is made by this record.
+Retirement: historical deletion record. A003–A026 reconciled for task 133 against the final Swift counterpart snapshot and implementer-reported focused execution; unassigned historical entries remain as recorded.
 Original: src/checks/project/iomutations.cpp
 Original SHA-256: 7e9bc82238223d083d9896a86accebbe1892abdf03e38dba935c4507537c35b8
 Swift counterpart: src/checks/workspace/SessionChecks.swift
@@ -10,10 +10,21 @@ Swift counterpart: src/checks/workspace/bank_edits.swift
 Swift counterpart: src/checks/workspace/session_io.swift
 Swift counterpart: src/checks/workspace/session_playback.swift
 Swift counterpart: src/checks/workspace/session_save.swift
+Swift counterpart: src/swift/app/ProjectService.swift
+Swift counterpart: src/swift/app/ProjectService+Bank.swift
+Swift counterpart: src/checks/workspace/session_support.swift
+Swift/QML counterpart: src/checks/editorqml/tst_ShellOpenFailure.qml
+Task-133 SHA-256: src/checks/workspace/session_io.swift 263f8f731a1da7764000cbfcb0d70dc48d748cd612bf9e989a76d7859c6c330c
+Task-133 SHA-256: src/swift/app/ProjectService.swift a9c7beb76b82b446d62d962f5caedf648191b5f5130adddeff55771d720a1aa3
+Task-133 SHA-256: src/swift/app/ProjectService+Bank.swift f457ad20951ee6c17c5211af1bd1ad50b83eb939910602cf807d4e768fc5f647
+Task-133 SHA-256: src/checks/workspace/session_support.swift e68924324134875006b3bfe8acd2c10b0203083bd6019cfb633088cc08eb1264
+Task-133 SHA-256: src/checks/editorqml/tst_ShellOpenFailure.qml 61d59807945c0ad72e52c9b2c10c71b259f2d26d1f5edc046e2bfc1db16f6c4a
 
 
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run.
+Task-133 command: /usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-projectsession --verbose
+Task-133 result: PASS, 1/36 (implementer-reported; executes all four failureStages scenarios; not rerun by ledger writer).
+Task-133 shell command: /usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify:shell --filter shell-open-failure --verbose
+Task-133 shell result: PASS, 1/75 (implementer-reported; real mounted failed-open journey; not rerun by ledger writer).
 
 A001 | ProjectIoMutationsTest::init | src/checks/project/iomutations.cpp:194
 Disposition: GAP
@@ -230,8 +241,8 @@ Original expression:
   QVERIFY(!m_fixture || m_fixture->callbacksReturnToCallerThread())
 
 A003 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:218
-Disposition: PARTIAL
-Mapping/reason: Related predicates S005-S012 in session_io.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Disposition: MATCHED
+Mapping: S009-S012 — `FailureScenario.allCases` enumerates reconcile, midi, voicegroup, and save; `sessionFailureStages` executes the four corresponding cases with those cppIDs.
 Source context since previous assertion:
   ;
       m_fixture.reset();
@@ -257,8 +268,8 @@ Original expression:
   QVERIFY2(opened, qPrintable(error))
 
 A004 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:225
-Disposition: PARTIAL
-Mapping/reason: Related predicates S005-S012 in session_io.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Disposition: GAP
+Mapping/reason: Fixture open is a setup/failure guard; sessionFailureStages opens copied projects before its assertions, but no executed Swift predicate asserts this fixture precondition.
 Source context since previous assertion:
   ;
       if (!opened)
@@ -272,8 +283,8 @@ Original expression:
   QVERIFY(missing)
 
 A005 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:230
-Disposition: PARTIAL
-Mapping/reason: Related predicates S005-S012 in session_io.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Disposition: GAP
+Mapping/reason: Constructing the missing-song value is a setup guard; the Swift scenario passes a string label directly and has no equivalent predicate asserting successful SongName construction.
 Source context since previous assertion:
   ;
           if (!missing)
@@ -285,8 +296,8 @@ Original expression:
   QVERIFY2(m_fixture->waitFor(resultBase + 1, error), qPrintable(error))
 
 A006 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:232
-Disposition: PARTIAL
-Mapping/reason: Related predicates S005-S012 in session_io.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S009; the reconcile failure outcome is checked as one typed async result. The exact callback result-count wait is retired transport representation.
 Source context since previous assertion:
   ;
           const auto *const failure = std::get_if<SongCommandFailure>(&m_fixture->results().back());
@@ -295,8 +306,8 @@ Original expression:
   QVERIFY(failure)
 
 A007 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:234
-Disposition: PARTIAL
-Mapping/reason: Related predicates S005-S012 in session_io.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Disposition: MATCHED
+Mapping: S009-S012 — each stage captures `error as? ProjectServiceError` and asserts equality/pattern against the corresponding typed failure case, proving the operation returned a typed failure.
 Source context since previous assertion:
   ;
           if (failure) {
@@ -305,8 +316,8 @@ Original expression:
   QVERIFY(failure->song == *missing)
 
 A008 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:235
-Disposition: PARTIAL
-Mapping/reason: Related predicates S005-S012 in session_io.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Disposition: MATCHED
+Mapping: S009-S012 — each typed failure assertion compares its label to `requestedLabel` (and its stage-specific path/voicegroup argument where applicable), matching the requested song identity.
 Source context since previous assertion:
   ;
 
@@ -314,8 +325,8 @@ Original expression:
   QCOMPARE(failure->stage, SongStage::Reconcile)
 
 A009 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:243
-Disposition: PARTIAL
-Mapping/reason: Related predicates S005-S012 in session_io.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S009; the reconcile failure is asserted as a typed async result. `SongStage::Reconcile` is retired stage-enum representation.
 Source context since previous assertion:
   ;
           }
@@ -330,8 +341,8 @@ Original expression:
   QVERIFY2(midiAside, qPrintable(error))
 
 A010 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:248
-Disposition: PARTIAL
-Mapping/reason: Related predicates S005-S012 in session_io.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Disposition: GAP
+Mapping/reason: Hiding the MIDI source is a setup/failure guard; no Swift assertion checks that the source can be moved aside before the missing-MIDI operation.
 Source context since previous assertion:
   ;
           if (!midiAside)
@@ -343,8 +354,8 @@ Original expression:
   QVERIFY2(m_fixture->waitFor(resultBase + 1, error), qPrintable(error))
 
 A011 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:250
-Disposition: PARTIAL
-Mapping/reason: Related predicates S005-S012 in session_io.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S010; the missing-MIDI failure outcome is asserted as one typed async result. The exact callback result-count wait is retired transport representation.
 Source context since previous assertion:
   ;
           const auto *const failure = std::get_if<SongCommandFailure>(&m_fixture->results().back());
@@ -353,8 +364,8 @@ Original expression:
   QVERIFY(failure)
 
 A012 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:252
-Disposition: PARTIAL
-Mapping/reason: Related predicates S005-S012 in session_io.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Disposition: MATCHED
+Mapping: S010 — the MIDI scenario requires `failure == .songMidiUnavailable(label: requestedLabel, path: midiPath)`, proving the failed result is the song-operation failure.
 Source context since previous assertion:
   ;
           if (failure) {
@@ -363,8 +374,8 @@ Original expression:
   QVERIFY(failure->song == opened->song)
 
 A013 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:253
-Disposition: PARTIAL
-Mapping/reason: Related predicates S005-S012 in session_io.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Disposition: MATCHED
+Mapping: S010 — the typed MIDI error equality checks the exact requested label and the opened song MIDI path, matching the failed song identity.
 Source context since previous assertion:
   ;
 
@@ -372,8 +383,8 @@ Original expression:
   QCOMPARE(failure->stage, SongStage::Midi)
 
 A014 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:255
-Disposition: PARTIAL
-Mapping/reason: Related predicates S005-S012 in session_io.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S010; the missing-MIDI outcome is asserted as typed `.songMidiUnavailable`. `SongStage::Midi` is retired stage-enum representation.
 Source context since previous assertion:
   ;
           }
@@ -382,8 +393,8 @@ Original expression:
   QVERIFY2(midiAside->restore(error), qPrintable(error))
 
 A015 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:261
-Disposition: PARTIAL
-Mapping/reason: Related predicates S005-S012 in session_io.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Disposition: MATCHED
+Mapping: S005 — after the hidden MIDI source restore defer runs, the check compares bytes at the original MIDI path to the exact pre-failure bytes.
 Source context since previous assertion:
   ;
           return;
@@ -396,8 +407,8 @@ Original expression:
   QVERIFY2(initial, qPrintable(error))
 
 A016 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:269
-Disposition: PARTIAL
-Mapping/reason: Related predicates S005-S012 in session_io.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Disposition: GAP
+Mapping/reason: Initial `DocumentSession.open` is fixture setup, not a passing assertion for this `loadSong` guard; no Swift predicate verifies this exact initial-load precondition.
 Source context since previous assertion:
   ;
       if (!initial)
@@ -412,8 +423,8 @@ Original expression:
   QVERIFY2(sourceAside, qPrintable(error))
 
 A017 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:274
-Disposition: PARTIAL
-Mapping/reason: Related predicates S005-S012 in session_io.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Disposition: GAP
+Mapping/reason: Moving the bank source aside is a setup/failure guard; no Swift predicate asserts that this fixture mutation succeeds before requesting the voicegroup failure.
 Source context since previous assertion:
   ;
           if (!sourceAside)
@@ -425,8 +436,8 @@ Original expression:
   QVERIFY2(m_fixture->waitFor(resultBase + 2, error), qPrintable(error))
 
 A018 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:275
-Disposition: PARTIAL
-Mapping/reason: Related predicates S005-S012 in session_io.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S011; the missing-bank failure result is asserted as one typed async outcome. The exact two-event callback count is retired transport representation.
 Source context since previous assertion:
   ;
 
@@ -434,8 +445,8 @@ Original expression:
   QVERIFY(std::holds_alternative<MidiStage>(m_fixture->results()[resultBase]))
 
 A019 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:278
-Disposition: PARTIAL
-Mapping/reason: Related predicates S005-S012 in session_io.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S011; the missing-bank failure outcome is asserted as a typed result. The intermediate `MidiStage` callback-pipeline event is retired representation.
 Source context since previous assertion:
   ;
           const auto *const failure =
@@ -445,8 +456,8 @@ Original expression:
   QVERIFY(failure)
 
 A020 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:280
-Disposition: PARTIAL
-Mapping/reason: Related predicates S005-S012 in session_io.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Disposition: MATCHED
+Mapping: S011 — the voicegroup scenario accepts only the `.songBankUnavailable` case in its typed pattern before its `report.expect` passes.
 Source context since previous assertion:
   ;
           if (failure) {
@@ -455,8 +466,8 @@ Original expression:
   QVERIFY(failure->song == opened->song)
 
 A021 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:281
-Disposition: PARTIAL
-Mapping/reason: Related predicates S005-S012 in session_io.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Disposition: MATCHED
+Mapping: S011 — the `.songBankUnavailable` pattern checks both `label == requestedLabel` and the expected voicegroup argument for the failed song.
 Source context since previous assertion:
   ;
 
@@ -464,8 +475,8 @@ Original expression:
   QCOMPARE(failure->stage, SongStage::Voicegroup)
 
 A022 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:283
-Disposition: PARTIAL
-Mapping/reason: Related predicates S005-S012 in session_io.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S011; the missing-bank outcome is asserted as typed `.songBankUnavailable`. `SongStage::Voicegroup` is retired stage-enum representation.
 Source context since previous assertion:
   ;
           }
@@ -474,8 +485,8 @@ Original expression:
   QVERIFY2(sourceAside->restore(error), qPrintable(error))
 
 A023 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:291
-Disposition: PARTIAL
-Mapping/reason: Related predicates S005-S012 in session_io.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Disposition: MATCHED
+Mapping: S006 — after the hidden bank source restore defer runs, the check compares bytes at the original bank path to the exact pre-failure bytes.
 Source context since previous assertion:
   ;
           return;
@@ -490,8 +501,8 @@ Original expression:
   QVERIFY2(m_fixture->waitFor(resultBase + 1, error), qPrintable(error))
 
 A024 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:293
-Disposition: PARTIAL
-Mapping/reason: Related predicates S005-S012 in session_io.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S012; the destination failure is asserted as one typed async result. The exact callback result-count wait is retired transport representation.
 Source context since previous assertion:
   ;
       const auto *const failure = std::get_if<SongCommandFailure>(&m_fixture->results().back());
@@ -500,8 +511,8 @@ Original expression:
   QVERIFY(failure)
 
 A025 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:295
-Disposition: PARTIAL
-Mapping/reason: Related predicates S005-S012 in session_io.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Disposition: MATCHED
+Mapping: S012 — the save scenario requires `.songSaveUnavailable(label: requestedLabel, path: missingDestination)`, proving the actual save call returned the typed failure.
 Source context since previous assertion:
   ;
       if (failure) {
@@ -510,8 +521,8 @@ Original expression:
   QVERIFY(failure->song == opened->song)
 
 A026 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:296
-Disposition: PARTIAL
-Mapping/reason: Related predicates S005-S012 in session_io.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S012; the destination failure is asserted as typed `.songSaveUnavailable`. `SongStage::Save` is retired stage-enum representation.
 Source context since previous assertion:
   ;
 
@@ -1374,27 +1385,44 @@ Anchor: message "tempo metas remain stripped while authoritative timing persists
 
 S005 | sessionFailureStages | src/checks/workspace/session_io.swift
 Anchor: message "failed stage preserves MIDI file bytes"
+Line: 235
+Predicate: report.expectEqual(expected: Optional(midiBefore), actual: bytes(at: midiPath), cppID: scenario.id, what: "failed stage preserves MIDI file bytes")
 
 S006 | sessionFailureStages | src/checks/workspace/session_io.swift
 Anchor: message "failed stage preserves voicegroup file bytes"
+Line: 237
+Predicate: report.expectEqual(expected: Optional(bankBefore), actual: bytes(at: bankPath), cppID: scenario.id, what: "failed stage preserves voicegroup file bytes")
 
 S007 | sessionFailureStages | src/checks/workspace/session_io.swift
 Anchor: message "failed stage leaves document dirty"
+Line: 239
+Predicate: report.expectEqual(expected: true, actual: document.isDirty, cppID: scenario.id, what: "failed stage leaves document dirty")
 
 S008 | sessionFailureStages | src/checks/workspace/session_io.swift
 Anchor: message "failed stage leaves bank dirty"
+Line: 241
+Predicate: report.expectEqual(expected: true, actual: live.bankDirty, cppID: scenario.id, what: "failed stage leaves bank dirty")
 
 S009 | sessionFailureStages | src/checks/workspace/session_io.swift
 Anchor: message "reconcile stage reports the native playable-song failure"
+Line: 213
+Predicate: report.expect(failure == .songNotPlayable(label: requestedLabel), cppID: scenario.id, message: "reconcile stage reports the native playable-song failure")
 
 S010 | sessionFailureStages | src/checks/workspace/session_io.swift
 Anchor: message "MIDI stage reports its missing source file"
+Line: 217
+Predicate: report.expect(failure == .songMidiUnavailable(label: requestedLabel, path: midiPath), cppID: scenario.id, message: "MIDI stage reports its missing source file")
 
 S011 | sessionFailureStages | src/checks/workspace/session_io.swift
 Anchor: message "voicegroup stage reports its missing source file"
+Line: 228
+Predicate: report.expect(bankFailure, cppID: scenario.id, message: "voicegroup stage reports its missing source file") where bankFailure is true only for `.songBankUnavailable` with matching requested label and voicegroup argument.
 
 S012 | sessionFailureStages | src/checks/workspace/session_io.swift
 Anchor: message "save stage reports the unwritable destination"
+Line: 231
+Predicate: report.expect(failure == .songSaveUnavailable(label: requestedLabel, path: missingDestination), cppID: scenario.id, message: "save stage reports the unwritable destination")
+
 
 S013 | bankConflicts | src/checks/workspace/bank_edits.swift
 Anchor: message "stale expected voice triggers bankConflict"

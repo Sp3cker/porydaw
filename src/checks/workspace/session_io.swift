@@ -100,118 +100,190 @@ internal func sessionOpenAndRecovery(report: CheckReport, projectDir: String) ->
     return (service, session)
 }
 
+private enum FailureScenario: String, CaseIterable {
+    case reconcile
+    case midi
+    case voicegroup
+    case save
+
+    var id: String {
+        "project-io-mutations/ProjectIoMutationsTest::failureStages[\(rawValue)]"
+    }
+}
+
 @MainActor
 internal func sessionFailureStages(report: CheckReport, session: DocumentSession,
                                    service: ProjectService, projectDir: String) -> Bool {
-    // 7. Stage failures retain file bytes and both dirty records.
-    guard var dirtyVoice = session.bankSlots[0].voice else {
-        report.fail("project-io-mutations/ProjectIoMutationsTest::failureStages[voicegroup]",
-                    "fixture has no editable bank voice")
-        return false
-    }
-    var failureConfig = session.document.state.config
-    failureConfig.priority += 1
-    session.document.setConfig(failureConfig)
-    dirtyVoice.release = dirtyVoice.release == 255 ? 254 : dirtyVoice.release + 1
-    do {
-        _ = try runBlocking {
-            try await session.applyBankEdit(slot: 0, value: dirtyVoice,
-                                            expected: session.bankSlots[0].voice)
-        }
-    } catch {
-        report.fail("project-io-mutations/ProjectIoMutationsTest::failureStages[voicegroup]",
-                    "could not prepare dirty bank record: \(error)")
-        return false
-    }
-    let midiPath = session.document.source.midiPath
-    let bankPath = projectDir + "/" + session.bankLease.sourcePath
-    let midiBeforeFailures = bytes(at: midiPath)
-    let bankBeforeFailures = bytes(at: bankPath)
-    let assertFailureIntegrity: (String) -> Void = { cppID in
-        report.expectEqual(expected: midiBeforeFailures, actual: bytes(at: midiPath), cppID: cppID,
-                           what: "failed stage preserves MIDI file bytes")
-        report.expectEqual(expected: bankBeforeFailures, actual: bytes(at: bankPath), cppID: cppID,
-                           what: "failed stage preserves voicegroup file bytes")
-        report.expectEqual(expected: true, actual: session.document.isDirty, cppID: cppID,
-                           what: "failed stage leaves document dirty")
-        report.expectEqual(expected: true, actual: session.bankDirty, cppID: cppID,
-                           what: "failed stage leaves bank dirty")
-    }
-
-    let reconcileID = "project-io-mutations/ProjectIoMutationsTest::failureStages[reconcile]"
-    do {
-        _ = try runBlocking {
-            try await service.openSong(label: "mus_reconcile_missing")
-        }
-        report.fail(reconcileID, "reconcile stage should reject an unknown playable label")
-    } catch {
-        report.expect(operationFailureMessage(error)?.contains("No playable song") == true,
-                      cppID: reconcileID,
-                      message: "reconcile stage reports the native playable-song failure")
-        assertFailureIntegrity(reconcileID)
-    }
-
-    let midiID = "project-io-mutations/ProjectIoMutationsTest::failureStages[midi]"
-    let hiddenMidiPath = midiPath + ".swiftcore-hidden"
-    do {
-        try? FileManager.default.removeItem(atPath: hiddenMidiPath)
-        try FileManager.default.moveItem(atPath: midiPath, toPath: hiddenMidiPath)
-        defer { try? FileManager.default.moveItem(atPath: hiddenMidiPath, toPath: midiPath) }
+    // Each failed operation owns a private project, live document and recovery.
+    let fixtureParent = URL(fileURLWithPath: projectDir).deletingLastPathComponent().path
+    for scenario in FailureScenario.allCases {
+        let root = stageTestProject(in: fixtureParent, projectName: "swiftcore-failed-\(scenario.rawValue)")
+        let caseService = ProjectService()
         do {
-            _ = try runBlocking {
-                try await service.openSong(label: "mus_session_test")
+            defer {
+                do {
+                    try runBlocking { await caseService.close() }
+                } catch {
+                    report.fail(scenario.id, "could not close private failure service: \(error)")
+                }
             }
-            report.fail(midiID, "missing MIDI source should fail the MIDI stage")
-        } catch {
-            report.expect(operationFailureMessage(error)?.contains("Cannot read") == true,
-                          cppID: midiID,
-                          message: "MIDI stage reports its missing source file")
-        }
-    } catch {
-        report.fail(midiID, "could not hide MIDI fixture: \(error)")
-    }
-    assertFailureIntegrity(midiID)
-
-    let voicegroupID = "project-io-mutations/ProjectIoMutationsTest::failureStages[voicegroup]"
-    let hiddenBankPath = bankPath + ".swiftcore-hidden"
-    do {
-        try? FileManager.default.removeItem(atPath: hiddenBankPath)
-        try FileManager.default.moveItem(atPath: bankPath, toPath: hiddenBankPath)
-        defer { try? FileManager.default.moveItem(atPath: hiddenBankPath, toPath: bankPath) }
-        do {
-            _ = try runBlocking {
-                try await service.openSong(label: "mus_session_test")
+            try runBlocking { try await caseService.open(root: root) }
+            let live = try runBlocking {
+                try await DocumentSession.open(service: caseService, label: "mus_session_test")
             }
-            report.fail(voicegroupID, "missing voicegroup source should fail the bank stage")
+            let document = live.document
+            let midiPath = document.source.midiPath
+            let bankPath = root + "/" + live.bankLease.sourcePath
+            guard let midiBefore = bytes(at: midiPath), let bankBefore = bytes(at: bankPath),
+                  var voice = live.bankSlots.first?.voice else {
+                report.fail(scenario.id, "private failure fixture lacks MIDI or editable bank bytes")
+                return false
+            }
+            let tick = (document.state.file.chunks.map(\.endTick).max() ?? 0) + 96
+            _ = try document.addNotes([
+                NewNote(track: 0, tick: tick, pitch: 76, duration: 24, velocity: 89),
+            ])
+            voice.release = voice.release == 255 ? 254 : voice.release + 1
+            let editedVoice = voice
+            _ = try runBlocking {
+                try await live.applyBankEdit(slot: 0, value: editedVoice,
+                                             expected: live.bankSlots[0].voice)
+            }
+            let stagedFile = document.state.file
+            let stagedConfig = document.state.config
+            let stagedSlots = live.bankSlots
+            let stagedLease = live.bankLease.bankToken
+            let history = document.history
+            let undoCount = history.undoCount
+            let undoIndex = history.undoIndex
+            let identity = history.currentIdentity
+            let revision = document.revision
+            let stagedBytes = Data(try document.captureSave().bytes)
+            let bankText = String(decoding: bankBefore, as: UTF8.self)
+            let originalVoiceLine = "    voice_square_1 60, 0, 2, 2, 2, 3, 12, 4"
+            guard bankText.components(separatedBy: originalVoiceLine).count == 2,
+                  editedVoice.release == 5 else {
+                report.fail(scenario.id, "private bank source does not match its expected voice fixture")
+                return false
+            }
+            let expectedBank = Data(bankText.replacingOccurrences(
+                of: originalVoiceLine,
+                with: "    voice_square_1 60, 0, 2, 2, 2, 3, 12, 5").utf8)
+            var failure: ProjectServiceError?
+            let requestedLabel = scenario == .reconcile
+                ? "porydaw_missing_song" : "mus_session_test"
+            let missingDestination = root + "/porydaw_iocheck_missing/mus_session_test.mid"
+            switch scenario {
+            case .midi, .voicegroup:
+                let sourcePath = scenario == .midi ? midiPath : bankPath
+                let asidePath = sourcePath + ".swiftcore-hidden"
+                try FileManager.default.moveItem(atPath: sourcePath, toPath: asidePath)
+                defer {
+                    do {
+                        try FileManager.default.moveItem(atPath: asidePath, toPath: sourcePath)
+                    } catch {
+                        report.fail(scenario.id, "could not restore hidden source: \(error)")
+                    }
+                }
+                do {
+                    _ = try runBlocking { try await caseService.openSong(label: requestedLabel) }
+                } catch {
+                    failure = error as? ProjectServiceError
+                }
+            case .save:
+                let snapshot = SaveSnapshot(
+                    bytes: Array(stagedBytes), config: stagedConfig, flagsNeeded: true,
+                    destination: SongSource(label: requestedLabel, midiPath: missingDestination,
+                                            hasConfig: true),
+                    revision: revision, identity: identity)
+                do {
+                    _ = try runBlocking { try await caseService.save(snapshot, bank: nil) }
+                } catch {
+                    failure = error as? ProjectServiceError
+                }
+            case .reconcile:
+                do {
+                    _ = try runBlocking { try await caseService.openSong(label: requestedLabel) }
+                } catch {
+                    failure = error as? ProjectServiceError
+                }
+            }
+            switch scenario {
+            case .reconcile:
+                report.expect(failure == .songNotPlayable(label: requestedLabel),
+                              cppID: scenario.id,
+                              message: "reconcile stage reports the native playable-song failure")
+            case .midi:
+                report.expect(failure == .songMidiUnavailable(label: requestedLabel, path: midiPath),
+                              cppID: scenario.id,
+                              message: "MIDI stage reports its missing source file")
+            case .voicegroup:
+                let bankFailure: Bool
+                if case .songBankUnavailable(let label, let argument, _) = failure {
+                    bankFailure = label == requestedLabel
+                        && argument == stagedConfig.voicegroupArgument
+                } else {
+                    bankFailure = false
+                }
+                report.expect(bankFailure, cppID: scenario.id,
+                              message: "voicegroup stage reports its missing source file")
+            case .save:
+                report.expect(failure == .songSaveUnavailable(
+                    label: requestedLabel, path: missingDestination), cppID: scenario.id,
+                              message: "save stage reports the unwritable destination")
+            }
+            report.expectEqual(expected: Optional(midiBefore), actual: bytes(at: midiPath),
+                               cppID: scenario.id, what: "failed stage preserves MIDI file bytes")
+            report.expectEqual(expected: Optional(bankBefore), actual: bytes(at: bankPath),
+                               cppID: scenario.id, what: "failed stage preserves voicegroup file bytes")
+            report.expectEqual(expected: true, actual: document.isDirty, cppID: scenario.id,
+                               what: "failed stage leaves document dirty")
+            report.expectEqual(expected: true, actual: live.bankDirty, cppID: scenario.id,
+                               what: "failed stage leaves bank dirty")
+            report.expect(live.document === document, cppID: scenario.id,
+                          message: "failed stage retains the selected document instance")
+            report.expectEqual(expected: "mus_session_test", actual: document.source.label,
+                               cppID: scenario.id, what: "failed stage retains the selected song")
+            report.expectEqual(expected: stagedFile, actual: document.state.file,
+                               cppID: scenario.id, what: "failed stage retains unsaved MIDI notes")
+            report.expectEqual(expected: stagedConfig, actual: document.state.config,
+                               cppID: scenario.id, what: "failed stage retains staged song configuration")
+            report.expectEqual(expected: stagedSlots, actual: live.bankSlots,
+                               cppID: scenario.id, what: "failed stage retains staged bank voices")
+            report.expectEqual(expected: stagedLease, actual: live.bankLease.bankToken,
+                               cppID: scenario.id, what: "failed stage retains the bank lease")
+            report.expectEqual(expected: undoCount, actual: history.undoCount,
+                               cppID: scenario.id, what: "failed stage retains undo record count")
+            report.expectEqual(expected: undoIndex, actual: history.undoIndex,
+                               cppID: scenario.id, what: "failed stage retains the undo cursor")
+            report.expectEqual(expected: identity, actual: history.currentIdentity,
+                               cppID: scenario.id, what: "failed stage retains undo record identity")
+            report.expectEqual(expected: revision, actual: document.revision,
+                               cppID: scenario.id, what: "failed stage retains document revision")
+            let recovered = try runBlocking {
+                try await caseService.openSong(label: "mus_session_test")
+            }
+            report.expectEqual(expected: document.source.label, actual: recovered.source.label,
+                               cppID: scenario.id, what: "restored source opens the original song")
+            report.expectEqual(expected: midiBefore, actual: Data(recovered.midiBytes),
+                               cppID: scenario.id, what: "restored source opens original MIDI bytes")
+            report.expectEqual(expected: live.bankLease.sourcePath,
+                               actual: recovered.bank.sourcePath, cppID: scenario.id,
+                               what: "restored source opens the original bank")
+            try runBlocking { try await live.save() }
+            report.expectEqual(expected: Optional(stagedBytes), actual: bytes(at: midiPath),
+                               cppID: scenario.id, what: "recovered save persists staged MIDI bytes")
+            report.expectEqual(expected: Optional(expectedBank), actual: bytes(at: bankPath),
+                               cppID: scenario.id, what: "recovered save persists staged bank voice bytes")
+            report.expectEqual(expected: false, actual: document.isDirty,
+                               cppID: scenario.id, what: "recovered save clears document dirty state")
+            report.expectEqual(expected: false, actual: live.bankDirty,
+                               cppID: scenario.id, what: "recovered save clears bank dirty state")
+            try runBlocking { _ = await live.close() }
         } catch {
-            report.expect(operationFailureMessage(error)?.contains("voicegroup") == true,
-                          cppID: voicegroupID,
-                          message: "voicegroup stage reports its missing source file")
+            report.fail(scenario.id, "failed operation or recovery could not complete: \(error)")
+            return false
         }
-    } catch {
-        report.fail(voicegroupID, "could not hide voicegroup fixture: \(error)")
-    }
-    assertFailureIntegrity(voicegroupID)
-
-    let saveID = "project-io-mutations/ProjectIoMutationsTest::failureStages[save]"
-    do {
-        let corruptDestination = SongSource(
-            label: "mus_session_test", midiPath: "/dev/null/unwritable/nonexistent.mid",
-            hasConfig: true)
-        let corruptSnapshot = SaveSnapshot(
-            bytes: [0x4D, 0x54, 0x68, 0x64], config: session.document.state.config,
-            flagsNeeded: false, destination: corruptDestination,
-            revision: session.document.revision,
-            identity: session.document.history.currentIdentity)
-        _ = try runBlocking {
-            try await service.save(corruptSnapshot, bank: nil)
-        }
-        report.fail(saveID, "unwritable save destination should fail")
-    } catch {
-        report.expect(operationFailureMessage(error)?.contains("Cannot write") == true,
-                      cppID: saveID,
-                      message: "save stage reports the unwritable destination")
-        assertFailureIntegrity(saveID)
     }
 
     // Native open/label paths reject all legacy invalid identity spellings.

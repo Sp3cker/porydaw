@@ -93,14 +93,25 @@ extension ProjectService {
             do {
                 song = try await store.songMeta(label: label)
             } catch ProjectStoreReadError.songNotFound {
-                throw ProjectServiceError.operationFailed(
-                    label.isEmpty ? "Invalid song label." : "No playable song named \(label).")
+                throw ProjectServiceError.songNotPlayable(label: label)
             }
             guard song.hasMid, let midiPath = song.midPath else {
-                throw ProjectServiceError.operationFailed("No playable song named \(label).")
+                throw ProjectServiceError.songNotPlayable(label: label)
             }
-            let bytes = try await store.readFile(midiPath)
-            let bank = try await store.loadBank(voicegroupArg: song.cfg.voicegroupArgument)
+            let bytes: Data
+            do {
+                bytes = try await store.readFile(midiPath)
+            } catch ProjectFileStoreError.cannotRead(let path) {
+                throw ProjectServiceError.songMidiUnavailable(label: label, path: path)
+            }
+            let bank: ProjectBankLease
+            do {
+                bank = try await store.loadBank(voicegroupArg: song.cfg.voicegroupArgument)
+            } catch VoicegroupStoreError.operationFailed(let reason) {
+                throw ProjectServiceError.songBankUnavailable(
+                    label: label, voicegroupArgument: song.cfg.voicegroupArgument,
+                    reason: reason)
+            }
             let published = appliedBank(bank, token: nil)
             await publish(published, from: store)
             return LoadedSong(
@@ -112,7 +123,9 @@ extension ProjectService {
                 midiBytes: Array(bytes), bank: published.lease, bankSlots: published.slots,
                 bankDirty: published.dirty, bankLoadName: published.loadName)
         } catch {
-            throw projectFailure(error)
+            let failure = projectFailure(error)
+            guard case let .operationFailed(message) = failure else { throw failure }
+            throw ProjectServiceError.operationFailed("Open song \(label): \(message)")
         }
     }
 
@@ -126,7 +139,12 @@ extension ProjectService {
             if let bank {
                 refreshed = try await saveBankStage(bank, in: store)
             }
-            try await store.writeFile(snapshot.destination.midiPath, data: Data(snapshot.bytes))
+            do {
+                try await store.writeFile(snapshot.destination.midiPath, data: Data(snapshot.bytes))
+            } catch ProjectFileStoreError.cannotWrite(let path) {
+                throw ProjectServiceError.songSaveUnavailable(
+                    label: snapshot.destination.label, path: path)
+            }
             var flagsWritten = false
             if snapshot.flagsNeeded {
                 let midiDir = URL(filePath: snapshot.destination.midiPath)
@@ -137,7 +155,10 @@ extension ProjectService {
             }
             return SaveReceipt(flagsWritten: flagsWritten, bank: refreshed)
         } catch {
-            throw projectFailure(error)
+            let failure = projectFailure(error)
+            guard case let .operationFailed(message) = failure else { throw failure }
+            throw ProjectServiceError.operationFailed(
+                "Save song \(snapshot.destination.label): \(message)")
         }
     }
 

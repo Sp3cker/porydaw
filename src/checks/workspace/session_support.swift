@@ -5,11 +5,15 @@ import PorydawCoreCheckNative
 import PorydawPlayback
 
 internal func operationFailureMessage(_ error: Error) -> String? {
-    guard let serviceError = error as? ProjectServiceError,
-          case let .operationFailed(message) = serviceError else {
-        return nil
+    guard let serviceError = error as? ProjectServiceError else { return nil }
+    switch serviceError {
+    case .serviceClosed, .bankConflict: return nil
+    case .operationFailed(let message): return message
+    case .songNotPlayable(let label): return "No playable song named \(label)."
+    case .songMidiUnavailable(_, let path): return "Cannot read \(path)"
+    case .songBankUnavailable(_, _, let reason): return reason
+    case .songSaveUnavailable(_, let path): return "Cannot write \(path)"
     }
-    return message
 }
 
 internal func noteOffSample(_ timeline: PlaybackTimeline, key: UInt8) -> UInt64? {

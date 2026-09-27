@@ -11,6 +11,14 @@ public enum ProjectServiceError: Error, Equatable, Sendable {
     case serviceClosed
     /// A hard project-store failure with the underlying message.
     case operationFailed(String)
+    /// A requested label is not a playable song in this project.
+    case songNotPlayable(label: String)
+    /// A playable song's MIDI source cannot be read.
+    case songMidiUnavailable(label: String, path: String)
+    /// The requested song's voicegroup argument cannot resolve a bank.
+    case songBankUnavailable(label: String, voicegroupArgument: String, reason: String)
+    /// The requested song's MIDI destination cannot be written.
+    case songSaveUnavailable(label: String, path: String)
     /// The bank changed underneath the edit (stale expected value, occupied
     /// blank slot, out-of-range slot, spent materialization token). The
     /// document is unchanged; the caller decides the conflict policy.
