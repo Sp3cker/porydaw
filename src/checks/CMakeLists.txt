@@ -208,9 +208,9 @@ if(APPLE)
         automation/domain/xcmd.swift
         automation/domain/xcmdRanges.swift
         automation/presentation/painting.swift
+        automation/presentation/painting_raster.swift
         automation/presentation/tst_automationpresentation.swift
         automation/automationcanvaslayout.swift
-        automation/presentation/painting_raster.swift
         automation/automationpointmenus.swift
         automation/automationclipboard.swift
         automation/automationcanvasediting.swift
@@ -294,9 +294,9 @@ if(APPLE)
         workspace/session_playback.swift
         workspace/session_save.swift
         workspace/bank_history_probes.swift
+        workspace/bank_undo_publication.swift
         workspace/bank_edits.swift
         workspace/bank_saves.swift
-        workspace/bank_undo_publication.swift
         workspace/bank_sharing.swift
         workspace/bank_sharing_history.swift
         workspace/bank_switching.swift
