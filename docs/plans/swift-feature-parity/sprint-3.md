@@ -18,9 +18,12 @@ Status: **in execution.** Landed: 52 (32aa160d), 53 (e7c58e06) + 53b (342dc379),
 (acdcd7e0), 129 (3b9bdd06), 130 (7c4f393b), 131 (236b8e7d), 132 (c9088d17), 133 (c2fe633e),
 134 (df5d2c3c), 135 (99f51fb7), 136 (8b086787), 137 (97363697), 138 (e4aa0296); bank-edit
 undo gate (3fbfe933). Resize sweep 9.9 s → 1.5–2.1 s with no per-resize or per-scroll scene
-rebuild; user grid rework 7e292570. Next: wave 147–154 (§17), with 144/146 finishing
-under §16. Historical pre-139 census: proof files 155 → 69; open GAP+PARTIAL rows
-3703 → 1575 (1246 GAP + 329 PARTIAL). Wave-147 planning census: 68 ledgers.
+rebuild; user grid rework 7e292570. Wave 147–154 landed: 147 (efeb19a2), 148 (0e76e4e2),
+149 (6b7a5777), 150 (d7cd2d64), 151 (5c3594ce), 153 (96cc9169), 154 (8f040917); 152 in
+flight. Next: wave 155–162 (§18). Historical pre-139 census: proof files 155 → 69; open
+GAP+PARTIAL rows 3703 → 1575 (1246 GAP + 329 PARTIAL). Wave-147 planning census: 68
+ledgers; wave-155 planning census: 65 ledgers, strict-mapping debt 293 (Task 146's
+measured remainder, unchanged by this wave).
 Known residues: QtBridge queues property notifications, so same-GUI-pass geometry clauses
 (host A095) stay PARTIAL; lanes use the null audio backend, so physical-output conjuncts
 stay PARTIAL.
@@ -2528,4 +2531,136 @@ Only this wave's exact selected rows supersede §16 deferrals. In particular:
   transport A009/A010/A013; physical audio output; ImageIO decoding; and
   pending-reload input gating remain excluded. No strict-mapping debt
   outside Task146's approved exception is selected.
+
+## 18. Wave 155–162 — hygiene, ledger closures and remaining evidenced consumers
+
+### Selection and bounded briefs
+
+Planning baseline: `deno task proof list` reports **65 ledgers** with Task 152 in
+flight (it is live-editing `project/proof.workspace.txt` rows A084–A098; counts drift
+until it lands). Strict-mapping debt is **293**, Task 146's measured remainder; this
+wave selects none of it. Planning ran per-ledger `proof sites ... --status GAP`/
+`PARTIAL`, read fork sources at each ledger's pinned revision, and dispatched three
+read-only scouts whose row classifications were re-verified against the live tree
+before freezing. `proof check --executed` currently exits 1 with 70
+voicegroupsourceediting "no executed predicate" errors and 71 "not executed" lines;
+the voicegroupsourceediting half is owned by a parallel fix outside this plan, and
+this wave owns only the themelayout S020 line.
+
+Select **50 open rows (40 GAP + 10 PARTIAL)** plus the Review146 hygiene inventory,
+two of them whole-ledger closures:
+
+| Task | Surface / brief | GAP | PARTIAL | Group | Route / seat |
+|---|---|---:|---:|---|---|
+| 155 | [Review146 numbered-literal repair and themelayout S020 re-anchor](task-155-brief.md) | 0 | 0 | A | SDD-track / sdd-implementer — anchor/literal hygiene across five committed checks |
+| 156 | [Drawer-band resize, hide and restore geometry on the mounted roll](task-156-brief.md) | 3 | 6 | A | SDD-track / sdd-implementer — mounted band lifecycle with queued-notification limits |
+| 157 | [Startup restores the saved tab recipe through the real session path](task-157-brief.md) | 12 | 0 | A* | SDD-track / sdd-implementer — consumer restore semantics, deque ordering retired |
+| 158 | [Mounted band plot/visibility projection completes canonical geometry](task-158-brief.md) | 3 | 4 | B | SDD-track / sdd-implementer — per-band projection residues on the roll lane |
+| 159 | [Refused Insert Time on an unresolvable scope closes the keyboard ledger](task-159-brief.md) | 4 | 0 | A | SDD-track / sdd-implementer — production refusal path; whole-ledger deletion |
+| 160 | [Mounted scroll/zoom frame cadence closes the swiftrollbench ledger](task-160-brief.md) | 6 | 0 | A | SDD-track / sdd-implementer — render-liveness proof on the roll lane; whole-ledger deletion |
+| 161 | [Document mutation, undo and redo transitions around a live velocity gesture](task-161-brief.md) | 7 | 0 | A | SDD-track / sdd-implementer — service-level history contract |
+| 162 | [Raster interaction residue: repeat leaves, hover clears, voice cursor](task-162-brief.md) | 5 | 0 | A | SDD-track / sdd-implementer — model-state clauses, pixel residue left open |
+| **Total** | | **40** | **10** | | |
+
+Write sets over four files (155) or three files (157) are explicit sizing exceptions
+for one cohesive hygiene surface and one restore scenario; 159/160 add one call line
+and one auto-enumerated suite file respectively. None is a standalone mapping pass:
+every selected GAP row gets a real Swift/QML owner predicate, and the two closures
+delete their ledgers only alongside the proving checks.
+
+### Priority census and rejection evidence
+
+| Inspected cluster | Current GAP / PARTIAL | Treatment |
+|---|---:|---|
+| project/workspace | 70 / 2 (live) | 157 takes the consumer-visible startup restore A018–A029 and retires the deque-ordering representation; A030–A083 protocol deferrals stand; A084–A098 belong to in-flight 152 |
+| project/ioflow | 37 / 8 | Rejected: FIFO/catalog-preemption/stage-tag rows are the §16 protocol deferral; A051–A065 bank-view envelopes and preview shadow paths have no established consumer check (scout + §16) |
+| project/iomutations | 32 / 0 | Rejected: A073–A097 preview cleanup, creation collision and shutdown stay deferred; no evidenced consumer |
+| retained/tst_nativeboundaries | 18 / 0 | Rejected: A002–A005 duplicate executing session predicates; A006–A014 are five distinct consumers; A015–A019 excluded export/audio — no bounded single-surface brief is honest |
+| nativegraphics/tst_nativewindowing | 28 / 0 | Rejected for this wave: A055–A078 are real rendered outcomes whose original stimulus current inputs do not produce (no invented harness stimulus); A047 needs a theme dialog the Swift shell does not have (`restoreAppearance` is startup-only); A002/A008 Win32 retirement rides with a future consumer |
+| mainwindowrouting (4 ledgers) | 105 / 67 | Rejected: input GAPs are fixture guards/Qt wiring; lifecycle close/reopen already matched with sidecar-snapshot residues blocked; native foreign-window cluster A031–A058 has no proven Cocoa second-window lane; state whole-project snapshots blocked |
+| host/hostintegration | 23 / 10 | 161 takes the mutation/undo/redo cluster; A162/A174–A185 (window close, teardown ordering) stay blocked |
+| automation/raster interaction | 7 / 6 | 162 takes the five model-state rows; A025/A033 pixel probes stay GAP (no framebuffer readback) |
+
+This favors clusters with verified owners, existing lanes and executable journeys —
+including the only two honest whole-ledger closures found — over larger raw counts
+whose rows are protocol machinery, native-window delivery or excluded surfaces.
+
+### Conflict matrix and dispatch groups
+
+`—` means disjoint complete write sets, including conditional production repairs.
+`L` = shared ledger with disjoint accepted A-row subsets applied serially by one
+writer. Read-only lane sharing is not a write conflict.
+
+| | 155 | 156 | 157 | 158 | 159 | 160 | 161 | 162 |
+|---|---|---|---|---|---|---|---|---|
+| 155 | — | — | — | — | — | — | — | — |
+| 156 | — | — | — | L | — | — | — | — |
+| 157 | — | — | — | — | — | — | — | — |
+| 158 | — | L | — | — | — | — | — | — |
+| 159 | — | — | — | — | — | — | — | — |
+| 160 | — | — | — | — | — | — | — | — |
+| 161 | — | — | — | — | — | — | — | — |
+| 162 | — | — | — | — | — | — | — | — |
+
+| Group | Tasks | Gate |
+|---|---|---|
+| A | 155, 156, 159, 160, 161, 162 | After the landed-wave gate; all six are independent writers. |
+| A* | 157 | Same parallelism as A, but dispatch only after in-flight **Task 152 is accepted/checkpointed** (it owns `proof.workspace.txt` and the session/bank files 157 must not disturb). |
+| B | 158 | After 156's accepted `proof.tst_hostadapter.txt` rows are checkpointed (single ledger writer, disjoint subsets). Its QML work may proceed in parallel. |
+
+Cross-wave boundaries: 155 re-points only `proof.windowtier_keyboard.txt` anchors and
+`proof.tst_themelayout_color.txt` S020; neither 152 nor the parallel
+voicegroupsourceediting fix owns those. 156/158 share the `swiftroll-window` lane
+read-only and own different suite files (`tst_SwiftRollPlots.qml` vs
+`tst_SwiftRollTrackHeaders.qml`); 160 adds `tst_SwiftRollCadence.qml`, which
+`RollQmlTests.swift` enumerates automatically — no manifest edits anywhere in this
+wave. 157/159/161/162 all execute under `swiftcore-projectsession` through different
+check files. Do not reset or restage a sibling's edits; a demonstrated defect outside a
+closed set stops for rebriefing.
+
+### Shared constraints and verification ownership
+
+The §16/§17 contracts continue unchanged: fork clauses win; one predicate per clause
+and each A-id on exactly one predicate; independent literal expected values;
+fail-closed fixture setup; real production entry points (staging through
+`applyTimeSelection`/`restoreStartup`/page gesture APIs is real-input staging, not
+mocking); no copied implementations; expected-identity comparisons only against
+pre-transaction captures; setup guards carry no A-ids (NATIVE-SETUP disposition for
+selected setup rows); retire only representation, never the observable consumer
+obligation; DPR2 claims gate on the lane's declared DPR; QtBridge queued notifications
+keep same-GUI-pass clauses PARTIAL (A095 deliberately stays PARTIAL in 156).
+
+Writers run their brief's focused lanes under the existing lock/175-second alarm and
+hand settled checks plus executed message evidence to the separate ledger writer, who
+updates only that task's rows in the same commit as the proving change. The two
+whole-ledger deletions (159, 160) also record their pinned-revision citations and the
+absence of the old C++ sources. No project-wide builds, tests, formatters or linters
+run mid-flight; native mounted lanes (156, 158, 160, and 155's shell lanes) require the
+macOS Qt desktop environment.
+
+After all accepted sources settle, the controller owns the project-wide gate once,
+using §16's locked `verify --verbose`, `verify:shell --verbose`, plus
+`deno task proof check --executed`; `proof check --strict-mappings` runs only as the
+exact debt inventory (expected residue: the unchanged 293 minus any rows the parallel
+voicegroupsourceediting fix retires, which is not this wave's claim). Planning
+validation for this docs-only commit checked brief links/headings, selected
+dispositions, fork assertion-start citations at pinned revisions, lane registrations
+and the computed write-set intersections; no application suite was run.
+
+### Deferred and excluded
+
+- The voicegroupsourceediting S092–S161 executed-anchor repair (helper message
+  emission) and the A001/A015 fixture-predicate hygiene are owned by the parallel fix
+  outside this plan; no brief in this wave touches
+  `VoicegroupEditingChecks.swift` or `proof.voicegroupsourceediting.txt`.
+- Retained `tst_nativeboundaries`, nativewindowing A002/A008/A047/A055–A078,
+  ioflow A039–A065, iomutations A073–A097, mainwindowrouting native/window-close/
+  snapshot clusters and hostintegration A162/A174–A185 remain open with the rejection
+  evidence above; a dead harness is not a retirement certificate.
+- Workspace protocol deferrals (A003/A004 loading refusal, pending-reload input gate,
+  catalog-once/plan-keying/silent completions) stand; 157 supersedes only the
+  consumer-visible restore half of the startup-terminal-order deferral.
+- Savecore A016–A026 catalog-outage policy; P3 WAV export; P4 sample studio; transport
+  A009/A010/A013; physical audio output; ImageIO decoding; strict-mapping debt outside
+  Task146's exception: all unchanged.
 
