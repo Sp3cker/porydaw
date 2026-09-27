@@ -18,12 +18,14 @@ Status: **in execution.** Landed: 52 (32aa160d), 53 (e7c58e06) + 53b (342dc379),
 (acdcd7e0), 129 (3b9bdd06), 130 (7c4f393b), 131 (236b8e7d), 132 (c9088d17), 133 (c2fe633e),
 134 (df5d2c3c), 135 (99f51fb7), 136 (8b086787), 137 (97363697), 138 (e4aa0296); bank-edit
 undo gate (3fbfe933). Resize sweep 9.9 s → 1.5–2.1 s with no per-resize or per-scroll scene
-rebuild; user grid rework 7e292570. Wave 147–154 landed: 147 (efeb19a2), 148 (0e76e4e2),
-149 (6b7a5777), 150 (d7cd2d64), 151 (5c3594ce), 153 (96cc9169), 154 (8f040917); 152 in
-flight. Next: wave 155–162 (§18). Historical pre-139 census: proof files 155 → 69; open
-GAP+PARTIAL rows 3703 → 1575 (1246 GAP + 329 PARTIAL). Wave-147 planning census: 68
-ledgers; wave-155 planning census: 65 ledgers, strict-mapping debt 293 (Task 146's
-measured remainder, unchanged by this wave).
+rebuild; user grid rework 7e292570. Wave 139–146 landed: 139 (e7e5cca9), 140 + 141
+(a0175a60), 142 + 143 (9dd85c37), 144 (ab4f1ae5), 145 (4a8004bb), 146 (a74f402a). Wave
+147–154 landed: 147 (efeb19a2), 148 (0e76e4e2), 149 (6b7a5777), 150 (d7cd2d64), 151
+(5c3594ce), 152 (036e58d1), 153 (96cc9169), 154 (8f040917); editing-literal evidence fix
+(0b12f4e7). Gate on 0b12f4e7: verify 36/36, verify:shell 75/75, verify:qml 1/1,
+verify:qml-roll 1/1, verify:bridge 0 findings, `proof check --executed` 0 errors (0 not
+executed). Next: wave 155–162 (§18). Census: proof files 155 → 65; open GAP+PARTIAL rows
+3703 → 1243 (971 GAP + 272 PARTIAL); strict-mapping debt 485 → 293.
 Known residues: QtBridge queues property notifications, so same-GUI-pass geometry clauses
 (host A095) stay PARTIAL; lanes use the null audio backend, so physical-output conjuncts
 stay PARTIAL.
