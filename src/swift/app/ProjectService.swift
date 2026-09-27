@@ -332,328 +332,23 @@ public struct SongDeletionPlan: Equatable, Sendable {
 /// transitions; document history never blocks on it.
 public actor ProjectService {
     nonisolated let bankViews = ProjectBankViews()
-    private var store: ProjectStore?
-    private var snapshot: ProjectSnapshot?
-    private var projectRoot = ""
-    private var closed = false
+    internal var store: ProjectStore?
+    internal var snapshot: ProjectSnapshot?
+    internal var projectRoot = ""
+    internal var closed = false
 
     public init() {}
 
-    private func requireStore() throws -> ProjectStore {
+    internal func requireStore() throws -> ProjectStore {
         guard !closed else { throw ProjectServiceError.serviceClosed }
         guard let store else {
             throw ProjectServiceError.operationFailed("Project is not open.")
         }
         return store
     }
-    private func publish(_ value: AppliedBankEdit, from source: ProjectStore) async {
+    internal func publish(_ value: AppliedBankEdit, from source: ProjectStore) async {
         guard !closed, store === source else { return }
         await bankViews.publish(value)
-    }
-
-    /// Opens the project root in the project-store actor.
-    public func open(root: String) async throws {
-        guard !closed else { throw ProjectServiceError.serviceClosed }
-        let candidate = ProjectStore(projectRoot: URL(filePath: root, directoryHint: .isDirectory))
-        do {
-            let opened = try await candidate.open()
-            guard !closed else { throw ProjectServiceError.serviceClosed }
-            store = candidate
-            snapshot = opened
-            projectRoot = root
-            await bankViews.reset(owner: candidate.publicationOwner)
-        } catch {
-            throw projectFailure(error)
-        }
-    }
-
-    public func songs() async throws -> [SongListing] {
-        let store = try requireStore()
-        do {
-            let values = try await store.songs()
-            let statuses = try await store.registrationStatuses()
-            var result: [SongListing] = []
-            result.reserveCapacity(values.count)
-            for song in values where song.hasMid {
-                let gaps = statuses[song.label]?.missingFiles ?? []
-                result.append(SongListing(id: song.id, label: song.label, constant: song.constant,
-                                          player: song.player, midiPath: song.midPath ?? "",
-                                          trackBudget: snapshot?.trackBudgetFor(song: song) ?? 16,
-                                          hasMid: song.hasMid, hasCfg: song.hasCfg,
-                                          registered: song.registered, registrationGaps: gaps))
-            }
-            return result
-        } catch { throw projectFailure(error) }
-    }
-
-    public func songLabels() async throws -> [String] {
-        try await songs().map(\.label)
-    }
-
-    public func songRegistrationPlan(label: String) async throws -> SongRegistrationPlan {
-        let store = try requireStore()
-        do {
-            let song: ProjectSong
-            do { song = try await store.songMeta(label: label) }
-            catch ProjectStoreReadError.songNotFound {
-                throw ProjectServiceError.operationFailed("No song named \(label) in this project.")
-            }
-            let constant = song.constant.isEmpty ? song.label.uppercased() : song.constant
-            let player = song.player.isEmpty ? "MUSIC_PLAYER_BGM" : song.player
-            let plan = try await store.registrationPlan(label: label, constant: constant,
-                                                        player: player)
-            let status = try await store.registrationStatus(label: label, constant: constant)
-            return SongRegistrationPlan(label: label, constant: constant, player: player,
-                                        songId: plan.songId, missingFiles: status.missingFiles)
-        } catch { throw projectFailure(error) }
-    }
-
-    public func registerSong(_ plan: SongRegistrationPlan) async throws -> Int {
-        let store = try requireStore()
-        do {
-            let id = try await store.registerSong(label: plan.label, constant: plan.constant,
-                                                  player: plan.player)
-            snapshot = try await store.snapshot()
-            return id
-        } catch { throw projectFailure(error) }
-    }
-
-    public func songDeletionPlan(label: String) async throws -> SongDeletionPlan {
-        let store = try requireStore()
-        do {
-            guard !label.isEmpty else {
-                throw ProjectServiceError.operationFailed("Invalid song label.")
-            }
-            let song: ProjectSong
-            do { song = try await store.songMeta(label: label) }
-            catch ProjectStoreReadError.songNotFound {
-                throw ProjectServiceError.operationFailed("No song named \(label) in this project.")
-            }
-            let constant = song.constant.isEmpty ? song.label.uppercased() : song.constant
-            let plan = try await store.removalPlan(label: label, constant: constant)
-            let voicegroup = try await store.deletableVoicegroup(label: label)
-            return SongDeletionPlan(tableIndex: plan.tableIndex, tableCount: plan.tableCount,
-                                    lastEntry: plan.lastEntry, inSongsH: plan.inSongsH,
-                                    inLdScript: plan.inLdScript, inCharmap: plan.inCharmap,
-                                    inDebugMenu: plan.inDebugMenu,
-                                    deletableVoicegroupName: voicegroup,
-                                    deletableVoicegroupDisplay: voicegroup.map {
-                                        $0.hasPrefix("_") ? String($0.dropFirst()) : $0
-                                    })
-        } catch { throw projectFailure(error) }
-    }
-
-    public func deleteSong(label: String, voicegroupName: String? = nil) async throws {
-        let store = try requireStore()
-        do {
-            try await store.deleteSong(label: label, voicegroupName: voicegroupName)
-            snapshot = try await store.snapshot()
-        } catch { throw projectFailure(error) }
-    }
-
-    public func voicegroupArgs() async throws -> [String] {
-        let store = try requireStore()
-        do { return try await store.voicegroupArgs() }
-        catch { throw projectFailure(error) }
-    }
-
-    /// Loads another voicegroup without reopening the song. The returned lease
-    /// owns its bank independently of the currently presented lease.
-    public func loadBank(voicegroupArg: String) async throws -> AppliedBankEdit {
-        let store = try requireStore()
-        do {
-            let bank = try await store.loadBank(voicegroupArg: voicegroupArg)
-            let loaded = appliedBank(bank, token: nil)
-            await publish(loaded, from: store)
-            return loaded
-        } catch {
-            throw projectFailure(error)
-        }
-    }
-
-    /// Reads the editor's symbol catalogs from the root supplying the bank.
-    public func voicegroupCatalog() async throws -> VoicegroupCatalog {
-        let store = try requireStore()
-        let root = projectRoot
-        let catalog = await store.voicegroupCatalog()
-        let groups = catalog.groups
-        let direct = catalog.direct
-        var adsrBySymbol: [String: VoiceListAdsr] = [:]
-        adsrBySymbol.reserveCapacity(groups.typicalAdsr.bySymbol.count)
-        for (symbol, adsr) in groups.typicalAdsr.bySymbol {
-            adsrBySymbol[symbol] = VoiceListAdsr(attack: Int32(adsr.attack),
-                decay: Int32(adsr.decay), sustain: Int32(adsr.sustain),
-                release: Int32(adsr.release))
-        }
-        var adsrByFamily: [Int32: VoiceListAdsr] = [:]
-        adsrByFamily.reserveCapacity(groups.typicalAdsr.byFamily.count)
-        for (key, adsr) in groups.typicalAdsr.byFamily {
-            adsrByFamily[Int32(key)] = VoiceListAdsr(attack: Int32(adsr.attack),
-                decay: Int32(adsr.decay), sustain: Int32(adsr.sustain),
-                release: Int32(adsr.release))
-        }
-        let defaults = VoiceListAdsrDefaults(bySymbol: adsrBySymbol, byFamily: adsrByFamily)
-        var keysplits: [String: String] = [:]
-        keysplits.reserveCapacity(groups.keysplits.count)
-        for split in groups.keysplits { keysplits[split.symbol] = split.table }
-        let synths: [String] = direct.synths.defs.map(\.symbol)
-        var synthDefinitions: [String: VgSynthDesc] = [:]
-        synthDefinitions.reserveCapacity(direct.synths.defs.count)
-        for def in direct.synths.defs { synthDefinitions[def.symbol] = def.descriptor }
-        return VoicegroupCatalog(
-            groupArgs: groups.groupArgs,
-            samples: direct.directSound, waves: VoicegroupSource.progWaveSymbols(root),
-            drumkits: groups.drumkits,
-            keysplits: keysplits,
-            synths: synths,
-            synthDefinitions: synthDefinitions,
-            canMintSynths: direct.synths.creatable(), defaults: defaults)
-    }
-
-    /// Resolves a picker audition through the project's own loader.
-    /// - Parameters:
-    ///   - symbol: The full sample, wave, or keysplit symbol.
-    ///   - kind: The picker row's instrument family.
-    /// - Returns: Detached playable bytes, or nil when the symbol cannot load.
-    public func pickerSound(symbol: String, kind: VoiceListAuditionKind) async -> PickerSound? {
-        guard let store else { return nil }
-        let family: String
-        switch kind {
-        case .sample: family = "sample"
-        case .wave: family = "wave"
-        case .keysplit: family = "keysplit"
-        }
-        return await store.pickerSound(symbol: symbol, kind: family)
-    }
-
-    /// Mints a memory-only synth definition for a pending voicegroup edit.
-    /// - Parameter descriptor: Waveform and pulse parameters to resolve.
-    /// - Returns: An existing or newly reserved assembler symbol.
-    /// - Throws: A project failure if the required macros are unavailable.
-    public func mintSynth(_ descriptor: VgSynthDesc) async throws -> String {
-        let store = try requireStore()
-        do { return try await store.mintSynth(descriptor) }
-        catch { throw projectFailure(error) }
-    }
-
-    /// Opens a playable song: raw MIDI bytes, metadata and the owned bank lease.
-    /// Unknown labels and unreadable stages throw.
-    public func openSong(label: String) async throws -> LoadedSong {
-        let store = try requireStore()
-        do {
-            let song: ProjectSong
-            do {
-                song = try await store.songMeta(label: label)
-            } catch ProjectStoreReadError.songNotFound {
-                throw ProjectServiceError.operationFailed(
-                    label.isEmpty ? "Invalid song label." : "No playable song named \(label).")
-            }
-            guard song.hasMid, let midiPath = song.midPath else {
-                throw ProjectServiceError.operationFailed("No playable song named \(label).")
-            }
-            let bytes = try await store.readFile(midiPath)
-            let bank = try await store.loadBank(voicegroupArg: song.cfg.voicegroupArgument)
-            let published = appliedBank(bank, token: nil)
-            await publish(published, from: store)
-            return LoadedSong(
-                label: song.label, midiPath: midiPath, constant: song.constant,
-                player: song.player, trackBudget: snapshot?.trackBudgetFor(song: song) ?? 16,
-                hasMid: song.hasMid, hasCfg: song.hasCfg, registered: song.registered,
-                config: song.cfg, source: SongSource(label: song.label, midiPath: midiPath,
-                                                    hasConfig: song.hasCfg),
-                midiBytes: Array(bytes), bank: published.lease, bankSlots: published.slots,
-                bankDirty: published.dirty, bankLoadName: published.loadName)
-        } catch {
-            throw projectFailure(error)
-        }
-    }
-
-    /// Ordered save: optional bank stage, then MIDI bytes, then flags. A
-    /// failed stage throws and later stages never run; nothing here marks the
-    /// document clean — the caller confirms via SongDocument.didSave.
-    public func save(_ snapshot: SaveSnapshot, bank: NativeBankLease?) async throws -> SaveReceipt {
-        let store = try requireStore()
-        do {
-            var refreshed: AppliedBankEdit?
-            if let bank {
-                refreshed = try await saveBankStage(bank, in: store)
-            }
-            try await store.writeFile(snapshot.destination.midiPath, data: Data(snapshot.bytes))
-            var flagsWritten = false
-            if snapshot.flagsNeeded {
-                let midiDir = URL(filePath: snapshot.destination.midiPath)
-                    .deletingLastPathComponent()
-                try await store.saveSongFlags(midiDir: midiDir, label: snapshot.destination.label,
-                                              config: snapshot.config)
-                flagsWritten = true
-            }
-            return SaveReceipt(flagsWritten: flagsWritten, bank: refreshed)
-        } catch {
-            throw projectFailure(error)
-        }
-    }
-
-    public func saveBank(lease: NativeBankLease) async throws -> AppliedBankEdit {
-        let store = try requireStore()
-        do {
-            return try await saveBankStage(lease, in: store)
-        } catch {
-            throw projectFailure(error)
-        }
-    }
-
-    private func saveBankStage(_ bank: NativeBankLease,
-                               in store: ProjectStore) async throws -> AppliedBankEdit {
-        guard bank.publicationOwner == store.publicationOwner else {
-            throw ProjectServiceError.serviceClosed
-        }
-        guard let saved = try await store.saveVoicegroup(lease: bank.handle) else {
-            throw ProjectServiceError.operationFailed(
-                "Could not save voicegroup \(bank.sourcePath) [\(bank.sectionLabel)].")
-        }
-        let savedView = appliedBank(saved, token: nil)
-        await publish(savedView, from: store)
-        return savedView
-    }
-
-    /// Applies a set-slot edit against the lease's bank. A nil expected value
-    /// requires the slot to still be blank (materialization); a set expected
-    /// value requires an exact match. Mismatches throw bankConflict.
-    public func bankApply(lease: NativeBankLease, slot: Int,
-                          value: BankVoice, expected: BankVoice?) async throws -> AppliedBankEdit {
-        let store = try requireStore()
-        guard lease.publicationOwner == store.publicationOwner else {
-            throw ProjectServiceError.serviceClosed
-        }
-        do {
-            let converted = try projectVoice(value)
-            let old = try expected.map(projectVoice)
-            let result = try await store.applyVoicegroupEdit(
-                lease: lease.handle,
-                operation: .set(SetVoicegroupSlot(slot: slot, value: converted, expected: old)))
-            let applied = try bankEditResult(result)
-            await publish(applied, from: store)
-            return applied
-        } catch {
-            throw projectFailure(error)
-        }
-    }
-
-    /// Reverts a blank-slot materialization via its single-shot token. Spent
-    /// or unknown tokens throw bankConflict; the source bytes stay untouched.
-    public func bankRevert(lease: NativeBankLease, token: UInt64) async throws -> AppliedBankEdit {
-        let store = try requireStore()
-        guard lease.publicationOwner == store.publicationOwner else {
-            throw ProjectServiceError.serviceClosed
-        }
-        do {
-            let applied = try bankEditResult(
-                await store.revertBlankSlot(lease: lease.handle, materializationToken: token))
-            await publish(applied, from: store)
-            return applied
-        } catch {
-            throw projectFailure(error)
-        }
     }
 
     /// Idempotent. Owned leases outlive the service.
@@ -667,7 +362,7 @@ public actor ProjectService {
 
 // MARK: - Store value conversion
 
-private func projectFailure(_ error: any Error) -> ProjectServiceError {
+internal func projectFailure(_ error: any Error) -> ProjectServiceError {
     if let error = error as? ProjectServiceError { return error }
     if let error = error as? any LocalizedError, let message = error.errorDescription {
         return .operationFailed(message)
@@ -675,7 +370,7 @@ private func projectFailure(_ error: any Error) -> ProjectServiceError {
     return .operationFailed(error.localizedDescription)
 }
 
-private func projectVoice(_ voice: BankVoice) throws -> PorydawProject.VgVoice {
+internal func projectVoice(_ voice: BankVoice) throws -> PorydawProject.VgVoice {
     guard let macro = PorydawProject.VgMacro(rawValue: voice.macro) else {
         throw ProjectServiceError.operationFailed("Voice macro ordinal is out of range.")
     }
@@ -778,13 +473,13 @@ private func copySubvoiceMacros(_ tone: ToneData) -> [Int32]? {
     }
 }
 
-private func appliedBank(_ lease: ProjectBankLease, token: UInt64?) -> AppliedBankEdit {
+internal func appliedBank(_ lease: ProjectBankLease, token: UInt64?) -> AppliedBankEdit {
     AppliedBankEdit(lease: NativeBankLease(handle: lease), slots: copySlots(lease),
                     dirty: lease.dirty, loadName: lease.loadName,
                     materializationToken: token == 0 ? nil : token)
 }
 
-private func bankEditResult(_ result: ProjectBankEditOutcome) throws -> AppliedBankEdit {
+internal func bankEditResult(_ result: ProjectBankEditOutcome) throws -> AppliedBankEdit {
     switch result {
     case let .applied(lease, _, token): appliedBank(lease, token: token)
     case .conflict: throw ProjectServiceError.bankConflict

@@ -46,8 +46,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
     public private(set) var projectRoot = ""
     private var labels: [String] = []
     private var settingsVoicegroups: [String] = []
-    private var catalogService: ProjectService?
-    private var audio: NativeAudio?
+    @QtIgnored
+    var catalogService: ProjectService?
+    @QtIgnored
+    var audio: NativeAudio?
     /// The empty presenter the surface binds while no document is presented.
     /// Drawer chrome belongs to the document, so this one is never attached to:
     /// it is the stable object QML may hold before the first open and after the
@@ -60,36 +62,45 @@ public final class ApplicationSession: QmlInstantiableStatus {
     private let playhead: SharedPlayheadPresenter
     private let playheadGuides: PlayheadGuidesPresenter
     private let eventList: EventListPresenter
-    private let transportBar: TransportBarPresenter
-    private let voiceList = VoiceListController()
-    private let songDock = SongDockController()
+    @QtIgnored
+    let transportBar: TransportBarPresenter
+    @QtIgnored
+    let voiceList = VoiceListController()
+    @QtIgnored
+    let songDock = SongDockController()
     private var pickerAuditionRevision = 0
     private let mouseHints = MouseHints()
     /// The workspaces whose rows have left the strip and whose pages have not
     /// reported their destruction yet. The page holds the C++ proxy for every
     /// presenter it read, so a workspace is retained here until its page is
     /// really gone.
-    private var pendingReleases: [Int: SongTabSession] = [:]
+    @QtIgnored
+    var pendingReleases: [Int: SongTabSession] = [:]
     /// The ordered queue of document closes the retirements started. Every close
     /// lands before the project service it borrows stops.
-    private var retireChain: Task<Void, Never>?
+    @QtIgnored
+    var retireChain: Task<Void, Never>?
     private var isDisposed = false
     private var hasReleased = false
-    private var activeReplacementTask: Task<Void, Never>?
-    private var startupRestoreTask: Task<Void, Never>?
-    private var pendingProjectSwitch: ProjectSwitchCandidate?
+    @QtIgnored
+    var activeReplacementTask: Task<Void, Never>?
+    @QtIgnored
+    var startupRestoreTask: Task<Void, Never>?
+    @QtIgnored
+    var pendingProjectSwitch: ProjectSwitchCandidate?
     private let preferences = PreferencesStore()
     private var persistenceConfigured = false
     private var editorLanes = EditorLaneState()
     public private(set) var editorChrome = EditorDrawerChromeState()
 
     private var isRestoringTabs = false
-    private var isHostCloseWalk = false
+    @QtIgnored
+    var isHostCloseWalk = false
     private var isReplacingProject = false
 
     /// A fully read project waiting to replace the open one: everything that can
     /// fail is read before any live tab is released.
-    private struct ProjectSwitchCandidate {
+    struct ProjectSwitchCandidate {
         let path: String
         let label: String?
         let restore: WorkspaceTabRecipe?
@@ -256,7 +267,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// The selected tab's workspace. Every document-bound accessor reads through
     /// it, so all of them follow the selection, and it is nil exactly while the
     /// strip is empty.
-    private var workspace: DocumentWorkspace? { songTabs.selectedWorkspace }
+    var workspace: DocumentWorkspace? { songTabs.selectedWorkspace }
     private struct PendingTimeSignature {
         let session: DocumentSession
         let tick: Tick
@@ -479,13 +490,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
 
     public func mouseHintsPresenter() -> MouseHints { mouseHints }
 
-    private var commandRouter: EditorCommandRouter? {
-        guard let workspace else { return nil }
-        return EditorCommandRouter(session: workspace.session, grid: workspace.grid,
-                                   automation: workspace.automationPage, drawer: workspace.drawer,
-                                   velocity: workspace.velocityPage)
-    }
-
     public func gridCommandAvailable(command: Int) -> Bool {
         guard let command = EditCommand(rawValue: command) else { return false }
         return commandRouter?.isAvailable(command) ?? false
@@ -622,37 +626,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
         }
     }
 
-    /// Releases every document-bound owner after the host removed the scene.
-    /// Never earlier: the QML surface binds to every tab's grid, pages and
-    /// workspace until the scene is really gone.
-    private func releaseDocumentPresentation() {
-        polyphony.setVisible(showing: false)
-        polyphony.setContext(session: nil)
-        songTabs.releaseAllDetached()
-        audio?.unload()
-        songOpen = false
-        documentDirty = false
-        canUndo = false
-        canRedo = false
-        // Keep the project alive until every released document and any in-flight
-        // open have retired, then stop its worker. The workspaces themselves are
-        // released synchronously above, before any async close.
-        //
-        // Capture the work, never the session: a task that outlives the host
-        // would release this session — and the QObject proxies it owns — after
-        // Qt's own teardown, and that order crashes in the proxy destructor.
-        let service = catalogService
-        songDock.detach()
-        catalogService = nil
-        let replacementTask = activeReplacementTask
-        let closing = retireChain
-        Task {
-            _ = await replacementTask?.value
-            _ = await closing?.value
-            await service?.close()
-        }
-    }
-
     // MARK: - Project and song opens
     public func configurePersistence() {
         persistenceConfigured = true
@@ -727,213 +700,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
         songTabs.startCloseAll()
     }
 
-    // MARK: - Tab lifecycle
-
-    /// The strip changed its model or selection: republish the flags the window
-    /// and the surface read.
-    @QtIgnored
-    func tabsDidChange() {
-        headerVoicePickerOpen = workspace?.headerVoicePicker.pickerOpen ?? false
-        polyphony.setContext(session: workspace?.session)
-        transportBar.refresh()
-        refreshDocumentState()
-        refreshVoicegroupDock()
-        // The selected workspace's grid owns command availability; switching
-        // tabs swaps it, so the window's Edit-menu enabled states must refresh.
-        gridCommandAvailabilityChanged()
-        persistTabRecipe()
-    }
-
-    /// A tab is about to leave the strip. Its workspace is retained here until
-    /// the page that bound it reports its destruction: that page holds a proxy
-    /// for every presenter it read, so releasing the workspace earlier would
-    /// leave those proxies dangling.
-    @QtIgnored
-    func tabWillLeave(_ tab: SongTabSession) {
-        pendingReleases[tab.tabId] = tab
-    }
-
-    /// The page that bound `tabId` is destroyed, so its workspace may be
-    /// retired. A tab that is not awaiting release is still live: a strip
-    /// reorder destroys and rebuilds the pages it moves, and that report
-    /// releases nothing.
-    @QtIgnored
-    func tabPageReleased(tabId: Int) {
-        guard let tab = pendingReleases.removeValue(forKey: tabId) else { return }
-        retire(tab)
-    }
-
-    /// Retires whatever no page reported. The host confirmed the scene is gone,
-    /// so no page can still bind these workspaces.
-    @QtIgnored
-    func drainTabReleases() {
-        guard !pendingReleases.isEmpty else { return }
-        let pending = pendingReleases.values.sorted { $0.tabId < $1.tabId }
-        pendingReleases.removeAll()
-        for tab in pending { retire(tab) }
-    }
-
-    /// The gate's Save answer for one tab, reported back through
-    /// `closeAfterSave(tabId:saved:)`: the strip closes the tab on success and
-    /// leaves the question up on a refusal.
-    @QtIgnored
-    func saveTabBeforeClose(_ tab: SongTabSession) {
-        guard !saveInProgress else {
-            let message = "A save is already in progress."
-            lastSaveError = message
-            operationFailed(message: message)
-            songTabs.closeAfterSave(tabId: tab.tabId, saved: false)
-            return
-        }
-        saveInProgress = true
-        lastSaveError = ""
-        // The document and the tab's identity travel; the strip and the session's
-        // own flags are reached through a weak self, so a save that finishes after
-        // the host is gone releases nothing late.
-        let tabId = tab.tabId
-        let session = tab.workspace.session
-        Task { [weak self] in
-            var saved = true
-            do {
-                try await session.save()
-            } catch {
-                saved = false
-                let message = String(describing: error)
-                self?.lastSaveError = message
-                self?.operationFailed(message: message)
-            }
-            self?.saveInProgress = false
-            self?.songTabs.closeAfterSave(tabId: tabId, saved: saved)
-        }
-    }
-
-    /// The gate's Save answer for one dirty bank, reported back through
-    /// `bankCloseAfterSave(saved:)`: the walk moves on after a successful save
-    /// and leaves the question up on a refusal.
-    @QtIgnored
-    func saveBankBeforeClose(_ target: BankCloseTarget) {
-        guard !saveInProgress else {
-            let message = "A save is already in progress."
-            lastSaveError = message
-            operationFailed(message: message)
-            songTabs.bankCloseAfterSave(saved: false)
-            return
-        }
-        saveInProgress = true
-        lastSaveError = ""
-        let service = catalogService
-        let lease = target.lease
-        Task { [weak self] in
-            var saved = true
-            do {
-                guard let service else { throw ProjectServiceError.serviceClosed }
-                _ = try await service.saveBank(lease: lease)
-            } catch {
-                saved = false
-                let message = String(describing: error)
-                self?.lastSaveError = message
-                self?.operationFailed(message: message)
-            }
-            self?.saveInProgress = false
-            self?.songTabs.bankCloseAfterSave(saved: saved)
-        }
-    }
-
-    @QtIgnored
-    func dirtyBanksForClose() -> [AppliedBankEdit] {
-        catalogService?.bankViews.dirtyBanks() ?? []
-    }
-
-    @QtIgnored
-    func closeAllResolved(closed: Bool) {
-        if let pending = pendingProjectSwitch {
-            pendingProjectSwitch = nil
-            guard closed else {
-                Task { await pending.service.close() }
-                persistTabRecipe()
-                closeCancelled()
-                return
-            }
-            let replacement = Task { [weak self] in
-                guard let self else { return }
-                await self.finishProjectSwitch(pending)
-            }
-            activeReplacementTask = replacement
-            if pending.restore != nil { startupRestoreTask = replacement }
-            return
-        }
-        if !closed {
-            isHostCloseWalk = false
-            persistTabRecipe()
-            closeCancelled()
-        } else {
-            allTabsClosed()
-        }
-    }
-
-    /// Reload keeps presentation and tab identity, not document history.
-    @QtIgnored
-    func reloadApproved(label: String, index: Int, restoring tab: ReloadedTab) {
-        startOpen(label: label, at: index, restoring: tab)
-    }
-
-    /// A document in one tab published a state change: every caption follows its
-    /// own document, and the selected document also feeds the window's flags.
-    /// Hidden tabs publish too, so a background edit still marks its own tab.
-    private func tabStateChanged(for session: DocumentSession) {
-        songTabs.refreshDirty()
-        guard selectedDocument === session else { return }
-        refreshDocumentState()
-        transportBar.refresh()
-        refreshVoicegroupDock()
-    }
-
-    private func refreshVoicegroupDock() {
-        if let session = selectedDocument {
-            voiceList.refresh(from: session)
-        } else {
-            voiceList.bindBank(slots: nil)
-        }
-    }
-
-    /// Retires one tab: releases the workspace's presenters and closes its
-    /// borrowed document. Closing is the application's async boundary, and every
-    /// close lands before the project service it borrows stops.
-    private func retire(_ tab: SongTabSession) {
-        let session = tab.workspace.session
-        tab.workspace.teardown()
-        let prior = retireChain
-        retireChain = Task {
-            _ = await prior?.value
-            _ = await session.close()
-        }
-    }
-
-    /// Waits for the document closes the retirements have already started. A tab
-    /// whose page has not reported yet is not awaited here: the row removal is
-    /// what destroys that page.
-    private func awaitTabCloses() async {
-        // Pages report destruction asynchronously, and a retire is only enqueued
-        // once its page reports — so the chain grows while reports land. Waiting
-        // on the chain as it stands now would return before the late reports'
-        // retires run, letting the outgoing service stop first. Wait until every
-        // released workspace has been retired, then drain the finished chain.
-        while !pendingReleases.isEmpty {
-            await retireChain?.value
-            await Task.yield()
-        }
-        await retireChain?.value
-    }
-
-    /// Tears every tab down for a project switch. The strip is presented, so the
-    /// workspaces are retired as their pages report destruction — nothing is
-    /// released while a page can still bind it — and the closes they started land
-    /// before the outgoing project's service stops.
-    private func releaseTabs() async {
-        songTabs.releaseAll()
-        await awaitTabCloses()
-    }
-
     private func requestProjectSwitch(path: String, label: String?) {
         // A deliberate open wins over a recipe still loading in the background.
         startupRestoreTask?.cancel()
@@ -1004,7 +770,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// in the order they were asked for, and never while the host is closing. The
     /// session is held weakly until the open actually starts, for the same reason
     /// a queued project switch is.
-    private func startOpen(label: String, at index: Int?, restoring tab: ReloadedTab? = nil) {
+    func startOpen(label: String, at index: Int?, restoring tab: ReloadedTab? = nil) {
         let priorTask = activeReplacementTask
         activeReplacementTask = Task { [weak self] in
             _ = await priorTask?.value
@@ -1276,7 +1042,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
         refreshTransportPresentation()
     }
 
-    private func finishProjectSwitch(_ candidate: ProjectSwitchCandidate) async {
+    func finishProjectSwitch(_ candidate: ProjectSwitchCandidate) async {
         isReplacingProject = true
         await releaseTabs()
         await catalogService?.close()
@@ -1323,7 +1089,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
         if candidate.restore == nil { persistTabRecipe() }
     }
 
-    private func persistTabRecipe() {
+    func persistTabRecipe() {
         guard projectOpen, persistenceConfigured,
               !isRestoringTabs, !isHostCloseWalk, !isReplacingProject,
               pendingProjectSwitch == nil else { return }
@@ -1387,7 +1153,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// Republishes the flags the window and the strip read: the song is open
     /// while any tab is, and the document flags follow the selected tab's
     /// workspace.
-    private func refreshDocumentState() {
+    func refreshDocumentState() {
         songOpen = songTabs.tabCount > 0
         songDock.syncSelection()
         guard let session = workspace?.session else {
@@ -1401,80 +1167,4 @@ public final class ApplicationSession: QmlInstantiableStatus {
         canRedo = session.document.history.canRedo
     }
 
-}
-
-/// Resolves canonical editor commands against live document selection. The
-/// window remains the sole key matcher and text/modal input arbiter.
-@MainActor
-public struct EditorCommandRouter {
-    private unowned let session: DocumentSession
-    private unowned let grid: PianoGrid
-    private unowned let automation: AutomationPage
-    private let drawer: EditorDrawerPresenter?
-    private let velocity: VelocityPage?
-
-    public init(session: DocumentSession, grid: PianoGrid, automation: AutomationPage,
-                drawer: EditorDrawerPresenter? = nil, velocity: VelocityPage? = nil) {
-        self.session = session
-        self.grid = grid
-        self.automation = automation
-        self.drawer = drawer
-        self.velocity = velocity
-    }
-
-    private var timeSelectionActive: Bool { session.timeSelection?.isActive == true }
-    private var pointerGestureActive: Bool {
-        grid.interactionActive || grid.scrollbarGrabActive
-            || drawer?.resizeActive == true || automation.pointerGestureActive
-            || velocity?.hasGesture == true
-    }
-    private var modalActive: Bool { automation.menuOpen || automation.promptOpen }
-
-    private func targetsTimeSelection(_ command: EditCommand) -> Bool {
-        timeSelectionActive && editCommandPolicy(command).rangeOperation != .none
-    }
-
-    public func isAvailable(_ command: EditCommand) -> Bool {
-        guard !modalActive,
-              !pointerGestureActive || editCommandPolicy(command).survivesPointerGesture
-        else { return false }
-        if command == .paste || targetsTimeSelection(command) {
-            return automation.selectionCommandAvailable(command: command)
-        }
-        // A time range owns the timeline even for these notes-only rows.
-        if timeSelectionActive && (command == .lengthenNote || command == .shortenNote) {
-            return false
-        }
-        if command == .delete && automation.hoverDeleteAvailable() { return true }
-        return grid.commandAvailable(command: command.rawValue)
-    }
-
-    public func route(_ command: EditCommand, autoRepeat: Bool) -> EditKeyDecision {
-        guard !modalActive else { return .decline }
-        return EditKeyArbiter.decide(command: command, surface: EditSurfaceState(
-            pointerGestureActive: pointerGestureActive,
-            timeSelectionActive: timeSelectionActive,
-            noteSelectionEmpty: session.selectedNotes.isEmpty,
-            origin: .timeline, autoRepeat: autoRepeat,
-            commandAvailable: isAvailable(command)))
-    }
-
-    public func perform(_ command: EditCommand) {
-        guard isAvailable(command) else { return }
-        if command == .paste || targetsTimeSelection(command) {
-            // Ownership, not mutation success, decides whether notes may run.
-            // An empty or unchanged range never falls through to selected notes.
-            _ = automation.consumeSelectionCommand(command: command)
-            return
-        }
-        if command == .delete && automation.consumeHoverDelete() { return }
-        if command == .pencilMode {
-            grid.performCommand(command: command.rawValue)
-            automation.isPencilMode = grid.pencilMode
-            return
-        }
-        // Note and standalone commands keep their existing grid executor.
-        // Clipboard paste above is document-wide, never selected by focus.
-        grid.performCommand(command: command.rawValue)
-    }
 }

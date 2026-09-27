@@ -55,7 +55,9 @@ if(APPLE)
     add_library(swift_core_check STATIC
         support/corecheck/CoreCheckSupport.swift
         midi/MidiSmfCodecChecks.swift
+        midi/MidiSmfCodecCompare.swift
         midi/MidiSemanticsChecks.swift
+        midi/MidiSemanticsExpected.swift
         midi/MidiEngineBoundsChecks.swift
         playback/PlaybackChecks.swift
         audio/controllerfixture.swift
@@ -75,6 +77,7 @@ if(APPLE)
         keyboard/KeybindingRegistryChecks.swift
         keyboard/EngineSettingsChecks.swift
         themecolor/ThemeColorChecks.swift
+        themecolor/ThemeColorPresets.swift
         editcheck/tst_songdocument_songraw.swift
         editcheck/tst_songdocument_runner.swift
         editcheck/tst_songdocument_songranges.swift
@@ -97,6 +100,7 @@ if(APPLE)
         audio/AudioAuditionChecks.swift
         playback/ResonanceSuppressionChecks.swift
         editcheck/NoteChecks.swift
+        editcheck/NoteHistoryChecks.swift
         editcheck/NoteIdentityChecks.swift
         editcheck/DocumentHistoryChecks.swift
         editcheck/DocumentEditChecks.swift
@@ -107,12 +111,19 @@ if(APPLE)
         editcheck/EventViewsRemapBucketsParity.swift
         editcheck/TrackCorpusChecks.swift
         editcheck/TimeRangeChecks.swift
+        editcheck/TimeRangeSupport.swift
+        editcheck/TimeRangeRangeEditingChecks.swift
+        editcheck/TimeRangeRangeMovementChecks.swift
+        editcheck/TimeRangeRemovalAndSeamsChecks.swift
+        editcheck/TimeRangeInsertionAndBoundariesChecks.swift
+        editcheck/TimeRangeDuplicationAndGlobalsChecks.swift
         editcheck/TimeCorpusChecks.swift
         editcheck/SelectionChecks.swift
         editcheck/TickBoundsChecks.swift
         editcheck/ClipboardCodecChecks.swift
         editcheck/ClipboardEditingChecks.swift
         editcheck/TrackLifecycleChecks.swift
+        editcheck/TrackContractsChecks.swift
         editcheck/MidiImportChecks.swift
         editcheck/XcmdPlaybackChecks.swift
         editcheck/FormatZeroChecks.swift
@@ -126,22 +137,45 @@ if(APPLE)
         rollcheck/resize.swift
         rollcheck/scale_editing.swift
         rollcheck/note_rendering.swift
+        rollcheck/note_rendering_support.swift
+        rollcheck/note_rendering_borders.swift
+        rollcheck/note_rendering_velocity.swift
+        rollcheck/note_rendering_names.swift
+        rollcheck/note_rendering_ghosts.swift
+        rollcheck/note_rendering_economy.swift
         rollcheck/keyboard.swift
+        rollcheck/keyboard_time_selection.swift
         rollcheck/keyboard_parity.swift
         rollcheck/selection.swift
+        rollcheck/selection_band.swift
+        rollcheck/selection_audition.swift
+        rollcheck/selection_editing.swift
         rollcheck/identity.swift
         rollcheck/interlock.swift
         rollcheck/note_commands.swift
+        rollcheck/note_commands_routing.swift
         rollcheck/remap.swift
         rollcheck/presentation.swift
         rollcheck/time_signature_prompt.swift
         rollcheck/pitch_bend.swift
+        rollcheck/pitch_bend_support.swift
+        rollcheck/pitch_bend_document.swift
+        rollcheck/pitch_bend_lifecycle.swift
+        rollcheck/pitch_bend_editing.swift
         rollcheck/timemenu.swift
         rollcheck/ruler_loop_menu.swift
+        rollcheck/ruler_loop_menu_retirement.swift
+        rollcheck/ruler_loop_menu_loop.swift
+        rollcheck/ruler_loop_menu_sweep.swift
+        rollcheck/ruler_loop_menu_seek.swift
         nativegraphics/tst_playhead_quick.swift
         nativegraphics/PlayheadFeatureChecks.swift
         eventviews/EventListPlayheadChecks.swift
+        eventviews/EventListPlayheadFocusChecks.swift
+        eventviews/EventListPlayheadContractChecks.swift
         eventviews/EventListPageChecks.swift
+        eventviews/EventListPageAppearanceChecks.swift
+        eventviews/EventListPageCellCommitChecks.swift
         songlist/songlist_checks.swift
         songlist/songlist_service.swift
         voicelist/VoiceListChecks.swift
@@ -156,8 +190,10 @@ if(APPLE)
         trackheaders/trackheaderraster.swift
         trackheaders/tst_trackactivitymeter.swift
         automation/domain/tst_automationdomain.swift
+        automation/domain/tst_automationdomainLegacy.swift
         automation/domain/gestureSweep.swift
         automation/domain/gestureNodeDrag.swift
+        automation/domain/gestureNodeDragPhantom.swift
         automation/domain/gesturePointRange.swift
         automation/domain/gesturePencil.swift
         automation/domain/xcmd.swift
@@ -168,6 +204,7 @@ if(APPLE)
         automation/automationpointmenus.swift
         automation/automationclipboard.swift
         automation/automationcanvasediting.swift
+        automation/automationcanvashover.swift
         automation/tst_automationediting.swift
         automation/automationtaptempo.swift
         automation/automationactions.swift
@@ -186,14 +223,18 @@ if(APPLE)
         velocity/velocitydetentdragging.swift
         velocity/tst_velocityediting.swift
         velocity/VelocityClickSelectionChecks.swift
+        velocity/VelocityClickCancellationChecks.swift
         velocity/VelocityPaintDetentChecks.swift
+        velocity/VelocityPaintDetentUnlockedChecks.swift
         velocity/VelocityRollCoreChecks.swift
         rollcheck/velocity_prompt.swift
         rollcheck/EditorGridCameraChecks.swift
+        rollcheck/EditorGridCameraIsolation.swift
         drawerpresentation/EditorDrawerChecks.swift
         drawerpresentation/other_events_band.swift
         themelayout/TypographyLayoutChecks.swift
         nativegraphics/SharedPlayheadChecks.swift
+        nativegraphics/SharedPlayheadPureChecks.swift
         velocity/VelocityPageChecks.swift
         drawerpresentation/VoiceChangesPageChecks.swift
         automation/AutomationPageChecks.swift
@@ -237,6 +278,7 @@ if(APPLE)
         workspace/bank_edits.swift
         workspace/bank_saves.swift
         workspace/bank_sharing.swift
+        workspace/bank_sharing_history.swift
         workspace/bank_switching.swift
     )
     set_target_properties(swift_core_check PROPERTIES
@@ -391,6 +433,7 @@ if(APPLE)
     )
     add_library(roll_qml_lane STATIC
         rollqml/RollQmlTests.swift
+        rollqml/RollQmlStaging.swift
         swiftqtml/BridgeProbeCheck.swift
         "${CMAKE_CURRENT_BINARY_DIR}/rollqml/RollQmlPaths.swift"
         "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"
