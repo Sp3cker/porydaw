@@ -20,6 +20,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         Action("file.new_song"),
         Action("songs.find"),
         Action("file.save_song"),
+        Action("file.register_song"),
         Action("file.close_tab"),
         Action("file.quit"),
         Action("edit.undo"),
@@ -251,6 +252,8 @@ public final class ShellPresenter: QmlInstantiableStatus {
         case "songs.find": return session.projectOpen
         case "file.new_song": return session.projectOpen && session.songOpen
         case "file.save_song": return session.songOpen && !session.saveInProgress
+        case "file.register_song": return session.songOpen
+            && session.songDockController().selectedTabRegistrationPending()
         case "file.close_tab": return session.songTabs.selectedPage != nil
         case "edit.undo": return session.songOpen && session.canUndo
         case "edit.redo": return session.songOpen && session.canRedo
@@ -322,6 +325,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         case "songs.find": session.songDockController().presenter.focusSearch()
         case "file.new_song": session.songDockController().requestNewSong()
         case "file.save_song": session.requestSave()
+        case "file.register_song": session.songDockController().requestRegisterSelectedTab()
         case "file.close_tab":
             session.songTabs.requestClose(tabId: session.songTabs.selectedId)
         case "file.quit": quitRequested()

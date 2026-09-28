@@ -1,10 +1,26 @@
 import QtQuick
+import QtQuick.Controls
 import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
 
 ShellMenusSupport {
+    ShellQmlBootstrap { id: songBootstrap }
+
+    function dockPresenter() { return shell.shellPresenter.session.songDockController().songListPresenter() }
+    function dockController() { return shell.shellPresenter.session.songDockController() }
+    function dockRow(id) {
+        var view = findChild(shell, "songList")
+        for (var index = 0; index < view.count; ++index) {
+            if (dockPresenter().songId(index) !== id)
+                continue
+            view.positionViewAtIndex(index, ListView.Contain)
+            return view.itemAtIndex(index)
+        }
+        return null
+    }
+
 
     function test_menuItemsExistWithLabelsAndNoSongGates() {
         openShell()
@@ -71,8 +87,8 @@ ShellMenusSupport {
         var file = findChild(shell, "shellFileMenu")
         var edit = findChild(shell, "shellEditMenu")
         var view = findChild(shell, "shellViewMenu")
-        menuOrder(file, ["file.open_project", "file.new_song", "file.save_song", "file.close_tab", "file.quit"])
-        compare(file.count, 5, "the File menu keeps only the mounted file rows")
+        menuOrder(file, ["file.open_project", "file.new_song", "file.save_song", "file.register_song", "file.close_tab", "file.quit"])
+        compare(file.count, 6, "the File menu keeps only the mounted file rows")
         verify(findChild(file, "shellAction_songs.find") === null,
                "Find Song moves from File to the Edit clipboard group")
         var clipboard = ["roll.copy", "roll.cut", "roll.paste", "roll.delete",
@@ -205,5 +221,76 @@ ShellMenusSupport {
         tryVerify(function() {
             return !settings.bool("velocityNoteColors", true)
         }, 3000, "toggling back clears the stored colours")
+    }
+
+    function test_fileRegisterSongActsOnSelectedTab() {
+        verify(songBootstrap.resetPreferences(), "the register journey starts with fresh window and filter state")
+        var originalRoot = songBootstrap.projectRoot
+        verify(songBootstrap.prepareSongActionFixture("charmap"),
+               "the register journey stages its isolated charmap-only project")
+        var root = songBootstrap.projectRoot
+        openShell()
+        verify(shell !== null, "the File-menu fixture opens a production shell")
+        var session = shell.shellPresenter.session
+        var presenter = shell.shellPresenter
+        var dock = session.songDockController()
+        var songs = dock.songListPresenter()
+        var songList = findChild(shell, "songList")
+        verify(songList !== null, "the production Songs list is mounted for the File-menu journey")
+        session.openProject(root)
+        verify(waitForNative(function() { return session.projectOpen && songs.rowCount > 0 }, 30000),
+               "the File-menu project loads the staged charmap project with its listed route song")
+        var routeId = -1
+        for (var index = 0; index < songs.rowCount; ++index) {
+            songList.positionViewAtIndex(index, ListView.Contain)
+            var candidate = songList.itemAtIndex(index)
+            if (candidate !== null && candidate.song.label === "mus_route101")
+                routeId = songs.songId(index)
+        }
+        verify(routeId >= 0, "the charmap-gapped route song is listed for the File-menu journey")
+        var fileMenu = findChild(shell, "shellFileMenu")
+        var registerRow = checkMenuItem(fileMenu, "file.register_song", "Register Song")
+        compare(presenter.actionEnabled("file.register_song"), false,
+                "no selected tab disables File Register Song")
+        compare(registerRow.enabled, false, "the File menu shows Register Song disabled with no tab")
+        var target = dockRow(routeId)
+        verify(target !== null, "the gapped route row is mounted for the File-menu journey")
+        compare(target.song.registrationGapText, "charmap.txt",
+                "the File-menu song is missing only charmap.txt")
+        mouseDoubleClickSequence(target, target.width / 2, target.height / 2, Qt.LeftButton)
+        verify(waitForNative(function() {
+            return session.songTabs.tabCount === 1
+                && session.songTabs.selectedPage.title === "mus_route101"
+        }, 30000), "the gapped song opens in an editor tab for its File-menu repair")
+        compare(presenter.actionEnabled("file.register_song"), true,
+                "the selected gapped tab enables File Register Song")
+        fileMenu.open()
+        tryVerify(function() { return registerRow.enabled }, 3000,
+                  "the opened File menu enables Register Song on the gapped tab")
+        fileMenu.close()
+        presenter.activate("file.register_song")
+        verify(waitForNative(function() {
+            var dialog = findChild(shell, "songConfirmationDialog")
+            return dock.confirmation === "register" && dialog !== null && dialog.visible
+        }, 5000), "activating File Register Song mounts the register confirmation for the selected tab")
+        var confirmation = findChild(shell, "songConfirmationDialog")
+        compare(dock.confirmationDetail,
+                "The following registration files need updates:\n  - charmap.txt",
+                "the File-menu ingress carries the charmap-only plan detail")
+        verify(confirmation.standardButton(Dialog.Ok) !== null,
+               "the File-menu confirmation has an activatable accepting button")
+        mouseClick(confirmation.standardButton(Dialog.Ok))
+        verify(waitForNative(function() {
+            return !dock.busy && dockRow(routeId) !== null
+                && dockRow(routeId).song.registrationGapText === ""
+                && !songs.canRegister(routeId)
+        }, 30000), "accepting the File-menu registration repairs the selected song")
+        compare(presenter.actionEnabled("file.register_song"), false,
+                "the repaired clean tab disables File Register Song")
+        fileMenu.open()
+        tryVerify(function() { return !registerRow.enabled }, 3000,
+                  "the opened File menu disables Register Song on the clean tab")
+        fileMenu.close()
+        songBootstrap.projectRoot = originalRoot
     }
 }

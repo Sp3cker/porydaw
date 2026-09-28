@@ -60,6 +60,20 @@ public final class SongDockController {
         let label = session?.songTabs.selectedPage?.title
         presenter.setCurrentSong(songId: presenter.songListings.first { $0.label == label }?.id ?? -1)
     }
+    // File-menu ingress: the fork acts on the selected tab regardless of
+    // dock filter state, so this resolves through the full snapshot listing.
+    public func selectedTabRegistrationPending() -> Bool {
+        guard let page = session?.songTabs.selectedPage, page.isReady else { return false }
+        return presenter.songListings.first { $0.label == page.title }?.registrationIncomplete ?? false
+    }
+
+    public func requestRegisterSelectedTab() {
+        guard !busy, confirmation.isEmpty, service != nil,
+              let page = session?.songTabs.selectedPage, page.isReady,
+              let song = presenter.songListings.first(where: { $0.label == page.title }),
+              song.registrationIncomplete else { return }
+        prepare(song.id, deleting: false)
+    }
 
     private func open(_ songId: Int, newTab: Bool) {
         guard let song = presenter.listing(songId: songId) else { return }

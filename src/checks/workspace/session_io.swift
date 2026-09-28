@@ -448,6 +448,7 @@ internal func sessionOpenAndRecovery(report: CheckReport, projectDir: String) ->
                       cppID: "mainwindow-routing-native/MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab",
                       message: "failed replacement keeps the open document session and its label")
     }
+    sessionRegisterSelectedTab(report: report, projectDir: projectDir)
     return (service, session)
 }
 
@@ -740,4 +741,96 @@ internal func sessionLifetime(report: CheckReport, session: DocumentSession, ser
         report.fail(lifetimeID,
                     "closed project service returned unexpected error: \(error)")
     }
+}
+
+// MARK: - File-menu Register Song on the selected tab
+
+@MainActor
+internal func sessionRegisterSelectedTab(report: CheckReport, projectDir: String) {
+    let id = "shellmenu/ShellMenuRegisterTest::selectedTabResolve"
+    let fixtureParent = URL(fileURLWithPath: projectDir).deletingLastPathComponent().path
+    let root = stageTestProject(in: fixtureParent, projectName: "swiftcore-register-selected-tab")
+    // Align songs.h constants with table indices so both session songs are
+    // complete; the appended partial row keeps its songs.h gap.
+    do {
+        let names = ["mus_session_test", "mus_session_test2"] + rejectedVoicegroupCases.map(\.label)
+        let defines = names.enumerated().map { "#define \($0.element.uppercased()) \($0.offset)" }
+            .joined(separator: "\n")
+        try (defines + "\n").write(toFile: root + "/include/constants/songs.h",
+                                   atomically: true, encoding: .utf8)
+        guard let midiBytes = try? makeMidiFixture().encoded() else {
+            report.fail(id, "fixture MIDI failed to encode for the partial selected-tab song")
+            return
+        }
+        try Data(midiBytes).write(to: URL(fileURLWithPath: root + "/sound/songs/midi/mus_partial_test.mid"))
+        let tablePath = root + "/sound/song_table.inc"
+        let table = try String(contentsOfFile: tablePath, encoding: .utf8)
+        try (table + "\n    song mus_partial_test, MUSIC_PLAYER_BGM, 0\n")
+            .write(toFile: tablePath, atomically: true, encoding: .utf8)
+        let cfgPath = root + "/sound/songs/midi/midi.cfg"
+        let cfg = try String(contentsOfFile: cfgPath, encoding: .utf8)
+        try (cfg + "\nmus_partial_test.mid: -R50 -G_test_vg -V100\n")
+            .write(toFile: cfgPath, atomically: true, encoding: .utf8)
+    } catch {
+        report.fail(id, "failed to stage complete and partial songs: \(error)")
+        return
+    }
+    let store = PreferencesStore()
+    guard store.resetPreferences() else {
+        report.fail(id, "could not clear isolated preferences before the selected-tab register journey")
+        return
+    }
+    let app = ApplicationSession()
+    app.configurePersistence()
+    defer {
+        app.hostClosing()
+        app.acknowledgeGridDetached()
+        if !store.resetPreferences() {
+            report.fail(id, "could not clear isolated preferences after the selected-tab register journey")
+        }
+    }
+    func until(_ predicate: () -> Bool) -> Bool {
+        let deadline = Date().addingTimeInterval(25)
+        while !predicate() && Date() < deadline {
+            _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+        }
+        return predicate()
+    }
+    let dock = app.songDockController()
+    app.openProject(path: root)
+    guard until({ app.projectOpen && !dock.songListPresenter().songListings.isEmpty }) else {
+        report.fail(id, "staged register project did not publish its song listing")
+        return
+    }
+    report.expect(!dock.selectedTabRegistrationPending(), cppID: id,
+                  message: "registerSelectedTab with no open tab reports no pending registration")
+    app.openProjectAndSong(path: root, label: "mus_session_test")
+    guard until({ app.songOpen && app.songTabs.selectedPage?.title == "mus_session_test"
+        && app.songTabs.selectedPage?.isReady == true }) else {
+        report.fail(id, "complete staged song did not open as the ready selected tab")
+        return
+    }
+    report.expect(!dock.selectedTabRegistrationPending(), cppID: id,
+                  message: "registerSelectedTab on the fully registered selected song reports no pending registration")
+    dock.requestRegisterSelectedTab()
+    RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.5))
+    report.expect(dock.confirmation.isEmpty && app.lastSaveError.isEmpty, cppID: id,
+                  message: "registerSelectedTab on the complete song refuses silently without staging a confirmation or failure")
+    app.openSong(label: "mus_partial_test")
+    guard until({ app.songTabs.tabCount == 2
+        && app.songTabs.selectedPage?.title == "mus_partial_test"
+        && app.songTabs.selectedPage?.isReady == true }) else {
+        report.fail(id, "partial staged song did not open as the ready selected tab: \(app.lastSaveError)")
+        return
+    }
+    report.expect(dock.selectedTabRegistrationPending(), cppID: id,
+                  message: "registerSelectedTab on the partial selected song reports a pending registration")
+    dock.requestRegisterSelectedTab()
+    guard until({ dock.confirmation == "register" }) else {
+        report.fail(id, "pending selected-tab song did not stage its register confirmation")
+        return
+    }
+    report.expect(dock.confirmationDetail
+        == "The following registration files need updates:\n  - songs.h", cppID: id,
+        message: "registerSelectedTab on the pending song stages the fork register confirmation with its missing-file detail")
 }
