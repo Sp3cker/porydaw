@@ -54,7 +54,9 @@ Wave 206–209 landed: 206 (fcecb8d4), 207 (77d8b50e), 209 New Voicegroup creati
 closes the sourceediting and save-presentation ledgers); 208 skipped (ledger-only mapping).
 Gate on b986ba08: verify 37/37, verify:shell 76/76, verify:qml 1/1, verify:qml-roll 1/1,
 bridge 0, `proof check --executed` 0 not executed. Census: 39 ledgers; open rows 871 (749 GAP
-+ 122 PARTIAL); strict debt 215.
++ 122 PARTIAL); strict debt 215. Wave 210–212 (§28) feature ports landed: 210 New Song
+label fold/filter + taken-name gate (41a7ebc4), 211 File → Register Song (8d338281), 212
+rename returns roll focus (ae48c95d). Gate on 41a7ebc4: all lanes green, 0 not executed.
 Known residues: QtBridge queues property notifications, so same-GUI-pass geometry clauses
 (host A095) stay PARTIAL; lanes use the null audio backend, so physical-output conjuncts
 stay PARTIAL.
