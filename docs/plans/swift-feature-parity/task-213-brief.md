@@ -1,5 +1,8 @@
 # Task 213 brief — the view-state round trip closes on its already-executing joint predicate (re-dispatch of 208)
 
+**HELD — do not dispatch.** Ledger-only closure; needs the user's exception to
+proof-ledger-workflow (see sprint-3.md status header).
+
 # Context
 
 Task 208 was briefed in §26 but never dispatched — no commit landed and
