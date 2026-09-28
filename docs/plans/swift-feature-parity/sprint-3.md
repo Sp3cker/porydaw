@@ -50,9 +50,11 @@ Gate on 82ebde21: verify 37/37, verify:shell 76/76, verify:qml 1/1, verify:qml-r
 bridge 0, `proof check --executed` 0 not executed. Census: 42 ledgers; open rows 887 (762 GAP
 + 125 PARTIAL); strict debt 233. UX deviation awaiting the user: directional left/right resize
 cursor art (rollcheck resize A002–A004/A027/A028; Swift shows one SizeHorCursor).
-Next: wave 206–208 (§26) plus task 209 (§27), the wired VG03 New
-Voicegroup creation flow (user-dispatched; write set disjoint from the
-wave).
+Wave 206–209 landed: 206 (fcecb8d4), 207 (77d8b50e), 209 New Voicegroup creation (b986ba08,
+closes the sourceediting and save-presentation ledgers); 208 skipped (ledger-only mapping).
+Gate on b986ba08: verify 37/37, verify:shell 76/76, verify:qml 1/1, verify:qml-roll 1/1,
+bridge 0, `proof check --executed` 0 not executed. Census: 39 ledgers; open rows 871 (749 GAP
++ 122 PARTIAL); strict debt 215.
 Known residues: QtBridge queues property notifications, so same-GUI-pass geometry clauses
 (host A095) stay PARTIAL; lanes use the null audio backend, so physical-output conjuncts
 stay PARTIAL.
