@@ -17,6 +17,9 @@ Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
 Additional Swift counterpart: src/checks/workspace/session_time_routing.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellTransport.qml
 Additional Swift counterpart: src/checks/editorqml/tst_ShellGridMenuRulerLifecycle.qml
+Additional Swift counterpart: src/checks/editorqml/tst_ShellWindowPrompts.qml
+Additional Swift counterpart: src/checks/editorqml/tst_ShellTabs.qml
+Additional Swift counterpart: src/checks/workspace/session_edit_routing.swift
 Task 168 final source SHA-256: src/checks/workspace/session_time_routing.swift f8a49e946df5d1942efcfc68732c7e12db12dc063672d3ac1bd51a92c46ba610
 Task 168 final source SHA-256: src/checks/editorqml/tst_ShellGridMenuRulerLifecycle.qml ab80e6877cfba3c138acd2a3987fa7b7448ef367b03900e3a7928bffb376d3e2
 Task 168 verification: swiftcore-projectsession PASS; shell-grid-menu-ruler-lifecycle PASS (provided by Task 168 implementer; ledger writer did not rerun either lane).
@@ -75,6 +78,11 @@ Task 197 final source SHA-256: src/checks/editorqml/tst_ShellWindowFocus.qml 230
 Task 197 final source SHA-256: src/checks/editorqml/tst_ShellWindowPrompts.qml 5080753d9d5849dd3947a46e15a83cbb7068edfbd2208bba72fb01a7d94f8600
 Task 197 verification: PASS swiftcore (12/37 ok, 25 skipped), shellwindow-focus (1/76 ok), and shellwindow-prompts (1/76 ok; 23 assertions), reported by the implementer in agent://Task197; ledger writer did not rerun the lanes.
 Task 197 execution evidence: predicates S425-S438 were reported executed in the corresponding lanes; proof:check --executed previously reported only stale S232/S233 anchors (Task 197 implementer handoff).
+Task 204 final source SHA-256: src/checks/editorqml/tst_ShellWindowPrompts.qml 661bf96dda1fe233217ba9ac8cdf6a8a36e555bd98155d5cf36f25d32477ffd5
+Task 204 final source SHA-256: src/checks/workspace/session_edit_routing.swift 24513f9c21c5bfc4c6523ce408c9a3517fd6f5554f44a704049b117e8ae7ee10
+Task 204 final source SHA-256: src/checks/editorqml/tst_ShellTabs.qml 4638c8b52634f25ccd89482bb323c47284d9db5032d2df2a39761d05bed795de
+Task 204 verification supplied by controller: swiftcore PASS (12/37), shellwindow-prompts PASS, shell-tabs PASS (7/7); ledger writer did not rerun lanes.
+
 
 A001 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:101
 Disposition: RETIRED-REPRESENTATION
@@ -473,13 +481,8 @@ Original expression:
         QVERIFY(wholeSongNote.has_value())
 
 A091 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:338
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp) no longer builds or runs. Previous native note: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        window.m_workspace->selectSongTab(&tab);
-        QAction *action = window.m_insertTimeAction;
-Original expression:
-        QVERIFY(action)
+Disposition: MATCHED
+Mapping: S439
 
 A092 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:349
 Disposition: MATCHED
@@ -779,32 +782,16 @@ A149 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/ch
 Disposition: RETIRED-REPRESENTATION
 
 A150 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:684
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp) no longer builds or runs. Previous native note: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-
-        // The outside-selection ruler path commits the clicked tick as the
-        // edit cursor before its menu opens; Insert Time then prompts at
-        // that cursor rather than the playhead.
-        const uint64_t rawTick = source->tick;
-        const QPointF local(
-            view.camera().displayX(double(rawTick), 0.0, rulerInput->devicePixelRatio()),
-            (std::max)(1.0, rulerInput->height() * 0.75));
-Original expression:
-        QVERIFY2(rulerInput->bounds().contains(local),
-                 "the ruler menu point is outside the live ruler input")
+Disposition: MATCHED
+Mapping: S440
 
 A151 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:691
 Disposition: MATCHED
 Mapping: S244
 
 A152 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:697
-Disposition: GAP
-Mapping/reason: Grid/time-signature/camera observation with no corresponding SessionChecks predicate; GAP.
-Source context since previous assertion:
-        const uint64_t target = view.editCursorTick();
-Original expression:
-        QCOMPARE(target, view.grid().snapTick(double(rawTick)))
+Disposition: MATCHED
+Mapping: S441
 
 A153 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:701
 Disposition: MATCHED
@@ -2397,3 +2384,19 @@ Anchor: message "the velocity toggle holds focus while the mounted A shortcut is
 
 S438 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "the window focus chain reaches the mounted editor surface"
+
+S439 | test_eRulerMenuActionIdentityAndBoundsTails | src/checks/editorqml/tst_ShellWindowPrompts.qml
+Anchor: message "the mounted ruler menu publishes the enabled Insert Time command"
+Line: 354
+Predicate: verify(panel.rowItem(0).itemData.actionId === 1 && panel.rowItem(0).itemData.enabled === true, "the mounted ruler menu publishes the enabled Insert Time command")
+
+S440 | test_eRulerMenuActionIdentityAndBoundsTails | src/checks/editorqml/tst_ShellWindowPrompts.qml
+Anchor: message "a real in-bounds ruler press opens the mounted ruler menu"
+Line: 348
+Predicate: verify(menu.isOpen, "a real in-bounds ruler press opens the mounted ruler menu")
+
+S441 | runEditRoutingChecks | src/checks/workspace/session_edit_routing.swift
+Anchor: message "the ruler press commits the snapped production cursor"
+Line: 252
+Predicate: report.expect(ruler.isOpen && session.editCursor == session.grid.snapTick(snapRaw, camera: session.camera), cppID: rulerID, message: "the ruler press commits the snapped production cursor")
+

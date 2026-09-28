@@ -332,6 +332,31 @@ ShellWindowSupport {
         compare(selectedSurface().gridModel.fetchNoteSummary(), siblingNotes,
                 "the ruler insertion leaves the inactive tab unchanged")
     }
+    // Fork action-identity and bounds tails: a real in-bounds press opens the
+    // menu and the menu publishes Insert Time (snap equality lives in Swift).
+    function test_eRulerMenuActionIdentityAndBoundsTails() {
+        openTwoSongShell()
+        var activeId = shell.shellPresenter.session.songTabs.selectedId
+        var surface = selectedSurface()
+        var menu = surface.rulerMenu
+        var page = findChild(shell.sceneLoader.item, "songTab_" + activeId)
+        var ruler = findChild(page, "timelineRulerInput")
+        verify(ruler && ruler.width > 0 && ruler.height > 0,
+               "the selected tab mounts its time ruler before the action tail")
+        mouseClick(ruler, ruler.width * 0.08, ruler.height * 0.75, Qt.RightButton)
+        tryVerify(function() { return menu.isOpen }, 3000)
+        verify(menu.isOpen, "a real in-bounds ruler press opens the mounted ruler menu")
+        var panel = null
+        tryVerify(function() {
+            panel = findChild(surface, "quickMenuPanelRoot")
+            return panel !== null && panel.visible && panel.rowItem(0) !== null
+        }, 5000)
+        verify(panel.rowItem(0).itemData.actionId === 1
+               && panel.rowItem(0).itemData.enabled === true,
+               "the mounted ruler menu publishes the enabled Insert Time command")
+        keyClick(Qt.Key_Escape)
+        tryCompare(menu, "isOpen", false, 3000)
+    }
 
     function test_eStandaloneInsertTimeZeroClickClosesWithoutEdit() {
         openTwoSongShell()

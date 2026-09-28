@@ -334,6 +334,8 @@ ShellTabsSupport {
                 "closing one song keeps the sibling's named content")
         verify(!tabOrderIds().includes(ids[1]) && tabs().selectedPage.title !== "mus_route102",
                "the closed song no longer resolves in the named tab strip")
+        var closedNameAbsent = !tabOrderIds().includes(ids[1])
+            && tabs().selectedPage.title !== "mus_route102"
         verify(gridOf(ids[0]).renderedNoteCount > 0,
                "the surviving sibling retains its rendered document")
 
@@ -350,6 +352,10 @@ ShellTabsSupport {
                 "the reopened song appends after the surviving sibling")
         compare(tabs().selectedPage.title, "mus_route102",
                 "the reopened song publishes its named loaded content")
+        verify(closedNameAbsent && tabOrderIds().filter(function(stripId) {
+            return pageOf(stripId).session.title === "mus_route102"
+        }).length === 1,
+        "the closed song leaves the named strip and reopens as exactly one row")
         verify(gridOf(reopenedId).renderedNoteCount > 0,
                "the reopened song has a ready rendered grid")
         var restoredDrawer = surfaceOf(reopenedId).drawerPresenter

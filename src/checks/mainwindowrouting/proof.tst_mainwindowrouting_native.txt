@@ -21,6 +21,10 @@ Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted n
 
 Command: deno task verify --filter swiftcore --verbose; deno task verify:shell --filter shellwindow --filter shell-tabs --filter shell-open-failure --verbose
 Result: PASS on both runs cited here: the swiftcore lane PASS per the frozen-check run, and the shellwindow + shell-tabs + shell-open-failure lanes PASS per the controller integrated run.
+Task 204 final source SHA-256: src/checks/editorqml/tst_ShellTabs.qml 4638c8b52634f25ccd89482bb323c47284d9db5032d2df2a39761d05bed795de
+Task 204 verification supplied by controller: shell-tabs PASS (7/7); ledger writer did not rerun the lane.
+
+
 
 A001 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:29
 Disposition: GAP
@@ -514,8 +518,8 @@ Original expression:
         QCOMPARE(soloTriggered.count(), 0)
 
 A069 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:285
-Disposition: PARTIAL
-Mapping/reason: Related predicates S192 and S193 in src/checks/editorqml/tst_ShellTabs.qml (test_sharedDrawerCloseAndReopen: message-anchored fileProbe.fileFingerprint compares prove the song bytes are unchanged across close and reopen); unproved: resolving the closed song NAME back to an absent tab — no Swift predicate performs the named lookup; shell-tabs evidence predates the journey. [S192][S193]
+Disposition: MATCHED
+Mapping: S194
 
 A070 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:287
 Disposition: RETIRED-REPRESENTATION
@@ -1180,3 +1184,8 @@ Anchor: message "closing one tab keeps its sibling and the project bytes" #2
 
 S193 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "reopening never rewrites the project song bytes"
+
+S194 | test_oFreshTabViewStateDefaults | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the closed song leaves the named strip and reopens as exactly one row"
+Line: 355
+Predicate: verify(closedNameAbsent && tabOrderIds().filter(function(stripId) { return pageOf(stripId).session.title === "mus_route102" }).length === 1, "the closed song leaves the named strip and reopens as exactly one row")

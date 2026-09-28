@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawAppCommands
 import PorydawCore
 import PorydawCoreCheckNative
@@ -245,6 +245,12 @@ internal func runEditRoutingChecks(report: CheckReport, fixtureRoot: String) {
                   document.revision == zeroRevision &&
                   (try? document.state.file.encoded()) == original,
                   cppID: insertID, message: "cancelling the standalone prompt preserves the song")
+    let snapRaw = Double(note.tick)
+    ruler.captureRulerPress(contentX: session.camera.contentX(tick: snapRaw),
+                            pointerY: grid.rulerHeight * 0.75)
+    ruler.openRulerAtRelease()
+    report.expect(ruler.isOpen && session.editCursor == session.grid.snapTick(snapRaw, camera: session.camera),
+                  cppID: rulerID, message: "the ruler press commits the snapped production cursor")
 
     page.applyTimeSelection(AutomationTimeSelection(range: range, scope: .tracks([firstTrack])))
     session.editCursor = range.endTick + span
