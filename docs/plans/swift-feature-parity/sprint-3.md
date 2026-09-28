@@ -44,7 +44,12 @@ exclusivity SIGABRT fixed), 189 (151dcfb4), 190 (ad0b7b1c), 191 (f4937597), 192
 verify:shell 76/76, verify:qml 1/1, verify:qml-roll 1/1, bridge 0, `proof check --executed`
 (b97c1c01). Census (per-area `proof list` sum): 47 ledgers; open rows 1034
 (855 GAP + 179 PARTIAL); strict debt 235. Waves 194–199 (§24) landed
-(432eaaa1). Next: wave 200–205 (§25).
+(432eaaa1). Wave 200–204 (§25) landed through 82ebde21 (205 skipped: its VG03 retirement
+contradicts the wired creation ingress); hint text restores the fork's "⇧ Right-drag" spacing.
+Gate on 82ebde21: verify 37/37, verify:shell 76/76, verify:qml 1/1, verify:qml-roll 1/1,
+bridge 0, `proof check --executed` 0 not executed. Census: 42 ledgers; open rows 887 (762 GAP
++ 125 PARTIAL); strict debt 233. UX deviation awaiting the user: directional left/right resize
+cursor art (rollcheck resize A002–A004/A027/A028; Swift shows one SizeHorCursor).
 Known residues: QtBridge queues property notifications, so same-GUI-pass geometry clauses
 (host A095) stay PARTIAL; lanes use the null audio backend, so physical-output conjuncts
 stay PARTIAL.
