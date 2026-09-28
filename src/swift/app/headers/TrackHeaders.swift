@@ -64,7 +64,6 @@ public final class TrackHeadersPresenter {
     @QtIgnored public var onRevealTrackVoiceRequested: ((Int) -> Void)?
     @QtIgnored public var onTrackSelected: ((Int) -> Void)?
     @QtIgnored public var onContextMenuRequested: ((Double, Double) -> Void)?
-    @QtIgnored public var onRestoreRollFocus: (() -> Void)?
     @QtIgnored var session: DocumentSession?
     @QtIgnored var palette = GridPalette()
     @QtIgnored var geometry = TrackHeadersGeometry()
@@ -133,7 +132,6 @@ public final class TrackHeadersPresenter {
         onRevealTrackVoiceRequested = nil
         onTrackSelected = nil
         onContextMenuRequested = nil
-        onRestoreRollFocus = nil
     }
 
     /// Called by the composition's one document publication, before refresh.
@@ -308,7 +306,7 @@ public final class TrackHeadersPresenter {
             session.document.renameTrack(target.track, to: draft)
             refreshFromDocument()
         }
-        if restoreRollFocus { onRestoreRollFocus?() }
+        if restoreRollFocus { restoreRollFocusRequested() }
     }
 
     public func beginPointer(x: Double, y: Double, button: Int, modifiers: Int) -> Bool {
@@ -396,6 +394,9 @@ public final class TrackHeadersPresenter {
     }
 
     @QtSignal public func contextMenuRequested(x: Double, y: Double)
+    // Mounted EditorSurface observes this to run the fork's focusContent
+    // synchronously after a rename ends with the editor's restore flag.
+    @QtSignal public func restoreRollFocusRequested()
 
     @QtIgnored
     func validTrack(_ track: Int) -> Bool {

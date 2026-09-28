@@ -151,6 +151,14 @@ Item {
         function onContextMenuRequested(x, y) {
             root.headerMenuPosition = trackHeaders.mapToItem(root, x, y)
         }
+        // Fork SongView::focusContent: the event-list input owns the band's
+        // space while shown, else the roll band input takes focus back.
+        function onRestoreRollFocusRequested() {
+            if (root.showEvents && eventPage.item)
+                eventPage.item.forceActiveFocus(Qt.OtherFocusReason)
+            else
+                rollInput.forceActiveFocus(Qt.OtherFocusReason)
+        }
     }
 
     Rectangle {

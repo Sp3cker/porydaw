@@ -75,16 +75,25 @@ func renameCommitsAndRebuildsHeader(
     h.finishRename(commit: true, restoreRollFocus: false)
     report.expectEqual(expected: -1, actual: h.renamingTrack, cppID: id, what: "hidden cancels draft permanently")
     baseline.expectUnchanged(report, fx.document, cppID: id, phase: "rename cancellation")
-    var focusRestores = 0
-    h.onRestoreRollFocus = { focusRestores += 1 }
     h.beginRename(track: 0)
     h.renameDraft = "HdrSrc"
     h.finishRename(commit: true, restoreRollFocus: true)
     report.expectEqual(expected: -1, actual: h.renamingTrack, cppID: id, what: "commit closes editor")
-    report.expectEqual(expected: 1, actual: focusRestores, cppID: id, what: "commit restores requested roll focus")
     report.expectEqual(expected: "HdrSrc", actual: fx.document.trackName(0), cppID: id, what: "commit renames song track")
     report.expectEqual(expected: baseline.revision + 1, actual: fx.document.revision, cppID: id,
                        what: "rename is one document edit")
+    h.beginRename(track: 0)
+    h.renameDraft = "HdrCancel"
+    h.finishRename(commit: false, restoreRollFocus: true)
+    report.expectEqual(expected: "HdrSrc", actual: fx.document.trackName(0), cppID: id, what: "cancel with restore flag keeps the committed name")
+    h.beginRename(track: 0)
+    h.renameDraft = "HdrSilent"
+    h.finishRename(commit: true, restoreRollFocus: false)
+    report.expect(fx.document.history.undoDocument(), cppID: id, message: "silent commit undo succeeds")
+    h.beginRename(track: 0)
+    h.renameDraft = "HdrDropped"
+    h.finishRename(commit: false, restoreRollFocus: false)
+    report.expectEqual(expected: "HdrSrc", actual: fx.document.trackName(0), cppID: id, what: "focus-loss cancel keeps the committed name")
     fx.rebuild()
     report.expectEqual(expected: "1 · HdrSrc", actual: h.rows[0].title, cppID: id,
                        what: "renamed title survives presenter rebuild")

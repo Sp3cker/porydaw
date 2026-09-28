@@ -172,6 +172,8 @@ SwiftRollTrackHeadersSupport {
         verify(!editor.visible && row.title === title
                && bootstrap.timeSigUndoIndex() === revision,
                "the rename editor takes focus and Escape discards it")
+        tryCompare(item("swiftRollInput"), "activeFocus", true, 5000,
+                   "cancelling the mounted rename returns focus to the roll input")
         openHeaderMenu(0)
         chooseHeaderAction(3)
         tryCompare(rename, "activeFocus", true)
@@ -181,6 +183,8 @@ SwiftRollTrackHeadersSupport {
         verify(!editor.visible && row.title === title
                && bootstrap.timeSigUndoIndex() === revision,
                "a transient cancelled rename stays hidden without writing")
+        verify(!item("swiftRollInput").activeFocus,
+               "a focus-loss cancel leaves the roll input unfocused")
     }
 
     function test_yStructuralRemapDismissesMenuAndRestoresFocus() {
@@ -230,6 +234,8 @@ SwiftRollTrackHeadersSupport {
                    "rename commits from the mounted editor")
         compare(h.renamingTrack, -1,
                 "mounted rename closes its editor after commit")
+        tryCompare(item("swiftRollInput"), "activeFocus", true, 5000,
+                   "committing the mounted rename returns focus to the roll input")
         mousePress(input, x, y, Qt.LeftButton)
         mouseMove(input, x, y + h.rowHeight, 10, Qt.LeftButton)
         tryCompare(item("timelineTrackHeaderReorderMarker"), "visible", true)
