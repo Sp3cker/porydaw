@@ -6,7 +6,7 @@ Original: src/checks/automationgesturecheck/hover.cpp
 Original SHA-256: c0bbc4a68e09aec50cdbfcbf6f3fec04750e3c34fcf6f7c7de7a6e5d495d3bed
 Swift counterpart: src/checks/automation/automationcanvasediting.swift
 
-Disposition tally: 30 sites: 24 MATCHED, 1 PARTIAL, 0 GAP, 5 RETIRED-REPRESENTATION.
+Disposition tally: 30 sites: 25 MATCHED, 0 PARTIAL, 0 GAP, 5 RETIRED-REPRESENTATION.
 
 Task-115 frozen source SHA-256: automationcanvasediting.swift 01ab5120e862c56fed885e7134129d3e4c75df810029800798ca4a328049b9e0; tst_ShellDrawerParity.qml b0c3a480064c7ad201d60ddf78361706a3b6c5e36cf435d09468260619122582; AutomationPage.qml 846b48d0559409db51aa3b922f6260465fb407da7469e4e1ee5e16ebc61aad40.
 Task-115 implementer-observed GREEN: swiftcore-projectsession 1/36, shell-drawer-parity 1/26, full verify 36/36; full shell suite 25/26 due to sibling-owned shell-note-visuals DPR2. Proof writer did not rerun them.
@@ -47,6 +47,11 @@ or topology internals with no executing production predicate, so deletion stays
 blocked. The mounted QML journey test_productionAutomationHoverTransfersBetweenWrittenNodes
 exercises the same two anchors but records no per-verify pass rows yet.
 
+Task-192 frozen check SHA-256: src/checks/editorqml/tst_EditorDrawerAutomationHover.qml b1b06378865e3ba928600ede3394a123e3bbdd3ca403f720644d0df7d2af73cb.
+Task-192 implementer-observed verification: `deno task verify:qml` PASS (editorqml-drawer 1/1); controller-reported, proof writer did not rerun.
+
+Counterpart executable predicate index
+The S entries are exact predicates defined in the converted automation Swift suites pinned by the counterpart hashes above. Their presence alone does not close any A entry; execution is claimed only as recorded in Verification. Preserve their surrounding setup and order in the paired source.
 A001 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:330
 Disposition: RETIRED-REPRESENTATION
 
@@ -161,82 +166,9 @@ Disposition: MATCHED
 Mapping: S047
 
 A030 | runCase | src/checks/automationgesturecheck/hover.cpp:564
-Disposition: PARTIAL
-Mapping/reason: S016, S017, S035, S041, S048, S049, S050 and S055 prove plot-to-gutter pointer leave clears background hover and hint, then re-entry restores them; unproved: complete guide/ghost/ring/text and framebuffer clearing immediately on lane transition, including the second leave.
-Source context since previous assertion:
-      leaveCanvas(rig);
-      const auto awaitClear = [&] {
-          QDeadlineTimer timeout{1000};
-          HoverObservation observation = observeHover(rig);
-          while (!isClear(observation) && !timeout.hasExpired()) {
-              rig.pump();
-              observation = observeHover(rig);
-          }
-          return observation;
-      };
-      const HoverObservation transitioned = awaitClear();
-      previewUnchanged("lane transition");
-      leaveCanvas(rig);
-      const HoverObservation left = awaitClear();
-      previewUnchanged("leave");
-      topology.leaveCleared =
-          isClear(transitioned) && isClear(left) &&
-          pixelClearedAt(idle.framebuffer, nodeHover.framebuffer, insertionFramebufferCenter) &&
-          pixelClearedAt(idle.framebuffer, transitioned.framebuffer, insertionFramebufferCenter) &&
-          pixelClearedAt(idle.framebuffer, left.framebuffer, insertionFramebufferCenter);
-Original expression:
-      probe.require(topology.leaveCleared,
-                    QStringLiteral("lane transition or leave retained dirty Quick hover state"));
+Disposition: MATCHED
+Mapping: S059
 
-Remaining original source (closing sequence and helper bodies):
-      return topology;
-  }
-
-  bool sameTopology(const Topology &left, const Topology &right)
-  {
-      return left.insertionLine == right.insertionLine && left.heldGhost == right.heldGhost &&
-             left.insertionLabel == right.insertionLabel && left.nodeRing == right.nodeRing &&
-             left.nodeLabel == right.nodeLabel && left.noInsertionGhost == right.noInsertionGhost &&
-             left.leaveCleared == right.leaveCleared && left.noRepeatChurn == right.noRepeatChurn;
-  }
-
-  } // namespace
-
-  void checkNodeLaneHoverParity(AutomationGestureCheckRig &rig, const AutomationGestureCheck &check)
-  {
-      rig.setAutomationZoom(96.0);
-      rig.setAutomationScroll(0.0);
-      rig.setPersistentPencil(false);
-      rig.pump();
-      rig.gutterMousePress(rig.tempoHeaderPoint());
-      rig.gutterMouseRelease(rig.tempoHeaderPoint());
-      rig.pump();
-      const bool tempoExpanded =
-          !rig.canvas().laneBody(AutomationGestureCheckRig::kTempoHandle).isEmpty();
-      check(tempoExpanded, QStringLiteral("Tempo header did not expose the expanded body"));
-      const auto initialTempo = rig.document().tempoPoints();
-      const auto initialPan = rig.document().lanePoints(rig.pan.track, rig.pan.controller);
-      std::array<Topology, kCases.size()> topologies{};
-      for (std::size_t index = 0; index < kCases.size(); ++index) {
-          if (kCases[index].kind == AdapterKind::Tempo && !tempoExpanded)
-              continue;
-          topologies[index] = runCase(rig, kCases[index], check);
-          setTempoPoints(rig, initialTempo);
-          setCcPoints(rig, laneValues(initialPan));
-      }
-      check(sameTopology(topologies.front(), topologies.back()),
-            QStringLiteral("Tempo and CC hover chrome topology diverged"));
-      const PreparedLane directLane = prepareLane(rig, kCases[1]);
-      if (directLane.handle.valid() && !directLane.body.isEmpty())
-          checkDirectHoverRoute(rig, directLane, check);
-      else
-          check(false, QStringLiteral("CC lane was unavailable for direct hover routing"));
-      setTempoPoints(rig, initialTempo);
-      setCcPoints(rig, laneValues(initialPan));
-  }
-
-Counterpart executable predicate index
-The S entries are exact predicates defined in the converted automation Swift suites pinned by the counterpart hashes above. Their presence alone does not close any A entry; execution is claimed only as recorded in Verification. Preserve their surrounding setup and order in the paired source.
 
 S001 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a hover on a node publishes the node"
@@ -410,3 +342,6 @@ S057 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_She
 Anchor: message "focus transfer keeps the staged selected-lane band visible"
 S058 | drawerAutomationFocusLossRetainsGesture | src/checks/automation/automationcanvashover.swift
 Anchor: message "focus loss while held freezes song bytes revision and undo"
+
+S059 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
+Anchor: message "the second plot-to-gutter leave clears every hover surface and restores the cleared plot pixels"

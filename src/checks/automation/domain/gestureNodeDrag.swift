@@ -148,6 +148,17 @@ func drawerAutomationGestureContractParity(_ report: CheckReport, suite: Documen
     report.expectEqual(expected: 0, actual: emptyModulationFacts.snapshot.leadInValue ?? -1,
                        cppID: drawerAutomationContractParityID,
                        what: "an unwritten Modulation lane leads in on its engine default")
+    let matrix = drawerAutomationAutomationFixture(suite: suite, service: service,
+        volume: [(48, 80), (192, 40)], pan: [(96, 60)], modulation: [(24, 10)],
+        tempo: [(0, 500_000), (192, 600_000)])
+    report.expect(
+        matrix.laneValues(matrix.facts(.tempo).displayPoints) == ["0:120", "192:100"]
+        && matrix.laneValues(matrix.facts(matrix.volumeLane).displayPoints)
+            == ["0:127", "48:80", "192:40"]
+        && matrix.laneValues(matrix.facts(matrix.panLane).displayPoints) == ["0:64", "96:60"]
+        && matrix.laneValues(matrix.facts(matrix.modulationLane).displayPoints) == ["24:10"],
+        cppID: drawerAutomationContractParityID,
+        message: "Tempo and every CC lane display exactly their seeded points")
     let metadata = AutomationParameterMetadata(parameter: emptyLane.panLane)
     report.expectEqual(expected: "Pan (PAN)", actual: AutomationCatalog.title(emptyLane.panLane),
                        cppID: drawerAutomationContractParityID, what: "the catalog titles a CC lane")

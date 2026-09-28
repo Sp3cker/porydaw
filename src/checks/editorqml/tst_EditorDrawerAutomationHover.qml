@@ -247,16 +247,26 @@ EditorDrawerTestSupport {
                 "leaving the plot writes nothing")
         mouseMove(input, gapX, free.y)
         tryVerify(function() { return model.hoverVisible === true }, 2000,
-                  "a move after the first leave revives the insertion hover")
+                  "the plot settles back into its insertion hover")
         mouseMove(gutter, gutter.width / 2, gutter.height / 2)
         tryVerify(function() { return model.hoverVisible === false }, 2000,
-                  "a second leave clears the insertion hover")
+                  "the plot settles after the second leave")
         waitForRendering(testCase.surface)
         var secondCleared = grabImage(testCase.surface)
-        verify(secondCleared.red(probeX, probeY) === clearedImage.red(probeX, probeY)
+        ringed = 0
+        laneNodes = AutomationGestureSupport.automationLaneNodes(testCase)
+        for (var m = 0; m < laneNodes.length; ++m) {
+            if (laneNodes[m].model.hovered === true)
+                ++ringed
+        }
+        verify(model.hoverVisible === false && guide.visible === false && ghost.visible === false
+               && label.visible === false && model.hoverText === ""
+               && input.cursorShape === Qt.ArrowCursor && ringed === 0
+               && bootstrap.automationDocumentRevision() === revision
+               && secondCleared.red(probeX, probeY) === clearedImage.red(probeX, probeY)
                && secondCleared.green(probeX, probeY) === clearedImage.green(probeX, probeY)
                && secondCleared.blue(probeX, probeY) === clearedImage.blue(probeX, probeY),
-               "the second plot leave restores the insertion target pixel")
+               "the second plot-to-gutter leave clears every hover surface and restores the cleared plot pixels")
         mouseMove(input, point.x, point.y)
         tryVerify(function() { return model.hoverVisible === true }, 2000,
                   "a move after a leave revives the hover")
