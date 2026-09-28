@@ -393,6 +393,7 @@ TestCase {
         var roll = rollInput()
         var surf = surface()
         publishedNoteCount(g)
+        var savedFoldV = g.cameraScrollY
         g.setScaleFold(true)
         var initialRows = g.visibleRowCount
         g.setScaleFold(false)
@@ -445,5 +446,43 @@ TestCase {
         tryCompare(g, "visibleRowCount", stableRows - 1, 3000,
                    "fold collapses the off-scale row after the drag commit")
         g.setScaleFold(false)
+        g.setCameraVScroll(savedFoldV)
     }
+
+    function test_narrowBodyArrowRetired() {
+        var g = grid()
+        var roll = rollInput()
+        var surf = surface()
+        publishedNoteCount(g)
+        var savedZoom = g.beatWidth
+        verify(bootstrap.setCameraTimeZoom(4), "the narrow probe parks the time zoom at its minimum")
+        verify(waitForNative(function() {
+            var notes = gridNotes(g)
+            for (var k = 0; k < notes.length; ++k) {
+                var it = noteItem(surf, notes[k].id)
+                if (it && it.width > 0 && it.height > 0)
+                    return true
+            }
+            return false
+        }, 8000), "the minimum zoom renders a note for the arrow probe")
+        var narrow = null
+        var narrowList = gridNotes(g)
+        for (var n = 0; n < narrowList.length; ++n) {
+            var narrowItem = noteItem(surf, narrowList[n].id)
+            if (!narrowItem || narrowItem.width <= 0 || narrowItem.height <= 0)
+                continue
+            var narrowCenter = narrowItem.mapToItem(roll, narrowItem.width / 2, narrowItem.height / 2)
+            if (narrowCenter.x < 1 || narrowCenter.y < 1
+                    || narrowCenter.x > roll.width - 1 || narrowCenter.y > roll.height - 1)
+                continue
+            narrow = narrowCenter
+            break
+        }
+        verify(narrow !== null, "a rendered note takes the narrow-body arrow probe")
+        mouseMove(roll, narrow.x, narrow.y)
+        verify(waitForNative(function() { return g.cursorKind === 0 }, 5000),
+               "the narrow note body shows the named arrow cursor")
+        bootstrap.setCameraTimeZoom(savedZoom)
+    }
+
 }

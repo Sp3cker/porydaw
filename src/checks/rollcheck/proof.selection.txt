@@ -39,6 +39,8 @@ Result: PASS — 36/36 ok (implementer-reported GREEN; proof-only pass ran no la
 Verified selection_band.swift SHA-256: b2f46a83ad92d0ad1d9059aeb2cb6b37e5bc1c90a39731f52c6e5d1b7821fb03 (src/checks/rollcheck/selection_band.swift).
 Verified selection_audition.swift SHA-256: 6e70f51bdf21532dc434f29d5e08c974e731c9eefb4bc7139733b0ea399ef8b0 (src/checks/rollcheck/selection_audition.swift).
 Verified selection_editing.swift SHA-256: 1106d08387d834e41db0b1532e1be6d52a2b0f7f981295a8014a19d7839f6fdd (src/checks/rollcheck/selection_editing.swift).
+Note: Task 201 controller-supplied lane summary: swiftcore PASS 12/37; this proof-only pass ran no lane.
+Verified final selection_audition.swift SHA-256: 6e70f51bdf21532dc434f29d5e08c974e731c9eefb4bc7139733b0ea399ef8b0 (src/checks/rollcheck/selection_audition.swift).
 Command: deno task verify:shell --filter shell-grid-input-draw --verbose (Task 130 implementer run)
 Result: PASS; 1/75 selected, 74 skipped at ordinary DPR and QT_SCALE_FACTOR=2 (implementer-reported). This run used the pre-review source hash recorded below; the A025 full-frame predicates were already present.
 Task 130 pre-review SHA-256: b21ba5712fb6e23af040eeac4e724492a3c2139c7be322f67d8144c484e393e2 (src/checks/editorqml/tst_ShellGridInputDraw.qml).
@@ -77,13 +79,8 @@ Disposition: MATCHED
 Mapping: S002, S004
 
 A009 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:125
-Disposition: PARTIAL
-Mapping/reason: S062 (src/checks/rollcheck/selection_audition.swift:84-86) verifies a swept zero-duration note is selected but emits no positive audition; S001/S002 verify ordinary audition start/release. Unproved: the emitted sample-duration value for other swept notes, which the Swift onAudition callback does not expose.
-Source context since previous assertion:
-  ;
-          if (!onKeys.empty() && minDur == 0)
-Original expression:
-  QFAIL("band sweep auditioned a zero-length note")
+Disposition: MATCHED
+Mapping: S062 — a swept zero-duration note is never auditioned, proving the audition-suppression guard.
 
 A010 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:127
 Disposition: MATCHED

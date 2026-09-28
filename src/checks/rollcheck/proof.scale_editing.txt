@@ -12,6 +12,8 @@ Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted n
 Command: deno task verify --filter swiftcore
 Result: verify: 1/31 ok (35.15s, 30 skipped); run_checks: PASS (all harnesses in 35.15s).
 Note: Task 42 evidence supplied to this ledger pass (not re-run here): swiftcore roll lanes and verify:qml-roll swiftroll-window are green with the new scale/fold predicates, verify:shell shell-grid-input is green, and the controller corrected tst_ShellTransport.qml:503/534 to fold.Accessible.checked so shell-transport passes.
+Note: Task 201 controller-supplied lane summary: swiftcore PASS 12/37; this proof-only pass ran no lane.
+Verified final scale_editing.swift SHA-256: 99101fd983b0482ea41d1a8e725ebc88034d122ec292d0a9b3cb55ba66e5991d (src/checks/rollcheck/scale_editing.swift).
 
 A001 | PianoRollTest::scaleFoldKeyboardNudges | src/checks/rollcheck/scale_editing.cpp:71
 Disposition: MATCHED
@@ -476,23 +478,8 @@ Original expression:
   QFAIL("Fold exception-row piano key did not audition pitch 61")
 
 A017 | PianoRollTest::scaleFoldExceptionAudition | src/checks/rollcheck/scale_editing.cpp:363
-Disposition: PARTIAL
-Mapping/reason: Related predicate S029 (fold exception-row piano key auditions its pitch) executes the audition observation and S013 asserts a view/selection-only pass leaves document history unchanged; unproved: no predicate counts the audition pass's undo commands (the swiftcore audition probe unwinds its fixture note by identity without a history assertion).
-Source context since previous assertion:
-  ;
-          checks::events::sendMouse(*rollGutter, QEvent::MouseButtonRelease,
-                                    QPoint(pianoKeyboardWidth / 2, foldCenterY(61)), Qt::LeftButton,
-                                    Qt::NoButton, Qt::NoModifier);
-          while (doc.undoStack()->index() > cmd0)
-              doc.undoStack()->undo();
-      }
-      view.setScaleHighlight(false);
-      view.setScaleFold(false);
-      view.setScaleRoot(0);
-      view.setScaleId(scaleMajor);
-      if (doc.undoStack()->index() != undo)
-Original expression:
-  QFAIL("gesture pass pushed an unexpected number of undo commands")
+Disposition: MATCHED
+Mapping: S040 — the fold exception-row piano-key audition leaves undo index, undo count, and history identity unchanged.
 
 A018 | PianoRollTest::scaleFoldExceptionAudition | src/checks/rollcheck/scale_editing.cpp:364
 Disposition: MATCHED
@@ -676,21 +663,8 @@ Original expression:
   QFAIL("Fold did not rebuild its occupied rows after the drag commit")
 
 A027 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:491
-Disposition: PARTIAL
-Mapping/reason: Related predicate S022 pins a folded edit pass as exactly one undoable command restored by one undo, and S011 asserts the fixture returns to its entry bytes; unproved: the pointer-drag pass's own undo-command count - the swiftcore drag commit is unwound by a single guard undoDocument() with no counted predicate.
-Source context since previous assertion:
-  ;
-          while (doc.undoStack()->index() > cmd0)
-              doc.undoStack()->undo();
-          view.selectionModel().clearNoteSelection();
-      }
-      view.setScaleHighlight(false);
-      view.setScaleFold(false);
-      view.setScaleRoot(0);
-      view.setScaleId(scaleMajor);
-      if (doc.undoStack()->index() != undo)
-Original expression:
-  QFAIL("gesture pass pushed an unexpected number of undo commands")
+Disposition: MATCHED
+Mapping: S042 — the fold pointer drag increments undo index/count by one, changes serialized MIDI bytes, and a single undo restores the pre-drag bytes and history identity.
 
 A028 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:492
 Disposition: MATCHED
@@ -739,22 +713,8 @@ Original expression:
   QFAIL("Fold horizontal move changed the exception pitch")
 
 A030 | PianoRollTest::scaleFoldHorizontalException | src/checks/rollcheck/scale_editing.cpp:534
-Disposition: PARTIAL
-Mapping/reason: Related predicate S022 pins a folded edit pass as exactly one undoable command (S011 restores the fixture bytes); unproved: the horizontal move pass's own undo-command count is not asserted.
-Source context since previous assertion:
-  ;
-          }
-          while (doc.undoStack()->index() > cmd0)
-              doc.undoStack()->undo();
-          view.selectionModel().clearNoteSelection();
-      }
-      view.setScaleHighlight(false);
-      view.setScaleFold(false);
-      view.setScaleRoot(0);
-      view.setScaleId(scaleMajor);
-      if (doc.undoStack()->index() != undo)
-Original expression:
-  QFAIL("gesture pass pushed an unexpected number of undo commands")
+Disposition: MATCHED
+Mapping: S041 — the fold horizontal move increments undo index/count by one, changes serialized MIDI bytes, and a single undo restores the pre-move bytes and history identity.
 
 A031 | PianoRollTest::scaleFoldHorizontalException | src/checks/rollcheck/scale_editing.cpp:535
 Disposition: MATCHED
@@ -962,3 +922,11 @@ Anchor: message "fold drag commits the note to its scale degree"
 
 S039 | SwiftRollSelection::test_foldDragExceptionCommitsAfterRelease | src/checks/rollqml/tst_SwiftRollSelection.qml
 Anchor: message "fold collapses the off-scale row after the drag commit"
+S040 | checkFoldPointerAndLifecycle | src/checks/rollcheck/scale_editing.swift
+Anchor: message "fold exception-row piano-key audition pushes no undo entry"
+
+S041 | checkFoldPointerAndLifecycle | src/checks/rollcheck/scale_editing.swift
+Anchor: message "fold horizontal move pushes one undo entry restored by one undo"
+
+S042 | checkFoldPointerAndLifecycle | src/checks/rollcheck/scale_editing.swift
+Anchor: message "fold pointer drag commits one undo entry restored by one undo"

@@ -322,6 +322,11 @@ private func checkFoldPointerAndLifecycle(
         report.fail(id, "could not restore the folded occupancy fixture")
         return
     }
+    // Replay to the tip so each gesture's single entry is countable.
+    guard document.history.redoDocument(), document.history.redoDocument() else {
+        report.fail(id, "could not replay the occupancy fixture to its tip")
+        return
+    }
     grid.refreshFromSession()
     grid.configureViewport(width: 800, height: 400, fontPx: 13, dpr: 1)
     guard let exceptionNote = document.note(exception),
@@ -344,6 +349,9 @@ private func checkFoldPointerAndLifecycle(
     report.expect(!grid.interactionActive
                   && document.history.currentIdentity == before,
                   cppID: id, message: "fold refuses a draw into an off-scale exception row")
+    let preAuditionIdentity = document.history.currentIdentity
+    let preAuditionIndex = document.history.undoIndex
+    let preAuditionCount = document.history.undoCount
     var auditionPitch: Int?
     let previousAudition = grid.onAudition
     grid.onAudition = { _, pitch, _ in auditionPitch = pitch }
@@ -352,6 +360,18 @@ private func checkFoldPointerAndLifecycle(
     grid.onAudition = previousAudition
     report.expect(auditionPitch == Int(exceptionNote.pitch), cppID: id,
                   message: "fold exception-row piano key auditions its pitch")
+    report.expect(document.history.currentIdentity == preAuditionIdentity
+        && document.history.undoIndex == preAuditionIndex
+        && document.history.undoCount == preAuditionCount,
+        cppID: id, message: "fold exception-row piano-key audition pushes no undo entry")
+    let preHorizontalIdentity = document.history.currentIdentity
+    let preHorizontalIndex = document.history.undoIndex
+    let preHorizontalCount = document.history.undoCount
+    let preHorizontalTick = exceptionNote.tick
+    guard let preHorizontalBytes = try? document.captureSave().bytes else {
+        report.fail(id, "could not capture the pre-move MIDI bytes")
+        return
+    }
     session.setSelectedNotes([exception])
     let x = box.x + box.w / 2
     let delta = max(grid.dragDistance * 2,
@@ -362,8 +382,98 @@ private func checkFoldPointerAndLifecycle(
     report.expect(document.note(exception).map {
         $0.pitch == exceptionNote.pitch && $0.tick != exceptionNote.tick
     } == true, cppID: id, message: "fold horizontal move keeps the exception pitch")
+    let postHorizontalIndex = document.history.undoIndex
+    let postHorizontalCount = document.history.undoCount
+    let postHorizontalChanged = document.history.currentIdentity != preHorizontalIdentity
+    guard let postHorizontalBytes = try? document.captureSave().bytes else {
+        report.fail(id, "could not capture the moved MIDI bytes")
+        return
+    }
     guard document.history.undoDocument() else {
         report.fail(id, "could not undo the folded horizontal move")
         return
+    }
+    guard let restoredHorizontalBytes = try? document.captureSave().bytes else {
+        report.fail(id, "could not capture the unwound move MIDI bytes")
+        return
+    }
+    report.expect(postHorizontalIndex == preHorizontalIndex + 1
+        && postHorizontalCount == preHorizontalCount + 1
+        && postHorizontalChanged
+        && postHorizontalBytes != preHorizontalBytes
+        && restoredHorizontalBytes == preHorizontalBytes
+        && document.note(exception)?.tick == preHorizontalTick
+        && document.history.currentIdentity == preHorizontalIdentity,
+        cppID: id, message: "fold horizontal move pushes one undo entry restored by one undo")
+    // Reapply the move so the drag probe starts at the tip.
+    guard document.history.redoDocument() else {
+        report.fail(id, "could not redo the folded horizontal move for the drag probe")
+        return
+    }
+    // Fold pointer drag: vertical degree commit through the production pointer.
+    let dragDstPitch = 62
+    grid.refreshFromSession()
+    var dragSupport: NoteID?
+    if !document.notes(in: track).contains(where: { $0.pitch == UInt8(dragDstPitch) }) {
+        dragSupport = try? document.addNotes([
+            NewNote(track: track, tick: base + duration * 20, pitch: UInt8(dragDstPitch),
+                    duration: duration, velocity: 100)
+        ]).first
+        grid.refreshFromSession()
+    }
+    guard let dragSource = document.note(exception),
+        let dragBox = grid.projectedNoteBox(
+            tick: Int(dragSource.tick), end: Int(dragSource.tick + dragSource.duration),
+            pitch: Int(dragSource.pitch)),
+        session.camera.projection.row(forPitch: dragDstPitch) != PitchProjection.hiddenRow,
+        let dragDstTop = session.camera.projection.rowTop(
+            session.camera.projection.row(forPitch: dragDstPitch),
+            keyHeight: session.camera.snapshot.keyHeight,
+            scrollY: session.camera.snapshot.scrollY, dpr: 1) else {
+        report.fail(id, "could not stage the fold pointer-drag rows")
+        return
+    }
+    session.setSelectedNotes([exception])
+    let dragSrcX = dragBox.x + dragBox.w / 2
+    let dragSrcY = dragBox.y + dragBox.h / 2
+    let dragDstY = dragDstTop + session.camera.snapshot.keyHeight / 2
+    let preDragIdentity = document.history.currentIdentity
+    let preDragIndex = document.history.undoIndex
+    let preDragCount = document.history.undoCount
+    guard let preDragBytes = try? document.captureSave().bytes else {
+        report.fail(id, "could not capture the pre-drag MIDI bytes")
+        return
+    }
+    grid.beginPointer(x: dragSrcX, y: dragSrcY, modifiers: 0)
+    grid.updatePointer(x: dragSrcX, y: dragDstY)
+    grid.endPointer(x: dragSrcX, y: dragDstY)
+    let dragMovedPitch = document.note(exception)?.pitch
+    let postDragIndex = document.history.undoIndex
+    let postDragCount = document.history.undoCount
+    let postDragChanged = document.history.currentIdentity != preDragIdentity
+    guard let postDragBytes = try? document.captureSave().bytes else {
+        report.fail(id, "could not capture the moved MIDI bytes")
+        return
+    }
+    guard document.history.undoDocument() else {
+        report.fail(id, "could not undo the fold pointer drag")
+        return
+    }
+    guard let restoredDragBytes = try? document.captureSave().bytes else {
+        report.fail(id, "could not capture the unwound drag MIDI bytes")
+        return
+    }
+    report.expect(dragMovedPitch == UInt8(dragDstPitch)
+        && postDragIndex == preDragIndex + 1
+        && postDragCount == preDragCount + 1
+        && postDragChanged
+        && postDragBytes != preDragBytes
+        && restoredDragBytes == preDragBytes
+        && document.note(exception)?.pitch == dragSource.pitch
+        && document.history.currentIdentity == preDragIdentity,
+        cppID: id, message: "fold pointer drag commits one undo entry restored by one undo")
+    if dragSupport != nil {
+        _ = document.history.undoDocument()
+        grid.refreshFromSession()
     }
 }
