@@ -58,8 +58,8 @@ Deno.test("Qt version switching clears cached component paths and remains select
         );
       }
     }
-    const buildDirectory = join(root, "build");
-    await Deno.mkdir(buildDirectory);
+    const buildDirectory = join(root, "build", "debug");
+    await Deno.mkdir(buildDirectory, { recursive: true });
     for (const prefix of [prefixes[1], prefixes[0]]) {
       const args = await cmakeConfigureArgs({
         buildDirectory,

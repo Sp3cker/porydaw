@@ -38,10 +38,10 @@ material unresolved risk, or when the user explicitly requests full coverage.
 Do not broaden or repeat checks merely by default.
 
 `--no-build` is an optimization, not the default: use it only when the
-existing `build/` demonstrably includes the changed source and configuration.
+existing `build/debug/` demonstrably includes the changed source and configuration.
 Otherwise omit it so `deno task verify` rebuilds. `deno task checks <binary>`
 is the raw runner; only use it when the binary is not
-`build/porydaw_checks` (CI's ASAN job does this).
+`build/debug/porydaw_checks` (CI's ASAN job does this).
 
 ### Instruction-only changes
 
@@ -54,7 +54,7 @@ executable contract or introduces unresolved risk that requires it.
 
 Do not:
 
-- run `./build/porydaw --vgcheck` / `--viewcheck` / other `--*check` flags
+- run `./build/debug/porydaw --vgcheck` / `--viewcheck` / other `--*check` flags
 - copy a decomp tree to `/tmp` or `/tmp/scratch`
 - call `tools/run_checks.sh`
 

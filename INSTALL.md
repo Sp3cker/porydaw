@@ -73,24 +73,33 @@ deno task format:check
 deno task setup:check
 ```
 
+Debug and Release builds live in separate trees: `build/debug` (the default) and `build/release`
+(`--release`, and the tree `deno task setup` builds). Switching configurations never reconfigures a
+tree in place.
+
+Build tasks print only what needs attention: on failure, the failed step and its errors; on success,
+one line naming the built binary, plus any warnings located in project sources. The complete
+CMake/Ninja output of the last run is in `build/<config>/build.log`.
+
 Swift targets compile in batches on Debug builds, so a target's C++-interop frontend startup is paid
 once per batch instead of once per source file. Swift's incremental driver reuses an object whenever
 the sources and their dependencies are unchanged — the compile command included — so a build drops
 the objects of any Swift target whose compile command no longer matches the one its objects were
-built with, and prints the targets it dropped. That happens once per flag change (a CMake option
-edit, or a flip between `build:app` and `build:checks`), not on unchanged builds.
+built with. That happens once per flag change (a CMake option edit, or a flip between `build:app`
+and `build:checks`), not on unchanged builds.
 
-Launch the built application with the platform-appropriate command:
+Launch the application built by `deno task setup` with the platform-appropriate command
+(`deno task build:app` builds the same paths under `build/debug`):
 
 ```bash
 # macOS
-open build/porydaw.app
+open build/release/porydaw.app
 
 # Windows
-.\build\Release\porydaw.exe
+.\build\release\Release\porydaw.exe
 
 # Linux
-./build/porydaw
+./build/release/porydaw
 ```
 
 `deno task verify` runs the check lanes declared for the host platform. On macOS every lane runs. On Linux and Windows the Swift lanes (`swiftcore`, `projectidentitycheck`, `projectstore-*`, `bankleases`, `vgbankcheck`, `exportcheck-*`) are still listed by `porydaw_checks --manifest` with `"platforms": ["macos"]`, but the runner reports them as platform-skipped because the check harness does not link Swift there yet. A verify selection that leaves no runnable check on the host exits with status 2 instead of passing.

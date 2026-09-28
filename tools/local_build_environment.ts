@@ -10,6 +10,13 @@ export type QtInstallation = {
   architecture: string;
 };
 
+export type BuildConfig = "debug" | "release";
+
+// Each configuration owns its tree, so switching never reconfigures in place.
+export function buildDirectory(config: BuildConfig): string {
+  return join("build", config);
+}
+
 type CmakeConfigureOptions = {
   buildDirectory: string;
   poryaaaaArgument: string;
@@ -98,6 +105,7 @@ export async function localQtPrefix(
   root = Deno.cwd(),
   installation = currentQtInstallation(),
   requestedVersion?: string,
+  configuredBuild = buildDirectory("debug"),
 ): Promise<string | undefined> {
   const directory = qtInstallationDirectory(root, installation);
   const kitDirectory = installation.host === "windows"
@@ -118,7 +126,7 @@ export async function localQtPrefix(
     if (requestedVersion === undefined) {
       try {
         const cache = await Deno.readTextFile(
-          join(root, "build", "CMakeCache.txt"),
+          join(root, configuredBuild, "CMakeCache.txt"),
         );
         const configured = /^Qt6_DIR:[^=]+=(.+)$/m.exec(cache)?.[1];
         const selected = prefixes.find((prefix) =>

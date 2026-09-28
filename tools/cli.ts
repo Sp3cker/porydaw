@@ -11,20 +11,14 @@
 // deno task format [--check] [files...]
 
 import { join } from "node:path";
-import {
-  cmakeConfigureArgs,
-  localQtPrefix,
-} from "./local_build_environment.ts";
-import { poryaaaaConfiguration } from "./poryaaaa_source.ts";
+import type { BuildConfig } from "./local_build_environment.ts";
+import { runBuild, usesMultiConfigBuild } from "./build.ts";
 import { unsupportedSources, unsupportedSourcesError } from "./format.ts";
 import {
   type CheckOptions,
   parseCheckOptions,
   VERIFY_HELP,
 } from "./checks_options.ts";
-
-const decoder = new TextDecoder();
-const BUILD_DIR = "build";
 
 type Subcommand =
   | "build:app"
@@ -70,8 +64,9 @@ function help(command?: Subcommand): string {
           ? "build the Swift-backed offline renderer"
           : "build the application, checks, and mid2agb"
       }
-  --release       configure and build Release; default is Debug
-  --verbose, -v   accepted; successful builds remain concise
+  --release       configure and build Release in build/release; default is
+                  Debug in build/debug
+  --verbose, -v   accepted; build output is the same either way
   --help          show this help without building
 
 Examples:
@@ -116,303 +111,16 @@ function isVerbose(args: string[]): boolean {
   return args.includes("--verbose") || args.includes("-v");
 }
 
-function buildRelease(args: string[], command: Subcommand): boolean {
+function buildConfig(args: string[], command: Subcommand): BuildConfig {
   const unknown = args.find((arg) =>
     arg !== "--release" && arg !== "--verbose" && arg !== "-v" &&
     arg !== "--help"
   );
   if (unknown) usage(command, `unknown argument ${unknown}`);
   if (args.includes("--help")) showHelp(command);
-  return args.includes("--release");
+  return args.includes("--release") ? "release" : "debug";
 }
 
-function printCapturedOutput(output: string): void {
-  if (output.trim()) console.error(output.trimEnd());
-}
-const MAX_DIAGNOSTIC_LINES = 40;
-function printDiagnosticLines(output: string): void {
-  const hits = output.split(/\r?\n/).filter((line) =>
-    /\b(?:warning(?:\s+[A-Z]+\d+)?:|CMake Warning\b|error\b)/i.test(line)
-  );
-  if (hits.length === 0) return;
-  const shown = hits.slice(0, MAX_DIAGNOSTIC_LINES);
-  console.error(shown.join("\n"));
-  if (hits.length > shown.length) {
-    console.error(
-      `build: ... ${hits.length - shown.length} more diagnostic lines`,
-    );
-  }
-}
-
-async function exists(path: string): Promise<boolean> {
-  try {
-    await Deno.stat(path);
-    return true;
-  } catch (error) {
-    if (error instanceof Deno.errors.NotFound) return false;
-    throw error;
-  }
-}
-
-async function hasBuildSystem(): Promise<boolean> {
-  const ninjaFile = join(BUILD_DIR, "build.ninja");
-  const makefile = join(BUILD_DIR, "Makefile");
-  if ((await exists(ninjaFile)) || (await exists(makefile))) return true;
-  try {
-    for await (const entry of Deno.readDir(BUILD_DIR)) {
-      if (entry.isFile && entry.name.endsWith(".sln")) return true;
-    }
-  } catch (error) {
-    if (error instanceof Deno.errors.NotFound) return false;
-    throw error;
-  }
-  return false;
-}
-
-async function usesMultiConfigBuild(): Promise<boolean> {
-  try {
-    const cache = await Deno.readTextFile(join(BUILD_DIR, "CMakeCache.txt"));
-    return /^CMAKE_CONFIGURATION_TYPES:[^=]*=.+$/m.test(cache);
-  } catch (error) {
-    if (error instanceof Deno.errors.NotFound) return false;
-    throw error;
-  }
-}
-
-async function cachedBuildType(): Promise<string | undefined> {
-  try {
-    const cache = await Deno.readTextFile(join(BUILD_DIR, "CMakeCache.txt"));
-    return /^CMAKE_BUILD_TYPE:STRING=(.*)$/m.exec(cache)?.[1];
-  } catch (error) {
-    if (error instanceof Deno.errors.NotFound) return undefined;
-    throw error;
-  }
-}
-
-async function cachedBuildChecks(): Promise<boolean | undefined> {
-  try {
-    const cache = await Deno.readTextFile(join(BUILD_DIR, "CMakeCache.txt"));
-    const value = /^PORYDAW_BUILD_CHECKS:BOOL=(.*)$/m.exec(cache)?.[1];
-    if (value === "ON") return true;
-    if (value === "OFF") return false;
-    return undefined;
-  } catch (error) {
-    if (error instanceof Deno.errors.NotFound) return undefined;
-    throw error;
-  }
-}
-
-async function ensureConfigured(
-  release: boolean,
-  buildChecks: boolean | undefined,
-): Promise<void> {
-  const poryaaaa = await poryaaaaConfiguration(BUILD_DIR);
-  const buildType = release ? "Release" : "Debug";
-  const multiConfig = await usesMultiConfigBuild();
-  const typeMatches = multiConfig ||
-    (await cachedBuildType()) === buildType;
-  const checksMatch = buildChecks === undefined ||
-    (await cachedBuildChecks()) === buildChecks;
-  if (
-    (await hasBuildSystem()) && poryaaaa.cacheMatches && typeMatches &&
-    checksMatch
-  ) return;
-  const localQt = await localQtPrefix();
-  const result = await new Deno.Command("cmake", {
-    args: await cmakeConfigureArgs({
-      buildDirectory: BUILD_DIR,
-      poryaaaaArgument: poryaaaa.cmakeArgument,
-      qtPrefix: localQt,
-      buildType,
-      buildChecks,
-    }),
-    stdout: "piped",
-    stderr: "piped",
-  }).output();
-  const out = decoder.decode(result.stdout);
-  const err = decoder.decode(result.stderr);
-  if (!result.success) {
-    printCapturedOutput(out + err);
-    console.error("build: configure failed");
-    Deno.exit(result.code || 1);
-  }
-  printDiagnosticLines(err);
-}
-
-// Swift's incremental driver reuses an object whenever the sources and their
-// dependency graph are unchanged — compile flags included. Ninja re-runs a
-// target's compile edge after a reconfigure, but the driver then reports no
-// work and the stale objects survive, so a CMake flag edit would keep the old
-// binary. Dropping the edge's objects is what makes the flag edit land; the
-// stamp records the commands the objects on disk were built with.
-interface SwiftCompileEdge {
-  readonly rule: string;
-  readonly objects: string[];
-  readonly signature: string;
-}
-
-interface SwiftCompileState {
-  readonly signatures: Record<string, string>;
-  readonly objects: Record<string, string[]>;
-}
-
-const SWIFT_COMMAND_STAMP = join(BUILD_DIR, ".porydaw-swift-commands.json");
-
-async function swiftCompileEdges(): Promise<SwiftCompileEdge[]> {
-  const ninjaPath = join(BUILD_DIR, "build.ninja");
-  if (!(await exists(ninjaPath))) return [];
-  const marker = ": Swift_COMPILER__";
-  const lines = (await Deno.readTextFile(ninjaPath)).split(/\r?\n/);
-  const edges: SwiftCompileEdge[] = [];
-  for (let index = 0; index < lines.length; index++) {
-    const line = lines[index];
-    if (!line.startsWith("build ")) continue;
-    const colon = line.indexOf(marker);
-    if (colon === -1) continue;
-    const directives: string[] = [];
-    for (
-      let next = index + 1;
-      next < lines.length && lines[next].startsWith("  ");
-      next++
-    ) {
-      const directive = lines[next].slice(2);
-      if (/^(?:FLAGS|INCLUDES|DEFINES|CONFIG) = /.test(directive)) {
-        directives.push(directive);
-      }
-    }
-    edges.push({
-      rule: line.slice(colon + marker.length).trim().split(/\s+/)[0],
-      objects: line.slice("build ".length, colon)
-        .split(/\s+/)
-        .filter((output) => output.endsWith(".o"))
-        .map((output) => join(BUILD_DIR, output)),
-      signature: directives.join("\n"),
-    });
-  }
-  return edges;
-}
-
-async function swiftCompileState(): Promise<SwiftCompileState> {
-  const signatures: Record<string, string> = {};
-  const objects: Record<string, string[]> = {};
-  for (const edge of await swiftCompileEdges()) {
-    const digest = await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(edge.signature),
-    );
-    signatures[edge.rule] = Array.from(
-      new Uint8Array(digest),
-      (byte) => byte.toString(16).padStart(2, "0"),
-    ).join("");
-    objects[edge.rule] = edge.objects;
-  }
-  return { signatures, objects };
-}
-
-async function recordedSwiftCommands(): Promise<
-  Record<string, string> | undefined
-> {
-  try {
-    const recorded: unknown = JSON.parse(
-      await Deno.readTextFile(SWIFT_COMMAND_STAMP),
-    );
-    return recorded && typeof recorded === "object"
-      ? recorded as Record<string, string>
-      : undefined;
-  } catch (error) {
-    if (error instanceof Deno.errors.NotFound || error instanceof SyntaxError) {
-      return undefined;
-    }
-    throw error;
-  }
-}
-
-async function reconcileSwiftObjects(): Promise<string[]> {
-  const state = await swiftCompileState();
-  const rules = Object.keys(state.signatures);
-  if (rules.length === 0) return [];
-  const recorded = await recordedSwiftCommands();
-  const dropped: string[] = [];
-  for (const rule of rules) {
-    if (recorded?.[rule] === state.signatures[rule]) continue;
-    let removed = 0;
-    for (const object of state.objects[rule]) {
-      try {
-        await Deno.remove(object);
-        removed++;
-      } catch (error) {
-        if (!(error instanceof Deno.errors.NotFound)) throw error;
-      }
-    }
-    if (removed > 0) dropped.push(rule);
-  }
-  await Deno.writeTextFile(
-    SWIFT_COMMAND_STAMP,
-    JSON.stringify(state.signatures, null, 2) + "\n",
-  );
-  return dropped;
-}
-
-async function cmakeBuild(
-  targets: string[],
-  release: boolean,
-): Promise<void> {
-  const args = [
-    "--build",
-    BUILD_DIR,
-    "-j",
-    String(navigator.hardwareConcurrency),
-  ];
-  if (release || (await usesMultiConfigBuild())) {
-    args.push("--config", "Release");
-  }
-  if (targets.length > 0) {
-    args.push("--target", ...targets);
-  }
-  const result = await new Deno.Command("cmake", {
-    args,
-    stdout: "piped",
-    stderr: "piped",
-  }).output();
-  const out = decoder.decode(result.stdout);
-  const err = decoder.decode(result.stderr);
-  const combined = out + err;
-  if (!result.success) {
-    printCapturedOutput(combined);
-    console.error(`build: failed (${targets.join(", ") || "all"})`);
-    Deno.exit(result.code || 1);
-  }
-  printDiagnosticLines(combined);
-}
-
-async function runBuild(
-  targets: string[],
-  release = false,
-  buildChecks?: boolean,
-): Promise<void> {
-  const started = performance.now();
-  await ensureConfigured(release, buildChecks);
-  const dropped = await reconcileSwiftObjects();
-  if (dropped.length > 0) {
-    console.log(
-      `build: dropped Swift objects for ${dropped.join(", ")}`,
-    );
-  }
-  await cmakeBuild(targets, release);
-  // A reconfigure inside the build rewrites compile commands after the
-  // reconcile above, so the objects it left behind can still be stale.
-  const reconfigured = await reconcileSwiftObjects();
-  if (reconfigured.length > 0) {
-    console.log(
-      `build: reconfigure dropped Swift objects for ${reconfigured.join(", ")}`,
-    );
-    await cmakeBuild(targets, release);
-  }
-  const ms = performance.now() - started;
-  const sec = (ms / 1000).toFixed(2);
-  // Filter progress noise: only show summary, not per-target [%] lines
-  console.log(`build: ok (${sec}s)`);
-}
 // One verify lane = the build targets it needs plus the harness it runs through
 // tools/run_checks.ts. Options, filters and the --qt payload are identical.
 interface VerifyLane {
@@ -469,7 +177,8 @@ const VERIFY_LANES: Record<
   },
 };
 
-async function runBridge(args: string[]): Promise<void> {
+// Inside verify the guard only speaks when it fails.
+async function runBridge(args: string[], quiet = false): Promise<void> {
   if (args.includes("--help")) showHelp("verify:bridge");
   const unknown = args.find((arg) =>
     arg !== "--update-baseline" && arg !== "--allow-growth"
@@ -494,10 +203,17 @@ async function runBridge(args: string[]): Promise<void> {
       "tools/qtbridge_surface.ts",
       ...args,
     ],
-    stdout: "inherit",
-    stderr: "inherit",
+    stdout: quiet ? "piped" : "inherit",
+    stderr: quiet ? "piped" : "inherit",
   }).output();
-  if (!result.success) Deno.exit(result.code);
+  if (result.success) return;
+  if (quiet) {
+    const decoder = new TextDecoder();
+    console.error(
+      (decoder.decode(result.stdout) + decoder.decode(result.stderr)).trimEnd(),
+    );
+  }
+  Deno.exit(result.code);
 }
 
 async function runVerify(
@@ -547,14 +263,14 @@ async function runVerify(
     usage(lane.command, error instanceof Error ? error.message : String(error));
   }
   if (options.help) showHelp(lane.command);
-  await runBridge([]);
-  await runBuild(lane.buildTargets(options), false, true);
+  await runBridge([], true);
+  const directory = await runBuild(lane.buildTargets(options), "debug", true);
   const executable = Deno.build.os === "windows"
     ? `${lane.binary}.exe`
     : lane.binary;
   const binary = join(
-    BUILD_DIR,
-    ...((Deno.build.os === "windows" && await usesMultiConfigBuild())
+    directory,
+    ...((Deno.build.os === "windows" && await usesMultiConfigBuild(directory))
       ? ["Release"]
       : []),
     executable,
@@ -667,15 +383,15 @@ if (sub === "verify-shell") sub = "verify:shell";
 const normalized = sub as Subcommand;
 switch (normalized) {
   case "build:app":
-    await runBuild(["porydaw"], buildRelease(rest, "build:app"));
+    await runBuild(["porydaw"], buildConfig(rest, "build:app"));
     break;
   case "build:render":
-    await runBuild(["porydaw_render_cli"], buildRelease(rest, "build:render"));
+    await runBuild(["porydaw_render_cli"], buildConfig(rest, "build:render"));
     break;
   case "build:checks":
     await runBuild(
       ["porydaw", "porydaw_checks", "mid2agb"],
-      buildRelease(rest, "build:checks"),
+      buildConfig(rest, "build:checks"),
       true,
     );
     break;

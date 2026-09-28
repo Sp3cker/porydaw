@@ -25,7 +25,7 @@ const HELP = `usage: deno task proof <command> [options]
   check [--executed [dir]] [--strict-mappings]
       Check proof structure and resolve every anchor against its source file.
       With --executed, also classify each anchor against the JSON evidence in
-      dir (default build/proof-evidence) written by the verify lanes.
+      dir (default build/debug/proof-evidence) written by the verify lanes.
       With --strict-mappings, additionally fail on every MATCHED site that
       cites no predicate whose anchor is a message anchor — Mapping:,
       Mapping/reason: and Swift: lines citing only function/deleted anchors,
@@ -346,7 +346,7 @@ function options(args: string[]): Options {
       if (value !== undefined && !value.startsWith("--")) {
         parsed.executed = value;
         ++i;
-      } else parsed.executed = "build/proof-evidence";
+      } else parsed.executed = "build/debug/proof-evidence";
     } else if (arg === "--offset") {
       const value = args[++i];
       if (
