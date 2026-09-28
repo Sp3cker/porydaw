@@ -283,6 +283,9 @@ SwiftRollTrackHeadersSupport {
         var input = item("timelineTrackHeadersInput")
         var bar = item("timelineTrackHeaderScrollBar")
         var rows = item("timelineTrackHeaderRows")
+        var thumb = item("timelineTrackHeaderScrollThumb")
+        verify(h !== null && band !== null && input !== null
+               && rows !== null && bar !== null && thumb !== null)
         var origin = band.mapToItem(s, 0, 0)
         verify(band.visible)
         verify(origin.x >= 0 && origin.y >= 0)
@@ -301,10 +304,25 @@ SwiftRollTrackHeadersSupport {
         verify(rows.count > 0)
         compare(h.contentHeight, rows.count * h.rowHeight)
         verify(Object.keys(h.appearance).length > 0)
+        var published = band.parent.bandRect
+        var publishedOrigin = band.parent.mapToItem(s, published.x, published.y)
+        tryVerify(function() {
+            var inputRect = rectOnSurface(input, s)
+            return near(inputRect.x, publishedOrigin.x)
+                   && near(inputRect.y, publishedOrigin.y)
+                   && near(inputRect.width, published.width - h.scrollbarWidth)
+                   && near(inputRect.height, published.height)
+        })
         var firstRow = rows.itemAt(0)
         verify(firstRow !== null && !firstRow.isAddTrack)
         compare(firstRow.subtitle, "000 fixture_loop (Sample)",
                 "the first track header spells the loaded bank's display name")
+        compare(h.menuOpen, false)
+        mouseClick(input, firstRow.titleRect.x + firstRow.titleRect.width / 2,
+                   firstRow.titleRect.y + firstRow.titleRect.height / 2, Qt.RightButton)
+        tryVerify(function() {
+            return h.menuOpen && band.parent.headersModel === h
+        }, 5000, "A082: mounted header input routes a real row press into its published headers presenter")
     }
 
     function test_addTrackRowPublishesUsableFonts() {

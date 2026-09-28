@@ -3,7 +3,7 @@ Assertion correspondence: host/tst_hostadapter.cpp
 Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Original: src/checks/host/tst_hostadapter.cpp
 Original SHA-256: 6e63b0766e5899601bb5a68b18a516715fe0669549a1929c4bc43ddb550c1bbe
-Swift counterpart: src/checks/rollqml/tst_SwiftRollTrackHeaders.qml :: test_mountedRulerRollVelocityAndDrawerChromeGeometry (SHA-256 f198c8f1aeb10f50eea8c77e3a8cd23236b6401f1f280e6a262986b1f2b0615c)
+Swift counterpart: src/checks/rollqml/tst_SwiftRollTrackHeaders.qml :: test_mountedBandGeometryAndRows (SHA-256 abed1f4d4f0325578bb1c990e4f8552e0a502ef3e1f6717d2d050726e33cf2b6)
 Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml (converted QML drawer lane)
 Additional Swift counterpart: src/checks/rollqml/tst_SwiftRollPlots.qml (converted QML roll lane; SHA-256 2685147c2eabdcb90bd649c7ce087d44cfb89eda26cf46adb2be2811d4fbe813)
 Additional Swift counterpart: src/checks/drawerpresentation/other_events_band.swift
@@ -29,6 +29,9 @@ Result: Mounted test_hostMountedBandsResizeHideAndEventList passes; the full swi
 
 Command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-projectsession --verbose
 Result: PASS 1/36 ok (Task142 implementer handoff; ledger writer ran no lane). Execution evidence: the frozen HostBehaviorChecks.swift SHA-256 e310f9ed4cefe927cfdbe7ffae749e4ae2c82f9029a1f72e69c6ce498e4f7336 and the handoff predicate report anchor A013/A015/A016/A164/A165/A168 in the HostBehaviorChecks message set; no Task142 failures reported.
+
+Command: deno task verify:qml-roll --filter swiftroll-window --verbose
+Result: PASS — ok (55.09s). Execution evidence and provenance: controller-provided observed result for the frozen check; ledger writer ran no verification lane.
 
 A001 | syntheticFixtureConstructsHost | src/checks/host/tst_hostadapter.cpp:63
 Disposition: RETIRED-REPRESENTATION
@@ -431,8 +434,8 @@ Original expression:
   QVERIFY(std::abs(toggles.center().x() - pianoCenter) <= layout::singlePixel())
 
 A080 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:288
-Disposition: GAP
-Mapping/reason: Swift TrackHeadersPresenter/TrackHeadersGeometry owns the track-headers quick surfaces (band, input, rows, scrollbar) discovered for the geometry probe; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP: discovery guards at src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:282-288 resolve the mounted headers model, band, input, rows, scrollbar and thumb; they carry no A-id, and setup discovery is not a matched behavior predicate.
 Source context since previous assertion:
   ;
           const auto *headers = view.findChild<songview::TrackHeaderModel *>(
@@ -462,8 +465,8 @@ Original expression:
   QVERIFY(headersGeometry.has_value())
 
 A082 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:292
-Disposition: GAP
-Mapping/reason: Swift TrackHeadersPresenter/TrackHeadersGeometry owns the track-headers input bound to the headers presenter; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
+Disposition: MATCHED
+Mapping: S129
 Source context since previous assertion:
   ;
 
@@ -1738,3 +1741,7 @@ S128 | test_hostMountedBandsResizeHideAndEventList | src/checks/rollqml/tst_Swif
 Source line: 454
 Predicate: eventVelocity.visible && eventVelocity.bodyWidth > 0 && eventVelocity.bodyHeight > 0 && sameRect(eventVelocityRect, velocityBeforeEvents) && sameRect(eventVelocityRect, Qt.rect(drawerItem.x + eventVelocity.bodyX, drawerItem.y + eventVelocity.bodyY, eventVelocity.bodyWidth, eventVelocity.bodyHeight))
 Anchor: message "Event List preserves published velocity section body geometry"
+S129 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Source line: 325
+Predicate: h.menuOpen && band.parent.headersModel === h
+Anchor: message "A082: mounted header input routes a real row press into its published headers presenter"
