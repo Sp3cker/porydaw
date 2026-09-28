@@ -27,7 +27,11 @@ verify:qml-roll 1/1, verify:bridge 0 findings, `proof check --executed` 0 errors
 executed). Wave 155–162 landed except 158 (in flight): 155 (3b268b98), 156 (4625fb42),
 157 (57932bdc), 159 (bd2a11a9), 160 (db8e2fb3), 161 (d34169dd), 162 (07f1308d). Next:
 wave 163–170 (§19). Census: proof files 155 → 63; open GAP+PARTIAL rows 3703 → ~1173
-(wave-163 planning: 63 ledgers, strict-mapping debt 293).
+(wave-163 planning: 63 ledgers, strict-mapping debt 293). Wave 163–170: 158 (4f8c16e7),
+163 (21dd242f), 165 (2dc911ff), 166 (0cef1c3b), 169 (59f8582f), 170 (6bb8b57b) landed;
+167/168 in flight; 164 blocked on QtBridge QML→Swift object passing. Next: wave 171–174
+(§20) — four evidence-backed briefs; the other audited clusters are blocked (§20 census).
+Census at wave-171 planning: 61 ledgers.
 Known residues: QtBridge queues property notifications, so same-GUI-pass geometry clauses
 (host A095) stay PARTIAL; lanes use the null audio backend, so physical-output conjuncts
 stay PARTIAL.
@@ -2775,3 +2779,100 @@ was run.
   primary changes. All standing exclusions (savecore A016–A026, P3 WAV, P4 sample
   studio, transport A009/A010/A013, physical audio, ImageIO, pending-reload gate)
   are unchanged.
+
+## 20. Wave 171–174 — the four surfaces that survive the constraints
+
+### Selection and bounded briefs
+
+Planning baseline: `deno task proof list` reports **61 ledgers**; 167/168 are in
+flight and 164 is blocked on QtBridge QML→Swift object passing. Hard write-set
+exclusions for this wave (the note-rendering performance agent's territory):
+`GridScene*`, `PianoGrid*`, `PianoRollCanvas.qml`, `TimelineQuickItem.qml`,
+`src/ui/songview/quick/swiftroll/*.qml`, `QuickDisplayListItem`,
+`cmake/patches/qtbridge/*`, `src/swift/app/CMakeLists.txt`,
+`src/checks/CMakeLists.txt` and `ShellQmlEntries.swift` — so no new check files and
+no new lane entries anywhere in this wave; every predicate extends an existing host.
+Three read-only scouts audited the preferred areas (shell chrome, project/songs/
+voicegroup services, drawer pages outside the roll bands, Swift core
+document/history) plus my own verification of each surviving candidate against the
+live tree and each ledger's pinned fork revision.
+
+Eight briefs were requested; **four survive the evidence**. Every other audited
+cluster is blocked, representation, owner-decision or excluded — padding the wave
+with ledger-only work would repeat the §19 rejection.
+
+| Task | Surface / brief | Rows | Group |
+|---|---|---|---|
+| 171 | [New Song creates from the current song and refuses MIDI collisions](task-171-brief.md) | iomutations A077–A087 (11 GAP) | A |
+| 172 | [Repeated hover/leave transitions leave the document byte-identical](task-172-brief.md) | interaction A013/A021 (2 PARTIAL) | A |
+| 173 | [Showing the Event List removes the roll band from the published set](task-173-brief.md) | hostadapter A113/A114/A117/A118 | A |
+| 174 | [Band geometry exists and survives appearance changes](task-174-brief.md) | hostintegration A008/A142 (2 GAP) | A |
+
+171 is the only brief that builds a missing flow (the registered-but-dead
+`file.new_song` command is the surface); it carries an explicit controller scope flag.
+173/174 observe published layout state, never rendering output.
+
+### Blocked-cluster census (why the wave is four)
+
+| Cluster | Blocker |
+|---|---|
+| Event-list polyphony reveal (164) | QtBridge cannot pass objects QML→Swift; needs the user's bridge work or a check-only seam |
+| mainwindowrouting lifecycle/state/input remainder | project-store snapshots and multi-song fixtures (`swift-project-store`), sidecar equality, native window close, `rebind(null)` seam absent, QAction/focusWidget representation |
+| Theme dialog (themelayout settings + visual dialogs A009) | owner decision: a separate ThemeDialog would duplicate the landed settings contrast control |
+| visual dialogs remainder | frozen QWidget pixel baselines; sample editor/sf2/wizard rows are P4-excluded |
+| transport tabs A062 | physical audio output readback (excluded infrastructure) |
+| iomutations A073–A076, ioflow A061–A065 | private preview-cleanup/result contracts and preview-plan paths — internal, no consumer |
+| workspace A030–A083 | standing protocol deferrals (event bus absence), unchanged |
+| retained, nativewindowing A055–A078/A002/A008 | duplication with executing checks; rendered stimulus current inputs cannot produce; Win32 internals |
+| hostintegration A162/A174–A185, A083–A098 | fixture fingerprint, real window close/teardown ordering, grabber identity |
+| midi/tst_midiexport PARTIALs | setup/guard classification tails over already-executing export predicates — no missing behavior |
+| project/identity A001–A019 | value-level predicates already execute under `projectidentitycheck`; any disposition change would be reconciliation, which §19's rejection forbids |
+
+### Conflict matrix and dispatch groups
+
+All four write sets are pairwise disjoint and touch no forbidden file: 171 owns
+`ProjectService+Songs.swift`/`SongDockController.swift`/`ShellPresenter.swift`/the
+dock prompt/`SongRegistrationChecks.swift`/`tst_ShellSongs.qml`; 172 owns
+`painting_raster.swift`; 173 owns `tst_SwiftRollPlots.qml` (Event List leg) with a
+conditional `EditorDrawerLayout.swift` repair; 174 owns `HostBehaviorChecks.swift`.
+173 and 174 both conditionally touch `EditorDrawerLayout.swift` — 173's condition is
+the published band set, 174's is geometry preservation; if both repairs trigger,
+sequence the second after the first's checkpoint (single owner per accepted change).
+
+| | 171 | 172 | 173 | 174 |
+|---|---|---|---|---|
+| each | — | — | — | — |
+
+| Group | Tasks | Note |
+|---|---|---|
+| A | 171, 172, 173, 174 | Independent writers; 171 dispatches only after the controller accepts its scope flag. |
+
+### Shared constraints and verification ownership
+
+The §16–§19 contracts continue unchanged, plus this wave's hard exclusions: no
+roll/grid rendering files, no CMake/manifest/registration edits, no new check files
+or lanes, 167/168's in-flight files untouched, and no QtBridge object passing. Ledger
+instructions: rows are edited only in the commit whose code and checks prove them;
+closed rows use the compact form (header + `Disposition` + one S-citing mapping line,
+no pasted code); the separate ledger writer applies each task's accepted rows from
+the implementer's evidence. Writers run their focused lanes under the lock/175-second
+alarm; mounted lanes need the macOS Qt desktop; no project-wide builds, tests,
+formatters or linters mid-flight. The controller owns the project-wide gate once
+after sources settle. Planning validation for this docs-only commit checked brief
+links/headings, fork citations at pinned revisions, lane registrations
+(`projectstore-songsmk`, `shell-songs`, `swiftcore-projectsession`,
+`swiftroll-window`), the dead `file.new_song` command, existing predicate coverage in
+`tst_ShellRollPlots.qml`/`painting_raster.swift`/`HostBehaviorChecks.swift`, and
+pairwise write-set disjointness; no application suite was run.
+
+### Deferred and excluded
+
+- Unlock paths for future waves: the user's QtBridge object passing (unblocks 164),
+  `swift-project-store` landing (lifecycle/state sidecar rows), the theme-dialog and
+  drawer-toggle-centring owner decisions (A079), and a verified real window-close
+  harness pattern (hostintegration A174–A177).
+- Strict-mapping debt remains untouched by design; reductions only ride incidentally
+  with these surfaces' commits.
+- All standing exclusions unchanged: savecore A016–A026, P3 WAV, P4 sample studio,
+  transport A009/A010/A013, physical audio, ImageIO, pending-reload gate, ED11
+  clipboard text ownership, New Voicegroup creation surfaces.
