@@ -51,6 +51,12 @@ target_compile_options(PorydawProject PUBLIC
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src/project>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/plugin>"
 )
+if(APPLE)
+    # Native headers include <QtCore/...>; optimized (WMO) imports need Qt's framework root.
+    get_filename_component(qt_framework_root "${Qt6Core_DIR}/../.." ABSOLUTE)
+    target_compile_options(PorydawProject PUBLIC
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -F${qt_framework_root}>")
+endif()
 
 target_include_directories(PorydawProject INTERFACE
     "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:PorydawProject,Swift_MODULE_DIRECTORY>>"
