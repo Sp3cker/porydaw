@@ -143,7 +143,7 @@ ShellGridMenuSupport {
         var session = openSong()
         var grid = surface().gridModel
         var range = sweepNoteRange()
-        var notes = JSON.parse(grid.noteSummary)
+        var notes = JSON.parse(grid.fetchNoteSummary())
         var latest = 0
         for (var index = 0; index < notes.length; ++index)
             latest = Math.max(latest, notes[index].tick + notes[index].duration)
@@ -163,10 +163,10 @@ ShellGridMenuSupport {
         menuStatusSpy.target = grid
         menuCursorSpy.clear()
         menuStatusSpy.clear()
-        var before = grid.noteSummary
+        var before = grid.fetchNoteSummary()
         var revision = grid.appliedRevisionText
         clickRow(menu, rulerRowIndex(menu, 13))
-        compare(grid.noteSummary, before,
+        compare(grid.fetchNoteSummary(), before,
                 "a conflicting range paste via the rendered row preserves the notes")
         compare(grid.appliedRevisionText, revision,
                 "a conflicting range paste via the rendered row preserves the revision")
@@ -199,7 +199,7 @@ ShellGridMenuSupport {
         var session = openSong()
         var grid = surface().gridModel
         var range = sweepNoteRange()
-        var notes = JSON.parse(grid.noteSummary)
+        var notes = JSON.parse(grid.fetchNoteSummary())
         var latest = 0
         for (var index = 0; index < notes.length; ++index)
             latest = Math.max(latest, notes[index].tick + notes[index].duration)
@@ -231,7 +231,7 @@ ShellGridMenuSupport {
                 "an admitted paste publishes exactly one cursor move")
         compare(menuStatusSpy.count, 1,
                 "an admitted paste publishes exactly one status update")
-        verify(JSON.parse(grid.noteSummary).some(function(note) {
+        verify(JSON.parse(grid.fetchNoteSummary()).some(function(note) {
             return note.tick === destination && note.pitch === 55 && note.duration === span
         }), "an admitted range paste writes its note at the captured cursor")
         menuCursorSpy.target = null

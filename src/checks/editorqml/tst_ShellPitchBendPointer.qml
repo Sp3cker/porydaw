@@ -55,7 +55,7 @@ ShellPitchBendSupport {
         }, 5000), "two wheel notches commit the second note-scoped edit")
         verify(opened.editor.description.indexOf((range + 3) + " semitones") >= 0,
                "the description reports the two-notch wheeled range")
-        const selected = JSON.parse(opened.grid.noteSummary).find(function(note) {
+        const selected = JSON.parse(opened.grid.fetchNoteSummary()).find(function(note) {
             return note.selected
         })
         const events = shell.shellPresenter.session.eventListPresenter()
@@ -164,7 +164,7 @@ ShellPitchBendSupport {
     function test_popupSpaceAuditionSoloAndMuteAbsorption() {
         const opened = openViaG()
         const graph = findChild(opened.view, "pitchBendGraph")
-        const selected = JSON.parse(opened.grid.noteSummary).find(function(note) {
+        const selected = JSON.parse(opened.grid.fetchNoteSummary()).find(function(note) {
             return note.selected
         })
         verify(selected !== undefined, "the popup anchors one selected note")
@@ -239,7 +239,7 @@ ShellPitchBendSupport {
                                       drawer: opened.view.drawerPresenter.height,
                                       view: [opened.view.width, opened.view.height],
                                       host: [host.width, host.height] }))
-        verify(JSON.parse(opened.grid.noteSummary).some(function(n) { return n.selected }),
+        verify(JSON.parse(opened.grid.fetchNoteSummary()).some(function(n) { return n.selected }),
                "the anchored note remains selected after the window shrinks")
     }
 

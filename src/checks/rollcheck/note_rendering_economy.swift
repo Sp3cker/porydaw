@@ -39,9 +39,8 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
     grid.refreshCamera()
     grid.scene.boxesProjected = 0
     grid.scene.fillWrites = 0
-    grid.noteSummaryRebuilds = 0
     let fillsBefore = fillSnapshot()
-    let summaryBefore = grid.noteSummary
+    let summaryBefore = grid.fetchNoteSummary()
     session.setSelectedNotes([noteID])
     grid.refreshCamera()
     report.expect(fillSnapshot() == fillsBefore
@@ -52,14 +51,13 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
                            thickness: ring, color: grid.palette.selectionRing),
                   cppID: id,
                   message: "a selection-only refresh still republishes the selection ring")
-    report.expect(grid.noteSummaryRebuilds > 0 && grid.noteSummary != summaryBefore,
+    report.expect(grid.fetchNoteSummary() != summaryBefore,
                   cppID: id,
-                  message: "a selection-content change still rebuilds the note summary")
+                  message: "a selection-content change is visible in the pulled note summary")
     grid.scene.boxesProjected = 0
     grid.scene.fillWrites = 0
-    grid.noteSummaryRebuilds = 0
     let fillsSelected = fillSnapshot()
-    let summarySelected = grid.noteSummary
+    let summarySelected = grid.fetchNoteSummary()
     let hoverPoint = viewportPoint(grid, x: box.x, y: box.y + box.h / 2)
     grid.updateHover(x: 4, y: hoverPoint.y)
     grid.refreshCamera()
@@ -67,17 +65,16 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
                       && grid.scene.boxesProjected == 0 && grid.scene.fillWrites == 0,
                   cppID: id,
                   message: "a hover-only refresh reuses the published fills with no box or fill work")
-    report.expect(grid.noteSummary == summarySelected && grid.noteSummaryRebuilds == 0,
+    report.expect(grid.fetchNoteSummary() == summarySelected,
                   cppID: id,
-                  message: "a hover-only refresh leaves the note summary byte-identical with no rebuild")
+                  message: "a hover-only refresh leaves the pulled note summary byte-identical")
     grid.clearKeyboardHover()
     session.clearSelectedNotes()
     grid.refreshCamera()
     grid.scene.boxesProjected = 0
     grid.scene.fillWrites = 0
-    grid.noteSummaryRebuilds = 0
     let fillsPlain = fillSnapshot()
-    let summaryPlain = grid.noteSummary
+    let summaryPlain = grid.fetchNoteSummary()
     let startTick = Tick(max(0, Int(note.tick) - 2))
     let endTick = Tick(Int(note.tick) + Int(note.duration) + 2)
     session.applyTimeSelection(AutomationTimeSelection(
@@ -88,9 +85,9 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
                       && grid.scene.boxesProjected == 0 && grid.scene.fillWrites == 0,
                   cppID: id,
                   message: "a highlight-only refresh reuses the published fills with no box or fill work")
-    report.expect(grid.noteSummary == summaryPlain && grid.noteSummaryRebuilds == 0,
+    report.expect(grid.fetchNoteSummary() == summaryPlain,
                   cppID: id,
-                  message: "a highlight-only refresh leaves the note summary byte-identical with no rebuild")
+                  message: "a highlight-only refresh leaves the pulled note summary byte-identical")
     report.expect(hasFrame(grid.scene.pianoNoteBordersAndSelection, box: box, inset: 0,
                            thickness: ring, color: grid.palette.selectionRing),
                   cppID: id,
@@ -98,9 +95,8 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
     session.clearTimeSelection()
     grid.scene.boxesProjected = 0
     grid.scene.fillWrites = 0
-    grid.noteSummaryRebuilds = 0
     let fillsBeforeScroll = fillSnapshot()
-    let summaryBeforeScroll = grid.noteSummary
+    let summaryBeforeScroll = grid.fetchNoteSummary()
     let scrolledX = session.camera.snapshot.scrollX
     session.mutateCamera { _ = $0.scrollByPx(10) }
     guard session.camera.snapshot.scrollX != scrolledX else {
@@ -127,9 +123,9 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
                       && grid.scene.boxesProjected == 0 && grid.scene.fillWrites == 0,
                   cppID: id,
                   message: "an in-window camera scroll republishes no note boxes or fills")
-    report.expect(grid.noteSummary == summaryBeforeScroll && grid.noteSummaryRebuilds == 0,
+    report.expect(grid.fetchNoteSummary() == summaryBeforeScroll,
                   cppID: id,
-                  message: "a camera-only refresh leaves the note summary byte-identical with no rebuild")
+                  message: "a camera-only refresh leaves the pulled note summary byte-identical")
 }
 
 @MainActor

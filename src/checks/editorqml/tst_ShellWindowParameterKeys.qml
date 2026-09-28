@@ -14,7 +14,7 @@ ShellWindowSupport {
         var roll = findChild(surface, "swiftRollInput")
         verify(roll && roll.visible, "the production roll is mounted")
         selectDrawnVelocityNote(surface)
-        var notesBefore = grid.noteSummary
+        var notesBefore = grid.fetchNoteSummary()
         var cursorBefore = grid.editCursorTick
         var trackBefore = grid.trackIndex
         compare(session.documentDirty, false, "tab activation starts from a clean song")
@@ -85,7 +85,7 @@ ShellWindowSupport {
         }
         compare(activeAfterSpace, activeBeforeSpace, "transport Space never retargets activation")
         compare(session.documentDirty, false, "transport Space never edits the song")
-        compare(grid.noteSummary, notesBefore, "transport Space never moves the selection")
+        compare(grid.fetchNoteSummary(), notesBefore, "transport Space never moves the selection")
         keyClick(Qt.Key_Space)
         tryCompare(playhead, "playing", false, 3000,
                    "the second label Space stops transport")
@@ -93,7 +93,7 @@ ShellWindowSupport {
         tryCompare(firstLabel, "checked", true, 3000,
                    "Enter activates the focused label once")
         compare(session.documentDirty, false, "label Enter never edits the song")
-        compare(grid.noteSummary, notesBefore, "label Enter never moves the selection")
+        compare(grid.fetchNoteSummary(), notesBefore, "label Enter never moves the selection")
         compare(grid.editCursorTick, cursorBefore, "label Enter never moves the cursor")
         compare(grid.trackIndex, trackBefore, "label Enter never retargets the track")
         secondLabel.forceActiveFocus(Qt.OtherFocusReason)
@@ -109,7 +109,7 @@ ShellWindowSupport {
         keyClick(Qt.Key_Return)
         compare(secondActivationChanges, 0, "a second activation never stacks")
         compare(session.documentDirty, false, "label Return never edits the song")
-        compare(grid.noteSummary, notesBefore, "label Return never moves the selection")
+        compare(grid.fetchNoteSummary(), notesBefore, "label Return never moves the selection")
         compare(grid.editCursorTick, cursorBefore, "label Return never moves the cursor")
         var plot = findChild(page, "automationPlotInput")
         verify(plot && plot.width > 0 && plot.height > 0,
@@ -121,7 +121,7 @@ ShellWindowSupport {
         var insertTime = findChild(shell, "shellAction_edit.insert_time")
         tryCompare(insertTime, "enabled", true, 3000,
                    "a real automation band stages a lane time range before Tap Space")
-        notesBefore = grid.noteSummary
+        notesBefore = grid.fetchNoteSummary()
         tapButton.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(tapButton, "activeFocus", true, 3000,
                    "the tempo Tap button takes keyboard focus")
@@ -141,7 +141,7 @@ ShellWindowSupport {
                "tap keys never change the revision or undo availability")
         compare(secondLabel.checked, true, "Return never retargets the active parameter")
         compare(session.documentDirty, false, "tap keys never edit the song")
-        compare(grid.noteSummary, notesBefore, "tap keys never move the selection")
+        compare(grid.fetchNoteSummary(), notesBefore, "tap keys never move the selection")
         keyClick(Qt.Key_Return, Qt.ShiftModifier)
         compare(model.tapTempoTapCount, 2, "Shift+Return never registers a tap")
         keyClick(Qt.Key_Space)
@@ -149,7 +149,7 @@ ShellWindowSupport {
                    "bare Space on the Tap button owns transport")
         compare(model.tapTempoTapCount, 2, "transport Space never taps")
         compare(session.documentDirty, false, "tap Space never edits the song")
-        compare(grid.noteSummary, notesBefore, "tap Space never moves the selection")
+        compare(grid.fetchNoteSummary(), notesBefore, "tap Space never moves the selection")
         compare(insertTime.enabled, true,
                 "Tap Space preserves the mounted automation lane time range")
         verify(grid.appliedRevisionText === revisionBeforeTap && session.canUndo === undoBeforeTap,
@@ -215,7 +215,7 @@ ShellWindowSupport {
         var beforeCount = page.pageModel.nodeCount
         var pair = selectMountedNotePair(surface)
         compare(pair.length, 2, "the real click and Shift-click select exactly the two note IDs")
-        var beforeNotes = grid.noteSummary
+        var beforeNotes = grid.fetchNoteSummary()
         var revisionBeforeSelection = grid.appliedRevisionText
         mousePress(plot, plot.width / 5, row, Qt.RightButton)
         mouseMove(plot, plot.width * 3 / 5, row, -1, Qt.RightButton)
@@ -224,7 +224,7 @@ ShellWindowSupport {
         tryCompare(insertTime, "enabled", true, 3000, "the right-band selects Volume time")
         compare(grid.appliedRevisionText, revisionBeforeSelection,
                 "the right-band alone never writes a lane")
-        beforeNotes = grid.noteSummary
+        beforeNotes = grid.fetchNoteSummary()
         verify(pair.every(function(previous) {
             var retained = JSON.parse(beforeNotes).find(function(note) {
                 return note.id === previous.id
@@ -265,7 +265,7 @@ ShellWindowSupport {
         var advanced = writtenTicks(page, []).sort(function(a, b) { return a - b })
         verify(advanced.length === beforeUp.length
                && advanced.some(function(tick, index) { return tick !== beforeUp[index] })
-               && grid.noteSummary === beforeNotes
+               && grid.fetchNoteSummary() === beforeNotes
                && insertTime.enabled,
                "lane-focus Right moves the point and translates the interval")
         keyClick(Qt.Key_Delete)
@@ -274,10 +274,10 @@ ShellWindowSupport {
         verify(writtenTicks(page, []).indexOf(outsideTick) >= 0
                && page.pageModel.nodeCount < beforeCount,
                "Delete removes only the lane points inside the staged range")
-        compare(grid.noteSummary, beforeNotes, "Volume range Delete preserves the notes")
+        compare(grid.fetchNoteSummary(), beforeNotes, "Volume range Delete preserves the notes")
         compare(volumeTab.activeFocus, true, "A066 label retains active focus after Delete")
         verify(pair.every(function(previous) {
-            var retained = JSON.parse(grid.noteSummary).find(function(note) {
+            var retained = JSON.parse(grid.fetchNoteSummary()).find(function(note) {
                 return note.id === previous.id
             })
             return retained && retained.tick === previous.tick
@@ -289,7 +289,7 @@ ShellWindowSupport {
         keySequence(StandardKey.SelectAll)
         compare(findChild(shell, "shellAction_edit.delete_time").enabled, false,
                 "Select All over label focus clears the time range")
-        var activeNotes = JSON.parse(grid.noteSummary).filter(function(note) {
+        var activeNotes = JSON.parse(grid.fetchNoteSummary()).filter(function(note) {
             return note.track === grid.trackIndex && !note.ghost
         })
         verify(activeNotes.length > 0 && activeNotes.every(function(note) { return note.selected }),
@@ -307,7 +307,7 @@ ShellWindowSupport {
         }, 3000, "Paste over label focus writes the copied Volume lane at the edit cursor")
         compare(volumeTab.activeFocus, true, "label retains active focus after Paste")
         verify(pair.every(function(previous) {
-            var retained = JSON.parse(grid.noteSummary).find(function(note) {
+            var retained = JSON.parse(grid.fetchNoteSummary()).find(function(note) {
                 return note.id === previous.id
             })
             return retained && retained.tick === previous.tick
@@ -345,7 +345,7 @@ ShellWindowSupport {
         var pointsBeforeHover = JSON.stringify(writtenTicks(page, []))
         keyClick(Qt.Key_Delete)
         verify(activeNotes.every(function(note) {
-            return !JSON.parse(grid.noteSummary).some(function(current) {
+            return !JSON.parse(grid.fetchNoteSummary()).some(function(current) {
                 return current.id === note.id && !current.ghost
             })
         }) && JSON.stringify(writtenTicks(page, [])) === pointsBeforeHover,
@@ -354,7 +354,7 @@ ShellWindowSupport {
         tryVerify(function() {
             return writtenTicks(page, []).indexOf(hoverTick) < 0
         }, 3000, "an eligible hovered point is deleted after note selection clears; "
-                 + "selected=" + JSON.stringify(JSON.parse(grid.noteSummary).filter(
+                 + "selected=" + JSON.stringify(JSON.parse(grid.fetchNoteSummary()).filter(
                      function(note) { return note.selected }))
                  + "; pencil=" + page.pageModel.isPencilMode
                  + "; focus=" + page.pageModel.plotFocused
@@ -395,12 +395,12 @@ ShellWindowSupport {
         mouseClick(tabPress, tabPress.width / 2, tabPress.height / 2)
         volumeTab.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(volumeTab, "activeFocus", true, 3000)
-        var before = grid.noteSummary
+        var before = grid.fetchNoteSummary()
         verify(JSON.parse(before).every(function(note) { return !note.selected }),
                "the label-Up fixture has no selected notes")
         var revision = grid.appliedRevisionText
         keyClick(Qt.Key_Up)
-        verify(grid.noteSummary === before && grid.appliedRevisionText === revision
+        verify(grid.fetchNoteSummary() === before && grid.appliedRevisionText === revision
                && volumeTab.activeFocus,
                "label-focus Up with an empty selection edits nothing")
     }

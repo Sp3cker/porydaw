@@ -14,7 +14,7 @@ ShellWindowSupport {
         compare(pair.length, 2, "the mounted roll provides a selected note")
         var selected = pair[0]
         function note(id) {
-            return JSON.parse(grid.noteSummary).find(function(item) { return item.id === id })
+            return JSON.parse(grid.fetchNoteSummary()).find(function(item) { return item.id === id })
         }
         var toggle = findChild(surface, "drawerToggle_automation")
         if (!surface.drawerPresenter.automationSection.visible)
@@ -43,12 +43,12 @@ ShellWindowSupport {
         tryCompare(volumeTab, "activeFocus", true, 3000,
                    "the Volume label owns active focus before commands")
         var labelRevision = grid.appliedRevisionText
-        var labelNotes = grid.noteSummary
+        var labelNotes = grid.fetchNoteSummary()
         keyClick(Qt.Key_Enter)
         keyClick(Qt.Key_Return)
         compare(grid.appliedRevisionText, labelRevision,
                 "label Enter and Return never edit the document")
-        compare(grid.noteSummary, labelNotes,
+        compare(grid.fetchNoteSummary(), labelNotes,
                 "label activation preserves both selected note identities")
         compare(volumeTab.activeFocus, true, "label retains focus after Enter and Return")
         var shortcut = windowShortcut("shellShortcut_roll.copy")
@@ -103,7 +103,7 @@ ShellWindowSupport {
                 "real label-focus Up key-up already ended the audition latch")
         compare(volumeTab.checked, true, "the active parameter survives label-focus commands")
 
-        var notesBefore = grid.noteSummary
+        var notesBefore = grid.fetchNoteSummary()
         var revisionBefore = grid.appliedRevisionText
         var plot = findChild(page, "automationPlotInput")
         tryVerify(function() { return plot && plot.width > 0 && plot.height > 0 }, 3000,
@@ -134,7 +134,7 @@ ShellWindowSupport {
         }
         findWritten(page)
         verify(node, "a written node has a drawn point-menu target")
-        notesBefore = grid.noteSummary
+        notesBefore = grid.fetchNoteSummary()
         revisionBefore = grid.appliedRevisionText
         var fill = findChild(node, "automationNodeFill")
         verify(fill && fill.visible, "the written node exposes its rendered hit target")
@@ -184,12 +184,12 @@ ShellWindowSupport {
         compare(field.text, "", "prompt Delete clears only the numeric draft")
         keySequence(StandardKey.Paste)
         compare(field.text, "12", "prompt Paste restores the copied numeric draft")
-        compare(grid.noteSummary, notesBefore, "prompt text keys preserve the staged note state")
+        compare(grid.fetchNoteSummary(), notesBefore, "prompt text keys preserve the staged note state")
         keyClick(Qt.Key_Up)
         keyClick(Qt.Key_Down)
         compare(model.promptOpen, true, "automation arrows leave the numeric prompt open")
         compare(field.activeFocus, true, "automation arrows keep numeric focus local")
-        compare(grid.noteSummary, notesBefore,
+        compare(grid.fetchNoteSummary(), notesBefore,
                 "automation arrows preserve selected note IDs and contents")
         compare(grid.appliedRevisionText, revisionBefore,
                 "automation arrows do not commit a song revision")
@@ -200,7 +200,7 @@ ShellWindowSupport {
         keyClick(Qt.Key_Escape)
         tryCompare(model, "promptOpen", false, 3000, "Escape closes the prompt without a write")
         compare(grid.appliedRevisionText, revisionBefore, "Escape never commits a document write")
-        compare(grid.noteSummary, notesBefore, "Escape keeps the staged note state unchanged")
+        compare(grid.fetchNoteSummary(), notesBefore, "Escape keeps the staged note state unchanged")
         compare(insertTime.enabled, true, "Escape keeps the selected time range unchanged")
         var automationPlot = findChild(page, "automationPlot")
         tryCompare(automationPlot, "activeFocus", true, 3000,

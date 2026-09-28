@@ -162,7 +162,7 @@ TestCase {
     }
     function clickFirstGridNote() {
         var input = rollInput()
-        var notes = JSON.parse(gridModel().noteSummary)
+        var notes = JSON.parse(gridModel().fetchNoteSummary())
         verify(notes.length > 0, "the staged song publishes notes")
         var target = null
         for (var n = 0; n < notes.length && !target; ++n) {
@@ -175,7 +175,7 @@ TestCase {
         verify(target, "the fixture exposes a note a click can reach")
         mouseClick(input, target.x, target.y)
         verify(waitForNative(function() {
-            return JSON.parse(gridModel().noteSummary).some(function(note) {
+            return JSON.parse(gridModel().fetchNoteSummary()).some(function(note) {
                 return note.selected
             })
         }, 5000), "the real click selected one grid note")

@@ -50,11 +50,11 @@ ShellWindowSupport {
         verify(roll && roll.visible, "the focused roll receives editor keys")
         selectDrawnVelocityNote(surface)
         var grid = surface.gridModel
-        var chosen = JSON.parse(grid.noteSummary).filter(function(note) { return note.selected })
+        var chosen = JSON.parse(grid.fetchNoteSummary()).filter(function(note) { return note.selected })
         compare(chosen.length, 1, "the pointer selected one source note")
         var original = chosen[0]
         function selectedNote() {
-            var selection = JSON.parse(grid.noteSummary).filter(function(note) {
+            var selection = JSON.parse(grid.fetchNoteSummary()).filter(function(note) {
                 return note.selected && note.id === original.id
             })
             compare(selection.length, 1, "the edited source note stays selected")
@@ -86,7 +86,7 @@ ShellWindowSupport {
         verify(grip && grip.visible, "the drawer resize grip is available")
         grip.forceActiveFocus(Qt.TabFocusReason)
         tryCompare(grip, "activeFocus", true, 3000)
-        var beforeGrip = grid.noteSummary
+        var beforeGrip = grid.fetchNoteSummary()
         var heightBefore = surface.drawerPresenter.section(
                     bootstrap.velocitySectionKind()).bodyHeight
         keyClick(Qt.Key_Up)
@@ -97,7 +97,7 @@ ShellWindowSupport {
                 heightBefore, "grip Down restores its height")
         keyClick(Qt.Key_Left)
         keyClick(Qt.Key_Right)
-        compare(grid.noteSummary, beforeGrip, "grip arrows never mutate selected notes")
+        compare(grid.fetchNoteSummary(), beforeGrip, "grip arrows never mutate selected notes")
         var revisionBeforeGrip = grid.appliedRevisionText
         var gripY = grip.height / 2
         mousePress(grip, grip.width / 2, gripY, Qt.LeftButton)
@@ -108,7 +108,7 @@ ShellWindowSupport {
         verify(resizedHeight !== heightBefore,
                "the held drawer grip changes the section height")
         keyClick(Qt.Key_Delete)
-        verify(grid.noteSummary === beforeGrip
+        verify(grid.fetchNoteSummary() === beforeGrip
                && grid.appliedRevisionText === revisionBeforeGrip,
                "drawer resize drag consumes Delete without editing the selected note")
         keyClick(Qt.Key_Escape)
@@ -119,7 +119,7 @@ ShellWindowSupport {
         compare(surface.drawerPresenter.section(bootstrap.velocitySectionKind()).bodyHeight,
                 cancelledHeight, "Escape freezes the cancelled drawer resize")
         mouseRelease(grip, grip.width / 2, gripY, Qt.LeftButton)
-        compare(grid.noteSummary, beforeGrip,
+        compare(grid.fetchNoteSummary(), beforeGrip,
                 "drawer resize Escape keeps the selected note intact")
         roll.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(roll, "activeFocus", true, 3000)
@@ -127,7 +127,7 @@ ShellWindowSupport {
         verify(selectedNote().tick > original.tick,
                "note editing resumes after the drawer resize releases")
         keyClick(Qt.Key_Escape)
-        compare(JSON.parse(grid.noteSummary).some(function(note) { return note.selected }),
+        compare(JSON.parse(grid.fetchNoteSummary()).some(function(note) { return note.selected }),
                 false, "the next idle Escape clears selection after the resize")
     }
 
@@ -137,10 +137,10 @@ ShellWindowSupport {
         var grid = surface.gridModel
         var roll = findChild(surface, "swiftRollInput")
         selectDrawnVelocityNote(surface)
-        var initiallySelected = JSON.parse(grid.noteSummary).find(function(note) {
+        var initiallySelected = JSON.parse(grid.fetchNoteSummary()).find(function(note) {
             return note.selected && !note.ghost
         })
-        var other = JSON.parse(grid.noteSummary).find(function(note) {
+        var other = JSON.parse(grid.fetchNoteSummary()).find(function(note) {
             var item = findChild(surface, "gridNote_" + note.id)
             return !note.selected && !note.ghost && item && item.visible
                    && item.width > 0 && item.height > 0
@@ -149,7 +149,7 @@ ShellWindowSupport {
         var item = findChild(surface, "gridNote_" + other.id)
         var point = item.mapToItem(roll, item.width / 2, item.height / 2)
         mouseClick(roll, point.x, point.y, Qt.LeftButton, Qt.ShiftModifier)
-        var before = JSON.parse(grid.noteSummary)
+        var before = JSON.parse(grid.fetchNoteSummary())
         var selected = before.filter(function(note) { return note.selected }).map(function(note) {
             return note.id
         })
@@ -165,7 +165,7 @@ ShellWindowSupport {
         ]
         for (var direction of directions) {
             keyClick(direction.key)
-            var after = JSON.parse(grid.noteSummary)
+            var after = JSON.parse(grid.fetchNoteSummary())
             verify(selected.every(function(id) {
                 var previous = before.find(function(note) { return note.id === id })
                 var current = after.find(function(note) { return note.id === id })
@@ -179,20 +179,20 @@ ShellWindowSupport {
                     JSON.stringify(selected), "the selection vector is identical after the arrow")
             keySequence(StandardKey.Undo)
             verify(waitForNative(function() {
-                return grid.noteSummary === JSON.stringify(before)
+                return grid.fetchNoteSummary() === JSON.stringify(before)
             }, 3000), "one undo restores the pre-arrow state")
             keySequence(StandardKey.Redo)
             verify(waitForNative(function() {
-                return grid.noteSummary === JSON.stringify(after)
+                return grid.fetchNoteSummary() === JSON.stringify(after)
             }, 3000), "one redo reapplies the selected-note arrow")
             keySequence(StandardKey.Undo)
             verify(waitForNative(function() {
-                return grid.noteSummary === JSON.stringify(before)
+                return grid.fetchNoteSummary() === JSON.stringify(before)
             }, 3000))
         }
         keyClick(Qt.Key_Right)
         keyClick(Qt.Key_Left)
-        compare(grid.noteSummary, JSON.stringify(before),
+        compare(grid.fetchNoteSummary(), JSON.stringify(before),
                 "Left moves the selected notes back by one snap")
     }
 
@@ -203,25 +203,25 @@ ShellWindowSupport {
         var roll = findChild(surface, "swiftRollInput")
         verify(roll && roll.visible, "the production roll routes editor commands")
         selectDrawnVelocityNote(surface)
-        var original = JSON.parse(grid.noteSummary).filter(function(note) { return note.selected })[0]
+        var original = JSON.parse(grid.fetchNoteSummary()).filter(function(note) { return note.selected })[0]
         verify(original, "the selected fixture note is available")
         roll.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(roll, "activeFocus", true, 3000)
         keyClick(Qt.Key_D, Qt.ControlModifier)
-        var duplicated = JSON.parse(grid.noteSummary).filter(function(note) {
+        var duplicated = JSON.parse(grid.fetchNoteSummary()).filter(function(note) {
             return note.selected && note.id !== original.id
                 && note.pitch === original.pitch && note.tick > original.tick
         })
         compare(duplicated.length, 1, "Ctrl+D duplicates and selects the original note")
         keySequence(StandardKey.SelectAll)
-        var selectedForJoin = JSON.parse(grid.noteSummary).filter(function(note) {
+        var selectedForJoin = JSON.parse(grid.fetchNoteSummary()).filter(function(note) {
             return note.selected && note.track === original.track
         })
         verify(selectedForJoin.some(function(note) { return note.id === original.id })
                && selectedForJoin.some(function(note) { return note.id === duplicated[0].id }),
                "Select All includes both same-track notes")
         keyClick(Qt.Key_J, Qt.ControlModifier)
-        var joined = JSON.parse(grid.noteSummary)
+        var joined = JSON.parse(grid.fetchNoteSummary())
         verify(joined.filter(function(note) { return note.track === original.track }).length
                < selectedForJoin.length,
                "Ctrl+J merges the adjacent same-pitch notes")
@@ -231,20 +231,20 @@ ShellWindowSupport {
         })
         verify(selectedJoined.length > 0, "Join selects a subdividable merged note")
         keyClick(Qt.Key_E, Qt.ControlModifier)
-        var split = JSON.parse(grid.noteSummary)
+        var split = JSON.parse(grid.fetchNoteSummary())
         verify(split.length > joined.length, "Ctrl+E splits selected notes on grid boundaries")
         verify(split.some(function(note) { return note.selected && note.pitch === original.pitch }),
                "Split keeps the resulting note fragments selected")
 
         var beforeCut = split.length
         keySequence(StandardKey.Cut)
-        var afterCut = JSON.parse(grid.noteSummary)
+        var afterCut = JSON.parse(grid.fetchNoteSummary())
         verify(afterCut.length < beforeCut, "Cut deletes selected notes from the focused roll")
         var cutClip = JSON.parse(bootstrap.copiedClipSummary())
         compare(cutClip[0], 1, "Cut writes a decodable single-track clipboard clip")
         verify(cutClip[1] > 0, "Cut preserves at least one copied note")
         keySequence(StandardKey.Paste)
-        var afterPaste = JSON.parse(grid.noteSummary)
+        var afterPaste = JSON.parse(grid.fetchNoteSummary())
         verify(afterPaste.length > afterCut.length, "Paste inserts clipboard notes into the roll")
         verify(afterPaste.some(function(note) { return note.selected }),
                "Paste selects at least one inserted note")
@@ -256,25 +256,25 @@ ShellWindowSupport {
         textProbe.cursorPosition = 0
         textProbe.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(textProbe, "activeFocus", true, 3000)
-        var notesBeforeLocalKeys = grid.noteSummary
+        var notesBeforeLocalKeys = grid.fetchNoteSummary()
         keyClick(Qt.Key_D, Qt.ControlModifier)
-        compare(grid.noteSummary, notesBeforeLocalKeys,
+        compare(grid.fetchNoteSummary(), notesBeforeLocalKeys,
                 "text-focused Duplicate never changes the musical notes")
         keyClick(Qt.Key_Delete)
         compare(textProbe.text, "ext", "text-focused Delete edits the local text")
-        compare(grid.noteSummary, notesBeforeLocalKeys,
+        compare(grid.fetchNoteSummary(), notesBeforeLocalKeys,
                 "text-focused Delete never deletes selected notes")
         textProbe.destroy()
 
         roll.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(roll, "activeFocus", true, 3000)
         keySequence(StandardKey.SelectAll)
-        var selectedAll = JSON.parse(grid.noteSummary).filter(function(note) {
+        var selectedAll = JSON.parse(grid.fetchNoteSummary()).filter(function(note) {
             return note.selected && note.track === original.track
         })
         verify(selectedAll.length > 0, "Select All targets the currently focused roll track")
         keyClick(Qt.Key_Delete)
-        var remaining = JSON.parse(grid.noteSummary)
+        var remaining = JSON.parse(grid.fetchNoteSummary())
         compare(remaining.filter(function(note) { return note.track === original.track }).length,
                 0, "Delete removes only the selected track's notes")
     }

@@ -78,7 +78,7 @@ TestCase {
         return findChild(page, "swiftRollOverlay")
     }
 
-    function gridNotes(grid) { return JSON.parse(grid.noteSummary) }
+    function gridNotes(grid) { return JSON.parse(grid.fetchNoteSummary()) }
 
     function noteById(grid, id) {
         var list = gridNotes(grid)
@@ -186,7 +186,7 @@ TestCase {
 
     function declinedPointerPress(item, x, y, button, grid, surface) {
         var cursor = grid.editCursorTick
-        var notes = grid.noteSummary
+        var notes = grid.fetchNoteSummary()
         var activeNote = grid.activeNoteId
         var revision = grid.appliedRevisionText
         var menuKind = grid.gridMenuKind
@@ -196,13 +196,13 @@ TestCase {
                "the shell context menu starts closed")
         mousePress(item, x, y, button)
         wait(0)
-        var unchanged = grid.editCursorTick === cursor && grid.noteSummary === notes
+        var unchanged = grid.editCursorTick === cursor && grid.fetchNoteSummary() === notes
             && grid.activeNoteId === activeNote && grid.appliedRevisionText === revision
             && grid.gridMenuKind === menuKind && surface.rulerMenu.isOpen === rulerMenuOpen
             && !contextMenu.visible
         mouseRelease(item, x, y, button)
         wait(0)
-        return unchanged && grid.editCursorTick === cursor && grid.noteSummary === notes
+        return unchanged && grid.editCursorTick === cursor && grid.fetchNoteSummary() === notes
             && grid.activeNoteId === activeNote && grid.appliedRevisionText === revision
             && grid.gridMenuKind === menuKind && surface.rulerMenu.isOpen === rulerMenuOpen
             && !contextMenu.visible

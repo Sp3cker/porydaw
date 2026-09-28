@@ -89,13 +89,18 @@ public enum OtherEventsStrip {
                                plotWidth: Double, baseFontPx: Double,
                                palette: GridPalette) -> [OtherEventsMarker] {
         let slop = fontPx(baseFontPx, 1.0 / 3.0)
+        let pixelsPerTick = camera.pixelsPerTick
         return items.compactMap { item in
+            // Cull in plot space, publish scroll-stable: the delegate offset
+            // restores the content position, so scroll-only camera changes leave
+            // every visible row identical instead of invalidating each model.
             let x = camera.contentX(tick: Double(item.tick))
             guard x >= -slop && x <= plotWidth + slop else { return nil }
             let color = item.track >= 0
                 ? PaletteMath.trackIdentityFills[PaletteMath.trackIdentityIndex(item.track)]
                 : palette.outline
-            return OtherEventsMarker(tick: item.tick, track: item.track, x: x,
+            return OtherEventsMarker(tick: item.tick, track: item.track,
+                                     x: Double(item.tick) * pixelsPerTick,
                                      color: color, label: item.label)
         }
     }

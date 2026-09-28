@@ -255,7 +255,7 @@ TestCase {
     }
 
     function noteLayout() {
-        return JSON.stringify(JSON.parse(surface().gridModel.noteSummary).map(function(note) {
+        return JSON.stringify(JSON.parse(surface().gridModel.fetchNoteSummary()).map(function(note) {
             return [note.track, note.tick, note.duration, note.pitch, note.velocity]
         }).sort())
     }
@@ -263,7 +263,7 @@ TestCase {
     function noteTargets() {
         var grid = surface().gridModel
         var roll = control("swiftRollInput")
-        return JSON.parse(grid.noteSummary).filter(function(note) {
+        return JSON.parse(grid.fetchNoteSummary()).filter(function(note) {
             return !note.ghost && note.track === grid.trackIndex
         }).map(function(note) {
             var item = findChild(surface(), "gridNote_" + note.id)
@@ -285,7 +285,7 @@ TestCase {
 
     function noteMenuMiss(menu) {
         var roll = control("swiftRollInput")
-        var targets = JSON.parse(surface().gridModel.noteSummary)
+        var targets = JSON.parse(surface().gridModel.fetchNoteSummary())
         for (var y = roll.height - surface().gridModel.rowHeight; y > 0;
              y -= surface().gridModel.rowHeight) {
             for (var x = roll.width - roll.height / 8; x > 0; x -= roll.width / 8) {
@@ -311,7 +311,7 @@ TestCase {
     function sweepNoteRange() {
         var ruler = control("timelineRulerInput")
         var grid = surface().gridModel
-        var notes = JSON.parse(grid.noteSummary)
+        var notes = JSON.parse(grid.fetchNoteSummary())
         var note = null
         for (var index = 0; index < notes.length && note === null; ++index) {
             var left = rulerTickX(notes[index].tick)

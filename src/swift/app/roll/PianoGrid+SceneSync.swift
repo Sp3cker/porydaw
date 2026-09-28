@@ -285,22 +285,6 @@ extension PianoGrid {
     @QtIgnored
     func publishOutputs() {
         if renderedNoteCount != notes.count { renderedNoteCount = notes.count }
-        let selection = session.selectedNoteOrder
-        if notes != summaryNotes || selection != summarySelection {
-            summaryNotes = notes
-            summarySelection = selection
-            noteSummaryRebuilds += 1
-            let selectedNotes = session.selectedNotes
-            let parts = notes.map { note -> String in
-                var json = "{\"id\":\(note.noteId.rawValue),\"tick\":\(note.tick)"
-                json += ",\"duration\":\(note.duration),\"pitch\":\(note.pitch)"
-                json += ",\"track\":\(note.track),\"velocity\":\(note.velocity)"
-                json += ",\"ghost\":\(note.ghost)"
-                json += ",\"selected\":\(selectedNotes.contains(note.noteId))}"
-                return json
-            }
-            noteSummary = "[" + parts.joined(separator: ",") + "]"
-        }
         let status = currentStatusText()
         if statusText != status { statusText = status }
         let availability = EditCommand.allCases.map { commands.isAvailable($0) }
@@ -310,5 +294,22 @@ extension PianoGrid {
             onCommandAvailabilityChanged?()
         }
         publishGeometry()
+    }
+
+    /// Check-facing note probe, pulled on demand. The pushed `noteSummary`
+    /// copy used to re-encode on the publish path; checks call this instead,
+    /// so scroll/zoom refreshes never serialize notes.
+    @QtIgnored
+    func fetchNoteSummaryImpl() -> String {
+        let selectedNotes = session.selectedNotes
+        let parts = notes.map { note -> String in
+            var json = "{\"id\":\(note.noteId.rawValue),\"tick\":\(note.tick)"
+            json += ",\"duration\":\(note.duration),\"pitch\":\(note.pitch)"
+            json += ",\"track\":\(note.track),\"velocity\":\(note.velocity)"
+            json += ",\"ghost\":\(note.ghost)"
+            json += ",\"selected\":\(selectedNotes.contains(note.noteId))}"
+            return json
+        }
+        return "[" + parts.joined(separator: ",") + "]"
     }
 }

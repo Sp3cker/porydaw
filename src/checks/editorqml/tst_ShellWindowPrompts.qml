@@ -66,7 +66,7 @@ ShellWindowSupport {
                "the production Pan selector activates")
         tryCompare(pan, "checked", true, 3000)
         var beforePanCancel = grid.appliedRevisionText
-        var beforePanNotes = grid.noteSummary
+        var beforePanNotes = grid.fetchNoteSummary()
         var beforePanUndo = session.canUndo
         verify(model.openInsertionPrompt(96, 64),
                "value-prompt CC10 insertion opens at empty tick 96")
@@ -79,7 +79,7 @@ ShellWindowSupport {
         tryCompare(model, "promptOpen", false, 3000)
         compare(grid.appliedRevisionText, beforePanCancel,
                 "tick-96 insertion Escape preserves the document revision")
-        compare(grid.noteSummary, beforePanNotes,
+        compare(grid.fetchNoteSummary(), beforePanNotes,
                 "tick-96 insertion Escape preserves selected notes")
         compare(session.canUndo, beforePanUndo,
                 "tick-96 insertion Escape preserves history availability")
@@ -96,12 +96,12 @@ ShellWindowSupport {
         if (!surface.drawerPresenter.section(bootstrap.velocitySectionKind()).visible)
             mouseClick(velocityToggle, velocityToggle.width / 2, velocityToggle.height / 2)
         selectDrawnVelocityNote(surface)
-        var selectedNotes = JSON.parse(grid.noteSummary).filter(function(note) {
+        var selectedNotes = JSON.parse(grid.fetchNoteSummary()).filter(function(note) {
             return note.selected && !note.ghost
         })
         compare(selectedNotes.length, 1, "the tick-144 prompt targets one real selected Littleroot note")
         var beforeCancel = grid.appliedRevisionText
-        var beforeNotes = grid.noteSummary
+        var beforeNotes = grid.fetchNoteSummary()
         var beforeUndo = session.canUndo
         verify(model.openInsertionPrompt(144, 64), "CC10 insertion opens at empty tick 144")
         tryVerify(function() {
@@ -136,7 +136,7 @@ ShellWindowSupport {
         tryCompare(model, "promptOpen", false, 3000)
         compare(grid.appliedRevisionText, beforeCancel,
                 "CC10 insertion Escape preserves its document revision")
-        compare(grid.noteSummary, beforeNotes,
+        compare(grid.fetchNoteSummary(), beforeNotes,
                 "CC10 insertion Escape preserves selected note identities")
         compare(session.canUndo, beforeUndo, "CC10 insertion Escape preserves history availability")
         tryCompare(plot, "activeFocus", true, 3000,
@@ -162,7 +162,7 @@ ShellWindowSupport {
         compare(findChild(shell, "shellAction_edit.delete_time").enabled, false,
                 "an open song without a time selection cannot delete a selected range")
         var before = grid.appliedRevisionText
-        var notesBefore = grid.noteSummary
+        var notesBefore = grid.fetchNoteSummary()
         var cursor = grid.editCursorTick
         var roll = findChild(surface, "swiftRollInput")
         roll.forceActiveFocus(Qt.OtherFocusReason)
@@ -231,7 +231,7 @@ ShellWindowSupport {
                   "the accepted nonzero form changes the selected song")
         compare(grid.editCursorTick, cursor,
                 "accepting a cursor insertion does not move the edit cursor")
-        var shifted = JSON.parse(grid.noteSummary)
+        var shifted = JSON.parse(grid.fetchNoteSummary())
         var original = JSON.parse(notesBefore)
         verify(original.some(function(note, index) {
             return note.tick >= cursor && shifted[index].tick > note.tick
@@ -241,13 +241,13 @@ ShellWindowSupport {
         var firstButton = findChild(shell.sceneLoader.item, "songTabSelect_" + firstId)
         mouseClick(firstButton, firstButton.width / 3, firstButton.height / 2)
         tryCompare(tabs, "selectedId", firstId)
-        var otherNotes = selectedSurface().gridModel.noteSummary
+        var otherNotes = selectedSurface().gridModel.fetchNoteSummary()
         var secondButton = findChild(shell.sceneLoader.item, "songTabSelect_" + secondId)
         mouseClick(secondButton, secondButton.width / 3, secondButton.height / 2)
         tryCompare(tabs, "selectedId", secondId)
         mouseClick(firstButton, firstButton.width / 3, firstButton.height / 2)
         tryCompare(tabs, "selectedId", firstId)
-        compare(selectedSurface().gridModel.noteSummary, otherNotes,
+        compare(selectedSurface().gridModel.fetchNoteSummary(), otherNotes,
                 "insertion leaves the inactive tab unchanged")
     }
 
@@ -257,7 +257,7 @@ ShellWindowSupport {
         var grid = surface.gridModel
         var menu = surface.rulerMenu
         var before = grid.appliedRevisionText
-        var notesBefore = grid.noteSummary
+        var notesBefore = grid.fetchNoteSummary()
         var editMenu = findChild(shell, "shellEditMenu")
         var timeMenu = findChild(shell, "shellTimeMenu")
         var insert = findChild(timeMenu, "shellAction_edit.insert_time")
@@ -279,7 +279,7 @@ ShellWindowSupport {
                    "clicking OK closes the accepted zero-span form")
         compare(grid.appliedRevisionText, before,
                 "a zero-span OK click preserves the selected document revision")
-        compare(grid.noteSummary, notesBefore,
+        compare(grid.fetchNoteSummary(), notesBefore,
                 "a zero-span OK click preserves the selected document notes")
     }
 

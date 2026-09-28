@@ -83,14 +83,6 @@ public final class PianoGrid {
     var contentEndTick = GridMetrics.songLengthTicks
     @QtIgnored
     var staticSceneDirty = true
-    /// Last note/selection state baked into `noteSummary`. The summary string
-    /// is a check-facing probe: rebuilding it per pointer sample serialized
-    /// the whole document, so it is only re-encoded when its inputs change.
-    @QtIgnored
-    var summaryNotes: [GridNote]?
-    @QtIgnored
-    var summarySelection: [NoteID]?
-    @QtIgnored public var noteSummaryRebuilds = 0
     @QtIgnored
     var lastEndTickNotes: [GridNote]?
     @QtIgnored
@@ -126,7 +118,6 @@ public final class PianoGrid {
     public internal(set) var activeNoteId: UInt64 = 0
     @QtTracked public var cursorKind = 0
     @QtTracked public var statusText = ""
-    @QtTracked public var noteSummary = "[]"
     @QtTracked public var lastCancelReason = -1
     @QtTracked public var pencilMode = false
     @QtTracked public var scaleFold = false
@@ -283,6 +274,10 @@ public final class PianoGrid {
         rebuildScene()
         publishOutputs()
     }
+
+    /// Check-facing note probe, pulled on demand by checks. Kept out of the
+    /// publish path so scroll/zoom refreshes never serialize notes.
+    public func fetchNoteSummary() -> String { fetchNoteSummaryImpl() }
 
     public func commandAvailable(command: Int) -> Bool {
         commandAvailableImpl(command: command)

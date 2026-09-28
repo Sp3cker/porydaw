@@ -88,7 +88,7 @@ TestCase {
             grid.setTrack(track)
             if (grid.trackIndex !== track)
                 break
-            const notes = JSON.parse(grid.noteSummary)
+            const notes = JSON.parse(grid.fetchNoteSummary())
             sampled.push({ track: track, count: notes.length,
                            durations: notes.slice(0, 4).map(function(n) { return n.duration }) })
             for (let i = 0; i < notes.length; ++i) {
@@ -241,7 +241,7 @@ TestCase {
         }
         let stray = null
         if (stageStrayNote) {
-            const existing = JSON.parse(grid.noteSummary).map(function(n) { return n.id })
+            const existing = JSON.parse(grid.fetchNoteSummary()).map(function(n) { return n.id })
             const anchorFace = findChild(view, "gridNote_" + note.id)
             const faceRight = anchorFace.mapToItem(roll, anchorFace.width, 0).x
             const drawX = faceRight + grid.beatWidth
@@ -255,9 +255,9 @@ TestCase {
             mouseRelease(roll, drawX + grid.drawThreshold + grid.beatWidth / 2,
                          drawY, Qt.LeftButton)
             verify(waitForNative(function() {
-                return JSON.parse(grid.noteSummary).length === existing.length + 1
+                return JSON.parse(grid.fetchNoteSummary()).length === existing.length + 1
             }, 5000), "the real roll draws a separate note before the popup opens")
-            const added = JSON.parse(grid.noteSummary).find(function(n) {
+            const added = JSON.parse(grid.fetchNoteSummary()).find(function(n) {
                 return existing.indexOf(n.id) === -1
             })
             const face = findChild(view, "gridNote_" + added.id)
@@ -267,7 +267,7 @@ TestCase {
         }
         mouseClick(roll, note.x, note.y, Qt.LeftButton)
         tryVerify(function() {
-            return JSON.parse(grid.noteSummary).some(function(n) { return n.selected })
+            return JSON.parse(grid.fetchNoteSummary()).some(function(n) { return n.selected })
         }, 5000, "the real roll click selects the anchor note")
         const overlay = grid.scene.pianoOverlay
         let paintedRange = false

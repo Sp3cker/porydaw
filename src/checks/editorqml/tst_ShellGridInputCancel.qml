@@ -7,7 +7,7 @@ ShellGridInputSupport {
         var surface = selectedSurface()
         var grid = surface.gridModel
         var roll = rollInput(surface)
-        var before = grid.noteSummary
+        var before = grid.fetchNoteSummary()
         var beforeReason = grid.lastCancelReason
         var target = firstBandedNote(grid, surface, roll)
         verify(target !== null, "a fully visible note takes a band")
@@ -24,7 +24,7 @@ ShellGridInputSupport {
         keyClick(Qt.Key_Escape)
         mouseRelease(roll, band.ex, band.ey, Qt.RightButton)
         verify(waitForNative(function() {
-            return grid.noteSummary === before
+            return grid.fetchNoteSummary() === before
         }, 5000), "Escape cancels the band without a document edit")
         compare(grid.lastCancelReason, beforeReason, "band Escape leaves the host cancel reason untouched")
         var idleItem = findChild(surface, "gridNote_" + target.id)
@@ -66,7 +66,7 @@ ShellGridInputSupport {
         var surface = selectedSurface()
         var grid = surface.gridModel
         var roll = rollInput(surface)
-        var before = grid.noteSummary
+        var before = grid.fetchNoteSummary()
         var target = firstBandedNote(grid, surface, roll)
         verify(target !== null, "a fully visible note takes a band")
         var band = noteBand(roll, surface, target.id)
@@ -80,7 +80,7 @@ ShellGridInputSupport {
         grid.inputCancelled(1)
         mouseRelease(roll, band.ex, band.ey, Qt.RightButton)
         verify(waitForNative(function() {
-            return grid.lastCancelReason === 1 && grid.noteSummary === before
+            return grid.lastCancelReason === 1 && grid.fetchNoteSummary() === before
         }, 5000), "pointer-ungrab cancels the band with reason 1")
     }
 
@@ -89,19 +89,19 @@ ShellGridInputSupport {
         var surface = selectedSurface()
         var grid = surface.gridModel
         var roll = rollInput(surface)
-        var before = grid.noteSummary
+        var before = grid.fetchNoteSummary()
         var revision = grid.appliedRevisionText
         grid.inputCancelled(1)
         compare(grid.lastCancelReason, 1, "an idle ungrab primes a non-hidden cancel reason")
         var band = holdBand(grid, surface, roll)
         surface.visible = false
         verify(waitForNative(function() {
-            return grid.lastCancelReason === 2 && grid.noteSummary === before
+            return grid.lastCancelReason === 2 && grid.fetchNoteSummary() === before
         }, 5000), "hiding the surface mid-band cancels it with reason 2")
         surface.visible = true
         mouseRelease(roll, band.ex, band.ey, Qt.RightButton)
         verify(waitForNative(function() { return true }, 100))
-        compare(grid.noteSummary, before, "the release after a hidden cancel commits no band")
+        compare(grid.fetchNoteSummary(), before, "the release after a hidden cancel commits no band")
         compare(grid.appliedRevisionText, revision, "the hidden cancel is not a history edit")
     }
 
@@ -110,7 +110,7 @@ ShellGridInputSupport {
         var surface = selectedSurface()
         var grid = surface.gridModel
         var roll = rollInput(surface)
-        var before = grid.noteSummary
+        var before = grid.fetchNoteSummary()
         var revision = grid.appliedRevisionText
         grid.inputCancelled(1)
         compare(grid.lastCancelReason, 1, "an idle ungrab primes a non-deactivation cancel reason")
@@ -118,13 +118,13 @@ ShellGridInputSupport {
         session.cancelGridInput(3)
         mouseRelease(roll, band.ex, band.ey, Qt.RightButton)
         verify(waitForNative(function() {
-            return grid.lastCancelReason === 3 && grid.noteSummary === before
+            return grid.lastCancelReason === 3 && grid.fetchNoteSummary() === before
         }, 5000), "window deactivation cancels the band with reason 3")
         band = holdBand(grid, surface, roll)
         session.cancelGridInput(0)
         mouseRelease(roll, band.ex, band.ey, Qt.RightButton)
         verify(waitForNative(function() {
-            return grid.lastCancelReason === 0 && grid.noteSummary === before
+            return grid.lastCancelReason === 0 && grid.fetchNoteSummary() === before
         }, 5000), "editor focus loss cancels the band with reason 0")
         compare(grid.appliedRevisionText, revision, "window cancels are not history edits")
     }

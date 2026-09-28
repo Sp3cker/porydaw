@@ -149,7 +149,7 @@ ShellTabsSupport {
                 ++zoom) {
             mouseWheel(roll, roll.width / 2, roll.height / 2, 0, -120)
         }
-        var beforePair = JSON.parse(reopenedGrid.noteSummary)
+        var beforePair = JSON.parse(reopenedGrid.fetchNoteSummary())
         var firstRow = Math.ceil(reopenedGrid.cameraScrollY / reopenedGrid.rowHeight) + 2
         var lastRow = Math.floor((reopenedGrid.cameraScrollY + plot.height)
                                  / reopenedGrid.rowHeight) - 2
@@ -173,10 +173,10 @@ ShellTabsSupport {
                    + reopenedGrid.cameraScrollY + ")")
             mouseDoubleClickSequence(roll, point.x, point.y, Qt.LeftButton)
             tryVerify(function() {
-                return JSON.parse(reopenedGrid.noteSummary).length === beforePair.length + i + 1
+                return JSON.parse(reopenedGrid.fetchNoteSummary()).length === beforePair.length + i + 1
             }, 3000, "the reopened roll creates a fresh tick-960 note")
         }
-        var pair = JSON.parse(reopenedGrid.noteSummary).filter(function(note) {
+        var pair = JSON.parse(reopenedGrid.fetchNoteSummary()).filter(function(note) {
             return note.tick === tick && pitches.indexOf(note.pitch) >= 0
                    && !beforePair.some(function(prior) { return prior.id === note.id })
         })
@@ -187,7 +187,7 @@ ShellTabsSupport {
         mouseClick(roll, secondPoint.x, secondPoint.y, Qt.LeftButton, Qt.ShiftModifier)
         tryVerify(function() {
             return pair.every(function(note) {
-                return JSON.parse(reopenedGrid.noteSummary).some(function(current) {
+                return JSON.parse(reopenedGrid.fetchNoteSummary()).some(function(current) {
                     return current.id === note.id && current.selected
                 })
             })
@@ -211,7 +211,7 @@ ShellTabsSupport {
         keyClick(Qt.Key_Right)
         tryVerify(function() {
             return pair.every(function(note) {
-                return JSON.parse(reopenedGrid.noteSummary).some(function(current) {
+                return JSON.parse(reopenedGrid.fetchNoteSummary()).some(function(current) {
                     return current.id === note.id && current.tick === tick + reopenedGrid.snapTicks
                 })
             })
@@ -219,7 +219,7 @@ ShellTabsSupport {
         keyClick(Qt.Key_Up)
         tryVerify(function() {
             return pair.every(function(note) {
-                return JSON.parse(reopenedGrid.noteSummary).some(function(current) {
+                return JSON.parse(reopenedGrid.fetchNoteSummary()).some(function(current) {
                     return current.id === note.id && current.pitch === note.pitch + 1
                 })
             })

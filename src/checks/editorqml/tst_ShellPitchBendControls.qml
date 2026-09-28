@@ -54,7 +54,7 @@ ShellPitchBendSupport {
         const note = visibleNote(view, grid, roll, plot)
         verify(note !== null, "a selected track's editable note is revealed: " + noteProbe)
         mouseClick(roll, note.x, note.y, Qt.LeftButton)
-        verify(JSON.parse(grid.noteSummary).some(function(n) { return n.selected }),
+        verify(JSON.parse(grid.fetchNoteSummary()).some(function(n) { return n.selected }),
                "the actual roll selects the note")
         const item = findChild(shell, "shellAction_roll.pitch_bend")
         verify(item !== null, "the Edit menu owns the pitch bend row")
@@ -71,7 +71,7 @@ ShellPitchBendSupport {
         compare(grid.appliedRevisionText, before)
         editor.cancelAndClose()
         tryCompare(editor, "isOpen", false)
-        verify(JSON.parse(grid.noteSummary).some(function(n) { return n.selected }),
+        verify(JSON.parse(grid.fetchNoteSummary()).some(function(n) { return n.selected }),
                "dismissing the menu-opened editor keeps the note selection")
     }
 
@@ -85,7 +85,7 @@ ShellPitchBendSupport {
         const note = visibleNote(view, grid, roll, plot)
         verify(note !== null, "a selected track's editable note is revealed: " + noteProbe)
         mouseClick(roll, note.x, note.y, Qt.LeftButton)
-        verify(JSON.parse(grid.noteSummary).some(function(n) { return n.selected }),
+        verify(JSON.parse(grid.fetchNoteSummary()).some(function(n) { return n.selected }),
                "the actual roll selects the note")
         grid.performCommand(6) // Edit → Pitch Bend (production EditCommand id)
         const editor = view.pitchBendPresenter
@@ -187,7 +187,7 @@ ShellPitchBendSupport {
         keyClick(Qt.Key_Escape)
         tryCompare(editor, "isOpen", false)
         compare(findChild(view, "pitchBendPopup"), null)
-        verify(JSON.parse(grid.noteSummary).some(function(n) { return n.selected }),
+        verify(JSON.parse(grid.fetchNoteSummary()).some(function(n) { return n.selected }),
                "Escape dismisses the editor without clearing note selection")
     }
 }

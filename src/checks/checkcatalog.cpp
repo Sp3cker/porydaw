@@ -100,6 +100,11 @@ const std::vector<CheckDefinition> &catalog()
              .argv = strings({"--audiocheck-backend"}),
              .handler = qtOnly<runAudioBackendCheck>,
              .environment = {{QStringLiteral("PORYDAW_AUDIO_BACKEND"), QStringLiteral("null")}}});
+        // Packed-blob decode: blobs past 64KiB must expose every model row;
+        // the quint16 length-field cast used to drop the tail silently.
+        result.push_back({.name = "quickdisplay-decode",
+                          .argv = strings({"--quickdisplay-decode"}),
+                          .handler = qtOnly<runQuickDisplayDecodeCheck>});
         // The suites below had no dedicated entry and previously ran only
         // inside the bare `swiftcore` entry, whose unfiltered QTest::qExec
         // executed every slot — re-running each suite that also has a

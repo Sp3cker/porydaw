@@ -11,7 +11,7 @@ ShellGridMenuSupport {
         openSong()
         var grid = surface().gridModel
         var roll = control("swiftRollInput")
-        var original = JSON.parse(grid.noteSummary)
+        var original = JSON.parse(grid.fetchNoteSummary())
         var snap = grid.snapTicks
         var pixelsPerTick = grid.beatWidth / grid.ticksPerBeat
         var start = Math.ceil((grid.cameraScrollX + roll.width / 3) / pixelsPerTick / snap) * snap
@@ -38,13 +38,13 @@ ShellGridMenuSupport {
         mouseRelease(roll, endX, y, Qt.LeftButton)
         var source = null
         tryVerify(function() {
-            source = JSON.parse(grid.noteSummary).find(function(note) {
+            source = JSON.parse(grid.fetchNoteSummary()).find(function(note) {
                 return original.every(function(previous) { return previous.id !== note.id })
             })
             return source !== undefined
         }, 3000)
         verify(source.pitch === 127 - pitchRow && source.tick === start,
-               "physical note lands at selected row and cell: " + grid.noteSummary
+               "physical note lands at selected row and cell: " + grid.fetchNoteSummary()
                + " expected tick " + start + " pitch " + (127 - pitchRow))
         verify(source.duration === 3 * snap,
                "the physical draw creates a three-cell source (duration "
@@ -61,12 +61,12 @@ ShellGridMenuSupport {
             tryCompare(menu, "visible", false)
         }
         activate("roll.duplicate_time", centerX)
-        verify(JSON.parse(grid.noteSummary).some(function(note) {
+        verify(JSON.parse(grid.fetchNoteSummary()).some(function(note) {
             return note.tick === start + 3 * snap && note.pitch === source.pitch
                 && note.duration === 3 * snap
         }), "the Duplicate row copies its selected note one span later")
         mouseClick(roll, centerX, y, Qt.LeftButton)
-        verify(JSON.parse(grid.noteSummary).some(function(note) {
+        verify(JSON.parse(grid.fetchNoteSummary()).some(function(note) {
             return note.tick === start && note.pitch === source.pitch
                 && note.selected && note.duration === 3 * snap
         }), "clicking the original selects the three-cell source before Split")
@@ -75,17 +75,17 @@ ShellGridMenuSupport {
         tryCompare(grid, "gridSelectionMenuId", 16)
         tryVerify(function() { return grid.visibleGridTicks === snap }, 3000)
         tryVerify(function() { return findChild(surface(), "quickMenuPanelRoot") === null }, 3000)
-        verify(JSON.parse(grid.noteSummary).some(function(note) {
+        verify(JSON.parse(grid.fetchNoteSummary()).some(function(note) {
             return note.tick === start && note.pitch === source.pitch && note.selected
         }), "grid division changes retain the selected source")
         activate("roll.split", centerX)
-        var pieces = JSON.parse(grid.noteSummary).filter(function(note) {
+        var pieces = JSON.parse(grid.fetchNoteSummary()).filter(function(note) {
             return note.pitch === source.pitch && note.tick >= start
                 && note.tick < start + 3 * snap && note.duration === snap
         })
-        compare(pieces.length, 3, "the Split row yields three grid pieces: " + grid.noteSummary)
+        compare(pieces.length, 3, "the Split row yields three grid pieces: " + grid.fetchNoteSummary())
         activate("roll.join", centerX)
-        verify(JSON.parse(grid.noteSummary).some(function(note) {
+        verify(JSON.parse(grid.fetchNoteSummary()).some(function(note) {
             return note.tick === start && note.pitch === source.pitch
                 && note.duration === 3 * snap
         }), "the Join row merges the selected three pieces")
@@ -101,7 +101,7 @@ ShellGridMenuSupport {
         mouseClick(roll, first.point.x, first.point.y, Qt.RightButton)
         var menu = noteMenu()
         tryCompare(menu, "visible", true)
-        verify(JSON.parse(grid.noteSummary).some(function(note) {
+        verify(JSON.parse(grid.fetchNoteSummary()).some(function(note) {
             return note.id === first.note.id && note.selected
         }), "a right release over an unselected note selects it and opens the note menu")
         verify(menu.itemAt(0).objectName === "shellContextAction_edit.set_velocity"
@@ -123,7 +123,7 @@ ShellGridMenuSupport {
         var position = roll.mapToItem(shell.contentItem, second.point.x, second.point.y)
         mousePress(shell.contentItem, position.x, position.y, Qt.RightButton)
         tryCompare(menu, "visible", true, 3000)
-        verify(menu.visible && JSON.parse(grid.noteSummary).some(function(note) {
+        verify(menu.visible && JSON.parse(grid.fetchNoteSummary()).some(function(note) {
             return note.id === second.note.id && note.selected
         }), "an outside right press retargets the open note menu to the note under the cursor")
         mouseRelease(shell.contentItem, position.x, position.y, Qt.RightButton)
@@ -138,7 +138,7 @@ ShellGridMenuSupport {
         mouseRelease(shell.contentItem, miss.x, miss.y, Qt.RightButton)
         compare(noteLayout(), before)
         compare(grid.appliedRevisionText, revision)
-        verify(JSON.parse(grid.noteSummary).some(function(note) {
+        verify(JSON.parse(grid.fetchNoteSummary()).some(function(note) {
             return note.id === second.note.id && note.selected
         }), "the empty-space release preserves the retargeted note selection")
     }
@@ -171,7 +171,7 @@ ShellGridMenuSupport {
         keyClick(Qt.Key_Return)
         tryCompare(model, "promptOpen", false)
         verify(waitForNative(function() {
-            return JSON.parse(grid.noteSummary).some(function(note) {
+            return JSON.parse(grid.fetchNoteSummary()).some(function(note) {
                 return note.id === target.note.id && note.velocity === 73
             })
         }, 5000), "the mounted fixture note is seeded at velocity 73")
@@ -199,7 +199,7 @@ ShellGridMenuSupport {
         tryCompare(model, "promptOpen", false)
         verify(roll.activeFocus, "accepting the prompt restores roll focus; active item "
                + (shell.activeFocusItem ? shell.activeFocusItem.objectName : "<none>"))
-        verify(JSON.parse(grid.noteSummary).some(function(note) {
+        verify(JSON.parse(grid.fetchNoteSummary()).some(function(note) {
             return note.id === target.note.id && note.velocity === 95
         }), "accepting the mounted prompt changes the captured note")
         var accepted = noteLayout()
@@ -234,7 +234,7 @@ ShellGridMenuSupport {
         var duration = Math.max(snap, Math.ceil(grid.drawThreshold / pixelsPerTick / snap) * snap)
         var start = Math.ceil((grid.cameraScrollX + roll.width / 3) / pixelsPerTick / snap) * snap
         var draw = null
-        var occupied = JSON.parse(grid.noteSummary)
+        var occupied = JSON.parse(grid.fetchNoteSummary())
         for (var rowIndex = Math.ceil(grid.cameraScrollY / grid.rowHeight) + 2;
              rowIndex < Math.floor((grid.cameraScrollY + roll.height) / grid.rowHeight) - 2;
              ++rowIndex) {
@@ -256,7 +256,7 @@ ShellGridMenuSupport {
         mouseMove(roll, drawEnd, draw.y, -1, Qt.LeftButton)
         mouseRelease(roll, drawEnd, draw.y, Qt.LeftButton)
         verify(waitForNative(function() {
-            return JSON.parse(grid.noteSummary).some(function(note) {
+            return JSON.parse(grid.fetchNoteSummary()).some(function(note) {
                 return occupied.every(function(previous) { return previous.id !== note.id })
                     && note.velocity === 73
             })
@@ -325,7 +325,7 @@ ShellGridMenuSupport {
         mouseClick(roll, targets[1].point.x, targets[1].point.y,
                    Qt.LeftButton, Qt.ControlModifier)
         tryVerify(function() {
-            return JSON.parse(grid.noteSummary).filter(function(note) {
+            return JSON.parse(grid.fetchNoteSummary()).filter(function(note) {
                 return note.selected
             }).length === 2
         }, 3000)
@@ -341,7 +341,7 @@ ShellGridMenuSupport {
                && findChild(shell, "shellAction_edit.undo") !== null
                && findChild(shell, "shellAction_edit.redo") !== null,
                "the mounted Edit menu owns Copy Paste Undo and Redo")
-        var before = JSON.parse(grid.noteSummary)
+        var before = JSON.parse(grid.fetchNoteSummary())
         var selectedIds = before.filter(function(note) { return note.selected })
             .map(function(note) { return note.id }).sort()
         var layout = noteLayout()
@@ -351,13 +351,13 @@ ShellGridMenuSupport {
         mouseClick(roll, targets[0].point.x, targets[0].point.y, Qt.RightButton)
         var menu = noteMenu()
         tryCompare(menu, "visible", true, 3000, "right click opens the mounted note menu")
-        compare(JSON.stringify(JSON.parse(grid.noteSummary).filter(function(note) {
+        compare(JSON.stringify(JSON.parse(grid.fetchNoteSummary()).filter(function(note) {
             return note.selected
         }).map(function(note) { return note.id }).sort()), JSON.stringify(selectedIds),
                 "opening the note menu preserves an existing multi-selection")
         keyClick(Qt.Key_Escape)
         tryVerify(function() {
-            var ids = JSON.parse(grid.noteSummary).filter(function(note) {
+            var ids = JSON.parse(grid.fetchNoteSummary()).filter(function(note) {
                 return note.selected
             }).map(function(note) { return note.id }).sort()
             return !menu.visible && JSON.stringify(ids) === JSON.stringify(selectedIds)
@@ -380,7 +380,7 @@ ShellGridMenuSupport {
         tryVerify(function() {
             return !menu.visible && noteLayout() === expected
         }, 3000, "Return activates the highlighted grid menu row")
-        compare(JSON.stringify(JSON.parse(grid.noteSummary).map(function(note) {
+        compare(JSON.stringify(JSON.parse(grid.fetchNoteSummary()).map(function(note) {
             return note.id
         }).sort()), JSON.stringify(before.filter(function(note) {
             return selectedIds.indexOf(note.id) < 0

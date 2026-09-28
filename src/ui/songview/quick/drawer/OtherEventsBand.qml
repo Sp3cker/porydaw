@@ -69,31 +69,39 @@ Rectangle {
             color: band.colors.rulerPreRollMask
         }
 
-        Repeater {
-            id: markerRepeater
-            objectName: "timelineOtherEventsMarkers"
-            model: band.presenter.markers
-            delegate: Shape {
-                required property var model
-                // One packed spec per marker: a single bridge read per model
-                // change instead of a metaCall per property.
-                readonly property var s: model ? model.spec : ({})
-                objectName: "timelineOtherEventsMarker"
-                x: s.x - band.presenter.markerHalfWidth
-                y: (band.height - height) / 2
-                width: 2 * band.presenter.markerHalfWidth
-                height: 2 * band.presenter.markerHalfHeight
-                ShapePath {
-                    fillColor: s.color
-                    strokeWidth: 0
-                    startX: band.presenter.markerHalfWidth
-                    startY: 0
-                    PathLine { x: 2 * band.presenter.markerHalfWidth; y: band.presenter.markerHalfHeight }
-                    PathLine { x: band.presenter.markerHalfWidth; y: 2 * band.presenter.markerHalfHeight }
-                    PathLine { x: 0; y: band.presenter.markerHalfHeight }
-                    PathLine { x: band.presenter.markerHalfWidth; y: 0 }
+        Item {
+            id: markerContent
+            width: parent.width
+            height: parent.height
+            // Stable rows translate once here from the surface scroll carrier,
+            // same-turn like the roll plot content.
+            x: -band.overlayRoot.scrollX
+            Repeater {
+                id: markerRepeater
+                objectName: "timelineOtherEventsMarkers"
+                model: band.presenter.markers
+                delegate: Shape {
+                    required property var model
+                    // One packed spec per marker: a single bridge read per model
+                    // change instead of a metaCall per property.
+                    readonly property var s: model ? model.spec : ({})
+                    objectName: "timelineOtherEventsMarker"
+                    x: s.x - band.presenter.markerHalfWidth
+                    y: (band.height - height) / 2
+                    width: 2 * band.presenter.markerHalfWidth
+                    height: 2 * band.presenter.markerHalfHeight
+                    ShapePath {
+                        fillColor: s.color
+                        strokeWidth: 0
+                        startX: band.presenter.markerHalfWidth
+                        startY: 0
+                        PathLine { x: 2 * band.presenter.markerHalfWidth; y: band.presenter.markerHalfHeight }
+                        PathLine { x: band.presenter.markerHalfWidth; y: 2 * band.presenter.markerHalfHeight }
+                        PathLine { x: 0; y: band.presenter.markerHalfHeight }
+                        PathLine { x: band.presenter.markerHalfWidth; y: 0 }
+                    }
+                    Accessible.ignored: true
                 }
-                Accessible.ignored: true
             }
         }
 

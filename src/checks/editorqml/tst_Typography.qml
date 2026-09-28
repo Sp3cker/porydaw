@@ -392,7 +392,7 @@ TestCase {
         var input = findChild(surface, "swiftRollInput")
         verify(plot && input, "the active roll input and plot are mounted")
         grid.setTrack(0)
-        var notes = JSON.parse(grid.noteSummary)
+        var notes = JSON.parse(grid.fetchNoteSummary())
         var note = notes.filter(function(candidate) {
             return candidate.track === 0 && candidate.duration >= 3
         })[0]

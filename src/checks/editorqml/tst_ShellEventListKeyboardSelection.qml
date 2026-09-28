@@ -25,7 +25,7 @@ ShellEventListSupport {
         const grid = surface.gridModel
         const roll = findChild(surface, "swiftRollInput")
         verify(roll && roll.visible)
-        const notes = JSON.parse(grid.noteSummary)
+        const notes = JSON.parse(grid.fetchNoteSummary())
         let chosenNote = null
         for (const note of notes) {
             const item = findChild(surface, "gridNote_" + note.id)
@@ -41,7 +41,7 @@ ShellEventListSupport {
         }
         verify(chosenNote !== null, "the roll exposes a note for window Copy")
         tryVerify(function() {
-            return JSON.parse(grid.noteSummary).some(function(note) {
+            return JSON.parse(grid.fetchNoteSummary()).some(function(note) {
                 return note.id === chosenNote.id && note.selected
             })
         }, 3000, "a real roll click selects the note before event-list focus")
@@ -110,7 +110,7 @@ ShellEventListSupport {
         compare(presenter.cellDisplay(moveRow, 6), earlierSummary,
                 "the displaced event remains in the next row")
         compare(presenter.rowCount, beforeMoveCount, "reordering preserves the event count")
-        const afterMoveNote = JSON.parse(grid.noteSummary).find(function(note) {
+        const afterMoveNote = JSON.parse(grid.fetchNoteSummary()).find(function(note) {
             return note.id === chosenNote.id
         })
         verify(afterMoveNote !== undefined && afterMoveNote.selected
@@ -210,7 +210,7 @@ ShellEventListSupport {
             verify(presenter.rowTick(row) !== firstTick
                    && presenter.rowTick(row) !== secondTick,
                    "both deleted raw-event ticks are absent from the Event List")
-        const survivor = JSON.parse(grid.noteSummary).find(function(note) {
+        const survivor = JSON.parse(grid.fetchNoteSummary()).find(function(note) {
             return note.id === chosenNote.id
         })
         verify(survivor !== undefined && survivor.selected

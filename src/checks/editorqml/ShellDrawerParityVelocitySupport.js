@@ -31,7 +31,7 @@
         testCase.tryCompare(voicePage, "pickerHasMatch", true)
         testCase.keyClick(Qt.Key_Return)
         testCase.tryCompare(voicePage, "pickerOpen", false)
-        var originalNotes = JSON.parse(grid.noteSummary).filter(function(note) {
+        var originalNotes = JSON.parse(grid.fetchNoteSummary()).filter(function(note) {
             return note.track === 0 && !note.ghost
         })
         testCase.verify(originalNotes.length >= 6 && originalNotes[3].velocity === 98
@@ -70,7 +70,7 @@
         }, 5000), "the selected square notes enable the rendered detent control: "
            + JSON.stringify({ selectedCount: model.selectedCount, available: model.detentsAvailable,
                               visible: detent.visible, enabled: detent.enabled, slot: model.contextSlot,
-                              selected: JSON.parse(grid.noteSummary).filter(function(note) {
+                              selected: JSON.parse(grid.fetchNoteSummary()).filter(function(note) {
                                   return note.selected
                               }).map(function(note) { return [note.id, note.velocity] }) }))
         var plot = testCase.findChild(page, "velocityPlot")
@@ -120,8 +120,8 @@
                "the unselected note paints the semantic dimmed mid ink")
         testCase.compare(outsiderFill.border.width, 0,
                 "a dimmed note no longer paints an ordinary black outline")
-        testCase.mouseMove(input, outsiderFill.parent.model.x, outsiderFill.parent.model.y,
-                  -1, Qt.NoButton)
+        testCase.mouseMove(input, outsiderFill.parent.model.x + model.handlesOriginX,
+                           outsiderFill.parent.model.y, -1, Qt.NoButton)
         testCase.verify(testCase.waitForNative(function() {
             return model.hoveredNoteText === String(notes[2].id)
         }, 3000), "hovering the outsider selects its own ruler context")
@@ -196,7 +196,7 @@
         var outside = testCase.velocityHandleFor(notes[2].id)
         testCase.verify(first && later && outside && first.selected && later.selected
                && !outside.selected, "the drawn velocity handles retain the exact drag selection")
-        var pressX = first.x
+        var pressX = first.x + model.handlesOriginX
         var pressY = first.y
         var endY = unlockAtPress
             ? Math.round(pressY - (pressY - later.y) * 7 / 8)
@@ -206,7 +206,7 @@
                && endY > 0 && endY < input.height,
                "published handle and intrinsic axis geometry keep the drag inside the plot")
         var before = testCase.revision()
-        var original = grid.noteSummary
+        var original = grid.fetchNoteSummary()
         var pressModifier = unlockAtPress ? Qt.ControlModifier : Qt.NoModifier
         var moveModifier = unlockAtPress ? Qt.NoModifier : Qt.ControlModifier
         testCase.mousePress(input, pressX, pressY, Qt.LeftButton, pressModifier)
@@ -234,11 +234,11 @@
         testCase.compare(testCase.velocityHandleFor(notes[2].id).preview, false,
                 "the outside drawn handle has no held velocity preview")
         testCase.compare(testCase.revision(), before, "the mounted drag holds the document revision")
-        testCase.compare(grid.noteSummary, original,
+        testCase.compare(grid.fetchNoteSummary(), original,
                 "the mounted preview leaves the published roll note summary unchanged")
         testCase.mouseRelease(input, pressX, endY, Qt.LeftButton, moveModifier)
         testCase.verify(testCase.waitForNative(function() {
-            var current = JSON.parse(grid.noteSummary)
+            var current = JSON.parse(grid.fetchNoteSummary())
             return current.some(function(note) {
                 return note.id === notes[0].id && note.velocity === quietValue && note.selected
             }) && current.some(function(note) {
@@ -246,7 +246,7 @@
             })
         }, 5000), "the mounted release commits exact selected velocities once")
         testCase.verify(testCase.revision() !== before, "the mounted release advances the document revision")
-        var committed = JSON.parse(grid.noteSummary)
+        var committed = JSON.parse(grid.fetchNoteSummary())
         testCase.compare(committed.find(function(note) { return note.id === notes[2].id }).velocity,
                 104, "the outside roll note keeps its literal velocity on release")
         testCase.compare(testCase.velocityHandleFor(notes[0].id).preview, false,
@@ -374,7 +374,7 @@
             var guideFrame = testCase.grabImage(capture)
             testCase.verify(Raster.paintedColor(testCase, guideFrame, capture, editGuide, page.gridPalette.editCursor),
                    "the moved edit guide paints its semantic cursor ink in the velocity band")
-            var beforeStack = JSON.parse(grid.noteSummary)
+            var beforeStack = JSON.parse(grid.fetchNoteSummary())
             var drawStart = testCase.gridPointFor(notes[0].tick + 8, notes[0].pitch + 1)
             var drawEnd = testCase.gridPointFor(notes[0].tick + 20, notes[0].pitch)
             testCase.verify(drawStart.x > 0 && drawEnd.x < roll.width
@@ -384,7 +384,7 @@
             testCase.mousePress(roll, drawStart.x, drawStart.y, Qt.LeftButton)
             testCase.mouseMove(roll, drawEnd.x, drawEnd.y, -1, Qt.LeftButton)
             testCase.mouseRelease(roll, drawEnd.x, drawEnd.y, Qt.LeftButton)
-            var newStack = JSON.parse(grid.noteSummary).filter(function(note) {
+            var newStack = JSON.parse(grid.fetchNoteSummary()).filter(function(note) {
                 return note.track === 0 && !beforeStack.some(function(old) {
                     return old.id === note.id
                 })
@@ -401,18 +401,18 @@
             })
             testCase.verify(stackedRing && stackedRing.visible,
                    "the stacked velocity node owns a visible selected ring")
-            testCase.mousePress(input, stackedHandle.x, stackedHandle.y, Qt.LeftButton)
+            testCase.mousePress(input, stackedHandle.x + model.handlesOriginX, stackedHandle.y, Qt.LeftButton)
             var leftStackFrame = testCase.grabImage(capture)
             testCase.verify(Raster.paintedColor(testCase, leftStackFrame, capture, stackedRing,
                                 page.gridPalette.selectionRing),
                    "left-pressing the selected stacked velocity node paints highlight ink")
-            testCase.mouseRelease(input, stackedHandle.x, stackedHandle.y, Qt.LeftButton)
-            testCase.mousePress(input, stackedHandle.x, stackedHandle.y, Qt.RightButton)
+            testCase.mouseRelease(input, stackedHandle.x + model.handlesOriginX, stackedHandle.y, Qt.LeftButton)
+            testCase.mousePress(input, stackedHandle.x + model.handlesOriginX, stackedHandle.y, Qt.RightButton)
             var pressedStackFrame = testCase.grabImage(capture)
             testCase.verify(Raster.paintedColor(testCase, pressedStackFrame, capture, stackedRing,
                                 page.gridPalette.selectionRing),
                    "right-pressing the selected stacked velocity node keeps its highlight ink")
-            testCase.mouseRelease(input, stackedHandle.x, stackedHandle.y, Qt.RightButton)
+            testCase.mouseRelease(input, stackedHandle.x + model.handlesOriginX, stackedHandle.y, Qt.RightButton)
             grid.setCameraHScroll(1e9)
             var timelineEndTick = grid.cameraScrollX * grid.ticksPerBeat / grid.beatWidth
             var barsAfterEnd = testCase.collectByName(plot, "velocityGrid", []).filter(function(row) {

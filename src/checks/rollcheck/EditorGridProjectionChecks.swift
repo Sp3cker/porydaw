@@ -72,10 +72,10 @@ func checkProjection(
             && (markXs.max() ?? -.infinity) >= snapshotAtMarks.scrollX + snapshotAtMarks.viewportWidth,
         cppID: projectionID, message: "generated time marks cover the visible plot")
 
-    let summaryBeforeCameraMove = grid.noteSummary
+    let summaryBeforeCameraMove = grid.fetchNoteSummary()
     _ = session.mutateCamera { _ = $0.scrollByPx(10) }
     report.expect(
-        grid.noteSummary == summaryBeforeCameraMove,
+        grid.fetchNoteSummary() == summaryBeforeCameraMove,
         cppID: projectionID, message: "camera movement does not alter noteSummary document state")
 
     grid.resetCameraScroll()

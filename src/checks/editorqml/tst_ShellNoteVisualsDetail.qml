@@ -21,7 +21,7 @@ ShellNoteVisualsSupport {
         target = trackFace(context, idle, false)
         verify(target !== null && target.rect.w > 45 && target.rect.h > 8,
                "a visible wide note guards the velocity drag")
-        var summary = context.grid.noteSummary
+        var summary = context.grid.fetchNoteSummary()
         var dpr = shellDpr(idle)
         var origin = win(target.item, 0, 0)
         var rollOrigin = win(roll, 0, 0)

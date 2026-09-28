@@ -76,7 +76,7 @@ ShellGridMenuSupport {
         var startX = roll.width * 0.3
         var endX = roll.width * 0.6
         var midX = (startX + endX) / 2
-        var notes = JSON.parse(grid.noteSummary)
+        var notes = JSON.parse(grid.fetchNoteSummary())
         var y = -1
         for (var row = Math.ceil(grid.cameraScrollY / grid.rowHeight);
              row < Math.min(128, Math.floor((grid.cameraScrollY + roll.height) / grid.rowHeight));
@@ -144,7 +144,7 @@ ShellGridMenuSupport {
         var grid = surface().gridModel
         var roll = control("swiftRollInput")
         var range = sweepNoteRange()
-        var initial = JSON.parse(grid.noteSummary)
+        var initial = JSON.parse(grid.fetchNoteSummary())
         var covered = null
         for (var index = 0; index < initial.length && covered === null; ++index) {
             var note = initial[index]
@@ -157,13 +157,13 @@ ShellGridMenuSupport {
         roll.forceActiveFocus(Qt.OtherFocusReason)
         keyClick(Qt.Key_Up)
         tryVerify(function() {
-            return JSON.parse(grid.noteSummary).some(function(note) {
+            return JSON.parse(grid.fetchNoteSummary()).some(function(note) {
                 return note.id === covered.id && note.pitch === covered.pitch + 1
             })
         }, 3000, "Up with an active time selection transposes the covered note")
         keyClick(Qt.Key_Right)
         tryVerify(function() {
-            return JSON.parse(grid.noteSummary).some(function(note) {
+            return JSON.parse(grid.fetchNoteSummary()).some(function(note) {
                 return note.id === covered.id && note.tick === covered.tick + grid.snapTicks
             })
         }, 3000, "Right with an active time selection nudges the covered note")
@@ -180,7 +180,7 @@ ShellGridMenuSupport {
         var emptyX = oldStartX + rulerCellPixels()
         var emptyY = roll.height * 0.85
         var occupied = false
-        var after = JSON.parse(grid.noteSummary)
+        var after = JSON.parse(grid.fetchNoteSummary())
         for (var noteIndex = 0; noteIndex < after.length; ++noteIndex) {
             var tile = findChild(surface(), "gridNote_" + after[noteIndex].id)
             if (!tile || after[noteIndex].ghost)
@@ -193,7 +193,7 @@ ShellGridMenuSupport {
         mouseClick(roll, emptyX, emptyY, Qt.LeftButton)
         compare(session.gridCommandAvailable(17), false,
                 "a left click on empty roll space inside the selection clears it")
-        compare(JSON.parse(grid.noteSummary).some(function(note) { return note.selected }), false,
+        compare(JSON.parse(grid.fetchNoteSummary()).some(function(note) { return note.selected }), false,
                 "time-selection keys and the empty click do not leak a note selection")
     }
 

@@ -628,7 +628,7 @@ TestCase {
         var viewport = rollInput()
         tryVerify(function() { return grid.renderedNoteCount > 0 }, 5000,
                   "the staged song publishes notes")
-        var notes = JSON.parse(grid.noteSummary)
+        var notes = JSON.parse(grid.fetchNoteSummary())
         var dpr = grid.devicePixelRatio
         var observed = false
         for (var i = 0; i < notes.length; ++i) {
@@ -690,7 +690,7 @@ TestCase {
         transport.setScaleType(0)
         transport.setScaleHighlight(false)
         waitForRendering(plot)
-        var notes = JSON.parse(grid.noteSummary)
+        var notes = JSON.parse(grid.fetchNoteSummary())
         var reference = null
         var referenceID = -1
         var referencePitch = -1
@@ -791,7 +791,7 @@ TestCase {
         waitForRendering(plot)
         var foldedNote = findChild(fill, "gridNote_" + referenceID)
         verify(foldedNote !== null, "the reference note is still rendered in Fold")
-        var foldedNotes = JSON.parse(grid.noteSummary)
+        var foldedNotes = JSON.parse(grid.fetchNoteSummary())
         var foldedPitches = []
         for (var j = 0; j < foldedNotes.length; ++j) {
             if (foldedNotes[j].track === grid.trackIndex

@@ -248,9 +248,9 @@ enum VelocityScene {
             let sectionEnd = min(last, context.endTick ?? last)
             if sectionEnd <= sectionTick { break }
             if context.status == .resolved, context.map.isPSG, context.map.levelCount > 1 {
-                let left = min(max(projection.xForDisplayTick(Double(sectionTick)), 0),
+                let left = min(max(camera.displayX(tick: Double(sectionTick), origin: 0, dpr: input.devicePixelRatio), 0),
                                input.plotWidth)
-                let right = min(max(projection.xForDisplayTick(Double(sectionEnd)), 0),
+                let right = min(max(camera.displayX(tick: Double(sectionEnd), origin: 0, dpr: input.devicePixelRatio), 0),
                                 input.plotWidth)
                 if right > left {
                     let sectionMap = context.map

@@ -19,22 +19,23 @@
         }
         var firstPoint = testCase.gridPointFor(notes[0].tick + notes[0].duration / 2, notes[0].pitch)
         testCase.mouseClick(roll, firstPoint.x, firstPoint.y, Qt.LeftButton, Qt.ControlModifier)
-        var staged = JSON.parse(grid.noteSummary)
+        var staged = JSON.parse(grid.fetchNoteSummary())
         testCase.compare(staged.find(function(note) { return note.id === notes[0].id }).velocity, 33,
                 "the mounted raw drag begins with a quiet velocity of 33")
         testCase.compare(staged.find(function(note) { return note.id === notes[1].id }).velocity, 87,
                 "the mounted raw drag begins with a later velocity of 87")
         var first = testCase.velocityHandleFor(notes[0].id)
         var later = testCase.velocityHandleFor(notes[1].id)
-        testCase.verify(first.selected && later.selected && first.x > 0 && first.x < input.width,
+        var originX = testCase.session().velocityPage().handlesOriginX
+        testCase.verify(first.selected && later.selected && first.x + originX > 0 && first.x + originX < input.width,
                "the mounted raw drag captures both visible note columns")
-        var baseline = grid.noteSummary
+        var baseline = grid.fetchNoteSummary()
         var before = Number(testCase.revision())
         var rawAtPress = Math.round(1 + (ruler.height - inset - first.y) * 126
                                     / (ruler.height - 2 * inset))
         var endY = yFor(rawAtPress + 7)
-        testCase.mousePress(input, first.x, first.y, Qt.LeftButton, Qt.ControlModifier)
-        testCase.mouseMove(input, first.x, endY, -1, Qt.LeftButton, Qt.NoModifier)
+        testCase.mousePress(input, first.x + originX, first.y, Qt.LeftButton, Qt.ControlModifier)
+        testCase.mouseMove(input, first.x + originX, endY, -1, Qt.LeftButton, Qt.NoModifier)
         testCase.verify(testCase.waitForNative(function() {
             var quiet = testCase.velocityHandleFor(notes[0].id)
             var companion = testCase.velocityHandleFor(notes[1].id)
@@ -44,13 +45,13 @@
                 "the mounted raw gesture previews quiet literal 40")
         testCase.compare(testCase.velocityHandleFor(notes[1].id).value, 94,
                 "the mounted raw gesture previews later literal 94")
-        testCase.compare(grid.noteSummary, baseline,
+        testCase.compare(grid.fetchNoteSummary(), baseline,
                 "the mounted raw gesture keeps both stored velocities while held")
         testCase.compare(Number(testCase.revision()), before,
                 "the mounted raw gesture stages no document revision")
-        testCase.mouseRelease(input, first.x, endY, Qt.LeftButton)
+        testCase.mouseRelease(input, first.x + originX, endY, Qt.LeftButton)
         testCase.verify(testCase.waitForNative(function() {
-            var current = JSON.parse(grid.noteSummary)
+            var current = JSON.parse(grid.fetchNoteSummary())
             return current.some(function(note) { return note.id === notes[0].id && note.velocity === 40 })
                 && current.some(function(note) { return note.id === notes[1].id && note.velocity === 94 })
         }, 5000), "the mounted raw release commits exactly 40 and 94")
@@ -94,17 +95,18 @@
         var first = testCase.velocityHandleFor(notes[0].id)
         var middle = testCase.velocityHandleFor(notes[2].id)
         var later = testCase.velocityHandleFor(notes[1].id)
-        var pressX = 2 * middle.x - later.x
+        var originX = testCase.session().velocityPage().handlesOriginX
+        var pressX = 2 * middle.x - later.x + originX
         testCase.verify(first.selected && middle.selected && later.selected
                && first.x < middle.x && middle.x < later.x
-               && pressX > 0 && pressX < middle.x
-               && Math.abs(pressX - first.x) <= first.hitRadius,
+               && pressX > 0 && pressX < middle.x + originX
+               && Math.abs(pressX - (first.x + originX)) <= first.hitRadius,
                "the mounted raw ramp brackets the selected midpoint in distinct columns")
-        var original = grid.noteSummary
+        var original = grid.fetchNoteSummary()
         var before = Number(testCase.revision())
         testCase.mousePress(input, pressX, yFor(37), Qt.LeftButton,
                    Qt.ControlModifier | Qt.ShiftModifier)
-        testCase.mouseMove(input, later.x, yFor(93), -1, Qt.LeftButton, Qt.NoModifier)
+        testCase.mouseMove(input, later.x + originX, yFor(93), -1, Qt.LeftButton, Qt.NoModifier)
         testCase.verify(testCase.waitForNative(function() {
             var a = testCase.velocityHandleFor(notes[0].id)
             var b = testCase.velocityHandleFor(notes[2].id)
@@ -112,13 +114,13 @@
             return a && b && c && a.preview && b.preview && c.preview
                 && a.value === 37 && b.value === 65 && c.value === 93
         }, 3000), "the mounted unlocked ramp previews literal 37, 65 and 93")
-        testCase.compare(grid.noteSummary, original,
+        testCase.compare(grid.fetchNoteSummary(), original,
                 "the mounted raw ramp keeps the committed roll unchanged while held")
         testCase.compare(Number(testCase.revision()), before,
                 "the mounted raw ramp defers its revision until release")
-        testCase.mouseRelease(input, later.x, yFor(93), Qt.LeftButton)
+        testCase.mouseRelease(input, later.x + originX, yFor(93), Qt.LeftButton)
         testCase.verify(testCase.waitForNative(function() {
-            var current = JSON.parse(grid.noteSummary)
+            var current = JSON.parse(grid.fetchNoteSummary())
             return current.some(function(note) { return note.id === notes[0].id && note.velocity === 37 })
                 && current.some(function(note) { return note.id === notes[2].id && note.velocity === 65 })
                 && current.some(function(note) { return note.id === notes[1].id && note.velocity === 93 })
@@ -162,7 +164,7 @@
         var before = Number(testCase.revision())
         testCase.mousePress(ruler, ruler.width / 2, rawY, Qt.LeftButton, Qt.ControlModifier)
         testCase.tryCompare(grid, "appliedRevisionText", String(before + 1))
-        var current = JSON.parse(grid.noteSummary)
+        var current = JSON.parse(grid.fetchNoteSummary())
         testCase.compare(current.find(function(note) { return note.id === notes[0].id }).velocity, 73,
                 "the modifier-unlocked ruler writes the first selected roll note on press")
         testCase.compare(current.find(function(note) { return note.id === notes[1].id }).velocity, 73,
@@ -190,12 +192,13 @@
             var endY = yFor(locked ? 73 : 91)
             var pressX = first.x - first.hitRadius * 2
             var pressY = startY + (endY - startY) * (pressX - first.x) / (later.x - first.x)
-            var snapshot = grid.noteSummary
+            pressX += model.handlesOriginX
+            var snapshot = grid.fetchNoteSummary()
             before = Number(testCase.revision())
             testCase.mousePress(input, pressX, pressY, Qt.LeftButton,
                        locked ? Qt.NoModifier : Qt.ControlModifier)
-            testCase.mouseMove(input, first.x, startY, -1, Qt.LeftButton, Qt.NoModifier)
-            testCase.mouseMove(input, later.x, endY, -1, Qt.LeftButton, Qt.NoModifier)
+            testCase.mouseMove(input, first.x + model.handlesOriginX, startY, -1, Qt.LeftButton, Qt.NoModifier)
+            testCase.mouseMove(input, later.x + model.handlesOriginX, endY, -1, Qt.LeftButton, Qt.NoModifier)
             var expectedFirst = locked ? expectedSnap : 37
             var expectedLast = locked ? expectedSnap : 91
             testCase.verify(testCase.waitForNative(function() {
@@ -216,13 +219,13 @@
                                             ? [testCase.velocityHandleFor(notes[1].id).value,
                                                testCase.velocityHandleFor(notes[1].id).preview] : null
                                     ], active: model.interactionActive }))
-            testCase.compare(grid.noteSummary, snapshot,
+            testCase.compare(grid.fetchNoteSummary(), snapshot,
                     "the mounted paint sweep keeps the committed roll unchanged")
             testCase.compare(Number(testCase.revision()), before,
                     "the mounted paint sweep defers its revision until release")
-            testCase.mouseRelease(input, later.x, endY, Qt.LeftButton)
+            testCase.mouseRelease(input, later.x + model.handlesOriginX, endY, Qt.LeftButton)
             testCase.verify(testCase.waitForNative(function() {
-                var values = JSON.parse(grid.noteSummary)
+                var values = JSON.parse(grid.fetchNoteSummary())
                 return values.some(function(note) {
                     return note.id === notes[0].id && note.velocity === expectedFirst
                 }) && values.some(function(note) {
@@ -243,7 +246,7 @@
                 before = Number(testCase.revision())
                 testCase.mousePress(ruler, ruler.width / 2, rawY, Qt.LeftButton)
                 testCase.tryCompare(grid, "appliedRevisionText", String(before + 1))
-                current = JSON.parse(grid.noteSummary)
+                current = JSON.parse(grid.fetchNoteSummary())
                 testCase.compare(current.find(function(note) { return note.id === notes[0].id }).velocity, 73,
                         "the disabled-detent ruler writes the first selected roll note on press")
                 testCase.compare(current.find(function(note) { return note.id === notes[1].id }).velocity, 73,

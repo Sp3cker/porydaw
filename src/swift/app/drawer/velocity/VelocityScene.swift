@@ -247,9 +247,9 @@ struct VelocitySceneSnapshot {
             let displayed = previewValue.map(Int.init) ?? Int(note.velocity)
             let isSelected = selected.contains(note.id)
             let isHovered = input.interaction.hovered == note.id
-            let x = projection.xForDisplayTick(Double(note.tick))
+            let x = projection.stableXForTick(Double(note.tick))
             let endTick = Double(note.tick) + Double(note.duration)
-            let endX = projection.xForDisplayTick(endTick)
+            let endX = projection.stableXForTick(endTick)
             let y = projection.yForNote(
                 map: map, velocity: displayed,
                 detentUnlock: !input.interaction.detentsEnabled || input.interaction.detentUnlock)

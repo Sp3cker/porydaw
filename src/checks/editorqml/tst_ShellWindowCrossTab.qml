@@ -38,7 +38,7 @@ ShellWindowSupport {
         verify(source && source.gridModel, "the source tab has a grid")
         compare(source.visible, true, "the selected ready source page accepts roll input")
         selectDrawnVelocityNote(source)
-        var sourceSummary = source.gridModel.noteSummary
+        var sourceSummary = source.gridModel.fetchNoteSummary()
         var selected = JSON.parse(sourceSummary).filter(function(note) { return note.selected })
         compare(selected.length, 1, "one source note is selected")
         var sourceRoll = findChild(source, "swiftRollInput")
@@ -69,7 +69,7 @@ ShellWindowSupport {
                    "the destination ready page replaces the source")
         compare(search.activeFocus, true,
                 "the destination stays unfocused until the user enters its editor")
-        var destinationBefore = JSON.parse(destination.gridModel.noteSummary)
+        var destinationBefore = JSON.parse(destination.gridModel.fetchNoteSummary())
         var destinationIDs = destinationBefore.map(function(note) { return note.id })
         var destinationTrack = destination.gridModel.trackIndex
         var destinationRoll = findChild(destination, "swiftRollInput")
@@ -81,14 +81,14 @@ ShellWindowSupport {
         compare(sourceRoll.activeFocus, false, "tab input cannot remain with the inactive source")
         keySequence(StandardKey.Paste)
         verify(waitForNative(function() {
-            var notes = JSON.parse(destination.gridModel.noteSummary)
+            var notes = JSON.parse(destination.gridModel.fetchNoteSummary())
             return notes.some(function(note) {
                 return destinationIDs.indexOf(note.id) < 0
                     && note.pitch === selected[0].pitch && note.track === destinationTrack
                     && note.selected
             })
         }, 5000), "Paste inserts and selects the copied note in the destination track")
-        var destinationAfter = JSON.parse(destination.gridModel.noteSummary)
+        var destinationAfter = JSON.parse(destination.gridModel.fetchNoteSummary())
         var inserted = destinationAfter.filter(function(note) {
             return destinationIDs.indexOf(note.id) < 0
         })
@@ -100,7 +100,7 @@ ShellWindowSupport {
         verify(secondButton, "the source tab control still exists")
         mouseClick(secondButton, secondButton.width / 3, secondButton.height / 2)
         tryCompare(tabs, "selectedId", secondId, 3000)
-        compare(selectedSurface().gridModel.noteSummary, sourceSummary,
+        compare(selectedSurface().gridModel.fetchNoteSummary(), sourceSummary,
                 "cross-tab Paste leaves the source song unchanged")
 
         mouseClick(firstButton, firstButton.width / 3, firstButton.height / 2)
@@ -113,7 +113,7 @@ ShellWindowSupport {
             return tabs.pendingCloseId === firstId
         }, 5000), "the window close walk pauses at the dirty destination")
         compare(tabs.tabCount, 2, "the dirty gate cannot silently close a tab")
-        compare(destination.gridModel.noteSummary, JSON.stringify(destinationAfter),
+        compare(destination.gridModel.fetchNoteSummary(), JSON.stringify(destinationAfter),
                 "the dirty gate preserves the pasted note")
         var discard = findChild(shell, "songTabDiscard")
         verify(discard && discard.visible, "the close gate exposes Discard")

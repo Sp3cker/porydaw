@@ -48,7 +48,7 @@ ShellWindowSupport {
         var firstTrack = headers.itemAt(surface.gridModel.trackIndex)
         verify(firstTrack && !firstTrack.isAddTrack, "the selected track header is available")
         compare(firstTrack.soloChecked, false)
-        var inactiveSummary = findChild(readyFirst, "swiftRollOverlay").gridModel.noteSummary
+        var inactiveSummary = findChild(readyFirst, "swiftRollOverlay").gridModel.fetchNoteSummary()
         var inactiveMix = findChild(findChild(readyFirst, "swiftRollOverlay"),
                                     "timelineTrackHeaderRows").itemAt(surface.gridModel.trackIndex)
         verify(inactiveMix, "the inactive track header remains mounted")
@@ -74,8 +74,8 @@ ShellWindowSupport {
         compare(menuSolo.enabled, true, "Solo is enabled for the selected track")
         editMenu.close()
         compare(shell.shellPresenter.actionEnabled("roll.copy"), true)
-        var noteSummaryBeforeCopy = surface.gridModel.noteSummary
-        var beforeCopy = JSON.parse(surface.gridModel.noteSummary)
+        var noteSummaryBeforeCopy = surface.gridModel.fetchNoteSummary()
+        var beforeCopy = JSON.parse(surface.gridModel.fetchNoteSummary())
         var copied = beforeCopy.filter(function(note) { return note.selected })
         compare(copied.length, 1, "the real node click selected one note")
         var drawerToggle = findChild(surface, "drawerToggle_velocity")
@@ -95,9 +95,9 @@ ShellWindowSupport {
         compare(clip[1], 1, "the copied track contains one selected note")
         compare(clip[2], copied[0].pitch, "the copied note retains its original key")
         compare(session.documentDirty, false, "the native window Copy never edits the song")
-        compare(surface.gridModel.noteSummary, noteSummaryBeforeCopy,
+        compare(surface.gridModel.fetchNoteSummary(), noteSummaryBeforeCopy,
                 "Copy preserves the active song's selected note bytes")
-        compare(findChild(readyFirst, "swiftRollOverlay").gridModel.noteSummary, inactiveSummary,
+        compare(findChild(readyFirst, "swiftRollOverlay").gridModel.fetchNoteSummary(), inactiveSummary,
                 "Copy never changes the inactive ready song")
         compare(firstTrack.soloChecked, false, "Copy never changes the selected track mix")
         var ruler = findChild(surface, "timelineRulerInput")
@@ -112,7 +112,7 @@ ShellWindowSupport {
         compare(copyActivatedSpy.count, copyCountBeforeRange + 1,
                 "time-range Copy activates the same window shortcut once")
         compare(session.documentDirty, false, "time-range Copy never dirties the active song")
-        compare(findChild(readyFirst, "swiftRollOverlay").gridModel.noteSummary, inactiveSummary,
+        compare(findChild(readyFirst, "swiftRollOverlay").gridModel.fetchNoteSummary(), inactiveSummary,
                 "time-range Copy leaves the inactive song untouched")
 
         roll.forceActiveFocus(Qt.OtherFocusReason)
@@ -178,7 +178,7 @@ ShellWindowSupport {
                 "the production Qt window is active before resumed numeric commands")
         var noteMenu = findChild(shell, "shellGridContextMenu")
         verify(noteMenu && !noteMenu.visible, "the real note menu starts closed")
-        var selectedVelocityNote = JSON.parse(surface.gridModel.noteSummary).find(function(note) {
+        var selectedVelocityNote = JSON.parse(surface.gridModel.fetchNoteSummary()).find(function(note) {
             return note.selected && !note.ghost
         })
         verify(selectedVelocityNote, "the velocity menu targets a selected roll note")
@@ -195,7 +195,7 @@ ShellWindowSupport {
                    "clicking Set Velocity closes the production note menu")
         tryCompare(session.velocityPage(), "promptOpen", true, 3000,
                    "the clicked Set Velocity row opens the production prompt")
-        var velocityNoteBeforeKeys = surface.gridModel.noteSummary
+        var velocityNoteBeforeKeys = surface.gridModel.fetchNoteSummary()
         var velocityRevisionBeforeKeys = surface.gridModel.appliedRevisionText
         var field = null
         tryVerify(function() {
@@ -235,7 +235,7 @@ ShellWindowSupport {
         tryCompare(session.velocityPage(), "selectedCount", 1, 3000,
                    "prompt arrows keep the musical selection")
         compare(session.documentDirty, false, "prompt arrows never edit the song")
-        compare(surface.gridModel.noteSummary, velocityNoteBeforeKeys,
+        compare(surface.gridModel.fetchNoteSummary(), velocityNoteBeforeKeys,
                 "velocity arrows retain the selected NoteID and note contents")
         compare(surface.gridModel.appliedRevisionText, velocityRevisionBeforeKeys,
                 "velocity numeric keys never commit a song revision")
@@ -255,7 +255,7 @@ ShellWindowSupport {
         compare(session.velocityPage().promptOpen, true)
         keyClick(Qt.Key_Escape)
         tryCompare(session.velocityPage(), "promptOpen", false, 3000)
-        compare(surface.gridModel.noteSummary, velocityNoteBeforeKeys,
+        compare(surface.gridModel.fetchNoteSummary(), velocityNoteBeforeKeys,
                 "velocity prompt cancellation preserves the selected note")
         compare(surface.gridModel.appliedRevisionText, velocityRevisionBeforeKeys,
                 "velocity prompt cancellation preserves the document revision")
@@ -322,12 +322,12 @@ ShellWindowSupport {
         keyRelease(Qt.Key_B)
         compare(grid.pencilMode, true, "releasing B keeps the pencil latched")
         compare(automation.isPencilMode, true, "releasing B keeps automation pencil latched")
-        var beforeSpace = grid.noteSummary
+        var beforeSpace = grid.fetchNoteSummary()
         keyClick(Qt.Key_Space)
         tryCompare(playhead, "playing", true, 3000)
         compare(grid.pencilMode, true, "roll Space never unlatches the pencil")
         compare(automation.isPencilMode, true, "roll Space leaves automation pencil armed")
-        compare(grid.noteSummary, beforeSpace, "roll Space never changes selected notes")
+        compare(grid.fetchNoteSummary(), beforeSpace, "roll Space never changes selected notes")
         keyClick(Qt.Key_Space)
         tryCompare(playhead, "playing", false, 3000)
         keyPress(Qt.Key_B)

@@ -273,6 +273,9 @@ ShellGridInputSupport {
         compare(fill.y, farY, "the expanded velocity band reaches the pointer vertically")
         compare(fill.width, startX - farX, "the expanded velocity band spans the horizontal press distance")
         compare(fill.height, startY - farY, "the expanded velocity band spans the vertical press distance")
+        // Handles publish scroll-stable x; the rendered note sits at the
+        // published origin offset, exactly as the mounted delegates draw it.
+        var originX = page.pageModel.handlesOriginX
         var targetNode = null
         for (var child of plot.children) {
             if (child.model && child.model.noteIdText === String(target.id)) {
@@ -280,7 +283,8 @@ ShellGridInputSupport {
                 break
             }
         }
-        verify(targetNode && targetNode.x > fill.x && targetNode.x < fill.x + fill.width
+        verify(targetNode && targetNode.x + originX > fill.x
+               && targetNode.x + originX < fill.x + fill.width
                && targetNode.y > fill.y && targetNode.y < fill.y + fill.height,
                "the expanded mounted band actually covers the independently located note")
         mouseMove(input, nearX, nearY, -1, Qt.RightButton)
@@ -292,7 +296,7 @@ ShellGridInputSupport {
         compare(fill.y, nearY, "the contracted velocity band retracts vertically while pressed")
         compare(fill.width, startX - nearX, "the contracted velocity band narrows before release")
         compare(fill.height, startY - nearY, "the contracted velocity band shortens before release")
-        verify(targetNode.x < fill.x,
+        verify(targetNode.x + originX < fill.x,
                "the contracted mounted band excludes the rendered note before release")
         mouseRelease(input, nearX, nearY, Qt.RightButton)
         compare(findChild(transient, "velocityBandFill"), null,

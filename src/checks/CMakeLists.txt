@@ -40,6 +40,8 @@ qt_add_executable(porydaw_checks
     fwd.hpp
     audio/tst_audiobackend.cpp
     audio/tst_audiobackend.h
+    quickdisplay/tst_quickdisplaydecode.cpp
+    quickdisplay/tst_quickdisplaydecode.h
     support/checkstartup.cpp
     support/checkstartup.h
     support/songfixture.cpp
@@ -347,6 +349,7 @@ target_link_libraries(porydaw_checks PRIVATE
     "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
     PorydawApp
     Qt6::Test
+    QtBridgeCpp
 )
 target_precompile_headers(porydaw_checks PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${PROJECT_SOURCE_DIR}/src/porydaw_pch.hpp>")

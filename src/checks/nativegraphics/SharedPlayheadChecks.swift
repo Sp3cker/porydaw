@@ -142,7 +142,7 @@ private func gridContentSnapshot(_ grid: PianoGrid) -> GridContentSnapshot {
     }
     return GridContentSnapshot(
         renderedNoteCount: grid.renderedNoteCount,
-        noteSummary: grid.noteSummary,
+        noteSummary: grid.fetchNoteSummary(),
         appliedRevisionText: grid.appliedRevisionText,
         editCursorTick: grid.editCursorTick,
         rulerChromeCount: scene.rulerChrome.count,

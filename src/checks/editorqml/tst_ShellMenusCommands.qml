@@ -146,7 +146,7 @@ ShellMenusSupport {
                 "G without a note selection is declined")
         presenter.activate("roll.select_all")
         verify(waitForNative(function() {
-            return JSON.parse(grid.noteSummary).some(function(n) { return n.selected })
+            return JSON.parse(grid.fetchNoteSummary()).some(function(n) { return n.selected })
         }, 5000), "Select All selects notes through the production route")
         tryVerify(function() { return presenter.actionEnabled("roll.pitch_bend") }, 3000,
                   "the selection enables pitch bend")
@@ -185,7 +185,7 @@ ShellMenusSupport {
         compare(grid.appliedRevisionText, before, "the menu route edits nothing on open")
         editor.cancelAndClose()
         tryCompare(editor, "isOpen", false)
-        verify(JSON.parse(grid.noteSummary).some(function(n) { return n.selected }),
+        verify(JSON.parse(grid.fetchNoteSummary()).some(function(n) { return n.selected }),
                "closing pitch bend preserves the velocity target")
         var velocityItem = findChild(shell, "shellAction_edit.set_velocity")
         verify(velocityItem !== null, "the Edit menu owns the set velocity row")
@@ -200,13 +200,13 @@ ShellMenusSupport {
         var prompt = findChild(page, "velocityPrompt")
         tryVerify(function() { return prompt.opened && prompt.visible }, 3000,
                   "the mounted prompt opens visibly for the selected note")
-        var selectedNotes = JSON.parse(grid.noteSummary).filter(function(n) { return n.selected })
+        var selectedNotes = JSON.parse(grid.fetchNoteSummary()).filter(function(n) { return n.selected })
         verify(selectedNotes.length > 0, "the prompt has selected notes to edit")
         var velocityValue = selectedNotes[0].velocity === 100 ? 99 : 100
         velocityModel.updatePromptDraft(String(velocityValue))
         velocityModel.acceptPrompt()
         verify(waitForNative(function() {
-            var notes = JSON.parse(grid.noteSummary)
+            var notes = JSON.parse(grid.fetchNoteSummary())
             return selectedNotes.every(function(target) {
                 return notes.some(function(note) {
                     return note.id === target.id && note.velocity === velocityValue

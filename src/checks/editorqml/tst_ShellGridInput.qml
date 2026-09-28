@@ -376,14 +376,14 @@ ShellGridInputSupport {
                                       keyedImage.blue(keyedX, keyedY)], ring),
                "time-scoped Up leaves the edited note's selection ring painted")
         var session = shell.shellPresenter.session
-        var blockedSummary = grid.noteSummary
+        var blockedSummary = grid.fetchNoteSummary()
         var blockedRevision = grid.appliedRevisionText
         var blockedCursor = grid.editCursorTick
         var blockedUndo = session.canUndo
         var blockedRedo = session.canRedo
         keyClick(Qt.Key_Right, Qt.ShiftModifier)
         keyClick(Qt.Key_Left, Qt.ShiftModifier)
-        compare(grid.noteSummary, blockedSummary,
+        compare(grid.fetchNoteSummary(), blockedSummary,
                 "mounted time selection blocks both resize keys without changing notes")
         compare(grid.appliedRevisionText, blockedRevision,
                 "mounted time selection blocks resize without changing revision")

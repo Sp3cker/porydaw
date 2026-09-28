@@ -175,6 +175,7 @@ extension VelocityPage {
     @QtIgnored func publishHandles(_ values: [VelocityHandle]) {
         publishedHandles = values
         handlesByID = Dictionary(uniqueKeysWithValues: values.map { ($0.noteID, $0) })
+        setPublished(&handlesOriginX, -projection.scrollOffsetX)
         syncModel(handles, values, matches: { $0.matches($1) })
     }
 
@@ -260,15 +261,17 @@ extension VelocityPage {
             case .ramp:
                 let dx = gesture.previousX - gesture.pressX
                 let dy = gesture.previousY - gesture.pressY
-                setPublished(&rampX0, gesture.pressX)
+                // Gestures live in scroll-stable x; the transient draws in
+                // untranslated plot space, so it restores the origin here.
+                setPublished(&rampX0, gesture.pressX + handlesOriginX)
                 setPublished(&rampY0, gesture.pressY)
                 setPublished(&rampLength, (dx * dx + dy * dy).squareRoot())
                 setPublished(&rampSlopeY, dy)
                 setPublished(&rampColor, palette.primaryText)
                 setPublished(&rampVisible, rampLength > 0)
             case .band, .pendingBand:
-                let minX = min(gesture.pressX, gesture.bandX)
-                let maxX = max(gesture.pressX, gesture.bandX)
+                let minX = min(gesture.pressX, gesture.bandX) + handlesOriginX
+                let maxX = max(gesture.pressX, gesture.bandX) + handlesOriginX
                 let minY = min(gesture.pressY, gesture.bandY)
                 let maxY = max(gesture.pressY, gesture.bandY)
                 rects.append(SceneRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY,

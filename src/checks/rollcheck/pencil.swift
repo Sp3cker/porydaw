@@ -491,7 +491,7 @@ private func checkDrawLatchAndCancel(_ report: CheckReport, session: DocumentSes
         let cancelRevision = session.document.revision
         let cancelCount = session.document.notes(in: grid.trackIndex).count
         grid.beginPointer(x: pressX, y: pressY, modifiers: 0)
-        let pressedSummary = grid.noteSummary
+        let pressedSummary = grid.fetchNoteSummary()
         grid.updatePointer(x: pressX + dragX, y: pressY)
         grid.inputCancelled(reason: reason.rawValue)
         report.expect(
@@ -499,7 +499,7 @@ private func checkDrawLatchAndCancel(_ report: CheckReport, session: DocumentSes
                 && session.document.notes(in: grid.trackIndex).count == cancelCount
                 && grid.lastCancelReason == reason.rawValue
                 && !grid.interactionActive
-                && grid.noteSummary == pressedSummary,
+                && grid.fetchNoteSummary() == pressedSummary,
             cppID: id,
             message: "\(reason) cancel discards the gesture, records the reason, and keeps the summary")
     }

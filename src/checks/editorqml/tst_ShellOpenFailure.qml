@@ -66,7 +66,7 @@ TestCase {
         var surface = surfaceOf(tabId)
         return surface ? surface.gridModel : null
     }
-    function summaryOf(tabId) { return gridOf(tabId).noteSummary }
+    function summaryOf(tabId) { return gridOf(tabId).fetchNoteSummary() }
     function drawNote(tabId) { return Rendering.drawNote(testCase, tabId) }
 
     function test_failedOpenPreservesLiveDirtyTabAndSurfacesError() {
@@ -149,7 +149,7 @@ TestCase {
         tryCompare(session.songTabs, "tabCount", 1)
         var firstId = session.songTabs.selectedId
         var firstPage = session.songTabs.selectedPage
-        verify(waitForNative(function() { return firstPage.grid.noteSummary.length > 2 }, 5000),
+        verify(waitForNative(function() { return firstPage.grid.fetchNoteSummary().length > 2 }, 5000),
                "the first song publishes its source notes before project replacement")
         session.openSong("mus_littleroot_test")
         verify(waitForNative(function() {
@@ -165,14 +165,14 @@ TestCase {
         var tabCount = tabs.tabCount
         var label = selectedPage.title
         var selectedDocument = selectedPage.grid
-        verify(waitForNative(function() { return selectedDocument.noteSummary.length > 2 }, 5000),
+        verify(waitForNative(function() { return selectedDocument.fetchNoteSummary().length > 2 }, 5000),
                "the selected document publishes loaded notes before project replacement")
         settings.synchronize()
         compare(settings.string("lastProjectDir", ""), bootstrap.projectRoot,
                 "the two live songs persist their original project path before failure")
         compare(settings.string("lastSongLabel", ""), "mus_littleroot_test",
                 "the selected second song persists before failure")
-        var originalNotes = selectedDocument.noteSummary
+        var originalNotes = selectedDocument.fetchNoteSummary()
 
         openFailedSpy.target = session
         criticalSpy.target = shell.shellPresenter
@@ -208,7 +208,7 @@ TestCase {
                 "failed project replacement keeps the selected document ready")
         compare(selectedPage.title, label,
                 "failed project replacement preserves the document label")
-        compare(selectedPage.grid.noteSummary, originalNotes,
+        compare(selectedPage.grid.fetchNoteSummary(), originalNotes,
                 "failed project replacement preserves the selected document notes")
         verify(findChild(shell.sceneLoader.item, "songTab_" + firstId) !== null
                && firstPage.songOpen,

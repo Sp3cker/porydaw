@@ -433,10 +433,10 @@ extension VelocityPage {
 
     private func updateRampPreview(x: Double, y: Double) {
         guard gesture != nil else { return }
-        let camera = session?.camera
-        let dpr = devicePixelRatio
+        // The swept column and the frozen note columns share scroll-stable
+        // handle space, so the ramp interpolates without a plot conversion.
         VelocityGesturePolicy.applyRamp(&gesture!, x: x, y: y, hitRadius: geometry.hitRadius) { note in
-            camera?.displayX(tick: Double(note.tick), origin: 0, dpr: dpr) ?? 0
+            projection.stableXForTick(Double(note.tick))
         }
         gesture?.previousX = x
         gesture?.previousY = y
@@ -450,9 +450,11 @@ extension VelocityPage {
         guard gesture != nil else { return }
         let radius = geometry.hitRadius
         let deltaX = toX - fromX
+        // The swept column arrives in published-handle (scroll-stable) space,
+        // exactly like the note columns below, so both sides compare directly.
         let resolve = VelocityScene.contextResolver(session)
         for note in paintCandidates where gesture?.frozenNote(note.id) == nil {
-            let x = projection.xForDisplayTick(Double(note.tick))
+            let x = projection.stableXForTick(Double(note.tick))
             let inSpan = deltaX == 0
                 ? abs(x - toX) <= radius
                 : (x >= min(fromX, toX) - radius && x <= max(fromX, toX) + radius)
@@ -464,7 +466,7 @@ extension VelocityPage {
         let updates = VelocityGesturePolicy.paint(
             axis: gesture!.axis, detentUnlock: gesture!.detentUnlock,
             candidates: gesture!.notes.map {
-                (note: $0, x: projection.xForDisplayTick(Double($0.tick)))
+                (note: $0, x: projection.stableXForTick(Double($0.tick)))
             },
             from: (fromX, fromY), to: (toX, toY), hitRadius: radius)
         guard !updates.isEmpty else { return }
@@ -476,6 +478,8 @@ extension VelocityPage {
         guard var live = gesture else { return }
         live.bandX = x
         live.bandY = y
+        // The band corners arrive in published-handle (scroll-stable) space,
+        // exactly like the handle rows below, so both sides compare directly.
         let minX = min(live.pressX, x)
         let maxX = max(live.pressX, x)
         let minY = min(live.pressY, y)

@@ -726,7 +726,7 @@ index 0000000..2e2693a
 +                    quint16 nameLen;
 +                    memcpy(&nameLen, p, 2);
 +                    p += 2;
-+                    if (nameLen > quint16(end - p)) break;
++                    if (quint64(end - p) < nameLen) break;
 +                    Row row;
 +                    row.name = QByteArray(p, nameLen);
 +                    p += nameLen;
@@ -734,7 +734,7 @@ index 0000000..2e2693a
 +                    quint16 colorLen;
 +                    memcpy(&colorLen, p, 2);
 +                    p += 2;
-+                    if (colorLen > quint16(end - p)) break;
++                    if (quint64(end - p) < colorLen) break;
 +                    row.fillColor = QString::fromUtf8(p, colorLen);
 +                    p += colorLen;
 +                    row.rect = Rect{f[0], f[1], f[2], f[3],

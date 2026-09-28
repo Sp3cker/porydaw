@@ -37,20 +37,20 @@ ShellGridInputSupport {
         var movedItem = findChild(surface, "gridNote_" + target.id)
         verify(movedItem !== null, "the moved note renders")
         var movedCenter = movedItem.mapToItem(roll, movedItem.width / 2, movedItem.height / 2)
-        var beforeGesture = grid.noteSummary
+        var beforeGesture = grid.fetchNoteSummary()
         mouseMove(roll, movedCenter.x, movedCenter.y)
         mousePress(roll, movedCenter.x, movedCenter.y, Qt.LeftButton)
         keyClick(Qt.Key_Delete)
-        compare(grid.noteSummary, beforeGesture, "Delete is blocked mid-gesture")
+        compare(grid.fetchNoteSummary(), beforeGesture, "Delete is blocked mid-gesture")
         var pencilBefore = grid.pencilMode
         keyClick(Qt.Key_B)
         compare(grid.pencilMode, !pencilBefore, "Pencil survives the pointer gesture")
-        compare(grid.noteSummary, beforeGesture, "surviving Pencil never edits notes")
+        compare(grid.fetchNoteSummary(), beforeGesture, "surviving Pencil never edits notes")
         keyClick(Qt.Key_B)
         compare(grid.pencilMode, pencilBefore, "second Pencil restores the mode")
-        compare(grid.noteSummary, beforeGesture, "restoring Pencil never edits notes")
+        compare(grid.fetchNoteSummary(), beforeGesture, "restoring Pencil never edits notes")
         mouseRelease(roll, movedCenter.x, movedCenter.y, Qt.LeftButton)
-        compare(grid.noteSummary, beforeGesture, "releasing the held press commits no edit")
+        compare(grid.fetchNoteSummary(), beforeGesture, "releasing the held press commits no edit")
         keyClick(Qt.Key_B)
         tryCompare(grid, "pencilMode", false, 3000)
         roll.forceActiveFocus(Qt.OtherFocusReason)
@@ -105,13 +105,13 @@ ShellGridInputSupport {
         }
         compare(noteById(grid, target.id).duration, 1,
                 "mounted Shift+Left reaches the one-tick duration floor")
-        var floorSummary = grid.noteSummary
+        var floorSummary = grid.fetchNoteSummary()
         var floorRevision = grid.appliedRevisionText
         var floorUndo = session.canUndo
         var floorRedo = session.canRedo
         var floorCursor = grid.editCursorTick
         keyClick(Qt.Key_Left, Qt.ShiftModifier)
-        compare(grid.noteSummary, floorSummary, "mounted Shift+Left at the floor changes no note")
+        compare(grid.fetchNoteSummary(), floorSummary, "mounted Shift+Left at the floor changes no note")
         compare(grid.appliedRevisionText, floorRevision,
                 "mounted Shift+Left at the floor writes no document revision")
         compare(session.canUndo, floorUndo, "mounted Shift+Left at the floor adds no undo")
@@ -128,13 +128,13 @@ ShellGridInputSupport {
               "Play/Pause is enabled with a song open")
         var playhead = session.playheadPresenter()
         compare(playhead.playing, false, "transport starts stopped")
-        var before = grid.noteSummary
+        var before = grid.fetchNoteSummary()
         roll.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(roll, "activeFocus", true, 3000)
         keyClick(Qt.Key_Space)
         verify(waitForNative(function() { return playhead.playing }, 5000),
               "bare Space starts transport from the focused grid")
-        compare(grid.noteSummary, before, "window Space never edits notes")
+        compare(grid.fetchNoteSummary(), before, "window Space never edits notes")
         keyClick(Qt.Key_Space)
         verify(waitForNative(function() { return !playhead.playing }, 5000),
               "second Space stops transport")
@@ -235,7 +235,7 @@ ShellGridInputSupport {
         verify(roll && lane, "an empty visible roll lane accepts the draw gesture")
         var start = pointFor(grid, lane.tick, lane.pitch)
         var end = pointFor(grid, lane.tick + 2 * grid.snapTicks, lane.pitch)
-        var before = grid.noteSummary
+        var before = grid.fetchNoteSummary()
         var originalIds = gridNotes(grid).map(function(note) { return note.id })
         var revision = grid.appliedRevisionText
         mousePress(roll, start.x, start.y, Qt.LeftButton)
@@ -243,18 +243,18 @@ ShellGridInputSupport {
         tryVerify(function() { return grid.statusText.indexOf("Drawing") !== -1 }, 3000)
         roll.forceActiveFocus(Qt.OtherFocusReason)
         keyClick(Qt.Key_Delete)
-        compare(grid.noteSummary, before,
+        compare(grid.fetchNoteSummary(), before,
                 "Delete during an active note gesture changes no notes")
         compare(grid.appliedRevisionText, revision,
                 "Delete during a draw records no document edit")
         keyClick(Qt.Key_Escape)
         mouseRelease(roll, end.x, end.y, Qt.LeftButton)
-        compare(grid.noteSummary, before,
+        compare(grid.fetchNoteSummary(), before,
                 "Escape cancels the gesture and restores the staged selection")
         mousePress(roll, start.x, start.y, Qt.LeftButton)
         mouseMove(roll, end.x, end.y, -1, Qt.LeftButton)
         mouseRelease(roll, end.x, end.y, Qt.LeftButton)
-        tryVerify(function() { return grid.noteSummary !== before }, 3000,
+        tryVerify(function() { return grid.fetchNoteSummary() !== before }, 3000,
                   "the released re-press commits its drawn note")
         var inserted = gridNotes(grid).filter(function(note) {
             return originalIds.indexOf(note.id) < 0
@@ -285,7 +285,7 @@ ShellGridInputSupport {
         var center = item.mapToItem(roll, item.width / 2, item.height / 2)
         mouseClick(roll, center.x, center.y, Qt.LeftButton)
         tryVerify(function() { return noteById(grid, target.id).selected }, 3000)
-        var before = grid.noteSummary
+        var before = grid.fetchNoteSummary()
         var revision = grid.appliedRevisionText
         var destination = center.x + 2 * grid.snapTicks * grid.beatWidth / grid.ticksPerBeat
         verify(destination < roll.width, "the selected note has room for a move preview")
@@ -293,13 +293,13 @@ ShellGridInputSupport {
         mouseMove(roll, destination, center.y, -1, Qt.LeftButton)
         roll.forceActiveFocus(Qt.OtherFocusReason)
         keyClick(Qt.Key_Delete)
-        compare(grid.noteSummary, before,
+        compare(grid.fetchNoteSummary(), before,
                 "a selected-note move consumes Delete while its pointer is held")
         compare(grid.appliedRevisionText, revision,
                 "Delete during a move records no document edit")
         keyClick(Qt.Key_Escape)
         mouseRelease(roll, destination, center.y, Qt.LeftButton)
-        compare(grid.noteSummary, before,
+        compare(grid.fetchNoteSummary(), before,
                 "the cancelled move retains the original selected note and its bytes")
     }
 
@@ -314,7 +314,7 @@ ShellGridInputSupport {
         var center = item.mapToItem(roll, item.width / 2, item.height / 2)
         mouseClick(roll, center.x, center.y, Qt.LeftButton)
         tryVerify(function() { return noteById(grid, target.id).selected }, 3000)
-        var before = grid.noteSummary
+        var before = grid.fetchNoteSummary()
         var revision = grid.appliedRevisionText
         var scrollbar = findChild(surface, "timelineRollScrollBar")
         verify(scrollbar && scrollbar.scrollable, "the roll scrollbar has a movable thumb")
@@ -325,7 +325,7 @@ ShellGridInputSupport {
         mousePress(scrollbar, point.x, point.y, Qt.LeftButton)
         tryCompare(scrollbar, "gestureActive", true, 3000)
         keyClick(Qt.Key_Delete)
-        verify(grid.noteSummary === before && grid.appliedRevisionText === revision,
+        verify(grid.fetchNoteSummary() === before && grid.appliedRevisionText === revision,
                "the thumb grab blocks Delete without editing the selected note")
         keyClick(Qt.Key_Escape)
         tryCompare(scrollbar, "gestureActive", false, 3000)
@@ -335,12 +335,12 @@ ShellGridInputSupport {
         mouseMove(scrollbar, point.x, heldY, -1, Qt.LeftButton)
         compare(grid.cameraScrollY, cameraY, "a cancelled thumb ignores held-button movement")
         mouseRelease(scrollbar, point.x, point.y, Qt.LeftButton)
-        verify(grid.noteSummary === before && grid.appliedRevisionText === revision,
+        verify(grid.fetchNoteSummary() === before && grid.appliedRevisionText === revision,
                "the thumb grab blocks Delete and Escape releases it")
         mousePress(scrollbar, point.x, point.y, Qt.LeftButton)
         tryCompare(scrollbar, "gestureActive", true, 3000)
         keyClick(Qt.Key_Delete)
-        compare(grid.noteSummary, before, "the next thumb grab still protects the note")
+        compare(grid.fetchNoteSummary(), before, "the next thumb grab still protects the note")
         var dragY = cameraY < grid.cameraMaxVScroll / 2 ? point.y + delta : point.y - delta
         mouseMove(scrollbar, point.x, dragY, -1, Qt.LeftButton)
         tryVerify(function() { return grid.cameraScrollY !== cameraY }, 3000,

@@ -299,12 +299,12 @@ ShellClipboardSupport {
             tracks: [], lanes: [{ track: selected.track, cc: 7, points: [] }], tempo: []
         })
         verify(clipProbe.writeClipJson(emptyPayload), "the empty lane clip is staged")
-        var notesBeforeEmpty = grid.noteSummary
+        var notesBeforeEmpty = grid.fetchNoteSummary()
         var revisionBeforeEmpty = grid.appliedRevisionText
         var cursorBeforeEmpty = grid.editCursorTick
         var undoBeforeEmpty = shell.shellPresenter.actionEnabled("edit.undo")
         keySequence(StandardKey.Paste)
-        compare(grid.noteSummary, notesBeforeEmpty, "an empty lane Paste key is a surface no-op")
+        compare(grid.fetchNoteSummary(), notesBeforeEmpty, "an empty lane Paste key is a surface no-op")
         compare(grid.appliedRevisionText, revisionBeforeEmpty, "the empty lane paste keeps revision")
         compare(grid.editCursorTick, cursorBeforeEmpty, "the empty lane paste keeps cursor")
         compare(shell.shellPresenter.actionEnabled("edit.undo"), undoBeforeEmpty,

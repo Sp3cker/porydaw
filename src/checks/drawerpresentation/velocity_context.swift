@@ -96,12 +96,13 @@ func drawerVelocityProjectionRefresh(_ report: CheckReport, session: DocumentSes
     }
     page.refreshCamera()
     let moved = fixture.handle(note)!
-    let expectedX = fixture.session.camera.displayX(tick: Double(note.tick), origin: 0, dpr: 1)
-    report.expect(moved.x == expectedX && moved.x != oldX && moved.y == oldY
-                      && moved.value == oldValue,
+    let stableX = fixture.session.camera.contentTickX(tick: Double(note.tick), dpr: page.devicePixelRatio)
+    let displayX = fixture.session.camera.displayX(tick: Double(note.tick), origin: 0, dpr: page.devicePixelRatio)
+    report.expect(moved.x == stableX && moved.x != oldX && moved.x + page.handlesOriginX == displayX
+                      && moved.y == oldY && moved.value == oldValue,
                   cppID: drawerVelocityProjectionID, message: "camera refresh moves the handle without changing its value axis")
     let row = page.handles[1]
-    report.expect(row.x == expectedX, cppID: drawerVelocityProjectionID,
+    report.expect(row.x == stableX && row.x + page.handlesOriginX == displayX, cppID: drawerVelocityProjectionID,
                   message: "the QML model receives the moved handle")
     report.expectEqual(expected: oldY, actual: row.y, cppID: drawerVelocityProjectionID,
                        what: "camera refresh preserves the node's marker-y value")

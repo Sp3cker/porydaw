@@ -133,7 +133,7 @@ TestCase {
         return input
     }
 
-    function gridNotes(g) { return JSON.parse(g.noteSummary) }
+    function gridNotes(g) { return JSON.parse(g.fetchNoteSummary()) }
 
     function noteById(g, id) {
         var list = gridNotes(g)
@@ -295,7 +295,7 @@ TestCase {
             var current = noteById(g, target.id)
             return current && current.selected
         }, 5000), "the setup band selects its note")
-        var before = g.noteSummary
+        var before = g.fetchNoteSummary()
         sweepBand(roll, band)
         verify(waitForNative(function() {
             return g.statusText.indexOf("Selecting") !== -1
@@ -303,7 +303,7 @@ TestCase {
         verify(bootstrap.cancelInput(), "the production cancel path runs")
         mouseRelease(roll, band.ex, band.ey, Qt.RightButton)
         verify(waitForNative(function() {
-            return g.noteSummary === before && g.lastCancelReason === 2
+            return g.fetchNoteSummary() === before && g.lastCancelReason === 2
         }, 5000), "cancel restores the band selection with reason 2")
     }
 

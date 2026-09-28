@@ -99,7 +99,7 @@ ShellTabsSupport {
         compare(summaryOf(firstId) === summaryOf(secondId), false,
                 "sibling tabs never share a document")
         var selectedGrid = surfaceOf(secondId).gridModel
-        compare(JSON.stringify(JSON.parse(selectedGrid.noteSummary)),
+        compare(JSON.stringify(JSON.parse(selectedGrid.fetchNoteSummary())),
                 JSON.stringify(JSON.parse(summaryOf(secondId))),
                 "the mounted surface publishes the selected page's grid")
     }
@@ -258,10 +258,10 @@ ShellTabsSupport {
         var firstSurface = surfaceOf(firstId)
         var secondSurface = surfaceOf(secondId)
         verify(firstSurface !== secondSurface, "each tab owns its surface")
-        compare(JSON.stringify(JSON.parse(firstSurface.gridModel.noteSummary)),
+        compare(JSON.stringify(JSON.parse(firstSurface.gridModel.fetchNoteSummary())),
                 JSON.stringify(JSON.parse(summaryOf(firstId))),
                 "the open tab keeps its grid")
-        compare(JSON.stringify(JSON.parse(secondSurface.gridModel.noteSummary)),
+        compare(JSON.stringify(JSON.parse(secondSurface.gridModel.fetchNoteSummary())),
                 JSON.stringify(JSON.parse(summaryOf(secondId))),
                 "the appended tab publishes its own grid")
     }

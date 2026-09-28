@@ -73,11 +73,11 @@ func checkCommandRouting(_ report: CheckReport, session: DocumentSession) {
         session.document.note(a).map { Int($0.duration) == 7 } == true
             && session.document.note(b).map { Int($0.duration) == 13 } == true,
         cppID: id, message: "merged shorten presses undo in one step")
-    let summaryBeforeCopy = grid.noteSummary
+    let summaryBeforeCopy = grid.fetchNoteSummary()
     let revisionBeforeCopy = session.document.revision
     grid.performCommand(command: EditCommand.copy.rawValue)
     report.expect(
-        grid.noteSummary == summaryBeforeCopy
+        grid.fetchNoteSummary() == summaryBeforeCopy
             && session.document.revision == revisionBeforeCopy,
         cppID: id, message: "copy leaves the document and published summary untouched")
     guard let aRect = firstRect(named: "gridNote_\(a.rawValue)", in: grid.scene.pianoNoteFills)
@@ -90,19 +90,19 @@ func checkCommandRouting(_ report: CheckReport, session: DocumentSession) {
     let pressY = aRect.y - floor(grid.cameraScrollY * dpr + 0.5) / dpr + aRect.height / 2
     let revisionBeforePress = session.document.revision
     grid.beginPointer(x: pressX, y: pressY, modifiers: 0)
-    let midGestureSummary = grid.noteSummary
+    let midGestureSummary = grid.fetchNoteSummary()
     grid.performCommand(command: EditCommand.delete.rawValue)
     report.expect(
-        grid.noteSummary == midGestureSummary && session.document.note(a) != nil,
+        grid.fetchNoteSummary() == midGestureSummary && session.document.note(a) != nil,
         cppID: id, message: "delete is refused while a pointer gesture owns the grid")
     let pencilBefore = grid.pencilMode
     grid.performCommand(command: EditCommand.pencilMode.rawValue)
     report.expect(
-        grid.pencilMode == !pencilBefore && grid.noteSummary == midGestureSummary,
+        grid.pencilMode == !pencilBefore && grid.fetchNoteSummary() == midGestureSummary,
         cppID: id, message: "pencil mode still toggles mid-gesture without touching notes")
     grid.performCommand(command: EditCommand.pencilMode.rawValue)
     report.expect(
-        grid.pencilMode == pencilBefore && grid.noteSummary == midGestureSummary,
+        grid.pencilMode == pencilBefore && grid.fetchNoteSummary() == midGestureSummary,
         cppID: id, message: "pencil mode toggles back mid-gesture without touching notes")
     grid.endPointer(x: pressX, y: pressY)
     report.expect(

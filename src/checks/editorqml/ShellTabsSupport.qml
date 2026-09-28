@@ -148,7 +148,7 @@ TestCase {
         var surface = surfaceOf(tabId)
         return surface ? surface.gridModel : null
     }
-    function summaryOf(tabId) { return gridOf(tabId).noteSummary }
+    function summaryOf(tabId) { return gridOf(tabId).fetchNoteSummary() }
     function dialogButton(name) {
         var button = findChild(shell, name)
         if (button)

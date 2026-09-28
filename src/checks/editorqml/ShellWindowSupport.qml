@@ -186,10 +186,10 @@ TestCase {
         var grid = surface.gridModel
         var roll = findChild(surface, "swiftRollInput")
         selectDrawnVelocityNote(surface)
-        var first = JSON.parse(grid.noteSummary).find(function(note) {
+        var first = JSON.parse(grid.fetchNoteSummary()).find(function(note) {
             return note.selected && !note.ghost
         })
-        var second = JSON.parse(grid.noteSummary).find(function(note) {
+        var second = JSON.parse(grid.fetchNoteSummary()).find(function(note) {
             var item = findChild(surface, "gridNote_" + note.id)
             return !note.selected && !note.ghost && item && item.visible
                    && item.width > 0 && item.height > 0
@@ -198,14 +198,14 @@ TestCase {
         var target = findChild(surface, "gridNote_" + second.id)
         var point = target.mapToItem(roll, target.width / 2, target.height / 2)
         mouseClick(roll, point.x, point.y, Qt.LeftButton, Qt.ShiftModifier)
-        var pair = JSON.parse(grid.noteSummary).filter(function(note) {
+        var pair = JSON.parse(grid.fetchNoteSummary()).filter(function(note) {
             return note.selected && (note.id === first.id || note.id === second.id)
         })
         return pair
     }
 
     function drawnNoteContent(grid) {
-        return JSON.parse(grid.noteSummary).map(function(note) {
+        return JSON.parse(grid.fetchNoteSummary()).map(function(note) {
             return [note.track, note.tick, note.pitch, note.duration, note.velocity, note.ghost]
         }).sort(function(a, b) { return JSON.stringify(a).localeCompare(JSON.stringify(b)) })
     }

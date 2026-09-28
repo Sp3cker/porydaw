@@ -204,7 +204,7 @@ ShellGridInputSupport {
         verify(center.y > face.mapToItem(roll, 0, 0).y
                && center.y < face.mapToItem(roll, 0, face.height).y,
                "the modifier press lies vertically inside the painted note rectangle")
-        var before = grid.noteSummary
+        var before = grid.fetchNoteSummary()
         var revision = grid.appliedRevisionText
         var undo = session.canUndo
         var redo = session.canRedo
@@ -216,7 +216,7 @@ ShellGridInputSupport {
             var staged = findChild(surface, "gridNote_" + note.id)
             return staged && staged.color.toString() !== originalFill
         }, 1000, "the held modifier drag paints a distinct staged velocity")
-        compare(grid.noteSummary, before, "the held modifier drag leaves the document unchanged")
+        compare(grid.fetchNoteSummary(), before, "the held modifier drag leaves the document unchanged")
         roll.forceActiveFocus(Qt.OtherFocusReason)
         keyClick(Qt.Key_Escape)
         mouseRelease(roll, center.x, center.y + travel, Qt.LeftButton, Qt.ControlModifier)
@@ -224,7 +224,7 @@ ShellGridInputSupport {
             var restored = findChild(surface, "gridNote_" + note.id)
             return restored && restored.color.toString() === originalFill
         }, 1000, "mounted Escape removes the staged velocity paint")
-        compare(grid.noteSummary, before, "mounted Escape restores every timeline velocity after a modifier drag")
+        compare(grid.fetchNoteSummary(), before, "mounted Escape restores every timeline velocity after a modifier drag")
         compare(grid.appliedRevisionText, revision, "mounted Escape publishes no velocity revision")
         compare(session.canUndo, undo, "mounted Escape appends no velocity undo entry")
         compare(session.canRedo, redo, "mounted Escape leaves velocity redo availability unchanged")
@@ -240,7 +240,7 @@ ShellGridInputSupport {
         var targetTick = lane.tick + 2 * grid.snapTicks
         var cell = pointFor(grid, targetTick + Math.max(1, Math.floor(grid.snapTicks / 4)),
                             lane.pitch)
-        var before = grid.noteSummary
+        var before = grid.fetchNoteSummary()
         var history = grid.appliedRevisionText
         var cursor = grid.editCursorTick
         verify(cursor !== targetTick, "empty click targets a cell away from the current cursor")
@@ -257,7 +257,7 @@ ShellGridInputSupport {
                + ", cellX=" + cell.x + ", targetTick=" + targetTick
                + ", status=" + grid.statusText + ")")
         mouseRelease(roll, cell.x + jitter, cell.y, Qt.LeftButton)
-        compare(grid.noteSummary, before, "below draw slop, click creates no note")
+        compare(grid.fetchNoteSummary(), before, "below draw slop, click creates no note")
         compare(grid.appliedRevisionText, history, "click pushes no history edit")
         compare(grid.editCursorTick, targetTick, "click parks at the nearest snapped tick")
         surface.rulerMenu.beginSweep(cell.x - grid.beatWidth / 2, 0, 0)

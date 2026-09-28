@@ -81,7 +81,7 @@ TestCase {
         return findChild(page, "swiftRollOverlay")
     }
 
-    function gridNotes(grid) { return JSON.parse(grid.noteSummary) }
+    function gridNotes(grid) { return JSON.parse(grid.fetchNoteSummary()) }
 
     function editableNotes(grid) {
         return gridNotes(grid).filter(function(note) {
@@ -136,7 +136,7 @@ TestCase {
     }
 
     function pastedOn(grid, sourceId, tick, source) {
-        var list = JSON.parse(grid.noteSummary)
+        var list = JSON.parse(grid.fetchNoteSummary())
         for (var i = 0; i < list.length; ++i) {
             var note = list[i]
             if (note.id !== sourceId && note.tick === tick && note.duration === source.duration
@@ -148,7 +148,7 @@ TestCase {
     }
 
     function noteOn(grid, id) {
-        var list = JSON.parse(grid.noteSummary)
+        var list = JSON.parse(grid.fetchNoteSummary())
         for (var i = 0; i < list.length; ++i)
             if (list[i].id === id)
                 return list[i]
@@ -156,7 +156,7 @@ TestCase {
     }
 
     function tileOn(grid, tick, pitch, duration, track, velocity, notId) {
-        var list = JSON.parse(grid.noteSummary)
+        var list = JSON.parse(grid.fetchNoteSummary())
         for (var i = 0; i < list.length; ++i) {
             var note = list[i]
             if (note.tick === tick && note.pitch === pitch && note.duration === duration

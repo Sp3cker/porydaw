@@ -260,7 +260,7 @@ ShellDrawerParitySupport {
         verify(grip && plot, "the automation grip and plot are mounted")
 
         clickFirstGridNote()
-        var notes = JSON.stringify(JSON.parse(gridModel().noteSummary))
+        var notes = JSON.stringify(JSON.parse(gridModel().fetchNoteSummary()))
 
         plot.forceActiveFocus(Qt.OtherFocusReason)
         verify(waitForNative(function() {
@@ -293,7 +293,7 @@ ShellDrawerParitySupport {
         wait(100)
         compare(plot.height, height, "horizontal arrows never resize the plot")
         compare(revision(), before, "grip keys never edit the song")
-        compare(JSON.stringify(JSON.parse(gridModel().noteSummary)), notes,
+        compare(JSON.stringify(JSON.parse(gridModel().fetchNoteSummary())), notes,
                 "grip keys never touch the selection")
     }
 }

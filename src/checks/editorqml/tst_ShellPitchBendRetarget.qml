@@ -17,7 +17,7 @@ ShellPitchBendSupport {
         tryCompare(opened.editor, "isOpen", false)
         compare(opened.grid.appliedRevisionText, before,
                 "an outside note press is eaten without dragging the note")
-        verify(JSON.parse(opened.grid.noteSummary).some(function(n) {
+        verify(JSON.parse(opened.grid.fetchNoteSummary()).some(function(n) {
             return n.id === opened.note.id && n.selected
         }), "clicking the anchored note dismisses the editor and keeps it selected")
         tryCompare(opened.roll, "activeFocus", true, 5000,
@@ -37,7 +37,7 @@ ShellPitchBendSupport {
         tryCompare(opened.editor, "isOpen", false)
         compare(opened.grid.appliedRevisionText, before,
                 "an outside note press is eaten without dragging the note")
-        const selected = JSON.parse(opened.grid.noteSummary).filter(function(n) {
+        const selected = JSON.parse(opened.grid.fetchNoteSummary()).filter(function(n) {
             return n.selected
         })
         verify(selected.length === 1 && selected[0].id === opened.stray.id,
@@ -105,7 +105,7 @@ ShellPitchBendSupport {
         const opened = openViaG()
         const graphs = [findChild(opened.view, "pitchBendGraph"),
                         findChild(opened.view, "modWheelGraph")]
-        const anchor = JSON.parse(opened.grid.noteSummary).find(function(n) {
+        const anchor = JSON.parse(opened.grid.fetchNoteSummary()).find(function(n) {
             return n.selected
         })
         verify(anchor !== undefined, "the anchor note bounds interior graph ticks")
@@ -251,7 +251,7 @@ ShellPitchBendSupport {
                 && mod.lane === opened.editor.modGraph()
                 && pitch.lane !== oldLane && mod.lane !== oldMod
         }, 5000, "the visible graph binds the newly anchored lane")
-        compare(JSON.parse(opened.grid.noteSummary).find(function(n) {
+        compare(JSON.parse(opened.grid.fetchNoteSummary()).find(function(n) {
             return n.selected
         }).id, opened.stray.id, "the popup targets the newly selected note")
         verify(Math.abs(opened.editor.anchorY - oldAnchorY) >= 2 * opened.grid.rowHeight,
@@ -262,7 +262,7 @@ ShellPitchBendSupport {
 
     function test_blankPassThroughAndFixtureFocus() {
         const opened = openViaG(true)
-        const selected = JSON.parse(opened.grid.noteSummary).filter(function(n) {
+        const selected = JSON.parse(opened.grid.fetchNoteSummary()).filter(function(n) {
             return n.selected
         })
         compare(selected.length, 1, "the mounted fixture holds exactly its anchor note selected")
@@ -274,7 +274,7 @@ ShellPitchBendSupport {
                                             opened.roll.height - opened.grid.baseFontPx)
         mouseClick(opened.view, blank.x, blank.y, Qt.LeftButton)
         tryCompare(opened.editor, "isOpen", false)
-        verify(JSON.parse(opened.grid.noteSummary).every(function(n) { return !n.selected }),
+        verify(JSON.parse(opened.grid.fetchNoteSummary()).every(function(n) { return !n.selected }),
                "an outside blank press passes through to the roll")
         compare(opened.grid.cursorKind, 0, "the roll advertises the arrow cursor after dismissal")
     }

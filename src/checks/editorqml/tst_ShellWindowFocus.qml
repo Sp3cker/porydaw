@@ -20,11 +20,11 @@ ShellWindowSupport {
         verify(firstButton && secondButton, "the production tab buttons are mounted")
         roll.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(roll, "activeFocus", true, 3000)
-        var noteSnapshot = surface.gridModel.noteSummary
+        var noteSnapshot = surface.gridModel.fetchNoteSummary()
         var playhead = shell.shellPresenter.session.playheadPresenter()
         keyClick(Qt.Key_Space)
         tryCompare(playhead, "playing", true, 3000)
-        compare(surface.gridModel.noteSummary, noteSnapshot, "roll Space leaves notes unchanged")
+        compare(surface.gridModel.fetchNoteSummary(), noteSnapshot, "roll Space leaves notes unchanged")
         keyClick(Qt.Key_Space)
         tryCompare(playhead, "playing", false, 3000)
 
@@ -35,7 +35,7 @@ ShellWindowSupport {
         keyClick(Qt.Key_Space)
         tryCompare(playhead, "playing", true, 3000)
         compare(section.visible, sectionVisible, "chrome Space does not toggle the section")
-        compare(surface.gridModel.noteSummary, noteSnapshot,
+        compare(surface.gridModel.fetchNoteSummary(), noteSnapshot,
                 "chrome Space never changes musical selection")
         keyClick(Qt.Key_Space)
         tryCompare(playhead, "playing", false, 3000)
@@ -129,7 +129,7 @@ ShellWindowSupport {
         var pair = selectMountedNotePair(surface)
         compare(pair.length, 2, "the real roll click selects a note")
         function note(id) {
-            return JSON.parse(grid.noteSummary).find(function(item) { return item.id === id })
+            return JSON.parse(grid.fetchNoteSummary()).find(function(item) { return item.id === id })
         }
         function pairUnchanged(before) {
             return before.every(function(previous) {
@@ -157,7 +157,7 @@ ShellWindowSupport {
         var beforeHeight = section.bodyHeight
         var beforeNote = pair.map(function(item) { return note(item.id) })
         var beforeRevision = grid.appliedRevisionText
-        var beforeSummary = grid.noteSummary
+        var beforeSummary = grid.fetchNoteSummary()
         var beforeUndo = session.canUndo
         copyActivatedSpy.target = windowShortcut("shellShortcut_roll.copy")
         soloActivatedSpy.target = windowShortcut("shellShortcut_roll.solo_tracks")
@@ -166,7 +166,7 @@ ShellWindowSupport {
         copyActivatedSpy.clear()
         soloActivatedSpy.clear()
         keyClick(Qt.Key_F24)
-        verify(section.bodyHeight === beforeHeight && grid.noteSummary === beforeSummary
+        verify(section.bodyHeight === beforeHeight && grid.fetchNoteSummary() === beforeSummary
                && grid.appliedRevisionText === beforeRevision && session.canUndo === beforeUndo,
                "an unrecognized key changes nothing")
         compare(copyActivatedSpy.count, 0, "A010 F24 never activates window Copy")

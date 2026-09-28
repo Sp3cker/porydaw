@@ -76,7 +76,7 @@ ShellTabsSupport {
         verify(prior.events, "reload seeds the visible Event List")
         verify(prior.cursor > 0 && prior.triplet && prior.events,
                "the reloaded tab's view is seeded with non-default cursor, feel and events")
-        const retainedNotes = grid.noteSummary
+        const retainedNotes = grid.fetchNoteSummary()
         grid.handleWheel(0, -120, 0, 0, 0, 0, false, 100, 20)
         grid.handleWheel(0, -120, 0, 0, Qt.ControlModifier, 0, true, 100, 20)
         grid.setCameraHScroll(1000000)
@@ -128,7 +128,7 @@ ShellTabsSupport {
                && grid.gridSelectionMenuId === prior.division
                && grid.tripletGrid === prior.triplet
                && tabs().selectedTabShowsEvents === prior.events
-               && grid.noteSummary === retainedNotes,
+               && grid.fetchNoteSummary() === retainedNotes,
                "restoring the captured runtime view preserves all fields and the original MIDI notes")
         session().openSong("mus_route101")
         verify(waitForNative(function() {
@@ -579,7 +579,7 @@ ShellTabsSupport {
                 return
             watch.seen = true
             watch.reason = grid.lastCancelReason
-            watch.restored = grid.noteSummary === before
+            watch.restored = grid.fetchNoteSummary() === before
             watch.closeReady = shell.shellPresenter.closeReady
         }
         repeater.itemRemoved.connect(watch.handler)
@@ -594,7 +594,7 @@ ShellTabsSupport {
         var closingBytes = fileProbe.fileFingerprint(closingPath)
         var survivorSummary = summaryOf(survivorId)
         var grid = gridOf(closingId)
-        var before = grid.noteSummary
+        var before = grid.fetchNoteSummary()
         grid.inputCancelled(1)
         compare(grid.lastCancelReason, 1, "an idle ungrab primes a non-hidden cancel reason")
         var release = holdBandOn(closingId)
@@ -656,7 +656,7 @@ ShellTabsSupport {
         var songPath = fileProbe.songPath(bootstrap.projectRoot, "mus_route101")
         var songBytes = fileProbe.fileFingerprint(songPath)
         var grid = gridOf(onlyId)
-        var before = grid.noteSummary
+        var before = grid.fetchNoteSummary()
         grid.inputCancelled(1)
         compare(grid.lastCancelReason, 1, "an idle ungrab primes a non-hidden cancel reason")
         var release = holdBandOn(onlyId)

@@ -6,7 +6,7 @@ ShellGridInputSupport {
         openRoute101()
         var surface = selectedSurface()
         var grid = surface.gridModel
-        var notesBefore = grid.noteSummary
+        var notesBefore = grid.fetchNoteSummary()
         var toggle = findChild(surface, "drawerToggle_automation")
         verify(toggle && toggle.visible, "the mounted Automation toggle is available")
         if (!surface.drawerPresenter.automationSection.visible)
@@ -158,7 +158,7 @@ ShellGridInputSupport {
                     return shiftedTicks.indexOf(node.tick) !== -1 && node.selected
                 })
         }, 3000, "a real pointer sweep repaints the restored selected interval")
-        compare(grid.noteSummary, notesBefore,
+        compare(grid.fetchNoteSummary(), notesBefore,
                 "Automation pointer and Delete Undo leave all roll notes unchanged")
     }
 
@@ -166,7 +166,7 @@ ShellGridInputSupport {
         openRoute101()
         var surface = selectedSurface()
         var grid = surface.gridModel
-        var originalNotes = grid.noteSummary
+        var originalNotes = grid.fetchNoteSummary()
         var toggle = findChild(surface, "drawerToggle_automation")
         verify(toggle && toggle.visible, "mixed range reaches the production Automation toggle")
         if (!surface.drawerPresenter.automationSection.visible)
@@ -331,7 +331,7 @@ ShellGridInputSupport {
         activate("Tempo")
         verify(written().some(function(node) { return node.tick === tempoStart.tick + delta }),
                "mixed Undo restores the translated Tempo occurrence")
-        compare(grid.noteSummary, originalNotes, "mixed Automation edits preserve all roll notes")
+        compare(grid.fetchNoteSummary(), originalNotes, "mixed Automation edits preserve all roll notes")
     }
 
 }

@@ -27,7 +27,7 @@
 
     /// The notes the production grid publishes, parsed from its own summary.
     function gridNotes(testCase) {
-        return JSON.parse(testCase.surface.gridModel.noteSummary)
+        return JSON.parse(testCase.surface.gridModel.fetchNoteSummary())
     }
 
     function primaryGridNotes(testCase) {

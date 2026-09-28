@@ -100,7 +100,7 @@ EditorDrawerTestSupport {
 
         // Position-only updates publish positions: the grid's notes, the page
         // rectangles and the document stay exactly as they were.
-        var summary = grid.noteSummary
+        var summary = grid.fetchNoteSummary()
         var notes = grid.renderedNoteCount
         var revision = grid.appliedRevisionText
         var heights = [testCase.section(testCase.velocityKind).bodyHeight,
@@ -109,7 +109,7 @@ EditorDrawerTestSupport {
         for (var step = 1; step <= 128; ++step)
             bootstrap.presentPlayheadObservation(step * 1000, 0)
         wait(0)
-        compare(grid.noteSummary, summary, "playhead-only updates rebuild no grid content")
+        compare(grid.fetchNoteSummary(), summary, "playhead-only updates rebuild no grid content")
         compare(grid.renderedNoteCount, notes, "playhead-only updates render the same notes")
         compare(grid.appliedRevisionText, revision, "playhead-only updates apply no revision")
         compare([testCase.section(testCase.velocityKind).bodyHeight,

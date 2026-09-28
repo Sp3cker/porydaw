@@ -90,7 +90,7 @@ FocusScope {
         readonly property string contextDiagnostic: ""
         readonly property bool readoutVisible: false
         readonly property bool detentsEnabled: true
-        readonly property bool detentsAvailable: false
+        readonly property double handlesOriginX: 0
         readonly property double baseFontPx: 13
         readonly property bool promptOpen: false
         readonly property string promptDraft: ""
@@ -317,10 +317,11 @@ FocusScope {
         Repeater {
             model: (page.pageModel ? page.pageModel.handles : [])
 
-            // `QQuickItem.x`/`y` are FINAL, so the delegate reads the published
-            // handle as the role object (`model`) exactly like the roll's own rect
-            // delegates; the drawn properties below are child items, never
-            // overrides of the delegate's own geometry.
+            // Handles publish scroll-stable x; each delegate adds the page's
+            // single scroll origin to its own x, so scroll-only camera changes
+            // move one scalar instead of invalidating every row's model. The
+            // drawn properties below are child items positioned from the stable
+            // spec, never overrides of the delegate's own geometry.
             delegate: Item {
                 id: node
 
@@ -329,10 +330,7 @@ FocusScope {
                 // local map instead of paying a metaCall per property.
                 readonly property var s: model ? model.spec : ({})
 
-                x: 0
-                y: 0
-                width: plot.width
-                height: plot.height
+                x: page.pageModel.handlesOriginX
 
                 Rectangle {
                     objectName: node.s.primitiveName + "Stem"
@@ -418,16 +416,21 @@ FocusScope {
 
             onPressed: (mouse) => {
                 plotMoves.flush()
+                // Handles and gestures live in scroll-stable x; the plot input
+                // arrives in plot space, so it sheds the published origin once
+                // at the boundary. The ruler keeps its own local coordinates.
                 mouse.accepted =
-                    page.pageModel.pointerPress(mouse.x, mouse.y, page.plotSurface,
+                    page.pageModel.pointerPress(mouse.x - page.pageModel.handlesOriginX,
+                                                mouse.y, page.plotSurface,
                                                 mouse.button, mouse.modifiers)
             }
             onPositionChanged: (mouse) => plotMoves.enqueue(
-                mouse.x, mouse.y, mouse.buttons, mouse.modifiers)
+                mouse.x - page.pageModel.handlesOriginX, mouse.y, mouse.buttons, mouse.modifiers)
             onReleased: (mouse) => {
                 plotMoves.flush()
                 plotHint.settleRelease(plotInput.mapToItem(null, mouse.x, mouse.y))
-                mouse.accepted = page.pageModel.pointerRelease(mouse.x, mouse.y, mouse.button)
+                mouse.accepted = page.pageModel.pointerRelease(
+                    mouse.x - page.pageModel.handlesOriginX, mouse.y, mouse.button)
             }
             onCanceled: {
                 plotMoves.flush()

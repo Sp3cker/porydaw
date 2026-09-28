@@ -10,7 +10,11 @@ Additional Swift counterpart: src/checks/editorqml/GridInputClipProbe.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellClipboard.qml
 
 Additional Swift counterpart: src/checks/editorqml/tst_ShellClipboardRoundTrip.qml
-Counterpart SHA-256: 14ac09e93939e939fd6986e51eaf563169b2a3387b35204562c6597881d2d257
+Counterpart SHA-256: eb0d81404856f93d8ed940eb4c3790340f0bc5a571e6c516d6d232bcc02024f7
+Additional Swift counterpart: src/checks/rollcheck/EditorGridProjectionChecks.swift
+Counterpart SHA-256: 75530a3f15793d1dd056954f9c138ef4316659fcfe92340d65fb931a3bca4810
+Additional Swift counterpart: src/checks/editorqml/ShellClipboardSupport.qml
+Counterpart SHA-256: d3727bd4e8a57101afee60fc462d6efcdfcb8209559387fc0af7a4672b7fdfd3
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -518,7 +522,7 @@ Original expression:
 
 A024 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:325
 Disposition: MATCHED
-Mapping: S073
+Mapping/reason: Held-gesture Copy preserves the exact fetched note summary; the executing Swift-side predicate reads it through fetchNoteSummary() and compares it unchanged (S073).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -675,7 +679,7 @@ Original expression:
 
 A042 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:370
 Disposition: MATCHED
-Mapping/reason: Successful JSON.parse of noteSummary on every read proves parse health; the staging guard executes wherever S057 reads notes.
+Mapping/reason: Successful JSON.parse(grid.fetchNoteSummary()) in the clipboard support helper feeds the executing staging/paste predicates (S057), covering parse health without claiming a pushed Swift property.
 Source context since previous assertion:
     const int copiedEnd = (std::max)(source->tick - copiedOrigin + source->duration,
                                      secondSource->tick - copiedOrigin + secondSource->duration);
@@ -918,7 +922,7 @@ Original expression:
 
 A065 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:456
 Disposition: MATCHED
-Mapping/reason: Replacement-surface staging (timebase, cursor, summary, dirty) plus paste enablement and real Paste delivery (S060).
+Mapping/reason: Replacement staging parses replacementGrid.fetchNoteSummary() before real paste; the replacement paste predicate verifies two notes and the committed cursor (S060).
 Source context since previous assertion:
     const auto replacementBefore = notes(replacement.grid, &error);
 Original expression:
@@ -1006,7 +1010,7 @@ Original expression:
 
 A073 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:501
 Disposition: MATCHED
-Mapping/reason: Staged empty span-48 clip (empty tracks, one empty cc lane) pastes to a no-op: summary, cursor and dirty unchanged (S061).
+Mapping/reason: Staged empty span-48 clip pastes to a no-op: the executing predicate compares the pulled note summary from fetchNoteSummary(), cursor and dirty state unchanged (S061).
 Source context since previous assertion:
     const QString pastedSummary = replacement.grid->property("noteSummary").toString();
     const int pastedCursor = replacement.grid->property("editCursorTick").toInt();
@@ -1022,7 +1026,7 @@ Original expression:
 
 A074 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:502
 Disposition: MATCHED
-Mapping: S108
+Mapping/reason: The no-op predicate compares the pulled note summary from fetchNoteSummary() unchanged (S108).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -1072,7 +1076,7 @@ Original expression:
 
 A079 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:518
 Disposition: MATCHED
-Mapping: S112
+Mapping/reason: Undo restores the pre-paste note summary captured through fetchNoteSummary() (S112).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -1395,8 +1399,9 @@ Anchor: message "generated time marks cover the visible plot"
 S025 | checkProjection | src/checks/rollcheck/EditorGridProjectionChecks.swift
 Anchor: message "camera movement does not alter noteSummary document state"
     report.expect(
-        grid.noteSummary == summaryBeforeCameraMove,
+        grid.fetchNoteSummary() == summaryBeforeCameraMove,
         cppID: projectionID, message: "camera movement does not alter noteSummary document state")
+Source line 78, checkProjection: grid.fetchNoteSummary() == summaryBeforeCameraMove
 
 S026 | checkProjection | src/checks/rollcheck/EditorGridProjectionChecks.swift
 Anchor: message "known note rectangle equals the camera projection"
@@ -1606,9 +1611,9 @@ S056 | pastedAt | src/checks/editorqml/ShellClipboardSupport.qml
 Anchor: function
     cleared clip plus real Copy publishes bytes parsed as format 1, grid ticksPerBeat, span 0, wholeLane false, empty lanes/tempo, one track with the source track and both notes as relTick/key/duration/velocity; copiedOrigin/copiedEnd derived
 
-S057 | pastedAt | src/checks/editorqml/ShellClipboardSupport.qml
+S057 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboardRoundTrip.qml
 Anchor: function
-    snap-guarded cursor staging with setEditCursorTick round-trip; Paste enabled; real Paste publishes two selected notes at cursor offsets with selectedCount 2 and committed cursor
+Source lines 161-186, test_roundTripReplacement: beforePaste = gridNotes(grid); verify(snap > 0); compare(grid.editCursorTick, cursor); paste predicate checks pasted && pasted.selected && secondPasted && secondPasted.selected && selectedCount(grid) === 2 && grid.editCursorTick === cursor + copiedEnd. gridNotes reads via ShellClipboardSupport.qml:84 JSON.parse(grid.fetchNoteSummary()).
 
 S058 | pastedAt | src/checks/editorqml/ShellClipboardSupport.qml
 Anchor: function
@@ -1618,13 +1623,13 @@ S059 | pastedAt | src/checks/editorqml/ShellClipboardSupport.qml
 Anchor: function
     documentDirty true; openSong on the selected label raises pendingCloseId; real Discard click replaces page and grid in place (same window, tabCount 1, gate cleared, new grid object) with history reset and exact clip bytes preserved
 
-S060 | pastedAt | src/checks/editorqml/ShellClipboardSupport.qml
+S060 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboardRoundTrip.qml
 Anchor: function
-    replacement staging plus Paste enabled; real Paste publishes two selected notes and the committed cursor on the replacement grid
+Source lines 325, 328-381, test_roundTripReplacement: JSON.parse(replacementGrid.fetchNoteSummary()); replacement predicate checks replacementPasted.selected && replacementSecond.selected && replacementGrid.editCursorTick === replacementCursor + copiedEnd.
 
-S061 | pastedAt | src/checks/editorqml/ShellClipboardSupport.qml
+S061 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboardRoundTrip.qml
 Anchor: function
-    staged empty span-48 clip pastes to a no-op (summary, cursor, dirty unchanged); one Undo removes the preceding real paste and restores pre-paste notes and dirty state
+Source lines 385-409, test_roundTripReplacement: compare(replacementGrid.fetchNoteSummary(), pastedSummary, "empty paste changes no notes"); compare(replacementGrid.fetchNoteSummary(), replacementSummary, "Undo restores pre-paste notes"); cursor and dirty state are unchanged/restored.
 
 S062 | pastedAt | src/checks/editorqml/ShellClipboardSupport.qml
 Anchor: function
@@ -1662,7 +1667,7 @@ Anchor: message "mid-gesture Copy keeps exact bytes"
 
 S073 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboardRoundTrip.qml
 Anchor: message "mid-gesture Copy keeps notes"
-
+Source line 71, test_roundTripReplacement: compare(grid.fetchNoteSummary(), preGestureSummary, "mid-gesture Copy keeps notes")
 S074 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboardRoundTrip.qml
 Anchor: message "mid-gesture Copy keeps revision"
 
@@ -1767,7 +1772,7 @@ Anchor: message "Undo is enabled after replacement paste"
 
 S108 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboardRoundTrip.qml
 Anchor: message "empty paste changes no notes"
-
+Source line 396, test_roundTripReplacement: compare(replacementGrid.fetchNoteSummary(), pastedSummary, "empty paste changes no notes")
 S109 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboardRoundTrip.qml
 Anchor: message "empty paste keeps the cursor"
 
@@ -1779,7 +1784,7 @@ Anchor: message "one Undo after the empty clip removes the preceding paste"
 
 S112 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboardRoundTrip.qml
 Anchor: message "Undo restores pre-paste notes"
-
+Source line 408, test_roundTripReplacement: compare(replacementGrid.fetchNoteSummary(), replacementSummary, "Undo restores pre-paste notes")
 S113 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboardRoundTrip.qml
 Anchor: message "Undo restores pre-paste dirty"
 

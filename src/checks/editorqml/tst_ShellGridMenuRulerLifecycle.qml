@@ -121,7 +121,7 @@ ShellGridMenuSupport {
         tryVerify(function() { return findChild(surface(), "insertTimeBars") !== null },
                   3000)
         var revision = grid.appliedRevisionText
-        var notes = grid.noteSummary
+        var notes = grid.fetchNoteSummary()
         var cursor = grid.editCursorTick
         var editMenu = findChild(shell, "shellEditMenu")
         var timeMenu = findChild(shell, "shellTimeMenu")
@@ -139,7 +139,7 @@ ShellGridMenuSupport {
                 "the disabled signature row cannot replace the active form")
         compare(grid.appliedRevisionText, revision,
                 "a blocked signature edit cannot change the document")
-        compare(grid.noteSummary, notes,
+        compare(grid.fetchNoteSummary(), notes,
                 "a blocked signature edit preserves the projected notes")
         compare(grid.editCursorTick, cursor,
                 "a blocked signature edit preserves the edit cursor")
@@ -257,7 +257,7 @@ ShellGridMenuSupport {
         var grid = surface().gridModel
         var ruler = control("timelineRulerInput")
         var rows = control("timelineTrackHeaderRows")
-        var notes = JSON.parse(grid.noteSummary)
+        var notes = JSON.parse(grid.fetchNoteSummary())
         var note = null
         for (var index = 0; index < notes.length && note === null; ++index) {
             var candidate = notes[index]

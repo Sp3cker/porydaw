@@ -27,7 +27,7 @@ ShellPitchBendSupport {
     function test_graphKeyOwnershipAndRepeatedOpener() {
         const opened = openViaG()
         const graph = findChild(opened.view, "pitchBendGraph")
-        const selected = JSON.parse(opened.grid.noteSummary).find(function(note) {
+        const selected = JSON.parse(opened.grid.fetchNoteSummary()).find(function(note) {
             return note.selected
         })
         const copySequence = "Ctrl+C"
@@ -36,14 +36,14 @@ ShellPitchBendSupport {
                && shell.shellPresenter.actionSequences("roll.copy").indexOf(copySequence) !== -1
                && shell.shellPresenter.actionSequences("roll.mute_tracks").indexOf("M") !== -1,
                "the four opener and popup commands bind the delivered single-key sequences")
-        const target = JSON.parse(opened.grid.noteSummary).find(function(note) {
+        const target = JSON.parse(opened.grid.fetchNoteSummary()).find(function(note) {
             return note.id === opened.note.id
         })
         verify(target && target.selected && target.track === opened.grid.trackIndex,
                "the G opener targets the published, selected primary-track note")
         verify(findChild(opened.view, "gridNote_" + target.id) !== null,
                "the selected G target remains painted on the mounted roll")
-        compare(JSON.parse(opened.grid.noteSummary).filter(function(note) {
+        compare(JSON.parse(opened.grid.fetchNoteSummary()).filter(function(note) {
             return note.selected
         }).length, 1, "the pitch opener owns exactly one selected primary-track note")
         verify(graph !== null && selected !== undefined, "the delivered G focuses a selected note's graph")
@@ -99,7 +99,7 @@ ShellPitchBendSupport {
                    "the dismissed pitch popup returns keyboard focus to the roll")
         keyClick(Qt.Key_Right)
         tryVerify(function() {
-            return JSON.parse(opened.grid.noteSummary).some(function(note) {
+            return JSON.parse(opened.grid.fetchNoteSummary()).some(function(note) {
                 return note.id === target.id && note.tick === target.tick + opened.grid.snapTicks
             })
         }, 5000, "a real roll-focus Right edits the selected note after pitch dismissal")
@@ -108,13 +108,13 @@ ShellPitchBendSupport {
     function test_graphVertexDeleteUndoAndWindowSoloResumption() {
         const opened = openViaG()
         const graph = findChild(opened.view, "pitchBendGraph")
-        const selected = JSON.parse(opened.grid.noteSummary).find(function(note) {
+        const selected = JSON.parse(opened.grid.fetchNoteSummary()).find(function(note) {
             return note.selected
         })
         const solo = findChild(opened.view, "timelineHeaderSolo_" + selected.track)
         verify(graph !== null && solo !== null)
         const originalSolo = solo.checked
-        const originalNotes = opened.grid.noteSummary
+        const originalNotes = opened.grid.fetchNoteSummary()
         const baseline = Number(opened.grid.appliedRevisionText)
         const originalSegments = graph.curveSegmentCount
         const canvas = graph.canvasRect
@@ -165,7 +165,7 @@ ShellPitchBendSupport {
         }, 5000), "the second standard Undo advances song history")
         tryCompare(graph, "curveSegmentCount", originalSegments, 5000,
                    "the second standard Undo restores the pre-edit document")
-        compare(opened.grid.noteSummary, originalNotes,
+        compare(opened.grid.fetchNoteSummary(), originalNotes,
                 "the two-step Undo journey leaves the selected notes untouched")
         const restoredRevision = opened.grid.appliedRevisionText
         keyClick(Qt.Key_Escape)
@@ -183,7 +183,7 @@ ShellPitchBendSupport {
         keyClick(Qt.Key_S)
         tryCompare(solo, "checked", originalSolo, 5000,
                    "the resumed window Solo toggles twice total")
-        compare(opened.grid.noteSummary, originalNotes,
+        compare(opened.grid.fetchNoteSummary(), originalNotes,
                 "the closed session leaves no note changes")
     }
 
@@ -191,7 +191,7 @@ ShellPitchBendSupport {
         const opened = openViaG()
         const input = findChild(opened.view, "bendRangeInput")
         const field = findChild(opened.view, "bendRangeSpin")
-        const selected = JSON.parse(opened.grid.noteSummary).find(function(note) {
+        const selected = JSON.parse(opened.grid.fetchNoteSummary()).find(function(note) {
             return note.selected
         })
         verify(selected !== undefined, "the numeric editor keeps its anchor note selected")

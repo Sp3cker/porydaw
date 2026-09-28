@@ -130,7 +130,7 @@ TestCase {
     }
 
     function publishedNotes(grid) {
-        var parsed = JSON.parse(grid.noteSummary)
+        var parsed = JSON.parse(grid.fetchNoteSummary())
         for (var i = 0; i < parsed.length; ++i) {
             var e = parsed[i]
             if (!(e.id > 0) || typeof e.track !== "number" || typeof e.velocity !== "number")

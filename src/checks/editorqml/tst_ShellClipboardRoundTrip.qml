@@ -62,13 +62,13 @@ ShellClipboardSupport {
         compare(clipProbe.clipSummary(), "[]", "the sentinel is not a song clip")
         var pressPoint = noteCenter(roll, surface, source.id)
         mousePress(roll, pressPoint.x, pressPoint.y, Qt.LeftButton)
-        var preGestureSummary = grid.noteSummary
+        var preGestureSummary = grid.fetchNoteSummary()
         var preGestureRevision = grid.appliedRevisionText
         compare(shell.shellPresenter.actionEnabled("roll.copy"), false,
                 "Copy is disabled mid-gesture")
         keySequence(StandardKey.Copy)
         compare(clipProbe.readClipJson(), sentinel, "mid-gesture Copy keeps exact bytes")
-        compare(grid.noteSummary, preGestureSummary, "mid-gesture Copy keeps notes")
+        compare(grid.fetchNoteSummary(), preGestureSummary, "mid-gesture Copy keeps notes")
         compare(grid.appliedRevisionText, preGestureRevision, "mid-gesture Copy keeps revision")
         mouseRelease(roll, pressPoint.x, pressPoint.y, Qt.LeftButton)
 
@@ -119,7 +119,7 @@ ShellClipboardSupport {
         roll.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(roll, "activeFocus", true)
         wait(0)
-        var rejectedNotes = grid.noteSummary
+        var rejectedNotes = grid.fetchNoteSummary()
         var rejectedRevision = grid.appliedRevisionText
         var rejectedCursor = grid.editCursorTick
         var rejectedScrollX = grid.cameraScrollX
@@ -132,7 +132,7 @@ ShellClipboardSupport {
         rejectedCursorSpy.clear()
         rejectedStatusSpy.clear()
         keySequence(StandardKey.Paste)
-        compare(grid.noteSummary, rejectedNotes,
+        compare(grid.fetchNoteSummary(), rejectedNotes,
                 "a conflicting note paste preserves document notes and selection")
         compare(grid.appliedRevisionText, rejectedRevision,
                 "a conflicting note paste preserves the document revision")
@@ -322,12 +322,12 @@ ShellClipboardSupport {
         compare(shell.shellPresenter.actionEnabled("edit.redo"), false, "Redo resets")
         compare(clipProbe.readClipJson(), copiedPayload, "the clip survives the reload")
 
-        var replacementBefore = JSON.parse(replacementGrid.noteSummary)
+        var replacementBefore = JSON.parse(replacementGrid.fetchNoteSummary())
         var replacementTpb = replacementGrid.ticksPerBeat
         verify(replacementTpb > 0, "the replacement timebase is positive")
         var replacementCursor = cursor + 4 * snap
         replacementGrid.setEditCursorTick(replacementCursor)
-        var replacementSummary = replacementGrid.noteSummary
+        var replacementSummary = replacementGrid.fetchNoteSummary()
         var replacementDirty = session.documentDirty
         compare(clipProbe.readClipJson(), copiedPayload, "the clip is still staged")
         replacementRoll.forceActiveFocus(Qt.OtherFocusReason)
@@ -343,7 +343,7 @@ ShellClipboardSupport {
         keySequence(StandardKey.Paste)
         compare(clipProbe.readClipJson(), refusedBytes,
                 "mounted malformed-MIME refusal preserves native clipboard bytes")
-        compare(replacementGrid.noteSummary, replacementSummary,
+        compare(replacementGrid.fetchNoteSummary(), replacementSummary,
                 "invalid custom MIME cannot change pasted notes")
         compare(replacementGrid.appliedRevisionText, refusedRevision,
                 "mounted malformed-MIME refusal preserves document revision")
@@ -367,7 +367,7 @@ ShellClipboardSupport {
         var replacementPasted = null
         var replacementSecond = null
         verify(waitForNative(function() {
-            var current = JSON.parse(replacementGrid.noteSummary)
+            var current = JSON.parse(replacementGrid.fetchNoteSummary())
             if (current.length !== replacementBefore.length + 2)
                 return false
             replacementPasted = pastedOn(replacementGrid, source.id,
@@ -382,7 +382,7 @@ ShellClipboardSupport {
         verify(waitForNative(function() {
             return shell.shellPresenter.actionEnabled("edit.undo")
         }, 5000), "Undo is enabled after replacement paste")
-        var pastedSummary = replacementGrid.noteSummary
+        var pastedSummary = replacementGrid.fetchNoteSummary()
         var pastedCursor = replacementGrid.editCursorTick
         var pastedDirty = session.documentDirty
 
@@ -393,19 +393,19 @@ ShellClipboardSupport {
         verify(clipProbe.writeClipJson(emptyPayload), "the empty clip is staged")
         keySequence(StandardKey.Paste)
         wait(200)
-        compare(replacementGrid.noteSummary, pastedSummary, "empty paste changes no notes")
+        compare(replacementGrid.fetchNoteSummary(), pastedSummary, "empty paste changes no notes")
         compare(replacementGrid.editCursorTick, pastedCursor, "empty paste keeps the cursor")
         compare(session.documentDirty, pastedDirty, "empty paste keeps dirty state")
 
         keySequence(StandardKey.Undo)
         verify(waitForNative(function() {
-            var current = JSON.parse(replacementGrid.noteSummary)
+            var current = JSON.parse(replacementGrid.fetchNoteSummary())
             if (current.length !== replacementBefore.length)
                 return false
             return noteOn(replacementGrid, replacementPasted.id) === null
                 && noteOn(replacementGrid, replacementSecond.id) === null
         }, 5000), "one Undo after the empty clip removes the preceding paste")
-        compare(replacementGrid.noteSummary, replacementSummary, "Undo restores pre-paste notes")
+        compare(replacementGrid.fetchNoteSummary(), replacementSummary, "Undo restores pre-paste notes")
         compare(session.documentDirty, replacementDirty, "Undo restores pre-paste dirty")
 
         var replacementLatestEnd = 0
@@ -426,7 +426,7 @@ ShellClipboardSupport {
         keySequence(StandardKey.Paste)
         var firstTile = null
         verify(waitForNative(function() {
-            var current = JSON.parse(replacementGrid.noteSummary)
+            var current = JSON.parse(replacementGrid.fetchNoteSummary())
             if (current.length !== replacementBefore.length + 1)
                 return false
             firstTile = tileOn(replacementGrid, tileStart, 60, 24, tileTrack, 100)
@@ -435,7 +435,7 @@ ShellClipboardSupport {
         keySequence(StandardKey.Paste)
         var secondTile = null
         verify(waitForNative(function() {
-            var current = JSON.parse(replacementGrid.noteSummary)
+            var current = JSON.parse(replacementGrid.fetchNoteSummary())
             if (current.length !== replacementBefore.length + 2)
                 return false
             secondTile = tileOn(replacementGrid, tileStart + 96, 60, 24, tileTrack, 100, firstTile.id)
@@ -443,14 +443,14 @@ ShellClipboardSupport {
         }, 5000), "second tile consumes the published cursor")
         keySequence(StandardKey.Undo)
         verify(waitForNative(function() {
-            var current = JSON.parse(replacementGrid.noteSummary)
+            var current = JSON.parse(replacementGrid.fetchNoteSummary())
             return current.length === replacementBefore.length + 1
                 && noteOn(replacementGrid, firstTile.id) !== null
                 && noteOn(replacementGrid, secondTile.id) === null
         }, 5000), "first tiled Undo removes only the second tile")
         keySequence(StandardKey.Undo)
         verify(waitForNative(function() {
-            var current = JSON.parse(replacementGrid.noteSummary)
+            var current = JSON.parse(replacementGrid.fetchNoteSummary())
             return current.length === replacementBefore.length
                 && noteOn(replacementGrid, firstTile.id) === null
                 && noteOn(replacementGrid, secondTile.id) === null

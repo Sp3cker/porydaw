@@ -36,7 +36,7 @@ ShellWindowSupport {
         var plot = findChild(page, "automationPlotInput")
         verify(plot && plot.width > 280 && plot.height > 20,
                "the automation plot has room for a real sweep and time range")
-        var notesBefore = grid.noteSummary
+        var notesBefore = grid.fetchNoteSummary()
         var row = Math.round(plot.height / 2)
         mousePress(plot, 120, row, Qt.LeftButton)
         mouseMove(plot, 180, row, -1, Qt.LeftButton)
@@ -95,7 +95,7 @@ ShellWindowSupport {
                     "Insert Time shifts all later events by the same range span")
         verify(grid.appliedRevisionText !== beforeSelectionRevision
                && session.documentDirty, "Insert Time commits an unsaved document change")
-        compare(grid.noteSummary, notesBefore, "a Volume-only selection does not move notes")
+        compare(grid.fetchNoteSummary(), notesBefore, "a Volume-only selection does not move notes")
 
         var editMenu = findChild(shell, "shellEditMenu")
         verify(editMenu, "the Edit menu contains the live Time submenu")
@@ -108,7 +108,7 @@ ShellWindowSupport {
             return restored.length === originalTicks.length
                 && restored.every(function(tick, index) { return tick === originalTicks[index] })
         }, 3000, "the Time menu Delete Time removes the inserted blank range")
-        compare(grid.noteSummary, notesBefore, "a Volume-only deletion preserves all notes")
+        compare(grid.fetchNoteSummary(), notesBefore, "a Volume-only deletion preserves all notes")
         mousePress(plot, 130, row, Qt.RightButton)
         mouseMove(plot, 205, row, -1, Qt.RightButton)
         mouseRelease(plot, 205, row, Qt.RightButton)
@@ -135,7 +135,7 @@ ShellWindowSupport {
             return writtenTicks(page, []).length > copiedCount
                    && grid.editCursorTick > copiedCursor
         }, 3000, "repeating Ctrl+D duplicates the newest copy")
-        compare(grid.noteSummary, notesBefore,
+        compare(grid.fetchNoteSummary(), notesBefore,
                 "lane-flavored Ctrl+D leaves unrelated notes byte-identical")
     }
 
@@ -158,12 +158,12 @@ ShellWindowSupport {
                    "the mounted Insert Time action is enabled before a range is selected")
         timeMenu.close()
         editMenu.close()
-        var before = JSON.parse(grid.noteSummary)
+        var before = JSON.parse(grid.fetchNoteSummary())
         var siblingButton = findChild(shell.sceneLoader.item, "songTabSelect_" + firstId)
         var activeButton = findChild(shell.sceneLoader.item, "songTabSelect_" + activeId)
         mouseClick(siblingButton, siblingButton.width / 3, siblingButton.height / 2)
         tryCompare(tabs, "selectedId", firstId)
-        var siblingNotes = selectedSurface().gridModel.noteSummary
+        var siblingNotes = selectedSurface().gridModel.fetchNoteSummary()
         mouseClick(activeButton, activeButton.width / 3, activeButton.height / 2)
         tryCompare(tabs, "selectedId", activeId)
         var beforeContent = drawnNoteContent(grid)
@@ -227,7 +227,7 @@ ShellWindowSupport {
         roll.forceActiveFocus(Qt.OtherFocusReason)
         keyClick(Qt.Key_I, Qt.ControlModifier | Qt.ShiftModifier)
         tryVerify(function() {
-            return JSON.parse(grid.noteSummary).some(function(note) {
+            return JSON.parse(grid.fetchNoteSummary()).some(function(note) {
                 return note.id === later.id && note.tick === later.tick + span
                     && note.pitch === later.pitch
             })
@@ -267,7 +267,7 @@ ShellWindowSupport {
         timeMenu.open()
         mouseClick(remove, remove.width / 2, remove.height / 2)
         tryVerify(function() {
-            return JSON.parse(grid.noteSummary).some(function(note) {
+            return JSON.parse(grid.fetchNoteSummary()).some(function(note) {
                 return note.id === later.id && note.tick === later.tick - span
             })
         }, 3000, "the real Time menu ripples the later drawn note left by the selected width")
@@ -287,7 +287,7 @@ ShellWindowSupport {
         }, 5000), "one window Undo restores every drawn scoped deletion note")
         mouseClick(siblingButton, siblingButton.width / 3, siblingButton.height / 2)
         tryCompare(tabs, "selectedId", firstId)
-        compare(selectedSurface().gridModel.noteSummary, siblingNotes,
+        compare(selectedSurface().gridModel.fetchNoteSummary(), siblingNotes,
                 "both real range commands leave the inactive tab's visible notes untouched")
     }
 
@@ -299,13 +299,13 @@ ShellWindowSupport {
         var activeButton = findChild(shell.sceneLoader.item, "songTabSelect_" + activeId)
         mouseClick(siblingButton, siblingButton.width / 3, siblingButton.height / 2)
         tryCompare(tabs, "selectedId", firstId)
-        var siblingNotes = selectedSurface().gridModel.noteSummary
+        var siblingNotes = selectedSurface().gridModel.fetchNoteSummary()
         mouseClick(activeButton, activeButton.width / 3, activeButton.height / 2)
         tryCompare(tabs, "selectedId", activeId)
         var surface = selectedSurface()
         var grid = surface.gridModel
         var roll = findChild(surface, "swiftRollInput")
-        var before = JSON.parse(grid.noteSummary)
+        var before = JSON.parse(grid.fetchNoteSummary())
         var beforeContent = drawnNoteContent(grid)
         var step = grid.snapTicks
         var scale = grid.beatWidth / grid.ticksPerBeat
@@ -347,22 +347,22 @@ ShellWindowSupport {
         timeMenu.open()
         mouseClick(deleteTime, deleteTime.width / 2, deleteTime.height / 2)
         tryVerify(function() {
-            return !JSON.parse(grid.noteSummary).some(function(note) {
+            return !JSON.parse(grid.fetchNoteSummary()).some(function(note) {
                 return note.id === firstInside.id
             }) && findChild(surface, "gridNote_" + firstInside.id) === null
         }, 3000, "the whole-song Time menu removes the first designated painted note")
         tryVerify(function() {
-            return !JSON.parse(grid.noteSummary).some(function(note) {
+            return !JSON.parse(grid.fetchNoteSummary()).some(function(note) {
                 return note.id === secondInside.id
             }) && findChild(surface, "gridNote_" + secondInside.id) === null
         }, 3000, "the whole-song Time menu removes the second designated painted note")
         tryVerify(function() {
-            return !JSON.parse(grid.noteSummary).some(function(note) {
+            return !JSON.parse(grid.fetchNoteSummary()).some(function(note) {
                 return note.id === otherInside.id
             }) && findChild(surface, "gridNote_" + otherInside.id) === null
         }, 3000, "the whole-song Time menu removes the other track's inside painted note")
         tryVerify(function() {
-            return JSON.parse(grid.noteSummary).some(function(note) {
+            return JSON.parse(grid.fetchNoteSummary()).some(function(note) {
                 return note.id === otherLater.id && note.tick === otherLater.tick - endTick
             })
         }, 3000, "the whole-song Time menu ripples the other track's later note exactly left")
@@ -382,7 +382,7 @@ ShellWindowSupport {
            + JSON.stringify(beforeContent) + "; after=" + JSON.stringify(drawnNoteContent(grid)))
         mouseClick(siblingButton, siblingButton.width / 3, siblingButton.height / 2)
         tryCompare(tabs, "selectedId", firstId)
-        compare(selectedSurface().gridModel.noteSummary, siblingNotes,
+        compare(selectedSurface().gridModel.fetchNoteSummary(), siblingNotes,
                 "the whole-song Time menu leaves the inactive tab's notes untouched")
     }
 }

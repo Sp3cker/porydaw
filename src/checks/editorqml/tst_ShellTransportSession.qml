@@ -398,7 +398,7 @@ ShellTransportSupport {
         var play = findChild(bar, "transport.play")
         var stop = findChild(bar, "transport.stop")
         verify(roll && gutter && play && stop, "real roll, keyboard and toolbar inputs mount")
-        var initial = grid.noteSummary
+        var initial = grid.fetchNoteSummary()
         var tabId = session.songTabs.selectedId
         grid.setCameraVScroll((127 - 61 + 0.5) * grid.rowHeight - roll.height / 2)
         var pitch = 61
@@ -420,7 +420,7 @@ ShellTransportSupport {
         mouseRelease(roll, x + grid.beatWidth, y, Qt.LeftButton)
         var added = null
         verify(waitForNative(function() {
-            added = JSON.parse(grid.noteSummary).find(function(n) {
+            added = JSON.parse(grid.fetchNoteSummary()).find(function(n) {
                 return n.track === grid.trackIndex && !notes.some(function(old) {
                     return old.id === n.id
                 })
@@ -442,7 +442,7 @@ ShellTransportSupport {
         mouseMove(roll, centerX + dx, centerY - grid.rowHeight, -1, Qt.LeftButton)
         mouseRelease(roll, centerX + dx, centerY - grid.rowHeight, Qt.LeftButton)
         verify(waitForNative(function() {
-            return JSON.parse(grid.noteSummary).some(function(n) {
+            return JSON.parse(grid.fetchNoteSummary()).some(function(n) {
                 return n.id === added.id && n.pitch === added.pitch + 1
                     && n.tick === added.tick + grid.snapTicks
             })
@@ -451,13 +451,13 @@ ShellTransportSupport {
         roll.forceActiveFocus(Qt.OtherFocusReason)
         keySequence(StandardKey.Undo)
         verify(waitForNative(function() {
-            return JSON.parse(grid.noteSummary).some(function(n) {
+            return JSON.parse(grid.fetchNoteSummary()).some(function(n) {
                 return n.id === added.id && n.tick === added.tick
                     && n.pitch === added.pitch
             })
         }, 3000), "first mounted Undo restores the newly drawn note's position")
         keySequence(StandardKey.Undo)
-        verify(waitForNative(function() { return grid.noteSummary === initial }, 5000),
+        verify(waitForNative(function() { return grid.fetchNoteSummary() === initial }, 5000),
                "mounted Undo restores the entire pre-edit roll note state")
         compare(session.documentDirty, false, "mounted Undo restores the clean selected song")
         compare(bar.presenter.state, 3, "mounted Undo preserves the playing transport")

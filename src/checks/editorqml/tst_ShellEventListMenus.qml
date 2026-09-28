@@ -319,7 +319,7 @@ ShellEventListSupport {
         compare(page.currentColumn, 5,
                 "the row menu opens from the original control row's Data column")
         const grid = fixture.session.songTabs.selectedPage.gridPresenter()
-        const sourceNotes = grid.noteSummary
+        const sourceNotes = grid.fetchNoteSummary()
         const sourceRevision = grid.appliedRevisionText
         const sourceTrack = grid.trackIndex
         verify(grid.renderedNoteCount > 0 && JSON.parse(sourceNotes).some(function(note) {
@@ -338,7 +338,7 @@ ShellEventListSupport {
                 "activating Insert closes the menu and inserts one event")
         compare(grid.trackIndex, sourceTrack,
                 "mounted insertion keeps the roll bound to its original engine owner")
-        compare(grid.noteSummary, sourceNotes,
+        compare(grid.fetchNoteSummary(), sourceNotes,
                 "mounted raw insertion preserves the source note projections")
         verify(grid.appliedRevisionText !== sourceRevision,
                "mounted raw insertion publishes the edited document revision")
@@ -348,12 +348,12 @@ ShellEventListSupport {
                "the Insert action has one undo transition")
         compare(presenter.rowCount, beforeCount, "undo restores the previous row count")
         compare(grid.trackIndex, sourceTrack, "raw insertion undo restores the header owner")
-        compare(grid.noteSummary, sourceNotes, "raw insertion undo restores the visible notes")
+        compare(grid.fetchNoteSummary(), sourceNotes, "raw insertion undo restores the visible notes")
         fixture.session.requestRedo()
         verify(waitForNative(function() { return presenter.rowCount === beforeCount + 1 }, 3000),
                "redo restores the inserted row")
         compare(grid.trackIndex, sourceTrack, "raw insertion redo rebinds the header owner")
-        compare(grid.noteSummary, sourceNotes, "raw insertion redo retains the source note values")
+        compare(grid.fetchNoteSummary(), sourceNotes, "raw insertion redo retains the source note values")
         const target = cellAt(fixture.table, sourceRow === 0 ? 1 : 0, 5)
         mouseClick(target, target.width / 2, target.height / 2, Qt.RightButton)
         tryCompare(presenter, "menuOpen", true, 3000)
@@ -382,7 +382,7 @@ ShellEventListSupport {
         const presenter = fixture.presenter
         const grid = fixture.session.songTabs.selectedPage.gridPresenter()
         const originalTrack = grid.trackIndex
-        const originalNotes = grid.noteSummary
+        const originalNotes = grid.fetchNoteSummary()
         const originalRevision = grid.appliedRevisionText
         const promotedNotes = JSON.parse(originalNotes)
         verify(promotedNotes.length > 0 && promotedNotes.some(function(note) {
@@ -415,7 +415,7 @@ ShellEventListSupport {
         tryCompare(presenter, "menuOpen", false, 3000)
         compare(grid.trackIndex, originalTrack + 1,
                 "the mounted roll follows its old owner to the new engine address")
-        compare(grid.noteSummary, expectedPromotedNotes,
+        compare(grid.fetchNoteSummary(), expectedPromotedNotes,
                 "mounted promotion retains every source note ID time pitch velocity and ghost flag at its new owner")
         verify(grid.appliedRevisionText !== originalRevision,
                "conductor promotion publishes a new roll projection")
@@ -423,11 +423,11 @@ ShellEventListSupport {
         verify(waitForNative(function() { return fixture.session.canRedo }, 3000),
                "one history undo restores conductor metadata")
         compare(grid.trackIndex, originalTrack, "promotion undo rebinds the original roll owner")
-        compare(grid.noteSummary, originalNotes, "promotion undo restores original note projections")
+        compare(grid.fetchNoteSummary(), originalNotes, "promotion undo restores original note projections")
         fixture.session.requestRedo()
         verify(waitForNative(function() { return grid.trackIndex === originalTrack + 1 }, 3000),
                "one history redo restores the promoted owner")
-        compare(grid.noteSummary, expectedPromotedNotes,
+        compare(grid.fetchNoteSummary(), expectedPromotedNotes,
                 "mounted promotion redo restores every remapped source note value")
     }
 }

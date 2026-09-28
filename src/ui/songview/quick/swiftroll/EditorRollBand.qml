@@ -103,6 +103,7 @@ Item {
                     acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
                     onWheel: (event) => {
                         root.deliverWheel(event, true)
+                        event.accepted = true
                     }
                 }
             }
@@ -261,6 +262,7 @@ Item {
                     acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
                     onWheel: (event) => {
                         root.deliverWheel(event, false)
+                        event.accepted = true
                     }
                 }
             }

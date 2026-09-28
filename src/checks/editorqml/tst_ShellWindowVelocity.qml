@@ -22,7 +22,7 @@ ShellWindowSupport {
         compare(pair.length, 2,
                 "the selected stem gesture starts with two real selected notes")
         var selectedIds = pair.map(function(note) { return note.id }).sort()
-        var original = grid.noteSummary
+        var original = grid.fetchNoteSummary()
         var revision = grid.appliedRevisionText
         var selected = session.velocityPage().selectedCount
         compare(selected, 2, "the captured stem selection contains both notes")
@@ -32,7 +32,7 @@ ShellWindowSupport {
         mousePress(plot, press.x, press.y, Qt.LeftButton)
         mouseMove(plot, press.x, press.y - node.height * 2, -1, Qt.LeftButton)
         tryCompare(session.velocityPage(), "interactionActive", true, 3000)
-        compare(JSON.parse(grid.noteSummary).filter(function(note) {
+        compare(JSON.parse(grid.fetchNoteSummary()).filter(function(note) {
             return note.selected
         }).map(function(note) { return note.id }).sort().join(","), selectedIds.join(","),
                 "the live selected-stem drag retains its two-note capture")
@@ -40,7 +40,7 @@ ShellWindowSupport {
         var redoBefore = session.canRedo
         keyClick(Qt.Key_Right)
         keyClick(Qt.Key_Delete)
-        compare(grid.noteSummary, original, "routed edit keys cannot mutate a live velocity stem drag")
+        compare(grid.fetchNoteSummary(), original, "routed edit keys cannot mutate a live velocity stem drag")
         compare(grid.appliedRevisionText, revision, "held edit keys leave the document revision frozen")
         compare(session.canUndo, undoBefore, "held stem edit keys do not push undo history")
         compare(session.canRedo, redoBefore, "held stem edit keys do not change redo history")
@@ -53,11 +53,11 @@ ShellWindowSupport {
         mouseRelease(plot, press.x, press.y - node.height * 2, Qt.LeftButton)
         compare(session.velocityPage().selectedCount, selected,
                 "the first routed Escape retains the captured note selection")
-        compare(grid.noteSummary, original, "Escape and release roll back the velocity stem preview")
+        compare(grid.fetchNoteSummary(), original, "Escape and release roll back the velocity stem preview")
         compare(grid.appliedRevisionText, revision, "Escape and release commit no document edit")
         compare(session.canUndo, undoBefore, "stem Escape leaves undo history unchanged")
         compare(session.canRedo, redoBefore, "stem Escape leaves redo history unchanged")
-        compare(JSON.parse(grid.noteSummary).filter(function(note) {
+        compare(JSON.parse(grid.fetchNoteSummary()).filter(function(note) {
             return note.selected
         }).map(function(note) { return note.id }).sort().join(","), selectedIds.join(","),
                 "stem Escape restores the exact two-note selection")
@@ -75,7 +75,7 @@ ShellWindowSupport {
         var plot = findChild(surface, "timelineQuickRollPlot")
         verify(roll && plot && input && velocityPlot,
                "the mounted roll and velocity plot accept real input")
-        var existing = JSON.parse(grid.noteSummary).filter(function(note) { return !note.ghost })
+        var existing = JSON.parse(grid.fetchNoteSummary()).filter(function(note) { return !note.ghost })
         var endTick = existing.reduce(function(last, note) {
             return Math.max(last, note.tick + note.duration)
         }, 0)
@@ -108,12 +108,12 @@ ShellWindowSupport {
             mouseMove(roll, releasePoint.x, releasePoint.y, 20, Qt.LeftButton)
             mouseRelease(roll, releasePoint.x, releasePoint.y, Qt.LeftButton)
             tryVerify(function() {
-                return JSON.parse(grid.noteSummary).filter(function(note) {
+                return JSON.parse(grid.fetchNoteSummary()).filter(function(note) {
                     return !note.ghost
                 }).length === existing.length + i + 1
             }, 3000, "the mounted roll commits the overlapping note")
         }
-        var pair = JSON.parse(grid.noteSummary).filter(function(note) {
+        var pair = JSON.parse(grid.fetchNoteSummary()).filter(function(note) {
             return pitches.indexOf(note.pitch) >= 0 && note.tick >= tick
         }).sort(function(a, b) { return a.tick - b.tick })
         verify(pair.length === 2 && pair[0].velocity === pair[1].velocity,
@@ -151,7 +151,7 @@ ShellWindowSupport {
         var earlierPoint = earlier.mapToItem(input, earlier.width / 2, earlier.height / 2)
         mouseClick(input, earlierPoint.x, earlierPoint.y)
         tryVerify(function() {
-            return JSON.parse(grid.noteSummary).some(function(note) {
+            return JSON.parse(grid.fetchNoteSummary()).some(function(note) {
                 return note.id === pair[0].id && note.selected
             })
         }, 3000, "the earlier duration stem belongs to the selected note")
@@ -181,23 +181,30 @@ ShellWindowSupport {
         var first = nodeFor(pair[0].id)
         mouseClick(input, first.mapToItem(input, first.width / 2, first.height / 2).x,
                    first.mapToItem(input, first.width / 2, first.height / 2).y)
-        var before = grid.noteSummary
+        var before = grid.fetchNoteSummary()
         var revision = grid.appliedRevisionText
         var undoBefore = shell.shellPresenter.session.canUndo
-        press = overlap().point
+        var overlapHit = overlap()
+        // Model-direct rendered truth: the press point derives from the same
+        // stable handle row plus origin the capture hit-test compares against.
+        // Resolving through rendered delegate geometry instead rests on the
+        // separately published origin scalar, so any skew between the rows
+        // and that scalar presents exactly as a paint-capture miss.
+        var originX = shell.shellPresenter.session.velocityPage().handlesOriginX
+        press = { x: overlapHit.node.parent.model.x + originX, y: overlapHit.node.parent.model.y }
         roll.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(roll, "activeFocus", true, 3000)
         mousePress(input, press.x, press.y, Qt.LeftButton)
         mouseMove(input, press.x, press.y - nodeFor(pair[1].id).height * 2,
                   -1, Qt.LeftButton)
         tryCompare(shell.shellPresenter.session.velocityPage(), "interactionActive", true)
-        verify(JSON.parse(grid.noteSummary).some(function(note) {
+        verify(JSON.parse(grid.fetchNoteSummary()).some(function(note) {
             return note.id === pair[1].id && note.selected
         }), "the live overlap drag captures the painted following node")
         keyClick(Qt.Key_Escape)
         tryCompare(shell.shellPresenter.session.velocityPage(), "interactionActive", false)
         mouseRelease(input, press.x, press.y - nodeFor(pair[1].id).height * 2, Qt.LeftButton)
-        compare(grid.noteSummary, before,
+        compare(grid.fetchNoteSummary(), before,
                 "overlap Escape restores the earlier-note selection and exact note content")
         compare(grid.appliedRevisionText, revision, "overlap Escape preserves document revision")
         compare(shell.shellPresenter.session.canUndo, undoBefore,
@@ -207,14 +214,14 @@ ShellWindowSupport {
         press = overlap().point
         mouseClick(input, press.x, press.y)
         tryVerify(function() {
-            return JSON.parse(grid.noteSummary).some(function(note) {
+            return JSON.parse(grid.fetchNoteSummary()).some(function(note) {
                 return note.id === pair[1].id && note.selected
             })
         }, 3000, "a fresh click retargets the painted following node")
         roll.forceActiveFocus(Qt.OtherFocusReason)
         keyClick(Qt.Key_Right)
         tryVerify(function() {
-            var notes = JSON.parse(grid.noteSummary)
+            var notes = JSON.parse(grid.fetchNoteSummary())
             var next = notes.find(function(note) { return note.id === pair[1].id })
             var first = notes.find(function(note) { return note.id === pair[0].id })
             return next && first && next.tick === pair[1].tick + grid.snapTicks
@@ -268,7 +275,7 @@ ShellWindowSupport {
             hit = node.mapToItem(plot, node.width / 2, node.height / 2)
             dragY = hit.y < plot.height / 2 ? hit.y + 30 : hit.y - 30
         }
-        var beforeNotes = grid.noteSummary
+        var beforeNotes = grid.fetchNoteSummary()
         var beforeRevision = grid.appliedRevisionText
         mousePress(plot, hit.x, hit.y, Qt.LeftButton)
         mouseMove(plot, hit.x, dragY, -1, Qt.LeftButton)
@@ -314,7 +321,7 @@ ShellWindowSupport {
                     "the close gate removes the mounted node's held preview")
             mouseRelease(plot, hit.x, dragY, Qt.LeftButton)
             compare(page.selectedCount, 1, "the close gate preserves the selected note")
-            compare(grid.noteSummary, beforeNotes, "the close gate writes no velocity")
+            compare(grid.fetchNoteSummary(), beforeNotes, "the close gate writes no velocity")
             compare(grid.appliedRevisionText, beforeRevision,
                     "the close gate does not advance document revision")
             compare(session.canUndo, true,
@@ -350,7 +357,7 @@ ShellWindowSupport {
         compare(node.parent.model.preview, false,
                 "the termination route removes the mounted node's held preview")
         compare(page.selectedCount, 1, "cancellation keeps the selected note")
-        compare(grid.noteSummary, beforeNotes, "a cancelled drag never writes note values")
+        compare(grid.fetchNoteSummary(), beforeNotes, "a cancelled drag never writes note values")
         compare(grid.appliedRevisionText, beforeRevision,
                 "a cancelled drag never increments the document revision")
         compare(session.documentDirty, false, "a cancelled drag never dirties the document")

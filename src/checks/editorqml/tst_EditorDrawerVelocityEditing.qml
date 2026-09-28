@@ -70,13 +70,13 @@ EditorDrawerTestSupport {
         var targetId = VelocitySupport.selectedNoteId(testCase)
         verify(targetId >= 0, "the click left one primary note selected")
         var before = VelocitySupport.noteVelocity(testCase, targetId)
-        var originalNotes = testCase.surface.gridModel.noteSummary
+        var originalNotes = testCase.surface.gridModel.fetchNoteSummary()
         var raised = center.y - 24
         mousePress(input, center.x, center.y, Qt.LeftButton)
         mouseMove(input, center.x, raised, -1, Qt.LeftButton)
         compare(VelocitySupport.velocityModel(testCase).interactionActive, true,
                 "a live drag reports an active interaction to the container")
-        compare(testCase.surface.gridModel.noteSummary, originalNotes,
+        compare(testCase.surface.gridModel.fetchNoteSummary(), originalNotes,
                 "A001 real pointer press and motion leave published document notes unchanged")
         tryVerify(function() {
             return VelocitySupport.velocityNodes(testCase).some(function(item) {
@@ -165,7 +165,7 @@ EditorDrawerTestSupport {
         verify(nodes.length > 0, "the page drew at least one node")
         var input = VelocitySupport.velocityPlotInput(testCase)
         function songNotes() {
-            return JSON.stringify(JSON.parse(testCase.surface.gridModel.noteSummary).map(function(note) {
+            return JSON.stringify(JSON.parse(testCase.surface.gridModel.fetchNoteSummary()).map(function(note) {
                 return [note.id, note.tick, note.duration, note.pitch, note.track, note.velocity]
             }))
         }

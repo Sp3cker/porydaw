@@ -71,9 +71,10 @@ func runOtherEventsBandChecks(_ report: CheckReport) {
     report.expect(fileMarker?.tick == 24 && fileMarker?.color == palette.outline,
                   cppID: "swiftcore/OtherEventsBand::markers",
                   message: "file-level markers use the palette outline")
-    report.expect(fileMarker?.x == camera.contentX(tick: 24),
+    report.expect(fileMarker?.x == Double(24) * camera.pixelsPerTick
+                  && fileMarker.map({ $0.x - camera.snapshot.scrollX == camera.contentX(tick: 24) }) ?? false,
                   cppID: "swiftcore/OtherEventsBand::markers",
-                  message: "marker x is the shared camera content position of its tick")
+                  message: "marker x is scroll-stable with the origin restoring the shared camera content position")
     report.expect(markers.contains { $0.track == 0 && $0.color == PaletteMath.trackIdentityFills[0] },
                   cppID: "swiftcore/OtherEventsBand::markers",
                   message: "track markers use the stable track-identity fill")

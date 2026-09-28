@@ -425,7 +425,7 @@ private func checkPresenterMetrics(_ report: CheckReport, session: DocumentSessi
         let selected: Bool
     }
     let decoded = (try? JSONDecoder().decode(
-        [SummaryNote].self, from: Data(grid.noteSummary.utf8))) ?? []
+        [SummaryNote].self, from: Data(grid.fetchNoteSummary().utf8))) ?? []
     let trackOrder = [grid.trackIndex]
         + (0..<session.document.engineTracks.usedTrackCount).filter { $0 != grid.trackIndex }
     let notes = trackOrder.flatMap { session.document.notes(in: $0) }

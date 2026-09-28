@@ -11,11 +11,11 @@ TimelinePanSupport {
             return Math.abs(g.cameraScrollX - (before + 8.0)) <= 0.01
         }, 5000, "a pixel-delta wheel pans the camera by exactly 8px")
 
-        var summary = g.noteSummary
+        var summary = g.fetchNoteSummary()
         mouseWheel(input, input.width / 2, input.height / 2, 0, 0)
         wait(50)
         var cameraUnchanged = g.cameraScrollX === before + 8.0
-        var summaryUnchanged = g.noteSummary === summary
+        var summaryUnchanged = g.fetchNoteSummary() === summary
         verify(cameraUnchanged && summaryUnchanged,
                "an empty wheel leaves the camera and gutter summary unchanged")
 
@@ -36,7 +36,7 @@ TimelinePanSupport {
     function test_middleDragPansCamera() {
         var g = grid()
         var input = rollInput()
-        var summary = g.noteSummary
+        var summary = g.fetchNoteSummary()
         var idleStatus = g.statusText
         var startX = input.width / 2
         var startY = input.height / 2
@@ -57,7 +57,7 @@ TimelinePanSupport {
                 && Math.abs(g.cameraScrollY - (beforeY + 20.0)) <= 0.01
         }, 5000, "the camera tracks the negative pointer delta")
         compare(g.cursorKind, 4)
-        compare(g.noteSummary, summary)
+        compare(g.fetchNoteSummary(), summary)
 
         mouseRelease(input, startX + 12, startY - 20, Qt.MiddleButton)
         tryCompare(g, "cursorKind", 0, 5000)
@@ -70,7 +70,7 @@ TimelinePanSupport {
         session.cancelGridInput(1)
         mouseRelease(input, startX + 4, startY, Qt.MiddleButton)
         tryCompare(g, "cursorKind", 0, 5000)
-        compare(g.noteSummary, summary)
+        compare(g.fetchNoteSummary(), summary)
     }
 
     function test_hoverChipOverlay() {

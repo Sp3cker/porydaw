@@ -187,7 +187,7 @@ ShellPitchBendSupport {
         keyClick(Qt.Key_Escape)
         tryCompare(editor, "isOpen", false)
         compare(grid.appliedRevisionText, before)
-        verify(JSON.parse(grid.noteSummary).some(function(n) { return n.selected }))
+        verify(JSON.parse(grid.fetchNoteSummary()).some(function(n) { return n.selected }))
         grid.performCommand(6)
         tryCompare(editor, "isOpen", true)
         tryVerify(function() { return findChild(view, "pitchBendGraph") !== null }, 5000,
@@ -198,7 +198,7 @@ ShellPitchBendSupport {
         mouseClick(view, point.x, point.y, Qt.LeftButton)
         tryCompare(editor, "isOpen", false)
         compare(grid.appliedRevisionText, before)
-        verify(JSON.parse(grid.noteSummary).some(function(n) { return n.id === note.id && n.selected }),
+        verify(JSON.parse(grid.fetchNoteSummary()).some(function(n) { return n.id === note.id && n.selected }),
                "outside click dismisses without editing or changing selection")
     }
 
@@ -216,17 +216,17 @@ ShellPitchBendSupport {
         tryCompare(roll, "activeFocus", true)
         keyClick(Qt.Key_Delete)
         tryVerify(function() {
-            return !JSON.parse(grid.noteSummary).some(function(n) { return n.id === note.id })
+            return !JSON.parse(grid.fetchNoteSummary()).some(function(n) { return n.id === note.id })
         }, 5000, "the roll Delete removes the anchored note")
         tryCompare(shell.shellPresenter.session, "canUndo", true)
         keySequence(StandardKey.Undo)
         const restoredByUndo = waitForNative(function() {
-            return JSON.parse(grid.noteSummary).some(function(n) { return n.id === note.id })
+            return JSON.parse(grid.fetchNoteSummary()).some(function(n) { return n.id === note.id })
         }, 5000)
         verify(restoredByUndo, "the roll undo restores the anchored note: "
                + JSON.stringify({ canRedo: shell.shellPresenter.session.canRedo,
                                   canUndo: shell.shellPresenter.session.canUndo,
-                                  notes: JSON.parse(grid.noteSummary).slice(0, 3),
+                                  notes: JSON.parse(grid.fetchNoteSummary()).slice(0, 3),
                                   selected: note, revision: grid.appliedRevisionText,
                                   error: shell.shellPresenter.session.lastSaveError }))
         const restored = visibleNote(view, grid, roll, plot)
@@ -246,7 +246,7 @@ ShellPitchBendSupport {
         verify(waitForNative(function() {
             return findChild(view, "pitchBendPopup") === null
         }, 5000), "closing the editor unloads the popup item")
-        verify(!JSON.parse(grid.noteSummary).some(function(n) { return n.id === note.id }),
+        verify(!JSON.parse(grid.fetchNoteSummary()).some(function(n) { return n.id === note.id }),
                "the external redo removes the original anchor note")
     }
 

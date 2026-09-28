@@ -1320,7 +1320,7 @@ S018 | runOtherEventsBandChecks | src/checks/drawerpresentation/other_events_ban
 Anchor: message "track markers use the stable track-identity fill"
 
 S019 | runOtherEventsBandChecks | src/checks/drawerpresentation/other_events_band.swift
-Anchor: message "marker x is the shared camera content position of its tick"
+Anchor: message "marker x is scroll-stable with the origin restoring the shared camera content position"
 
 S020 | runOtherEventsBandChecks | src/checks/drawerpresentation/other_events_band.swift
 Anchor: message "hover lines format timestamp, File or one-based Track, and the event label"

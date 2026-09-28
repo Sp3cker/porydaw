@@ -199,7 +199,7 @@ TestCase {
     }
 
     function selectedNoteCount(grid) {
-        var notes = JSON.parse(grid.noteSummary)
+        var notes = JSON.parse(grid.fetchNoteSummary())
         var count = 0
         for (var i = 0; i < notes.length; ++i) {
             if (notes[i].selected)
