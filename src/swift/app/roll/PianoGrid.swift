@@ -141,11 +141,10 @@ public final class PianoGrid {
     @QtTracked public var dragDistance = 10.0
     @QtTracked public var drawThreshold = 3.0
     @QtTracked public var hoverKey = -1
-    /// View menu display modes, mirrored from ApplicationSession (which owns
+    /// View menu display mode, mirrored from ApplicationSession (which owns
     /// the app-wide state and pushes it to every tab). Plain Swift state, set
-    /// only through the setters below so each change rebuilds the notes;
-    /// standalone grids (checks, fixtures) default both off.
-    @QtIgnored public var velocityColorMode = false
+    /// only through the setter below so each change rebuilds the notes;
+    /// standalone grids (checks, fixtures) default off.
     @QtIgnored public var noteNameMode = false
     @QtIgnored
     var measurementFonts: [GridFontKind: GridFontSpec] = [:]
@@ -218,15 +217,6 @@ public final class PianoGrid {
     }
     public func setScaleFold(fold: Bool) {
         session.setScale(fold: fold)
-    }
-
-    /// Mirrors ApplicationSession's velocity-color mode on this tab: every
-    /// non-ghost fill and the draw preview re-hue by velocity. No-op when
-    /// unchanged; otherwise rebuilds the visible notes.
-    public func setVelocityColorMode(enabled: Bool) {
-        guard velocityColorMode != enabled else { return }
-        velocityColorMode = enabled
-        refreshNotes()
     }
 
     /// Mirrors ApplicationSession's note-name mode on this tab: visible

@@ -240,18 +240,16 @@ extension AutomationPage {
         syncTexts(valueLabels, labels)
     }
 
+    // Ghost curve ink per ThemePreset.rawValue: automationNodeInk at alpha
+    // 128, precomputed; verified by themeColorTableChecks.
+    static let ghostCurveInk = ["#80EA3C3C", "#80FF4D47", "#80FF91C3"]
+
     func appendCurve(_ lane: AutomationLaneProjection, projection: AutomationProjection,
                      isGhost: Bool, into runs: inout [SceneRect]) {
         guard !lane.points.isEmpty else { return }
         let stroke = 2.0
-        let ink = palette.automationNodeInk
-        let color: String
-        if isGhost {
-            let channels = PaletteMath.channels(ink)
-            color = PaletteMath.hex(r: channels.r, g: channels.g, b: channels.b, a: 128)
-        } else {
-            color = ink
-        }
+        // Theme-only lookup: the ghost ink is automationNodeInk at alpha 128.
+        let color = isGhost ? Self.ghostCurveInk[palette.theme.rawValue] : palette.automationNodeInk
         let name = isGhost ? "automationGhostCurve" : "automationCurve"
         let limit = max(0, plotWidth)
         func x(_ tick: Tick) -> Double { projection.x(tick) }

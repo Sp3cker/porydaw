@@ -228,10 +228,9 @@ extension ApplicationSession {
                                  startPlayback: true)
                 self.transportBar.refresh()
             }
-            // New tabs receive the current View menu display modes: the grid
-            // defaults both off, and each setter no-ops (without rebuilding)
-            // when the mode is already off.
-            workspace.grid.setVelocityColorMode(enabled: velocityColorMode)
+            // New tabs receive the current View menu display mode: the grid
+            // defaults note names off, and the setter no-ops (without
+            // rebuilding) when the mode is already off.
             workspace.grid.setNoteNameMode(enabled: noteNameMode)
             workspace.grid.refreshTimeSelectionHighlight()
             workspace.automationPage.onCommandAvailabilityChanged = { [weak self, weak workspace] in
@@ -351,16 +350,6 @@ extension ApplicationSession {
             EditorViewStateCodec.save(state, store: preferences)
             onEditorViewStatePersisted?(state)
         }
-    }
-
-    func setVelocityColorModeImpl(enabled: Bool) {
-        guard velocityColorMode != enabled else { return }
-        velocityColorMode = enabled
-        for tab in songTabs.allTabs {
-            tab.workspace.grid.setVelocityColorMode(enabled: enabled)
-        }
-        preferences.setBool(key: "velocityNoteColors", value: enabled)
-        preferences.synchronize()
     }
 
     func setNoteNameModeImpl(enabled: Bool) {

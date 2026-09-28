@@ -37,7 +37,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtTracked public var baseFontPx = 0
     @QtTracked public var bodyFontPx = 0
     private var hasCapturedTypography = false
-    @QtTracked public var velocityColorMode = false
     @QtTracked public var noteNameMode = false
     /// The open songs. Constructed with the session and never nil: the surface
     /// binds the strip before the first open and after the last close.
@@ -435,7 +434,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
     }
 
     public func restoreDisplayModes() {
-        velocityColorMode = preferences.bool(key: "velocityNoteColors", fallback: false)
         noteNameMode = preferences.bool(key: "noteNames", fallback: false)
     }
 
@@ -492,16 +490,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
         goToStartImpl()
     }
 
-    /// Applies the velocity-hue display mode app-wide: every open tab's grid
-    /// re-hues its non-ghost fills (and draw preview) immediately, and tabs
-    /// opened later receive the current value in openTab. No-op when unchanged.
-    public func setVelocityColorMode(enabled: Bool) {
-        setVelocityColorModeImpl(enabled: enabled)
-    }
-
-    /// Applies the note-name display mode app-wide, with the same
-    /// push-to-open-tabs and apply-to-later-tabs semantics as
-    /// setVelocityColorMode. No-op when unchanged.
+    /// Applies the note-name display mode app-wide: every open tab's grid
+    /// gains pitch-name labels immediately, and tabs opened later receive
+    /// the current value in openTab. No-op when unchanged.
     public func setNoteNameMode(enabled: Bool) {
         setNoteNameModeImpl(enabled: enabled)
     }

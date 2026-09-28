@@ -7,7 +7,6 @@ import QtBridge
 func runNoteRenderingChecks(_ report: CheckReport, session: DocumentSession) {
     checkNoteBorders(report, session: session)
     checkIdentityNoteColors(report, session: session)
-    checkVelocityColorMode(report, session: session)
     checkNoteNameMode(report, session: session)
     checkVelocityValues(report, session: session)
     checkGhostNotes(report, session: session)

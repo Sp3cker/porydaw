@@ -230,11 +230,7 @@ struct VelocitySceneSnapshot {
         let selected = input.selectedNoteIDs
         let notes = input.notes
         let trackColor = PaletteMath.trackIdentityFills[PaletteMath.trackIdentityIndex(input.track)]
-        let trackChannels = PaletteMath.channels(trackColor)
-        let stemColor = PaletteMath.hex(
-            PaletteMath.mixTowardOklab(
-                PaletteMath.oklab(r: trackChannels.r, g: trackChannels.g, b: trackChannels.b),
-                PaletteMath.oklab(r: 0, g: 0, b: 0), 1.0 / 3.0))
+        let stemColor = ThemeColorTables.velocityStemColors[PaletteMath.trackIdentityIndex(input.track)]
         let selectedCount = notes.filter { selected.contains($0.id) }.count
         let dimUnselected = selectedCount > 1
         let resolve = input.source.resolver()

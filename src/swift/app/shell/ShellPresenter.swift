@@ -76,7 +76,6 @@ public final class ShellPresenter: QmlInstantiableStatus {
         Action("view.velocity_drawer"),
         Action("view.voice_changes_drawer"),
         Action("view.polyphony_debugger"),
-        Action("view.velocity_colors"),
         Action("view.note_names"),
         Action("help.about"),
     ]
@@ -283,7 +282,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         switch id {
         case "view.event_list", "view.automation_drawer", "view.velocity_drawer",
             "view.voice_changes_drawer", "view.polyphony_debugger",
-            "view.velocity_colors", "view.note_names", "transport.loop",
+            "view.note_names", "transport.loop",
             "transport.follow_playhead", "transport.resonance":
             return true
         default: return false
@@ -300,7 +299,6 @@ public final class ShellPresenter: QmlInstantiableStatus {
         case "view.voice_changes_drawer":
             return session.songTabs.selectedPage?.drawerPresenter().voiceChangesSection.visible ?? false
         case "view.polyphony_debugger": return polyphonyVisible
-        case "view.velocity_colors": return session.velocityColorMode
         case "view.note_names": return session.noteNameMode
         case "transport.loop": return session.transportBarPresenter().loopEnabled
         case "transport.follow_playhead": return session.transportBarPresenter().followPlayhead
@@ -360,8 +358,6 @@ public final class ShellPresenter: QmlInstantiableStatus {
         case "view.voice_changes_drawer":
             session.songTabs.selectedPage?.drawerPresenter()
                 .toggleSection(kind: DrawerSectionKind.voiceChanges.rawValue, drawerOwnsFocus: true)
-        case "view.velocity_colors":
-            session.setVelocityColorMode(enabled: !session.velocityColorMode)
         case "view.note_names":
             session.setNoteNameMode(enabled: !session.noteNameMode)
         case "view.polyphony_debugger":

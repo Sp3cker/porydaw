@@ -4,44 +4,61 @@ import Foundation
 enum SceneRectPacking {
     static let unparseableColor: UInt32 = 0xFFFF_FFFF
 
-    private static var argbCache: [String: UInt32] = [:]
-
-    static func argb(_ fillColor: String) -> UInt32 {
-        if let cached = argbCache[fillColor] { return cached }
-        let c = PaletteMath.channels(fillColor)
-        let value = c.r == 0 && c.g == 0 && c.b == 0 && c.a == 0 && !fillColor.isEmpty
-            ? unparseableColor
-            : (UInt32(c.a) << 24) | (UInt32(c.r) << 16) | (UInt32(c.g) << 8) | UInt32(c.b)
-        argbCache[fillColor] = value
-        return value
+    // Strict "#RRGGBB" -> 0xFFRRGGBB / "#AARRGGBB" -> 0xAARRGGBB, no allocation.
+    // "" still yields 0xFF000000 and all-zero still yields unparseableColor.
+    @inline(__always) static func argb(_ fillColor: String) -> UInt32 {
+        if fillColor.isEmpty { return 0xFF00_0000 }
+        var bytes = fillColor.utf8.makeIterator()
+        guard bytes.next() == UInt8(ascii: "#") else { return unparseableColor }
+        var value: UInt32 = 0
+        var count = 0
+        while let byte = bytes.next() {
+            let digit: UInt32
+            switch byte {
+            case UInt8(ascii: "0")...UInt8(ascii: "9"):
+                digit = UInt32(byte - UInt8(ascii: "0"))
+            case UInt8(ascii: "a")...UInt8(ascii: "f"):
+                digit = UInt32(byte - UInt8(ascii: "a") + 10)
+            case UInt8(ascii: "A")...UInt8(ascii: "F"):
+                digit = UInt32(byte - UInt8(ascii: "A") + 10)
+            default:
+                return unparseableColor
+            }
+            value = (value << 4) | digit
+            count += 1
+            if count > 8 { return unparseableColor }
+        }
+        if count == 6 {
+            value |= 0xFF00_0000
+        } else if count != 8 {
+            return unparseableColor
+        }
+        return value == 0 ? unparseableColor : value
     }
 
     static func pack(_ rows: [SceneRect]) -> Data {
-        var data = Data()
-        data.reserveCapacity(4 + rows.count * 24)
-        append(&data, UInt32(rows.count))
-        for row in rows {
-            append(&data, Float32(row.x))
-            append(&data, Float32(row.y))
-            append(&data, Float32(row.width))
-            append(&data, Float32(row.height))
-            append(&data, argb(row.fillColor))
-            append(&data, UInt16(0))
-            append(&data, UInt16(0))
+        var data = Data(count: 4 + rows.count * 24)
+        data.withUnsafeMutableBytes { buffer in
+            buffer.storeBytes(of: UInt32(rows.count).littleEndian, toByteOffset: 0, as: UInt32.self)
+            var offset = 4
+            for row in rows {
+                buffer.storeBytes(of: Float32(row.x).bitPattern.littleEndian, toByteOffset: offset, as: UInt32.self)
+                offset += 4
+                buffer.storeBytes(of: Float32(row.y).bitPattern.littleEndian, toByteOffset: offset, as: UInt32.self)
+                offset += 4
+                buffer.storeBytes(of: Float32(row.width).bitPattern.littleEndian, toByteOffset: offset, as: UInt32.self)
+                offset += 4
+                buffer.storeBytes(
+                    of: Float32(row.height).bitPattern.littleEndian, toByteOffset: offset, as: UInt32.self)
+                offset += 4
+                buffer.storeBytes(of: argb(row.fillColor).littleEndian, toByteOffset: offset, as: UInt32.self)
+                offset += 4
+                buffer.storeBytes(of: UInt16(0).littleEndian, toByteOffset: offset, as: UInt16.self)
+                offset += 2
+                buffer.storeBytes(of: UInt16(0).littleEndian, toByteOffset: offset, as: UInt16.self)
+                offset += 2
+            }
         }
         return data
-    }
-
-    private static func append(_ data: inout Data, _ value: UInt32) {
-        var v = value.littleEndian
-        withUnsafeBytes(of: &v) { data.append(contentsOf: $0) }
-    }
-    private static func append(_ data: inout Data, _ value: UInt16) {
-        var v = value.littleEndian
-        withUnsafeBytes(of: &v) { data.append(contentsOf: $0) }
-    }
-    private static func append(_ data: inout Data, _ value: Float32) {
-        var v = value.bitPattern.littleEndian
-        withUnsafeBytes(of: &v) { data.append(contentsOf: $0) }
     }
 }

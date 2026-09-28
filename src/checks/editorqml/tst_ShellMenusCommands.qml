@@ -78,14 +78,7 @@ ShellMenusSupport {
                   "Follow check follows the transport bar switch")
 
         // Display modes flip session state and the menu checks.
-        var colors = findChild(shell, "shellAction_view.velocity_colors")
         var names = findChild(shell, "shellAction_view.note_names")
-        var colorsBefore = session.velocityColorMode
-        presenter.activate("view.velocity_colors")
-        compare(session.velocityColorMode, !colorsBefore, "the menu toggle flips velocity colours")
-        tryVerify(function() { return colors.checked === !colorsBefore }, 3000,
-                  "velocity colours check follows the flip")
-        presenter.activate("view.velocity_colors")
         var namesBefore = session.noteNameMode
         presenter.activate("view.note_names")
         compare(session.noteNameMode, !namesBefore, "the menu toggle flips note names")

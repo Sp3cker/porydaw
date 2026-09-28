@@ -19,7 +19,6 @@ extension GridScene {
     private func paletteContent(_ input: GridSceneInput) -> Data {
         let key = PaletteContentKey(
             palette: ObjectIdentifier(input.palette),
-            velocityColorMode: input.velocityColorMode,
             lastVelocity: input.lastVelocity)
         if let cached = paletteContentCache, cached.key == key { return cached.data }
         let data = RollDrawingContent.paletteSection(input)

@@ -61,30 +61,28 @@ enum DrawingContentBinary {
         return d
     }
 
-    static func append(_ data: inout Data, _ value: UInt64) {
-        for shift in stride(from: 0, to: 64, by: 8) {
-            data.append(UInt8(truncatingIfNeeded: value >> shift))
-        }
+    @inline(__always) static func append(_ data: inout Data, _ value: UInt64) {
+        var v = value.littleEndian
+        withUnsafeBytes(of: &v) { data.append(contentsOf: $0) }
     }
-    static func append(_ data: inout Data, _ value: UInt32) {
-        for shift in stride(from: 0, to: 32, by: 8) {
-            data.append(UInt8(truncatingIfNeeded: value >> shift))
-        }
+    @inline(__always) static func append(_ data: inout Data, _ value: UInt32) {
+        var v = value.littleEndian
+        withUnsafeBytes(of: &v) { data.append(contentsOf: $0) }
     }
-    static func append(_ data: inout Data, _ value: UInt16) {
-        data.append(UInt8(truncatingIfNeeded: value))
-        data.append(UInt8(truncatingIfNeeded: value >> 8))
+    @inline(__always) static func append(_ data: inout Data, _ value: UInt16) {
+        var v = value.littleEndian
+        withUnsafeBytes(of: &v) { data.append(contentsOf: $0) }
     }
-    static func append(_ data: inout Data, _ value: UInt8) {
+    @inline(__always) static func append(_ data: inout Data, _ value: UInt8) {
         data.append(value)
     }
-    static func append(_ data: inout Data, _ value: Int32) {
+    @inline(__always) static func append(_ data: inout Data, _ value: Int32) {
         append(&data, UInt32(bitPattern: value))
     }
-    static func append(_ data: inout Data, _ value: Double) {
+    @inline(__always) static func append(_ data: inout Data, _ value: Double) {
         append(&data, value.bitPattern)
     }
-    static func append(_ data: inout Data, _ value: Float) {
+    @inline(__always) static func append(_ data: inout Data, _ value: Float) {
         append(&data, value.bitPattern)
     }
 }

@@ -6,39 +6,6 @@ import Porydaw.Ui
 import "GatedVisualsHelpers.js" as Helpers
 
 ShellNoteVisualsSupport {
-    function test_velocityColorRaster() {
-        var context = openNotes()
-        var baseline = grabShell()
-        verify(baseline !== null, "the identity roll renders a frame")
-        var ghost = trackFace(context, baseline, true)
-        var note = trackFace(context, baseline, false)
-        verify(ghost !== null, "a visible other-track note guards the ghost comparison")
-        verify(note !== null, "a visible current-track note guards the fill probe")
-        var before = rgb(baseline, note.rect.x + Math.floor(note.rect.w / 2),
-                         note.rect.y + Math.floor(note.rect.h / 2))
-        shell.shellPresenter.activate("view.velocity_colors")
-        verify(waitForNative(function() { return context.session.velocityColorMode }, 5000),
-               "the menu enables velocity-color rendering")
-        var colored = grabShell()
-        verify(colored !== null, "the velocity-color mode renders a frame")
-        verify(regionIdentical(baseline, colored, ghost.rect),
-               "velocity-color mode changes no ghost note pixel")
-        var expected = Helpers.channels(probe.velocityFace(
-            note.note.velocity, context.grid.palette.noteVelocityZero))
-        var actual = rgb(colored, note.rect.x + Math.floor(note.rect.w / 2),
-                         note.rect.y + Math.floor(note.rect.h / 2))
-        verify(Helpers.colorsNear(actual, expected),
-               "velocity-mode note interior matches velocityNoteColor")
-        shell.shellPresenter.activate("view.velocity_colors")
-        verify(waitForNative(function() { return !context.session.velocityColorMode }, 5000),
-               "the menu disables velocity-color rendering")
-        var restored = grabShell()
-        verify(restored !== null, "the identity mode renders again")
-        verify(Helpers.colorsNear(
-            rgb(restored, note.rect.x + Math.floor(note.rect.w / 2),
-                note.rect.y + Math.floor(note.rect.h / 2)), before),
-            "disabling velocity-color mode restores the identity fill pixels")
-    }
 
     function test_drawnNoteFillBorderAndAbuttingSeam() {
         var context = openNotes()
@@ -149,8 +116,7 @@ ShellNoteVisualsSupport {
         var nextBox = deviceRect(secondItem, context.plot, image, dpr)
         var cy = box.y + Math.floor(box.h / 2)
         var cx = box.x + Math.floor(box.w / 2)
-        var expected = Helpers.channels(probe.noteFace(
-            first.track, first.velocity, grid.palette.noteVelocityZero))
+        var expected = Helpers.channels(grid.palette.noteFill(first.track, first.velocity))
         verify(Helpers.colorsNear(rgb(image, cx, cy), expected),
                "a drawn note paints its interior in the velocity fill")
         var seamStart = box.x
@@ -239,8 +205,7 @@ ShellNoteVisualsSupport {
             var noteRect = deviceRect(item, context.plot, named, shellDpr(named))
             if (noteRect.w <= 20 || noteRect.h <= 12)
                 continue
-            var noteFill = probe.noteFace(
-                notes[i].track, notes[i].velocity, context.grid.palette.noteVelocityZero)
+            var noteFill = context.grid.palette.noteFill(notes[i].track, notes[i].velocity)
             var ink = Helpers.channels(context.grid.palette.noteLabelInk(noteFill))
             for (var y = noteRect.y + 2; y < noteRect.y + noteRect.h - 2; ++y)
                 for (var x = noteRect.x + 2; x < noteRect.x + noteRect.w - 2; ++x) {
@@ -423,8 +388,8 @@ ShellNoteVisualsSupport {
         var face = rgb(capturedPixels,
                        physicalRect.x + Math.floor(physicalRect.w / 2),
                        physicalRect.y + Math.floor(physicalRect.h / 2))
-        verify(Helpers.colorsNear(face, Helpers.channels(probe.noteFace(
-                   small.note.track, small.note.velocity, grid.palette.noteVelocityZero))),
+        verify(Helpers.colorsNear(face, Helpers.channels(
+                   grid.palette.noteFill(small.note.track, small.note.velocity))),
                "the captured small-font DPR2 note keeps a face inside the thinned border")
         reader.destroy()
     }

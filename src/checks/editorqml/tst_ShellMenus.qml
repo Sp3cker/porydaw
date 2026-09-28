@@ -61,20 +61,18 @@ ShellMenusSupport {
         var velocity = checkMenuItem(viewMenu, "view.velocity_drawer", "Velocity Drawer")
         var voiceChanges = checkMenuItem(viewMenu, "view.voice_changes_drawer",
                                          "Voice Changes Drawer")
-        var colors = checkMenuItem(viewMenu, "view.velocity_colors", "Color Notes by Velocity")
         var names = checkMenuItem(viewMenu, "view.note_names", "Show Note Names")
         compare(automation.enabled, false, "no tab disables the automation drawer toggle")
         compare(velocity.enabled, false, "no tab disables the velocity drawer toggle")
         compare(voiceChanges.enabled, false, "no tab disables the voice-change drawer toggle")
-        compare(colors.enabled, true, "velocity colours stay available with no song")
         compare(names.enabled, true, "note names stay available with no song")
         compare(automation.checkable, true, "the automation drawer toggle is checkable")
-        compare(colors.checkable, true, "velocity colours are checkable")
+        compare(names.checkable, true, "note names are checkable")
         var eventList = findChild(viewMenu, "shellAction_view.event_list")
         verify(eventList !== null, "the event list row still leads the View menu")
         compare(viewMenu.itemAt(5).objectName, "shellViewSectionSeparator",
                 "the global View preferences follow a separator")
-        compare(viewMenu.itemAt(8).objectName, "shellAction_transport.follow_playhead",
+        compare(viewMenu.itemAt(7).objectName, "shellAction_transport.follow_playhead",
                 "Follow Playhead stays at the fork View position")
 
         var about = checkMenuItem(helpMenu, "help.about", "About porydaw")
@@ -191,36 +189,28 @@ ShellMenusSupport {
         compare(shell.shellPresenter.sceneActive, true, "inert activations keep the scene")
     }
 
-    function test_displayModesPersistAcrossShells() {
+    function test_noteNamesPersistAcrossShells() {
         openShell()
         var presenter = shell.shellPresenter
         var session = presenter.session
-        if (session.velocityColorMode)
-            presenter.activate("view.velocity_colors")
         if (session.noteNameMode)
             presenter.activate("view.note_names")
-        compare(session.velocityColorMode, false, "the test starts from colours off")
-        presenter.activate("view.velocity_colors")
+        compare(session.noteNameMode, false, "the test starts from names off")
         presenter.activate("view.note_names")
-        tryVerify(function() {
-            return settings.bool("velocityNoteColors", false)
-        }, 3000, "toggling colours writes the original root key")
         tryVerify(function() {
             return settings.bool("noteNames", false)
         }, 3000, "toggling names writes the original root key")
         closeShell()
         openShell()
         session = shell.shellPresenter.session
-        compare(session.velocityColorMode, true, "a fresh shell restores velocity colours")
         compare(session.noteNameMode, true, "a fresh shell restores note names")
-        var colors = findChild(shell, "shellAction_view.velocity_colors")
-        compare(colors.checked, true, "the restored check is visible in the menu")
+        var names = findChild(shell, "shellAction_view.note_names")
+        compare(names.checked, true, "the restored check is visible in the menu")
         presenter = shell.shellPresenter
-        presenter.activate("view.velocity_colors")
         presenter.activate("view.note_names")
         tryVerify(function() {
-            return !settings.bool("velocityNoteColors", true)
-        }, 3000, "toggling back clears the stored colours")
+            return !settings.bool("noteNames", true)
+        }, 3000, "toggling back clears the stored names")
     }
 
     function test_fileRegisterSongActsOnSelectedTab() {

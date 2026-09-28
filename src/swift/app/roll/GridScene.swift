@@ -112,7 +112,6 @@ public final class GridScene {
     @QtIgnored var noteRecordCount = 0
     struct PaletteContentKey: Equatable {
         let palette: ObjectIdentifier
-        let velocityColorMode: Bool
         let lastVelocity: Int
     }
     @QtIgnored var paletteContentCache: (key: PaletteContentKey, data: Data)?

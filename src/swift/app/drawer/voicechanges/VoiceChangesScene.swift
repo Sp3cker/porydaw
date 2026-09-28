@@ -235,7 +235,7 @@ enum VoiceChangesScene {
     static func spans(_ input: VoiceChangesSceneInput,
                       entries: [VoiceProjectionEntry]) -> [SceneRect] {
         guard input.plotHeight > 0, input.plotWidth > 0, input.trackAvailable else { return [] }
-        let held = PaletteMath.hex(PaletteMath.trackIdentityOklab(input.track), alpha: 18)
+        let held = ThemeColorTables.voiceHeldColors[PaletteMath.trackIdentityIndex(input.track)]
         return VoiceChangesProjection.spans(VoiceSpanProjectionInput(
             entries: entries,
             firstProgram: input.firstProgram,

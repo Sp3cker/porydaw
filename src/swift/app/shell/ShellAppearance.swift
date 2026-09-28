@@ -96,11 +96,13 @@ public enum ShellAppearance {
     }
 
     public static func apply(to palette: GridPalette, mode: String, contrast: Int) {
+        let preset = ThemePreset(mode: mode)
+        palette.theme = preset
         let colors: Colors
-        switch mode {
-        case "dark-neutral-high": colors = darkNeutralHigh
-        case "immaterial": colors = immaterial
-        default: colors = vanilla
+        switch preset {
+        case .darkNeutralHigh: colors = darkNeutralHigh
+        case .immaterial: colors = immaterial
+        case .vanilla: colors = vanilla
         }
         let grid = gridColor(colors.grid, background: colors.roll, contrast: contrast)
         let gridChannels = PaletteMath.channels(grid)
@@ -120,7 +122,7 @@ public enum ShellAppearance {
         palette.buttonPressedBackground = colors.controlPressed
         // Dark presets use the resting button surface as the active foreground
         // (themeresolver.cpp:38-52), not their pale resting text.
-        palette.buttonPressedText = mode == "vanilla" ? colors.text : colors.control
+        palette.buttonPressedText = preset == .vanilla ? colors.text : colors.control
         // Native menu roles use item surfaces; selection and pressed menu text
         // share resolveDarkPreset's active foreground (themeresolver.cpp:44-49).
         palette.buttonHoverBackground = colors.controlHover

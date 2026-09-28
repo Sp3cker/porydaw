@@ -73,7 +73,6 @@ constexpr uint8_t noteGhost = 0x1;
 constexpr uint8_t noteSelected = 0x2;
 constexpr uint8_t noteTimeCovered = 0x4;
 
-constexpr uint8_t modeVelocityColor = 0x1;
 constexpr uint8_t modeNoteName = 0x2;
 constexpr uint8_t modeShowVelocityValues = 0x4;
 constexpr uint8_t modeTypographyAvailable = 0x8;

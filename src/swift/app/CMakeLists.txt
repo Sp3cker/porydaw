@@ -69,6 +69,7 @@ add_library(PorydawApp STATIC
     timeline/DrawingContentBinary.swift
     timeline/GridGeometry.swift
     timeline/GridPalette.swift
+    timeline/ThemeColorTables.swift
     timeline/GridTypography.swift
     timeline/RulerMenuPresenter.swift
     timeline/TimelineSnapPolicy.swift

@@ -22,7 +22,6 @@ struct GridSceneInput {
     var drawPreview: (tick: Int, duration: Int, pitch: Int)?
     var lastVelocity: Int = 100
     var hoverKey: Int = -1
-    var velocityColorMode = false
     var noteNameMode = false
     var showVelocityValues = false
     var timeSelection: AutomationTimeSelection? = nil

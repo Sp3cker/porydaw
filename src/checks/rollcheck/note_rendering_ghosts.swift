@@ -66,9 +66,8 @@ func checkGhostNotes(_ report: CheckReport, session: DocumentSession) {
         report.fail(id, "ghost fixture has no projected scene box")
         return
     }
-    let expectedGhost = PaletteMath.ghostFill(
-        track: other, accidentalRow: GridScene.isBlackKey(ghost.pitch),
-        rollBackground: grid.palette.rollBackground, accidentalLane: grid.palette.accidentalLane)
+    let expectedGhost = grid.palette.ghostFill(
+        track: other, accidentalRow: GridScene.isBlackKey(ghost.pitch))
     report.expect(
         ghostFill(ghost.id) == RollContentProbe.argb(expectedGhost),
                   cppID: id, message: "A017 ghost face uses the track-identity mix")
@@ -119,21 +118,15 @@ func checkGhostNotes(_ report: CheckReport, session: DocumentSession) {
     report.expect(
         ghostFill(plain.id)
             == RollContentProbe.argb(
-                PaletteMath.ghostFill(
-                          track: primary, accidentalRow: GridScene.isBlackKey(plain.pitch),
-                          rollBackground: grid.palette.rollBackground,
-                    accidentalLane: grid.palette.accidentalLane))
+                grid.palette.ghostFill(
+                    track: primary, accidentalRow: GridScene.isBlackKey(plain.pitch)))
             && ghostFill(ghost.id)
                 == RollContentProbe.argb(grid.palette.noteFill(track: other, velocity: 100)),
                   cppID: id, message: "swapped faces follow their new roles")
     grid.setTrack(index: primary)
-    grid.setVelocityColorMode(enabled: true)
-    let ghostVelocityFill = ghostFill(ghost.id)
-    grid.setVelocityColorMode(enabled: false)
     report.expect(
-        ghostVelocityFill == RollContentProbe.argb(expectedGhost)
-            && ghostFill(ghost.id) == RollContentProbe.argb(expectedGhost),
-                  cppID: id, message: "A031 velocity-color mode leaves the ghost fill byte-identical")
+        ghostFill(ghost.id) == RollContentProbe.argb(expectedGhost),
+        cppID: id, message: "ghost fill stays on its identity mix")
     let ghostOrigin = viewportPoint(grid, x: ghostBox.x, y: ghostBox.y)
     let pressX = ghostOrigin.x + ghostBox.w / 2
     let pressY = ghostOrigin.y + ghostBox.h / 2

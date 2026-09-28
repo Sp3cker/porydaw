@@ -125,7 +125,6 @@ ThemedWindow {
         function onCanRedoChanged() { ++root.actionRevision }
         function onGridCommandAvailabilityChanged() { ++root.actionRevision }
         function onTransportAvailabilityChanged() { ++root.actionRevision }
-        function onVelocityColorModeChanged() { ++root.actionRevision }
         function onNoteNameModeChanged() { ++root.actionRevision }
         function onOpenFailed(message) { shell.openFailed(message) }
         function onOperationFailed(message) { shell.operationFailed(message) }

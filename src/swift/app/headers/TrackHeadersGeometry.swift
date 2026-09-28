@@ -247,26 +247,19 @@ extension TrackHeadersPresenter {
             row.subtitleColor = palette.secondaryText
         }
         if track >= session.document.trackBudget {
-            let backdrop: String
-            let surface: String
-            let cap: Double
+            // Theme-only lookups: the dimmed inks depend solely on the preset
+            // palette, so they are checked-in literals indexed by ThemePreset.
+            let preset = palette.theme.rawValue
             if primary {
-                backdrop = palette.selectionRing
-                surface = backdrop
-                cap = 0.35
+                row.titleColor = TrackHeadersGeometry.overBudgetPrimaryInk[preset]
+                row.subtitleColor = row.titleColor
             } else if scoped {
-                backdrop = palette.selectionRing
-                surface = TrackHeadersGeometry.scopedHeaderSurface(palette: palette)
-                cap = 0.6
+                row.titleColor = TrackHeadersGeometry.overBudgetScopedInk[preset]
+                row.subtitleColor = row.titleColor
             } else {
-                backdrop = palette.windowBackground
-                surface = backdrop
-                cap = 0.6
+                row.titleColor = TrackHeadersGeometry.overBudgetTitleInk[preset]
+                row.subtitleColor = TrackHeadersGeometry.overBudgetSubtitleInk[preset]
             }
-            row.titleColor = TrackHeadersGeometry.dimmedInk(
-                ink: row.titleColor, backdrop: backdrop, surface: surface, cap: cap)
-            row.subtitleColor = TrackHeadersGeometry.dimmedInk(
-                ink: row.subtitleColor, backdrop: backdrop, surface: surface, cap: cap)
         }
         row.muteChecked = session.mutedTracks.contains(track)
         row.soloChecked = session.soloedTracks.contains(track)
@@ -280,9 +273,8 @@ extension TrackHeadersPresenter {
             row.subtitle = VoiceLanePolicy.label(slot: program,
                                                  view: session.bankSlots[program])
         } else { row.subtitle = String(format: "%03d Voice", program) }
-        let identity = PaletteMath.trackIdentityOklab(track)
         row.activityActiveColor = PaletteMath.trackIdentityFills[PaletteMath.trackIdentityIndex(track)]
-        row.activityDimColor = headerActivityDim(identity)
+        row.activityDimColor = ThemeColorTables.activityDimColors[PaletteMath.trackIdentityIndex(track)]
         let intensity = activity.intensity(track: track)
         row.activityLeftHeight = activityHeight(intensity.left)
         row.activityRightHeight = activityHeight(intensity.right)
@@ -300,6 +292,14 @@ extension TrackHeadersGeometry {
             g: (tint.g * 64 + base.g * 191 + 127) / 255,
             b: (tint.b * 64 + base.b * 191 + 127) / 255)
     }
+
+    // Over-budget inks per ThemePreset.rawValue, precomputed from the
+    // dimmedInk/scopedHeaderSurface math; verified by themeColorTableChecks.
+    static let overBudgetSurface = ["#C5CBC8", "#515D5F", "#4D575F"]
+    static let overBudgetPrimaryInk = ["#5B6565", "#455255", "#4B5359"]
+    static let overBudgetScopedInk = ["#505655", "#C6D5D8", "#C5CBCE"]
+    static let overBudgetTitleInk = ["#554F4C", "#A0A0A0", "#96989C"]
+    static let overBudgetSubtitleInk = ["#564F4A", "#A0A0A0", "#95989F"]
 
     static func dimmedInk(ink: String, backdrop: String, surface: String,
                           cap: Double) -> String {
@@ -324,26 +324,4 @@ extension TrackHeadersGeometry {
         }
         return mixed(lower)
     }
-}
-
-/// The existing track activity renderer's Oklch dimming: lower L by 0.18,
-/// reduce chroma only when the result would leave sRGB, then quantize once.
-private func headerActivityDim(_ identity: PaletteMath.Oklab) -> String {
-    let lightness = max(0, identity.lightness - 0.18)
-    var a = identity.a, b = identity.b
-    for _ in 0..<12 {
-        let lab = PaletteMath.Oklab(lightness: lightness, a: a, b: b)
-        let l = lightness + 0.3963377774 * a + 0.2158037573 * b
-        let m = lightness - 0.1055613458 * a - 0.0638541728 * b
-        let s = lightness - 0.0894841775 * a - 1.2914855480 * b
-        let l3 = l * l * l, m3 = m * m * m, s3 = s * s * s
-        let r = 4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3
-        let g = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3
-        let blue = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.7076147010 * s3
-        if r >= 0, r <= 1, g >= 0, g <= 1, blue >= 0, blue <= 1 {
-            return PaletteMath.hex(lab)
-        }
-        a *= 0.85; b *= 0.85
-    }
-    return PaletteMath.hex(PaletteMath.Oklab(lightness: lightness, a: 0, b: 0))
 }

@@ -276,8 +276,8 @@ ShellNoteVisualsSupport {
                "the minimum-zoom narrow note paints its top outline in the border role")
         verify(channelDelta(topOutline, face) > 16,
                "the minimum-zoom note outline differs visibly from its face")
-        verify(Helpers.colorsNear(face, Helpers.channels(probe.noteFace(
-                   narrow.note.track, narrow.note.velocity, grid.palette.noteVelocityZero))),
+        verify(Helpers.colorsNear(face, Helpers.channels(
+                   grid.palette.noteFill(narrow.note.track, narrow.note.velocity))),
                "the minimum-zoom narrow note retains its painted face")
     }
 

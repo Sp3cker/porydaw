@@ -57,7 +57,6 @@ struct RollDrawingContentKey: Equatable {
     var fonts: [GridFontKind: RollDrawingContent.FontSignature]
     var drawPreview: RollDrawingContent.DrawPreviewSignature?
     var lastVelocity: Int
-    var velocityColorMode: Bool
     var noteNameMode: Bool
     var showVelocityValues: Bool
     var timeSelection: AutomationTimeSelection?
@@ -131,7 +130,6 @@ enum RollDrawingContent {
                 DrawPreviewSignature(tick: $0.tick, duration: $0.duration, pitch: $0.pitch)
             },
             lastVelocity: input.lastVelocity,
-            velocityColorMode: input.velocityColorMode,
             noteNameMode: input.noteNameMode,
             showVelocityValues: input.showVelocityValues,
             timeSelection: input.timeSelection,
@@ -162,14 +160,22 @@ enum RollDrawingContent {
     private static func metricsSection(_ input: GridSceneInput) -> Data {
         let m = input.metrics
         var d = Data()
-        let values: [Double] = [
-            m.baseFontPx, m.keyboardWidth, m.noteMinWidth, m.noteMinHeight,
-            m.selectionRingDip, m.drawThreshold, m.detailMinPxPerBeat,
-            m.autoGridMinCell, fontPx(m.baseFontPx, 1.0 / 6.0), m.spaceHalf,
-            m.spaceTwo, fontPx(m.baseFontPx, 0.25), fontPx(m.baseFontPx, 0.5),
-            m.rulerBeatLabelZoomFactor, m.keyLabelRightInset,
-        ]
-        for value in values { DrawingContentBinary.append(&d, value) }
+        d.reserveCapacity(15 * 8)
+        DrawingContentBinary.append(&d, m.baseFontPx)
+        DrawingContentBinary.append(&d, m.keyboardWidth)
+        DrawingContentBinary.append(&d, m.noteMinWidth)
+        DrawingContentBinary.append(&d, m.noteMinHeight)
+        DrawingContentBinary.append(&d, m.selectionRingDip)
+        DrawingContentBinary.append(&d, m.drawThreshold)
+        DrawingContentBinary.append(&d, m.detailMinPxPerBeat)
+        DrawingContentBinary.append(&d, m.autoGridMinCell)
+        DrawingContentBinary.append(&d, fontPx(m.baseFontPx, 1.0 / 6.0))
+        DrawingContentBinary.append(&d, m.spaceHalf)
+        DrawingContentBinary.append(&d, m.spaceTwo)
+        DrawingContentBinary.append(&d, fontPx(m.baseFontPx, 0.25))
+        DrawingContentBinary.append(&d, fontPx(m.baseFontPx, 0.5))
+        DrawingContentBinary.append(&d, m.rulerBeatLabelZoomFactor)
+        DrawingContentBinary.append(&d, m.keyLabelRightInset)
         return d
     }
 
@@ -178,123 +184,137 @@ enum RollDrawingContent {
             (0, .ruler), (1, .beat), (2, .bold), (3, .sig), (4, .chip),
             (5, .keyLabel), (6, .noteName), (7, .noteValue),
         ]
+        let fonts = input.fonts
         var d = Data()
-        let present = order.filter { input.fonts[$0.1] != nil }
-        DrawingContentBinary.append(&d, UInt8(present.count))
-        for (id, kind) in present {
-            guard let spec = input.fonts[kind] else { continue }
+        d.reserveCapacity(1 + order.count * 24)
+        DrawingContentBinary.append(&d, UInt8(0))  // count placeholder, patched below
+        var count = 0
+        for (id, kind) in order {
+            guard let spec = fonts[kind] else { continue }
             DrawingContentBinary.append(&d, id)
             DrawingContentBinary.append(&d, Int32(spec.pixelSize))
             DrawingContentBinary.append(&d, Int32(spec.weight))
             DrawingContentBinary.append(&d, spec.letterSpacing)
             DrawingContentBinary.append(&d, UInt16(min(spec.family.utf8.count, Int(UInt16.max))))
             d.append(contentsOf: spec.family.utf8.prefix(Int(UInt16.max)))
+            count += 1
         }
+        d[0] = UInt8(count)
         return d
     }
 
     static func paletteSection(_ input: GridSceneInput) -> Data {
         let p = input.palette
-        let argb = { SceneRectPacking.argb($0) }
-        let previewFill: String
-        if input.velocityColorMode {
-            previewFill = PaletteMath.velocityNoteColor(
-                velocity: input.lastVelocity, zeroColor: p.noteVelocityZero)
-        } else {
-            previewFill = PaletteMath.noteFill(
-                track: 0, velocity: input.lastVelocity, zeroColor: p.noteVelocityZero)
-        }
-        let values: [String] = [
-            p.rollBackground, p.accidentalLane, p.scaleHighlight, p.gridLineBar,
-            p.gridLineBeat, p.gridLineSub1, p.gridLineSub2, p.gridLineSub3,
-            p.noteBorder, p.selectionRing, p.selectionFill, p.selectionEdge,
-            p.selectionFill, p.selectionRing, p.selectionRing, previewFill,
-            p.keyboardNatural, p.keyboardBlack, p.keyboardSeparator,
-            p.keyboardHover, p.keyboardLabel, p.keyboardNatural, p.keyboardBlack,
-            p.primaryText, p.rowLine, p.gridLineBeatFine, p.preRollMask,
-            p.rulerPreRollMask, p.gridLine, p.chromeBackground, p.separator,
-            p.rulerDetailText, p.implicitSignature, p.noteVelocityZero,
-        ]
         var d = Data()
-        DrawingContentBinary.append(&d, UInt16(values.count))
-        for value in values { DrawingContentBinary.append(&d, argb(value)) }
+        d.reserveCapacity(2 + 34 * 4)
+        DrawingContentBinary.append(&d, UInt16(34))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.rollBackground))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.accidentalLane))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.scaleHighlight))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.gridLineBar))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.gridLineBeat))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.gridLineSub1))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.gridLineSub2))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.gridLineSub3))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.noteBorder))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.selectionRing))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.selectionFill))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.selectionEdge))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.selectionFill))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.selectionRing))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.selectionRing))
+        DrawingContentBinary.append(&d, p.noteFillArgb(track: 0, velocity: input.lastVelocity))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.keyboardNatural))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.keyboardBlack))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.keyboardSeparator))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.keyboardHover))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.keyboardLabel))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.keyboardNatural))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.keyboardBlack))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.primaryText))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.rowLine))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.gridLineBeatFine))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.preRollMask))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.rulerPreRollMask))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.gridLine))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.chromeBackground))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.separator))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.rulerDetailText))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.implicitSignature))
+        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.noteVelocityZero))
         return d
     }
 
     private static func rowsSection(_ input: GridSceneInput) -> Data {
         let projection = input.camera.projection
-        let pitches = (0..<projection.visibleRowCount).compactMap { projection.visiblePitch(at: $0) }
+        let rowCount = projection.visibleRowCount
+        let highlight = input.scale.highlight
+        let scale = input.scale
         var d = Data()
-        DrawingContentBinary.append(&d, UInt16(pitches.count))
-        for pitch in pitches {
+        d.reserveCapacity(2 + rowCount * 2)
+        DrawingContentBinary.append(&d, UInt16(0))  // count placeholder, patched below
+        var count = 0
+        for row in 0..<rowCount {
+            guard let pitch = projection.visiblePitch(at: row) else { continue }
             var flags: UInt8 = 0
             if GridScene.isBlackKey(pitch) { flags |= 1 }
-            if input.scale.highlight && input.scale.contains(pitch) { flags |= 2 }
+            if highlight && scale.contains(pitch) { flags |= 2 }
             DrawingContentBinary.append(&d, UInt8(pitch))
             DrawingContentBinary.append(&d, flags)
+            count += 1
         }
+        let patched: UInt16 = UInt16(count).littleEndian
+        d.withUnsafeMutableBytes { $0.storeBytes(of: patched, toByteOffset: 0, as: UInt16.self) }
         return d
     }
 
     private static func notesSection(_ input: GridSceneInput) -> (Data, Int) {
-        let p = input.palette
         let projection = input.camera.projection
-        var records: [(UInt64, UInt32, UInt32, UInt8, UInt8, UInt8, UInt8, UInt32)] = []
-        records.reserveCapacity(input.notes.count)
-        for ghostPass in [true, false] {
-            for note in input.notes where note.ghost == ghostPass {
-                let (tick, end, pitch) = input.displayedNote(note)
+        let noteTable = ThemeColorTables.noteFillTable(input.palette.theme)
+        let ghostTable = ThemeColorTables.ghostFillTable(input.palette.theme)
+        let notes = input.notes
+        let selected = input.selectedNotes
+        let displayed = input.displayedNote
+        var d = Data()
+        d.reserveCapacity(4 + notes.count * 24)
+        DrawingContentBinary.append(&d, UInt32(0))  // count placeholder, patched below
+        var count = 0
+        // Ghost records first, preserving the old two-pass order without the array.
+        for pass in 0..<2 {
+            let ghostPass = pass == 0
+            for note in notes where note.ghost == ghostPass {
+                let (tick, end, pitch) = displayed(note)
                 if (0..<128).contains(pitch),
                     projection.row(forPitch: pitch) == PitchProjection.hiddenRow
                 {
                     continue
                 }
                 var flags: UInt8 = note.ghost ? 1 : 0
-                if input.selectedNotes.contains(note.noteId) { flags |= 2 }
+                if selected.contains(note.noteId) { flags |= 2 }
                 if GridScene.timeCovers(input, track: note.track, tick: tick, end: end) {
                     flags |= 4
                 }
-                let fill: String
+                let trackIndex = PaletteMath.trackIdentityIndex(note.track)
+                let fill: UInt32
                 if ghostPass {
-                    fill = PaletteMath.ghostFill(
-                        track: note.track,
-                        accidentalRow: GridScene.isBlackKey(pitch),
-                        rollBackground: p.rollBackground,
-                        accidentalLane: p.accidentalLane)
-                } else if input.velocityColorMode {
-                    fill = PaletteMath.velocityNoteColor(
-                        velocity: note.velocity, zeroColor: p.noteVelocityZero)
+                    fill = ghostTable[trackIndex * 2 + (GridScene.isBlackKey(pitch) ? 1 : 0)]
                 } else {
-                    fill = PaletteMath.noteFill(
-                        track: note.track, velocity: note.velocity,
-                        zeroColor: p.noteVelocityZero)
+                    fill = noteTable[trackIndex * 128 + min(127, max(0, note.velocity))]
                 }
-                records.append(
-                    (
-                        note.noteId.rawValue,
-                        UInt32(clamping: max(0, tick)),
-                        UInt32(clamping: max(0, end - tick)),
-                        UInt8(clamping: min(127, max(0, pitch))),
-                        UInt8(clamping: note.track),
-                        UInt8(clamping: note.velocity),
-                        flags,
-                        SceneRectPacking.argb(fill)
-                    ))
+                DrawingContentBinary.append(&d, note.noteId.rawValue)
+                DrawingContentBinary.append(&d, UInt32(clamping: max(0, tick)))
+                DrawingContentBinary.append(&d, UInt32(clamping: max(0, end - tick)))
+                DrawingContentBinary.append(&d, UInt8(clamping: min(127, max(0, pitch))))
+                DrawingContentBinary.append(&d, UInt8(clamping: note.track))
+                DrawingContentBinary.append(&d, UInt8(clamping: note.velocity))
+                DrawingContentBinary.append(&d, flags)
+                DrawingContentBinary.append(&d, fill)
+                count += 1
             }
         }
-        var d = Data()
-        DrawingContentBinary.append(&d, UInt32(records.count))
-        for record in records {
-            DrawingContentBinary.append(&d, record.0)
-            DrawingContentBinary.append(&d, record.1)
-            DrawingContentBinary.append(&d, record.2)
-            DrawingContentBinary.append(&d, record.3)
-            DrawingContentBinary.append(&d, record.4)
-            DrawingContentBinary.append(&d, record.5)
-            DrawingContentBinary.append(&d, record.6)
-            DrawingContentBinary.append(&d, record.7)
-        }
-        return (d, records.count)
+        let patched: UInt32 = UInt32(count).littleEndian
+        d.withUnsafeMutableBytes { $0.storeBytes(of: patched, toByteOffset: 0, as: UInt32.self) }
+        return (d, count)
     }
 
     private static func keyboardNamesSection(_ input: GridSceneInput) -> Data {
@@ -303,18 +323,19 @@ enum RollDrawingContent {
             DrawingContentBinary.append(&d, UInt16(0))
             return d
         }
-        var entries: [(Int, String)] = []
-        entries.reserveCapacity(128)
+        d.reserveCapacity(2 + 128 * 8)
+        DrawingContentBinary.append(&d, UInt16(0))  // count placeholder, patched below
+        var count = 0
         for pitch in 0..<min(128, names.count) {
             let name = names[pitch]
-            if !name.isEmpty { entries.append((pitch, name)) }
-        }
-        DrawingContentBinary.append(&d, UInt16(entries.count))
-        for (pitch, name) in entries {
+            if name.isEmpty { continue }
             DrawingContentBinary.append(&d, UInt8(pitch))
             DrawingContentBinary.append(&d, UInt16(min(name.utf8.count, Int(UInt16.max))))
             d.append(contentsOf: name.utf8.prefix(Int(UInt16.max)))
+            count += 1
         }
+        let patched: UInt16 = UInt16(count).littleEndian
+        d.withUnsafeMutableBytes { $0.storeBytes(of: patched, toByteOffset: 0, as: UInt16.self) }
         return d
     }
 
@@ -324,19 +345,19 @@ enum RollDrawingContent {
 
     private static func overlaySection(_ input: GridSceneInput) -> Data {
         var d = Data()
+        d.reserveCapacity(1 + 8 + 8 + 4 + 4 + 32)
         let selection = input.timeSelection
         DrawingContentBinary.append(&d, selection?.isActive == true ? UInt8(1) : UInt8(0))
         DrawingContentBinary.append(&d, UInt64(selection?.range.startTick ?? 0))
         DrawingContentBinary.append(&d, UInt64(selection?.range.endTick ?? 0))
         DrawingContentBinary.append(&d, UInt32(clamping: input.selectedTrack))
         DrawingContentBinary.append(&d, UInt32(clamping: input.usedTrackCount))
-        var scope = [UInt8](repeating: 0, count: 32)
-        if let selection, case .tracks(let tracks) = selection.scope {
-            for track in tracks where (0..<32).contains(track) {
-                scope[track] = 1
-            }
+        var tracks: Set<Int>? = nil
+        if let selection, case .tracks(let scoped) = selection.scope { tracks = scoped }
+        for track in 0..<32 {
+            let bit: UInt8 = tracks?.contains(track) == true ? 1 : 0
+            DrawingContentBinary.append(&d, bit)
         }
-        d.append(contentsOf: scope)
         return d
     }
 
@@ -360,7 +381,6 @@ enum RollDrawingContent {
 
     private static func modesSection(_ input: GridSceneInput) -> Data {
         var flags: UInt8 = 0
-        if input.velocityColorMode { flags |= 1 }
         if input.noteNameMode { flags |= 2 }
         if input.showVelocityValues { flags |= 4 }
         if input.typography != nil { flags |= 8 }

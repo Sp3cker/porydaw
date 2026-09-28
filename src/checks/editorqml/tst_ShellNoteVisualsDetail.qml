@@ -114,8 +114,8 @@ ShellNoteVisualsSupport {
         verify(border === "", "the tiny note paints its fitted top and bottom border: " + border)
         var cx = rect.x + Math.floor(rect.w / 2)
         var cy = rect.y + Math.floor(rect.h / 2)
-        verify(Helpers.colorsNear(rgb(image, cx, cy), Helpers.channels(probe.noteFace(
-                   target.track, target.velocity, grid.palette.noteVelocityZero))),
+        verify(Helpers.colorsNear(rgb(image, cx, cy), Helpers.channels(
+                   grid.palette.noteFill(target.track, target.velocity))),
                "the tiny note paints its face between the thin borders")
     }
 
@@ -160,8 +160,7 @@ ShellNoteVisualsSupport {
         verify(unselected !== null, "a fully visible unselected note is available for probing")
 
         var expectedFace = Helpers.channels(
-                    probe.noteFace(unselected.note.track, unselected.note.velocity,
-                                   grid.palette.noteVelocityZero))
+                    grid.palette.noteFill(unselected.note.track, unselected.note.velocity))
         var unselectedFace = [unselectedImage.red(
                     unselected.rect.x + Math.floor(unselected.rect.w / 2),
                     unselected.rect.y + Math.floor(unselected.rect.h / 2)),
@@ -328,8 +327,7 @@ ShellNoteVisualsSupport {
                                  "small selected note " + small.note.id + " border") === "",
                 "the small border thins instead of vanishing")
         var smallExpectedFace = Helpers.channels(
-                    probe.noteFace(small.note.track, small.note.velocity,
-                                   grid.palette.noteVelocityZero))
+                    grid.palette.noteFill(small.note.track, small.note.velocity))
         var smallFace = [smallImage.red(small.rect.x + Math.floor(small.rect.w / 2),
                                         small.rect.y + Math.floor(small.rect.h / 2)),
                 smallImage.green(small.rect.x + Math.floor(small.rect.w / 2),

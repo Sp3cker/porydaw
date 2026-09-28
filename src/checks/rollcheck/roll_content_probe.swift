@@ -57,7 +57,6 @@ import PorydawCore
     let palette: [UInt32]
     let loopStartTick: Int
     let loopEndTick: Int
-    let velocityColorMode: Bool
     let noteNameMode: Bool
     let showVelocityValues: Bool
     let drumKeyboard: Bool
@@ -99,7 +98,6 @@ import PorydawCore
         var palette: [UInt32] = []
         var loopStart = 0
         var loopEnd = 0
-        var velocityColorMode = false
         var noteNameMode = false
         var showVelocityValues = false
         var drumKeyboard = false
@@ -187,7 +185,6 @@ import PorydawCore
                     lastVelocity: velocity)
             case 10:
                 let flags = r.u8()
-                velocityColorMode = flags & 1 != 0
                 noteNameMode = flags & 2 != 0
                 showVelocityValues = flags & 4 != 0
                 drumKeyboard = flags & 16 != 0
@@ -208,7 +205,6 @@ import PorydawCore
         self.palette = palette
         self.loopStartTick = loopStart
         self.loopEndTick = loopEnd
-        self.velocityColorMode = velocityColorMode
         self.noteNameMode = noteNameMode
         self.showVelocityValues = showVelocityValues
         self.drumKeyboard = drumKeyboard

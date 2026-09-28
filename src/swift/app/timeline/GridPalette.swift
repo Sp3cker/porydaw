@@ -52,31 +52,86 @@ public enum PaletteMath {
               b: from.b + (to.b - from.b) * t)
     }
 
-    public static func hex(r: Int, g: Int, b: Int, a: Int = 255) -> String {
-        a == 255
-            ? String(format: "#%02X%02X%02X", r, g, b)
-            : String(format: "#%02X%02X%02X%02X", a, r, g, b)
+    @inline(__always)
+    private static func writeHexByte(_ value: UInt32, into buffer: UnsafeMutableBufferPointer<UInt8>, at index: Int) {
+        let hi = (value >> 4) & 0xF
+        let lo = value & 0xF
+        buffer[index] = hi < 10 ? UInt8(48 + hi) : UInt8(55 + hi)
+        buffer[index + 1] = lo < 10 ? UInt8(48 + lo) : UInt8(55 + lo)
     }
 
+    // Profiled hot path (note-grid interaction): direct UTF-8 fill, no Foundation formatting.
+    public static func hex(r: Int, g: Int, b: Int, a: Int = 255) -> String {
+        if a == 255 {
+            return String(unsafeUninitializedCapacity: 7) { buffer in
+                buffer[0] = 35
+                writeHexByte(UInt32(r & 0xFF), into: buffer, at: 1)
+                writeHexByte(UInt32(g & 0xFF), into: buffer, at: 3)
+                writeHexByte(UInt32(b & 0xFF), into: buffer, at: 5)
+                return 7
+            }
+        }
+        return String(unsafeUninitializedCapacity: 9) { buffer in
+            buffer[0] = 35
+            writeHexByte(UInt32(a & 0xFF), into: buffer, at: 1)
+            writeHexByte(UInt32(r & 0xFF), into: buffer, at: 3)
+            writeHexByte(UInt32(g & 0xFF), into: buffer, at: 5)
+            writeHexByte(UInt32(b & 0xFF), into: buffer, at: 7)
+            return 9
+        }
+    }
     public static func hex(_ lab: Oklab, alpha: Int = 255) -> String {
         let c = rgb(lab)
         return hex(r: c.r, g: c.g, b: c.b, a: alpha)
     }
 
+    @inline(__always)
+    public static func hex(argb: UInt32) -> String {
+        if argb >> 24 == 0xFF {
+            return String(unsafeUninitializedCapacity: 7) { buffer in
+                buffer[0] = 35
+                writeHexByte((argb >> 16) & 0xFF, into: buffer, at: 1)
+                writeHexByte((argb >> 8) & 0xFF, into: buffer, at: 3)
+                writeHexByte(argb & 0xFF, into: buffer, at: 5)
+                return 7
+            }
+        }
+        return String(unsafeUninitializedCapacity: 9) { buffer in
+            buffer[0] = 35
+            writeHexByte((argb >> 24) & 0xFF, into: buffer, at: 1)
+            writeHexByte((argb >> 16) & 0xFF, into: buffer, at: 3)
+            writeHexByte((argb >> 8) & 0xFF, into: buffer, at: 5)
+            writeHexByte(argb & 0xFF, into: buffer, at: 7)
+            return 9
+        }
+    }
+
     public static func channels(_ hex: String) -> (r: Int, g: Int, b: Int, a: Int) {
         var value: UInt64 = 0
-        Scanner(string: String(hex.dropFirst())).scanHexInt64(&value)
-        if hex.count == 9 {
+        for byte in hex.utf8.dropFirst() {
+            let digit: UInt64
+            if byte >= 48 && byte <= 57 {
+                digit = UInt64(byte - 48)
+            } else if byte >= 65 && byte <= 70 {
+                digit = UInt64(byte - 55)
+            } else if byte >= 97 && byte <= 102 {
+                digit = UInt64(byte - 87)
+            } else {
+                break
+            }
+            value = (value << 4) | digit
+        }
+        if hex.utf8.count == 9 {
             return (Int((value >> 16) & 0xFF), Int((value >> 8) & 0xFF), Int(value & 0xFF),
                     Int((value >> 24) & 0xFF))
         }
         return (Int((value >> 16) & 0xFF), Int((value >> 8) & 0xFF), Int(value & 0xFF), 255)
     }
 
+    static let srgbToLinearTable: [Double] = (0...255).map { srgbToLinear(Double($0) / 255.0) }
+
     public static func relativeLuminance(r: Int, g: Int, b: Int) -> Double {
-        0.2126 * srgbToLinear(Double(r) / 255.0)
-            + 0.7152 * srgbToLinear(Double(g) / 255.0)
-            + 0.0722 * srgbToLinear(Double(b) / 255.0)
+        0.2126 * srgbToLinearTable[r] + 0.7152 * srgbToLinearTable[g] + 0.0722 * srgbToLinearTable[b]
     }
 
     /// WCAG relative luminance of an sRGB hex color. Alpha is ignored, matching
@@ -94,109 +149,6 @@ public enum PaletteMath {
         return (lighter + 0.05) / (darker + 0.05)
     }
 
-    public static func gridLineColor(_ alpha: Int = 255) -> String {
-        let base = channels("#3F040000")
-        let a = (base.a * alpha + 127) / 255
-        return hex(r: base.r, g: base.g, b: base.b, a: a)
-    }
-
-    public static func noteFill(track: Int, velocity: Int, zeroColor: String) -> String {
-        let v = min(127, max(0, velocity))
-        if v == 0 { return zeroColor }
-        let identity = trackIdentityOklab(track)
-        if v == 127 { return hex(identity) }
-        let zeroChannels = channels(zeroColor)
-        let zero = oklab(r: zeroChannels.r, g: zeroChannels.g, b: zeroChannels.b)
-        return hex(mixTowardOklab(identity, zero, 1.0 - Double(v) / 127.0))
-    }
-
-    /// Velocity-hue display mode (View menu, app-wide): note fills take their
-    /// hue from velocity — purple (1) sweeping the long way around the wheel
-    /// to red (127) — instead of the track identity. Mirrors
-    /// SongView::velocityNoteColor (trackvoiceops.cpp): velocity <= 0 renders
-    /// the shared zero-velocity ink; 1 and 127 are the fixed #5F44E9/#E90904
-    /// endpoints; between them hue/saturation/value interpolate linearly in
-    /// Qt HSV (hue ~250deg down to ~1deg, i.e. through blue/green/yellow)
-    /// with t = (v-1)/126, quantized to 8-bit RGB.
-    public static func velocityNoteColor(velocity: Int, zeroColor: String) -> String {
-        if velocity <= 0 { return zeroColor }
-        // Oracle endpoints: QColor(0x5F, 0x44, 0xE9) and QColor(0xE9, 0x09, 0x04).
-        if velocity <= 1 { return hex(r: 0x5F, g: 0x44, b: 0xE9) }
-        if velocity >= 127 { return hex(r: 0xE9, g: 0x09, b: 0x04) }
-        // QColor::getHsvF works in double (qreal); the oracle keeps the
-        // components in float locals and interpolates in float, so the same
-        // widths are used here: Double conversion, Float interpolation, then
-        // fromHsvF quantized with qRound (round half up, non-negative).
-        let t = Float(velocity - 1) / 126
-        let minHSV = rgbToHsvFractional(r: 0x5F, g: 0x44, b: 0xE9)
-        let maxHSV = rgbToHsvFractional(r: 0xE9, g: 0x09, b: 0x04)
-        let h = Double(Float(minHSV.h) + (Float(maxHSV.h) - Float(minHSV.h)) * t)
-        let s = Double(Float(minHSV.s) + (Float(maxHSV.s) - Float(minHSV.s)) * t)
-        let v = Double(Float(minHSV.v) + (Float(maxHSV.v) - Float(minHSV.v)) * t)
-        let (r, g, b) = hsvToRgbBytes(h: h, s: s, v: v)
-        return hex(r: r, g: g, b: b)
-    }
-
-    /// QColor::getHsvF for a chromatic 8-bit color: hue in [0, 1), saturation
-    /// and value in [0, 1]. The achromatic hue (-1) never occurs here — both
-    /// velocity endpoints are saturated — so only the chromatic path is kept.
-    private static func rgbToHsvFractional(r: Int, g: Int, b: Int)
-        -> (h: Double, s: Double, v: Double)
-    {
-        let red = Double(r) / 255.0
-        let green = Double(g) / 255.0
-        let blue = Double(b) / 255.0
-        let cmax = max(red, max(green, blue))
-        let cmin = min(red, min(green, blue))
-        let delta = cmax - cmin
-        let saturation = cmax == 0 ? 0 : delta / cmax
-        let hue: Double
-        if cmax == red {
-            hue = (green - blue) / delta
-        } else if cmax == green {
-            hue = 2 + (blue - red) / delta
-        } else {
-            hue = 4 + (red - green) / delta
-        }
-        var degrees = hue * 60
-        if degrees < 0 { degrees += 360 }
-        return (degrees / 360, saturation, cmax)
-    }
-
-    /// QColor::fromHsvF quantized through QRgb: h in [0, 1], s/v in [0, 1];
-    /// the result rounds each channel half up to 8 bits.
-    private static func hsvToRgbBytes(h: Double, s: Double, v: Double)
-        -> (r: Int, g: Int, b: Int)
-    {
-        let red: Double
-        let green: Double
-        let blue: Double
-        if s == 0 {
-            red = v
-            green = v
-            blue = v
-        } else {
-            let sector = h * 6
-            let index = Int(sector.rounded(.down))
-            let fraction = sector - Double(index)
-            let p = v * (1 - s)
-            let q = v * (1 - s * fraction)
-            let t = v * (1 - s * (1 - fraction))
-            switch index {
-            case 0: (red, green, blue) = (v, t, p)
-            case 1: (red, green, blue) = (q, v, p)
-            case 2: (red, green, blue) = (p, v, t)
-            case 3: (red, green, blue) = (p, q, v)
-            case 4: (red, green, blue) = (t, p, v)
-            default: (red, green, blue) = (v, p, q)
-            }
-        }
-        func quantize(_ channel: Double) -> Int {
-            min(255, max(0, Int((channel * 255).rounded(.toNearestOrAwayFromZero))))
-        }
-        return (quantize(red), quantize(green), quantize(blue))
-    }
-
     /// Legible ink for text on `fill`: the candidate with the higher WCAG
     /// contrast ratio. Mirrors songview contrastingTextColor (detail.cpp),
     /// which picks between the piano keyboard's natural- and black-key inks.
@@ -210,19 +162,6 @@ public enum PaletteMath {
         let preferred = contrastingTextColor(fill: fill, light: light, dark: dark)
         if contrastRatio(fill, preferred) >= 4.5 { return preferred }
         return contrastingTextColor(fill: fill, light: fallbackLight, dark: fallbackDark)
-    }
-
-    static func ghostFill(track: Int, accidentalRow: Bool,
-                          rollBackground: String, accidentalLane: String) -> String {
-        let identity = trackIdentityOklab(track)
-        let backdrop = channels(accidentalRow ? accidentalLane : rollBackground)
-        let background = oklab(r: backdrop.r, g: backdrop.g, b: backdrop.b)
-        let weight = 60.0 / 255.0
-        let offset = min(0.055, max(-0.055,
-                                    (identity.lightness - background.lightness) * weight))
-        return hex(Oklab(lightness: background.lightness + offset,
-                         a: background.a + (identity.a - background.a) * weight,
-                         b: background.b + (identity.b - background.b) * weight))
     }
 
     public static func trackIdentityIndex(_ track: Int) -> Int {
@@ -245,6 +184,7 @@ public enum PaletteMath {
 @MainActor
 @QtBridgeable
 public final class GridPalette {
+    @QtIgnored public var theme: ThemePreset = .vanilla
 
     public var windowBackground: String = "#C9C1BB"
     public var rollBackground: String = "#D4CCC7"
@@ -308,20 +248,16 @@ public final class GridPalette {
     public var keyboardHover: String = "#50B9E8EE"
 
     public var gridLine: String = "#3F040000"
-    public var gridLineSub1: String = PaletteMath.gridLineColor(125)
-    public var gridLineSub2: String = PaletteMath.gridLineColor(100)
-    public var gridLineSub3: String = PaletteMath.gridLineColor(75)
-    public var gridLineBeat: String = PaletteMath.gridLineColor(160)
-    public var gridLineBeatFine: String = PaletteMath.gridLineColor(200)
-    public var gridLineBar: String = PaletteMath.gridLineColor()
-    public var rowLine: String = PaletteMath.gridLineColor(50)
+    public var gridLineSub1: String = "#1F040000"
+    public var gridLineSub2: String = "#19040000"
+    public var gridLineSub3: String = "#13040000"
+    public var gridLineBeat: String = "#28040000"
+    public var gridLineBeatFine: String = "#31040000"
+    public var gridLineBar: String = "#3F040000"
+    public var rowLine: String = "#0C040000"
 
-    public var preRollMask: String = PaletteMath.hex(
-        PaletteMath.mixTowardOklab(PaletteMath.oklab(r: 0xD4, g: 0xCC, b: 0xC7),
-                                 PaletteMath.oklab(r: 0x04, g: 0x00, b: 0x00), 0.15))
-    public var rulerPreRollMask: String = PaletteMath.hex(
-        PaletteMath.mixTowardOklab(PaletteMath.oklab(r: 0xBD, g: 0xB5, b: 0xAF),
-                                 PaletteMath.oklab(r: 0x04, g: 0x00, b: 0x00), 0.15))
+    public var preRollMask: String = "#B0A6A1"
+    public var rulerPreRollMask: String = "#9D938E"
 
     public var noteVelocityZero: String = "#8B847E"
     public let noteLabelAaLight: String = "#FFFFFF"
@@ -331,8 +267,17 @@ public final class GridPalette {
             fill: fill, light: keyboardNatural, dark: keyboardBlack,
             fallbackLight: noteLabelAaLight, fallbackDark: noteLabelAaDark)
     }
+    @QtIgnored func noteFillArgb(track: Int, velocity: Int) -> UInt32 {
+        ThemeColorTables.noteFill(theme, track: track, velocity: velocity)
+    }
     public func noteFill(track: Int, velocity: Int) -> String {
-        PaletteMath.noteFill(track: track, velocity: velocity, zeroColor: noteVelocityZero)
+        PaletteMath.hex(argb: noteFillArgb(track: track, velocity: velocity))
+    }
+    @QtIgnored func ghostFillArgb(track: Int, accidentalRow: Bool) -> UInt32 {
+        ThemeColorTables.ghostFill(theme, track: track, accidentalRow: accidentalRow)
+    }
+    public func ghostFill(track: Int, accidentalRow: Bool) -> String {
+        PaletteMath.hex(argb: ghostFillArgb(track: track, accidentalRow: accidentalRow))
     }
 
     public var noteBorder: String = "#FF000000"

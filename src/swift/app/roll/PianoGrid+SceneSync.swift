@@ -53,7 +53,7 @@ extension PianoGrid {
             selectedNotes: selectedNotes,
             drawPreview: drawPreview, lastVelocity: lastVelocity,
             hoverKey: hoverKey,
-            velocityColorMode: velocityColorMode, noteNameMode: noteNameMode,
+            noteNameMode: noteNameMode,
             showVelocityValues: showVelocityValues,
             timeSelection: session.timeSelection,
             usedTrackCount: session.document.engineTracks.usedTrackCount,

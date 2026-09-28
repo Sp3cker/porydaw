@@ -111,11 +111,6 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
         font: [:], palette: grid.palette)
     report.expect(ghostLabels.count == 1 && ghostLabels[0].labelText == GridScene.keyName(pitch),
                   cppID: id, message: "ghost notes are never labeled")
-    let hardFill = PaletteMath.velocityNoteColor(
-        velocity: 121, zeroColor: grid.palette.noteVelocityZero)
-    report.expect(PaletteMath.contrastRatio(
-        hardFill, NoteNameLabels.textColor(fillColor: hardFill, palette: grid.palette)) >= 4.5,
-        cppID: id, message: "the low-contrast velocity hue gets AA-clearing label ink")
     grid.setNoteNameMode(enabled: false)
     report.expect(
         !RollContentProbe(grid.scene).noteNameMode, cppID: id,
@@ -186,15 +181,5 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
     grid.refreshCamera()
     report.expect(!hasLabel(wide.id), cppID: id,
                   message: "one pixel shorter the label hides instead of shrinking")
-    for (velocity, label) in [
-        (100, "label ink is chosen against the bright velocity fill"),
-        (1, "label ink is chosen against the dark velocity fill"),
-    ] {
-        let fill = PaletteMath.velocityNoteColor(
-            velocity: velocity, zeroColor: grid.palette.noteVelocityZero)
-        report.expect(PaletteMath.contrastRatio(
-            fill, NoteNameLabels.textColor(fillColor: fill, palette: grid.palette)) >= 4.5,
-            cppID: id, message: label)
-    }
     grid.setNoteNameMode(enabled: false)
 }
