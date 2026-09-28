@@ -42,8 +42,9 @@ on 78af02d8. Wave 179–187 (§22) landed, 181 completing it at 3c325bf1 + 85a80
 exclusivity SIGABRT fixed), 189 (151dcfb4), 190 (ad0b7b1c), 191 (f4937597), 192
 (461d81cb), 193 (30b8b356); 13 more closed ledgers deleted. Gate on b97c1c01: verify 37/37,
 verify:shell 76/76, verify:qml 1/1, verify:qml-roll 1/1, bridge 0, `proof check --executed`
-0 not executed. Census (per-area `proof list` sum): 47 ledgers; open rows 1034 (855 GAP +
-179 PARTIAL); strict debt 235. Next: wave 194+ (§24).
+(b97c1c01). Census (per-area `proof list` sum): 47 ledgers; open rows 1034
+(855 GAP + 179 PARTIAL); strict debt 235. Waves 194–199 (§24) landed
+(432eaaa1). Next: wave 200–205 (§25).
 Known residues: QtBridge queues property notifications, so same-GUI-pass geometry clauses
 (host A095) stay PARTIAL; lanes use the null audio backend, so physical-output conjuncts
 stay PARTIAL.
@@ -3364,3 +3365,228 @@ pairwise write-set disjointness; no application suite was run.
   source-editing flow in voicegroupsourceediting is closed by 196), visual
   baselines, WindowDeactivate ingress, physical DPR-2 pixels, ruled-deviation
   conjuncts (input A015/A017/A019, selftest transport A009–A013).
+
+## 25. Wave 200–205 — the bridge-probe remount, wording parity and the retired-flow tails
+
+### Selection and bounded briefs
+
+Planning baseline: 46 ledgers; `proof check` 0 errors; strict-mapping debt
+235. HEAD `432eaaa1` — wave 194–199 landed in full, and its two closed
+ledgers (automationgesturecheck parity, hostseams is likewise clean) deleted
+their C++ sources. Working tree is clean except the user's untracked
+`docs/plans/swift-clipboard-cutover/`, `swift-keybindings-integration/`,
+`.omp/rules/swift-typecheck-complexity.md` and `profiler/`.
+
+Re-examining the parked/blocked clusters with fresh eyes:
+
+- **midi/midiexport 13 PARTIAL** (`proof.tst_midiexport.txt`): every residual
+  is a QTest-fixture guard tail — staged-root directory check (A001), song
+  label guard (A002), `fixture` open value + `qPrintable(error)` error-string
+  propagation (A003/A005/A024/A032), `QTemporaryDir` scratch validity
+  (A006/A025/A033), `readFile` predicates (A009/A027/A029) and empty-error
+  (A035). `KeybindingRegistry.swift:113` registers `file.export_wav` but no
+  production handler or export surface exists in the Swift shell, so there is
+  no user-visible surface change that can carry these rows. **Stay parked**
+  with the P3 WAV bundle.
+- **project/identity 19 PARTIAL** (`project/proof.identity.txt`): the
+  residuals are `SongName::create`/`VoicegroupId::create` value-law
+  conjuncts (empty-label rejection, equality/inequality, `qHash`,
+  `sectionLabel`, `sourceRelativePath`) whose "unproved" note is uniformly
+  "the value type has no Swift ingress". No user-visible label-construction
+  surface is named; closing is a reconciliation over already-executing
+  service predicates, which §19/§21 forbid outside a real surface change.
+  **Stay parked** for the identity surface.
+- **rollcheck 18 PARTIAL** is closable: 11 of the 15 non-164 rows are pure
+  native representation (resize cursor pixmaps A002–A004/A020/A027/A028 —
+  Swift publishes a named cursor shape, never a `Qt::BitmapCursor` pixmap;
+  identity A014 — the QFAIL names Qt's ViewState capture/apply pair; the
+  scale_editing QFAILs A017/A027/A030 count Qt undo-stack commands, a
+  representation Swift's `undoDocument` guard has no counterpart of).
+  `selection` A009 (band-sweep audition duration not exposed by `onAudition`)
+  adjudicates per clause. Presentation A018–A024 stay blocked on 164's
+  QtBridge object passing. Task 201.
+- **voicegroupbank 15 PARTIAL** splits: label-guard tails A001/A003/A014/
+  A015/A017/A022/A044/A048–A050 share identity's "no Swift ingress" ruling —
+  parked; the savecore write-failure family A089–A093 stays parked on the
+  standing savecore decision. No surface task in this wave.
+- **mainwindowrouting remainders**: input A091/A150 (`m_insertTimeAction`
+  QAction identity, ruler-input bounds containment) and A152
+  (grid/time-signature/camera observation) are reachable on the mounted
+  ruler-menu lanes — task 204. Native A069's named-lookup conjunct
+  adjudicates on `tst_ShellTabs.qml` — task 204. State A094–A099
+  (`editActionsStartUnboundWithNoWorkspace`, `m_editActions` QAction-set
+  identity) adjudicate on the mounted no-tab shell — task 200, which already
+  owns the state ledger for its anchor edits. Input A015/A017/A019 ruled
+  deviations, the input fixture-seed GAPs (A088–A090/A120/A123–A125/
+  A146/A147/A166/A169–A174/A191), lifecycle's sidecar/`swift-project-store`
+  tails and native's Cocoa/QAction/signal-count GAPs stay parked.
+- **swiftqtml 78 GAP**: the §17 flag demanded a consumer audit before
+  retirement. The audit: `BridgeProbe.qml` imports `SwiftQtMlCheck 1.0`, a
+  module that no longer registers (the C++ lane deleted at `67544720`;
+  `sqpRegisterProbeTypes` is dead code), and `tst_SwiftRoll.qml` never mounts
+  it — only `BridgeProbeLifetimeChecks` run, from `cleanupTestCase`. The
+  surface these rows map to is the QtBridge QML↔Swift contract itself:
+  presenter property binding, `QListModel` row mutation/replacement/reset
+  delegate-identity, returned/selected object lifetime, and the null
+  selection. Task 202 remounts `BridgeProbe` inside the rollqml lane —
+  registering `BridgeProbe` in `runSuite` and driving the fixture with real
+  QML — proving the bridge law per clause (MATCHED) or closing the
+  prototype-only conjuncts as RETIRED-REPRESENTATION with executed refusal
+  predicates on the mounted probe. `actViaRow` object-argument invocations
+  stay out of the lane (the pinned QtBridge cannot pass objects into slots;
+  the harness calls the same contract through `actViaSelectedRow`, as the
+  fixture already does).
+- **swiftrollgated** A017: the only open row, ED11 clipboard text ownership —
+  standing exclusion unchanged. Not in the wave.
+- **workspace**: selftest_timeline A020 (`previewWhileStoppedDoesNotStartTransport`
+  already-stopped Stop before the stopped audition) is reachable on the
+  mounted transport lane — task 203; its Null-backend physical-output
+  residuals (A006/A009/A011/A014) and selftest_transport's (A005/A007/A011/
+  A015) stay PARTIAL per the standing rule, and A009/A010/A013 stay
+  ruled-deviation PARTIAL. `tabs_transport` A062 ("NativeAudio
+  `updateSettings(config:)` publication of the song volume") is reachable on
+  the mounted `shell-transport-volume` lane — the task adds a small
+  production `songVolume` publication on `NativeAudio` if the applied setting
+  is not already observable. `session` A024/A042 keep the `swift-project-store`
+  sidecar exclusion.
+- **hostintegration/hostadapter**: A004's `session->active` two-note context
+  is observable on a mounted two-tab shell — task 203 pins it from
+  `HostBehaviorChecks.swift` (the file 195 already wrote). A087/A091 stay
+  PARTIAL (WindowDeactivate has no mounted ingress — a real runtime event we
+  cannot synthesize). Hostadapter A079 (centring decision), A095
+  (same-GUI-pass queued-notification residue) and its NATIVE-SETUP row stay
+  parked. Hostintegration A162/A174–A185 stay parked on the real
+  window-close harness.
+- **viewcache/sourceediting (196 residue)**: 196 landed `S038` but left
+  viewcache A046's pending-origin conjunct, A069's coordinator-gate conjuncts
+  and all seven voicegroupsourceediting GAPs (A086–A092, the retired
+  createVoicegroup/appendIncludeLine flow that spec.md:63 lists as dead
+  surface). Task 205 finishes the retirement the §24 brief described.
+- **MouseHints wording residual (state A250 note)**: the fork's `fragment()`
+  renders `label + separator + ' ' + action` — "⇧ Right-drag", "⌘ Wheel" —
+  while `MouseHints.swift` concatenates the glyph directly ("⇧Right-drag").
+  The fork wording is the intended UI text (§54's house-style comment calls
+  the leading space deliberate); task 200 restores it across the three lanes
+  that pin the literals and refreshes the A250 mapping note.
+
+The wave is six tasks, each on a mounted surface or an already-executing
+check surface:
+
+| Task | Surface / brief | Rows | Group |
+|---|---|---|---|
+| 200 | [Mouse hints render the fork's modifier-fragment spacing and the unloaded edit actions stay bound](task-200-brief.md) | state A094–A099 (6 GAP) + the A250 wording residual (anchor/note refresh only) | A |
+| 201 | [The mounted roll retires the cursor-bitmap, view-state and undo-count representations](task-201-brief.md) | rollcheck identity A014, resize A002–A004/A020/A027/A028, scale_editing A017/A027/A030, selection A009 (11 PARTIAL → RR or MATCHED); identity/resize/scale_editing ledgers delete on zero | A |
+| 202 | [The bridge probe remounts inside the roll lane and audits the QtBridge contract](task-202-brief.md) | swiftqtml A004–A097 (78 GAP → MATCHED or RR per clause); ledger deletes on zero | A |
+| 203 | [The mounted session and transport lanes pin the already-stopped Stop, song-volume and active-tab residuals](task-203-brief.md) | selftest_timeline A020, tabs_transport A062 (2 PARTIAL… A062 GAP), hostintegration A004 (1 PARTIAL) | A |
+| 204 | [The mounted ruler menu and tab strip adjudicate the action-identity and named-lookup tails](task-204-brief.md) | input A091/A150/A152 (3 GAP), native A069 (1 PARTIAL → MATCHED or RR) | A |
+| 205 | [The voicegroup coordinator and the retired creation flow close their ledgers](task-205-brief.md) | viewcache A046 residual conjunct + A069 (2 PARTIAL), voicegroupsourceediting A086–A092 (7 GAP → RR); sourceediting ledger deletes on zero | A |
+
+### What was excluded and why — census evidence
+
+- **200 owns the state ledger alone** this wave: its literal refresh must
+  rewrite the two `Anchor: message` lines in `proof.tst_mainwindowrouting_
+  state.txt` that pin `tst_ShellWindowHints.qml`, and the A094–A099
+  adjudication rides the same ledger; no other task may touch that file.
+- **201's ledger deletions**: `rollcheck/identity.cpp`, `resize.cpp` and
+  `scale_editing.cpp` are already deleted sources (headers carry `Deleted
+  in:` `67544720`); once their open rows close, the ledger files delete in
+  the task's commit. `selection` keeps no other open rows — A009 is its last
+  PARTIAL — so its ledger deletes too if A009 closes; the brief carries both
+  dispositions.
+- **202 is the §17 "consumer audit" made a task**: the prototype fixture is
+  dead and its presenter is still live Swift production code of the rollqml
+  lane, so the correct move is a surface task proving the replacement (the
+  mounted probe inside `roll_qml_tests`), not a blanket retirement. Clauses
+  that are prototype-harness artefacts (delegate serial counters, probe
+  diagnostics helpers) close RR with executed refusal predicates on the
+  mounted bridge guards; bridge-law clauses close MATCHED.
+- **203's A062**: the mounted `shell-transport-volume` lane already types a
+  master-volume edit through `setMasterVolume` → `updateSettings(config:)`;
+  the task adds an observable applied-song-volume publication on
+  `NativeAudio` only if no existing surface reads the applied setting, and
+  pins it with an independent literal.
+- **204's fixture rows stay open**: input A088–A090/A120/A123–A125/
+  A146/A147/A166/A169–A174/A191 are fixture-open/seed guards with no
+  SessionChecks counterpart — reconciliation-only, parked per §19/§21.
+- **Parked, unchanged**: midiexport 13P (no export surface; P3), project
+  identity 19P + voicegroupbank label-guard + A089–A093 savecore tails (no
+  value-type ingress surface; savecore decision), lifecycle sidecar/store
+  tails and session A024/A042 (`swift-project-store`), rollcheck presentation
+  A018–A024 (164/QtBridge object passing), swiftrollgated A017 (ED11),
+  selftest physical-output conjuncts and ruled deviations (transport
+  A009/A010/A013, input A015/A017/A019), voicegroupsave presentation
+  A032–A037 + savecore GAPs (VG03 create flow, catalog outage), onboardcheck
+  import wizard, samplecheck (P4), nativegraphics + retained + mainwindow-
+  routing native 28G (native boundaries/Cocoa/QAction/signal counts),
+  visual 46 (frozen baselines), themelayout 36 (owner decisions), hostadapter
+  A079/A095/NATIVE-SETUP, hostintegration A087/A091 (WindowDeactivate
+  ingress) + A162/A174–A185 (window-close harness), automation presentation
+  A037 (physical DPR-2), automation hover A133 (in flight separately).
+
+### Conflict matrix and dispatch groups
+
+Write sets are pairwise disjoint (each brief lists its exact set). Six tasks,
+five independent writers; ledgers are per-task disjoint so the single ledger
+writer applies each set serially without row-level arbitration. `tst_ShellTabs.qml`
+is written only by 204; `tst_ShellWindowHints.qml`, `tst_ShellTabsMouseHints.qml`
+and `tst_ShellDrawerParityAutomation.qml` only by 200. `RollQmlTests.swift`
+and `BridgeProbe.qml`/`BridgeProbeCheck.swift` are 202's alone. No task
+touches a `Shell*Support.qml` shared file.
+
+| Task | Ledger files | Check/predicate files |
+|---|---|---|
+| 200 | `mainwindowrouting/proof.tst_mainwindowrouting_state.txt` | `src/swift/app/MouseHints.swift`, `editorqml/tst_ShellWindowHints.qml`, `editorqml/tst_ShellTabsMouseHints.qml`, `editorqml/tst_ShellDrawerParityAutomation.qml`, `editorqml/tst_ShellWindowShortcuts.qml` |
+| 201 | `rollcheck/proof.identity.txt`, `proof.resize.txt`, `proof.scale_editing.txt`, `proof.selection.txt` | `rollqml/tst_SwiftRollSelection.qml`, `editorqml/tst_ShellNoteVisuals.qml`, `rollcheck/scale_editing.swift`, `rollcheck/identity.swift` |
+| 202 | `swiftqtml/proof.tst_swiftqtml.txt` | `rollqml/RollQmlTests.swift` (registration), `swiftqtml/BridgeProbe.qml` (module retarget), `rollqml/tst_SwiftRollBridge.qml` (new), `swiftqtml/BridgeProbeCheck.swift` (fixture slots only) |
+| 203 | `workspace/proof.selftest_timeline.txt`, `workspace/proof.tabs_transport.txt`, `host/proof.tst_hostintegration.txt` | `editorqml/tst_ShellTransportSession.qml`, `editorqml/tst_ShellTransportVolume.qml`, `host/HostBehaviorChecks.swift`, `src/swift/app/NativeAudio.swift` (observability only if needed) |
+| 204 | `mainwindowrouting/proof.tst_mainwindowrouting_input.txt`, `proof.tst_mainwindowrouting_native.txt` | `editorqml/tst_ShellWindowPrompts.qml`, `editorqml/tst_ShellGridMenuRulerLifecycle.qml`, `editorqml/tst_ShellTabs.qml` |
+| 205 | `voicegroup/proof.tst_voicegroupviewcache.txt`, `voicegroup/proof.voicegroupsourceediting.txt` | `workspace/bank_history_probes.swift`, `workspace/bank_undo_publication.swift`, `voicelist/VoiceListChecks.swift` |
+
+| Group | Tasks | Note |
+|---|---|---|
+| A | 200, 201, 202, 203, 204, 205 | Independent writers. Ledger rows serialized through the single ledger writer; ledgers are per-task disjoint. 200's QML literal edits are evidence-breaking for the lanes it touches; siblings must not cite the old literals. |
+
+### Shared constraints and verification ownership
+
+The §16–§24 contracts continue: fork clauses win; one predicate per fork
+clause with its unique complete literal; each A-id on exactly one predicate;
+a fork require/QVERIFY with conjuncts is ONE predicate per iteration even
+inside a loop; expectations independent of production projections; a fork
+state unreachable in Swift closes as RETIRED-REPRESENTATION with executed
+refusal predicates; no test-only APIs or ingress — real production entry
+points only; fail-closed staging; no Qt.callLater, no focus memory, no second
+dispatcher, no idempotence guards; opaque pre-stimulus snapshots allowed;
+WCAG AA beats parity; queued QtBridge notifications keep same-GUI-pass
+clauses PARTIAL. Ledger rows are edited only in the commit whose code and
+checks prove them; closed rows use the compact form. Writers run their
+brief's focused lanes under the lock/175-second alarm; no project-wide
+builds, tests, formatters or linters mid-flight; the controller owns the
+project-wide gate once after sources settle. Planning validation for this
+docs-only commit checked brief links/headings, pinned fork citations, row
+statuses (`proof sites` per area: state 0P/6G, input 3P/20G, native 1P/28G,
+rollcheck identity 1P/resize 6P/scale_editing 3P/selection 1P, swiftqtml
+78G, selftest_timeline 5P, tabs_transport 1G, hostintegration 3P/7G,
+viewcache 2P, sourceediting 7G), lane registrations (`shellwindow-hints`,
+`shell-tabs-mouse-hints`, `shell-drawer-parity-automation`,
+`shellwindow-shortcuts`, `shell-transport-session`,
+`shell-transport-volume`, `shellwindow-prompts`,
+`shell-grid-menu-ruler-lifecycle`, `shell-tabs-*`, `swiftroll-window`,
+`swiftcore`, `swiftcore-projectsession`, `swiftcore-bankhistory`), and
+pairwise write-set disjointness; no application suite was run.
+
+### Deferred and excluded
+
+- Unlock paths: the user's QtBridge object passing (164 + rollcheck
+  presentation A018–A024), `swift-project-store` (sidecar/view-state
+  families), theme-dialog and hostadapter A079 centring, a real window-close
+  harness (hostintegration A162/A174–A185), catalog-outage savecore rows,
+  the hostadapter A095 same-GUI-pass residue, the identity/midiexport/
+  voicegroupbank guard-tail reconciliation gate, WindowDeactivate ingress
+  (A087/A091), physical audio (selftest physical-output conjuncts,
+  tabs_transport physical rows), and the P3/P4 features.
+- Strict-mapping debt (235) untouched by design.
+- Standing exclusions unchanged: savecore A016–A026, pending-reload input
+  gate, transport A009/A010/A013, ImageIO, ED11 clipboard text ownership,
+  New Voicegroup creation surfaces, visual baselines, physical DPR-2 pixels,
+  ruled-deviation conjuncts (input A015/A017/A019, viewcache A046's
+  bank-only-dirt close refusal, selftest transport A009–A013).
