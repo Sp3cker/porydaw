@@ -3207,3 +3207,160 @@ run.
   gate, P3 WAV, P4 sample studio, transport A009/A010/A013, physical audio,
   ImageIO, ED11 clipboard text ownership, New Voicegroup creation surfaces,
   visual baselines, WindowDeactivate ingress, physical DPR-2 pixels.
+
+## 24. Wave 194–199 — representation retirements and the mounted residuals
+
+### Selection and bounded briefs
+
+Planning baseline: 47 ledgers; open rows 1034 (855 GAP + 179 PARTIAL); strict
+debt 235; `proof check` 0 errors. HEAD `b97c1c01` — wave 188–193 landed in
+full and its six closed ledgers (corearrows, tabs_scale, windowtier_lifetime,
+windowtier_keyboard, automationgesturecheck hover/contract) are deleted.
+Working tree is clean except the user's untracked docs/profiler items
+(`docs/plans/swift-clipboard-cutover/`, `swift-keybindings-integration/`,
+`.omp/rules/swift-typecheck-complexity.md`, `profiler/`).
+
+The surviving open inventory is dominated by families that stay excluded:
+samplecheck 408 (P4), swiftqtml 78 (retired prototype fixture), visual 46
+(frozen baselines), onboardcheck 45 (import wizard), themelayout 36
+(theme-dialog/header-rule owner decisions), nativegraphics 27 + retained 18
+(native boundaries), mainwindowrouting native 29 (Cocoa/QAction/focusWidget),
+project ioflow/iomutations/workspace ~140 (`swift-project-store` and
+backend-protocol representation), voicegroup bank/savecore guard tails
+(pending user decision), identity/midiexport guard reconciliation, savecore
+A016–A026, session A024/A042 sidecars, tabs_transport A062 physical audio,
+selftest physical-output conjuncts, hostintegration A162/A174–A185 real
+window close, hostadapter A079/A095 decisions/residue, task 164's
+presentation A018–A024 conjuncts (QtBridge object passing), swiftrollgated
+A017/A023 (ED11 text ownership), input/lifecycle/state PARTIALs that name
+user-ruled deviations or parked sidecar guards.
+
+What remains reachable is exactly the class the prompt asks about: ledgers
+whose open rows are all blocked or representation-only, closable by a
+surface task that proves refusal, plus mounted-shell residual conjuncts
+whose executed predicates already exist but lack the message-anchored proof
+each fork clause requires. The wave is six surface tasks:
+
+| Task | Surface / brief | Rows | Group |
+|---|---|---|---|
+| 194 | [The automation drawer's hint and gesture invariants retire their native-token tails](task-194-brief.md) | automation/hover A108/A121/A123/A126/A133/A143 (6 PARTIAL → RETIRED-REPRESENTATION or MATCHED); automationgesturecheck parity A001/A002 (2 PARTIAL); ledgers deleted on zero | A |
+| 195 | [The mounted host surfaces close the fixture, grabber and null-timeline tails](task-195-brief.md) | hostintegration A003/A004/A007 (fixture representation) + A087/A091 (mouseGrabberItem identity); hostadapter A137 (non-optional timeline build); all 6 PARTIAL | A |
+| 196 | [The voicegroup coordinator and the retired creation flow close their ledgers](task-196-brief.md) | voicegroupviewcache A046/A069 (2 PARTIAL); voicegroupsourceediting A086–A092 (7 GAP → RETIRED-REPRESENTATION); both ledgers deleted on zero | A |
+| 197 | [The ruler Insert Time route and the velocity-toggle focus pin their residuals](task-197-brief.md) | mainwindowrouting input A154–A165 (12 PARTIAL) + A036/A037 (2 PARTIAL); A152 if its snap observation proves mounted | A |
+| 198 | [The track-header menu, rename and status-hint footer pin every residual conjunct](task-198-brief.md) | mainwindowrouting state A188/A204/A208/A217/A224/A227/A250/A253/A255/A258/A260 (11 PARTIAL) + A262–A267 (6 GAP) | A |
+| 199 | [Tab readiness and reload staging close as retired signal-count representation](task-199-brief.md) | mainwindowrouting lifecycle A033/A034/A041/A046/A047/A051–A054/A064/A068/A071 (11 PARTIAL → MATCHED or RETIRED-REPRESENTATION) | A |
+
+### What was excluded and why — census evidence
+
+- **Ledger closure criteria**: 194's hover ledger reaches zero open rows if
+  all six source-token PARTIALs retire (§23 already names them "a native
+  pointer-token identity that has no observable Swift surface"); each brief
+  carries the refusal-predicate path and, where a clause is observable,
+  MATCHED. 196's two ledgers reach zero for the same reason; their C++
+  sources are uncompiled in every target, so the ledgers and sources delete
+  in the task's commit. 194 likewise deletes `tst_automationhover.cpp` and
+  `parity.cpp` (both uncompiled) with their ledgers. hostintegration keeps
+  its excluded GAPs (A162/A174–A185), so its ledger stays; the input and
+  lifecycle ledgers keep their `swift-project-store`/fixture-guard and
+  ruled-deviation rows.
+- **Parked clusters (unchanged from §23)**: project identity 19P and
+  voicegroupbank label-guard tails A001/A003/A014/A015/A017/A022/A044/
+  A048–A050 — reconciliation over already-executing predicates, riding only
+  in a future bank/identity surface change; midiexport 13P same class plus
+  P3; voicegroupbank A087–A093 savecore decision; voicegroupsave
+  presentation A032–A037 + savecore A016–A025/A026 GAPs (VG03 create flow,
+  catalog-outage decision); workspace session A024/A042, tabs_transport
+  A062, selftest physical-output conjuncts; automation presentation A037
+  (DPR-2 pixels); rollcheck identity A014, presentation A018–A024 (164),
+  resize A002–A004/A020/A027/A028 (cursor-bitmap representation), selection
+  A009, scale_editing A017/A027/A030 (QFAIL undo-count representation) —
+  representation tails that §19/§21/§23 forbid closing outside a real
+  surface change; hostseams has zero open rows and its ledger is a cleanup
+  candidate for the controller, not a wave task.
+- **Ruled deviations stay PARTIAL** per the transport A009/A010/A013
+  precedent: input A015 (deliberate text-chrome focus retention), A017/A019
+  (cursor commits never seek), lifecycle A025/A033/A034 focus-retention
+  conjuncts that name the deviation, themelayout_color A038/A039 (unshipped
+  branch/sample-editor roles), hostadapter A079/A095.
+- **194's parity rows**: A001/A002 are helper guards (`isOneEdit`,
+  `isUnchanged`) whose per-gesture predicates exist but are unlabelled; the
+  brief adds the executed, message-anchored law predicates on the mounted
+  gesture lanes rather than re-citing neighbours.
+- **198's GAPs**: A263–A267 are native status-bar geometry clauses whose
+  mounted equivalent is the ShellWindow hint footer (S237–S239 partial
+  coverage); the task pins caption identity, meter x-offset, bar height and
+  centred-elision invariants on that footer, or retires each clause as
+  representation when no footer counterpart exists. A262 (hint-source
+  identity) follows 194's source-token retirement ruling.
+- Unchanged unlock paths: task 164 (QtBridge QML→Swift object passing),
+  `swift-project-store`, theme-dialog/A079 centring, real window-close
+  harness, catalog-outage savecore rows, savecore A016–A026, pending-reload
+  input gate, P3 WAV, P4 sample studio, WindowDeactivate ingress, physical
+  DPR-2 pixels, physical audio readback.
+
+### Conflict matrix and dispatch groups
+
+Write sets are pairwise disjoint (each brief lists its exact set). All six
+tasks write distinct ledger files and distinct check sources; the single
+ledger writer applies each set serially without row-level arbitration. The
+three `Shell*Support.qml` shared files stay out of every write set — a task
+that truly needs one messages the controller first.
+
+| Task | Ledger files | Check/predicate files |
+|---|---|---|
+| 194 | `automation/hover/proof.tst_automationhover.txt`, `automationgesturecheck/proof.parity.txt` | `editorqml/tst_EditorDrawerAutomationHover.qml`, `automation/domain/tst_automationdomain.swift`, `automation/AutomationPageChecks.swift`; deletes `automation/hover/tst_automationhover.cpp`, `automationgesturecheck/parity.cpp` |
+| 195 | `host/proof.tst_hostintegration.txt`, `host/proof.tst_hostadapter.txt` | `host/HostBehaviorChecks.swift`, `editorqml/tst_ShellWindowVelocity.qml`, `rollcheck/ruler_loop_menu.swift` |
+| 196 | `voicegroup/proof.tst_voicegroupviewcache.txt`, `voicegroup/proof.voicegroupsourceediting.txt` | `workspace/bank_undo_publication.swift`, `workspace/bank_history_probes.swift`, `voicelist/VoiceListChecks.swift`; deletes `voicegroup/tst_voicegroupviewcache.cpp`, `voicegroup/voicegroupsourceediting.cpp` |
+| 197 | `mainwindowrouting/proof.tst_mainwindowrouting_input.txt` | `workspace/session_edit_routing.swift`, `editorqml/tst_ShellWindowFocus.qml`, `editorqml/tst_ShellWindowPrompts.qml`, `editorqml/tst_ShellWindowTimeEditing.qml` |
+| 198 | `mainwindowrouting/proof.tst_mainwindowrouting_state.txt` | `editorqml/tst_ShellWindowHints.qml`, `trackheaders/trackheaderinput.swift` |
+| 199 | `mainwindowrouting/proof.tst_mainwindowrouting_lifecycle.txt` | `workspace/session_view_state.swift`, `editorqml/tst_ShellTabsReload.qml` |
+
+| Group | Tasks | Note |
+|---|---|---|
+| A | 194, 195, 196, 197, 198, 199 | Independent writers. Ledger rows serialized through the single ledger writer; ledgers are per-task disjoint. |
+
+### Shared constraints and verification ownership
+
+The §16–§23 contracts continue: fork clauses win; **one predicate per fork
+clause** — a fork require/QVERIFY with conjuncts, even inside a loop over
+surfaces/routes, is ONE predicate executed per iteration; never split one
+clause across several predicates and never fold a clause into another row's
+predicate; each A-id on exactly one predicate; **expectations independent of
+production projections** (independent literals, not read-back computed
+state); **a fork state unreachable in Swift closes as
+RETIRED-REPRESENTATION with executed refusal predicates** (the ruled
+precedent: track beyond used tracks, time-signature under Insert Time, null
+voicegroup); **no test-only APIs or ingress** — production entry points
+only; fail-closed staging; no Qt.callLater, no focus memory, no second
+dispatcher, no idempotence guards; opaque pre-stimulus snapshots allowed;
+WCAG AA beats parity; queued QtBridge notifications keep same-GUI-pass
+clauses PARTIAL. Ledger rows are edited only in the commit whose code and
+checks prove them; closed rows use the compact form. Writers run their
+brief's focused lanes under the lock/175-second alarm; no project-wide
+builds, tests, formatters or linters mid-flight; the controller owns the
+project-wide gate once after sources settle. Planning validation for this
+docs-only commit checked brief links/headings, pinned fork citations, row
+statuses (`proof sites` per area: hover 6P, parity 2P, hostintegration 5P/7G,
+hostadapter 2P/1G, viewcache 2P, sourceediting 7G, input 17P/20G, state
+11P/12G, lifecycle 35P/20G), lane registrations (`editorqml-drawer`,
+`shellwindow-velocity`, `shellwindow-hints`, `shellwindow-focus`,
+`shellwindow-prompts`, `shellwindow-time-editing`, `shell-tabs-reload`,
+`swiftcore`, `swiftcore-projectsession`, `swiftcore-bankhistory`), and
+pairwise write-set disjointness; no application suite was run.
+
+### Deferred and excluded
+
+- Unlock paths: the user's QtBridge object passing (164 + rollcheck
+  presentation A018–A024), `swift-project-store` (sidecar/view-state
+  families), theme-dialog and hostadapter A079 centring, real window-close
+  harness (hostintegration A162/A174–A185), catalog-outage savecore rows,
+  hostadapter A095 same-GUI-pass residue, the identity/midiexport/
+  voicegroupbank guard-tail reconciliation gate.
+- Strict-mapping debt (235) untouched by design.
+- Standing exclusions unchanged: savecore A016–A026, pending-reload input
+  gate, P3 WAV, P4 sample studio, transport A009/A010/A013, physical audio,
+  ImageIO, ED11 clipboard text ownership, New Voicegroup creation surfaces
+  (the §23 VG03 presentation A032–A037 rows stay; only the retired
+  source-editing flow in voicegroupsourceediting is closed by 196), visual
+  baselines, WindowDeactivate ingress, physical DPR-2 pixels, ruled-deviation
+  conjuncts (input A015/A017/A019, selftest transport A009–A013).
