@@ -16,6 +16,7 @@ Swift counterpart: src/checks/workspace/session_view_state.swift
 Swift counterpart: src/checks/workspace/editor_view_state_checks.swift
 QML counterpart: src/checks/editorqml/tst_ShellWindow.qml (window-title rows A002/A005, S186-S188)
 QML counterpart: src/checks/editorqml/tst_ShellTabs.qml (mounted two-tab shared-bank journey S194-S200 and shared-drawer close/reopen S211-S217, shell-tabs lane)
+QML counterpart: src/checks/editorqml/tst_ShellSongs.qml (A017; SHA-256 441d3b329d58b0a6bfc657d87a0f93147f025f1bb9d7476f2f6aa74f16c4fa3a)
 Shared helper: src/checks/workspace/session_fixtures.swift
 Shared SHA-256: bad9687a1301619c8bee2268a96a52ac104fe34ebe1eccd6b05a38ffb11ac741
 Shared helper: src/checks/workspace/session_support.swift
@@ -53,6 +54,9 @@ Command: deno task verify --filter swiftcore-projectsession; deno task verify:sh
 Result: Task 103 implementer GREEN: shell-tabs 1/26 PASS; task predicates passed in focused Swift run (2 harnesses passed, one failed on unrelated rollcheck A041/AutomationPage tick-zero). Implementer-tested source SHA-256: session_view_state.swift 1877e7b484ff3011a97d729a09468218ba1ff93a5ba1da6da45e4a9dca6990b8; tst_ShellTabs.qml f7c1625360bce81f30bbf182d0a530ceaf330bdb15bdd93bf07f8ad986781ee5.
 Task 65 note (ledger pass, no lane re-run): the frozen counterpart write set is src/checks/workspace/session_view_state.swift (sha256 10266bc4650d53a0d7f3b61af5a640bb4bff9456b7d0cf4d3f22c892d117879f, runSessionViewStateChecks :35-81) plus src/checks/editorqml/tst_ShellTabs.qml test_sharedDrawerCloseAndReopen (sha256 9c89b6d2a36e5892de2f8e66b33e5fa18094fbc9b7015b0a2eb269bc40346eeb, :789-821). Indexed S201-S210 (swiftcore editorViewState) and S211-S217 (shell-tabs drawer journey); all are executed (swiftcore-projectsession.json passes; shell-tabs.json functions). No disposition flipped to MATCHED: the session open rows assert windowGeometry, lastProjectDir/lastSongLabel/lastOpenSongs/songFilterText, song-list, sidecar, sessionAndEditorSettings and single-object full-state equalities with no exact Task65 predicate, so they stay GAP/PARTIAL with refreshed reasons (A011/A012/A028/A033/A034 now cite the new drawer/round-trip predicates as related and name the unproved single-object half). The ledger is NOT deleted. Lane evidence is the controller-provided frozen task-65 result (all covering lanes passed). This pass ran only read-only evidence queries and deno task proof check variants.
 
+Command: deno task verify:shell --filter shell-songs
+Result: PASS — shell-songs 1/76 ok (observed in the assignment handoff; not rerun by this ledger agent).
+Frozen QML SHA-256: src/checks/editorqml/tst_ShellSongs.qml 441d3b329d58b0a6bfc657d87a0f93147f025f1bb9d7476f2f6aa74f16c4fa3a
 Command: deno task verify:shell --filter shellwindow --verbose
 Result: PASS for the shellwindow lane (1/1) on the task-24 settled sources; implementer-run per the task-24 handoff, not re-run by the ledger agent. The same handoff records the full shell sweep failing the typography static-title pin (deleted by task 24; focused rerun green) and shell-chrome-visuals (controller-owned scope).
 
@@ -140,8 +144,8 @@ A016 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/
 Disposition: RETIRED-REPRESENTATION
 
 A017 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:188
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift song list model/presenter (src/checks/songlist/songlist_checks.swift) exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping: S250
 Source context since previous assertion:
   ;
 Original expression:
@@ -990,3 +994,6 @@ Anchor: message "reopening retains the real resized shared section height"
 
 S249 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
 Anchor: message "reopened editor retains the hidden lane ordering"
+
+S250 | test_songFiltersSurviveShellRelaunch (shell-songs lane) :816-818 verify(reopenedCategoryBox !== null && reopenedCategoryBox.count > 1, "the reopened Songs browser still lists more than one category") | src/checks/editorqml/tst_ShellSongs.qml
+Anchor: message "the reopened Songs browser still lists more than one category"

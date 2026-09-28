@@ -813,6 +813,9 @@ TestCase {
                 && findChild(shell, "songListCategory").currentIndex === presenter().categoryIndex
                 && presenter().categoryIndex > 0
         }, 3000, "song filter text, sort and category restore across a fresh shell session")
+        const reopenedCategoryBox = findChild(shell, "songListCategory")
+        verify(reopenedCategoryBox !== null && reopenedCategoryBox.count > 1,
+               "the reopened Songs browser still lists more than one category")
         cleanup()
         settings.setString("songFilterText", "")
         settings.setInt("songFilterSort", 0)
