@@ -24,6 +24,11 @@ public final class SongTabSession {
     /// (voicegroup) edits alike count: both are work the close gate must not
     /// discard without an answer.
     public var dirty: Bool
+    /// Whether this tab owns an in-flight bank transition. While set, the
+    /// strip refuses this tab's close and the session refuses its next bank
+    /// action; other tabs are unaffected. Refreshed with `dirty` on every
+    /// session publication, so the flag tracks the history's live answer.
+    public var bankTransitionPending: Bool = false
     /// Whether this tab's song is presented. A tab exists only while its
     /// document is open, so a live tab's own answer is always true. The member
     /// exists because the surface reads one session object: the drawer pages'
@@ -71,11 +76,14 @@ public final class SongTabSession {
     }
 
     /// Republishes this tab's own dirty state, for the strip caption and for the
-    /// close gate.
+    /// close gate, alongside its pending bank-transition flag, for the
+    /// origin-scoped close gate. Both track the session's live answers.
     @QtIgnored
     func refreshDirty() {
         let value = SongTabSession.isDirty(workspace.session)
         if dirty != value { dirty = value }
+        let pending = workspace.session.document.history.bankTransitionInFlight
+        if bankTransitionPending != pending { bankTransitionPending = pending }
     }
 
     // MARK: - Editor surface: this tab's document
@@ -304,6 +312,22 @@ public final class SongTabsController {
         for tab in tabs { tab.refreshDirty() }
     }
 
+    /// The tab owning the in-flight bank transition, or -1 while none is
+    /// pending. A pending transition gates close and bank actions on its
+    /// origin tab only; every other tab follows document dirt alone.
+    public var pendingBankTabId: Int {
+        tabs.first { $0.bankTransitionPending }?.tabId ?? -1
+    }
+
+    /// Whether a tab's close affordance is enabled. A pending bank transition
+    /// refuses close on its origin tab; any other tab stays enabled whatever
+    /// its own bank dirt. Unsaved document dirt still raises the ordinary
+    /// close gate in `requestClose`.
+    public func closeEnabled(tabId: Int) -> Bool {
+        guard let tab = tabs.first(where: { $0.tabId == tabId }) else { return false }
+        return !tab.bankTransitionPending
+    }
+
     @QtIgnored
     func tab(id tabId: Int) -> SongTabSession? {
         guard let index = tabIndex(of: tabId) else { return nil }
@@ -372,10 +396,12 @@ public final class SongTabsController {
     /// being written. A tab that is already leaving the strip is not found here
     /// at all — its row is gone before it is retired. The third C++ refusal, a
     /// tab that is still loading, has no counterpart: a tab is installed only
-    /// after its document loaded, so nothing saveable is ever missing.
+    /// after its document loaded, so nothing saveable is ever missing. A tab
+    /// owning an in-flight bank transition is refused while it stays pending:
+    /// closing it would drop the transition's origin from under the commit.
     public func requestClose(tabId: Int) {
         guard pendingCloseBank == nil, let index = tabIndex(of: tabId),
-              savingCloseId != tabId else { return }
+              savingCloseId != tabId, !tabs[index].bankTransitionPending else { return }
         guard tabs[index].dirty else {
             closeTab(index: index)
             return

@@ -247,6 +247,7 @@ Item {
                             height: root.closeExtent
                             padding: 2
                             focusPolicy: Qt.NoFocus
+                            enabled: !selectButton.session.bankTransitionPending
                             display: AbstractButton.IconOnly
                             icon.source: "qrc:/porydaw/swiftroll/tabart/window-close.svg"
                             icon.width: root.scrollExtent

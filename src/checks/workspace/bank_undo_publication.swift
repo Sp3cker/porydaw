@@ -1,8 +1,7 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
-
 @MainActor
 internal func bankUndoPublicationChecks(_ report: CheckReport, fixtureRoot: String) {
     let id = "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates"
@@ -114,4 +113,88 @@ internal func bankUndoPublicationChecks(_ report: CheckReport, fixtureRoot: Stri
                   message: "immediate Undo leaves the confirmed bank edit redoable")
     report.expect(origin.document.history.canUndo, cppID: id,
                   message: "immediate Undo preserves the preceding document edit")
+    guard let peerID = app.songTabs.allTabs.first(where: { $0.workspace.session === peer })?.tabId else {
+        report.fail(id, "peer tab lookup failed for the pending-origin gate")
+        return
+    }
+    // A pending bank transition gates close and bank actions on its origin
+    // tab only: the origin refuses a second transition and its close while
+    // the non-origin tab stays close-enabled. A document publication pumps
+    // the production refresh that republishes every tab's pending flag.
+    guard let held = origin.document.history.beginBankTransition() else {
+        report.fail(id, "origin bank transition could not open for the pending-origin gate")
+        return
+    }
+    var pump = peer.document.state.config
+    pump.priority = pump.priority == 1 ? 2 : 1
+    peer.document.setConfig(pump)
+    let closeBefore = app.songTabs.pendingCloseId
+    let tabsBefore = app.songTabs.tabCount
+    app.songTabs.requestClose(tabId: originID)
+    let closeRefused = app.songTabs.pendingCloseId == closeBefore && app.songTabs.tabCount == tabsBefore
+    report.expect(origin.document.history.beginBankTransition() == nil
+                  && app.songTabs.pendingBankTabId == originID
+                  && !app.songTabs.closeEnabled(tabId: originID)
+                  && app.songTabs.closeEnabled(tabId: peerID)
+                  && closeRefused,
+                  cppID: id,
+                  message: "pending bank transition refuses origin-tab close while the non-origin tab stays close-enabled")
+    origin.document.history.endBankTransition(held)
+    // Resolutions addressed to another identity leave the pending origin
+    // bound: a full bank cycle on the peer session must not clear it.
+    guard let heldOther = origin.document.history.beginBankTransition() else {
+        report.fail(id, "origin bank transition could not reopen for the foreign-resolution gate")
+        return
+    }
+    guard let peerVoice = peer.bankSlots.first?.voice else {
+        report.fail(id, "peer lacks an editable slot for the foreign-resolution gate")
+        origin.document.history.endBankTransition(heldOther)
+        return
+    }
+    var peerEdited = peerVoice
+    peerEdited.release = peerVoice.release == 255 ? 254 : peerVoice.release + 1
+    do {
+        _ = try runBlocking {
+            try await peer.applyBankEdit(slot: 0, value: peerEdited, expected: peerVoice)
+        }
+    } catch {
+        report.fail(id, "peer bank edit failed during the foreign-resolution gate: \(error)")
+        origin.document.history.endBankTransition(heldOther)
+        return
+    }
+    report.expect(origin.document.history.bankTransitionInFlight
+                  && app.songTabs.pendingBankTabId == originID
+                  && !app.songTabs.closeEnabled(tabId: originID),
+                  cppID: id,
+                  message: "another tab's confirmed bank edit leaves the origin's pending transition bound")
+    origin.document.history.endBankTransition(heldOther)
+    // A hard error addressed to another identity leaves the pending origin
+    // bound: the peer's stale-expectation edit fails without touching it.
+    guard let heldHard = origin.document.history.beginBankTransition() else {
+        report.fail(id, "origin bank transition could not reopen for the foreign-error gate")
+        return
+    }
+    guard let failedBase = peer.bankSlots.first?.voice else {
+        report.fail(id, "peer lacks an editable slot for the foreign-error gate")
+        origin.document.history.endBankTransition(heldHard)
+        return
+    }
+    var failedValue = failedBase
+    failedValue.release = failedBase.release == 255 ? 254 : failedBase.release + 1
+    do {
+        _ = try runBlocking {
+            try await peer.applyBankEdit(slot: 0, value: failedValue, expected: original)
+        }
+        report.fail(id, "stale peer bank edit must fail during the foreign-error gate")
+        origin.document.history.endBankTransition(heldHard)
+        return
+    } catch {
+        // Expected: the other tab's hard failure carries its own identity.
+    }
+    report.expect(origin.document.history.bankTransitionInFlight
+                  && app.songTabs.pendingBankTabId == originID
+                  && !app.songTabs.closeEnabled(tabId: originID),
+                  cppID: id,
+                  message: "another tab's failed bank edit leaves the origin's pending transition bound")
+    origin.document.history.endBankTransition(heldHard)
 }
