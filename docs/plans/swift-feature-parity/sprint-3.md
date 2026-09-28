@@ -29,13 +29,15 @@ executed). Wave 155–162 landed except 158 (in flight): 155 (3b268b98), 156 (46
 wave 163–170 (§19). Census: proof files 155 → 63; open GAP+PARTIAL rows 3703 → ~1173
 (wave-163 planning: 63 ledgers, strict-mapping debt 293). Wave 163–170 landed: 158
 (4f8c16e7), 163 (21dd242f), 165 (2dc911ff), 166 (0cef1c3b), 167 (d3242623), 168 (4b49b544),
-169 (59f8582f), 170 (6bb8b57b); 164 blocked on QtBridge QML→Swift object passing. Wave
+164 blocked on QtBridge QML→Swift object passing. Wave
 171–174 landed: 171 (0c9f378d, New Song flow), 172 (2c2042c6), 173 (83e60dd7), 174
 (487052d5); File-menu topology check follows the fork's New Song row (1364a2ac). Census:
 62 ledgers; open GAP+PARTIAL rows 1132 (903 GAP + 229 PARTIAL); strict debt 286. Gate on
 1364a2ac: verify 36/36, verify:qml 1/1, verify:qml-roll 1/1, bridge 0; verify:shell 74/76 —
 shell-note-visuals is the rendering agent's in-progress test, shellwindow-label-commands
-is an AutomationMenu focus race (Qt.callLater grab; fix pending foreign build).
+is an AutomationMenu focus race (Qt.callLater grab; fix pending foreign build). Next:
+wave 175–178 (§21) — four clean-file briefs under the foreign-performance exclusions;
+the remaining clusters are blocked or foreign (§21 census).
 Known residues: QtBridge queues property notifications, so same-GUI-pass geometry clauses
 (host A095) stay PARTIAL; lanes use the null audio backend, so physical-output conjuncts
 stay PARTIAL.
@@ -2884,3 +2886,93 @@ pairwise write-set disjointness; no application suite was run.
 - All standing exclusions unchanged: savecore A016–A026, P3 WAV, P4 sample studio,
   transport A009/A010/A013, physical audio, ImageIO, pending-reload gate, ED11
   clipboard text ownership, New Voicegroup creation surfaces.
+
+## 21. Wave 175–178 — unreachable-state rulings and the clean-file remainder
+
+### Selection and bounded briefs
+
+Planning baseline: 62 ledgers, 1132 open rows (903 GAP + 229 PARTIAL), strict debt
+286. HEAD `f20232a0`. The foreign QML-performance work owns 88 dirty files,
+including nearly every `tst_Shell*.qml` support test, the rollqml tests, several
+rollcheck files, the whole velocity/OtherEvents drawer, the roll rendering set, both
+CMakeLists, `ShellQmlEntries.swift`, `checkcatalog.cpp` and `fwd.hpp`. Every brief
+below was verified to touch only files clean in `git status`. The two new user
+rulings apply: unreachable fork states close as RETIRED-REPRESENTATION with refusal
+predicates (159/166/168 precedent), and a voicegroup switch stays an undoable edit.
+
+Six tasks were requested; **four survive** the clean-file and surface-first filters:
+
+| Task | Surface / brief | Rows | Group |
+|---|---|---|---|
+| 175 | [Command enablement refuses the unbound-with-selection state](task-175-brief.md) | state A087–A091 (5 GAP; ruling) | A |
+| 176 | [A pending reload never exposes a partially bound tab](task-176-brief.md) | lifecycle A076–A079, A081 (5 GAP; ruling) | A |
+| 177 | [The track-header input binds to the published headers geometry](task-177-brief.md) | hostadapter A080/A082 (2 GAP) | A |
+| 178 | [Switching projects empties the tab set before the new project lands](task-178-brief.md) | lifecycle A091–A093 (3 GAP) | A |
+
+### Why not six — census evidence
+
+- Every remaining open cluster's check hosts, production owners, or both are dirty
+  (foreign): the Event List reveal family beyond blocked 164, the automation raster
+  pixel rows, the clipboardchecks ledger (foreign-modified), `tst_ShellTabsReload`,
+  `tst_SwiftRollPlots`, `tst_ShellGridMenu*`, pitch-bend and note-visuals tests.
+- The remaining lifecycle/state/input GAPs are fixture guards,
+  `swift-project-store`-classified (sidecar snapshots, project view-state settings,
+  failed-switch retention), native window close, QAction/focusWidget identity, or
+  the excluded pending-reload gate; iomutations/ioflow/workspace protocol
+  deferrals stand; retained/nativewindowing keep their standing rejection evidence;
+  midiexport and project-identity PARTIALs are guard/value tails over executing
+  predicates (reconciliation is forbidden by §19's rejection).
+- hostadapter's remainder after 177: A079 (owner decision), A098 (staging row),
+  A118 (foreign host), A140 (foreign OtherEvents raster). hostintegration's
+  remainder: A162 fixture fingerprint, A174–A185 real-window close/teardown, and
+  focus/grabber rows whose velocity half is foreign.
+- The import wizard stays a separately-deferred unbuilt surface; savecore A016–A026
+  and the pending-reload gate stay open user decisions; P3/P4 unchanged.
+
+### Conflict matrix and dispatch groups
+
+All four write sets are pairwise disjoint and clean: 175 owns
+`session_edit_routing.swift` + the state ledger; 176 owns `session_io.swift` + the
+lifecycle ledger's staged-readiness rows; 177 owns `tst_SwiftRollTrackHeaders.qml` +
+conditional `TrackHeadersGeometry.swift` + the hostadapter ledger; 178 owns
+`tst_ShellWindow.qml` + the lifecycle ledger's project-switch rows. 176 and 178
+share the lifecycle ledger over disjoint A-row subsets applied serially by the
+single ledger writer.
+
+| | 175 | 176 | 177 | 178 |
+|---|---|---|---|---|
+| each | — | — | — | — |
+
+| Group | Tasks | Note |
+|---|---|---|
+| A | 175, 176, 177, 178 | Independent writers; all four may dispatch together once 167/168 land (their files are already free). |
+
+### Shared constraints and verification ownership
+
+The §16–§20 contracts continue, plus this wave's foreign-file ban (velocity drawer,
+OtherEvents, AutomationMenu, roll rendering, cmake patches, both CMakeLists,
+`ShellQmlEntries.swift`, `checkcatalog.cpp`, `fwd.hpp`, and every test dirty in
+`git status`) — if a brief's file becomes dirty before dispatch, stop for rebriefing
+rather than editing foreign territory. The unreachable-state ruling applies only
+where a named Swift guard makes the fork state unreachable, with an executed refusal
+predicate in the closing commit; the voicegroup-undoable ruling changes no row here
+(its deviating behaviors already landed with 166). Ledger instructions: rows edited
+only in the proving commit; compact form (header + `Disposition` + one S-citing
+mapping line, no pasted code); the separate ledger writer applies accepted rows.
+Writers run their focused lanes under the lock/175-second alarm (macOS Qt desktop
+for 177/178); no project-wide builds, tests, formatters or linters mid-flight; the
+controller owns the project-wide gate once after sources settle. Planning validation
+for this docs-only commit checked brief links/headings, pinned fork citations, row
+statuses (A076–A093/A080/A082/A087–A091 verified GAP), file cleanliness against
+`git status`, lane registrations, and pairwise disjointness; no application suite
+was run.
+
+### Deferred and excluded
+
+- Unlock paths: the user's QtBridge object passing (164), `swift-project-store`
+  (lifecycle sidecar/view-state families), the theme-dialog and A079 centring
+  decisions, a real window-close harness pattern (A174–A177), and the foreign
+  performance work landing (frees the dirty test hosts).
+- Strict-mapping debt untouched by design. Standing exclusions unchanged: savecore
+  A016–A026, pending-reload input gate, P3 WAV, P4 sample studio, transport
+  A009/A010/A013, physical audio, ImageIO, ED11 clipboard text ownership.
