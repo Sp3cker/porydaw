@@ -321,4 +321,36 @@ ShellTabsSupport {
         verify(!session().documentDirty, "a saved and reopened tab starts clean")
         verify(!session().canUndo, "a saved and reopened tab has no previous undo history")
     }
+    function test_kSelectedCloseWithVelocitySelection() {
+        var ids = openShell(["mus_route101", "mus_littleroot_test"])
+        var survivorId = ids[0]
+        var closingId = ids[1]
+        compare(tabs().selectedId, closingId, "the second tab is selected")
+        var surface = surfaceOf(closingId)
+        var node = findChild(surface, "velocityNodeFill")
+        var plotInput = findChild(surface, "velocityPlotInput")
+        verify(node && plotInput && node.width > 0 && node.height > 0,
+               "the closing tab draws a real velocity node")
+        var hit = node.mapToItem(plotInput, node.width / 2, node.height / 2)
+        mouseClick(plotInput, hit.x, hit.y)
+        tryCompare(pageOf(closingId).session.velocityPage(), "selectedCount", 1, 3000)
+        var close = closeButton(closingId)
+        verify(close && close.visible, "the selected tab has a close control")
+        mouseClick(close, close.width / 2, close.height / 2)
+        verify(waitForNative(function() { return tabs().tabCount === 1 }, 5000),
+               "closing the selected tab removes its row without an abort")
+        compare(tabs().pendingCloseId, -1, "a clean close asks nothing")
+        compare(tabOrderIds().indexOf(closingId), -1, "the closed tab left the strip")
+        verify(waitForNative(function() { return pageOf(closingId) === null }, 5000),
+               "the closed tab's page is destroyed")
+        compare(tabs().selectedId, survivorId, "the close hands selection to the survivor")
+        verify(waitForNative(function() {
+            var survivor = pageOf(survivorId)
+            return survivor && survivor.visible
+        }, 5000), "the survivor page is presented")
+        compare(pageOf(survivorId).session.velocityPage().selectedNoteIdText(), "",
+                "the survivor inherits no note selection from the closed tab")
+        verify(JSON.parse(summaryOf(survivorId)).length > 0,
+                "the survivor kept its song content")
+    }
 }

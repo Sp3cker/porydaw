@@ -477,6 +477,8 @@ private func hostLifecycleTermination(_ report: CheckReport, session: DocumentSe
             && DocumentSnapshot(outgoing.document) == snapshot
             && outgoing.document.history.undoCount == depth
             && (try? outgoing.document.state.file.encoded()) == originalBytes
+        report.expect(outgoing.session.selectedNotes.isEmpty, cppID: id,
+                      message: "song teardown clears the outgoing note selection")
         if replacing {
             report.expect(preserved, cppID: id,
                           message: "song replacement ends the outgoing preview without mutating its song")

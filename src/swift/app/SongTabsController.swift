@@ -349,6 +349,8 @@ public final class SongTabsController {
     /// Installs a newly opened song and selects it.
     @QtIgnored
     func add(_ tab: SongTabSession, at index: Int?) {
+        // Inserts only create delegates: no page is destroyed, so no teardown
+        // can publish under this borrow (removals retire first — see closeTab).
         if let index {
             tabs.insert(tab, at: min(max(index, 0), tabs.count))
         } else {

@@ -5,9 +5,9 @@ Original: src/checks/host/tst_hostintegration.cpp
 Original SHA-256: 4083b59bbb5e88019ed164c1296e3f8ea36e3a6fe6673d8b0ef74316dbdbae10
 Swift counterpart: src/checks/velocity/VelocityClickSelectionChecks.swift (drawerVelocityPrimaryTrackSwitchCancels :267-312; drawerVelocityLifecycleCancellation :315-383 plus bank route :384-461); src/checks/velocity/VelocityPageChecks.swift call-list entry; src/checks/editorqml/tst_ShellWindow.qml test_kVelocityGestureTermination plus data (:976-1083)
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
-Additional Swift counterpart: src/checks/host/HostBehaviorChecks.swift :: hostNoteDiscovery + hostVelocityGestureContracts + hostVelocityExactGestures + hostLifecycleTermination + hostPlayheadFollowing + hostVelocityAxisVoice + hostCosmeticOnly + hostDocumentMutationUndoRedo + hostBandGeometry (SHA-256 1be477ecc9ed246d2d37ca6a0a855b027b889bbe187101599da17b62c22fe16a)
+Additional Swift counterpart: src/checks/host/HostBehaviorChecks.swift :: hostNoteDiscovery + hostVelocityGestureContracts + hostVelocityExactGestures + hostLifecycleTermination + hostPlayheadFollowing + hostVelocityAxisVoice + hostCosmeticOnly + hostDocumentMutationUndoRedo + hostBandGeometry (SHA-256 ddf9269a98f9143c088ba0cd6a4f00f3b21f727899346922a2f0864779d06f2f)
 Additional Swift counterpart: src/checks/workspace/session_view_state_fanout.swift (SHA-256 a856e21e1f145a33665fd7776a3b89635677e316ac21e3c6c6a3249339c587523)
-Additional QML counterpart: src/checks/editorqml/tst_ShellTabsClose.qml (SHA-256 d4d05854ffc009768dc7c56f0e6c90bf6beb53d7f3fac5d8f9a8ac4dc08df736)
+Additional QML counterpart: src/checks/editorqml/tst_ShellTabsClose.qml (SHA-256 39d1426b8b0ab46b1c6d02dd52c936fbfc5c09e19d758b13f3f9e4fc2d4c301a)
 
 Additional Swift counterpart: src/checks/velocity/VelocityClickCancellationChecks.swift (SHA-256 35e2781445d126ca180843e5a513245d4b9d1312b9d3c885aede3c2b0ea48b8c)
 Additional QML counterpart: src/checks/editorqml/tst_ShellWindowVelocity.qml (SHA-256 857442f15569025b8f2aa9e5b3042c91eaf8c1eea007c548fc947d94609710ca)
@@ -50,6 +50,7 @@ Task 166 proof-structure command: deno task proof check
 Task 166 proof-structure result: successful; zero structural errors; 63 proof files, 4601 indexed C++ sites, 4711 anchors resolved (0 historical); strict-mapping debt warning: 293 sites. Ledger-writer run. This checks structure, tallies and anchor resolution, not semantic parity or execution.
 Task 174 verification lane: swiftcore-projectsession
 Task 174 verification result: PASS (Task 174 handoff). The final HostBehaviorChecks.swift SHA-256 is 1be477ecc9ed246d2d37ca6a0a855b027b889bbe187101599da17b62c22fe16a. The lane invokes runHostBehaviorChecks from SessionChecks.swift; hostBandGeometry runs the A008 and A142 predicates indexed at S056-S057.
+Current A119 reconciliation: frozen src/checks/host/HostBehaviorChecks.swift SHA-256 ddf9269a98f9143c088ba0cd6a4f00f3b21f727899346922a2f0864779d06f2f; swiftcore-projectsession executes runHostBehaviorChecks via SessionChecks.swift, including hostLifecycleTermination's song-null/replacement loop and the outgoing selectedNotes.isEmpty predicate S065. Controller-provided observed verification: swiftcore 12/37 PASS; shell-tabs 7/76 PASS; full verify:shell 76/76 PASS. The mounted tst_ShellTabsClose.qml test_kSelectedCloseWithVelocitySelection independently supports outgoing-tab selection cleanup (no A-id; SHA-256 above). Ledger writer did not rerun verification.
 
 
 A001 | twoTabReadySessionWithTwoNoteSeed | src/checks/host/tst_hostintegration.cpp:145
@@ -794,14 +795,8 @@ Mapping: S054 — replacement clears the held velocity preview; the fork voice-n
 
 
 A119 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:523
-Disposition: PARTIAL
-Mapping/reason: Partial velocity-termination correspondence: the track-replace execution is matched by the primary-track-switch cancel clearing the selection (VelocityClickSelectionChecks.swift selectedNoteOrder.isEmpty) and by the executed hostLifecycleTermination predicate (S007: selectedNotes.isEmpty); unproved condition: song-null and song-replacement selection clearing (S008/S009 preserve the outgoing song without a selection-emptiness predicate) plus voice-replace and voice-null executions; never MATCHED.
-Source context since previous assertion:
-  ;
-          if (clearsSelection)
-
-Original expression:
-  QVERIFY(view.selectionModel().noteSelection().empty())
+Disposition: MATCHED
+Mapping: S065 — executed song-null and song-replacement routes assert the outgoing selected-note set is empty; voice routes remain under A120’s standing unreachable ruling.
 
 A120 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:525
 Disposition: MATCHED
@@ -1563,3 +1558,9 @@ S064 | test_kVelocityGestureTermination | src/checks/editorqml/tst_ShellWindowVe
 Source line: 376
 Predicate: verify(rollInput.cursorShape !== Qt.ClosedHandCursor, "A122 gesture termination leaves no closed-hand pan cursor")
 Anchor: message "A122 gesture termination leaves no closed-hand pan cursor"
+
+S065 | hostLifecycleTermination | src/checks/host/HostBehaviorChecks.swift
+Source line: 480
+cppID: swiftcore/HostBehaviorChecks::lifecycleTermination
+Predicate: report.expect(outgoing.session.selectedNotes.isEmpty, cppID: id, message: "song teardown clears the outgoing note selection")
+Anchor: message "song teardown clears the outgoing note selection"

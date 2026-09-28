@@ -322,6 +322,8 @@ public final class VelocityPage: EditorDrawerPage {
     @QtIgnored
     public func detach() {
         cancelSectionInteraction()
+        // The outgoing selection dies with the page, so no survivor inherits it.
+        session?.setSelectedNotes([])
         session = nil
         hovered = nil
         metricsCache = nil
