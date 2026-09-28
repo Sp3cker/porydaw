@@ -45,6 +45,187 @@ SwiftRollTrackHeadersSupport {
                                    rollGutter.parent.width, rollGutter.height)
             var rollPlotRect = rectOnSurface(rollPlot, s)
             var headerRect = rectOnSurface(headers, s)
+            var other = item("timelineOtherEventsBand")
+            var otherInput = item("timelineOtherEventsInput")
+            var otherGutter = item("timelineOtherEventsGutterInput")
+            var rulerChrome = item("timelineQuickRulerGutterChrome")
+            var rulerControls = item("timelineRulerControls")
+            var divisionControl = item("timelineRulerDivisionControl")
+            var feelControl = item("timelineRulerFeelControl")
+            var divisionInput = divisionControl.children[divisionControl.children.length - 1]
+            var feelInput = feelControl.children[feelControl.children.length - 1]
+            var rollGutterInput = rollGutter.children[1]
+            verify(divisionInput && feelInput && rollGutterInput
+                   && divisionInput.acceptedButtons !== undefined
+                   && feelInput.acceptedButtons !== undefined
+                   && rollGutterInput.acceptedButtons !== undefined)
+
+            var headerInputRect = rectOnSurface(headerInput, s)
+            var headerBandState = headers.parent.bandRect
+            var headerPlotWidth = Math.max(0, headerBandState.x + headerBandState.width
+                                              - s.drawerPresenter.plotOrigin)
+            verify(near(headerRect.x, 0) && near(headerRect.width, h.trackHeaderWidth)
+                   && headerInputRect.width > 0 && headerInputRect.height > 0
+                   && headerPlotWidth === 0
+                   && headerInputRect.x >= headerRect.x
+                   && headerInputRect.x + headerInputRect.width <= headerRect.x + headerRect.width,
+                   "A026: mounted track headers render their own input and publish no extent into the plot")
+
+            var right = s.width - h.scrollbarWidth
+            var otherRect = rectOnSurface(other, s)
+            var drawerRect = rectOnSurface(drawer, s)
+            var sections = [
+                { kind: 0, body: item("drawerBody_automation"),
+                  plot: item("automationPlot"), gutter: item("automationGutter"),
+                  expectedVisible: false },
+                { kind: 1, body: body, plot: item("velocityPlotInput"),
+                  gutter: item("velocityRulerInput"), expectedVisible: true },
+                { kind: 2, body: item("drawerBody_voiceChanges"),
+                  plot: item("voicePlotInput"), gutter: item("voiceGutter"),
+                  expectedVisible: false }
+            ]
+            var bands = [
+                { band: ruler, plot: rulerInput, gutter: rulerControls,
+                  published: Qt.rect(h.trackHeaderWidth, 0,
+                                     right - h.trackHeaderWidth, s.gridModel.rulerHeight),
+                  expected: Qt.rect(s.drawerPresenter.plotOrigin - s.gridModel.keyboardWidth, 0,
+                                    right - (s.drawerPresenter.plotOrigin
+                                             - s.gridModel.keyboardWidth),
+                                    s.gridModel.rulerHeight),
+                  expectedVisible: true },
+                { band: rollGutter.parent, plot: rollInput, gutter: rollGutterInput,
+                  published: Qt.rect(h.trackHeaderWidth, 0,
+                                     right - h.trackHeaderWidth,
+                                     s.gridModel.rulerHeight + h.viewportHeight),
+                  expected: Qt.rect(h.trackHeaderWidth, 0,
+                                    right - h.trackHeaderWidth,
+                                    s.height - s.drawerPresenter.height
+                                    - s.otherEventsPresenter.bandHeight
+                                    - item("mouseHintStatus").height - h.scrollbarWidth),
+                  plotTopOffset: s.gridModel.rulerHeight, expectedVisible: true },
+                { band: other, plot: otherInput, gutter: otherGutter,
+                  published: Qt.rect(0, drawerRect.y + s.drawerPresenter.height,
+                                     s.width, s.otherEventsPresenter.bandHeight),
+                  expected: Qt.rect(0, s.height - item("mouseHintStatus").height
+                                    - h.scrollbarWidth - s.otherEventsPresenter.bandHeight,
+                                    s.width, s.otherEventsPresenter.bandHeight),
+                  plotRight: right, expectedVisible: true }
+            ]
+            for (var sectionIndex = 0; sectionIndex < sections.length; ++sectionIndex) {
+                var section = sections[sectionIndex]
+                var state = s.drawerPresenter.section(section.kind)
+                bands.push({ band: section.body, plot: section.plot, gutter: section.gutter,
+                             published: Qt.rect(drawerRect.x + state.bodyX,
+                                                drawerRect.y + state.bodyY,
+                                                state.bodyWidth, state.bodyHeight),
+                             expected: Qt.rect(drawerRect.x,
+                                               drawerRect.y + state.bodyY,
+                                               section.expectedVisible ? right : 0,
+                                               state.bodyHeight),
+                             state: state, expectedVisible: section.expectedVisible })
+            }
+            bands.push({ band: headers, plot: null, gutter: headerInput,
+                         publishedPlotWidth: headerPlotWidth,
+                         published: Qt.rect(headerBandState.x, s.gridModel.rulerHeight,
+                                            headerBandState.width, headerBandState.height),
+                         expected: Qt.rect(0, s.gridModel.rulerHeight,
+                                           h.trackHeaderWidth, h.viewportHeight),
+                         expectedVisible: true })
+            for (var bandIndex = 0; bandIndex < bands.length; ++bandIndex) {
+                var entry = bands[bandIndex]
+                var actualBand = rectOnSurface(entry.band, s)
+                var projected = entry.published
+                var expected = entry.expected
+                verify(near(actualBand.x, projected.x)
+                       && near(actualBand.y, projected.y)
+                       && near(actualBand.width, projected.width)
+                       && near(actualBand.height, projected.height)
+                       && near(actualBand.x, expected.x)
+                       && near(actualBand.y, expected.y)
+                       && near(actualBand.width, expected.width)
+                       && near(actualBand.height, expected.height),
+                       "A033: every mounted band projects its published geometry to its physical item")
+
+                var active = entry.expectedVisible
+                var plotTopOffset = entry.plotTopOffset || 0
+                var expectedPlot = entry.plot
+                    ? Qt.rect(split, expected.y + plotTopOffset,
+                              Math.max(0, (entry.plotRight || expected.x + expected.width) - split),
+                              active ? expected.height - plotTopOffset : 0)
+                    : null
+                var plotMatches = !entry.plot && entry.publishedPlotWidth === 0
+                if (entry.plot) {
+                    var actualPlot = rectOnSurface(entry.plot, s)
+                    plotMatches = near(actualPlot.x, expectedPlot.x)
+                                  && near(actualPlot.y, expectedPlot.y)
+                                  && near(actualPlot.width, expectedPlot.width)
+                                  && near(actualPlot.height, expectedPlot.height)
+                }
+                verify(plotMatches,
+                       "A034: every band projects its plot input rectangle or an empty plot")
+                var effective = true
+                for (var ancestor = entry.band; ancestor && ancestor !== s;
+                     ancestor = ancestor.parent)
+                    effective = effective && ancestor.visible
+                var plotEffective = true
+                for (var plotAncestor = entry.plot; plotAncestor && plotAncestor !== s;
+                     plotAncestor = plotAncestor.parent)
+                    plotEffective = plotEffective && plotAncestor.visible
+                var gutterEffective = true
+                for (var gutterAncestor = entry.gutter; gutterAncestor && gutterAncestor !== s;
+                     gutterAncestor = gutterAncestor.parent)
+                    gutterEffective = gutterEffective && gutterAncestor.visible
+                verify((!entry.state || entry.state.visible === active)
+                       && entry.band.visible === active && effective === active
+                       && (!entry.plot || plotEffective === active)
+                       && gutterEffective === active,
+                       "A035: every band publishes its mounted plot and effective visibility")
+            }
+
+            var controlsRect = rectOnSurface(rulerControls, s)
+            var chromeRect = rectOnSurface(rulerChrome, s)
+            var divisionRect = rectOnSurface(divisionInput, s)
+            var feelRect = rectOnSurface(feelInput, s)
+            verify(rulerControls.visible && rulerChrome.visible
+                   && divisionInput.visible && feelInput.visible
+                   && near(controlsRect.x, 0) && near(controlsRect.y, 0)
+                   && near(controlsRect.width, split)
+                   && near(controlsRect.height, s.gridModel.rulerHeight)
+                   && near(chromeRect.x, h.trackHeaderWidth)
+                   && near(chromeRect.width, s.gridModel.keyboardWidth)
+                   && near(chromeRect.height, s.gridModel.rulerHeight)
+                   && divisionRect.x >= controlsRect.x && feelRect.x >= controlsRect.x
+                   && divisionRect.x + divisionRect.width <= split
+                   && feelRect.x + feelRect.width <= split
+                   && divisionRect.y >= 0 && feelRect.y >= 0
+                   && divisionRect.y + divisionRect.height <= controlsRect.height
+                   && feelRect.y + feelRect.height <= controlsRect.height,
+                   "A036: ruler gutter chrome and physical grid inputs map within the font-sized gutter")
+
+            var gutterRect = rectOnSurface(rollGutter, s)
+            var gutterInputRect = rectOnSurface(rollGutterInput, s)
+            verify(rollGutter.visible && rollGutterInput.visible
+                   && near(gutterRect.y, s.gridModel.rulerHeight)
+                   && near(gutterRect.height, h.viewportHeight)
+                   && near(gutterInputRect.x, gutterRect.x)
+                   && near(gutterInputRect.y, gutterRect.y)
+                   && near(gutterInputRect.width, s.gridModel.keyboardWidth)
+                   && near(gutterInputRect.height, h.viewportHeight),
+                   "A037: roll keyboard gutter input occupies the full note-row height")
+
+            var otherInputRect = rectOnSurface(otherInput, s)
+            var otherGutterRect = rectOnSurface(otherGutter, s)
+            verify(other.visible && otherInput.visible && otherGutter.visible
+                   && otherInputRect.x >= otherRect.x
+                   && otherInputRect.x + otherInputRect.width <= otherRect.x + otherRect.width
+                   && otherInputRect.y >= otherRect.y
+                   && otherInputRect.y + otherInputRect.height <= otherRect.y + otherRect.height
+                   && otherGutterRect.x >= otherRect.x
+                   && otherGutterRect.x + otherGutterRect.width <= otherRect.x + otherRect.width
+                   && otherGutterRect.y >= otherRect.y
+                   && otherGutterRect.y + otherGutterRect.height <= otherRect.y + otherRect.height,
+                   "A038: Other Events plot and gutter inputs remain visible within their mounted band")
+
 
             verify(ruler.visible && rulerInput.visible && rollGutter.visible
                    && rollPlot.visible && rollInput.visible && headers.visible)

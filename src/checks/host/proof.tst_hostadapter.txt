@@ -3,7 +3,7 @@ Assertion correspondence: host/tst_hostadapter.cpp
 Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Original: src/checks/host/tst_hostadapter.cpp
 Original SHA-256: 6e63b0766e5899601bb5a68b18a516715fe0669549a1929c4bc43ddb550c1bbe
-Swift counterpart: src/checks/rollqml/tst_SwiftRollTrackHeaders.qml :: test_mountedRulerRollVelocityAndDrawerChromeGeometry
+Swift counterpart: src/checks/rollqml/tst_SwiftRollTrackHeaders.qml :: test_mountedRulerRollVelocityAndDrawerChromeGeometry (SHA-256 f198c8f1aeb10f50eea8c77e3a8cd23236b6401f1f280e6a262986b1f2b0615c)
 Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml (converted QML drawer lane)
 Additional Swift counterpart: src/checks/rollqml/tst_SwiftRollPlots.qml (converted QML roll lane; SHA-256 b4fca80de33783a5373ce4508bc15b888887c3c40f153f9f11179ae4c8807e36)
 Additional Swift counterpart: src/checks/drawerpresentation/other_events_band.swift
@@ -173,13 +173,8 @@ Original expression:
   QVERIFY(trackHeaders.has_value())
 
 A026 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:131
-Disposition: GAP
-Mapping/reason: Swift TrackHeadersPresenter/TrackHeadersGeometry owns the track-headers plot-rect emptiness; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(trackHeaders->plotRect.isEmpty())
+Disposition: MATCHED
+Mapping: S120
 
 A027 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:136
 Disposition: MATCHED
@@ -240,93 +235,28 @@ Original expression:
   QVERIFY(!trackHeaders->rect.intersects(geometry->plotRect))
 
 A033 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:169
-Disposition: PARTIAL
-Mapping/reason: S078-S081 and S039/S042/S045 cover mounted ruler, roll, Other Events, velocity, automation and voice-change physical geometry against independent/model-published expectations; unproved: the original per-band QML root-property projection and the track-header projection.
-Source context since previous assertion:
-  ;
-          }
-          struct BandProperties {
-              songview::TimelineBand band;
-              const char *rect;
-              const char *plot;
-              const char *visible;
-          };
-          constexpr std::array<BandProperties, 7> properties{{
-              {songview::TimelineBand::Ruler, "rulerBandRect", "rulerBandPlotRect",
-               "rulerBandVisible"},
-              {songview::TimelineBand::Roll, "rollBandRect", "rollBandPlotRect", "rollBandVisible"},
-              {songview::TimelineBand::OtherEvents, "otherEventsBandRect", "otherEventsBandPlotRect",
-               "otherEventsBandVisible"},
-              {songview::TimelineBand::Automation, "automationBandRect", "automationBandPlotRect",
-               "automationBandVisible"},
-              {songview::TimelineBand::Velocity, "velocityBandRect", "velocityBandPlotRect",
-               "velocityBandVisible"},
-              {songview::TimelineBand::VoiceChanges, "voiceChangesBandRect",
-               "voiceChangesBandPlotRect", "voiceChangesBandVisible"},
-              {songview::TimelineBand::TrackHeaders, "trackHeadersBandRect",
-               "trackHeadersBandPlotRect", "trackHeadersBandVisible"},
-          }};
-          for (const BandProperties &entry : properties) {
-              const auto geometry = layout.geometry(entry.band);
-              const QRectF expectedRect = geometry ? QRectF(geometry->rect) : QRectF{};
-              const QRectF expectedPlot =
-                  geometry && !geometry->plotRect.isEmpty() ? QRectF(geometry->plotRect) : QRectF{};
-
-Original expression:
-  QCOMPARE(root->property(entry.rect).toRectF(), expectedRect)
+Disposition: MATCHED
+Mapping: S121
 
 A034 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:170
-Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerSectionGeometry owns the band plot published to the QML root property per band entry; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(root->property(entry.plot).toRectF(), expectedPlot)
+Disposition: MATCHED
+Mapping: S122
 
 A035 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:171
-Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerSectionGeometry owns the band visibility published to the QML root property per band entry; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(root->property(entry.visible).toBool(), geometry.has_value())
+Disposition: MATCHED
+Mapping: S123
 
 A036 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:173
-Disposition: PARTIAL
-Mapping/reason: S079/S082/S085/S088 cover the mounted ruler plot origin, model-derived edge, vertical containment and header exclusion; unproved: ruler gutter existence, bounds and mapped geometry.
-Source context since previous assertion:
-  ;
-          }
-
-Original expression:
-  QVERIFY(checks::support::physicalInputsMatchCanonical(
-              layout, *root, songview::TimelineBand::Ruler, QStringLiteral("timelineRulerInput"),
-              QStringLiteral("timelineRulerGutterInput")))
+Disposition: MATCHED
+Mapping: S124
 
 A037 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:176
-Disposition: PARTIAL
-Mapping/reason: S080/S083/S086/S089 prove the roll plot split origin, model-derived edge, vertical containment and header exclusion, and S092 proves the keyboard gutter width and shared split; unproved: gutter vertical bounds and the complete canonical input mapping.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(checks::support::physicalInputsMatchCanonical(
-              layout, *root, songview::TimelineBand::Roll, QStringLiteral("timelineRollInput"),
-              QStringLiteral("timelineRollGutterInput")))
+Disposition: MATCHED
+Mapping: S125
 
 A038 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:179
-Disposition: PARTIAL
-Mapping/reason: S081/S084/S087/S090/S091 prove the Other Events plot origin, mounted band edge, vertical containment, header exclusion and gutter dimensions; unproved: physical input visibility and the complete original canonical-layout match.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(checks::support::physicalInputsMatchCanonical(
-              layout, *root, songview::TimelineBand::OtherEvents,
-              QStringLiteral("timelineOtherEventsInput"),
-              QStringLiteral("timelineOtherEventsGutterInput")))
+Disposition: MATCHED
+Mapping: S126
 
 A039 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:183
 Disposition: MATCHED
@@ -1777,3 +1707,38 @@ S119 | test_hostMountedBandsResizeHideAndEventList | src/checks/rollqml/tst_Swif
 Source line: 433
 Predicate: effectivelyVisible(plot, body) && effectivelyVisible(gutter, body) && sameRect(sceneRect(plot), Qt.rect(split, restoredRect.y, restoredRect.x + restored.bodyWidth - split, restored.bodyHeight)) && sameRect(sceneRect(gutter), Qt.rect(restoredRect.x, restoredRect.y, split - restoredRect.x, restored.bodyHeight))
 Anchor: message "restored drawer plot and gutter inputs tile published section geometry"
+
+S120 | test_mountedRulerRollVelocityAndDrawerChromeGeometry | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Source line: 67
+Predicate: near(headerRect.x, 0) && near(headerRect.width, h.trackHeaderWidth) && headerInputRect.width > 0 && headerInputRect.height > 0 && headerPlotWidth === 0
+Anchor: message "A026: mounted track headers render their own input and publish no extent into the plot"
+
+S121 | test_mountedRulerRollVelocityAndDrawerChromeGeometry | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Source line: 139
+Predicate: near(actualBand.x, projected.x) && near(actualBand.y, projected.y) && near(actualBand.width, projected.width) && near(actualBand.height, projected.height) && near(actualBand.x, expected.x) && near(actualBand.y, expected.y) && near(actualBand.width, expected.width) && near(actualBand.height, expected.height)
+Anchor: message "A033: every mounted band projects its published geometry to its physical item"
+
+S122 | test_mountedRulerRollVelocityAndDrawerChromeGeometry | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Source line: 164
+Predicate: plotMatches
+Anchor: message "A034: every band projects its plot input rectangle or an empty plot"
+
+S123 | test_mountedRulerRollVelocityAndDrawerChromeGeometry | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Source line: 178
+Predicate: (!entry.state || entry.state.visible === active) && entry.band.visible === active && effective === active && (!entry.plot || plotEffective === active) && gutterEffective === active
+Anchor: message "A035: every band publishes its mounted plot and effective visibility"
+
+S124 | test_mountedRulerRollVelocityAndDrawerChromeGeometry | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Source line: 189
+Predicate: rulerControls.visible && rulerChrome.visible && divisionInput.visible && feelInput.visible && near(controlsRect.width, split) && near(chromeRect.width, s.gridModel.keyboardWidth) && divisionRect.x >= controlsRect.x && feelRect.x >= controlsRect.x && divisionRect.x + divisionRect.width <= split && feelRect.x + feelRect.width <= split && divisionRect.y >= 0 && feelRect.y >= 0 && divisionRect.y + divisionRect.height <= controlsRect.height && feelRect.y + feelRect.height <= controlsRect.height
+Anchor: message "A036: ruler gutter chrome and physical grid inputs map within the font-sized gutter"
+
+S125 | test_mountedRulerRollVelocityAndDrawerChromeGeometry | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Source line: 207
+Predicate: rollGutter.visible && rollGutterInput.visible && near(gutterRect.y, s.gridModel.rulerHeight) && near(gutterRect.height, h.viewportHeight) && near(gutterInputRect.x, gutterRect.x) && near(gutterInputRect.y, gutterRect.y) && near(gutterInputRect.width, s.gridModel.keyboardWidth) && near(gutterInputRect.height, h.viewportHeight)
+Anchor: message "A037: roll keyboard gutter input occupies the full note-row height"
+
+S126 | test_mountedRulerRollVelocityAndDrawerChromeGeometry | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Source line: 218
+Predicate: other.visible && otherInput.visible && otherGutter.visible && otherInputRect.x >= otherRect.x && otherInputRect.x + otherInputRect.width <= otherRect.x + otherRect.width && otherInputRect.y >= otherRect.y && otherInputRect.y + otherInputRect.height <= otherRect.y + otherRect.height && otherGutterRect.x >= otherRect.x && otherGutterRect.x + otherGutterRect.width <= otherRect.x + otherRect.width && otherGutterRect.y >= otherRect.y && otherGutterRect.y + otherGutterRect.height <= otherRect.y + otherRect.height
+Anchor: message "A038: Other Events plot and gutter inputs remain visible within their mounted band"
