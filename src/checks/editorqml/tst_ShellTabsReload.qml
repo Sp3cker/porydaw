@@ -310,7 +310,9 @@ ShellTabsSupport {
         tryCompare(reloadReadiness, "count", 1, 2000,
                    "pending reload publishes readiness exactly once")
         compare(tabs().selectedPage, page, "pending reload keeps the old page selectable")
+        compare(tabs().tabCount, 1, "pending reload installs no second tab row")
         compare(gridOf(id), grid, "pending reload keeps the old rendered grid")
+        verify(gridOf(id).renderedNoteCount > 0, "pending reload shows no partially-installed page")
         compare(summaryOf(id), prior.notes, "pending reload keeps the old MIDI events")
         compare(grid.cameraScrollX, prior.x, "pending reload keeps the horizontal camera")
         compare(grid.editCursorTick, prior.cursor, "pending reload keeps the edit cursor")
@@ -322,6 +324,7 @@ ShellTabsSupport {
                 && gridOf(id) !== grid && semanticNotes(id) === prior.semanticNotes
         }, 30000), "ready publication installs the saved MIDI and full replacement page together")
         compare(reloadReadiness.count, 1, "old page publishes no duplicate readiness transition")
+        compare(tabs().tabCount, 1, "ready publication leaves a single mounted page")
         var landed = tabs().selectedPage
         compare(landed.tabId, id, "complete reload keeps the original strip identity")
         compare(gridOf(id).cameraScrollX, prior.x, "complete reload retains the camera")
@@ -416,6 +419,8 @@ ShellTabsSupport {
         var reloadedId = ids[1]
         var oldPage = tabs().selectedPage
         var oldGrid = gridOf(reloadedId)
+        verify(pageOf(firstId).session.isReady, "the surviving tab is ready before its sibling reloads")
+        verify(pageOf(reloadedId).session.isReady, "the reload target is ready before its reload begins")
         tabs().setSelectedTabEventsVisible(true)
         compare(tabs().selectedTabShowsEvents, true,
                 "the reload target starts with its visible Event List")
@@ -464,12 +469,15 @@ ShellTabsSupport {
         mouseClick(selectFirst, selectFirst.width / 3, selectFirst.height / 2)
         compare(tabs().selectedId, firstId,
                 "the user selects A while B still occupies its reloading row")
+        var selectedBefore = tabs().selectedPage
         verify(waitForNative(function() {
             return pageOf(pendingId) !== null && pageOf(pendingId).session !== originalPage
                 && pageOf(pendingId).session.gridPresenter().renderedNoteCount > 0
         }, 30000), "unselected B finishes reloading at its original strip position")
         compare(tabs().selectedId, firstId,
                 "background reload completion cannot steal the user's selected tab")
+        compare(tabs().selectedPage, selectedBefore,
+                "ready publication performs no automatic switch: the selected page is untouched")
     }
 
     function test_rFinalCloseStopsAdvancingPlayback() {

@@ -188,12 +188,12 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: Fork QVERIFY(session.has_value()) at tst_mainwindowrouting_lifecycle.cpp:145 (oracle fceecd88) guards the native two-song fixture; S252 proves a surviving tab while its sibling reloads and S253 observes the returned ready document.
 
 A033 | MainWindowRoutingLifecycleTest::selectionDuringReloadFocusesWhenReady | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:149
-Disposition: PARTIAL
-Mapping/reason: S255 and S256 select surviving A during B's reload and keep A selected after B completes; openShell waits for A's rendered grid before either predicate. Residue: fork QVERIFY(a->isReady()) at tst_mainwindowrouting_lifecycle.cpp:149 (oracle fceecd88) queries the native Qt tab readiness gate explicitly; the indexed mounted predicate observes selection, not that gate. [S255][S256]
+Disposition: MATCHED
+Mapping: S328
 
 A034 | MainWindowRoutingLifecycleTest::selectionDuringReloadFocusesWhenReady | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:150
-Disposition: PARTIAL
-Mapping/reason: S267 proves B starts selected with its visible Event List and S253 proves its fresh ready replacement; openShell waits for B's rendered grid before reload. Residue: fork QVERIFY(b->isReady()) at tst_mainwindowrouting_lifecycle.cpp:150 (oracle fceecd88) queries native Qt readiness at the initial pre-reload instant, not separately asserted by the indexed mounted predicate. [S267][S253]
+Disposition: MATCHED
+Mapping: S329
 
 A035 | MainWindowRoutingLifecycleTest::selectionDuringReloadFocusesWhenReady | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:151
 Disposition: MATCHED
@@ -220,8 +220,8 @@ Disposition: MATCHED
 Mapping: S253, S263
 
 A041 | MainWindowRoutingLifecycleTest::selectionDuringReloadFocusesWhenReady | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:163
-Disposition: PARTIAL
-Mapping/reason: S263 proves explicitly selected B remains selected on ready publication; S266 observes the reopened mounted plot only after explicitly forcing its focus. Residue: fork QVERIFY(focused && (focused == b || b->isAncestorOf(focused))) at tst_mainwindowrouting_lifecycle.cpp:163 (oracle fceecd88) requires automatic Qt focusWidget ancestry following ready publication, not an explicit QML forceActiveFocus call. [S263][S266]
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QApplication::focusWidget ancestry is unavailable in the QML shell; ready publication has no focus-grant path, while S330 observes explicit-selection retention without an automatic page switch. [S330]
 
 A042 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:169
 Disposition: GAP
@@ -266,25 +266,12 @@ Original expression:
         QVERIFY(SmfFile::readFile(song->midPath, &stage, &error))
 
 A046 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:186
-Disposition: PARTIAL
-Mapping/reason: S299 proves the actual fresh-open path has no command-ready tab before completion. Residue: fork !probe.isReady() checks a newly constructed, unmounted native SongTab before its staged binding protocol; Swift does not instantiate that probe. [S299]
-Source context since previous assertion:
-        LoadedVoiceGroup bank = {};
-        SongTab probe(name);
-        const EditorViewState global = completeSeed();
-        probe.view().applyEditorViewState(global);
-        QSignalSpy ready(&probe, &SongTab::readinessChanged);
-Original expression:
-        QVERIFY(!probe.isReady())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The unmounted SongTab readiness probe is not part of atomic fresh-open installation; S331 watches the published strip for an unready or extra row instead. [S331]
 
 A047 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:189
-Disposition: PARTIAL
-Mapping/reason: S300 proves the fresh tab becomes ready only after its document and bank load. Residue: fork !probe.isReady() samples the unmounted native tab immediately after applyMidiStage; Swift does not execute that intermediate stage. [S300]
-Source context since previous assertion:
-        probe.applyMidiStage(*song, std::move(stage),
-                             workspace.projectState().snapshot.trackBudgetFor(*song));
-Original expression:
-        QVERIFY(!probe.isReady())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The intermediate applyMidiStage readiness sample belongs to the absent staged native protocol; S331 watches fresh-open publication for an unready or extra row. [S331]
 
 A048 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:190
 Disposition: RETIRED-REPRESENTATION
@@ -307,41 +294,20 @@ Original expression:
         QVERIFY(hasCanonicalFreshViewState(probe.view(), *probe.timeline()))
 
 A051 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:193
-Disposition: PARTIAL
-Mapping/reason: S304 proves a fresh open publishes no intermediate command-ready tab. Residue: fork ready.count() at the intermediate MIDI-only stage counts Qt readinessChanged emissions; Swift observes external tab publication, not that signal count. [S304]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(ready.count(), 0)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Qt readinessChanged emission counts at an unmounted MIDI-only stage are not observable in the atomic fresh-open path; S331 watches published rows for unready or extra tabs. [S331]
 
 A052 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:200
-Disposition: PARTIAL
-Mapping/reason: S305 proves initial drawer chrome is installed before tab publication. Residue: fork ready.count() after applyBankView counts Qt readinessChanged emissions at that stage; Swift observes installed chrome before publication, not signal count. [S305]
-Source context since previous assertion:
-        probe.applyBankView(LoadedBankView{
-            .id = *session->b->voicegroupId(),
-            .bank = borrowVoicegroupLease(&bank),
-            .loadName = QString(),
-            .slotViews = {},
-        });
-Original expression:
-        QCOMPARE(ready.count(), 0)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Qt readinessChanged emission counts after applyBankView are not observable in the atomic fresh-open path; S331 watches published rows for unready or extra tabs. [S331]
 
 A053 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:202
-Disposition: PARTIAL
-Mapping/reason: S306 proves the first ready tab has every seeded lane member. Residue: fork isReady() is sampled specifically after applyVoicegroupBound; Swift asserts the complete lane state on the published tab but not a voicegroup-bound transition. [S306]
-Source context since previous assertion:
-        probe.applyVoicegroupBound(*session->b->voicegroupId());
-Original expression:
-        QVERIFY(probe.isReady())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The applyVoicegroupBound readiness transition is absent from atomic fresh-open installation; S331 watches the published strip for an unready or extra row. [S331]
 
 A054 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:204
-Disposition: PARTIAL
-Mapping/reason: S307 proves initial successful open installs exactly one ready row. Residue: fork ready.count() measures one native readinessChanged notification; Swift observes the installed ready-row count, not Qt signal emissions. [S307]
-Source context since previous assertion:
-        checks::support::bindEditActionsForTest(probe.view());
-Original expression:
-        QCOMPARE(ready.count(), 1)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: A single native readinessChanged emission is not observable; S331 watches the fresh-open strip for unready or extra published rows. [S331]
 
 A055 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:210
 Disposition: GAP
@@ -450,12 +416,8 @@ Original expression:
         QVERIFY(sameViewState(probe.view().viewState(), retained))
 
 A064 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:253
-Disposition: PARTIAL
-Mapping/reason: S312 proves the reload remains pending without installing another row. Residue: fork ready.count() observes exactly one native readinessChanged emission on beginMidiReload; Swift asserts pending readiness and tab count, not signal count. [S312]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(ready.count(), 1)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The native beginMidiReload emission sequence is not observable; S332 watches pending reload for no second row or partially installed page. [S332]
 
 A065 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:255
 Disposition: MATCHED
@@ -482,12 +444,8 @@ Original expression:
         QVERIFY(sameViewState(probe.view().viewState(), retained))
 
 A068 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:258
-Disposition: PARTIAL
-Mapping/reason: S316 proves reload replaces the page at the original tab identity. Residue: fork ready.count() == 1 observes a Qt readinessChanged emission after applyMidiStage; Swift proves replacement identity, not Qt signal count. [S316]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(ready.count(), 1)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The post-applyMidiStage emission count is not observable in the atomic replacement path; S332 watches pending reload for no second row or partially installed page. [S332]
 
 A069 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:260
 Disposition: MATCHED
@@ -506,12 +464,8 @@ Original expression:
         QVERIFY(sameViewState(probe.view().viewState(), retained))
 
 A071 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:262
-Disposition: PARTIAL
-Mapping/reason: S319 proves selected notes are restored when the replacement is ready and the single tab remains mounted. Residue: fork ready.count() == 2 counts exactly one Qt readinessChanged emission for pending and one for ready; Swift checks pending and ready states separately, not notification count. [S319]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(ready.count(), 2)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The native pending/ready signal pair is not observable; S332 watches pending reload for no second row or partially installed page. [S332]
 
 A072 | MainWindowRoutingLifecycleTest::bankRebind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:268
 Disposition: GAP
@@ -2093,3 +2047,18 @@ Anchor: message "A092: the requested project becomes ready after its tabs close"
 
 S327 | test_xProjectSwitchEmptiesTwoSongWorkspace (lines 189-190; compare(session.songTabs.tabCount, 0)) | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "A093: the completed project switch has an empty tab set"
+
+S328 | test_qSelectionDuringReloadKeepsExplicitTarget (shell-tabs-reload; fixture openShell(["mus_route102", "mus_route101"]); line 422 verify(pageOf(firstId).session.isReady, "the surviving tab is ready before its sibling reloads")) | src/checks/editorqml/tst_ShellTabsReload.qml
+Anchor: message "the surviving tab is ready before its sibling reloads"
+
+S329 | test_qSelectionDuringReloadKeepsExplicitTarget (shell-tabs-reload; fixture openShell(["mus_route102", "mus_route101"]); line 423 verify(pageOf(reloadedId).session.isReady, "the reload target is ready before its reload begins")) | src/checks/editorqml/tst_ShellTabsReload.qml
+Anchor: message "the reload target is ready before its reload begins"
+
+S330 | test_qReloadCompletionKeepsDifferentSelection (shell-tabs-reload; lines 479-480 compare(tabs().selectedPage, selectedBefore, "ready publication performs no automatic switch: the selected page is untouched")) | src/checks/editorqml/tst_ShellTabsReload.qml
+Anchor: message "ready publication performs no automatic switch: the selected page is untouched"
+
+S331 | runTabReadinessChecks [called by runSessionViewStateChecks at session_view_state.swift:127, registered from SessionChecks.swift:43; lines 413-427 watch and report.expect(!freshSawUnreadyRow && !freshSawExtraRow, cppID: id); cppID id declared at line 377 as freshBind in MainWindowRoutingLifecycleTest] | src/checks/workspace/session_view_state.swift
+Anchor: message "fresh open installs no probe row: the strip never selects an unready or extra tab"
+
+S332 | runTabReadinessChecks [called by runSessionViewStateChecks at session_view_state.swift:127, registered from SessionChecks.swift:43; lines 498-511 watch and report.expect(!pendingSawSecondRow && !pendingSawUnreadySwap, cppID: reloadID); cppID reloadID declared at line 378 as stagedReload in MainWindowRoutingLifecycleTest] | src/checks/workspace/session_view_state.swift
+Anchor: message "pending reload publishes no second row and no partially-installed page"

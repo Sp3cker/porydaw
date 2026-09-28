@@ -406,7 +406,15 @@ private func runTabReadinessChecks(report: CheckReport, store: PreferencesStore,
     app.openProjectAndSong(path: root, label: "mus_session_test")
     report.expect(app.songTabs.tabCount == 0 && !app.songOpen, cppID: id,
                   message: "A046 initial real song open has no command-ready tab before completion")
-    guard until({ app.songTabs.tabCount == 1 || !app.lastSaveError.isEmpty }),
+    // The staged fork probe never exists here: rows install only after the
+    // document loads, so the whole async window is watched for a probe row.
+    var freshSawUnreadyRow = false
+    var freshSawExtraRow = false
+    guard until({
+        if app.songTabs.tabCount > 1 { freshSawExtraRow = true }
+        if let page = app.songTabs.selectedPage, !page.isReady { freshSawUnreadyRow = true }
+        return app.songTabs.tabCount == 1 || !app.lastSaveError.isEmpty
+    }),
           let first = app.songTabs.selectedPage else {
         report.fail(id, "fresh copied song did not finish opening: \(app.lastSaveError)")
         return
@@ -415,6 +423,8 @@ private func runTabReadinessChecks(report: CheckReport, store: PreferencesStore,
         report.fail(id, "fresh tab did not publish its document")
         return
     }
+    report.expect(!freshSawUnreadyRow && !freshSawExtraRow, cppID: id,
+                  message: "fresh open installs no probe row: the strip never selects an unready or extra tab")
     let fresh = document.camera.snapshot
     report.expect(first.isReady && first.songOpen, cppID: id,
                   message: "A047 a fresh tab is published only after document and bank load")
@@ -482,15 +492,23 @@ private func runTabReadinessChecks(report: CheckReport, store: PreferencesStore,
                   message: "A063 pending reload retains complete editor camera cursor and selection")
     report.expect(!first.isReady && app.songTabs.tabCount == 1, cppID: reloadID,
                   message: "A064 pending reload changes readiness once without installing another row")
+    var pendingSawSecondRow = false
+    var pendingSawUnreadySwap = false
     var partialPublication = false
     let arrived = until {
+        // The replacement swaps in place at the same identity: no second row
+        // and no partially-installed page may appear while pending.
+        if app.songTabs.tabCount != 1 { pendingSawSecondRow = true }
         if app.songTabs.selectedPage === oldPage {
             if oldPage.isReady || oldSession.timeline.events != original
                 || oldSession.editorViewState != priorEditor { partialPublication = true }
             return false
         }
+        if app.songTabs.selectedPage?.isReady != true { pendingSawUnreadySwap = true }
         return app.songTabs.selectedPage?.isReady == true
     }
+    report.expect(!pendingSawSecondRow && !pendingSawUnreadySwap, cppID: reloadID,
+                  message: "pending reload publishes no second row and no partially-installed page")
     report.expect(!partialPublication, cppID: reloadID,
                   message: "A065 event-loop pending observations never expose partially replaced MIDI")
     guard arrived, let landed = app.songTabs.selectedPage else {
