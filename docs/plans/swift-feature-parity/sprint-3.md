@@ -35,9 +35,10 @@ wave 163–170 (§19). Census: proof files 155 → 63; open GAP+PARTIAL rows 370
 62 ledgers; open GAP+PARTIAL rows 1132 (903 GAP + 229 PARTIAL); strict debt 286. Gate on
 1364a2ac: verify 36/36, verify:qml 1/1, verify:qml-roll 1/1, bridge 0; verify:shell 74/76 —
 shell-note-visuals is the rendering agent's in-progress test, shellwindow-label-commands
-is an AutomationMenu focus race (Qt.callLater grab; fix pending foreign build). Next:
-wave 175–178 (§21) — four clean-file briefs under the foreign-performance exclusions;
-the remaining clusters are blocked or foreign (§21 census).
+is an AutomationMenu focus race (Qt.callLater grab; fix pending foreign build). Wave
+175–178 (§21) landed: 175 (a2e980cd), 177 (89ecda83), 176 + 178 (78af02d8); verify 37/37
+on 78af02d8. The rest of the census is blocked on foreign in-progress files, on 164, or on
+open decisions (§21 census).
 Known residues: QtBridge queues property notifications, so same-GUI-pass geometry clauses
 (host A095) stay PARTIAL; lanes use the null audio backend, so physical-output conjuncts
 stay PARTIAL.
