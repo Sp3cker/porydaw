@@ -56,7 +56,12 @@ Gate on b986ba08: verify 37/37, verify:shell 76/76, verify:qml 1/1, verify:qml-r
 bridge 0, `proof check --executed` 0 not executed. Census: 39 ledgers; open rows 871 (749 GAP
 + 122 PARTIAL); strict debt 215. Wave 210–212 (§28) feature ports landed: 210 New Song
 label fold/filter + taken-name gate (41a7ebc4), 211 File → Register Song (8d338281), 212
-rename returns roll focus (ae48c95d). Gate on 41a7ebc4: all lanes green, 0 not executed.
+rename returns roll focus (ae48c95d); 210 review follow-up (5a651eb5). Gate on 5a651eb5:
+verify 37/37, verify:shell 76/76, verify:qml 1/1, verify:qml-roll 1/1, bridge 0, `proof
+check --executed` 0 not executed. **Handoff:** the non-excluded inventory is exhausted (§29
+census). Task 213 is HELD, not dispatched: it is ledger-only, which
+proof-ledger-workflow forbids, and task 201 kept A014 PARTIAL. Do not plan further waves
+until the user rules on the open decisions below.
 Known residues: QtBridge queues property notifications, so same-GUI-pass geometry clauses
 (host A095) stay PARTIAL; lanes use the null audio backend, so physical-output conjuncts
 stay PARTIAL.
@@ -67,8 +72,13 @@ tokens survive an external source refresh, matching the fork (78); a voicegroup 
 an undoable edit (deliberate deviation: the fork switch is display-only); fork states that
 Swift guards make unreachable close as RETIRED-REPRESENTATION with refusal predicates —
 track beyond the used tracks (159), time-signature edit under Insert Time (168), null
-voicegroup (166). Open decisions: catalog-outage status path (Swift scan has none);
-pending-reload input gate. Fork oracle: `fceecd88`
+voicegroup (166). Open decisions (user): catalog-outage status path (Swift scan has none);
+pending-reload input gate; P3 WAV export; P4 sample studio/import wizard; task 164 QtBridge
+QML→Swift object passing; directional resize cursors; tabs_transport A062; window-close
+harness; theme/settings/sf2 dialogs; a ledger-only exception for rollcheck identity A014
+(213) and project identity's 19 PARTIAL rows whose predicates already execute; whether the
+New Song taken-name hint should also cover stray unregistered files (210 gates registered
+names only; strays refuse at Create). Fork oracle: `fceecd88`
 (`git show fceecd88:<path>`).
 
 ## 1. Objective and success criteria
@@ -4042,7 +4052,8 @@ exists and `rollcheck/proof.identity.txt` still reports A014 PARTIAL.
 Row-level census of every remaining open site (`proof sites --area
 <dir>` for all ledgers, GAP and PARTIAL paged to exhaustion): exactly
 one row closes honestly under the controller's standing exclusions —
-the wave is a single re-dispatch, no padding:
+the wave is a single re-dispatch, no padding. **Controller: HELD** pending the user's
+ruling on a ledger-only exception (see the status header).
 
 | Task | Surface / brief | Rows | Group |
 |---|---|---|---|
