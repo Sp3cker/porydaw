@@ -38,8 +38,12 @@ shell-note-visuals is the rendering agent's in-progress test, shellwindow-label-
 is an AutomationMenu focus race (Qt.callLater grab; fix pending foreign build). Wave
 175–178 (§21) landed: 175 (a2e980cd), 177 (89ecda83), 176 + 178 (78af02d8); verify 37/37
 on 78af02d8. Wave 179–187 (§22) landed, 181 completing it at 3c325bf1 + 85a806f9
-(gesture ledgers deleted). Census: 53 ledgers; open rows 747 (604 GAP + 143
-PARTIAL); strict debt 286. Next: wave 188–193 (§23).
+(gesture ledgers deleted). Wave 188–193 (§23) landed: 188 (9ccb8d01, tab-close
+exclusivity SIGABRT fixed), 189 (151dcfb4), 190 (ad0b7b1c), 191 (f4937597), 192
+(461d81cb), 193 (30b8b356); 13 more closed ledgers deleted. Gate on b97c1c01: verify 37/37,
+verify:shell 76/76, verify:qml 1/1, verify:qml-roll 1/1, bridge 0, `proof check --executed`
+0 not executed. Census (per-area `proof list` sum): 47 ledgers; open rows 1034 (855 GAP +
+179 PARTIAL); strict debt 235. Next: wave 194+ (§24).
 Known residues: QtBridge queues property notifications, so same-GUI-pass geometry clauses
 (host A095) stay PARTIAL; lanes use the null audio backend, so physical-output conjuncts
 stay PARTIAL.
