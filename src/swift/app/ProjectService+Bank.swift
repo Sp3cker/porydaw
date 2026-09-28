@@ -57,6 +57,34 @@ extension ProjectService {
             synthDefinitions: synthDefinitions,
             canMintSynths: direct.synths.creatable(), defaults: defaults)
     }
+    /// Writes a per-file voicegroup, appends its hub include, then rescans
+    /// the project so the catalog publishes the new arg. Refusals throw.
+    /// `copyFromFile` is project-relative ("" for the dummy template).
+    public func createVoicegroup(name: String, copyFromFile: String,
+                                 copySectionLabel: String) async throws {
+        let store = try requireStore()
+        guard Self.isValidVoicegroupName(name: name) else {
+            throw ProjectServiceError.operationFailed("Invalid voicegroup name: \(name).")
+        }
+        do {
+            let args = try await store.voicegroupArgs()
+            guard !args.contains("_" + name) else {
+                throw ProjectServiceError.operationFailed("A voicegroup named \(name) already exists.")
+            }
+            let copyPath = copyFromFile.isEmpty ? "" : projectRoot + "/" + copyFromFile
+            try VoicegroupSource.createVoicegroup(projectRoot: projectRoot, name: name,
+                                                  copyFromFile: copyPath,
+                                                  copySectionLabel: copySectionLabel)
+            try VoicegroupSource.appendIncludeLine(projectRoot: projectRoot, name: name)
+            try await open(root: projectRoot)
+        } catch {
+            throw projectFailure(error)
+        }
+    }
+
+    public nonisolated static func isValidVoicegroupName(name: String) -> Bool {
+        name.range(of: #"^[A-Za-z][A-Za-z0-9_]*$"#, options: .regularExpression) != nil
+    }
 
     /// Resolves a picker audition through the project's own loader.
     /// - Parameters:

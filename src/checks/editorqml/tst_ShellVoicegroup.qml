@@ -7,6 +7,7 @@ import ShellQmlCheck 1.0
 import Porydaw.Ui
 
 ShellVoicegroupSupport {
+    SignalSpy { id: statusSpy; signalName: "statusMessage" }
     function test_128RowsSelectionAndAudition() {
         const controller = app.voiceListController()
         compare(findChild(panel, "voicegroupRows").count, 128)
@@ -198,6 +199,100 @@ ShellVoicegroupSupport {
             compare(panel.Layout.minimumWidth, baseline,
                     "the dock's minimum width ignores the selected voice's family")
         }
+    }
+    function test_yNewVoicegroupCreatesAndAssignsUndoably() {
+        const controller = app.voiceListController()
+        statusSpy.target = app
+        statusSpy.clear()
+        const button = findChild(panel, "vgNewVoicegroupButton")
+        verify(button !== null, "the mounted dock exposes its New voicegroup button")
+        mouseClick(button, button.width / 2, button.height / 2)
+        verify(waitForNative(function() { return controller.newVoicegroupPrompt }, 5000),
+               "the mounted New button opens the name prompt")
+        verify(waitForNative(function() {
+            const mounted = findChild(panel, "voicegroupNewDialogLoader")
+            return mounted !== null && mounted.item !== null
+        }, 5000), "the panel mounts the New Voicegroup dialog")
+        const dialog = findChild(panel, "voicegroupNewDialogLoader").item
+        const nameField = findChild(dialog, "voicegroupNewName")
+        verify(waitForNative(function() {
+            return nameField !== null && nameField.activeFocus
+        }, 5000), "the mounted prompt focuses its visible name entry")
+        const accept = dialog.footer.standardButton(Dialog.Ok)
+        compare(accept.text, "Create", "the New Voicegroup accept action is titled Create")
+        compare(accept.enabled, false, "an empty voicegroup name cannot be accepted")
+        for (const key of [Qt.Key_V, Qt.Key_G, Qt.Key_S, Qt.Key_A, Qt.Key_V, Qt.Key_E,
+                           Qt.Key_Underscore, Qt.Key_C, Qt.Key_R, Qt.Key_E, Qt.Key_A,
+                           Qt.Key_T, Qt.Key_E, Qt.Key_D])
+            keyClick(key)
+        compare(nameField.text, "vgsave_created", "real text input enters the voicegroup name")
+        compare(controller.newVoicegroupCopyLabel, "fixture_rich.inc",
+                "the prompt offers the current bank as its copy source")
+        compare(accept.enabled, true, "a valid label enables the mounted Create button")
+        mouseClick(accept, accept.width / 2, accept.height / 2)
+        verify(waitForNative(function() {
+            return controller.bankLoadName === "vgsave_created"
+                && controller.selectorText === "vgsave_created"
+        }, 30000), "Create writes the per-file group and binds _vgsave_created: "
+                   + app.lastSaveError)
+        compare(app.lastSaveError, "")
+        verify(fileProbe.fileFingerprint(
+            bootstrap.projectRoot + "/sound/voicegroups/vgsave_created.inc") !== "",
+               "the created voicegroup file reaches the disk")
+        compare(statusSpy.count, 1, "success publishes one status line")
+        verify(statusSpy.signalArguments[0][0].indexOf("vgsave_created") >= 0
+               && statusSpy.signalArguments[0][0].indexOf("mus_route101") >= 0,
+               "the status line names the created file and song: "
+               + statusSpy.signalArguments[0][0])
+        app.requestUndo()
+        verify(waitForNative(function() {
+            return controller.bankLoadName === "fixture_rich"
+                && controller.selectorText === "fixture_rich"
+        }, 15000), "one undo restores the home voicegroup binding")
+        verify(fileProbe.fileFingerprint(
+            bootstrap.projectRoot + "/sound/voicegroups/vgsave_created.inc") !== "",
+               "undo keeps the created file: creation is a project op")
+    }
+
+    function test_zzNewVoicegroupCollisionRefuses() {
+        const controller = app.voiceListController()
+        const created = bootstrap.projectRoot + "/sound/voicegroups/vgsave_created.inc"
+        const before = fileProbe.fileFingerprint(created)
+        verify(before !== "", "the create leg seeds the colliding voicegroup file")
+        app.lastSaveError = ""
+        const button = findChild(panel, "vgNewVoicegroupButton")
+        verify(button !== null, "the mounted dock exposes its New voicegroup button")
+        mouseClick(button, button.width / 2, button.height / 2)
+        verify(waitForNative(function() { return controller.newVoicegroupPrompt }, 5000),
+               "the mounted New button reopens the name prompt")
+        verify(waitForNative(function() {
+            const mounted = findChild(panel, "voicegroupNewDialogLoader")
+            return mounted !== null && mounted.item !== null
+        }, 5000), "the panel mounts the New Voicegroup dialog")
+        const dialog = findChild(panel, "voicegroupNewDialogLoader").item
+        const nameField = findChild(dialog, "voicegroupNewName")
+        verify(waitForNative(function() {
+            return nameField !== null && nameField.activeFocus
+        }, 5000), "the collision name is entered in the real prompt")
+        for (const key of [Qt.Key_V, Qt.Key_G, Qt.Key_S, Qt.Key_A, Qt.Key_V, Qt.Key_E,
+                           Qt.Key_Underscore, Qt.Key_C, Qt.Key_R, Qt.Key_E, Qt.Key_A,
+                           Qt.Key_T, Qt.Key_E, Qt.Key_D])
+            keyClick(key)
+        compare(nameField.text, "vgsave_created", "real typing names the existing group")
+        compare(dialog.footer.standardButton(Dialog.Ok).enabled, false,
+                "a colliding name cannot be accepted")
+        controller.acceptNewVoicegroup()
+        verify(waitForNative(function() { return app.lastSaveError.length > 0 }, 5000),
+               "the colliding create reports its refusal")
+        verify(app.lastSaveError.indexOf("vgsave_created") >= 0,
+               "the mounted failure names the colliding voicegroup: " + app.lastSaveError)
+        compare(fileProbe.fileFingerprint(created), before,
+                "the refusal preserves every byte of the created file")
+        compare(controller.bankLoadName, "fixture_rich",
+                "the refusal leaves the home bank bound")
+        keyClick(Qt.Key_Escape)
+        verify(waitForNative(function() { return !controller.newVoicegroupPrompt }, 5000),
+               "Escape dismisses the refused prompt")
     }
 
     function test_zMountedSongReloadPresentsResolvedBank() {

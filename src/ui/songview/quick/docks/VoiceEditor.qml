@@ -313,6 +313,7 @@ ColumnLayout {
         Layout.preferredHeight: editor.buttonHeight
         Layout.minimumHeight: 0
         Button {
+            objectName: "vgNewVoicegroupButton"
             text: qsTr("New...")
             Layout.preferredHeight: editor.buttonHeight
             Layout.minimumHeight: 0

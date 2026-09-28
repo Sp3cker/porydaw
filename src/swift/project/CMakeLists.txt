@@ -14,6 +14,7 @@ add_library(PorydawProject STATIC
     SongRegistration+Removal.swift
     SongRegistration+Store.swift
     VoicegroupSource.swift
+    VoicegroupSource+Create.swift
     VoiceEdits.swift
     VoicegroupSave.swift
     AsmLine.swift

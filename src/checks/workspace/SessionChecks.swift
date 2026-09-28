@@ -105,6 +105,7 @@ internal func runBankHistorySuite(_ report: CheckReport) {
         return
     }
     bankUndoPublicationChecks(report, fixtureRoot: fixtureRoot)
+    runVoicegroupCreationChecks(report, fixtureRoot: fixtureRoot)
     twoOpenSessionsShareBankEdit(report: report, fixtureRoot: fixtureRoot)
     bankSharedHistoryAndLifecycle(report: report, fixtureRoot: fixtureRoot)
     bankBindingIdentityIsolation(report: report, fixtureRoot: fixtureRoot)

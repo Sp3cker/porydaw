@@ -115,6 +115,7 @@ extension ApplicationSession {
         let catalog = candidate.voicegroupCatalog
         settingsVoicegroups = catalog.groupArgs
         voiceList.setVoicegroupChoices(catalog.groupArgs)
+        voiceList.projectService = candidate.service
         voiceList.sampleChoices = catalog.samples
         voiceList.waveSymbols = catalog.waves
         voiceList.drumkitSymbols = catalog.drumkits

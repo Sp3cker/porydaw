@@ -468,4 +468,138 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
     }
     report.expectEqual(expected: secondVoice, actual: second.bankSlots[0].voice, cppID: originID,
                        what: "undo restores the second tab's original voice")
+    runVoiceListNewVoicegroupChecks(report, fixtureRoot: fixtureRoot)
+}
+
+// MARK: - New Voicegroup Prompt Checks
+//
+// The mounted New Voicegroup flow at the controller level: prompt gates,
+// collision refusal, accept binds _name undoably with a bank rebind, and one
+// undo restores the home binding while the created files remain.
+
+@MainActor
+internal func runVoiceListNewVoicegroupChecks(_ report: CheckReport, fixtureRoot: String) {
+    let flowID = "vgsavecheck/VoicegroupSaveTest::newVoicegroupCreatesAndAssignsUndoably"
+    let projectDir = stageTestProject(in: fixtureRoot, projectName: "swiftcore-voicelist-newvg")
+    let service = ProjectService()
+    do {
+        try runBlocking { try await service.open(root: projectDir) }
+    } catch {
+        report.fail(flowID, "project open failed: \(error)")
+        return
+    }
+    var session: DocumentSession!
+    do {
+        session = try runBlocking {
+            try await DocumentSession.open(service: service, label: "mus_session_test")
+        }
+    } catch {
+        report.fail(flowID, "session open failed: \(error)")
+        return
+    }
+    let homeArg = session.document.state.config.voicegroupArgument
+    let homeLoad = session.bankLoadName
+    let gateID = "swiftcore/VoiceListNewVoicegroup::promptGates"
+    let orphan = VoiceListController()
+    var orphanFailures: [String] = []
+    orphan.onNewVoicegroupFailed = { orphanFailures.append($0) }
+    orphan.presentNewVoicegroup()
+    report.expect(!orphan.newVoicegroupPrompt && orphanFailures.isEmpty, cppID: gateID,
+                  message: "present refuses silently with no bound session")
+    let list = VoiceListController()
+    list.projectService = service
+    list.refresh(from: session)
+    do {
+        list.setVoicegroupChoices(try runBlocking { try await service.voicegroupArgs() })
+    } catch {
+        report.fail(flowID, "voicegroup catalog failed: \(error)")
+        return
+    }
+    list.setLoading(true)
+    list.presentNewVoicegroup()
+    report.expect(!list.newVoicegroupPrompt, cppID: gateID,
+                  message: "present refuses silently while the bank is loading")
+    list.setLoading(false)
+    var failures: [String] = []
+    list.onNewVoicegroupFailed = { failures.append($0) }
+    var statuses: [String] = []
+    list.onStatusMessage = { statuses.append($0) }
+    list.presentNewVoicegroup()
+    report.expect(list.newVoicegroupPrompt && list.newVoicegroupName.isEmpty
+                  && list.newVoicegroupCopyLabel == "test_vg.inc", cppID: flowID,
+                  message: "A032: requestNewVoicegroup opens the prompt with its name and copy source")
+    list.newVoicegroupName = "draft"
+    list.presentNewVoicegroup()
+    report.expect(list.newVoicegroupName == "draft", cppID: gateID,
+                  message: "present is a no-op while the prompt is already open")
+    report.expect(!list.isValidVoicegroupName(name: "9bad") && !list.isValidVoicegroupName(name: "")
+                  && list.isValidVoicegroupName(name: "vgsave_created"), cppID: flowID,
+                  message: "A033: the prompt gates Create on the fork name rule with its copy source")
+    report.expect(!list.newVoicegroupNameAvailable(name: "test_vg")
+                  && list.newVoicegroupNameAvailable(name: "vgsave_created"), cppID: gateID,
+                  message: "the prompt reports colliding names as unavailable")
+    list.newVoicegroupName = "test_vg"
+    let hubURL = URL(fileURLWithPath: projectDir).appendingPathComponent("sound/voice_groups.inc")
+    let hubBeforeCollision = (try? Data(contentsOf: hubURL)) ?? Data()
+    list.acceptNewVoicegroup()
+    let hubAfterCollision = (try? Data(contentsOf: hubURL)) ?? Data()
+    report.expect(failures.last?.contains("test_vg") == true && list.newVoicegroupPrompt
+                  && session.document.state.config.voicegroupArgument == homeArg
+                  && hubAfterCollision == hubBeforeCollision, cppID: gateID,
+                  message: "a colliding name refuses with its message and writes nothing")
+    list.cancelNewVoicegroup()
+    list.presentNewVoicegroup()
+    list.newVoicegroupName = "9bad"
+    list.acceptNewVoicegroup()
+    report.expect((failures.last?.isEmpty == false) && list.newVoicegroupPrompt
+                  && session.document.state.config.voicegroupArgument == homeArg, cppID: gateID,
+                  message: "an invalid name refuses through the failure seam and writes nothing")
+    list.cancelNewVoicegroup()
+    list.presentNewVoicegroup()
+    list.newVoicegroupName = "vgsave_created"
+    list.acceptNewVoicegroup()
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(20)
+            while Date() < deadline {
+                if session.document.state.config.voicegroupArgument == "_vgsave_created"
+                    && list.bankLoadName == "vgsave_created" {
+                    return
+                }
+                await Task.yield()
+            }
+            throw RunBlockingError.timeout
+        }
+    } catch {
+        report.fail(flowID, "accept did not bind the created group: \(error)")
+        return
+    }
+    let createdPath = URL(fileURLWithPath: projectDir)
+        .appendingPathComponent("sound/voicegroups/vgsave_created.inc").path
+    report.expect(session.document.state.config.voicegroupArgument == "_vgsave_created"
+                  && FileManager.default.fileExists(atPath: createdPath)
+                  && session.bankLease.sourcePath.hasSuffix("vgsave_created.inc"), cppID: flowID,
+                  message: "A034: accept creates the per-file group and binds _vgsave_created")
+    report.expect(session.document.isDirty, cppID: flowID,
+                  message: "A035: the created binding marks the document dirty")
+    report.expect(statuses == ["Created sound/voicegroups/vgsave_created.inc and assigned it to mus_session_test."],
+                  cppID: gateID,
+                  message: "success publishes the fork status line naming the file and song")
+    do {
+        _ = try runBlocking { try await session.undo() }
+    } catch {
+        report.fail(flowID, "creation undo threw: \(error)")
+        return
+    }
+    list.refresh(from: session)
+    report.expect(session.document.state.config.voicegroupArgument == homeArg, cppID: flowID,
+                  message: "A036: one undo restores the home -G binding")
+    report.expect(session.bankLoadName == homeLoad
+                  && session.bankLease.sourcePath.hasSuffix("test_vg.inc"), cppID: flowID,
+                  message: "A037: undo restores the home bank lease")
+    let hub = (try? String(contentsOf: URL(fileURLWithPath: projectDir)
+        .appendingPathComponent("sound/voice_groups.inc"), encoding: .utf8)) ?? ""
+    report.expect(FileManager.default.fileExists(atPath: createdPath)
+                  && hub.contains("sound/voicegroups/vgsave_created.inc"), cppID: gateID,
+                  message: "undo keeps the created file and hub line: creation is a project op")
 }

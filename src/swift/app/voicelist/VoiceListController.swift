@@ -159,6 +159,21 @@ public final class VoiceListController {
                                                       _ kind: VoiceListAuditionKind,
                                                       _ adsr: VoiceListAdsr) -> Void)?
     @QtIgnored public var onSampleAuditionStopRequested: (() -> Void)?
+    /// Whether the New Voicegroup prompt is mounted. Owned by the controller
+    /// so the dialog survives selector refreshes while it is open.
+    @QtTracked public var newVoicegroupPrompt = false
+    /// The prompt's in-progress name draft, mirrored from its text field.
+    @QtTracked public var newVoicegroupName = ""
+    /// The copy source's file name ("Copy of ..."), or "" with no source.
+    @QtTracked public var newVoicegroupCopyLabel = ""
+    /// Whether accept copies the current bank (false = dummy template).
+    @QtTracked public var newVoicegroupUseCopy = true
+    /// Refusal and failure messages for the create flow; never empty.
+    @QtIgnored public var onNewVoicegroupFailed: ((_ message: String) -> Void)?
+    /// The fork's showStatus line for a completed creation.
+    @QtIgnored public var onStatusMessage: ((_ message: String) -> Void)?
+    /// The project service behind the create op, installed by the owner.
+    @QtIgnored public var projectService: ProjectService?
 
     // MARK: Bound model
 
@@ -387,6 +402,87 @@ public final class VoiceListController {
 
     public func requestNewVoicegroup() {
         onNewVoicegroupRequested?()
+    }
+
+    // MARK: New voicegroup
+
+    /// Opens the New Voicegroup prompt. Silent while unbound, loading, or
+    /// already open: no dialog, no writes, no failure message.
+    public func presentNewVoicegroup() {
+        guard !newVoicegroupPrompt, !isLoading, let session, !session.isClosed else { return }
+        let source = session.bankLease.sourcePath
+        if source.isEmpty {
+            newVoicegroupCopyLabel = ""
+            newVoicegroupUseCopy = false
+        } else {
+            newVoicegroupCopyLabel = URL(filePath: source).lastPathComponent
+            newVoicegroupUseCopy = true
+        }
+        newVoicegroupName = ""
+        newVoicegroupPrompt = true
+    }
+
+    /// The fork's name gate: letters, digits and underscores, leading letter.
+    public func isValidVoicegroupName(name: String) -> Bool {
+        ProjectService.isValidVoicegroupName(name: name)
+    }
+
+    /// Whether no catalog arg collides with the name. The dialog gates its
+    /// Create button on this; accept rechecks before writing.
+    public func newVoicegroupNameAvailable(name: String) -> Bool {
+        !knownArgs.contains("_" + name.trimmingCharacters(in: .whitespaces))
+    }
+
+    public func cancelNewVoicegroup() {
+        newVoicegroupPrompt = false
+        newVoicegroupName = ""
+    }
+
+    /// Creates the per-file group and binds `_<name>` as an undoable cfg edit; refusals
+    /// keep the prompt open and write nothing, service failures report.
+    public func acceptNewVoicegroup() {
+        guard newVoicegroupPrompt, !isLoading, let session, !session.isClosed else { return }
+        let name = newVoicegroupName.trimmingCharacters(in: .whitespaces)
+        guard isValidVoicegroupName(name: name) else {
+            onNewVoicegroupFailed?("Invalid voicegroup name: \(newVoicegroupName).")
+            return
+        }
+        guard newVoicegroupNameAvailable(name: name) else {
+            onNewVoicegroupFailed?("A voicegroup named \(name) already exists.")
+            return
+        }
+        guard projectService != nil else {
+            onNewVoicegroupFailed?("The project service is unavailable.")
+            return
+        }
+        newVoicegroupPrompt = false
+        let useCopy = newVoicegroupUseCopy
+        Task { [weak self] in
+            guard let self, let session = self.session, !session.isClosed,
+                  let service = self.projectService else { return }
+            do {
+                let lease = session.bankLease
+                let copyFile = useCopy ? lease.sourcePath : ""
+                let copyLabel = useCopy ? lease.sectionLabel : ""
+                try await service.createVoicegroup(name: name, copyFromFile: copyFile,
+                                                   copySectionLabel: copyLabel)
+                let args = try await service.voicegroupArgs()
+                try await session.selectVoicegroup("_" + name)
+                self.setVoicegroupChoices(args)
+                self.refresh(from: session)
+                let song = session.document.source.label
+                self.onStatusMessage?(
+                    "Created sound/voicegroups/\(name).inc and assigned it to \(song).")
+            } catch {
+                let message: String
+                if case let ProjectServiceError.operationFailed(text) = error, !text.isEmpty {
+                    message = text
+                } else {
+                    message = String(describing: error)
+                }
+                self.onNewVoicegroupFailed?(message.isEmpty ? "Could not create \(name)." : message)
+            }
+        }
     }
 
     public func requestSave() {

@@ -251,4 +251,20 @@ ColumnLayout {
             applicationSession: panel.applicationSession
         }
     }
+
+    Loader {
+        id: newVoicegroupDialog
+        objectName: "voicegroupNewDialogLoader"
+        height: 0
+        active: panel.controller.newVoicegroupPrompt
+        sourceComponent: VoicegroupNewDialog {
+            controller: panel.controller
+            baseFontPx: panel.baseFontPx
+            layoutSpaces: panel.applicationSession.layoutSpaces
+        }
+        onLoaded: {
+            if (status === Loader.Ready)
+                item.open()
+        }
+    }
 }

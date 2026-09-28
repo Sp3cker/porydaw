@@ -49,6 +49,15 @@ extension ApplicationSession {
                 }
             }
         }
+        voiceList.onNewVoicegroupRequested = { [weak self] in
+            self?.voiceList.presentNewVoicegroup()
+        }
+        voiceList.onNewVoicegroupFailed = { [weak self] message in
+            self?.lastSaveError = message
+        }
+        voiceList.onStatusMessage = { [weak self] message in
+            self?.statusMessage(message: message)
+        }
         voiceList.onSaveRequested = { [weak self] in self?.requestSave() }
         voiceList.onSampleAuditionRequested = { [weak self] symbol, kind, adsr in
             guard let self, let service = self.catalogService,

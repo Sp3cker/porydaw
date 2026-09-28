@@ -298,6 +298,7 @@ if(APPLE)
         workspace/session_save.swift
         workspace/bank_history_probes.swift
         workspace/bank_undo_publication.swift
+        workspace/voicegroup_creation.swift
         workspace/bank_edits.swift
         workspace/bank_saves.swift
         workspace/bank_sharing.swift

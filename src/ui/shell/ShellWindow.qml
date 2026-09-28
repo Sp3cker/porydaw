@@ -129,6 +129,7 @@ ThemedWindow {
         function onNoteNameModeChanged() { ++root.actionRevision }
         function onOpenFailed(message) { shell.openFailed(message) }
         function onOperationFailed(message) { shell.operationFailed(message) }
+        function onStatusMessage(message) { shell.statusText = message }
         function onAllTabsClosed() { shell.allTabsClosed() }
         function onCloseCancelled() { shell.closeCancelled() }
     }

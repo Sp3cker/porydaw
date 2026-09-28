@@ -395,6 +395,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtSignal public func projectRootChanged()
     @QtSignal public func openFailed(message: String)
     @QtSignal public func operationFailed(message: String)
+    @QtSignal public func statusMessage(message: String)
     @QtSignal public func allTabsClosed()
 
     @QtSignal public func closeCancelled()
