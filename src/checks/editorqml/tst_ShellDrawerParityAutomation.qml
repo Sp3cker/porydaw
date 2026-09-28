@@ -240,6 +240,9 @@ ShellDrawerParitySupport {
         var pixelTickTolerance = Math.ceil(1 / pixelsPerTick)
         var altStartX = input.width * 0.25
         var altY = input.height * 0.5
+        // The arming travel the test drives; production maps the press itself
+        // directly and compensates only post-activation release coordinates.
+        var slopTravel = model.baseFontPx * 3
         var fineEndpoint = null
         var priorNodes = collectByName(page, "automationNodeFill", []).map(function(fill) {
             return fill.parent.model.tick
@@ -247,7 +250,7 @@ ShellDrawerParitySupport {
         for (var delta = model.baseFontPx * 4; delta < input.width * 0.5;
              delta += model.baseFontPx) {
             var candidateX = altStartX + delta
-            var rawTick = (candidateX - model.baseFontPx * 3 + grid.cameraScrollX)
+            var rawTick = (candidateX - slopTravel + grid.cameraScrollX)
                           / pixelsPerTick
             var fineTick = Math.floor(rawTick / clockStep + 0.5) * clockStep
             var coarseTick = Math.floor(rawTick / coarseStep + 0.5) * coarseStep
@@ -261,7 +264,7 @@ ShellDrawerParitySupport {
                "the grid exposes a visible Alt endpoint distinct from coarse snap")
         mouseMove(input, altStartX, altY)
         mousePress(input, altStartX, altY, Qt.LeftButton, Qt.AltModifier)
-        mouseMove(input, altStartX + model.baseFontPx * 3, altY,
+        mouseMove(input, altStartX + slopTravel, altY,
                   -1, Qt.LeftButton, Qt.AltModifier)
         mouseMove(input, fineEndpoint.x, altY - model.baseFontPx,
                   -1, Qt.LeftButton, Qt.AltModifier)
