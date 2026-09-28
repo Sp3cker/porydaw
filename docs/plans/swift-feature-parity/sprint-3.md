@@ -3910,3 +3910,117 @@ sourceediting 7G = A086–A092 exactly, presentation 6G = A032–A037
 exactly), lane registrations (`swiftcore-bankhistory`,
 `swiftcore-projectsession`, `shell-voicegroup`), and write-set
 disjointness against §26 tasks; no application suite was run.
+
+## 28. Wave 210–212 — the feature-gap residue: song-label input laws, the dead Register action and the rename focus restore
+
+### Selection and bounded briefs
+
+Planning baseline unchanged from §26–§27 (wave 209 landed at `b986ba08`:
+39 ledgers, 871 open rows, strict debt 215). This wave answers the two
+feature-gap questions §26 parked for the controller — song-label
+validation and dead ingress — and briefs every resulting honest surface
+task. No ledger row is claimed: none of the three behaviors carries an
+open assertion in a surviving ledger, so all three follow the task-171
+pattern of a feature port proven by service/controller predicates and
+mounted journeys, with no ledger edits.
+
+### Feature-gap finding 1 — song-label validation
+
+The suspected gap inverts. Swift's `isValidSongLabel`
+(`ProjectService+Songs.swift:81-84`) refuses strictly more spellings than
+the fork's accepted set, not fewer: `SongName::create` is an empty-only
+gate (`projectidentity.cpp:8-13` at `fceecd88`; the mounted service guard
+`projectio.cpp:366-368`), and the wizard's accepted set is *folded*
+`^[a-z_][a-z0-9_]*$` — the `LowercaseNameValidator` folds typed capitals
+and drops non-name characters per keystroke (`newsongwizard.cpp:78-88,
+102-105`). Swift accepts nothing the fork refused, but refuses "Mus_X"
+the fork folded to "mus_x", lets invalid characters sit in the field
+until Create instead of dropping them live, and refuses a same-name
+collision only after accept where the fork gates completion on it
+(`isComplete` + red hint, `newsongwizard.cpp:134-149`). The fork has no
+song-rename flow at all (only `beginRename` on track headers), so the
+New Song prompt is the only song-label ingress — task-210 territory.
+
+### Feature-gap finding 2 — dead-ingress audit
+
+Every declared `on*` callback and `@QtSignal` in `src/swift` was checked
+for a production assignee, every `KeybindingRegistry` id for a reachable
+handler (`ShellPresenter.actions` → `activate`, the `command` path, or a
+hold-chord consumer), and every QML menu/actionId for dispatch:
+
+| Ingress | State | Disposition |
+|---|---|---|
+| `file.register_song` (`KeybindingRegistry.swift:111`) | Not in `ShellPresenter.actions` — dead keybinding; dock context menu carries the flow | **task-211** (fork File-menu ingress, `mainwindow.cpp:304-307`, gate `:966`) |
+| `TrackHeadersPresenter.onRestoreRollFocus` (`TrackHeaders.swift:67,311`) | Unassigned in production — mounted `finishRename(commit, entered=true)` loses the fork's `focusContent` | **task-212** |
+| `file.import_midi` (`:109`) | Registered, no action | Excluded: P4 import wizard |
+| `file.export_wav` (`:113`) | Registered, no action | Excluded: P3 WAV export |
+| `view.theme` (`:130`) | Registered, no action | Excluded: theme-dialog user decision |
+| `tools.import_sample` (`:138`) | Registered, no action | Excluded: P4 sample studio |
+| VoiceEditor "New Sample"/"Edit Sample" (`VoiceEditor.qml:163,172` → `onNewSampleRequested`/`onEditSampleRequested`) | Buttons fire into unassigned callbacks | Excluded: P4 sample studio |
+| `roll.velocity_drag` (`:170`, holdChord) | Entry only labels the fixed Ctrl chord (`QtFact.controlModifier`); holdChord value unread | Dead registry metadata — no consumer |
+| `VoiceListController.requestVoiceEdit`/`onVoiceEditRequested` (`:366-372`) | Dead method: never called; the real path is `VoiceEditorController` → `applyVoiceEdit` | Dead code — no task |
+| `ApplicationSession.onEditorViewStatePersisted` (`ApplicationSession+Tabs.swift:352`) | Harness-only completion seam (fork `editorViewStatePersisted`, `mainwindow.cpp:943-951`) | No task — intended |
+| All other `on*` callbacks / `@QtSignal`s | Assigned in `DocumentWorkspace`/`ApplicationSession+Audio` or connected in QML | Clean |
+| SongsPanel/QuickMenuPanel/EditorSurfaceMenus/AutomationMenu/EventListMenu actionIds | All dispatch to mounted handlers | Clean |
+
+### Tasks
+
+| Task | Surface / brief | Rows | Group |
+|---|---|---|---|
+| 210 | [The New Song name field takes only the fork's accepted labels](task-210-brief.md) | none — feature port | A |
+| 211 | [File → Register Song restores the dead registry action on the selected tab](task-211-brief.md) | none — feature port | A |
+| 212 | [Rename commit/cancel restores roll focus through a real signal](task-212-brief.md) | none — feature port | A |
+
+### Excluded and deferred — census evidence
+
+- Project identity A001–A008 (`SongName::create` accept/reject/hash):
+  already discharged by executing predicates in
+  `src/checks/projectstore/ProjectIdentityChecks.swift` (A001–A008 named
+  in the messages) — a stale-disposition reconciliation for the
+  ledger-agent gate, not a surface task.
+- visual chrome A007 stays GAP with its family (unported dialog
+  baselines): it pins a `QVERIFY(name)` construction, not the wizard's
+  input mechanics, and its ledger is otherwise parked.
+- voicegroupbank label-guard PARTIALs and lifecycle A714/A715's
+  `SongName::create` conjuncts: same value-type reconciliation gate;
+  `SongName`/`VoicegroupId` exist in `ProjectIdentity.swift`.
+- Standing exclusions unchanged: directional resize cursors, theme
+  dialog/owner rows, drawer-toggle centring (host A079), catalog outage
+  (savecore A016–A026), pending-reload input gate, P3 WAV export
+  (`file.export_wav`), P4 sample studio/import wizard
+  (`tools.import_sample`, `file.import_midi`, the two VoiceEditor sample
+  buttons), Task 164 QtBridge object passing.
+
+### Conflict matrix and dispatch groups
+
+Write sets are pairwise disjoint; no ledger file is touched by any task.
+
+| Task | Production files | Check files |
+|---|---|---|
+| 210 | `src/swift/app/songlist/SongListPresenter.swift`, `src/swift/app/ProjectService+Songs.swift` (normalize the accepted label), `src/ui/songview/quick/docks/SongConfirmDialog.qml` | `src/checks/songlist/songlist_checks.swift`, `src/checks/editorqml/tst_ShellSongs.qml` |
+| 211 | `src/swift/app/shell/ShellPresenter.swift`, `src/swift/app/songlist/SongDockController.swift` | `src/checks/workspace/session_io.swift`, `src/checks/editorqml/tst_ShellMenus.qml` |
+| 212 | `src/swift/app/headers/TrackHeaders.swift`, `src/ui/songview/quick/swiftroll/EditorSurface.qml` | `src/checks/trackheaders/trackheadermutations.swift`, `src/checks/rollqml/tst_SwiftRollTrackHeaderInput.qml` |
+
+| Group | Tasks | Note |
+|---|---|---|
+| A | 210, 211, 212 | Independent writers: no shared file or ledger anywhere; 210 keeps presenter-level laws out of `SongDockController` so 211 owns it alone; 211's mounted journey lives in `tst_ShellMenus` so 210 owns `tst_ShellSongs`. |
+
+### Shared constraints and verification ownership
+
+The §16–§27 contracts continue: fork clauses win; real production
+ingress only (keyTyped/shortcut/menu click, `finishRename` through the
+mounted editor); no test-only properties, no `Qt.callLater` in
+production code; fail-closed staging; independent literals. Ledger rows
+stay untouched — nothing here has an open row to close. Writers run
+their brief's focused lanes under the lock/175-second alarm; the
+controller owns the project-wide gate once after sources settle.
+Planning validation for this docs-only commit checked fork sources at
+`fceecd88` (`newsongwizard.cpp:78-149`, `projectidentity.cpp:8-13`,
+`mainwindow.cpp:304-307,966-981`, `workspaceui_project.cpp:420-428`,
+`trackheadermodel.cpp:514-530`, `songview.cpp:833-843`), Swift ingress
+points (`ShellPresenter.swift:18-81,250-368`,
+`SongDockController.swift:60-135`, `SongListPresenter.swift:115-259`,
+`TrackHeaders.swift:290-312`, `KeybindingRegistry.swift:106-177`), lane
+registrations (`swiftcore-projectsession`, `shell-songs`,
+`shell-menus`, `verify:qml-roll`'s `swiftroll-window`), and pairwise
+write-set disjointness; no application suite was run.
