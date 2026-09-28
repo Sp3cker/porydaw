@@ -13,13 +13,18 @@ Swift counterpart SHA-256: c26d5ee7f1f0b19e0664c5e914c736972a9548398b1384f2b541a
 Swift counterpart: src/checks/workspace/session_playback.swift
 Swift counterpart: src/checks/workspace/session_save.swift
 Swift counterpart: src/checks/songlist/songlist_service.swift
-Swift counterpart SHA-256: 7c0256d2de6a01fe1223492138410fd94d08bba2b08931b9019f74b426ebcf52
+Swift/QML counterpart: src/checks/editorqml/tst_ShellVoicegroup.qml
+Swift/QML counterpart SHA-256: 1584af2e610fe5c17a980b079a208f555753bc130a989f6b4fda99f0a4a11946
+Swift counterpart: src/checks/projectstore/BankLeasesChecks.swift
+Swift counterpart SHA-256: 76510b70f24bbafe6b7e4ce8d819d2a570ba326fa9fca5d2a5663f8fa05356c2
 
 
 Command: Task 134 prescribed lanes: projectstore-open, swiftcore-projectsession, shell-open-failure. Exact executed invocations were not provided in the handoff.
 Result: Implementer handoff reports projectstore-open PASS; Task 134 predicates PASS in swiftcore-projectsession, while the full lane fails on sibling Task 127/128 registration tests; shell-open-failure PASS. This ledger agent did not rerun these lanes.
 Task 151 command: deno task verify --filter swiftcore-projectsession --verbose
 Task 151 result: PASS (1/36 selected), full filtered lane, controller-reported on the unchanged songlist_service.swift SHA-256 7c0256d2de6a01fe1223492138410fd94d08bba2b08931b9019f74b426ebcf52. The proof writer did not rerun the lane; this result supersedes the earlier red sibling-row handoff.
+Task 170 lanes: shell-voicegroup, bankleases, swiftcore-bankhistory
+Result: Controller-provided PASS for all three lanes; exact invocations and per-lane counts were not supplied. The ledger writer did not rerun verification.
 
 A001 | ProjectIoFlowTest::init | src/checks/project/ioflow.cpp:49
 Disposition: GAP
@@ -617,8 +622,8 @@ Original expression:
   QCOMPARE(m_fixture->resultCount(), resultBase + 3)
 
 A051 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:203
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP — the opened-project guard is scenario setup; no independent Swift predicate asserts this precondition.
 Source context since previous assertion:
   ;
   }
@@ -632,8 +637,8 @@ Original expression:
   QVERIFY2(opened, qPrintable(error))
 
 A052 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:209
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP — the first-song load guard is scenario setup; no independent Swift predicate asserts this precondition.
 Source context since previous assertion:
   ;
       if (!opened)
@@ -646,8 +651,8 @@ Original expression:
   QVERIFY2(firstSong, qPrintable(error))
 
 A053 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:216
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — the C++ waitFor result-count condition is native FIFO/result-envelope sequencing, not a user-visible predicate; S037–S042 assert resolved-bank presentation only, not this event count.
 Source context since previous assertion:
   ;
       if (!firstSong)
@@ -661,8 +666,8 @@ Original expression:
   QVERIFY2(m_fixture->waitFor(loadBase + 2, error), qPrintable(error))
 
 A054 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:217
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — the C++ resultCount equality is native FIFO/result-envelope sequencing, not a user-visible predicate; S037–S042 assert resolved-bank presentation only, not this event count.
 Source context since previous assertion:
   ;
 
@@ -670,8 +675,8 @@ Original expression:
   QCOMPARE(m_fixture->resultCount(), loadBase + 2)
 
 A055 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:220
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Disposition: MATCHED
+Mapping/reason: S037 is the executing mounted production-shell check: after opening mus_route101, it asserts the dock voice list resolves to fixture_rich.
 Source context since previous assertion:
   ;
       const auto *const view = std::get_if<LoadedBankView>(&m_fixture->results()[loadBase]);
@@ -681,8 +686,8 @@ Original expression:
   QVERIFY(view)
 
 A056 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:221
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Disposition: MATCHED
+Mapping/reason: S038 is the executing mounted reload check: after saving fixture_alt and reopening the original song tab, it asserts the dock resolves to fixture_alt.
 Source context since previous assertion:
   ;
 
@@ -690,8 +695,8 @@ Original expression:
   QVERIFY(bound)
 
 A057 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:224
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Disposition: MATCHED
+Mapping/reason: S040 in runBankLeasesSuite's openedSongResolvesBoundVoicegroup scenario checks the opened song’s resolved bank sourcePath; its report.expect carries cppID project-io-flow/ProjectIoFlowTest::voicegroupLoadAndPreviewPaths.
 Source context since previous assertion:
   ;
       if (!(view && bound))
@@ -701,8 +706,8 @@ Original expression:
   QCOMPARE(view->id.sourceRelativePath(), bankId.sourceRelativePath())
 
 A058 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:225
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Disposition: MATCHED
+Mapping/reason: S041 in runBankLeasesSuite's openedSongResolvesBoundVoicegroup scenario checks the per-file sectionLabel; its report.expect carries cppID project-io-flow/ProjectIoFlowTest::voicegroupLoadAndPreviewPaths.
 Source context since previous assertion:
   ;
 
@@ -710,8 +715,8 @@ Original expression:
   QCOMPARE(view->id.sectionLabel(), bankId.sectionLabel())
 
 A059 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:226
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Disposition: MATCHED
+Mapping/reason: S039 checks the mounted row-zero title contains fixture_loop after opening the resolved bank in test_zMountedSongReloadPresentsResolvedBank.
 Source context since previous assertion:
   ;
 
@@ -719,8 +724,8 @@ Original expression:
   QVERIFY(view->bank)
 
 A060 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:227
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Disposition: MATCHED
+Mapping/reason: S042 in runBankLeasesSuite's openedSongResolvesBoundVoicegroup scenario checks the opened song's fixture_rich load identity; its report.expect carries cppID project-io-flow/ProjectIoFlowTest::voicegroupLoadAndPreviewPaths.
 Source context since previous assertion:
   ;
 
@@ -728,8 +733,8 @@ Original expression:
   QVERIFY(bound->id == bankId)
 
 A061 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:231
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — the native waitFor preview-result guard pins event-loop/result sequencing; S037–S042 assert resolved-bank presentation only and do not claim preview-plan behavior.
 Source context since previous assertion:
   ;
 
@@ -740,8 +745,8 @@ Original expression:
   QVERIFY2(m_fixture->waitFor(previewBase + 1, error), qPrintable(error))
 
 A062 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:233
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — the native PreviewPlan result-variant check pins the removed backend envelope; S037–S042 assert resolved-bank presentation only and do not claim preview-plan behavior.
 Source context since previous assertion:
   ;
       const auto *const plan = std::get_if<PreviewPlan>(&m_fixture->results().back());
@@ -908,3 +913,21 @@ Anchor: message "A031 first deletion protects its shared voicegroup"
 
 S036 | runSongListServiceChecks (lines 268-269: report.expectEqual(expected: ["_test_vg"], actual: args, cppID: id, what: "voicegroupArgs publishes the catalog group args")) | src/checks/songlist/songlist_service.swift
 Anchor: message "voicegroupArgs publishes the catalog group args"
+
+S037 | test_zMountedSongReloadPresentsResolvedBank (line 220: compare(voice.bankLoadName, "fixture_rich", "A055: opening the copied song presents the fixture rich bank in the dock")) | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "A055: opening the copied song presents the fixture rich bank in the dock"
+
+S038 | test_zMountedSongReloadPresentsResolvedBank (line 274: compare(voice.bankLoadName, "fixture_alt", "A056: reloading the song presents its newly resolved fixture alt bank")) | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "A056: reloading the song presents its newly resolved fixture alt bank"
+
+S039 | test_zMountedSongReloadPresentsResolvedBank (line 228: tryVerify(function() { return first !== null && first.used && first.title.indexOf("fixture_loop") >= 0 }, 5000, "A059: the opened bank presents the fixture loop voice in slot zero")) | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "A059: the opened bank presents the fixture loop voice in slot zero"
+
+S040 | runBankLeasesSuite (line 153: report.expect(song.bank.sourcePath == "sound/voicegroups/fixture_rich.inc", cppID: cppID, message: "A057: opened song resolves the fixture rich source path")) | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "A057: opened song resolves the fixture rich source path"
+
+S041 | runBankLeasesSuite (line 156: report.expect(song.bank.sectionLabel == "", cppID: cppID, message: "A058: opened per-file voicegroup has no section label")) | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "A058: opened per-file voicegroup has no section label"
+
+S042 | runBankLeasesSuite (line 159: report.expect(song.bankLoadName == "fixture_rich", cppID: cppID, message: "A060: opened song binds the resolved fixture rich load identity")) | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "A060: opened song binds the resolved fixture rich load identity"

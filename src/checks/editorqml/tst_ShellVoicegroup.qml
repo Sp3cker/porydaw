@@ -200,4 +200,84 @@ ShellVoicegroupSupport {
         }
     }
 
+    function test_zMountedSongReloadPresentsResolvedBank() {
+        fullShell = fullShellComponent.createObject(null)
+        const shell = fullShell
+        verify(shell !== null, "the production shell creates the voicegroup dock")
+        shell.requestActivate()
+        tryCompare(shell, "active", true)
+        const session = shell.shellPresenter.session
+        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        verify(waitForNative(function() {
+            return session.songOpen || session.lastSaveError.length > 0
+        }, 30000), "the copied song opens in the production shell")
+        compare(session.lastSaveError, "")
+        const dock = findChild(shell, "voicegroupPanel")
+        const voice = session.voiceListController()
+        verify(dock !== null, "the voicegroup dock is mounted in the shell")
+        tryCompare(voice, "isBound", true, 5000)
+        compare(voice.bankLoadName, "fixture_rich",
+                "A055: opening the copied song presents the fixture rich bank in the dock")
+        const rows = findChild(dock, "voicegroupRows")
+        verify(rows !== null, "the mounted dock contains voice rows")
+        rows.positionViewAtIndex(0, ListView.Contain)
+        tryVerify(function() {
+            const first = findChild(dock, "voicegroupRow_0")
+            return first !== null && first.used
+                   && first.title.indexOf("fixture_loop") >= 0
+        }, 5000, "A059: the opened bank presents the fixture loop voice in slot zero")
+
+        const selector = findChild(dock, "vgArgCombo")
+        verify(selector !== null, "the mounted dock exposes its voicegroup selector")
+        selector.forceActiveFocus()
+        selector.editText = "fixture_alt"
+        selector.contentItem.forceActiveFocus()
+        keyClick(Qt.Key_Return)
+        verify(waitForNative(function() {
+            return voice.bankLoadName === "fixture_alt" || session.lastSaveError.length > 0
+        }, 15000), "the dock commits the alternate voicegroup argument")
+        compare(session.lastSaveError, "")
+        session.requestSave()
+        verify(waitForNative(function() {
+            return !session.documentDirty && !session.saveInProgress
+                   || session.lastSaveError.length > 0
+        }, 30000), "the new song voicegroup argument persists before reload")
+        compare(session.lastSaveError, "")
+        const originalPage = session.songTabs.selectedPage
+        const originalId = session.songTabs.selectedId
+        const songs = session.songDockController().songListPresenter()
+        const list = findChild(shell, "songList")
+        verify(list !== null, "the production Songs list is mounted for reload")
+        let songIndex = -1
+        for (let i = 0; i < songs.rowCount; ++i) {
+            if (songs.songId(i) === songs.currentSongId)
+                songIndex = i
+        }
+        verify(songIndex >= 0, "the opened song remains in the mounted Songs list")
+        list.positionViewAtIndex(songIndex, ListView.Contain)
+        tryVerify(function() {
+            const row = list.itemAtIndex(songIndex)
+            return row !== null && row.song.text.indexOf("mus_route101") >= 0
+        }, 3000, "the mounted Songs dock exposes the saved song for reload")
+        const songRow = list.itemAtIndex(songIndex)
+        mouseDoubleClickSequence(songRow, songRow.width / 2, songRow.height / 2,
+                                 Qt.LeftButton)
+        verify(waitForNative(function() {
+            return session.songTabs.selectedId === originalId
+                   && session.songTabs.selectedPage !== originalPage
+                   && session.songTabs.selectedPage !== null
+                   && session.songTabs.selectedPage.isReady
+                   || session.lastSaveError.length > 0
+        }, 30000), "the saved song reloads in its original tab")
+        compare(session.lastSaveError, "")
+        compare(voice.bankLoadName, "fixture_alt",
+                "A056: reloading the song presents its newly resolved fixture alt bank")
+        rows.positionViewAtIndex(0, ListView.Contain)
+        tryVerify(function() {
+            const reloaded = findChild(dock, "voicegroupRow_0")
+            return reloaded !== null && reloaded.used
+                   && reloaded.title.indexOf("fixture_bass") >= 0
+        }, 5000, "the reloaded dock presents fixture bass instead of the old loop voice")
+    }
+
 }

@@ -146,6 +146,18 @@ private func serviceBankCase(
 
 @MainActor
 internal func runBankLeasesSuite(_ report: CheckReport) {
+    serviceBankCase("openedSongResolvesBoundVoicegroup", report) { _, _, song in
+        let cppID = "project-io-flow/ProjectIoFlowTest::voicegroupLoadAndPreviewPaths"
+        report.expect(song.bank.sourcePath == "sound/voicegroups/fixture_rich.inc",
+                      cppID: cppID,
+                      message: "A057: opened song resolves the fixture rich source path")
+        report.expect(song.bank.sectionLabel == "",
+                      cppID: cppID,
+                      message: "A058: opened per-file voicegroup has no section label")
+        report.expect(song.bankLoadName == "fixture_rich",
+                      cppID: cppID,
+                      message: "A060: opened song binds the resolved fixture rich load identity")
+    }
     bankCase("benchGuards", report) { _, store, song, first in
         report.expect(song.isPlayable && first.slotViews.count == voicegroupSize,
                       cppID: "vgbankcheck/VoicegroupBankTest::benchGuards",
