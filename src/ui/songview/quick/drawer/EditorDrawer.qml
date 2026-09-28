@@ -105,8 +105,24 @@ FocusScope {
         }
         return null
     }
+    // True when keyboard focus sits inside the container-wide modal layer:
+    // a menu, picker or prompt owns it, not the section chrome.
+    function modalOwnsFocus() {
+        const window = drawerScope.Window.window
+        let focus = window ? window.activeFocusItem : null
+        while (focus) {
+            if (focus === modalLayer)
+                return true
+            focus = focus.parent
+        }
+        return false
+    }
 
     function executeFocusRequest() {
+        // A queued section request predates a modal the user has since opened;
+        // the modal keeps keyboard focus until it dismisses itself.
+        if (drawerScope.modalOwnsFocus())
+            return
         var target = drawerScope.presenter.focusTarget
         if (target < 0) {
             var root = drawerScope

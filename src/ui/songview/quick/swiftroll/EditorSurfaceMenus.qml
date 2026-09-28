@@ -55,6 +55,31 @@ Item {
     }
 
     function hoverRow(panel, row) { panel.highlightedRow = row }
+    // Single dismissal seam: only the closing surface still owning keyboard
+    // focus may move it; a close landing while focus sits elsewhere moves nothing.
+    function dismissalOwnsFocus(menuItem) {
+        return !!(menuItem && menuItem.activeFocus)
+    }
+    // A late close finds focus on the itemless loader or up the parent chain;
+    // neither owns a control, so both still route home.
+    function dismissalFocusOrphaned() {
+        const window = menuHost.Window.window
+        if (!window)
+            return false
+        const focused = window.activeFocusItem
+        if (!focused || !focused.visible || !focused.enabled)
+            return true
+        if ((focused === gridMenuLoader || focused === headerMenuLoader
+             || focused === timeSigMenuLoader) && !focused.item)
+            return true
+        let host = menuHost
+        while (host) {
+            if (focused === host)
+                return true
+            host = host.parent
+        }
+        return false
+    }
     function activateRow(panel, row) {
         const item = panel.rowItem(row)
         if (!item || !item.active)
@@ -67,45 +92,36 @@ Item {
         } else if (panel.rowObjectNamePrefix === "rulerMenuRow_") {
             const targetTick = root.rulerMenu.targetTick()
             const wasTimeMenu = root.rulerMenu.menuKind === 2
-            root.menuDismissReturnsFocus = true
             const openPrompt = root.rulerMenu.activate(actionId)
             root.timeSigHost.closeTimeSigMenu()
             if (openPrompt)
                 root.timeSigHost.openTimeSigPrompt(targetTick)
-            else if (wasTimeMenu && !root.rulerMenu.insertTimePromptOpen)
+            else if (wasTimeMenu && !root.rulerMenu.insertTimePromptOpen
+                     && dismissalOwnsFocus(timeSigMenuLoader.item))
                 rollInput.forceActiveFocus(Qt.OtherFocusReason)
         }
     }
     Connections {
         target: root.rulerMenu
         function onIsOpenChanged() {
-            if (root.rulerMenu.isOpen) {
-                root.menuDismissReturnsFocus = false
-                root.menuHostHeldFocus = !!(timeSigMenuLoader.item
-                                             && timeSigMenuLoader.item.activeFocus)
+            if (root.rulerMenu.isOpen)
                 return
-            }
-            const returnFocus = root.menuDismissReturnsFocus || root.menuHostHeldFocus
-            root.menuDismissReturnsFocus = false
-            root.menuHostHeldFocus = false
             if (root.timeSigHost && root.timeSigHost.timeSigMenuOpen)
                 root.timeSigHost.closeTimeSigMenu()
-            if (root.timeMenuFocus) {
-                root.timeMenuFocus = false
-                if (returnFocus && !root.applicationSession.timeSigPromptOpen
-                    && !root.rulerMenu.insertTimePromptOpen)
-                    rollInput.forceActiveFocus(Qt.OtherFocusReason)
-            } else if (returnFocus && !root.applicationSession.timeSigPromptOpen
-                       && !root.rulerMenu.insertTimePromptOpen) {
-                rulerInput.forceActiveFocus(Qt.OtherFocusReason)
-            }
+            const target = root.timeMenuFocus ? rollInput : rulerInput
+            root.timeMenuFocus = false
+            if (!root.applicationSession.timeSigPromptOpen
+                && !root.rulerMenu.insertTimePromptOpen
+                && (dismissalOwnsFocus(timeSigMenuLoader.item) || dismissalFocusOrphaned()))
+                target.forceActiveFocus(Qt.OtherFocusReason)
         }
     }
     Connections {
         target: root.gridModel
         function onGridMenuKindChanged() {
             if (root.gridModel.gridMenuKind === 0
-                && !root.applicationSession.timeSigPromptOpen)
+                && !root.applicationSession.timeSigPromptOpen
+                && (dismissalOwnsFocus(gridMenuLoader.item) || dismissalFocusOrphaned()))
                 rulerInput.forceActiveFocus(Qt.OtherFocusReason)
         }
     }
@@ -117,12 +133,10 @@ Item {
         Connections {
             target: root.headersModel
             function onMenuOpenChanged() {
-                if (!root.headersModel.menuOpen)
-                    Qt.callLater(function() {
-                        if (!root.headersModel.menuOpen && !root.applicationSession.headerVoicePickerOpen
-                            && root.headersModel.renamingTrack < 0 && trackHeaders.bandVisible)
-                            trackHeaders.restoreHeaderFocus()
-                    })
+                if (!root.headersModel.menuOpen && !root.applicationSession.headerVoicePickerOpen
+                    && root.headersModel.renamingTrack < 0 && trackHeaders.bandVisible
+                    && (dismissalOwnsFocus(headerMenuLoader.item) || dismissalFocusOrphaned()))
+                    trackHeaders.restoreHeaderFocus()
             }
         }
         sourceComponent: Component {
@@ -249,21 +263,13 @@ Item {
         sourceComponent: Component {
             Item {
                 focus: true
-                onActiveFocusChanged: {
-                    if (activeFocus)
-                        root.menuHostHeldFocus = true
-                    else if (root.rulerMenu.isOpen)
-                        root.menuHostHeldFocus = false
-                }
                 Keys.onEscapePressed: (event) => {
-                    root.menuDismissReturnsFocus = true
                     root.timeSigHost.closeTimeSigMenu()
                     event.accepted = true
                 }
                 MouseArea {
                     anchors.fill: parent
                     onPressed: {
-                        root.menuDismissReturnsFocus = true
                         root.timeSigHost.closeTimeSigMenu()
                     }
                 }

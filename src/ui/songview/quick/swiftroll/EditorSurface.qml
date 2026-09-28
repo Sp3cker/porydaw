@@ -26,6 +26,9 @@ Item {
     readonly property var eventListPresenter: applicationSession.eventListPresenter()
     readonly property bool showEvents: applicationSession.showsEvents
     onShowEventsChanged: {
+        // Current-state arbitration: the toggle returns focus to the roll only
+        // when the events surface owned it or the teardown orphaned focus.
+        const eventsHeldFocus = eventPage.item && eventPage.item.activeFocus
         if (!root.showEvents)
             eventPage.active = false
         if (root.eventListPresenter)
@@ -33,8 +36,25 @@ Item {
         eventListHost.visible = root.showEvents
         if (root.showEvents)
             eventPage.active = true
-        else
+        else if (eventsHeldFocus || root.focusOrphanedByToggle())
             rollInput.forceActiveFocus(Qt.OtherFocusReason)
+    }
+    // Teardown falls back up the destroyed page's parent chain, so focus on the
+    // events host or above owns no control.
+    function focusOrphanedByToggle() {
+        const window = root.Window.window
+        if (!window)
+            return false
+        const focused = window.activeFocusItem
+        if (!focused || !focused.visible || !focused.enabled)
+            return true
+        let host = eventListHost
+        while (host) {
+            if (focused === host)
+                return true
+            host = host.parent
+        }
+        return false
     }
     readonly property var hintService: applicationSession.mouseHintsPresenter()
     readonly property bool hintWindowActive: visible && Window.window !== null
@@ -67,8 +87,6 @@ Item {
     readonly property var rulerMenu: applicationSession.rulerMenuPresenter()
     property point timeSelectionMenuPosition: Qt.point(0, 0)
     property bool timeMenuFocus: false
-    property bool menuDismissReturnsFocus: false
-    property bool menuHostHeldFocus: false
     property bool insertPromptHadFocus: false
     readonly property int menuHorizontalPadding: applicationSession.timeSigHost.layoutSpaces.two
     readonly property int menuVerticalPadding: applicationSession.timeSigHost.layoutSpaces.half

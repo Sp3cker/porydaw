@@ -313,8 +313,6 @@ ShellGridMenuSupport {
         menu = openRulerMenu(range.startX, ruler.height * 0.75)
         tryVerify(function() { return menu.parent.activeFocus }, 3000,
                   "the ruler menu host owns focus before the Undo edit")
-        verify(surface().menuHostHeldFocus,
-               "the menu focus witness is armed before the window Undo")
         verify(shell.shellPresenter.actionEnabled("edit.undo"),
                "Undo remains enabled at window level while the ruler menu is open")
         var undoRevision = grid.appliedRevisionText
