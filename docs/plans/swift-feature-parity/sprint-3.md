@@ -37,8 +37,9 @@ wave 163–170 (§19). Census: proof files 155 → 63; open GAP+PARTIAL rows 370
 shell-note-visuals is the rendering agent's in-progress test, shellwindow-label-commands
 is an AutomationMenu focus race (Qt.callLater grab; fix pending foreign build). Wave
 175–178 (§21) landed: 175 (a2e980cd), 177 (89ecda83), 176 + 178 (78af02d8); verify 37/37
-on 78af02d8. The rest of the census is blocked on foreign in-progress files, on 164, or on
-open decisions (§21 census).
+on 78af02d8. Wave 179–187 (§22) landed, 181 completing it at 3c325bf1 + 85a806f9
+(gesture ledgers deleted). Census: 53 ledgers; open rows 747 (604 GAP + 143
+PARTIAL); strict debt 286. Next: wave 188–193 (§23).
 Known residues: QtBridge queues property notifications, so same-GUI-pass geometry clauses
 (host A095) stay PARTIAL; lanes use the null audio backend, so physical-output conjuncts
 stay PARTIAL.
@@ -3089,3 +3090,116 @@ and pairwise write-set disjointness; no application suite was run.
   P3 WAV, P4 sample studio, transport A009/A010/A013, physical audio, ImageIO,
   ED11 clipboard text ownership, New Voicegroup creation surfaces, visual
   baselines.
+
+## 23. Wave 188–193 — the tab-close exclusivity fix and the last reachable tails
+
+### Selection and bounded briefs
+
+Planning baseline: 53 ledgers; open rows 747 (604 GAP + 143 PARTIAL); strict
+debt 286. HEAD `85a806f9` — wave 179–187 landed in full (181 closed A122 plus
+the gesturevelocity/gesturecommands rows at `3c325bf1`/`85a806f9`; corearrows
+A007 did not land and is re-planned as 190). Working tree is clean except the
+user's untracked docs/profiler items.
+
+The wave is one mandatory crash fix plus five surface tasks, each verified
+against the live tree and each ledger's pinned fork revision:
+
+| Task | Surface / brief | Rows | Group |
+|---|---|---|---|
+| 188 | [Closing a tab must not teardown inside the `tabs` mutation](task-188-brief.md) | hostintegration A119 (1 PARTIAL) + SIGABRT fix | A |
+| 189 | [The scale bar's Fold/Highlight state is per-tab and survives every toggle path](task-189-brief.md) | tabs_scale A021/A023 (2 GAP) + A027/A033/A050/A054 (4 PARTIAL) | A |
+| 190 | [An incidental band or chrome press preserves an eligible note selection](task-190-brief.md) | corearrows A007 (1 GAP; 186 re-plan) | A |
+| 191 | [Selection and byte invariance across the mounted tab lifecycle](task-191-brief.md) | windowtier_lifetime A054, windowtier_keyboard A103 (2 PARTIAL); tabs_transport A050 (1 PARTIAL) | A |
+| 192 | [The automation drawer's second leave clears hover completely; point equality covers Tempo/CC](task-192-brief.md) | automationgesturecheck hover A030, contract A001 (2 PARTIAL); parity A001/A002 ride-along only if discharged | A |
+| 193 | [A rejected track remap is a total no-op; view-only mutations touch no sidecar bytes](task-193-brief.md) | state A164/A171 + A173–A181 (11 GAP) | A |
+
+### What was excluded and why — census evidence
+
+- **188's root cause** is given by the controller: `closeTab`'s
+  `tabs.remove(at:)` removes the QML row while the model's storage access is
+  active; the delegate's synchronous destruction runs
+  `pageReleased`→`retire`→`teardown`→`VelocityPage.detach`, and restoring the
+  velocity-selection clear (A119's missing conjunct) publishes through
+  `PianoGrid.publishOutputs` → `selectedWorkspace` → `tabs` — a reentrant read
+  under `modify`. The fix finishes the row mutation before any teardown; no
+  deferral.
+- **project/proof.identity (19 PARTIAL)** and **voicegroupbank's label-guard
+  conjuncts (A003/A015/A017/A022/A044)**: executing predicates already exist
+  in `ProjectIdentityChecks.swift` (A001–A019 by message anchor); closing them
+  is a standalone reconciliation, which §19/§21 forbid — they ride only
+  inside a future identity-surface change. midiexport's 13 PARTIALs are the
+  same QTest-guard/scratch-fixture tails, additionally parked with P3.
+- **mainwindowrouting remainder**: input 20G/17P, lifecycle 20G/35P, native
+  28G/1P, state beyond 193's rows — fixture guards, `swift-project-store`
+  sidecar/view-state families, native window close, QAction/focusWidget
+  identity, WindowDeactivate routes (no mounted ingress). Unchanged.
+- **Closed but parked**: swiftqtml 78 GAP (retired native BridgeProbe lane —
+  prototype-fixture observation rows, §13 audit deferred), onboardcheck 33
+  (import wizard surface), samplecheck ~390 (P4), nativegraphics 27 +
+  retained 18 (native boundaries), project ioflow/iomutations/workspace
+  protocol deferrals, themelayout settings (owner decision), voicegroupsave
+  presentation A032–A037 (VG03 create flow), voicegroupsave savecore +
+  voicegroupbank A087–A093 (pending user decision), voicegroupsourceediting
+  A086–A092 (retired creation flow), session A024/A042 (sidecar, no owner),
+  tabs_transport A062 (physical audio), selftest_* physical-output conjuncts,
+  visual baselines, swiftrollgated A017/A023 (ED11 clipboard text ownership),
+  hostintegration A162/A174–A185 (real window-close harness), hostadapter
+  A079 (centring decision) and A095 (same-GUI-pass residue),
+  automationhover source-token rows, physical DPR-2 pixels in the drawer
+  lane (presentation A037), task 164 (QtBridge object passing).
+
+### Conflict matrix and dispatch groups
+
+Write sets are pairwise disjoint (each brief lists its exact set). Two tasks
+share the workspace check directory over disjoint files (189:
+`session_editor_semantics.swift` + `tst_ShellTransportSession.qml`; 191:
+`session_edit_routing.swift` + `tst_ShellTabsDrawer.qml` +
+`tst_ShellWindowParameterKeys.qml` + `tst_ShellTransportVolume.qml`; 193:
+`session_view_state_fanout.swift`). Ledgers are per-task disjoint — no two
+tasks write the same ledger, so the single ledger writer applies each set
+serially without row-level arbitration. 188 owns `VelocityPage.swift`,
+`SongTabsController.swift`/`+Close.swift`, `tst_ShellTabsClose.qml` and the
+hostintegration ledger; 190 owns `tst_ShellGridInputEditing.qml` and
+corearrows; 192 owns `tst_EditorDrawerAutomationHover.qml`, the automation
+domain checks and the three automationgesturecheck ledgers.
+
+| Group | Tasks | Note |
+|---|---|---|
+| A | 188, 189, 190, 191, 192, 193 | Independent writers; 188 dispatches first (it is the lane-red crash fix and sits under 181's review fallout). Ledger rows serialized through the ledger writer. |
+
+### Shared constraints and verification ownership
+
+The §16–§22 contracts continue: fork clauses win; one predicate per clause
+with its unique complete literal; each A-id on exactly one predicate;
+independent literal expectations; fail-closed staging; real production
+ingress and real input; no Qt.callLater, no focus memory, no test-only
+ingress/API, no idempotence guards; opaque pre-stimulus snapshots allowed
+(188's document bytes, 193's directory snapshot); WCAG AA beats parity;
+queued QtBridge notifications keep same-GUI-pass clauses PARTIAL. Ledger rows
+are edited only in the commit whose code and checks prove them; closed rows
+use the compact form. Writers run their brief's focused lanes under the
+lock/175-second alarm; no project-wide builds, tests, formatters or linters
+mid-flight; the controller owns the project-wide gate once after sources
+settle. Planning validation for this docs-only commit checked brief
+links/headings, pinned fork citations, row statuses (`proof sites` per area:
+hostintegration A119 PARTIAL; tabs_scale A021/A023 GAP + 4 PARTIAL;
+corearrows A007 GAP; windowtier A054/A103 PARTIAL; tabs_transport A050
+PARTIAL; automationgesturecheck A030/A001 PARTIAL; state A164–A181 GAP), lane
+registrations (`shell-tabs-*`, `shellwindow-velocity`,
+`shell-transport-session`, `shell-grid-input-editing`, `shell-tabs-drawer`,
+`shellwindow-parameter-keys`, `shell-transport-volume`, `editorqml-drawer`,
+`swiftcore`), and pairwise write-set disjointness; no application suite was
+run.
+
+### Deferred and excluded
+
+- Unlock paths: the user's QtBridge object passing (164), `swift-project-store`
+  (sidecar/view-state families), the theme-dialog and A079 centring decisions,
+  a real window-close harness (hostintegration A162/A174–A185), the
+  catalog-outage savecore rows, the hostadapter A095 same-GUI-pass residue,
+  and the identity/midiexport guard-tail reconciliation gate.
+- Strict-mapping debt (286) untouched by design.
+- Standing exclusions unchanged: savecore A016–A026, pending-reload input
+  gate, P3 WAV, P4 sample studio, transport A009/A010/A013, physical audio,
+  ImageIO, ED11 clipboard text ownership, New Voicegroup creation surfaces,
+  visual baselines, WindowDeactivate ingress, physical DPR-2 pixels.
