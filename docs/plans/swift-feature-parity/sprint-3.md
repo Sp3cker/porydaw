@@ -27,11 +27,15 @@ verify:qml-roll 1/1, verify:bridge 0 findings, `proof check --executed` 0 errors
 executed). Wave 155–162 landed except 158 (in flight): 155 (3b268b98), 156 (4625fb42),
 157 (57932bdc), 159 (bd2a11a9), 160 (db8e2fb3), 161 (d34169dd), 162 (07f1308d). Next:
 wave 163–170 (§19). Census: proof files 155 → 63; open GAP+PARTIAL rows 3703 → ~1173
-(wave-163 planning: 63 ledgers, strict-mapping debt 293). Wave 163–170: 158 (4f8c16e7),
-163 (21dd242f), 165 (2dc911ff), 166 (0cef1c3b), 169 (59f8582f), 170 (6bb8b57b) landed;
-167/168 in flight; 164 blocked on QtBridge QML→Swift object passing. Next: wave 171–174
-(§20) — four evidence-backed briefs; the other audited clusters are blocked (§20 census).
-Census at wave-171 planning: 61 ledgers.
+(wave-163 planning: 63 ledgers, strict-mapping debt 293). Wave 163–170 landed: 158
+(4f8c16e7), 163 (21dd242f), 165 (2dc911ff), 166 (0cef1c3b), 167 (d3242623), 168 (4b49b544),
+169 (59f8582f), 170 (6bb8b57b); 164 blocked on QtBridge QML→Swift object passing. Wave
+171–174 landed: 171 (0c9f378d, New Song flow), 172 (2c2042c6), 173 (83e60dd7), 174
+(487052d5); File-menu topology check follows the fork's New Song row (1364a2ac). Census:
+62 ledgers; open GAP+PARTIAL rows 1132 (903 GAP + 229 PARTIAL); strict debt 286. Gate on
+1364a2ac: verify 36/36, verify:qml 1/1, verify:qml-roll 1/1, bridge 0; verify:shell 74/76 —
+shell-note-visuals is the rendering agent's in-progress test, shellwindow-label-commands
+is an AutomationMenu focus race (Qt.callLater grab; fix pending foreign build).
 Known residues: QtBridge queues property notifications, so same-GUI-pass geometry clauses
 (host A095) stay PARTIAL; lanes use the null audio backend, so physical-output conjuncts
 stay PARTIAL.
