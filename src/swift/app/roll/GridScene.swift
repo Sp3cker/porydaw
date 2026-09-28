@@ -211,8 +211,11 @@ public final class GridScene {
 
     public init(typography: Typography = Typography(baseFontPx: 13)) {
         hoverChipFont = typography.caption.map
+        // Mirrored layers (exposeRows in QML) need name and fillColor text;
+        // the rest ship geometry + color only.
         for model in rectModels() {
-            model.enablePackedRows { SceneRectPacking.pack($0) }
+            let mirrored = model === pianoNoteFills || model === pianoOverlay
+            model.enablePackedRows { SceneRectPacking.pack($0, includeStrings: mirrored) }
         }
     }
 

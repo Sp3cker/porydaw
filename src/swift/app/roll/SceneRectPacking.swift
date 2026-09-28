@@ -22,9 +22,13 @@ enum SceneRectPacking {
         return value
     }
 
-    static func pack(_ rows: [SceneRect]) -> Data {
+    /// Serializes rows for the packedRows role. `includeStrings` must be true
+    /// when a consumer mirrors rows (QuickDisplayList.exposeRows) or relies on
+    /// the fillColor text fallback for colors PaletteMath cannot parse.
+    static func pack(_ rows: [SceneRect], includeStrings: Bool = false) -> Data {
         var data = Data()
-        data.reserveCapacity(4 + rows.count * 24)
+        let stride = includeStrings ? 40 : 24
+        data.reserveCapacity(4 + rows.count * stride)
         append(&data, UInt32(rows.count))
         for row in rows {
             append(&data, Float32(row.x))
@@ -32,10 +36,15 @@ enum SceneRectPacking {
             append(&data, Float32(row.width))
             append(&data, Float32(row.height))
             append(&data, argb(row.fillColor))
-            append(&data, UInt16(min(row.primitiveName.utf8.count, Int(UInt16.max))))
-            data.append(contentsOf: row.primitiveName.utf8.prefix(Int(UInt16.max)))
-            append(&data, UInt16(min(row.fillColor.utf8.count, Int(UInt16.max))))
-            data.append(contentsOf: row.fillColor.utf8.prefix(Int(UInt16.max)))
+            if includeStrings {
+                append(&data, UInt16(min(row.primitiveName.utf8.count, Int(UInt16.max))))
+                data.append(contentsOf: row.primitiveName.utf8.prefix(Int(UInt16.max)))
+                append(&data, UInt16(min(row.fillColor.utf8.count, Int(UInt16.max))))
+                data.append(contentsOf: row.fillColor.utf8.prefix(Int(UInt16.max)))
+            } else {
+                append(&data, UInt16(0))
+                append(&data, UInt16(0))
+            }
         }
         return data
     }
