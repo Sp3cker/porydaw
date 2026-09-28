@@ -6,6 +6,9 @@ import ShellQmlCheck 1.0
 import Porydaw.Ui
 
 ShellWindowSupport {
+    TabsDrawerProbe { id: projectSwitchFileProbe }
+    SignalSpy { id: projectReadySpy; signalName: "projectRootChanged" }
+
     function test_savedWindowFrameRestoresAcrossShellSessions() {
         bootstrap.resetPreferences()
         shell = shellComponent.createObject(null)
@@ -146,6 +149,55 @@ ShellWindowSupport {
         compare(settings.int("theme.grid-line-contrast", -1), 80)
         compare(settings.hasValue("theme.primary"), false)
         compare(settings.hasValue("theme.accent"), false)
+    }
+
+    function test_xProjectSwitchEmptiesTwoSongWorkspace() {
+        const firstPath = bootstrap.projectRoot + "/sound/songs/midi/mus_route101.mid"
+        const secondPath = bootstrap.projectRoot + "/sound/songs/midi/mus_littleroot_test.mid"
+        compare(projectSwitchFileProbe.fileFingerprint(firstPath), "471:d31e7c4a0a32a53f",
+                "the first outgoing song starts with independently pinned MIDI bytes")
+        compare(projectSwitchFileProbe.fileFingerprint(secondPath), "425:c27d69bdefcd9207",
+                "the second outgoing song starts with independently pinned MIDI bytes")
+
+        const firstId = openTwoSongShell()
+        const session = shell.shellPresenter.session
+        const secondId = session.songTabs.selectedId
+        compare(session.songTabs.tabCount === 2 && firstId !== secondId
+                && session.songTabs.selectedPage.isReady, true,
+                "A091: two fixture songs occupy distinct ready tabs")
+
+        const picker = findChild(shell, "shellProjectPicker")
+        verify(picker !== null, "the mounted File Open Project picker exists")
+        projectReadySpy.target = session
+        projectReadySpy.clear()
+        const fileMenu = findChild(shell, "shellFileMenu")
+        verify(fileMenu !== null, "the mounted File menu exists")
+        fileMenu.open()
+        tryCompare(fileMenu, "visible", true, 3000)
+        const openProject = findChild(fileMenu, "shellAction_file.open_project")
+        verify(openProject !== null && openProject.enabled,
+               "the File menu enables Open Project with two songs live")
+        mouseClick(openProject, openProject.width / 2, openProject.height / 2)
+        tryCompare(picker, "visible", true, 3000)
+        picker.selectedFolder = "file://" + bootstrap.projectRoot
+        picker.accept()
+
+        verify(waitForNative(function() {
+            return projectReadySpy.count === 1 && session.projectOpen
+                && session.songCount() > 0 && session.lastSaveError === ""
+        }, 30000), "A092: the requested project becomes ready after its tabs close")
+        compare(session.songTabs.tabCount, 0,
+                "A093: the completed project switch has an empty tab set")
+        compare(session.songOpen, false, "the outgoing documents are no longer open")
+        compare(session.songTabs.selectedPage, null, "no outgoing document remains selected")
+        verify(findChild(shell.sceneLoader.item, "songTab_" + firstId) === null
+               && findChild(shell.sceneLoader.item, "songTab_" + secondId) === null,
+               "both outgoing song pages have been released")
+        compare(projectSwitchFileProbe.fileFingerprint(firstPath), "471:d31e7c4a0a32a53f",
+                "switching preserves the first outgoing song's pinned bytes")
+        compare(projectSwitchFileProbe.fileFingerprint(secondPath), "425:c27d69bdefcd9207",
+                "switching preserves the second outgoing song's pinned bytes")
+        projectReadySpy.target = null
     }
 
     function test_yCleanSessionClosesWithoutPrompt() {

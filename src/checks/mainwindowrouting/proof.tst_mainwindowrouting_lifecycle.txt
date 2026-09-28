@@ -30,6 +30,13 @@ Command: deno task verify:shell --filter shell-tabs --verbose
 Result: PASS: shell-tabs, 1/26, 16.54 s on the task-84 settled sources; implementer-run per the task-84 handoff, not re-run by the ledger agent.
 Command: deno task verify --filter swiftcore-projectsession; deno task verify:shell --filter shell-tabs --verbose
 Result: Task 103 implementer GREEN: shell-tabs 1/26 PASS; own Swift predicates passed in focused run (2 harnesses passed, one failed on unrelated rollcheck A041/AutomationPage tick-zero). Implementer-tested source SHA-256: session_view_state.swift 1877e7b484ff3011a97d729a09468218ba1ff93a5ba1da6da45e4a9dca6990b8; tst_ShellTabs.qml f7c1625360bce81f30bbf182d0a530ceaf330bdb15bdd93bf07f8ad986781ee5.
+Task 176 settled source SHA-256: src/checks/workspace/session_io.swift fd4bb279e05b0d8cb608547ca91ec0ac37e429c963d6c66cd44c147c77214053.
+Task 176 Swift execution path: SessionChecks.swift:46 calls sessionOpenAndRecovery; session_io.swift:328 invokes sessionReloadAtomicBinding with cppID mainwindowrouting/MainWindowRoutingLifecycleTest::bankRebind.
+Task 176 verification: `verify --filter swiftcore-projectsession --verbose` PASS (9.83s), controller-observed on the frozen source above; proof writer did not rerun it.
+Task 178 settled source SHA-256: src/checks/editorqml/tst_ShellWindow.qml bdde542b57abc920368fc6647c316397ee48dc691c8ea91e91e535d98af292ee.
+Task 178 QML execution path: ShellQmlEntries.swift registers tst_ShellWindow.qml in shellwindow; ShellQmlTests.swift:36 resolves the lane entry and :71-73 launches its -input file, including test_xProjectSwitchEmptiesTwoSongWorkspace.
+Task 178 verification: `verify:shell --filter shellwindow` shellwindow ok (2.86s), controller-observed on the frozen source above; proof writer did not rerun it.
+Fork revision note: briefs cite 5f768e34; this ledger retains historical Reference revision b5815a6e23296a9cc48c85a201a2ce858b99aae9.
 
 A001 | MainWindowRoutingLifecycleTest::closeAndReopenProjectsGlobalState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:40
 Disposition: RETIRED-REPRESENTATION
@@ -549,8 +556,8 @@ Original expression:
         QVERIFY(SmfFile::readFile(song->midPath, &stage, &error))
 
 A076 | MainWindowRoutingLifecycleTest::bankRebind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:294
-Disposition: GAP
-Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Sprint-3 §21 classifies the fork staged-binding state as unreachable: Swift atomically installs the complete replacement; S320 is the executing refusal predicate for the original fully bound selected song. [S320]
 Source context since previous assertion:
         const VoicegroupId identity = *session->b->voicegroupId();
         LoadedVoiceGroup initial;
@@ -570,8 +577,8 @@ Original expression:
         QVERIFY(probe.isReady())
 
 A077 | MainWindowRoutingLifecycleTest::bankRebind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:305
-Disposition: GAP
-Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Sprint-3 §21 classifies the fork staged-binding state as unreachable: Swift atomically installs the complete replacement; S321 is the executing refusal predicate for preserving the original MIDI, bank, and selection while pending. [S321]
 Source context since previous assertion:
         const MidiTimeline *timeline = probe.timeline().get();
         const SongView::ViewState state = probe.view().viewState();
@@ -587,16 +594,16 @@ Original expression:
         QVERIFY(probe.isReady())
 
 A078 | MainWindowRoutingLifecycleTest::bankRebind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:306
-Disposition: GAP
-Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Sprint-3 §21 classifies the fork staged-binding state as unreachable: Swift atomically installs the complete replacement; S322 is the executing event-loop refusal predicate for partially bound live reload state. [S322]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(probe.timeline().get(), timeline)
 
 A079 | MainWindowRoutingLifecycleTest::bankRebind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:307
-Disposition: GAP
-Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Sprint-3 §21 classifies the fork staged-binding state as unreachable: Swift atomically installs the complete replacement; S323 observes changed MIDI with a complete test_vg bank and selection at replacement. [S323]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -611,8 +618,8 @@ Original expression:
         QVERIFY(sameViewState(probe.view().viewState(), state))
 
 A081 | MainWindowRoutingLifecycleTest::bankRebind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:309
-Disposition: GAP
-Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline readinessChanged signal observation; no Swift predicate observes Qt readinessChanged emission.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Sprint-3 §21 classifies the fork staged ready-emission state as unreachable: Swift publishes one complete replacement at the original tab identity; S324 observes exactly one ready publication. [S324]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -697,8 +704,8 @@ Original expression:
         QCOMPARE(old->document().label(), label)
 
 A091 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:350
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-open precondition for the two-song Qt MainWindow session (and the two tabs being distinct); no Swift predicate opens a two-song Qt session.
+Disposition: MATCHED
+Mapping/reason: S325 observes two distinct ready tabs after the journey opens its staged two-song workspace; this is the consumer outcome of the fork session-open guard, not setup. [S325]
 Source context since previous assertion:
     }
 
@@ -709,8 +716,8 @@ Original expression:
         QVERIFY(session.has_value())
 
 A092 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:361
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (project switch): waitForProjectReady gate after requestProjectOpenAt; no Swift predicate switches Qt projects.
+Disposition: MATCHED
+Mapping/reason: S326 observes the requested project ready after the real File → Open Project path closes its tabs, matching the project-ready outcome. [S326]
 Source context since previous assertion:
         MainWindow &window = *session->window;
         WorkspaceUi &workspace = *window.m_workspace;
@@ -726,8 +733,8 @@ Original expression:
         QVERIFY(waitForProjectReady(workspace))
 
 A093 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:362
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (project switch): tab-set emptied by Qt project switch; no Swift predicate switches Qt projects.
+Disposition: MATCHED
+Mapping/reason: S327 observes exactly zero tabs when the completed project switch is ready, matching the tab-set-empty outcome. [S327]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -2062,3 +2069,27 @@ Anchor: message "A070 completed publication retains full editor drawer lane came
 
 S319 | runTabReadinessChecks | src/checks/workspace/session_view_state.swift
 Anchor: message "A071 exactly one pending and one ready transition restore selected notes at completion"
+
+S320 | sessionReloadAtomicBinding (line 194; report.expect(first.isReady && app.selectedDocument === original && original.document.source.label == "mus_session_test" && original.bankLoadName == "test_vg" && oldVoice.release == 4, cppID: id)) | src/checks/workspace/session_io.swift
+Anchor: message "A076 original selected song starts fully bound to its MIDI and test_vg bank"
+
+S321 | sessionReloadAtomicBinding (lines 203-209; report.expect(!first.isReady && siblingSelectable && app.songTabs.selectedPage === first && app.selectedDocument === original && original.document.source.label == "mus_session_test" && (try? original.document.state.file.encoded()) == oldMidi && original.bankLoadName == "test_vg" && original.bankSlots == oldSlots && original.bankLease.sourcePath == oldBankSource && original.selectedTrack == 0 && original.selectedNoteOrder == selectedNotes, cppID: id)) | src/checks/workspace/session_io.swift
+Anchor: message "A077 pending reload keeps the original MIDI bank and note selection selectable"
+
+S322 | sessionReloadAtomicBinding (lines 213-239; report.expect(!partialPublication && arrived, cppID: id); event-loop observations set partialPublication for an unexpected tab, partial state or incomplete replacement) | src/checks/workspace/session_io.swift
+Anchor: message "A078 event-loop observations refuse any partially bound live reload tab"
+
+S323 | sessionReloadAtomicBinding (lines 245-255; report.expect(changedMidi && replacement !== original && replacement.document.source.label == "mus_session_test" && replacement.bankLoadName == "test_vg" && replacement.bankLease.sourcePath == "sound/voicegroups/test_vg.inc" && replacement.bankSlots.first?.voice?.release == 4 && replacement.selectedTrack == 0 && replacement.selectedNoteOrder == selectedNotes, cppID: id)) | src/checks/workspace/session_io.swift
+Anchor: message "A079 replacement publishes changed MIDI with complete test_vg bank and selection"
+
+S324 | sessionReloadAtomicBinding (lines 256-260; report.expect(readyPublications == 1 && landed.isReady && landed !== first && landed.tabId == first.tabId && app.songTabs.tabCount == 2 && app.songTabs.tabs.contains { $0 === second }, cppID: id)) | src/checks/workspace/session_io.swift
+Anchor: message "A081 one completed replacement publishes ready at the original tab identity"
+
+S325 | test_xProjectSwitchEmptiesTwoSongWorkspace (lines 165-167; compare(session.songTabs.tabCount === 2 && firstId !== secondId && session.songTabs.selectedPage.isReady, true)) | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "A091: two fixture songs occupy distinct ready tabs"
+
+S326 | test_xProjectSwitchEmptiesTwoSongWorkspace (lines 185-188; verify(waitForNative(() -> projectReadySpy.count === 1 && session.projectOpen && session.songCount() > 0 && session.lastSaveError === "", 30000))) | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "A092: the requested project becomes ready after its tabs close"
+
+S327 | test_xProjectSwitchEmptiesTwoSongWorkspace (lines 189-190; compare(session.songTabs.tabCount, 0)) | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "A093: the completed project switch has an empty tab set"

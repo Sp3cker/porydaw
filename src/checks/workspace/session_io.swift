@@ -139,6 +139,128 @@ private func checkFailedProjectSwitch(report: CheckReport, projectDir: String) {
 }
 
 @MainActor
+private func sessionReloadAtomicBinding(report: CheckReport, projectDir: String) {
+    let id = "mainwindowrouting/MainWindowRoutingLifecycleTest::bankRebind"
+    let parent = URL(fileURLWithPath: projectDir).deletingLastPathComponent().path
+    let root = stageTestProject(in: parent, projectName: "swiftcore-atomic-reload")
+    let app = ApplicationSession()
+    app.configurePersistence()
+    defer {
+        app.hostClosing()
+        app.acknowledgeGridDetached()
+    }
+    func until(_ predicate: () -> Bool) -> Bool {
+        let deadline = Date().addingTimeInterval(25)
+        while Date() < deadline {
+            if predicate() { return true }
+            _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+        }
+        return predicate()
+    }
+    app.openProjectAndSong(path: root, label: "mus_session_test")
+    guard until({ app.songTabs.tabCount == 1 || !app.lastSaveError.isEmpty }),
+          let first = app.songTabs.selectedPage, let original = app.selectedDocument else {
+        report.fail(id, "first staged tab did not open: \(app.lastSaveError)")
+        return
+    }
+    app.openSong(label: "mus_session_test2")
+    guard until({ app.songTabs.tabCount == 2 || !app.lastSaveError.isEmpty }),
+          let second = app.songTabs.selectedPage, second !== first else {
+        report.fail(id, "second staged tab did not open: \(app.lastSaveError)")
+        return
+    }
+    guard let note = original.document.notes(in: 0).first,
+          let oldMidi = try? original.document.state.file.encoded(),
+          let oldVoice = original.bankSlots.first?.voice else {
+        report.fail(id, "first staged tab lacks MIDI notes or a bound bank voice")
+        return
+    }
+    app.songTabs.selectTab(tabId: first.tabId)
+    original.setSelectedNotes([note.id])
+    original.selectedTrack = 0
+    let selectedNotes = original.selectedNoteOrder
+    let oldSlots = original.bankSlots
+    let oldBankSource = original.bankLease.sourcePath
+    let midiURL = URL(fileURLWithPath: original.document.source.midiPath)
+    do {
+        var file = try MidiFile.decode(Array(Data(contentsOf: midiURL)))
+        file.chunks[1].events.insert(.channel(tick: 72, status: 0x90, data0: 73, data1: 91), at: 4)
+        file.chunks[1].events.insert(.channel(tick: 84, status: 0x80, data0: 73), at: 5)
+        try Data(file.encoded()).write(to: midiURL)
+    } catch {
+        report.fail(id, "could not stage changed reload MIDI: \(error)")
+        return
+    }
+    report.expect(first.isReady && app.selectedDocument === original
+                  && original.document.source.label == "mus_session_test"
+                  && original.bankLoadName == "test_vg" && oldVoice.release == 4,
+                  cppID: id,
+                  message: "A076 original selected song starts fully bound to its MIDI and test_vg bank")
+    app.openSong(label: "mus_session_test")
+    app.songTabs.selectTab(tabId: second.tabId)
+    let siblingSelectable = app.songTabs.selectedPage === second
+    app.songTabs.selectTab(tabId: first.tabId)
+    report.expect(!first.isReady && siblingSelectable
+                  && app.songTabs.selectedPage === first && app.selectedDocument === original
+                  && original.document.source.label == "mus_session_test"
+                  && (try? original.document.state.file.encoded()) == oldMidi
+                  && original.bankLoadName == "test_vg"
+                  && original.bankSlots == oldSlots && original.bankLease.sourcePath == oldBankSource
+                  && original.selectedTrack == 0 && original.selectedNoteOrder == selectedNotes,
+                  cppID: id,
+                  message: "A077 pending reload keeps the original MIDI bank and note selection selectable")
+
+    var partialPublication = false
+    var readyPublications = 0
+    let arrived = until {
+        guard app.songTabs.tabCount == 2, let page = app.songTabs.selectedPage,
+              page.tabId == first.tabId else {
+            partialPublication = true
+            return false
+        }
+        if page === first {
+            if page.isReady || app.selectedDocument !== original
+                || (try? original.document.state.file.encoded()) != oldMidi
+                || original.bankLoadName != "test_vg" || original.bankSlots != oldSlots
+                || original.bankLease.sourcePath != oldBankSource
+                || original.selectedTrack != 0 || original.selectedNoteOrder != selectedNotes {
+                partialPublication = true
+            }
+            return false
+        }
+        readyPublications += 1
+        if !page.isReady || app.selectedDocument == nil
+            || app.selectedDocument === original {
+            partialPublication = true
+        }
+        return page.isReady
+    }
+    report.expect(!partialPublication && arrived, cppID: id,
+                  message: "A078 event-loop observations refuse any partially bound live reload tab")
+    guard arrived, let replacement = app.selectedDocument,
+          let landed = app.songTabs.selectedPage else {
+        report.fail(id, "atomic reload did not publish a replacement: \(app.lastSaveError)")
+        return
+    }
+    let changedMidi = replacement.timeline.events.contains {
+        $0.tick == 72 && $0.track == 0 && $0.type == 0x9 && $0.data0 == 73 && $0.data1 == 91
+    }
+    report.expect(changedMidi && replacement !== original
+                  && replacement.document.source.label == "mus_session_test"
+                  && replacement.bankLoadName == "test_vg"
+                  && replacement.bankLease.sourcePath == "sound/voicegroups/test_vg.inc"
+                  && replacement.bankSlots.first?.voice?.release == 4
+                  && replacement.selectedTrack == 0 && replacement.selectedNoteOrder == selectedNotes,
+                  cppID: id,
+                  message: "A079 replacement publishes changed MIDI with complete test_vg bank and selection")
+    report.expect(readyPublications == 1 && landed.isReady && landed !== first
+                  && landed.tabId == first.tabId && app.songTabs.tabCount == 2
+                  && app.songTabs.tabs.contains { $0 === second },
+                  cppID: id,
+                  message: "A081 one completed replacement publishes ready at the original tab identity")
+}
+
+@MainActor
 private func sessionStartupRestore(report: CheckReport, projectDir: String) {
     let id = "project-workspace/ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder"
     let store = PreferencesStore()
@@ -203,6 +325,7 @@ private func sessionStartupRestore(report: CheckReport, projectDir: String) {
 internal func sessionOpenAndRecovery(report: CheckReport, projectDir: String) -> (service: ProjectService, session: DocumentSession)? {
     checkFailedProjectSwitch(report: report, projectDir: projectDir)
     sessionStartupRestore(report: report, projectDir: projectDir)
+    sessionReloadAtomicBinding(report: report, projectDir: projectDir)
     // 1. Service open and error recovery
     let service = ProjectService()
     let songTablePath = projectDir + "/sound/song_table.inc"
