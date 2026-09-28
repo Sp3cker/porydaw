@@ -118,7 +118,7 @@ EditorDrawerTestSupport {
         verify(marker.s.color !== "", "the marker receives a track or file palette color")
         var tooltip = findChild(testCase.surface, "timelineOtherEventsToolTip")
         verify(tooltip && !tooltip.visible && tooltip.toolTipText === "",
-               "the mounted Other Events tooltip starts empty and hidden")
+               "A123 the mounted Other Events tooltip starts empty and hidden")
         var tooltipLabel = null
         for (var child of tooltip.children) {
             if (typeof child.text === "string")
@@ -131,7 +131,8 @@ EditorDrawerTestSupport {
                "the hover tooltip describes the visible marker")
         verify(presenter.toolTipText.includes(" · Track ") || presenter.toolTipText.includes(" · File · "),
                "the tooltip names the event scope and formatted time")
-        tryCompare(tooltip, "visible", true)
+        tryCompare(tooltip, "visible", true, 5000,
+                   "A129 the hovered marker shows the mounted Other Events tooltip")
         var pointer = input.mapToItem(testCase.surface, marker.s.x, band.height / 2)
         fuzzyCompare(presenter.toolTipX, marker.s.x, 0.01,
                      "the hover position is measured in the physical plot input")
@@ -150,9 +151,13 @@ EditorDrawerTestSupport {
                 "clicking the event band does not steal the roll's keyboard focus")
         var ruler = findChild(testCase.surface, "timelineRulerInput")
         mouseMove(ruler, ruler.width / 2, ruler.height / 2)
-        tryCompare(presenter, "toolTipVisible", false)
+        tryCompare(presenter, "toolTipVisible", false, 5000,
+                   "A131 leaving for the ruler retires the band tooltip")
         tryCompare(presenter, "toolTipText", "")
-        tryCompare(tooltip, "visible", false)
+        verify(!presenter.toolTipVisible && presenter.toolTipText === "",
+               "A132 leaving for the ruler clears the band tooltip state")
+        tryCompare(tooltip, "visible", false, 5000,
+                   "A133 leaving for the ruler hides the mounted tooltip")
         compare(tooltipLabel.text, "",
                 "leaving for the ruler clears the painted tooltip text")
         mouseMove(input, marker.s.x, band.height / 2)
@@ -254,5 +259,136 @@ EditorDrawerTestSupport {
                 "blank chrome does not execute a document command")
         LayoutSupport.compareSnapshots(testCase, LayoutSupport.snapshotStore(testCase, location), before,
                                   "blank chrome changes no section preference")
+    }
+
+    function verifyHiddenHandleCleared(kind) {
+        var handle = testCase.grip(kind)
+        var geometry = testCase.section(kind)
+        verify(handle !== null, "the mounted section owns a chrome resize handle")
+        tryVerify(function() {
+            return geometry.visible && geometry.handleHeight > 0 && handle.visible
+        }, 5000, "the mounted section publishes its chrome handle before hiding")
+        LayoutSupport.clickToggle(testCase, kind)
+        tryVerify(function() {
+            return !geometry.visible && geometry.handleHeight === 0 && !handle.visible
+        }, 5000, "the hidden section settles with no chrome handle")
+        verify(!geometry.visible && geometry.handleHeight === 0 && !handle.visible,
+               "A098 hidden drawer section clears its published chrome handle")
+        LayoutSupport.clickToggle(testCase, kind)
+        tryVerify(function() {
+            return geometry.visible && geometry.handleHeight > 0 && handle.visible
+        }, 5000, "the restored section republishes its chrome handle")
+    }
+
+    function test_hiddenDrawerSectionClearsChromeHandle() {
+        if (testCase.containerPhase) skip("production composition only")
+        VelocitySupport.mountProductionVelocity(testCase, "hidden-handle-velocity")
+        AutomationTabsSupport.mountProductionAutomation(testCase, "hidden-handle-automation")
+        VoiceSupport.mountProductionVoice(testCase, "hidden-handle-voice")
+        verify(testCase.drawer() !== null, "the production drawer is mounted")
+        var kinds = [testCase.velocityKind, testCase.automationKind, testCase.voiceChangesKind]
+        for (var shown = 0; shown < kinds.length; ++shown) {
+            if (!testCase.section(kinds[shown]).visible)
+                LayoutSupport.clickToggle(testCase, kinds[shown])
+        }
+        tryVerify(function() {
+            return testCase.section(testCase.velocityKind).visible
+                && testCase.section(testCase.automationKind).visible
+                && testCase.section(testCase.voiceChangesKind).visible
+        }, 5000, "every production section shows its chrome before hiding")
+        try {
+            verifyHiddenHandleCleared(testCase.velocityKind)
+            verifyHiddenHandleCleared(testCase.automationKind)
+            verifyHiddenHandleCleared(testCase.voiceChangesKind)
+        } finally {
+            for (var restored = 0; restored < kinds.length; ++restored) {
+                if (!testCase.section(kinds[restored]).visible)
+                    LayoutSupport.clickToggle(testCase, kinds[restored])
+            }
+        }
+    }
+
+    function test_otherEventsBandSurvivesLoopMarkerUpdate() {
+        var band = findChild(testCase.surface, "timelineOtherEventsBand")
+        var presenter = testCase.surface.otherEventsPresenter
+        var grid = testCase.surface.gridModel
+        var ruler = findChild(testCase.surface, "timelineRulerInput")
+        var rulerMenu = testCase.surface.rulerMenu
+        verify(band !== null && ruler !== null, "the Other Events band and the production ruler are mounted")
+        grid.setCameraHScroll(0)
+        tryVerify(function() { return grid.cameraScrollX === 0 }, 3000,
+                  "the camera parks at the origin before the loop update")
+        tryCompare(presenter, "labelCount", 3)
+        // Opaque pre-stimulus snapshot: band geometry before the timeline update.
+        var before = Qt.rect(band.x, band.y, band.width, band.height)
+        var countBefore = presenter.labelCount
+        function markerX(name) {
+            var marker = findChild(testCase.surface, name)
+            return marker === null ? null : marker.mapToItem(ruler, 0, 0).x
+        }
+        function rulerX(tick) {
+            return tick * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX
+        }
+        function writeLoopMarker(pressTick, actionId, markerName) {
+            mouseClick(ruler, rulerX(pressTick), ruler.height / 2, Qt.RightButton)
+            tryVerify(function() {
+                var menu = findChild(testCase.surface, "quickMenuPanelRoot")
+                return menu !== null && menu.rowObjectNamePrefix === "rulerMenuRow_" && menu.visible
+            }, 5000, "the ruler press opens the production loop menu")
+            var menu = findChild(testCase.surface, "quickMenuPanelRoot")
+            var captured = rulerMenu.targetTick()
+            var index = -1
+            tryVerify(function() {
+                if (menu.rowCount === 0)
+                    return false
+                for (var k = 0; k < menu.rowCount; ++k) {
+                    var candidate = menu.rowItem(k)
+                    if (candidate !== null && candidate.itemData.actionId === actionId) {
+                        index = k
+                        return true
+                    }
+                }
+                return false
+            }, 3000, "the production loop row is mounted")
+            var row = menu.rowItem(index)
+            verify(row.itemData.enabled, "the production loop row is enabled")
+            mouseClick(row, row.width / 2, row.height / 2)
+            tryVerify(function() {
+                return findChild(testCase.surface, "quickMenuPanelRoot") === null
+            }, 3000, "the loop row activation closes the production menu")
+            var expected = rulerX(captured)
+            tryVerify(function() {
+                var actual = markerX(markerName)
+                return actual !== null && Math.abs(actual + 0.5 - expected) <= 0.75
+            }, 3000, "the production loop marker lands at the pressed ruler tick")
+        }
+        var originalStart = markerX("loopStartMarker")
+        var originalEnd = markerX("loopEndMarker")
+        var writes = 0
+        try {
+            writeLoopMarker(48, 2, "loopStartMarker")
+            writes = 1
+            writeLoopMarker(144, 3, "loopEndMarker")
+            writes = 2
+            verify(band.visible && band.x === before.x && band.y === before.y
+                   && band.width === before.width && band.height === before.height
+                   && presenter.labelCount === countBefore,
+                   "A140 the loop-marker timeline update preserves the published Other Events band geometry")
+        } finally {
+            if (writes > 1) {
+                verify(bootstrap.requestAutomationUndo(), "the first undo steps back from the loop end write")
+                tryVerify(function() {
+                    return markerX("loopEndMarker") === originalEnd
+                }, 5000, "the first undo restores the original loop end")
+            }
+            if (writes > 0) {
+                verify(bootstrap.requestAutomationUndo(), "the second undo steps back from the loop start write")
+            }
+        }
+        tryVerify(function() {
+            return markerX("loopStartMarker") === originalStart
+                && markerX("loopEndMarker") === originalEnd
+        }, 5000, "undo restores the original loop markers")
+        grid.setCameraHScroll(0)
     }
 }

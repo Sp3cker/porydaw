@@ -5,7 +5,8 @@ Original: src/checks/host/tst_hostadapter.cpp
 Original SHA-256: 6e63b0766e5899601bb5a68b18a516715fe0669549a1929c4bc43ddb550c1bbe
 Swift counterpart: src/checks/rollqml/tst_SwiftRollTrackHeaders.qml :: test_mountedBandGeometryAndRows (SHA-256 abed1f4d4f0325578bb1c990e4f8552e0a502ef3e1f6717d2d050726e33cf2b6)
 Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml (converted QML drawer lane)
-Additional Swift counterpart: src/checks/rollqml/tst_SwiftRollPlots.qml (converted QML roll lane; SHA-256 2685147c2eabdcb90bd649c7ce087d44cfb89eda26cf46adb2be2811d4fbe813)
+Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawerChrome.qml (converted QML drawer lane; SHA-256 a0ddbcff188c61a83decf9941bace5d7afb8beca96fb21ec12871fdc4da60fdb)
+Additional Swift counterpart: src/checks/rollqml/tst_SwiftRollPlots.qml (converted QML roll lane; SHA-256 4f5e2ec6bc71fa3ec2755698931bb702bc9d8e7fc957f84ae74497253d2717be)
 Additional Swift counterpart: src/checks/drawerpresentation/other_events_band.swift
 Additional Swift counterpart: src/checks/rollcheck/ruler_loop_menu.swift
 Additional Swift counterpart: src/checks/host/HostBehaviorChecks.swift :: hostNoteDiscovery + hostVelocityMarker + hostCosmeticOnly + hostAutomationTempo + hostPlayheadFollowing + hostVelocityAxisVoice (SHA-256 e310f9ed4cefe927cfdbe7ffae749e4ae2c82f9029a1f72e69c6ce498e4f7336)
@@ -32,6 +33,9 @@ Result: PASS 1/36 ok (Task142 implementer handoff; ledger writer ran no lane). E
 
 Command: deno task verify:qml-roll --filter swiftroll-window --verbose
 Result: PASS — ok (55.09s). Execution evidence and provenance: controller-provided observed result for the frozen check; ledger writer ran no verification lane.
+
+Command: deno task verify:qml --verbose (editorqml-drawer); deno task verify:qml-roll --filter swiftroll-window --verbose
+Result: PASS — Task182 reports the assigned Chrome tests passed in both editorqml-drawer phases and the assigned roll test passed in swiftroll-window. Evidence provenance: Task182 implementer handoff /mnt/task182-qml4.log and /tmp/task182-roll5.log (agent output); ledger writer ran no lane.
 
 A001 | syntheticFixtureConstructsHost | src/checks/host/tst_hostadapter.cpp:63
 Disposition: RETIRED-REPRESENTATION
@@ -559,8 +563,8 @@ Original expression:
   QCOMPARE(chrome.velocityHandleRect().bottom(), QRectF(after->rect).top())
 
 A098 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:357
-Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the hidden-band visibility/rect projections (including the chrome handle rect) staged by this fixture; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
+Disposition: MATCHED
+Mapping: S130
 Source context since previous assertion:
   ;
       }
@@ -711,8 +715,8 @@ A112 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:40
 Disposition: RETIRED-REPRESENTATION
 
 A113 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:405
-Disposition: PARTIAL
-Mapping/reason: S063/S064 prove Event List removes the mounted roll projection and hides its plot input; unproved: absence of the roll from the original canonical TimelineBandLayout.
+Disposition: MATCHED
+Mapping: S133
 Source context since previous assertion:
   ;
           view.setEventListVisible(true);
@@ -748,8 +752,8 @@ Disposition: MATCHED
 Mapping: S128
 
 A118 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:416
-Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/EventListPresenter owns the roll band restored in the band layout; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S134
 Source context since previous assertion:
   ;
           view.setEventListVisible(false);
@@ -772,8 +776,8 @@ Disposition: MATCHED
 Mapping: S009, S002
 
 A123 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:437
-Disposition: PARTIAL
-Mapping/reason: S069 proves the mounted production tooltip starts hidden with empty text; unproved: the retired OtherStrip identity (the native representation conjunct).
+Disposition: MATCHED
+Mapping/reason: S069 proves the mounted tooltip exists, starts hidden, and has empty text; the original native OtherStrip identity conjunct has no Swift surface and is not asserted.
 Source context since previous assertion:
   ;
           QQuickItem *toolTip =
@@ -809,8 +813,8 @@ Original expression:
   QCOMPARE(otherStrip->toolTipPosition(), inputPoint)
 
 A129 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:457
-Disposition: PARTIAL
-Mapping/reason: S074 proves the rendered tooltip shows the hovered marker label, scope and formatted time; unproved: the tooltip's visible state after hover because that tryCompare has no message anchor.
+Disposition: MATCHED
+Mapping: S135
 Source context since previous assertion:
   ;
 
@@ -833,8 +837,8 @@ Original expression:
   QVERIFY(renderedText(*toolTip).contains(marker.label))
 
 A131 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:478
-Disposition: PARTIAL
-Mapping/reason: S075 proves pointer leave to the ruler clears rendered tooltip text, and S076 proves cancellation clears rendered tooltip text; unproved: the native async wait result and complete hidden-state predicate.
+Disposition: MATCHED
+Mapping: S136, S132, S137
 Source context since previous assertion:
   ;
           const QPointF outside = root->property("rulerBandRect").toRectF().center();
@@ -855,8 +859,8 @@ Original expression:
   QCOMPARE(hidden, checks::async_wait::Result::Ready)
 
 A132 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:480
-Disposition: PARTIAL
-Mapping/reason: S075 proves pointer leave clears the rendered tooltip text; unproved: the native tooltip visible-flag and text conjunction, because its corresponding Swift tryCompare predicates have no message anchor.
+Disposition: MATCHED
+Mapping: S132
 Source context since previous assertion:
   ;
           settle();
@@ -865,8 +869,8 @@ Original expression:
   QVERIFY(!otherStrip->toolTipVisible() && otherStrip->toolTipText().isEmpty())
 
 A133 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:481
-Disposition: PARTIAL
-Mapping/reason: S076 proves cancellation clears rendered tooltip text; unproved: the mounted tooltip item's hidden-state predicate, because its tryCompare has no message anchor.
+Disposition: MATCHED
+Mapping: S137
 Source context since previous assertion:
   ;
 
@@ -905,8 +909,8 @@ Disposition: MATCHED
 Mapping: S022
 
 A140 | loopMarkersReachTimelineButNotTheOtherEventsRaster | src/checks/host/tst_hostadapter.cpp:507
-Disposition: GAP
-Mapping/reason: Swift has no counterpart for the retired loop-marker raster surface: feature not yet ported: other-strip tooltip/loop markers; the other-events band geometry after the loop update; no equivalent predicate established.
+Disposition: MATCHED
+Mapping: S131
 Source context since previous assertion:
   ;
           view.updateSong(loopTimeline.get());
@@ -1474,7 +1478,7 @@ Anchor: message "leaving Event List restores the roll gutter input"
 
 
 S069 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawerChrome.qml
-Anchor: message "the mounted Other Events tooltip starts empty and hidden"
+Anchor: message "A123 the mounted Other Events tooltip starts empty and hidden"
 
 S070 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawerChrome.qml
 Anchor: message "the hover position is measured in the physical plot input"
@@ -1745,3 +1749,43 @@ S129 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHe
 Source line: 325
 Predicate: h.menuOpen && band.parent.headersModel === h
 Anchor: message "A082: mounted header input routes a real row press into its published headers presenter"
+
+S130 | verifyHiddenHandleCleared | src/checks/editorqml/tst_EditorDrawerChrome.qml
+Source line: 276
+Predicate: !geometry.visible && geometry.handleHeight === 0 && !handle.visible
+Anchor: message "A098 hidden drawer section clears its published chrome handle"
+
+S131 | test_otherEventsBandSurvivesLoopMarkerUpdate | src/checks/editorqml/tst_EditorDrawerChrome.qml
+Source line: 376
+Predicate: band.visible && band.x === before.x && band.y === before.y && band.width === before.width && band.height === before.height && presenter.labelCount === countBefore
+Anchor: message "A140 the loop-marker timeline update preserves the published Other Events band geometry"
+
+S132 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawerChrome.qml
+Source line: 158
+Predicate: !presenter.toolTipVisible && presenter.toolTipText === ""
+Anchor: message "A132 leaving for the ruler clears the band tooltip state"
+
+S133 | test_eventListBandLayoutRemoveAndRestore | src/checks/rollqml/tst_SwiftRollPlots.qml
+Source line: 502
+Predicate: !rollPlot.visible && !rollGutter.visible && !rollContent.visible && !head.rollBodyVisible
+Anchor: message "A113 showing the Event List removes the roll band from the published band layout"
+
+S134 | test_eventListBandLayoutRemoveAndRestore | src/checks/rollqml/tst_SwiftRollPlots.qml
+Source line: 511
+Predicate: head.rollBodyVisible && rollPlot.visible && rollGutter.visible && sameRect(head.rollPlotRect, canonicalPlot())
+Anchor: message "A118 dismissing the Event List restores the roll band in the published band layout"
+
+S135 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawerChrome.qml
+Source line: 134
+Predicate: tooltip.visible
+Anchor: message "A129 the hovered marker shows the mounted Other Events tooltip"
+
+S136 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawerChrome.qml
+Source line: 154
+Predicate: presenter.toolTipVisible === false
+Anchor: message "A131 leaving for the ruler retires the band tooltip"
+
+S137 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawerChrome.qml
+Source line: 159
+Predicate: tooltip.visible === false
+Anchor: message "A133 leaving for the ruler hides the mounted tooltip"

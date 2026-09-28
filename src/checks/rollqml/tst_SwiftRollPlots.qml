@@ -442,6 +442,12 @@ TestCase {
                    "Event List retains mounted roll plot and gutter input hosts")
             verify(!rollPlot.visible && !playhead().rollBodyVisible,
                    "Event List removes the roll band projection")
+            var rollContent = findChild(s, "rollContentBand")
+            verify(rollContent !== null, "the roll content band is mounted beside its plot inputs")
+            tryVerify(function() {
+                var page = findChild(s, "eventListPage")
+                return page !== null && page.visible
+            }, 5000, "the Event List page mounts visibly over the hidden roll plot")
             verify(!effectivelyVisible(rollInput(), rollBand()),
                    "Event List hides the roll plot input")
             verify(!effectivelyVisible(rollGutter, rollBand()),
@@ -472,6 +478,39 @@ TestCase {
                 drawer.setSectionVisible(restore, original[restore], false)
             if (previousHeight !== null)
                 drawer.setSectionBodyHeight(1, previousHeight)
+        }
+    }
+
+    // The Event List leg of the published band layout on its own journey, so
+    // the remove/restore contract reads independently of drawer-band staging.
+    function test_eventListBandLayoutRemoveAndRestore() {
+        var s = surface()
+        var eventsWereVisible = session.songTabs.selectedTabShowsEvents
+        try {
+            session.songTabs.setSelectedTabEventsVisible(false)
+            tryCompare(s, "showEvents", false)
+            var rollPlot = findChild(s, "timelineQuickRollPlot")
+            var rollGutter = findChild(s, "timelineQuickRollGutter")
+            var rollContent = findChild(s, "rollContentBand")
+            var head = playhead()
+            verify(rollPlot !== null && rollGutter !== null && rollContent !== null,
+                   "the roll plot, gutter and content bands are mounted")
+            session.songTabs.setSelectedTabEventsVisible(true)
+            tryCompare(s, "showEvents", true)
+            verify(!rollPlot.visible && !rollGutter.visible && !rollContent.visible
+                   && !head.rollBodyVisible,
+                   "A113 showing the Event List removes the roll band from the published band layout")
+            tryVerify(function() {
+                var page = findChild(s, "eventListPage")
+                return page !== null && page.visible
+            }, 5000, "the Event List page mounts visibly over the hidden roll plot")
+            session.songTabs.setSelectedTabEventsVisible(false)
+            tryCompare(s, "showEvents", false)
+            verify(head.rollBodyVisible && rollPlot.visible && rollGutter.visible
+                   && sameRect(head.rollPlotRect, canonicalPlot()),
+                   "A118 dismissing the Event List restores the roll band in the published band layout")
+        } finally {
+            session.songTabs.setSelectedTabEventsVisible(eventsWereVisible)
         }
     }
 
