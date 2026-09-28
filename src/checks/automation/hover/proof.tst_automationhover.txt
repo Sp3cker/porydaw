@@ -21,7 +21,7 @@ Additional Swift counterpart: src/swift/app/MouseHints.swift
 
 Disposition tally: 153 sites: 105 MATCHED, 1 PARTIAL, 0 GAP, 0 NATIVE, 47 RETIRED-REPRESENTATION.
 
-Task-194 frozen check SHA-256: src/checks/editorqml/tst_EditorDrawerAutomationHover.qml 4385b53d55fbccbcb6211d48cafd0f438ed58f59eed30f9aa607c222f52549c3; src/checks/editorqml/tst_ShellDrawerParityAutomation.qml 5b593d6452e7c62b866a76f93c31ff06e6f8cce9539d37f1e3b8f707417963d2.
+Task-194 frozen check SHA-256: src/checks/editorqml/tst_EditorDrawerAutomationHover.qml 4385b53d55fbccbcb6211d48cafd0f438ed58f59eed30f9aa607c222f52549c3; src/checks/editorqml/tst_ShellDrawerParityAutomation.qml f142de9de1863fde1abc432a8804ab350046fd2997ff206f95d6105fe6b7e7f5.
 Task-194 Swift counterpart SHA-256: src/swift/app/MouseHints.swift fad30e3599da9346e0c84ef7fade971b5b93f9490ac094e0b009bcc4b396062c.
 Task-194 implementer-observed verification (controller-reported; proof writer did not rerun): verify:qml 1/1 PASS; shell-drawer-parity-automation 1/76 PASS; swiftcore 12/37 PASS.
 
@@ -572,8 +572,8 @@ Mapping: S047
 
 A133 | AutomationHoverTest::liveModifierGesturesCommitAndUndo | src/checks/automation/hover/tst_automationhover.cpp:511
 Disposition: PARTIAL
-Mapping/reason: S149, S150, S151, S152, S153 prove a bounded fine-grid endpoint and actual mounted Alt stroke; PARTIAL remains because the automation camera frame differs from the roll grid frame and no per-row draft reads exist.
-Missing: The automation camera frame differs from the roll grid frame; the check has no per-row draft reads.
+Mapping/reason: S149, S151, and S153 execute only tolerance-based fine-endpoint and commit predicates. The exact committed sweep set is not reproducible across runs: a sub-tick press anchor at 65.49 raw can flip the walk anchor between 65 and 66 and shift the step-lane canonicalization hole (AutomationEdits.swift:42); QML exposes no per-row draft reads.
+Missing: A sub-tick press anchor at 65.49 raw can change the walk anchor between 65 and 66, shifting the step-lane canonicalization hole; QML has no per-row draft reads for the exact committed sweep set.
 Original expression: `QVERIFY(found);`
 
 A134 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:521
