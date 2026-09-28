@@ -5,7 +5,7 @@ Original: src/checks/host/tst_hostadapter.cpp
 Original SHA-256: 6e63b0766e5899601bb5a68b18a516715fe0669549a1929c4bc43ddb550c1bbe
 Swift counterpart: src/checks/rollqml/tst_SwiftRollTrackHeaders.qml :: test_mountedRulerRollVelocityAndDrawerChromeGeometry (SHA-256 f198c8f1aeb10f50eea8c77e3a8cd23236b6401f1f280e6a262986b1f2b0615c)
 Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml (converted QML drawer lane)
-Additional Swift counterpart: src/checks/rollqml/tst_SwiftRollPlots.qml (converted QML roll lane; SHA-256 b4fca80de33783a5373ce4508bc15b888887c3c40f153f9f11179ae4c8807e36)
+Additional Swift counterpart: src/checks/rollqml/tst_SwiftRollPlots.qml (converted QML roll lane; SHA-256 2685147c2eabdcb90bd649c7ce087d44cfb89eda26cf46adb2be2811d4fbe813)
 Additional Swift counterpart: src/checks/drawerpresentation/other_events_band.swift
 Additional Swift counterpart: src/checks/rollcheck/ruler_loop_menu.swift
 Additional Swift counterpart: src/checks/host/HostBehaviorChecks.swift :: hostNoteDiscovery + hostVelocityMarker + hostCosmeticOnly + hostAutomationTempo + hostPlayheadFollowing + hostVelocityAxisVoice (SHA-256 e310f9ed4cefe927cfdbe7ffae749e4ae2c82f9029a1f72e69c6ce498e4f7336)
@@ -719,17 +719,8 @@ Original expression:
   QVERIFY(!view.timelineBandLayout().geometry(songview::TimelineBand::Roll).has_value())
 
 A114 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:410
-Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/EventListPresenter owns the roll plot/gutter input surfaces present under the event-list toggle; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
-Source context since previous assertion:
-  ;
-          auto *roll =
-              root->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineRollInput"));
-          auto *gutter = root->findChild<songview::TimelineInputItem *>(
-              QStringLiteral("timelineRollGutterInput"));
-
-Original expression:
-  QVERIFY(roll && gutter)
+Disposition: MATCHED
+Mapping: S127
 
 A115 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:411
 Disposition: MATCHED
@@ -750,13 +741,8 @@ Original expression:
   QVERIFY(!gutter->isVisible())
 
 A117 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:413
-Disposition: PARTIAL
-Mapping/reason: S066 proves the velocity plot remains available under Event List; unproved: original canonical-layout geometry presence.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(view.timelineBandLayout().geometry(songview::TimelineBand::Velocity).has_value())
+Disposition: MATCHED
+Mapping: S128
 
 A118 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:416
 Disposition: GAP
@@ -1742,3 +1728,13 @@ S126 | test_mountedRulerRollVelocityAndDrawerChromeGeometry | src/checks/rollqml
 Source line: 218
 Predicate: other.visible && otherInput.visible && otherGutter.visible && otherInputRect.x >= otherRect.x && otherInputRect.x + otherInputRect.width <= otherRect.x + otherRect.width && otherInputRect.y >= otherRect.y && otherInputRect.y + otherInputRect.height <= otherRect.y + otherRect.height && otherGutterRect.x >= otherRect.x && otherGutterRect.x + otherGutterRect.width <= otherRect.x + otherRect.width && otherGutterRect.y >= otherRect.y && otherGutterRect.y + otherGutterRect.height <= otherRect.y + otherRect.height
 Anchor: message "A038: Other Events plot and gutter inputs remain visible within their mounted band"
+
+S127 | test_hostMountedBandsResizeHideAndEventList | src/checks/rollqml/tst_SwiftRollPlots.qml
+Source line: 441
+Predicate: rollPlot !== null && rollGutter !== null && rollInput() !== null
+Anchor: message "Event List retains mounted roll plot and gutter input hosts"
+
+S128 | test_hostMountedBandsResizeHideAndEventList | src/checks/rollqml/tst_SwiftRollPlots.qml
+Source line: 454
+Predicate: eventVelocity.visible && eventVelocity.bodyWidth > 0 && eventVelocity.bodyHeight > 0 && sameRect(eventVelocityRect, velocityBeforeEvents) && sameRect(eventVelocityRect, Qt.rect(drawerItem.x + eventVelocity.bodyX, drawerItem.y + eventVelocity.bodyY, eventVelocity.bodyWidth, eventVelocity.bodyHeight))
+Anchor: message "Event List preserves published velocity section body geometry"

@@ -433,10 +433,13 @@ TestCase {
                        "restored drawer plot and gutter inputs tile published section geometry")
                 hostBandGeometry()
             }
+            var velocityBeforeEvents = sceneRect(velocityBody)
             session.songTabs.setSelectedTabEventsVisible(true)
             tryCompare(s, "showEvents", true)
             var rollPlot = findChild(s, "timelineQuickRollPlot")
             var rollGutter = findChild(s, "timelineQuickRollGutter")
+            verify(rollPlot !== null && rollGutter !== null && rollInput() !== null,
+                   "Event List retains mounted roll plot and gutter input hosts")
             verify(!rollPlot.visible && !playhead().rollBodyVisible,
                    "Event List removes the roll band projection")
             verify(!effectivelyVisible(rollInput(), rollBand()),
@@ -446,6 +449,16 @@ TestCase {
             verify(effectivelyVisible(findChild(s, "velocityPlotInput"),
                                       findChild(s, "drawerBody_velocity")),
                    "Event List leaves the velocity band available")
+            var eventVelocity = drawer.section(1)
+            var eventVelocityRect = sceneRect(velocityBody)
+            verify(eventVelocity.visible && eventVelocity.bodyWidth > 0
+                   && eventVelocity.bodyHeight > 0
+                   && sameRect(eventVelocityRect, velocityBeforeEvents)
+                   && sameRect(eventVelocityRect,
+                               Qt.rect(drawerItem.x + eventVelocity.bodyX,
+                                       drawerItem.y + eventVelocity.bodyY,
+                                       eventVelocity.bodyWidth, eventVelocity.bodyHeight)),
+                   "Event List preserves published velocity section body geometry")
             session.songTabs.setSelectedTabEventsVisible(false)
             tryCompare(s, "showEvents", false)
             verify(effectivelyVisible(rollInput(), rollBand()),
