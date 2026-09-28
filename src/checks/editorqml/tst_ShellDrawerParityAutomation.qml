@@ -188,6 +188,34 @@ ShellDrawerParitySupport {
                "the in-bounds dip maps away from the independently interpolated midpoint")
         compare(dipNode.value, expectedMidValue,
                 "the released middle node follows endpoint interpolation rather than the dip")
+        var scaleLabels = collectByName(page, "automationScaleLabel", [])
+        var axisHigh = null
+        var axisLow = null
+        for (var s = 0; s < scaleLabels.length; ++s) {
+            var axisNumber = parseFloat(scaleLabels[s].text)
+            if (!isFinite(axisNumber))
+                continue
+            var axisCenter = scaleLabels[s].mapToItem(input, scaleLabels[s].width / 2,
+                                                     scaleLabels[s].height / 2)
+            if (axisHigh === null || axisNumber > axisHigh.value)
+                axisHigh = { value: axisNumber, y: axisCenter.y }
+            if (axisLow === null || axisNumber < axisLow.value)
+                axisLow = { value: axisNumber, y: axisCenter.y }
+        }
+        verify(axisHigh !== null && axisLow !== null && axisHigh.value > axisLow.value
+               && axisHigh.y < axisLow.y,
+               "the static value axis calibrates the pointer mapping")
+        function axisValueAt(pointerY) {
+            var clamped = Math.min(Math.max(pointerY, axisHigh.y), axisLow.y)
+            return Math.round(axisHigh.value - (clamped - axisHigh.y)
+                              * (axisHigh.value - axisLow.value) / (axisLow.y - axisHigh.y))
+        }
+        var startMapped = axisValueAt(input.height * 0.8)
+        var endMapped = axisValueAt(input.height * 0.2)
+        var dipMapped = axisValueAt(input.height * 0.95)
+        var midMapped = Math.round(startMapped + dipFraction * (endMapped - startMapped))
+        verify(dipMapped !== midMapped,
+               "the pointer-mapped dip differs from the pointer-mapped endpoint interpolation")
         var afterRamp = revision()
         input.forceActiveFocus(Qt.MouseFocusReason)
         keyClick(Qt.Key_B)

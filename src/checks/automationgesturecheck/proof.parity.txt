@@ -9,13 +9,17 @@ Additional Swift counterpart: src/checks/automation/domain/gestureNodeDrag.swift
 Additional Swift counterpart: src/checks/automation/domain/gesturePointRange.swift
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
 Additional Swift counterpart: src/checks/automation/automationselection.swift
+Additional Swift counterpart: src/checks/automation/domain/tst_automationdomain.swift
 
-Disposition tally: 21 sites: 19 MATCHED, 2 PARTIAL, 0 GAP.
+Disposition tally: 21 sites: 21 MATCHED, 0 PARTIAL, 0 GAP.
 
 Task-115 frozen source SHA-256: gestureSweep.swift 30da459163ad89ff2a939be75c383cadb8dbe713e467c211218b8429647d4531; gestureNodeDrag.swift cfaaea075abbcc227ae3ccc58ea1ca5afb13c933fe358224e370bc11b5ef7a48; gestureNodeDragPhantom.swift bd40d2203e67ba489cbe990a477e981abec2223da571d292e0d7e597cf32827d; gesturePointRange.swift 44faa1defb91a7a19ae71233204803447d4e09f5e1db0b0d582cc28b0c23e530; tst_ShellDrawerParity.qml b0c3a480064c7ad201d60ddf78361706a3b6c5e36cf435d09468260619122582.
 Task-115 implementer-observed GREEN: swiftcore-projectsession 1/36, shell-drawer-parity 1/26, full verify 36/36; full shell suite 25/26 due to sibling-owned shell-note-visuals DPR2. Proof writer did not rerun them.
 Task-184 frozen check SHA-256: src/checks/automation/domain/gestureNodeDrag.swift c0992e7ec5c749e9aec8fb1f05681b3dbec132fc32e772bea1f55f77437a7530; src/checks/automation/domain/gestureSweep.swift 603ae030404d4c0ede89ccb2e15dda502d45db6ac1821522f43f04a694cd9850; src/checks/automation/domain/gesturePointRange.swift b22da5a8af11d4c3066e767d31c93d5edfd3c854afcc75d9f71f5a23c3b3188c; src/checks/automation/AutomationPageChecks.swift c9b77134ffc457fe444a274e1e80456734eff2f612bf4b634cfe5e7c797f4b71.
 Task-184 implementer-observed verification (controller-reported; proof writer did not rerun): `deno task verify --filter swiftcore-projectsession --verbose` PASS; `swiftcore` PASS.
+
+Task-194 frozen check SHA-256: src/checks/automation/domain/tst_automationdomain.swift 4f774e890b3cf9ca5fa6fdd681ab7c3eb04057a562489c822d2796898552dcb7.
+Task-194 implementer-observed verification (controller-reported; proof writer did not rerun): swiftcore 12/37 PASS.
 
 Task-96 GREEN: `deno task verify --filter swiftcore-projectsession --verbose`
 PASS (1/36 selected); `deno task verify:qml --verbose` PASS
@@ -50,209 +54,11 @@ flips: undo-index halves, raw-byte conjuncts, lane-set/scope flags, and the
 retired-surface halves stay open, so deletion stays blocked.
 
 A001 | expectOneEdit | src/checks/automationgesturecheck/parity.cpp:184
-Disposition: PARTIAL
-Mapping/reason: One-edit helper guard; related one-edit predicates are indexed below (S015 and S016 fractional drag, S020 selected drag one revision, S021 redo, S028 and S029 recovered drag, S043 a node drag commits one revision, S049 the selected-range drag commits once, S052 a sweep ramp commits one document edit, S053 a pencil stroke on an empty lane commits once, S054 the tempo pencil click records one revision); unproved: native NodeLane pointer delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
-Source context since previous assertion:
-  #include "domains.h"
-  #include "support.h"
-
-  #include <algorithm>
-  #include <array>
-  #include <cmath>
-  #include <cstdint>
-  #include <limits>
-  #include <optional>
-  #include <vector>
-
-  #include <QSize>
-
-  #include <QString>
-
-  #include "core/songdocument.h"
-  #include "core/timedefaults.h"
-  #include "rig.h"
-  #include "ui/editordrawer/automationcanvas.h"
-  #include "ui/editordrawer/nodelane/nodelane.h"
-  #include "ui/layout.h"
-  #include "ui/songview/quick/timelinequickscene.h"
-
-  #include "ui/songview.h"
-  #include "ui/songview/editorselectionmodel.h"
-
-  namespace {
-
-  enum class AdapterKind { Tempo, Cc };
-
-  struct Adapter {
-      AdapterKind kind = AdapterKind::Tempo;
-      const char *name = "";
-  };
-
-  struct Context {
-      AutomationGestureCheckRig &rig;
-      Check check;
-      Adapter adapter;
-      const char *scenario = "";
-      LaneHandle handle;
-      int track = 0;
-      uint8_t controller = 10;
-
-      Context(AutomationGestureCheckRig &rig, const AutomationGestureCheck &fn, Adapter adapter,
-              const char *scenario, LaneHandle handle, int track, uint8_t controller)
-          : rig(rig)
-          , check(fn,
-                  QStringLiteral("%1 %2").arg(QLatin1String(adapter.name), QLatin1String(scenario)))
-          , adapter(adapter)
-          , scenario(scenario)
-          , handle(handle)
-          , track(track)
-          , controller(controller)
-      {}
-  };
-
-  struct Scenario {
-      const char *name;
-      void (*run)(Context &);
-  };
-
-  constexpr uint32_t kPreservedTempoUs = 499999;
-  constexpr std::array kAdapters{
-      Adapter{AdapterKind::Tempo, "Tempo"},
-      Adapter{AdapterKind::Cc, "CC"},
-  };
-  const std::vector<NodePoint> kFixture{{0, 80}, {kFixtureTick, 100}, {288, 64}};
-  const std::vector<NodePoint> kMulti{{0, 80}, {kFixtureTick, 100}, {192, 64}, {384, 110}};
-
-  bool containsPoint(const std::vector<NodePoint> &points, uint64_t tick, int value)
-  {
-      return std::any_of(points.cbegin(), points.cend(), [tick, value](const NodePoint &point) {
-          return point.tick == tick && point.value == value;
-      });
-  }
-
-  struct HorizontalSpan {
-      qreal y = 0.0;
-      qreal length = 0.0;
-  };
-
-  std::optional<HorizontalSpan> longestHorizontalSpan(const songview::TimelineQuickLayerData &layer)
-  {
-      const qreal tolerance = layout::singlePixel();
-      std::optional<HorizontalSpan> result;
-      for (const auto &triangle : layer.triangles) {
-          const qreal minX = std::min({triangle.first.x(), triangle.second.x(), triangle.third.x()});
-          const qreal maxX = std::max({triangle.first.x(), triangle.second.x(), triangle.third.x()});
-          const qreal minY = std::min({triangle.first.y(), triangle.second.y(), triangle.third.y()});
-          const qreal maxY = std::max({triangle.first.y(), triangle.second.y(), triangle.third.y()});
-          const qreal length = maxX - minX;
-          if (maxY - minY <= 2.0 * tolerance && length > 0.0 &&
-              (!result || length > result->length)) {
-              result = HorizontalSpan{(minY + maxY) / 2.0, length};
-          }
-      }
-      return result;
-  }
-
-  std::vector<NodePoint> pointsOf(const Context &ctx)
-  {
-      std::vector<NodePoint> out;
-      if (ctx.adapter.kind == AdapterKind::Tempo) {
-          for (const auto &point : ctx.rig.document().tempoPoints())
-              out.push_back({point.tick, tempoBpm(point.microsecondsPerQuarterNote)});
-          return out;
-      }
-      for (const auto &point : ctx.rig.document().lanePoints(ctx.track, ctx.controller)) {
-          if (!out.empty() && out.back().tick == point.tick)
-              out.back().value = point.value;
-          else
-              out.push_back({point.tick, point.value});
-      }
-      return out;
-  }
-
-  void setTempo(Context &ctx, const std::vector<TempoPoint> &points)
-  {
-      if (ctx.rig.document().tempoPoints() == points)
-          return;
-      TempoEdit edit;
-      edit.remove = ctx.rig.document().tempoPoints();
-      edit.add = points;
-      ctx.rig.document().applyTempoEdit(edit);
-      ctx.rig.documentChanged();
-  }
-
-  void seed(Context &ctx, const std::vector<NodePoint> &points)
-  {
-      if (ctx.adapter.kind == AdapterKind::Tempo) {
-          std::vector<TempoPoint> tempo;
-          tempo.reserve(points.size());
-          for (const auto &point : points) {
-              tempo.push_back({point.tick, tempoUsForBpm(point.value)});
-          }
-          setTempo(ctx, tempo);
-          return;
-      }
-      std::vector<SongDocument::LanePointValue> values;
-      values.reserve(points.size());
-      for (const auto &point : points)
-          values.push_back({point.tick, point.value});
-      ctx.rig.document().writeLanePoints(ctx.track, ctx.controller, 0,
-                                         std::numeric_limits<uint64_t>::max(), values);
-      ctx.rig.documentChanged();
-  }
-
-  AutomationGestureCheckRig::InputPoint at(const Context &ctx, double tick, int value)
-  {
-      return ctx.rig.pointAt(ctx.handle, tick, value);
-  }
-
-  void activatedDrag(const Context &ctx, const QPointF &start, const QPointF &target,
-                     Qt::KeyboardModifiers modifiers = Qt::NoModifier)
-  {
-      const QPointF activation =
-          start + QPointF(ctx.rig.geometry().nodeDragActivationDistance + 2, 0.0);
-      const QPointF end = activation + target - start;
-      ctx.rig.mousePress(start, modifiers);
-      ctx.rig.mouseMove(activation, Qt::LeftButton, modifiers);
-      ctx.rig.mouseMove(end, Qt::LeftButton, modifiers);
-      ctx.rig.mouseRelease(end, modifiers);
-  }
-
-  void selectRange(Context &ctx, uint64_t first, uint64_t last)
-  {
-      songview::EditorSelectionModel::TimeSelection selection;
-      selection.startTick = first;
-      selection.endTick = last;
-      selection.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
-      if (ctx.adapter.kind == AdapterKind::Tempo)
-          selection.tempo = true;
-      else
-          selection.lanes = {{ctx.track, ctx.controller}};
-      ctx.rig.view().selectionModel().setTimeSelection(std::move(selection));
-      ctx.rig.pump();
-  }
-
-  void expectOneEdit(const Context &ctx, const DocSnapshot &before,
-                     const std::vector<NodePoint> &expected)
-  {
-      const auto after = snapshot(ctx.rig.document());
-Original expression:
-      ctx.check.require(
-          isOneEdit(before, after) && sameNodePoints(pointsOf(ctx), expected),
-          QStringLiteral("completed gesture did not commit one edit with the shared node result"));
-
+Disposition: MATCHED
+Mapping: S094 (drawerAutomationCompletedGestureOneEditLaw; cppID swiftcore/AutomationPage::gestureOneEditLaw; runAutomationPageChecks executes the production-page pointer gesture and checks one serialized edit with the expected node result).
 A002 | expectUnchanged | src/checks/automationgesturecheck/parity.cpp:191
-Disposition: PARTIAL
-Mapping/reason: Unchanged helper guard; related non-mutation predicates are indexed below (S025, S026, and S027 stale release snapshots, S031 sub-threshold write, S033 parked press, S044 a node drag preview writes nothing before release, S045 a pencil preview mutates nothing until release, S046 a stale batch release writes nothing); unproved: native NodeLane pointer delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
-Source context since previous assertion:
-  }
-
-  void expectUnchanged(const Context &ctx, const DocSnapshot &before, const char *label)
-  {
-Original expression:
-      ctx.check.require(
-          isUnchanged(before, snapshot(ctx.rig.document())),
-          QStringLiteral("%1 mutated SMF, revision, or undo").arg(QLatin1String(label)));
+Disposition: MATCHED
+Mapping: S095 (drawerAutomationParkedGestureUnchangedLaw; cppID swiftcore/AutomationPage::parkedGestureUnchangedLaw; runAutomationPageChecks executes the production-page pointer press and cancellation and compares complete song bytes, revision and undo state).
 
 A003 | runNodeDrag | src/checks/automationgesturecheck/parity.cpp:233
 Disposition: MATCHED
@@ -676,3 +482,9 @@ Anchor: message "a stale release after a geometry rebuild commits no song bytes 
 
 S093 | drawerAutomationStagedGestureSnapshots | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "recovery after a geometry rebuild commits one serialized history edit and idles"
+
+S094 | drawerAutomationCompletedGestureOneEditLaw | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "a completed gesture commits one edit with the shared node result"
+
+S095 | drawerAutomationParkedGestureUnchangedLaw | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "a parked gesture mutates no song bytes revision or undo depth"

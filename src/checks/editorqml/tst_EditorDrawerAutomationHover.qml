@@ -322,6 +322,9 @@ EditorDrawerTestSupport {
         keyClick(Qt.Key_Escape)
         tryVerify(function() { return bootstrap.automationMenuOpen() === false }, 2000,
                   "dismissing the menu closes it")
+        tryVerify(function() { return hintStatusText.text.length > 0
+                && !("currentSource" in testCase.surface.hintService) }, 2000,
+                  "the Escape dismissal restores the plot hint with no hint-source object")
         mouseMove(input, gapX, free.y)
         tryVerify(function() { return model.hoverVisible === true }, 2000,
                   "pointer motion after a dismissal recovers the hover")
@@ -330,6 +333,27 @@ EditorDrawerTestSupport {
         mouseMove(input, point.x, point.y)
         tryVerify(function() { return model.hoverVisible === true }, 2000,
                   "the node hover returns after a dismissal")
+        // The native hint-source token has no Swift surface: the mounted lane
+        // proves every scope transition through hint text and real pointer ingress.
+        mouseMove(input, gapX, free.y)
+        tryVerify(function() { return model.hoverVisible === true }, 2000,
+                  "the background hover returns for the source check")
+        tryVerify(function() { return hintStatusText.text.length > 0 }, 2000,
+                  "the background hover publishes its hint text")
+        verify(!("currentSource" in testCase.surface.hintService),
+               "the background hover publishes no hint-source object")
+        mouseClick(input, point.x, point.y, Qt.RightButton)
+        tryVerify(function() { return bootstrap.automationMenuOpen() === true }, 2000,
+                  "the second right click reopens the node menu")
+        tryVerify(function() { return hintStatusText.text === "" }, 2000,
+                  "the reopened menu mutes the underlay hint")
+        verify(!("currentSource" in testCase.surface.hintService),
+               "the open menu publishes no hint-source object")
+        mouseMove(input, gapX, free.y)
+        tryVerify(function() { return hintStatusText.text === "" }, 2000,
+                  "motion between underlying targets stays muted under the reopened menu")
+        verify(!("currentSource" in testCase.surface.hintService),
+               "the muted underlay publishes no hint-source object")
     }
 
     function test_productionAutomationEditGuideTracksCursor() {

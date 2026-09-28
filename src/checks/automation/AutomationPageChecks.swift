@@ -376,6 +376,8 @@ internal func runAutomationPageChecks(_ report: CheckReport, session: DocumentSe
     drawerAutomationPencilStrokeModifiers(report, suite: session, service: service)
     drawerAutomationGestureContractParity(report, suite: session, service: service)
     drawerAutomationStagedGestureSnapshots(report, suite: session, service: service)
+    drawerAutomationCompletedGestureOneEditLaw(report, suite: session, service: service)
+    drawerAutomationParkedGestureUnchangedLaw(report, suite: session, service: service)
     drawerAutomationXcmdParity(report, suite: session, service: service)
     drawerAutomationXcmdLaneEdits(report)
     drawerAutomationTapTempoCadenceAndCommit(report, suite: session, service: service)

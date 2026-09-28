@@ -15,6 +15,15 @@ Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml
 Additional Swift counterpart: src/checks/editorqml/tst_ShellDrawerParity.qml
 Additional Swift counterpart: src/checks/editorqml/EditorQmlTests.swift
 Additional Swift counterpart: src/checks/automation/presentation/painting.swift
+Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
+Additional Swift counterpart: src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
+Additional Swift counterpart: src/swift/app/MouseHints.swift
+
+Disposition tally: 153 sites: 105 MATCHED, 1 PARTIAL, 0 GAP, 0 NATIVE, 47 RETIRED-REPRESENTATION.
+
+Task-194 frozen check SHA-256: src/checks/editorqml/tst_EditorDrawerAutomationHover.qml 4385b53d55fbccbcb6211d48cafd0f438ed58f59eed30f9aa607c222f52549c3; src/checks/editorqml/tst_ShellDrawerParityAutomation.qml 5b593d6452e7c62b866a76f93c31ff06e6f8cce9539d37f1e3b8f707417963d2.
+Task-194 Swift counterpart SHA-256: src/swift/app/MouseHints.swift fad30e3599da9346e0c84ef7fade971b5b93f9490ac094e0b009bcc4b396062c.
+Task-194 implementer-observed verification (controller-reported; proof writer did not rerun): verify:qml 1/1 PASS; shell-drawer-parity-automation 1/76 PASS; swiftcore 12/37 PASS.
 
 Task-115 frozen source SHA-256: automationcanvasediting.swift 01ab5120e862c56fed885e7134129d3e4c75df810029800798ca4a328049b9e0; gestureSweep.swift 30da459163ad89ff2a939be75c383cadb8dbe713e467c211218b8429647d4531; gestureNodeDrag.swift cfaaea075abbcc227ae3ccc58ea1ca5afb13c933fe358224e370bc11b5ef7a48; tst_ShellDrawerParity.qml b0c3a480064c7ad201d60ddf78361706a3b6c5e36cf435d09468260619122582; AutomationPage.qml 846b48d0559409db51aa3b922f6260465fb407da7469e4e1ee5e16ebc61aad40.
 Task-115 implementer-observed GREEN: swiftcore-projectsession 1/36, shell-drawer-parity 1/26, full verify 36/36. Proof writer did not rerun them; full shell suite was 25/26 due to sibling-owned shell-note-visuals DPR2.
@@ -464,20 +473,8 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: S107, S106: retired `!body.isEmpty()` native `canvas->laneBody(lane->handle)` rectangle lookup; the origin phantom is resolved from the typed production projection.
 
 A108 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:406
-Disposition: PARTIAL
-Mapping/reason: S105, S106, S107 and S130 prove origin-phantom instructions from actual mounted plot hover; unproved: native `hints.currentSource() == plot` pointer-token identity (no public MouseHints source token in the converted shell).
-Source context since previous assertion:
-
-      m_fixture->rig->view().setEditorHorizontalScroll(geometry.pointHitRadius + 8.0);
-      QCoreApplication::processEvents();
-      const auto domain = CoreTimeDefaults::laneDomain(kPanController);
-      const qreal phantomY = AutomationProjection::valueY(body, geometry, domain.minimum,
-                                                          domain.maximum, lane->heldValue);
-      moveCursorTo(*m_fixture,
-                   automation_hover::windowPoint(*m_fixture, {qreal(body.left()), phantomY}));
-
-Original expression:
-  QTRY_VERIFY(hints.currentSource() == plot);
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S162: the executed mounted hover refusal predicate confirms hint text but no native hint-source object; Swift MouseHints exposes text only, not the retired QObject token.
 
 A109 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:407
 Disposition: MATCHED
@@ -527,31 +524,16 @@ Disposition: MATCHED
 Mapping: S056, S059
 
 A121 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:440
-Disposition: PARTIAL
-Mapping/reason: S110, S111, S132 and S133 prove a real pointer-opened menu suppresses the underlying shell hint and owns its modal underlay; unproved: native `menu.session->owns(hints.currentSource())` source-token identity.
-Source context since previous assertion:
-
-
-Original expression:
-  QTRY_VERIFY(menu.session->owns(hints.currentSource()));
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S163: the executed open-menu refusal predicate checks that no native hint-source object is exposed; Swift MouseHints exposes text only, not menu-session QObject ownership.
 
 A122 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:441
 Disposition: MATCHED
 Mapping: S081, S092
 
 A123 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:447
-Disposition: PARTIAL
-Mapping/reason: S112, S134 prove pointer movement on the menu underlay leaves the mounted shell hint muted; unproved: native `menu.session->owns(hints.currentSource())` source-token identity throughout the open menu.
-Source context since previous assertion:
-
-
-      // Move between real underlying targets while the popup owns the scope:
-      // the underlay stays muted and the session keeps the empty claim.
-      moveCursorTo(*m_fixture, lane->insertionWindowPosition);
-      QCoreApplication::processEvents();
-
-Original expression:
-  QVERIFY(menu.session->owns(hints.currentSource()));
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S164: the executed muted-underlay refusal predicate verifies suppressed hint text with no native source object; Swift MouseHints exposes text only, not source-token identity.
 
 A124 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:448
 Disposition: MATCHED
@@ -562,13 +544,8 @@ Disposition: MATCHED
 Mapping: S057
 
 A126 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:455
-Disposition: PARTIAL
-Mapping/reason: S113, S114 and S135 prove the real menu closes by outside pointer click and the underlay hint recovers without another plot move; unproved: native `hints.currentSource() == plot` source-token identity at the stationary dismissal point.
-Source context since previous assertion:
-
-
-Original expression:
-  QTRY_VERIFY(hints.currentSource() == plot);
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S161: the executed dismissal refusal predicate observes restored hint text and confirms no native source object; Swift MouseHints exposes text only, not QObject identity.
 
 A127 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:456
 Disposition: MATCHED
@@ -595,8 +572,8 @@ Mapping: S047
 
 A133 | AutomationHoverTest::liveModifierGesturesCommitAndUndo | src/checks/automation/hover/tst_automationhover.cpp:511
 Disposition: PARTIAL
-Mapping: S149, S150, S151, S152, S153 (a bounded Alt endpoint is chosen from an independently computed fine grid, distinct from the coarse grid, and a real stroke publishes a fine-only tick).
-Missing: The native candidate uses `candidateEffective = pressViewport + (endContent - activationContent)` after the activation pointer translation. The mounted check computes its `rawTick` with `candidateX - model.baseFontPx * 3`; it does not assert the actual post-activation effective raw position used by the production sweep matches that independent coordinate before release.
+Mapping/reason: S149, S150, S151, S152, S153 prove a bounded fine-grid endpoint and actual mounted Alt stroke; PARTIAL remains because the automation camera frame differs from the roll grid frame and no per-row draft reads exist.
+Missing: The automation camera frame differs from the roll grid frame; the check has no per-row draft reads.
 Original expression: `QVERIFY(found);`
 
 A134 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:521
@@ -636,10 +613,8 @@ Disposition: MATCHED
 Mapping: S156 (the actual dip pointer is within the mounted plot bounds and displaced from the straight endpoint path).
 
 A143 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:590
-Disposition: PARTIAL
-Mapping: S157, S158 (for the actual in-bounds dip, the computed dip interpolation differs from the interpolated middle node, which publishes a line between the released endpoints).
-Missing: The mounted midpoint derives its endpoint values from the resulting `rampNodes` rather than from independent press/release pointer-to-value mappings, so it does not assert the dip's value against the fork's independently mapped expected midpoint.
-Original expression: `QVERIFY(dipValue != expectedMidValue);`
+Disposition: MATCHED
+Mapping: S165 (the executed mounted check independently maps press, release, and in-bounds dip pointer y-coordinates through the calibrated static value axis, then asserts dipMapped differs from the pointer-mapped endpoint interpolation).
 
 A144 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:595
 Disposition: MATCHED
@@ -1179,3 +1154,18 @@ S159 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_She
 Anchor: message "the focus-retained right release does not edit the song"
 S160 | drawerAutomationFocusLossKeepsPress | src/checks/automation/automationcanvashover.swift
 Anchor: message "focus loss while still held freezes song bytes revision and undo"
+
+S161 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
+Anchor: message "the Escape dismissal restores the plot hint with no hint-source object"
+
+S162 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
+Anchor: message "the background hover publishes no hint-source object"
+
+S163 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
+Anchor: message "the open menu publishes no hint-source object"
+
+S164 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
+Anchor: message "the muted underlay publishes no hint-source object"
+
+S165 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
+Anchor: message "the pointer-mapped dip differs from the pointer-mapped endpoint interpolation"

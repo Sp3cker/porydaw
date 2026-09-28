@@ -388,3 +388,58 @@ func drawerAutomationDeleteTransactions(_ report: CheckReport, suite: DocumentSe
     report.expectEqual(expected: [selection.volumeLane, selection.panLane], actual: selection.page.selectedParameters, cppID: drawerAutomationDeleteID,
                        what: "the selection survives the delete it performed")
 }
+let drawerAutomationGestureLawID = "swiftcore/AutomationPage::gestureOneEditLaw"
+let drawerAutomationParkedLawID = "swiftcore/AutomationPage::parkedGestureUnchangedLaw"
+
+// The parity helper laws, executed as one predicate each through the page's
+// production pointer route: a completed gesture is one edit with its nodes,
+// a parked gesture mutates nothing.
+@MainActor
+func drawerAutomationCompletedGestureOneEditLaw(_ report: CheckReport, suite: DocumentSession,
+                                                service: ProjectService) {
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                    pan: [(24, 64), (120, 40)])
+    fixture.activate(fixture.panLane)
+    let before = DrawerAutomationStagedSnapshot(fixture.document)
+    let pressX = fixture.x(24)
+    let pressY = fixture.y(fixture.panLane, 64)
+    guard fixture.page.pointerPress(x: pressX, y: pressY, surface: 1,
+                                    button: AutomationQtButton.left) else {
+        report.fail(drawerAutomationGestureLawID, "a press grabs the node for the one-edit gesture")
+        return
+    }
+    let travel = fixture.page.geometry.nodeDragActivationDistance + 2
+    _ = fixture.page.pointerMove(x: pressX + travel, y: pressY, buttons: AutomationQtButton.left)
+    _ = fixture.page.pointerMove(x: pressX + travel, y: fixture.y(fixture.panLane, 90),
+                                 buttons: AutomationQtButton.left)
+    _ = fixture.page.pointerRelease(x: pressX + travel, y: fixture.y(fixture.panLane, 90),
+                                    button: AutomationQtButton.left)
+    let after = DrawerAutomationStagedSnapshot(fixture.document)
+    report.expect(after.revision == before.revision + 1
+                  && after.undoIndex == before.undoIndex + 1
+                  && after.undoCount == before.undoCount + 1
+                  && after.bytes != before.bytes
+                  && fixture.values(fixture.panLane) == ["24:90", "120:40"],
+                  cppID: drawerAutomationGestureLawID,
+                  message: "a completed gesture commits one edit with the shared node result")
+}
+
+@MainActor
+func drawerAutomationParkedGestureUnchangedLaw(_ report: CheckReport, suite: DocumentSession,
+                                               service: ProjectService) {
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                    pan: [(24, 64), (120, 40)])
+    fixture.activate(fixture.panLane)
+    let before = DrawerAutomationStagedSnapshot(fixture.document)
+    guard fixture.page.pointerPress(x: fixture.x(24), y: fixture.y(fixture.panLane, 64), surface: 1,
+                                    button: AutomationQtButton.left) else {
+        report.fail(drawerAutomationParkedLawID, "a press parks on the node for the unchanged law")
+        return
+    }
+    _ = fixture.page.pointerMove(x: fixture.x(24) + 2, y: fixture.y(fixture.panLane, 64),
+                                 buttons: AutomationQtButton.left)
+    fixture.page.cancelSectionInteraction()
+    report.expect(DrawerAutomationStagedSnapshot(fixture.document) == before,
+                  cppID: drawerAutomationParkedLawID,
+                  message: "a parked gesture mutates no song bytes revision or undo depth")
+}
