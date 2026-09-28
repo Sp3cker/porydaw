@@ -264,10 +264,9 @@ public final class SongListPresenter {
 
     // MARK: - New Song name laws (fork newsongwizard identity field)
 
-    /// Folds typed capitals to lowercase, drops characters outside
-    /// [a-z0-9_], and drops a leading digit: the field always holds a
-    /// folded ^[a-z_][a-z0-9_]*$ prefix. Idempotent and allocation-light.
-    public func normalizeSongLabel(text: String) -> String {
+    /// Folds capitals, drops non-name characters and a leading digit: the
+    /// field always holds a folded ^[a-z_][a-z0-9_]*$ prefix. Idempotent.
+    @QtIgnored public nonisolated static func normalizeSongLabel(text: String) -> String {
         var out = ""
         out.reserveCapacity(text.count)
         for ch in text.lowercased() {
@@ -278,9 +277,13 @@ public final class SongListPresenter {
         return out
     }
 
-    /// Exact-match membership over the registered snapshot rows: table
-    /// entries with or without MIDI trip the taken hint, while unregistered
-    /// stray files reach the service refusal instead of the prompt gate.
+    /// QML entry for the mounted name field (bridgeable instance shape).
+    public func normalizeSongLabel(text: String) -> String {
+        Self.normalizeSongLabel(text: text)
+    }
+
+    /// Exact-match over registered snapshot rows: mid-less table entries trip
+    /// the hint; unregistered strays reach the service refusal instead.
     public func songLabelTaken(label: String) -> Bool {
         allListings.contains { $0.registered && $0.label == label }
     }

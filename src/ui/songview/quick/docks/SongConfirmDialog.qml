@@ -66,9 +66,10 @@ Basic.Dialog {
             onTextChanged: {
                 const normalized = dialog.controller.songListPresenter().normalizeSongLabel(text)
                 if (normalized !== text) {
-                    const cursor = cursorPosition
+                    const kept = dialog.controller.songListPresenter()
+                        .normalizeSongLabel(text.substring(0, cursorPosition))
                     text = normalized
-                    cursorPosition = Math.min(cursor, text.length)
+                    cursorPosition = kept.length
                 }
                 dialog.controller.newSongLabel = text
             }
