@@ -109,7 +109,7 @@ public final class PianoGrid {
     @QtTracked public var cameraMaxHScroll = 0.0
     @QtTracked public var keyboardWidth = 56.0
     @QtTracked public var trackHeaderWidth = fontPx(GridCameraPolicy.seedBaseFontPx, 17.5)
-    @QtTracked public var resizeCursorExtent = fontPx(GridCameraPolicy.seedBaseFontPx, 2.0)
+    @QtTracked public var resizeCursorExtent = Int(fontPx(GridCameraPolicy.seedBaseFontPx, 2.0))
     @QtTracked public var rulerHeight = 0.0
     @QtTracked public var rulerMarkerRowHeight = 0.0
     @QtTracked public var ticksPerBeat = GridMetrics.ticksPerBeat
@@ -181,7 +181,7 @@ public final class PianoGrid {
         metrics = GridMetrics(baseFontPx: base, dpr: 1, width: 0, height: 0)
         keyboardWidth = metrics.keyboardWidth
         trackHeaderWidth = fontPx(base, 17.5)
-        resizeCursorExtent = fontPx(base, 2.0)
+        resizeCursorExtent = Int(fontPx(base, 2.0))
         // The existing Set Velocity row asks its owner for the prompt instead of
         // committing a value; the owner is the document-bound page the
         // application session installs after this presenter exists.

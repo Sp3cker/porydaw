@@ -1,0 +1,395 @@
+Assertion correspondence: rollcheck/resize.cpp
+
+Reference revision: 5f768e3401d74d5df185a6de5692595351156a9d
+Original: src/checks/rollcheck/resize.cpp
+Original SHA-256: 37b983c01f4d66212216d87b519d6de8da76b8fdeed6344195d40b59e246a7af
+Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
+Additional Swift counterpart: src/checks/rollcheck/resize.swift
+Additional Swift counterpart: src/checks/rollqml/tst_SwiftRollSelection.qml
+Additional Swift counterpart: src/checks/editorqml/tst_ShellGridInput.qml
+Additional Swift counterpart: src/checks/editorqml/tst_ShellNoteVisuals.qml
+Additional Swift counterpart: src/checks/editorqml/tst_ShellGridMenuInputZones.qml
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
+
+
+Command: deno task verify
+Result: PASS — 37/37 ok (controller-recorded post-fix run; this proof-only pass ran no lane).
+Command: deno task verify:qml-roll --verbose
+Result: PASS — 1/1 ok (controller-recorded post-fix run; this proof-only pass ran no lane).
+Command: deno task verify:shell
+Result: PASS — 76/76 ok (controller-recorded post-fix run; this proof-only pass ran no lane).
+Command: deno task verify --filter swiftcore --verbose (earlier frozen-checks run)
+Result: PASS — 12/37 ok with the resize.swift messages in build/proof-evidence/swiftcore-projectsession.json (controller-observed; this proof-only pass ran no lane).
+Command: deno task verify --filter swiftcore-projectsession --verbose (task-93 implementer run)
+Result: PASS; 1/36 ok (implementer-reported GREEN on frozen checks; this proof-only pass ran no lane).
+Command: deno task verify:shell --filter shell-note-visuals --verbose (task-93 implementer run)
+Result: PASS; 1/26 ok including physical DPR2 ring/border/face pixel readback (implementer-reported GREEN; this proof-only pass ran no lane).
+Verified note-visuals QML SHA-256: 7996c1fcb13cc466741d6c41a92f10ceba34573221fd4fa58dd18069ddae78b9 (src/checks/editorqml/tst_ShellNoteVisuals.qml).
+Command: deno task verify --filter swiftcore-projectsession --verbose (task-97 frozen checks)
+Result: PASS — 1/36 ok, 35 skipped (implementer-reported GREEN; proof-only pass ran no lane).
+Command: PORYDAW_ROLL_QML_SUITE=tst_SwiftRollSelection.qml deno task verify:qml-roll --verbose (task-97 frozen checks)
+Result: PASS — swiftroll-window 1/1 ok (implementer-reported GREEN; proof-only pass ran no lane).
+Command: deno task verify:shell --filter shell-grid-input --verbose (task-97 frozen checks)
+Result: PASS — shell-grid-input 1/26 ok, 25 skipped (implementer-reported GREEN; proof-only pass ran no lane).
+Command: deno task verify:shell --verbose (task-97 frozen checks)
+Result: PASS — 26/26 ok (implementer-reported GREEN; proof-only pass ran no lane).
+Command: deno task verify (task-97 frozen checks)
+Result: PASS — 36/36 ok (implementer-reported GREEN; proof-only pass ran no lane).
+Verified resize.swift SHA-256: 690c8355c7428aa3fb1bff6e73471e30205aa44c13c7614d6cd1e8454b480528 (src/checks/rollcheck/resize.swift).
+Verified tst_SwiftRollSelection.qml SHA-256: 0bd2eeebc3234d80f1509371df263606c5ac8574899a386425ccee28c1697c12 (src/checks/rollqml/tst_SwiftRollSelection.qml).
+Verified tst_ShellGridMenuInputZones.qml SHA-256: e09de7997b9bfc20e6936caea5bad558d7150c097649f4414df72ac0b94ac6a3 (src/checks/editorqml/tst_ShellGridMenuInputZones.qml).
+
+
+A001 | PianoRollTest::resizeOffGrid | src/checks/rollcheck/resize.cpp:35
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S001 — `QVERIFY2(d.key >= 0, "no free grid cell for the off-grid resize")` guards the deleted native findFreeCell fixture search; Swift stages its own note and proves the off-grid resize result at S001.
+
+A002 | PianoRollTest::resizeOffGrid | src/checks/rollcheck/resize.cpp:57
+Disposition: PARTIAL
+Mapping/reason: PARTIAL — S041 and S042 show each roll edge binding a different asset and applying a bitmap (BitmapCursor readback with the right-drag/left-drag source; null, missing, or invalid art would degrade to ArrowCursor with "QCursor: Cannot create bitmap cursor"), and S043/S044 show the same per-edge binding in the production shell window. Residue: no runtime image comparison of the left art against the right art, so pixel inequality is unproven.
+Source context since previous assertion:
+;
+    SongDocument &doc = check.document();
+    SongView &view = check.view();
+    auto &roll = check.rollInput();
+    const int track = check.track();
+    const SnappedRows rows{view, roll};
+    const uint32_t offDur = uint32_t(d.dur + d.dur / 4);
+    doc.addNote(track, d.tick, uint8_t(d.key), offDur, 100);
+    const QByteArray before = doc.smf().write();
+    const int undo = doc.undoStack()->index();
+    const qreal dpr = roll.devicePixelRatio();
+    const int rowY = rows.centerY(d.key);
+    const qreal leftX = view.camera().displayX(double(d.tick), 0.0, dpr);
+    const qreal rightX = view.camera().displayX(double(d.tick + offDur), 0.0, dpr);
+    const qreal gripInset = layout::fontPxF(0.25) / 2.0;
+    const QPointF leftHandle(leftX + gripInset, rowY);
+    const QPointF rightHandle(rightX - gripInset, rowY);
+    const QSize cursorSize(layout::fontPx(2.0), layout::fontPx(2.0));
+    const QImage leftImage =
+        QIcon(QStringLiteral(":/cursors/left-drag.png")).pixmap(cursorSize, dpr).toImage();
+    const QImage rightImage =
+        QIcon(QStringLiteral(":/cursors/right-drag.png")).pixmap(cursorSize, dpr).toImage();
+
+Original expression:
+QVERIFY2(leftImage != rightImage,
+             "the left and right edge cursor images are indistinguishable")
+
+A003 | PianoRollTest::resizeOffGrid | src/checks/rollcheck/resize.cpp:61
+Disposition: PARTIAL
+Mapping/reason: PARTIAL — S021 shows the left edge publishing the left-drag kind (2), and S042 shows the roll left edge applying the left-drag art as a BitmapCursor (null, missing, or invalid art would degrade to ArrowCursor with "QCursor: Cannot create bitmap cursor"). Residue: the applied pixmap's image equality to the DPI-matched left art is not read back; nothing reads cursor().pixmap() to QML.
+Source context since previous assertion:
+;
+    checks::events::sendMouse(roll, QEvent::MouseMove, leftHandle, Qt::NoButton, Qt::NoButton,
+                              Qt::ControlModifier);
+
+Original expression:
+QVERIFY2(roll.cursor().shape() == Qt::BitmapCursor &&
+                 roll.cursor().pixmap().toImage() == leftImage,
+             "left note edge did not show its DPI-matched custom cursor")
+
+A004 | PianoRollTest::resizeOffGrid | src/checks/rollcheck/resize.cpp:66
+Disposition: PARTIAL
+Mapping/reason: PARTIAL — S020 shows the right edge publishing the right-drag kind (3), and S041 shows the roll right edge applying the right-drag art as a BitmapCursor (null, missing, or invalid art would degrade to ArrowCursor with "QCursor: Cannot create bitmap cursor"). Residue: the applied pixmap's image equality to the DPI-matched right art is not read back; nothing reads cursor().pixmap() to QML.
+Source context since previous assertion:
+;
+    checks::events::sendMouse(roll, QEvent::MouseMove, rightHandle, Qt::NoButton, Qt::NoButton,
+                              Qt::ControlModifier);
+
+Original expression:
+QVERIFY2(roll.cursor().shape() == Qt::BitmapCursor &&
+                 roll.cursor().pixmap().toImage() == rightImage,
+             "right note edge did not show its custom cursor")
+
+A005 | PianoRollTest::resizeOffGrid | src/checks/rollcheck/resize.cpp:78
+Disposition: MATCHED
+Mapping: S001, S027
+
+A006 | PianoRollTest::resizeOffGrid | src/checks/rollcheck/resize.cpp:82
+Disposition: MATCHED
+Mapping: S002
+
+A007 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:89
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S003 — `QVERIFY(seed.has_value())` guards the deleted native makeVelocitySeed optional fixture; Swift stages its own selected notes for the Ctrl+edge journey at S003.
+
+A008 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:99
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S006 — `QVERIFY2(d.key >= 0, "no free grid cell for the selection resize")` guards the deleted native findFreeCell fixture; Swift stages the grabbed note and checks its grouped growth at S006.
+
+A009 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:102
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S006 — `QVERIFY(doc.findNote(track, d.tick, uint8_t(d.key), &dBefore))` guards the deleted native fixture add; Swift uses its planted NoteID to prove grouped growth at S006.
+
+A010 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:116
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S007 — `QVERIFY2(doc.findNote(track, b.tick, uint8_t(b.key), &bBefore), "note B went missing before the Ctrl+edge grab")` guards the deleted native seed lookup; Swift tracks the planted second NoteID and proves its grouped growth at S007.
+
+A011 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:123
+Disposition: MATCHED
+Mapping: S003, S031
+
+A012 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:128
+Disposition: MATCHED
+Mapping: S004, S031
+
+A013 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:130
+Disposition: MATCHED
+Mapping: S005
+
+A014 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:142
+Disposition: MATCHED
+Mapping: S006, S029
+
+A015 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:144
+Disposition: MATCHED
+Mapping: S007, S029
+
+A016 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:147
+Disposition: MATCHED
+Mapping: S036 — grouped Ctrl+edge resize increments undoCount by exactly one.
+
+A017 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:151
+Disposition: MATCHED
+Mapping: S009
+
+A018 | PianoRollTest::resizeMinimum | src/checks/rollcheck/resize.cpp:158
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S010 — `QVERIFY2(d.key >= 0, "no free grid cell for the minimum resize")` guards the deleted native findFreeCell fixture; Swift plants a note and proves the minimum resize at S010.
+
+A019 | PianoRollTest::resizeMinimum | src/checks/rollcheck/resize.cpp:180
+Disposition: MATCHED
+Mapping: S010, S028
+
+A020 | PianoRollTest::resizeMinimum | src/checks/rollcheck/resize.cpp:186
+Disposition: RETIRED-REPRESENTATION
+Mapping: S040 — test_narrowBodyArrowRetired observes the mounted narrow note body showing the named arrow cursor; the Qt cursor shape/image identity is native representation.
+
+A021 | PianoRollTest::resizeMinimum | src/checks/rollcheck/resize.cpp:197
+Disposition: MATCHED
+Mapping: S011
+
+A022 | PianoRollTest::resizeMinimum | src/checks/rollcheck/resize.cpp:207
+Disposition: MATCHED
+Mapping: S032, S035
+
+A023 | PianoRollTest::resizeMinimum | src/checks/rollcheck/resize.cpp:208
+Disposition: MATCHED
+Mapping: S033
+
+A024 | PianoRollTest::resizeMinimum | src/checks/rollcheck/resize.cpp:211
+Disposition: MATCHED
+Mapping: S034
+
+A025 | PianoRollTest::resizeMinimum | src/checks/rollcheck/resize.cpp:215
+Disposition: MATCHED
+Mapping: S012
+
+A026 | PianoRollTest::resizeAbutting | src/checks/rollcheck/resize.cpp:226
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S013 — `QVERIFY2(g.key >= 0, "no free grid cell for the abutting-notes resize")` guards the deleted native findFreeCell fixture; Swift stages an abutting pair and proves the first boundary grip at S013.
+
+A027 | PianoRollTest::resizeAbutting | src/checks/rollcheck/resize.cpp:243
+Disposition: PARTIAL
+Mapping/reason: PARTIAL — S038 shows boundary-left hover publishing kind 3, which binds right-drag, and S041 shows the right-drag art applying as a BitmapCursor in the roll lane. Residue: the applied pixmap's image equality to the right-drag art is not read back; nothing reads cursor().pixmap() to QML.
+Source context since previous assertion:
+;
+    doc.addNote(track, g.tick, uint8_t(g.key), uint32_t(g.dur), 100);
+    doc.addNote(track, g.tick + g.dur, uint8_t(g.key), uint32_t(g.dur), 100);
+    const QByteArray before = doc.smf().write();
+    const int undo = doc.undoStack()->index();
+    const SnappedRows rows{view, roll};
+    const qreal dpr = roll.devicePixelRatio();
+    const Tick snap = view.grid().snapTicksAt(g.tick);
+    const qreal boundary = view.camera().displayX(double(g.tick + g.dur), 0.0, dpr);
+    const qreal gripInset = layout::fontPxF(0.25) / 2.0;
+    const QPointF left(boundary - gripInset, rows.centerY(g.key));
+    const QPointF right(boundary + gripInset, rows.centerY(g.key));
+    const QSize cursorSize(layout::fontPx(2.0), layout::fontPx(2.0));
+    checks::events::sendMouse(roll, QEvent::MouseMove, left, Qt::NoButton, Qt::NoButton,
+                              Qt::NoModifier);
+    const QPixmap rightGrip =
+        QIcon(QStringLiteral(":/cursors/right-drag.png")).pixmap(cursorSize, dpr);
+
+Original expression:
+QCOMPARE(roll.cursor().pixmap().toImage(), rightGrip.toImage())
+
+A028 | PianoRollTest::resizeAbutting | src/checks/rollcheck/resize.cpp:248
+Disposition: PARTIAL
+Mapping/reason: PARTIAL — S039 shows boundary-right hover publishing kind 2, which binds left-drag, and S042 shows the left-drag art applying as a BitmapCursor in the roll lane. Residue: the applied pixmap's image equality to the left-drag art is not read back; nothing reads cursor().pixmap() to QML.
+Source context since previous assertion:
+;
+    checks::events::sendMouse(roll, QEvent::MouseMove, right, Qt::NoButton, Qt::NoButton,
+                              Qt::NoModifier);
+    const QPixmap leftGrip =
+        QIcon(QStringLiteral(":/cursors/left-drag.png")).pixmap(cursorSize, dpr);
+
+Original expression:
+QCOMPARE(roll.cursor().pixmap().toImage(), leftGrip.toImage())
+
+A029 | PianoRollTest::resizeAbutting | src/checks/rollcheck/resize.cpp:259
+Disposition: MATCHED
+Mapping: S014, S013, S030
+
+A030 | PianoRollTest::resizeAbutting | src/checks/rollcheck/resize.cpp:262
+Disposition: MATCHED
+Mapping: S015
+
+A031 | PianoRollTest::resizeAbutting | src/checks/rollcheck/resize.cpp:275
+Disposition: MATCHED
+Mapping: S017, S016, S030
+
+A032 | PianoRollTest::resizeAbutting | src/checks/rollcheck/resize.cpp:278
+Disposition: MATCHED
+Mapping: S018
+
+A033 | PianoRollTest::resizeAbutting | src/checks/rollcheck/resize.cpp:283
+Disposition: MATCHED
+Mapping: S019
+
+Remaining original source (closing sequence and helper bodies):
+;
+}
+
+Counterpart executable predicate index
+S001..S031 are the live counterparts. S001..S023 and S027..S031 are report.expect predicates
+in the registered swiftcore checks resize.swift and EditorGridCameraChecks.swift, executed by
+deno task verify --filter swiftcore --verbose. S024 is a Qt Quick Test predicate in the
+roll QML lane (src/checks/rollqml/tst_SwiftRollSelection.qml, deno task verify:qml-roll
+--verbose). S025 and S026 are shell-lane Qt Quick Test predicates executed by
+deno task verify:shell --verbose. The retired swiftrollgated C++ sources that the former
+S001..S015 entries indexed are not on disk and not registered in this checkout; their
+live equivalents are the shell QML predicates indexed here. Predicate presence alone
+does not close an A entry: each mapping requires corresponding execution and equivalent
+setup.
+
+S001 | checkResizeOffGrid | src/checks/rollcheck/resize.swift
+Anchor: message "off-grid right edge ends exactly two ruler cells after start"
+
+S002 | checkResizeOffGrid | src/checks/rollcheck/resize.swift
+Anchor: message "Undo restores the planted off-grid MIDI bytes"
+
+S003 | checkResizeSelection | src/checks/rollcheck/resize.swift
+Anchor: message "stationary Ctrl+edge joins grabbed note to selection"
+
+S004 | checkResizeSelection | src/checks/rollcheck/resize.swift
+Anchor: message "stationary Ctrl+edge does not resize grabbed note"
+
+S005 | checkResizeSelection | src/checks/rollcheck/resize.swift
+Anchor: message "stationary Ctrl+edge creates no history entry"
+
+S006 | checkResizeSelection | src/checks/rollcheck/resize.swift
+Anchor: message "Ctrl+edge drag grows grabbed note by exactly one cell"
+
+S007 | checkResizeSelection | src/checks/rollcheck/resize.swift
+Anchor: message "Ctrl+edge drag grows the rest of selection by one cell"
+
+S008 | checkResizeSelection | src/checks/rollcheck/resize.swift
+Anchor: message "one selection resize gesture commits one transaction"
+
+S009 | checkResizeSelection | src/checks/rollcheck/resize.swift
+Anchor: message "Undo restores the planted selection MIDI bytes"
+
+S010 | checkResizeMinimum | src/checks/rollcheck/resize.swift
+Anchor: message "overshot edge clamps at one snap cell"
+
+S011 | checkResizeMinimum | src/checks/rollcheck/resize.swift
+Anchor: message "minimum-duration note spans at most three pixels at narrow zoom"
+
+S012 | checkResizeMinimum | src/checks/rollcheck/resize.swift
+Anchor: message "Undo restores the planted minimum-resize MIDI bytes"
+
+S013 | checkResizeAbutting | src/checks/rollcheck/resize.swift
+Anchor: message "boundary-left grip targets the first note"
+
+S014 | checkResizeAbutting | src/checks/rollcheck/resize.swift
+Anchor: message "boundary-left drag shortens first note by one snap cell"
+
+S015 | checkResizeAbutting | src/checks/rollcheck/resize.swift
+Anchor: message "boundary-left drag leaves second note unchanged"
+
+S016 | checkResizeAbutting | src/checks/rollcheck/resize.swift
+Anchor: message "boundary-right grip targets the second note"
+
+S017 | checkResizeAbutting | src/checks/rollcheck/resize.swift
+Anchor: message "boundary-right drag advances second start one snap cell"
+
+S018 | checkResizeAbutting | src/checks/rollcheck/resize.swift
+Anchor: message "boundary-right drag leaves first note unchanged"
+
+S019 | checkResizeAbutting | src/checks/rollcheck/resize.swift
+Anchor: message "Undo restores the planted abutting pair MIDI bytes"
+
+S020 | checkResizeHoverCursor | src/checks/rollcheck/resize.swift
+Anchor: message "the right edge grip publishes the right-drag cursor"
+
+S021 | checkResizeHoverCursor | src/checks/rollcheck/resize.swift
+Anchor: message "the left edge grip publishes the left-drag cursor"
+
+S022 | checkResizeHoverCursor | src/checks/rollcheck/resize.swift
+Anchor: message "the note body publishes the arrow cursor"
+
+S023 | checkResizeOffGrid | src/checks/rollcheck/resize.swift
+Anchor: message "right edge grips the off-grid note"
+
+S024 | test_edgeHoverShowsResizeCursor | src/checks/rollqml/tst_SwiftRollSelection.qml
+Anchor: function
+
+S025 | test_resizeMinimum | src/checks/editorqml/tst_ShellGridInputEditing.qml
+Anchor: function
+
+S026 | test_noteRasterParity | src/checks/editorqml/tst_ShellNoteVisualsDetail.qml
+Anchor: function
+
+S027 | checkEdgeResize | src/checks/rollcheck/resize.swift
+Anchor: message "off-grid right-edge drag snaps the end to the ruler grid"
+
+S028 | checkEdgeResize | src/checks/rollcheck/resize.swift
+Anchor: message "overshot right-edge drag stops at one snap cell"
+
+S029 | checkEdgeResize | src/checks/rollcheck/resize.swift
+Anchor: message "Ctrl+edge drag resizes the grabbed note and the joined selection"
+
+S030 | checkEdgeResize | src/checks/rollcheck/resize.swift
+Anchor: message "boundary-right drag resizes the right note's start only"
+
+S031 | checkEdgeResize | src/checks/rollcheck/resize.swift
+Anchor: message "stationary Ctrl+edge click joins the note without resizing"
+
+S032 | test_ghostEdgesAndMinimumZoomFace | src/checks/editorqml/tst_ShellNoteVisualsRuler.qml
+Anchor: message "a snap-cell narrow note remains visible at minimum time zoom: "
+
+S033 | test_ghostEdgesAndMinimumZoomFace | src/checks/editorqml/tst_ShellNoteVisualsRuler.qml
+Anchor: message "the minimum-zoom note outline differs visibly from its face"
+
+S034 | test_ghostEdgesAndMinimumZoomFace | src/checks/editorqml/tst_ShellNoteVisualsRuler.qml
+Anchor: message "the minimum-zoom narrow note retains its painted face"
+
+S035 | test_ghostEdgesAndMinimumZoomFace | src/checks/editorqml/tst_ShellNoteVisualsRuler.qml
+Anchor: message "the minimum-zoom narrow note paints its top outline in the border role"
+
+S036 | checkResizeSelection | src/checks/rollcheck/resize.swift
+Anchor: message "grouped Ctrl edge resize pushes exactly one undo command"
+
+S037 | checkResizeMinimum | src/checks/rollcheck/resize.swift
+Anchor: message "a too-narrow note body presents the arrow instead of an edge grip"
+S040 | test_narrowBodyArrowRetired | src/checks/rollqml/tst_SwiftRollSelection.qml
+Anchor: message "the narrow note body shows the named arrow cursor"
+
+S038 | checkResizeAbutting | src/checks/rollcheck/resize.swift
+Anchor: message "boundary-left hover shows the first note's right-drag cursor"
+
+S039 | checkResizeAbutting | src/checks/rollcheck/resize.swift
+Anchor: message "boundary-right hover shows the second note's left-drag cursor"
+
+S041 | test_edgeHoverShowsResizeCursor | src/checks/rollqml/tst_SwiftRollSelection.qml
+Anchor: message "the right edge hover shows the right-drag cursor art"
+
+S042 | test_edgeHoverShowsResizeCursor | src/checks/rollqml/tst_SwiftRollSelection.qml
+Anchor: message "the left edge hover shows the left-drag cursor art"
+
+S043 | test_rollPressFocusAndHoverCursorZones | src/checks/editorqml/tst_ShellGridMenuInputZones.qml
+Anchor: message "the left note edge shows the left-drag cursor art"
+
+S044 | test_rollPressFocusAndHoverCursorZones | src/checks/editorqml/tst_ShellGridMenuInputZones.qml
+Anchor: message "the right note edge shows the right-drag cursor art"

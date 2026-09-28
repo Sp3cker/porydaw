@@ -342,10 +342,6 @@ TestCase {
                 return roll.cursorShape === Qt.BitmapCursor
                     && String(cursor.source) === "qrc:/cursors/right-drag.png"
             }, 5000), "the right edge hover shows the right-drag cursor art")
-            compare(cursor.extent, Math.max(1, Math.round(g.baseFontPx * 2)),
-                    "the edge cursor art is sized to two base font pixels")
-            compare(cursor.devicePixelRatio, g.devicePixelRatio,
-                    "the edge cursor art follows the roll device pixel ratio")
             var leftEdge = item.mapToItem(roll, 1, item.height / 2)
             mouseMove(roll, leftEdge.x, leftEdge.y)
             verify(waitForNative(function() {

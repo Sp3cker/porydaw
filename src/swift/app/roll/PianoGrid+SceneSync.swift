@@ -155,7 +155,7 @@ extension PianoGrid {
         if keyboardWidth != metrics.keyboardWidth { keyboardWidth = metrics.keyboardWidth }
         let headerWidth = fontPx(baseFontPx, 17.5)
         if trackHeaderWidth != headerWidth { trackHeaderWidth = headerWidth }
-        let cursorExtent = fontPx(baseFontPx, 2.0)
+        let cursorExtent = Int(fontPx(baseFontPx, 2.0))
         if resizeCursorExtent != cursorExtent { resizeCursorExtent = cursorExtent }
         let tpb = Int(max(1, session.document.ticksPerBeat))
         if ticksPerBeat != tpb { ticksPerBeat = tpb }

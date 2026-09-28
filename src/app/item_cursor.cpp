@@ -20,10 +20,18 @@ QCursor centeredCursor(const QPixmap &pixmap)
 
 ItemCursor::ItemCursor(QObject *parent) : QObject(parent) {}
 
+void ItemCursor::componentComplete()
+{
+    m_complete = true;
+    apply();
+}
+
 void ItemCursor::setTarget(QQuickItem *target)
 {
     if (m_target == target)
         return;
+    if (m_target && m_complete)
+        m_target->unsetCursor();
     m_target = target;
     apply();
     emit targetChanged();
@@ -59,7 +67,7 @@ void ItemCursor::setExtent(int extent)
 
 void ItemCursor::setDevicePixelRatio(qreal devicePixelRatio)
 {
-    if (qFuzzyCompare(m_devicePixelRatio, devicePixelRatio))
+    if (m_devicePixelRatio == devicePixelRatio)
         return;
     m_devicePixelRatio = devicePixelRatio;
     m_pixmapCursors.clear();
@@ -67,7 +75,7 @@ void ItemCursor::setDevicePixelRatio(qreal devicePixelRatio)
     emit devicePixelRatioChanged();
 }
 
-const QCursor &ItemCursor::pixmapCursor()
+QCursor ItemCursor::pixmapCursor()
 {
     auto it = m_pixmapCursors.find(m_source);
     if (it == m_pixmapCursors.end()) {
@@ -80,7 +88,7 @@ const QCursor &ItemCursor::pixmapCursor()
 
 void ItemCursor::apply()
 {
-    if (!m_target)
+    if (!m_complete || !m_target)
         return;
     if (m_source.isEmpty())
         m_target->setCursor(QCursor(m_shape));

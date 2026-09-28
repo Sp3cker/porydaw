@@ -5,12 +5,14 @@
 #include <QtCore/qpointer.h>
 #include <QtCore/qurl.h>
 #include <QtGui/qcursor.h>
+#include <QtQml/qqmlparserstatus.h>
 #include <QtQml/qqmlregistration.h>
 #include <QtQuick/qquickitem.h>
 
-class ItemCursor : public QObject
+class ItemCursor : public QObject, public QQmlParserStatus
 {
     Q_OBJECT
+    Q_INTERFACES(QQmlParserStatus)
     QML_ELEMENT
     Q_PROPERTY(QQuickItem *target READ target WRITE setTarget NOTIFY targetChanged REQUIRED)
     Q_PROPERTY(Qt::CursorShape shape READ shape WRITE setShape NOTIFY shapeChanged)
@@ -21,6 +23,9 @@ class ItemCursor : public QObject
 
   public:
     explicit ItemCursor(QObject *parent = nullptr);
+
+    void classBegin() override {}
+    void componentComplete() override;
 
     [[nodiscard]] QQuickItem *target() const { return m_target; }
     void setTarget(QQuickItem *target);
@@ -41,7 +46,7 @@ class ItemCursor : public QObject
     void devicePixelRatioChanged();
 
   private:
-    const QCursor &pixmapCursor();
+    [[nodiscard]] QCursor pixmapCursor();
     void apply();
 
     QPointer<QQuickItem> m_target;
@@ -49,5 +54,6 @@ class ItemCursor : public QObject
     QUrl m_source;
     int m_extent = 0;
     qreal m_devicePixelRatio = 1.0;
+    bool m_complete = false;
     QHash<QUrl, QCursor> m_pixmapCursors;
 };
