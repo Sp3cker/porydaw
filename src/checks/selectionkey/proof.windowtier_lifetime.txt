@@ -4,8 +4,11 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Original: src/checks/selectionkey/windowtier_lifetime.cpp
 Original SHA-256: 47d589471dbc0075cb36225ef0f79df0eb818a96a61bfc963a79ab67f4e8d8d6
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
+Counterpart SHA-256: 97fd9fdc2f43d0d7e3a8a102027675348e814eadc6f2ede3383deeee36906558
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
 Additional Swift counterpart: src/checks/editorqml/tst_ShellTabs.qml
+Additional Swift counterpart: src/checks/editorqml/tst_ShellTabsDrawer.qml
+Counterpart SHA-256: 299632de57adf69b141faeee9150acc38a6c2290294b8a3b06c1c0239cbc69dc
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 
@@ -25,6 +28,8 @@ Command: deno task verify:shell --filter shell-tabs --verbose (R16)
 Result: pending controller run. S057-S062 are shell-lane (windowing=offscreen) predicates of test_sMidGestureCloseCancelsHeldBand: the clean selected tab is closed through SongTabsController.requestClose and the same song is reopened.
 Command: deno task verify --filter swiftcore-projectsession --verbose; deno task verify:shell --filter shell-tabs --verbose; deno task verify:shell --verbose; deno task verify (task-95 implementer-observed GREEN after review fixes)
 Result: PASS 1/36 swiftcore-projectsession, PASS 1/26 shell-tabs, PASS 26/26 full shell, PASS 36/36 full verify; frozen check hashes: localinputtier_text.swift 348986513c9c0c8e05732a1be0daf44908e23030264461c628b8eb5534b8f2ed; tst_ShellTabs.qml 4ec55c45d04457539b2d824dbaed5ed968ed09bbee1af7b0b2c1b5c906cea5c3; tst_ShellWindow.qml ce46f5e1dc5e6a76df187f78d67336a66728b765b704b6e6187d3983a8663d71.
+
+Task 191 verification reused (implementer-reported; ledger agent did not rerun): swiftcore PASS (12/37); shell-tabs-drawer PASS. S090 is the executed drawerOriginalNumericPromptTransaction predicate through the swiftcore session suite.
 
 A001 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:61
 Disposition: RETIRED-REPRESENTATION
@@ -213,8 +218,8 @@ Disposition: MATCHED
 Mapping: S081, S082
 
 A054 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:243
-Disposition: PARTIAL
-Mapping/reason: S083, S084, S088, S089 - the mounted reopened-tab Right/Up leaves the first song's note summary, revision, and saved file bytes unchanged; direct Swift document encoding in S084 proves a separate cross-document transpose. PARTIAL: no mounted in-memory serialized-byte equality for the first document after the reopened-tab edits; its saved-file fingerprint does not establish the unsaved document's bytes.
+Disposition: MATCHED
+Mapping: S090 - the reopened-tab Right/Up edits preserve the first document's exact serialized bytes.
 Source context since previous assertion:
   ;
 
@@ -498,6 +503,9 @@ Anchor: message "reopened-tab keys do not advance the first document revision"
 
 S089 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabsDrawer.qml
 Anchor: message "reopened-tab keys preserve the first song's saved bytes"
+
+S090 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "reopened-tab edits preserve the first song's exact serialized bytes"
 
 Shared helpers
 selectDrawnVelocityNote (:153) and openTwoSongShell (:88) stage the two-song

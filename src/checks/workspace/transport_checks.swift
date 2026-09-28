@@ -129,6 +129,10 @@ private func checkTransportVolumeIsolation(_ report: CheckReport, fixtureRoot: S
                   message: "output edit records no song history count or index")
     report.expect(!firstDocument.isDirty, cppID: id,
                   message: "output edit leaves the first song clean")
+    bar.commitOutputVolume(percent: bar.outputVolume)
+    report.expect(firstDocument.history.undoCount == initialCount &&
+                  firstDocument.history.undoIndex == initialIndex, cppID: id,
+                  message: "same-value output commit preserves the exact song history count and index")
     bar.commitOutputVolume(percent: 37)
     let editedMaster = initialMaster == 100 ? 101 : 100
     bar.setMasterVolume(value: editedMaster)

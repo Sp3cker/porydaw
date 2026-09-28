@@ -4,6 +4,9 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Original: src/checks/selectionkey/windowtier_keyboard.cpp
 Original SHA-256: f00861f60ece3fc2b9de78b2c6b886d6139a71f79c7c07aeb5d1c8a69a5730d0
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
+Counterpart SHA-256: 97fd9fdc2f43d0d7e3a8a102027675348e814eadc6f2ede3383deeee36906558
+Additional Swift counterpart: src/checks/workspace/session_edit_routing.swift
+Counterpart SHA-256: 5e1572c7b2f9c326c964fd0e4b52ce89b9f0cac3f8f48b3efadb5774c2b1b619
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindowFocus.qml
@@ -15,6 +18,8 @@ Counterpart SHA-256: 9fef0460c40920526108a768ff3861dabe34af817d4f6b51e8487bc1fb7
 Additional Swift counterpart: src/checks/selectionkey/localinputtier_window.swift
 Counterpart SHA-256: ff83d6c4114a0023533503c4b31caf6865b36fe2f6e483bb30277dc49c2dd58f
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
+
+Task 191 verification reused (implementer-reported; ledger agent did not rerun): swiftcore PASS (12/37); shellwindow-parameter-keys PASS. S264 is the executed checkMountedPitchKeyAndUndo predicate through runEditRoutingChecks.
 
 
 Command: deno task verify --filter swiftcore --verbose (controller-observed)
@@ -621,8 +626,8 @@ Disposition: MATCHED
 Mapping: S213, S214, S067 - Swift pins the exact undo count across window transport with a two-tap draft; mounted Space leaves revision and undo availability unchanged.
 
 A103 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:430
-Disposition: PARTIAL
-Mapping/reason: S059, S067, S215, S216, S217, S218 - mounted Space leaves its real automation lane range and note selection unchanged after two taps; Swift Space preserves exact Pan/Modulation two-lane bounds, Tempo exclusion and empty note selection. PARTIAL: the mounted journey selects one lane, not the fork's two-lane selection, so that simultaneous mounted conjunct remains unproved.
+Disposition: MATCHED
+Mapping: S264 - the second window Space retains the exact two-lane time selection and empty note selection.
 Source context since previous assertion:
   ;
 
@@ -1157,3 +1162,5 @@ Anchor: message "Enter toggles the focused drawer section"
 
 S263 | test_lChromeArrowsAndUnknownKey | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "Return restores the focused drawer section"
+S264 | checkMountedPitchKeyAndUndo | src/checks/workspace/session_edit_routing.swift
+Anchor: message "the second window Space retains the exact two-lane time selection and empty note selection"

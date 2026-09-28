@@ -5,7 +5,10 @@ Original: src/checks/workspace/tabs_transport.cpp
 Original SHA-256: 7cebe66a4323ed77638ac8c03ab07a4c28896e50abbf4b0ea58157c9c537ee5e
 Swift counterpart: src/checks/workspace/SessionChecks.swift
 Swift counterpart: src/checks/workspace/transport_checks.swift
+Counterpart SHA-256: 9d52aea74085c0c625e265fe96ff10ac2cd8886837bf89059058a52afef10130
 QML counterpart: src/checks/editorqml/tst_ShellTransport.qml
+QML counterpart: src/checks/editorqml/tst_ShellTransportVolume.qml
+Counterpart SHA-256: 35d0661d6a0f215ab970e6644a94aa077a3261ec0be09830118cce3ea197ba22
 Swift counterpart: src/checks/songlist/songlist_checks.swift
 QML counterpart: src/checks/editorqml/tst_ShellSongs.qml
 QML counterpart: src/checks/editorqml/tst_ShellWindow.qml
@@ -24,7 +27,7 @@ Shared SHA-256: 79d2a5010d685bd2a2ec6547db1c7430319c5006b18827f97fed1d49239ac306
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 WorkspaceTabsTest::transportVolumesAndRaster covers the transport bar before any project is open (disabled scale controls, reserved time-strip geometry, dial raster ticks) and with two tabs (toolbar order, output-volume dial versus song master-volume spin, mouse-drag dial behavior, shortcut-override filtering).
-tabs_transport.cpp contributes 73 sites: 40 MATCHED, 1 PARTIAL, 1 GAP, 31 RETIRED-REPRESENTATION. The
+tabs_transport.cpp contributes 73 sites: 41 MATCHED, 0 PARTIAL, 1 GAP, 31 RETIRED-REPRESENTATION. The
 shell-transport TestCase mounts ShellWindow with a live project and two tabs;
 
 Command: deno task verify --filter projectstore --filter swiftcore --verbose
@@ -64,6 +67,9 @@ A016-A023 QWidget sizeHint/min/max width) with same-task behavioral proof cited,
 count/index from the stationary click itself). A062 stays GAP: no audio-engine readback proof. This
 deviates from the brief's planned 29 MATCHED by one (A050) because the mounted stationary-click
 predicate observes canUndo false rather than the exact undo count/index.
+
+Task 191 reconciliation: A050 is now MATCHED to S253 (same-value output commit preserves the exact song history count/index); A062 remains GAP. Current tally: 41 MATCHED, 0 PARTIAL, 1 GAP, 31 RETIRED-REPRESENTATION.
+Task 191 verification reused (implementer-reported; ledger agent did not rerun): swiftcore PASS (12/37); shell-transport-volume PASS. S253 is the executed checkTransportVolumeIsolation predicate invoked by runTransportBarChecks.
 
 No native execution remains: the QtTest suites declared in
 src/checks/workspace/tst_workspacesessions.h
@@ -265,8 +271,8 @@ Original expression:
   QCOMPARE(dial->value(), 50)
 
 A050 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:175
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S227 (stationary mounted click creates no song undo; message "stationary output click creates no song undo") and S197 (press without drag leaves the value); residue: exact undo count/index equality from that same stationary pointer event (the exact count/index predicate S213 covers the 42 commit, not the stationary click).
+Disposition: MATCHED
+Mapping: S253 - the same-value output commit preserves the exact song history count and index.
 
 A051 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:182
 Disposition: MATCHED
@@ -1127,3 +1133,6 @@ Anchor: message "upper output bound rejects further pointer increase"
 
 S252 | test_volumeIsolationAcrossRealInputAndTabs | src/checks/editorqml/tst_ShellTransportVolume.qml
 Anchor: message "scale chrome leaves bare Space to window transport"
+
+S253 | checkTransportVolumeIsolation | src/checks/workspace/transport_checks.swift
+Anchor: message "same-value output commit preserves the exact song history count and index"

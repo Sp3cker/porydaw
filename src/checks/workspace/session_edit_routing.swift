@@ -390,5 +390,8 @@ internal func checkMountedPitchKeyAndUndo(report: CheckReport, fixtureRoot: Stri
                   cppID: tapID,
                   message: "window Space retains exact Pan and Modulation bounds without Tempo or notes")
     shell.activate(id: "transport.play_pause")
+    report.expect(session.selectedNotes.isEmpty && session.timeSelection == tapSelection,
+                  cppID: tapID,
+                  message: "the second window Space retains the exact two-lane time selection and empty note selection")
     page.resetTapTempo()
 }

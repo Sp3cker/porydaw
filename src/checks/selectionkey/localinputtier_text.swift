@@ -176,6 +176,13 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
     fixture.document.nudgeNotes(pairA, byTicks: 24, byKeys: 0)
     report.expect(fixture.document.note(pairA[0])?.tick == hiddenTick + Tick(24), cppID: lifetimeID,
                   message: "note arrows route while the automation section stays hidden")
+    // windowtier_lifetime.cpp:243 snapshots documentA after the second tab's
+    // close and compares its bytes after the reopened tab's routed edits.
+    let firstBytesBeforeReopen = try? fixture.document.state.file.encoded()
+    guard firstBytesBeforeReopen != nil else {
+        report.fail(lifetimeID, "first-document reopen snapshot failed to encode")
+        return
+    }
     let second = drawerAutomationAutomationFixture(suite: suite, service: service,
                                                    pan: [(48, 32), (96, 64)],
                                                    tailTick: 6000)
@@ -240,6 +247,10 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
     second.document.nudgeNotes(pairT1, byTicks: 0, byKeys: 1)
     report.expect(second.document.note(pairT1[0])?.pitch == 61, cppID: lifetimeID,
                   message: "the new primary track's selection transposes one semitone under Up")
+    report.expectEqual(expected: firstBytesBeforeReopen,
+                       actual: try? fixture.document.state.file.encoded(),
+                       cppID: lifetimeID,
+                       what: "reopened-tab edits preserve the first song's exact serialized bytes")
 
     second.session.setSelectedNotes(pairT1)
     let priorChange = second.session.onChange

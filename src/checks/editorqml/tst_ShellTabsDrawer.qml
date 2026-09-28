@@ -112,6 +112,10 @@ ShellTabsSupport {
                 "closing one tab keeps its sibling and the project bytes")
         compare(fileProbe.fileFingerprint(path), bytes,
                 "closing one tab keeps its sibling and the project bytes")
+        var firstNotes = summaryOf(firstId)
+        var firstRevision = gridOf(firstId).appliedRevisionText
+        var firstPath = fileProbe.songPath(bootstrap.projectRoot, "mus_route101")
+        var firstBytes = fileProbe.fileFingerprint(firstPath)
         session().openSong("mus_littleroot_test")
         verify(waitForNative(function() {
             return tabs().tabCount === 2 && tabs().selectedId !== closingId
@@ -134,10 +138,6 @@ ShellTabsSupport {
                 "reopening retains the Voice Changes section height")
         compare(fileProbe.fileFingerprint(path), bytes,
                 "reopening never rewrites the project song bytes")
-        var firstNotes = summaryOf(firstId)
-        var firstRevision = gridOf(firstId).appliedRevisionText
-        var firstPath = fileProbe.songPath(bootstrap.projectRoot, "mus_route101")
-        var firstBytes = fileProbe.fileFingerprint(firstPath)
         var reopenedGrid = gridOf(reopenedId)
         var roll = findChild(surfaceOf(reopenedId), "swiftRollInput")
         var plot = findChild(surfaceOf(reopenedId), "timelineQuickRollPlot")

@@ -145,13 +145,16 @@ ShellTransportSupport {
 
     function test_outputDialIncrementalDrag() {
         const bar = openShell()
+        openSong()
         const output = findChild(bar, "transportOutputVolume")
         bar.presenter.setOutputVolume(40)
         const x = output.width / 2
         const y = output.height / 2
         mousePress(output, x, y, Qt.LeftButton)
+        mouseRelease(output, x, y, Qt.LeftButton)
         compare(bar.presenter.outputVolume, 40,
                 "pressing the output dial without dragging leaves the volume unchanged")
+        mousePress(output, x, y, Qt.LeftButton)
         mouseMove(output, x, y + 140, -1, Qt.LeftButton)
         tryCompare(bar.presenter, "outputVolume", 100)
         mouseMove(output, x, y + 130, -1, Qt.LeftButton)
