@@ -79,6 +79,12 @@ extension GridScene {
         let snapshot = camera.snapshot
         let window = ContentWindow(
             camera: camera, contentEndTick: input.contentEndTick, previous: contentWindow)
+        // The scroll row lives outside the window-keyed early return: the
+        // window quantizes scroll into culling chunks, so small pans and every
+        // vertical scroll must still republish the carrier.
+        sync(cameraScroll, [SceneRect(
+            x: snapshot.scrollX, y: snapshot.scrollY, width: 0, height: 0,
+            fillColor: "")])
         let key = StaticKey(
             pixelsPerTick: snapshot.pixelsPerTick, keyHeight: snapshot.keyHeight,
             projection: camera.projection, dpr: m.dpr, baseFontPx: m.baseFontPx,

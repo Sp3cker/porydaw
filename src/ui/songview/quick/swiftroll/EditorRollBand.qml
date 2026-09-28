@@ -57,7 +57,8 @@ Item {
 
                 Item {
                     id: gutterContent
-                    y: -Math.round(root.gridModel.cameraScrollY * root.gridModel.devicePixelRatio)
+                    y: -Math.round(root.scrollY
+                                   * root.gridModel.devicePixelRatio)
                        / root.gridModel.devicePixelRatio
                     width: parent.width
                     height: parent.height
@@ -121,9 +122,11 @@ Item {
 
                 Item {
                     id: plotContent
-                    x: -Math.round(root.gridModel.cameraScrollX * root.gridModel.devicePixelRatio)
+                    x: -Math.round(root.scrollX
+                                   * root.gridModel.devicePixelRatio)
                        / root.gridModel.devicePixelRatio
-                    y: -Math.round(root.gridModel.cameraScrollY * root.gridModel.devicePixelRatio)
+                    y: -Math.round(root.scrollY
+                                   * root.gridModel.devicePixelRatio)
                        / root.gridModel.devicePixelRatio
                     width: parent.width
                     height: parent.height

@@ -115,6 +115,10 @@ public final class GridScene {
     public var pianoOverlay: QListModel<SceneRect> = QListModel()
     public var pianoKeyboardKeys: QListModel<SceneRect> = QListModel()
     public var pianoKeyboardHighlights: QListModel<SceneRect> = QListModel()
+    /// One-row scroll carrier: its frame.x/frame.y are the camera scroll so
+    /// QML translate bindings update inside the same synchronous dataChanged
+    /// sweep as every rect row — no queued property NOTIFY can lag a frame.
+    public var cameraScroll: QListModel<SceneRect> = QListModel()
 
     public var pianoNoteTextModel: QListModel<SceneText> = QListModel()
     public var pianoKeyboardTextModel: QListModel<SceneText> = QListModel()
@@ -207,6 +211,17 @@ public final class GridScene {
 
     public init(typography: Typography = Typography(baseFontPx: 13)) {
         hoverChipFont = typography.caption.map
+        for model in rectModels() {
+            model.enablePackedRows { SceneRectPacking.pack($0) }
+        }
+    }
+
+    @QtIgnored
+    private func rectModels() -> [QListModel<SceneRect>] {
+        [rulerGutterChrome, rulerChrome, rulerMarks, pianoGridRows,
+         pianoGridTime, pianoNoteFills, pianoDrawPreviewFill,
+         pianoNoteBordersAndSelection, pianoOverlay, pianoKeyboardKeys,
+         pianoKeyboardHighlights, cameraScroll]
     }
 
     @QtIgnored

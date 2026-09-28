@@ -38,7 +38,8 @@ Item {
                     }
                     Item {
                         id: rulerContent
-                        x: -Math.round(root.gridModel.cameraScrollX * root.gridModel.devicePixelRatio)
+                        x: -Math.round(root.scrollX
+                                       * root.gridModel.devicePixelRatio)
                            / root.gridModel.devicePixelRatio
                         width: parent.width
                         height: parent.height
@@ -48,6 +49,7 @@ Item {
                         anchors.fill: parent
                         objectName: "timelineQuickRulerMarks"
                         rects: root.gridModel.scene.rulerMarks
+                        batched: true
                     }
                     Repeater {
                         parent: rulerContent

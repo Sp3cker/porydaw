@@ -9,6 +9,9 @@ Item {
     // (e.g. scene.rulerMarks, scene.pianoNoteFills).
     required property var rects
     property bool batched: false
+    // Batch-paint rows and mirror each as a lightweight native child so
+    // objectName lookups and row hit-testing keep working without delegates.
+    property bool exposeRows: false
     readonly property bool batchingActive: root.batched
                                            && GraphicsInfo.api !== GraphicsInfo.Software
 
@@ -17,6 +20,7 @@ Item {
 
         anchors.fill: parent
         rects: root.batchingActive ? root.rects : null
+        exposeRows: root.batchingActive ? root.exposeRows : false
         visible: root.batchingActive
     }
 

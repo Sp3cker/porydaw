@@ -547,6 +547,7 @@ if(APPLE)
         editorqml/tst_ShellWindowFocus.qml
         editorqml/tst_ShellWindowTimeEditing.qml
         editorqml/tst_ShellWindowVelocity.qml
+        editorqml/tst_ShellDeferralProbe.qml
         editorqml/tst_ShellWindowParameterKeys.qml
         editorqml/tst_ShellWindowLabelCommands.qml
         editorqml/tst_ShellWindowHints.qml

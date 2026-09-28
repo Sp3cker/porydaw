@@ -33,6 +33,8 @@ Item {
         objectName: "timelineQuickPianoNoteFills"
         anchors.fill: parent
         rects: root.timelineScene.pianoNoteFills
+        batched: true
+        exposeRows: true
         z: 2
     }
 
@@ -91,6 +93,7 @@ Item {
         anchors.fill: parent
         rects: root.timelineScene.pianoOverlay
         batched: true
+        exposeRows: true
         z: 6
     }
 

@@ -150,6 +150,26 @@ Item {
         hintStatus: parent.hintStatusItem
     }
 
+    // One scroll row: its frame updates in the same dataChanged sweep as the
+    // painted rows the band translates, so content and scroll never lag apart.
+    property real scrollX: 0
+    property real scrollY: 0
+    Repeater {
+        id: scrollCarrier
+        model: root.gridModel.scene.cameraScroll
+        delegate: Item {
+            required property var frame
+            onFrameChanged: applyScrollFrame()
+            Component.onCompleted: applyScrollFrame()
+            function applyScrollFrame() {
+                if (frame) {
+                    root.scrollX = frame.x
+                    root.scrollY = frame.y
+                }
+            }
+        }
+    }
+
     // Keep the timeline row below the drawer; its value is owned by the Swift
     // camera and the control only requests a new scroll position.
     TimelineScrollbar {

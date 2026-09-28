@@ -24,18 +24,22 @@ foreach(patched_file IN ITEMS ${qtbridge_patched_files})
     execute_process(
         COMMAND git apply "--include=${patched_file}" --check "${PATCH}"
         RESULT_VARIABLE applies_cleanly OUTPUT_QUIET ERROR_QUIET)
-    if(NOT applies_cleanly EQUAL 0)
+        # Restore HEAD's version when the file is tracked there; otherwise
+        # drop it from both the index (staged adds) and the working tree so
+        # "new file" patch sections can create it.
         execute_process(
-            COMMAND git ls-files --error-unmatch "${patched_file}"
-            RESULT_VARIABLE tracked_file OUTPUT_QUIET ERROR_QUIET)
-        if(tracked_file EQUAL 0)
+            COMMAND git cat-file -e "HEAD:${patched_file}"
+            RESULT_VARIABLE in_head OUTPUT_QUIET ERROR_QUIET)
+        if(in_head EQUAL 0)
             execute_process(
-                COMMAND git checkout -- "${patched_file}"
+                COMMAND git checkout HEAD -- "${patched_file}"
                 COMMAND_ERROR_IS_FATAL ANY)
         else()
+            execute_process(
+                COMMAND git rm -q -f --ignore-unmatch "${patched_file}"
+                OUTPUT_QUIET ERROR_QUIET)
             file(REMOVE "${patched_file}")
         endif()
-    endif()
 
     execute_process(
         COMMAND git apply "--include=${patched_file}" "${PATCH}"

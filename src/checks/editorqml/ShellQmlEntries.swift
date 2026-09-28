@@ -67,6 +67,7 @@ enum ShellQmlRegistry {
         Entry(name: "shell-grid-input-keyboard", inputFileName: "tst_ShellGridInputKeyboard.qml", fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
         Entry(name: "shell-grid-input-automation", inputFileName: "tst_ShellGridInputAutomation.qml", fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
         Entry(name: "shell-pitch-bend-cancellation", inputFileName: "tst_ShellPitchBendCancellation.qml", fixtureFiles: songs("mus_route101")),
+        Entry(name: "shell-deferral-probe", inputFileName: "tst_ShellDeferralProbe.qml", fixtureFiles: songs("mus_route101")),
         Entry(name: "shell-pitch-bend-controls", inputFileName: "tst_ShellPitchBendControls.qml", fixtureFiles: songs("mus_route101")),
         Entry(name: "shell-pitch-bend-pointer", inputFileName: "tst_ShellPitchBendPointer.qml", fixtureFiles: songs("mus_route101")),
         Entry(name: "shell-pitch-bend-keys", inputFileName: "tst_ShellPitchBendKeys.qml", fixtureFiles: songs("mus_route101")),
