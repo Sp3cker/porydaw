@@ -360,6 +360,9 @@ private func themeGridContrastChecks(_ report: CheckReport) {
                       cppID: themeGridContrastID, message: "\(tag): contrast 100 raises grid alpha")
         let baseLuminance = themeRefLuminance(base.gridLine)
         let rollLuminance = themeRefLuminance(row.roll)
+        report.expect(baseLuminance <= rollLuminance,
+                      cppID: themeGridContrastID,
+                      message: "\(tag): default grid luminance sits at or below the roll surface")
         let fullLuminance = themeRefLuminance(strengthened.gridLine)
         if baseLuminance <= rollLuminance {
             report.expect(fullLuminance < baseLuminance,

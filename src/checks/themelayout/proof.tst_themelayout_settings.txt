@@ -170,12 +170,9 @@ Disposition: MATCHED
 Mapping: S006, S007
 
 A019 | DeferredThemeLayoutTest::itemViewBrushes | src/checks/themelayout/tst_themelayout_settings.cpp:216
-Disposition: PARTIAL
-Mapping/reason: No Swift itemAlternate owner: GridPalette exposes no alternate item surface and no Swift/QML surface renders one. The legacy seam is EventListPage.qml tableAlternateBackground (EventListPage.qml) fed by eventlistcontroller.cpp:147-148 (themes::Role::item_alternate_background); EventListPage.qml is mounted only by the unmounted TimelineCanvas.qml event-list host. Unproved: the item-alternate value and the second-row cell rendering.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(cellColor(1), themes::color(themes::Role::item_alternate_background));
+Disposition: MATCHED
+Mapping: S008
+Mapping/reason: S008 (tst_ShellEventListPresentation.qml test_eventListRowsFollowAppliedTheme) reads the mounted row-1 delegate eventListRowStripe color and requires Qt.colorEqual against session.palette.alternateBackground, the alternate item surface EventListCell.qml paints for odd rows.
 
 A020 | DeferredThemeLayoutTest::itemViewBrushes | src/checks/themelayout/tst_themelayout_settings.cpp:219
 Disposition: GAP
@@ -551,3 +548,6 @@ Anchor: message "\(tag): menu aliases the item surface"
 
 S007 | test_menuChromeFollowsTheme | src/checks/editorqml/tst_Theme.qml
 Anchor: message "Copy is a real context-menu action"
+
+S008 | test_eventListRowsFollowAppliedTheme | src/checks/editorqml/tst_ShellEventListPresentation.qml
+Anchor: message "row 1 stripe paints the theme's alternate item surface"

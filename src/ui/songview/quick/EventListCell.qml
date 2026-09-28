@@ -66,6 +66,7 @@ Item {
 
 
         Rectangle {
+            objectName: "eventListRowStripe"
             anchors.fill: parent
             color: cell.selected ? page.tableSelectedBackground
                   : page.controller && page.controller.playRow === cell.row ? page.playheadTint

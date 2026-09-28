@@ -214,9 +214,9 @@ Mapping: S005, S019
 Mapping/reason: S019 (ThemeColorChecks.swift:572-574) takes the base-luminance-not-above-roll branch and requires the contrast-100 grid luminance below the default, the original's adjustedLuminance < originalLuminance branch.
 
 A038 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:205
-Disposition: PARTIAL
-Mapping: S005, S020
-Mapping/reason: S020 (ThemeColorChecks.swift:368-372) is the original's else branch - contrast-100 grid luminance above the default when the default sits above the roll surface - but no shipped preset reaches it: the executing themecolor lane carries only the darkens row for vanilla, dark-neutral-high and immaterial, so this clause has a counterpart predicate and no executed observation of its own.
+Disposition: RETIRED-REPRESENTATION
+Mapping: S021
+Mapping/reason: S021 (ThemeColorChecks.swift themeGridContrastChecks) executes for every shipped preset and requires the default grid luminance at or below the roll surface, so the fork else branch (default above the roll surface) is unreachable on real theme data; retired by positive observation, not by property absence.
 
 A039 | ThemeLayoutTest::laneAndWaveformLegibility | src/checks/themelayout/tst_themelayout_color.cpp:245
 Disposition: PARTIAL
@@ -383,3 +383,6 @@ Anchor: message "\(tag): contrast 100 darkens away from the surface"
 S020 | themeGridContrastChecks | src/checks/themecolor/ThemeColorChecks.swift
 Anchor: function
   ThemeColorChecks.swift:368-372 in the baseLuminance > rollLuminance branch: report.expect(themeRefLuminance(strengthened.gridLine) > themeRefLuminance(base.gridLine)) - one row per preset.
+
+S021 | themeGridContrastChecks | src/checks/themecolor/ThemeColorChecks.swift
+Anchor: message "\(tag): default grid luminance sits at or below the roll surface"

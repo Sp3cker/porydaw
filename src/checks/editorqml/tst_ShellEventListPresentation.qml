@@ -38,6 +38,19 @@ ShellEventListSupport {
                "selected rows use the theme's selection surface")
         verify(Qt.colorEqual(page.headerBackground, palette.chromeBackground),
                "the header band uses chrome")
+        const table = findChild(page, "eventListTable")
+        verify(table, "event-list table mounts behind the stripe read")
+        session.eventListPresenter().selectRow(-1, Qt.NoModifier)
+        const evenCell = cellAt(table, 0, 0)
+        const evenStripe = findChild(evenCell, "eventListRowStripe")
+        verify(evenStripe, "row 0 renders its background stripe")
+        verify(Qt.colorEqual(evenStripe.color, palette.menuBackground),
+               "row 0 stripe paints the theme's item surface")
+        const oddCell = cellAt(table, 1, 0)
+        const oddStripe = findChild(oddCell, "eventListRowStripe")
+        verify(oddStripe, "row 1 renders its background stripe")
+        verify(Qt.colorEqual(oddStripe.color, palette.alternateBackground),
+               "row 1 stripe paints the theme's alternate item surface")
 
         settings.setString("theme.mode", "vanilla")
         shell.shellPresenter.restoreAppearance()
