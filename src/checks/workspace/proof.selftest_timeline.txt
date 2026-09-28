@@ -12,6 +12,7 @@ Swift counterpart: src/checks/workspace/bank_edits.swift
 Swift counterpart: src/checks/workspace/bank_history_probes.swift
 Swift counterpart: src/checks/workspace/bank_saves.swift
 Swift counterpart: src/checks/workspace/bank_sharing.swift
+Note: A020 is proved by src/checks/editorqml/tst_ShellTransportSession.qml (SHA-256: 299439f457b58580586c89f460dd2f8816b60ee83b550025e681c57ac7ae5c68).
 Shared helper: src/checks/workspace/session_fixtures.swift
 Shared SHA-256: bad9687a1301619c8bee2268a96a52ac104fe34ebe1eccd6b05a38ffb11ac741
 Shared helper: src/checks/workspace/session_support.swift
@@ -135,8 +136,8 @@ A019 | WorkspaceTimelineSelfTest::previewWhileStoppedDoesNotStartTransport | src
 Disposition: RETIRED-REPRESENTATION
 
 A020 | WorkspaceTimelineSelfTest::previewWhileStoppedDoesNotStartTransport | src/checks/workspace/selftest_timeline.cpp:146
-Disposition: PARTIAL
-Mapping/reason: Related predicate S004 proves Stop reaches Stopped after playing; unproved: this distinct already-stopped Stop scenario is not exercised independently before the stopped audition of S007. Do not double-count A015.
+Disposition: MATCHED
+Mapping: S013 (the mounted real Stop control is clicked while Stopped; its action is disabled and the transport remains Stopped)
 Source context since previous assertion:
   ;
       window.stopPlayback();
@@ -188,4 +189,7 @@ Anchor: message "voice-control audition during playback leaves the song Playing"
 
 S012 | checkLiveTimelineTransport | src/checks/workspace/session_playback.swift
 Anchor: message "voice-control audition leaves the song sample counter advancing"
+
+S013 | test_alreadyStoppedStopKeepsTransportStopped | src/checks/editorqml/tst_ShellTransportSession.qml
+Anchor: message "Stop on the stopped transport is refused and it stays Stopped"
 

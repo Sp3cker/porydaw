@@ -436,6 +436,21 @@ ShellTransportSupport {
         compare(survivor.soloChecked, false,
                 "deleting the solo track drops its mask instead of soloing its successor")
     }
+    // Fork selftest_timeline.cpp:146 drives Stop on an already-stopped
+    // transport before the stopped audition; the stopped audition itself rides S007.
+    function test_alreadyStoppedStopKeepsTransportStopped() {
+        var bar = openShell()
+        bar = openSong()
+        var stop = findChild(bar, "transport.stop")
+        verify(stop !== null, "the stopped transport mounts its real Stop control")
+        tryCompare(bar.presenter, "state", 1, 3000,
+                   "the freshly loaded song rests Stopped before any playback")
+        mouseClick(stop, stop.width / 2, stop.height / 2)
+        verify(waitForNative(function() {
+            return !stop.actionable && bar.presenter.state === 1
+        }, 3000), "Stop on the stopped transport is refused and it stays Stopped")
+    }
+
     function test_liveEditAuditionAndFinalCloseDuringPlayback() {
         var bar = openShell()
         var session = shell.shellPresenter.session
