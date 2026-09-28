@@ -262,17 +262,26 @@ ShellGridInputSupport {
                && farY > 0 && farY < nearY && nearY < startY && startY < plot.height,
                "the rendered target separates the expanded and contracted band endpoints")
         var before = gridNotes(grid)
+        wait(0)
+        var quiet = grabImage(surface)
+        var imageScale = quiet.width / surface.width
+        var origin = transient.mapToItem(null, 0, 0)
+        function changedAt(image, x, y) {
+            var px = Math.round((origin.x + x) * imageScale)
+            var py = Math.round((origin.y + y) * imageScale)
+            return Math.abs(image.red(px, py) - quiet.red(px, py)) > 1
+                || Math.abs(image.green(px, py) - quiet.green(px, py)) > 1
+                || Math.abs(image.blue(px, py) - quiet.blue(px, py)) > 1
+        }
         mousePress(input, startX, startY, Qt.RightButton)
         mouseMove(input, farX, farY, -1, Qt.RightButton)
-        tryVerify(function() {
-            var candidate = findChild(transient, "velocityBandFill")
-            return candidate && candidate.visible
-        }, 1000, "the mounted right drag publishes a selection rectangle")
-        var fill = findChild(transient, "velocityBandFill")
-        compare(fill.x, farX, "the expanded velocity band reaches the pointer horizontally")
-        compare(fill.y, farY, "the expanded velocity band reaches the pointer vertically")
-        compare(fill.width, startX - farX, "the expanded velocity band spans the horizontal press distance")
-        compare(fill.height, startY - farY, "the expanded velocity band spans the vertical press distance")
+        wait(0)
+        waitForRendering(surface)
+        var expanded = grabImage(surface)
+        verify(changedAt(expanded, (farX + startX) / 2, (farY + startY) / 2),
+               "the expanded velocity band paints its interior")
+        verify(!changedAt(expanded, farX / 2, (farY + startY) / 2),
+               "the expanded velocity band starts at the pointer horizontally")
         // Handles publish scroll-stable x; the rendered note sits at the
         // shared camera scroll offset, exactly as the mounted delegates draw it.
         var dpr = grid.devicePixelRatio > 0 ? grid.devicePixelRatio : 1
@@ -288,24 +297,26 @@ ShellGridInputSupport {
             return null
         }
         var targetNode = findHandleRow(plot)
-        verify(targetNode && targetNode.x + originX > fill.x
-               && targetNode.x + originX < fill.x + fill.width
-               && targetNode.y > fill.y && targetNode.y < fill.y + fill.height,
+        verify(targetNode && targetNode.x + originX > farX
+               && targetNode.x + originX < startX
+               && targetNode.y > farY && targetNode.y < startY,
                "the expanded mounted band actually covers the independently located note")
         mouseMove(input, nearX, nearY, -1, Qt.RightButton)
-        tryVerify(function() {
-            var contracted = findChild(transient, "velocityBandFill")
-            return contracted && Math.abs(contracted.x - nearX) < 0.001
-        }, 1000, "the contracted velocity band retracts horizontally while pressed")
-        fill = findChild(transient, "velocityBandFill")
-        compare(fill.y, nearY, "the contracted velocity band retracts vertically while pressed")
-        compare(fill.width, startX - nearX, "the contracted velocity band narrows before release")
-        compare(fill.height, startY - nearY, "the contracted velocity band shortens before release")
-        verify(targetNode.x + originX < fill.x,
+        wait(0)
+        waitForRendering(surface)
+        var contracted = grabImage(surface)
+        verify(changedAt(contracted, (nearX + startX) / 2, (nearY + startY) / 2),
+               "the contracted velocity band still paints its interior")
+        verify(!changedAt(contracted, (farX + nearX) / 2, (nearY + startY) / 2),
+               "the contracted velocity band retracts horizontally while pressed")
+        verify(targetNode.x + originX < nearX,
                "the contracted mounted band excludes the rendered note before release")
         mouseRelease(input, nearX, nearY, Qt.RightButton)
-        compare(findChild(transient, "velocityBandFill"), null,
-                "releasing the mounted velocity band clears the transient rectangle")
+        wait(0)
+        waitForRendering(surface)
+        var cleared = grabImage(surface)
+        verify(!changedAt(cleared, (nearX + startX) / 2, (nearY + startY) / 2),
+               "releasing the mounted velocity band clears the transient rectangle")
         var after = gridNotes(grid)
         compare(after.length, before.length, "velocity band selection keeps the timeline note count")
         for (var i = 0; i < before.length; ++i) {

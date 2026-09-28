@@ -45,8 +45,7 @@ extension PianoGrid {
             ? [] : session.selectedNotes
         return GridSceneInput(
             metrics: metrics, grid: session.grid, palette: palette, camera: session.camera,
-            contentEndTick: contentEndTick, scale: session.scaleProjection,
-            rulerHeight: rulerHeight,
+            scale: session.scaleProjection,
             typography: typography, fontSpec: { self.fontSpec($0) },
             fonts: measurementFonts, notes: visibleNotes,
             displayedNote: { self.displayedNote($0) },

@@ -88,24 +88,51 @@ extension VoiceChangesPage {
             caption: caption)
         trackAvailable = snapshot.trackAvailable
         publishGutter(snapshot.gutterTexts)
-        publishSpans(snapshot.spans)
-        publishGrid(snapshot.gridLines)
         projectMarkers(snapshot.entries)
         publishReadout(snapshot.readout)
         publishTransient()
+        publishDrawingContent(entries: entries, session: session)
     }
 
-    /// Reprojects only the x-dependent voice scene primitives for a horizontal
-    /// camera scroll. Gutter text, readout and marker identities remain intact.
-    @QtIgnored
-    public func refreshHorizontalProjection() {
-        guard let session else { return }
-        let entries = markerEntries()
-        let input = sceneInput(session, entries: entries)
-        publishSpans(VoiceChangesScene.spans(input, entries: entries))
-        publishGrid(VoiceChangesScene.gridLines(input, palette: palette))
-        projectMarkers(entries, reuseGeometry: true)
-        publishTransient()
+    private func publishDrawingContent(entries: [VoiceProjectionEntry], session: DocumentSession) {
+        var rects: [DrawerStaticRect] = []
+        if let track = currentTrack(session), plotHeight > 0 {
+            let color = SceneRectPacking.argb(
+                PaletteMath.hex(PaletteMath.trackIdentityOklab(track), alpha: 18))
+            var program = session.timeline.tracks[track].firstProgram
+            var start: Tick = 0
+            for entry in entries {
+                if program >= 0, entry.tick > start {
+                    rects.append(
+                        DrawerStaticRect(
+                            tickStart: start, tickEnd: entry.tick, y: 0,
+                            height: Float(plotHeight), argb: color))
+                }
+                program = entry.value
+                start = entry.tick
+            }
+            if program >= 0, session.timeline.lengthTicks > start {
+                rects.append(
+                    DrawerStaticRect(
+                        tickStart: start, tickEnd: session.timeline.lengthTicks, y: 0,
+                        height: Float(plotHeight), argb: color))
+            }
+        }
+        let colors: [Int: String] = [
+            3: palette.gridLineBar, 4: palette.gridLineBeat,
+            5: palette.gridLineSub1, 6: palette.gridLineSub2,
+            7: palette.gridLineSub3, 25: palette.gridLineBeatFine,
+        ]
+        let metrics = GridMetrics(
+            baseFontPx: baseFontPx, dpr: devicePixelRatio,
+            width: plotWidth, height: plotHeight,
+            timeAxis: session.projectionCache.timeAxis)
+        let data = DrawerStaticsContent.pack(
+            axis: metrics.timeAxis, grid: session.grid,
+            metrics: metrics, paletteColors: colors, rects: rects)
+        guard drawingContentData != data else { return }
+        drawingContentData = data
+        contentRevision &+= 1
     }
 
     /// The page's own facts for one scene build: the lane, the bank, the track,
@@ -121,7 +148,6 @@ extension VoiceChangesPage {
             slots: slotViews(),
             track: track ?? 0,
             firstProgram: firstProgram(),
-            lengthTicks: session.timeline.lengthTicks,
             trackAvailable: track != nil,
             gutterTitle: gutterTitle,
             contextTick: effectiveContextTick(),
@@ -133,8 +159,6 @@ extension VoiceChangesPage {
             gap: max(fontPx(baseFontPx, VoiceChangesPagePolicy.hoverPaintPaddingFactor), pad),
             stairLimit: fontPx(baseFontPx, VoiceChangesPagePolicy.spaceFourFactor),
             camera: session.camera,
-            metrics: gridMetrics(session),
-            grid: session.grid,
             interaction: interactionSnapshot())
     }
 
@@ -164,19 +188,6 @@ extension VoiceChangesPage {
         VoiceChangesProjection.syncTexts(gutterTexts, values)
     }
 
-    /// Applies the scene's held spans: one rect per program section, from the
-    /// previous change to this one, then the tail to the song's end.
-    @QtIgnored
-    func publishSpans(_ values: [SceneRect]) {
-        VoiceChangesProjection.syncRects(heldSpans, values)
-    }
-
-    /// Applies the scene's vertical grid: the roll's own subdivision, beat,
-    /// fine-beat and bar lines, through the same grid metrics.
-    @QtIgnored
-    func publishGrid(_ values: [SceneRect]) {
-        VoiceChangesProjection.syncRects(gridLines, values)
-    }
 
     /// The marker projection: the scene computes one marker rule and one label
     /// box per entry from the page's own geometry, and the page publishes them
@@ -369,21 +380,6 @@ extension VoiceChangesPage {
     private func setPublishedFont(_ storage: inout [String: QVariantSettable],
                                   _ value: [String: QVariantSettable]) {
         if !VoiceChangesProjection.fontMatches(storage, value) { storage = value }
-    }
-
-    // MARK: Internals: shared metrics
-
-
-    private func gridMetrics(_ session: DocumentSession) -> GridMetrics {
-        let key = MetricsKey(revision: session.document.revision, font: baseFontPx,
-                             dpr: devicePixelRatio, width: plotWidth, height: plotHeight)
-        if metricsKey == key, let cachedMetrics { return cachedMetrics }
-        let metrics = GridMetrics(baseFontPx: baseFontPx, dpr: devicePixelRatio,
-                                  width: plotWidth, height: plotHeight,
-                                  timeAxis: session.projectionCache.timeAxis)
-        metricsKey = key
-        cachedMetrics = metrics
-        return metrics
     }
 
 }

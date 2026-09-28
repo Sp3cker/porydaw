@@ -16,12 +16,17 @@ Item {
                 height: root.gridModel.rulerHeight
                 clip: true
 
-                TimelineQuickItem {
+                Rectangle {
                     objectName: "timelineQuickRulerGutterChrome"
                     width: root.gridModel.keyboardWidth
                     height: parent.height
-                    rects: root.gridModel.scene.rulerGutterChrome
-                    batched: true
+                    color: root.gridModel.palette.chromeBackground
+                }
+                Rectangle {
+                    y: root.gridModel.rulerHeight - 0.5
+                    width: root.gridModel.keyboardWidth
+                    height: 1 / root.gridModel.devicePixelRatio
+                    color: root.gridModel.palette.separator
                 }
 
                 Item {
@@ -30,44 +35,17 @@ Item {
                     height: parent.height
                     clip: true
 
-                    TimelineQuickItem {
-                        anchors.fill: parent
-                        objectName: "timelineQuickRulerChrome"
-                        rects: root.gridModel.scene.rulerChrome
-                        batched: true
-                    }
-                    Item {
-                        id: rulerContent
-                        x: -Math.round(root.scrollX
-                                       * root.gridModel.devicePixelRatio)
-                           / root.gridModel.devicePixelRatio
-                        width: parent.width
-                        height: parent.height
-                    }
-                    TimelineQuickItem {
-                        parent: rulerContent
+                    TimelineRenderer {
                         anchors.fill: parent
                         objectName: "timelineQuickRulerMarks"
-                        rects: root.gridModel.scene.rulerMarks
-                        batched: true
-                    }
-                    Repeater {
-                        parent: rulerContent
-                        model: root.gridModel.scene.rulerTextModel
-                        delegate: Text {
-                            required property var labelSpec
-                            required property string labelText
-                            required property var labelFont
-                            x: labelSpec.x
-                            y: labelSpec.y
-                            width: labelSpec.width
-                            height: labelSpec.height
-                            color: labelSpec.color
-                            text: labelText
-                            font: Qt.font(labelFont)
-                            textFormat: Text.PlainText
-                            renderType: Text.NativeRendering
-                        }
+                        band: 2
+                        contentSource: root.gridModel.scene
+                        contentRevision: root.gridModel.scene.contentRevision
+                        pixelsPerTick: root.gridModel.pixelsPerTick
+                        keyHeight: root.gridModel.rowHeight
+                        scrollX: root.gridModel.cameraScrollX
+                        scrollY: root.gridModel.cameraScrollY
+                        devicePixelRatio: root.gridModel.devicePixelRatio
                     }
                     MouseArea {
                         id: rulerInput

@@ -152,25 +152,34 @@ EditorDrawerTestSupport {
             }
         }
         var nodeShoulder = false
+        var curveOnlyScene = input.mapToItem(testCase.surface, model.baseFontPx * 3, 0)
+        var curveOnlyX = Math.round(curveOnlyScene.x * moved.width / testCase.surface.width)
+        var scanRegion = PixelSupport.regionOf(testCase, moved, testCase.surface, input)
+        var curveRows = []
+        for (var curveRow = Math.max(0, scanRegion.y0);
+             curveRow <= Math.min(moved.height - 1, scanRegion.y1); ++curveRow) {
+            if (transientInk(moved, curveOnlyX, curveRow)
+                    && !transientInk(first, curveOnlyX, curveRow))
+                curveRows.push(curveRow)
+        }
         var shoulderOffset = Math.ceil(model.baseFontPx * 3 / 16
                                        * moved.height / testCase.surface.height)
+        var shoulderY = curveRows.length > 0
+            ? Math.round((curveRows[0] + curveRows[curveRows.length - 1]) / 2) : shoulderOffset
         for (var shoulderX = targetX - 1; shoulderX <= targetX + 2; ++shoulderX) {
             for (var side = -1; side <= 1; side += 2) {
-                var shoulderY = targetY + side * shoulderOffset
+                var shoulderRow = shoulderY + side * shoulderOffset
                 nodeShoulder = nodeShoulder
-                    || (transientInk(moved, shoulderX, shoulderY)
-                        && !transientInk(first, shoulderX, shoulderY))
+                    || (transientInk(moved, shoulderX, shoulderRow)
+                        && !transientInk(first, shoulderX, shoulderRow))
             }
         }
-        var curveOnlyScene = input.mapToItem(testCase.surface,
-                                             model.baseFontPx * 3, y + 2 * delta)
-        var curveOnlyX = Math.round(curveOnlyScene.x * moved.width / testCase.surface.width)
         verify(targetedInk,
                "the scrolled Pan phantom paints selection-edge ink near the independently projected draft target")
         verify(nodeShoulder,
                "the scrolled Pan phantom paints node-shaped ink beyond the held preview curve")
-        verify(!transientInk(moved, curveOnlyX, targetY - shoulderOffset)
-               && !transientInk(moved, curveOnlyX, targetY + shoulderOffset),
+        verify(!transientInk(moved, curveOnlyX, shoulderY - shoulderOffset)
+               && !transientInk(moved, curveOnlyX, shoulderY + shoulderOffset),
                "the held preview curve lacks node-shaped shoulders away from the scrolled Pan phantom")
         var region = PixelSupport.regionOf(testCase, first, testCase.surface, input)
         var sx = (region.x1 - region.x0 + 1) / input.width
@@ -197,41 +206,69 @@ EditorDrawerTestSupport {
     function test_productionAutomationGhostCurvesDrawUnderActive() {
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
         AutomationTabsSupport.mountProductionAutomation(testCase, "production-automation-ghost")
-        verify(AutomationGestureSupport.writeVolumeLanePoints(testCase, bootstrap.automationVolumeIndex()))
         var model = AutomationTabsSupport.automationModel(testCase)
-        var page = AutomationTabsSupport.automationPageItem(testCase)
-        var active = AutomationTabsSupport.automationCurveItems(testCase).length
-        verify(active > 0, "the active lane draws its curve")
         var ghostTab = model.tabCount - 1
+        AutomationTabsSupport.clickAutomationTab(testCase, ghostTab)
+        var tempoValues = bootstrap.automationLaneValues().split(",")
+        var bpm = Number(tempoValues[0].split(":")[1])
+        verify(AutomationGestureSupport.writeVolumeLanePoints(testCase, bootstrap.automationVolumeIndex()))
+        var plot = AutomationTabsSupport.automationPlot(testCase)
+        var nodes = AutomationGestureSupport.automationLaneNodes(testCase)
+            .sort(function(a, b) { return a.model.tick - b.model.tick })
+        var activeY = nodes[nodes.length - 1].model.y
+        var font = model.baseFontPx
+        var padding = Math.round(Math.max(font * 3 / 16 + font / 12,
+                                          font * 9 / 32 + font / 10))
+        var ghostY = Math.round(plot.height - padding
+                                - (bpm - 20) * (plot.height - 2 * padding) / 235)
+        var activeX = plot.width * 0.875
+        var ghostX = Number(tempoValues[1].split(":")[0])
+            * testCase.surface.gridModel.beatWidth / testCase.surface.gridModel.ticksPerBeat / 2
+        function pixelAt(frame, x, y) {
+            var scene = plot.mapToItem(testCase.surface, x, y)
+            var px = Math.round(scene.x * frame.width / testCase.surface.width)
+            var row = Math.round(scene.y * frame.height / testCase.surface.height)
+            return [frame.red(px, row), frame.green(px, row), frame.blue(px, row)]
+        }
+        function distance(a, b) {
+            return Math.max.apply(null, a.map(function(channel, i) {
+                return Math.abs(channel - b[i])
+            }))
+        }
+        wait(0)
+        waitForRendering(testCase.surface)
+        var before = grabImage(testCase.surface)
+        var ink = PixelSupport.channelsOf(testCase, testCase.drawerPalette().automationNodeInk)
+        verify(distance(pixelAt(before, activeX, activeY), ink) < 30,
+               "the active lane draws its curve")
         AutomationTabsSupport.pressAutomationTabWithControl(testCase, ghostTab)
         tryVerify(function() { return bootstrap.automationGhostParameters().length > 0 }, 2000,
                   "the Control press pinned the Tempo row as a ghost")
-        tryVerify(function() {
-            return PageSupport.collectByNames(testCase, page, ["automationGhostCurve"], []).length > 0
-        }, 2000, "the plot drew the ghost's curve")
-        var ghosts = PageSupport.collectByNames(testCase, page, ["automationGhostCurve"], []).length
-        var drawn = AutomationTabsSupport.automationCurveItems(testCase)
-        compare(drawn.length, active + ghosts,
+        wait(0)
+        waitForRendering(testCase.surface)
+        var pinned = grabImage(testCase.surface)
+        var originalGhost = pixelAt(before, ghostX, ghostY)
+        var drawnGhost = pixelAt(pinned, ghostX, ghostY)
+        var expectedGhost = ink.map(function(channel, i) {
+            return Math.round((128 * channel + 127 * originalGhost[i]) / 255)
+        })
+        verify(distance(drawnGhost, originalGhost) > 6,
+               "the plot drew the ghost's curve")
+        verify(distance(drawnGhost, expectedGhost) < 20,
                 "pinning adds exactly the ghost runs before the active runs")
-        var seenActive = false
-        var ordered = true
-        for (var i = 0; i < drawn.length; ++i) {
-            var name = drawn[i].objectName
-            if (name === "automationCurve")
-                seenActive = true
-            if (name !== "automationCurve" && name !== "automationGhostCurve")
-                ordered = false
-            if (seenActive && name === "automationGhostCurve")
-                ordered = false
-        }
-        verify(seenActive, "the active curve keeps its runs")
-        verify(ordered, "every ghost run draws before the active runs")
+        verify(distance(pixelAt(pinned, activeX, activeY), ink) < 30,
+               "the active curve keeps its runs")
+        verify(distance(pixelAt(pinned, activeX, activeY), pixelAt(before, activeX, activeY)) < 12,
+               "every ghost run draws before the active runs")
         AutomationTabsSupport.pressAutomationTabWithControl(testCase, ghostTab)
         tryVerify(function() { return bootstrap.automationGhostParameters().length === 0 }, 2000,
                   "a second Control press cleared the pin")
-        tryVerify(function() {
-            return AutomationTabsSupport.automationCurveItems(testCase).length === active
-        }, 2000, "unpinning restores the unpinned plot")
+        wait(0)
+        waitForRendering(testCase.surface)
+        var unpinned = grabImage(testCase.surface)
+        verify(distance(pixelAt(unpinned, ghostX, ghostY), originalGhost) < 12
+               && distance(pixelAt(unpinned, activeX, activeY), pixelAt(before, activeX, activeY)) < 12,
+               "unpinning restores the unpinned plot")
     }
 
     function automationPaintRegion(image, plot, x, y, radius) {
@@ -428,13 +465,12 @@ EditorDrawerTestSupport {
                "the endpoint Pan node paints no highlight ring")
         verify(ringDistance(excluded, points[2]) > 30,
                "the later Pan node paints no highlight ring")
-        var selection = findChild(AutomationTabsSupport.automationPageItem(testCase), "automationSelectionRects")
         compare(bootstrap.automationSelectionRange(),
                 first.model.tick + ":" + second.model.tick,
                 "the first real Pan drag selects its half-open tick interval")
         var edgeRegion = testCase.automationPaintRegion(excluded, plot,
             xAt(second.model.tick) - 0.5, input.height * 0.18, 1)
-        verify(selection && PixelSupport.nearestPixel(testCase, excluded, edgeRegion, edgeInk).distance < 30,
+        verify(PixelSupport.nearestPixel(testCase, excluded, edgeRegion, edgeInk).distance < 30,
                "the half-open selection paints its reticle edge")
         mousePress(input, xAt(first.model.tick) + 1, bandY, Qt.RightButton)
         mouseMove(input, xAt(third.model.tick) + 1, bandY, -1, Qt.RightButton)
@@ -499,7 +535,7 @@ EditorDrawerTestSupport {
                 return node.model.tick === expected.tick && !node.model.phantom
             })
             verify(handle && !handle.model.selected
-                   && Math.abs(handle.model.x - xAt(expected.tick)) <= 1
+                   && Math.abs(handle.model.x - expected.tick * grid.beatWidth / grid.ticksPerBeat) <= 1
                    && Math.abs(handle.model.y - forkY(expected.value)) <= 1
                    && Math.abs(handle.model.ringRadius - model.baseFontPx * 9 / 32) <= 0.5,
                    "each fork Pan group publishes independently projected node and annulus geometry")

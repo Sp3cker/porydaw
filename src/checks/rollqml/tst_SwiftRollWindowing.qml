@@ -392,6 +392,7 @@ TestCase {
             original[gridRoles[i]] = palette[gridRoles[i]]
 
         function grab() {
+            wait(0)
             return grabImage(plot)
         }
         function push(contrast) {

@@ -133,6 +133,7 @@ TestCase {
         verify(rowHeight > 0, "the row height is published")
         verify(keyboardWidth > 0, "the keyboard width is published")
 
+        wait(0)
         var image = grabImage(shell.contentItem)
         verify(image.width > 0 && image.height > 0, "the window renders a frame")
         var dpr = image.width / shell.contentItem.width
@@ -216,19 +217,23 @@ TestCase {
                && !Helpers.colorsNear(expectedBeatAccidental, accidental),
                "the theme keeps beat lines distinguishable from both row roles")
         var winLeft = win(plot, 0, 0).x
-        var startMarker = findChild(surface, "loopStartMarker")
-        var endMarker = findChild(surface, "loopEndMarker")
+        var rulerMarks = findChild(surface, "timelineQuickRulerMarks")
+        verify(rulerMarks && rulerMarks.band === 2, "the native ruler marks are mounted")
+        var startMarker = rulerMarks.noteFace("loopStartMarker")
+        var endMarker = rulerMarks.noteFace("loopEndMarker")
+        var hasStart = startMarker && startMarker.x !== undefined
+        var hasEnd = endMarker && endMarker.x !== undefined
         var excluded = []
-        if (startMarker || endMarker) {
-            var startX = startMarker
-                ? startMarker.mapToItem(plot, startMarker.width / 2, 0).x : 0
-            var endX = endMarker
-                ? endMarker.mapToItem(plot, endMarker.width / 2, 0).x : plot.width
+        if (hasStart || hasEnd) {
+            var startX = hasStart
+                ? rulerMarks.mapToItem(plot, startMarker.x + startMarker.width / 2, 0).x : 0
+            var endX = hasEnd
+                ? rulerMarks.mapToItem(plot, endMarker.x + endMarker.width / 2, 0).x : plot.width
             var glowWidth = Math.min(2 * grid.baseFontPx, endX - startX)
             var edge = 1 / dpr
-            if (startMarker)
+            if (hasStart)
                 excluded.push([startX - edge, startX + glowWidth + edge])
-            if (endMarker)
+            if (hasEnd)
                 excluded.push([endX - glowWidth - edge, endX + edge])
         }
         var barLineFound = false

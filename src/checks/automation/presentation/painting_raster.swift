@@ -70,11 +70,13 @@ func drawerAutomationRasterScrolledPhantom(_ report: CheckReport, suite: Documen
         _ = page.pointerMove(x: 0, y: targetY, buttons: AutomationQtButton.left)
         let dragAnchor = 2 * targetY - sourceY
         _ = page.pointerMove(x: 0, y: dragAnchor, buttons: AutomationQtButton.left)
+        let preview = AutomationDrawerProbe(page.drawingContent())
         report.expect(page.previewPoints.contains { $0.tick == 144 && $0.value == cursorValue }
-                      && page.previewRects.contains {
-                          $0.primitiveName == "automationPreviewNode"
-                              && $0.fillColor == page.palette.selectionEdge
-                              && abs($0.y + $0.height / 2 - targetY) <= 1
+                && preview.valid
+                && preview.previewNodes.contains {
+                    $0.tick == 144
+                        && $0.color == SceneRectPacking.argb(page.palette.selectionEdge)
+                        && abs(Double($0.y + $0.height / 2) - targetY) <= 1
                       }, cppID: id,
                       message: "the held phantom paints the exact tick-144 cursor-value preview")
         report.expectEqual(expected: original, actual: fixture.snapshot, cppID: id,
@@ -83,7 +85,11 @@ func drawerAutomationRasterScrolledPhantom(_ report: CheckReport, suite: Documen
                       && originalBytes == (try? fixture.document.captureSave().bytes),
                       cppID: id, message: "the held scrolled phantom retains exact document bytes")
         fixture.activate(isTempo ? fixture.panLane : .tempo)
-        report.expect(!page.hasGesture && page.previewRects.isEmpty && !page.hoverVisible,
+        let cancelledPreview = AutomationDrawerProbe(page.drawingContent())
+        report.expect(
+            !page.hasGesture && cancelledPreview.valid
+                && cancelledPreview.previewNodes.isEmpty && cancelledPreview.previewRuns.isEmpty
+                && !page.hoverVisible,
                       cppID: id, message: "switching lanes clears the phantom ring and transient draft")
         report.expectEqual(expected: original, actual: fixture.snapshot, cppID: id,
                            what: "lane switching cancels without touching document or history")
@@ -137,7 +143,7 @@ func drawerAutomationRasterHalfOpenGeometry(_ report: CheckReport, suite: Docume
     let normal = page.publishedNodes
     let nodes = [(Tick(48), 40), (Tick(72), 80), (Tick(120), 55)]
     for (tick, value) in nodes {
-        let expectedX = fixture.x(tick)
+        let expectedX = fixture.x(tick) + fixture.session.camera.snapshot.scrollX
         let expectedY = fixture.y(fixture.panLane, value)
         report.expect(normal.contains {
             $0.tick == Double(tick) && $0.value == value && abs($0.x - expectedX) <= 1
@@ -158,9 +164,15 @@ func drawerAutomationRasterHalfOpenGeometry(_ report: CheckReport, suite: Docume
             $0.ringRadius > $0.radius
                 && $0.ringColor == page.palette.selectionRing
         }, cppID: id, message: "each selected fork Pan group publishes an outer selection annulus")
-        report.expect(page.selectionRects.count == 3
-                      && abs(page.selectionRects[2].x + page.selectionRects[2].width
-                             - fixture.x(endTick)) <= 1
+        let selection = AutomationDrawerProbe(page.drawingContent())
+        report.expect(
+            selection.valid && selection.selectionRects.count == 1
+                && selection.selectionEdges.count == 2
+                && selection.selectionRects.first?.start == 48
+                && selection.selectionRects.first?.end == endTick
+                && selection.selectionEdges.last?.tick == endTick
+                && selection.selectionEdges.last?.dx == -1
+                && selection.selectionEdges.last?.width == 1
                       && page.publishedNodes.count == normal.count,
                       cppID: id,
                       message: "the selection reticle's drawn edge follows the fork half-open endpoint without dropping nodes")

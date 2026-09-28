@@ -190,6 +190,7 @@ internal func runVoiceChangesPageChecks(_ report: CheckReport, session _: Docume
     }
     let programs = [editable[0], editable[1], editable[2]]
     drawerVoiceMarkerProjection(report, suite: session, service: service, programs: programs)
+    drawerVoiceContentBlob(report, suite: session, service: service, programs: programs)
     drawerVoiceSlotLabels(report, session: session, service: service, programs: programs)
     drawerVoiceCurrentVoiceContext(report, suite: session, service: service, programs: programs)
     drawerVoiceOccurrenceIdentity(report, suite: session, service: service, programs: programs)
@@ -210,4 +211,65 @@ internal func runVoiceChangesPageChecks(_ report: CheckReport, session _: Docume
     drawerVoiceCollisionDragOutcome(report, suite: session, service: service, programs: programs)
     drawerVoiceBlankSlotCommit(report, suite: session, service: service, programs: programs)
     drawerVoiceAuditionCapability(report, suite: session, service: service, programs: programs)
+}
+
+@MainActor
+private func drawerVoiceContentBlob(
+    _ report: CheckReport, suite: DocumentSession,
+    service: ProjectService, programs: [Int]
+) {
+    let fixture = drawerVoiceVoiceChangesFixture(
+        suite: suite, service: service, programs: programs)
+    let page = fixture.page
+    let initial = page.drawingContent()
+    let revision = page.contentRevision
+    let decoded = VelocityContentProbe(initial)
+    let expectedColor = RollContentProbe.argb(
+        PaletteMath.hex(PaletteMath.trackIdentityOklab(0), alpha: 18))
+    var expectedBounds: [(Tick, Tick)] = [(0, 48), (48, 120)]
+    if fixture.session.timeline.lengthTicks > 120 {
+        expectedBounds.append((120, fixture.session.timeline.lengthTicks))
+    }
+    report.expect(
+        decoded.valid && decoded.segments.first?.start == 0
+            && decoded.segments.last?.next == UInt64(TimeDefaults.noTick)
+            && decoded.palette.count > 25
+            && decoded.palette[3] == RollContentProbe.argb(GridPalette().gridLineBar)
+            && decoded.records.count == expectedBounds.count
+            && zip(decoded.records, expectedBounds).allSatisfy { rect, bounds in
+                rect.tickStart == bounds.0 && rect.tickEnd == bounds.1
+                    && rect.y == 0 && rect.height == 46
+                    && rect.argb == expectedColor && rect.flags == 0
+            },
+        cppID: drawerVoiceProjectionID,
+        message: "voice content decodes the fixture's held sections and frame grid")
+    let markerXs = page.publishedMarkers.map(\.x)
+    fixture.session.mutateCamera { camera in _ = camera.setHScroll(17) }
+    page.refreshCamera()
+    report.expect(
+        page.contentRevision == revision && page.drawingContent() == initial
+            && page.publishedMarkers.map(\.x) == markerXs,
+        cppID: drawerVoiceProjectionID,
+        message: "voice scroll preserves drawing bytes, revision, and marker content x")
+    fixture.session.mutateCamera { camera in
+        camera.setTimeZoom(camera.snapshot.pixelsPerBeat * 2)
+    }
+    page.refreshCamera()
+    report.expect(
+        page.contentRevision == revision && page.drawingContent() == initial,
+        cppID: drawerVoiceProjectionID,
+        message: "voice zoom preserves drawing bytes and revision")
+    fixture.document.writeLane(
+        track: 0, lane: .voice, from: 72, through: 72,
+        points: [LaneWrite(tick: 72, value: programs[0])])
+    page.refreshFromDocument()
+    let changed = VelocityContentProbe(page.drawingContent())
+    report.expect(
+        page.contentRevision == revision + 1
+            && changed.records.count == expectedBounds.count + 1
+            && changed.records[1].tickStart == 48 && changed.records[1].tickEnd == 72
+            && changed.records[2].tickStart == 72 && changed.records[2].tickEnd == 120,
+        cppID: drawerVoiceProjectionID,
+        message: "one voice change publishes exactly one revised held-span blob")
+    page.detach()
 }

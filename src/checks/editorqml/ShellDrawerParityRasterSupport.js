@@ -97,7 +97,7 @@
 
     function changedPixels(testCase, before, after, region, limit) {
         var changed = 0
-        var cap = limit || 1000000
+        var cap = limit === undefined ? 1000000 : limit
         for (var x = region.x0; x <= region.x1; ++x) {
             for (var y = region.y0; y <= region.y1; ++y) {
                 if (pixelsDiffer(testCase, before, after, x, y)) {

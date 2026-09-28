@@ -114,7 +114,6 @@ private struct GridContentSnapshot: Equatable {
     var noteSummary: String
     var appliedRevisionText: String
     var editCursorTick: Int
-    var rulerChromeCount: Int
     var contentRevision: Int
     var noteCount: Int
     var rowCount: Int
@@ -131,7 +130,6 @@ private func gridContentSnapshot(_ grid: PianoGrid) -> GridContentSnapshot {
         noteSummary: grid.fetchNoteSummary(),
         appliedRevisionText: grid.appliedRevisionText,
         editCursorTick: grid.editCursorTick,
-        rulerChromeCount: scene.rulerChrome.count,
         contentRevision: probe.revision,
         noteCount: probe.notes.count,
         rowCount: probe.rows.count,

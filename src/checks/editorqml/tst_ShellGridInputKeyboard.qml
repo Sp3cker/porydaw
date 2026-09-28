@@ -432,8 +432,36 @@ ShellGridInputSupport {
                   -1, Qt.RightButton)
         mouseMove(input, bandEndX, bandY, -1, Qt.RightButton)
         mouseRelease(input, bandEndX, bandY, Qt.RightButton)
-        tryVerify(function() { return model.selectionRects.rowCount() === 3 }, 3000,
-                  "the right-button band paints selection fill and its two edges")
+        var statics = findChild(page, "automationStatics")
+        verify(statics && statics.width > 0,
+               "the right-button band has a mounted static renderer")
+        var testCase = this
+        function selectionFrame() {
+            return RollNoteFaces.grab(testCase, statics)
+        }
+        var edgeHex = String(page.gridPalette.selectionEdge).slice(-6)
+        var edgeRgb = [parseInt(edgeHex.slice(0, 2), 16),
+                       parseInt(edgeHex.slice(2, 4), 16),
+                       parseInt(edgeHex.slice(4, 6), 16)]
+        function paintedEdge(frame, x) {
+            var scale = frame.width / statics.width
+            var row = Math.floor(frame.height * 0.65)
+            var center = Math.round(x * scale)
+            for (var px = Math.max(0, center - 2);
+                 px <= Math.min(frame.width - 1, center + 2); ++px) {
+                if (frame.alpha(px, row) > 0
+                        && Math.max(Math.abs(frame.red(px, row) - edgeRgb[0]),
+                                    Math.abs(frame.green(px, row) - edgeRgb[1]),
+                                    Math.abs(frame.blue(px, row) - edgeRgb[2])) < 24)
+                    return true
+            }
+            return false
+        }
+        tryVerify(function() {
+            var frame = selectionFrame()
+            return paintedEdge(frame, endTick * pixelsPerTick - grid.cameraScrollX)
+                && paintedEdge(frame, (endTick + step) * pixelsPerTick - grid.cameraScrollX - 1)
+        }, 3000, "the right-button band paints selection fill and its two edges")
         sourceFill = writtenNodeAt(endTick)
         verify(sourceFill && sourceFill.parent.model.selected,
                "the written node carries the real band selection into its drag")
@@ -473,19 +501,23 @@ ShellGridInputSupport {
             return model.hoverDisplay.hasNode
                    && model.hoverDisplay.nodeTick === destinationTick
         }, 3000, "the B-switched moved node responds to hover at its destination cell")
-        tryVerify(function() { return model.selectionRects.rowCount() === 3 }, 3000,
-                   "the physically B-switched node drag retains its selected band")
-        var selectionFill = model.selectionRects.data(model.selectionRects.index(0, 0), 0)
+        tryVerify(function() {
+            var frame = selectionFrame()
+            return paintedEdge(frame, destinationTick * pixelsPerTick - grid.cameraScrollX)
+                && paintedEdge(frame, (destinationTick + step) * pixelsPerTick
+                                      - grid.cameraScrollX - 1)
+                && !paintedEdge(frame, endTick * pixelsPerTick - grid.cameraScrollX)
+        }, 3000, "the physically B-switched node drag retains its selected band")
         var pixelRatio = input.Screen.devicePixelRatio
         function selectedEdge(tick) {
             return Math.round((tick * pixelsPerTick - grid.cameraScrollX) * pixelRatio)
                    / pixelRatio
         }
-        fuzzyCompare(selectionFill.x, selectedEdge(destinationTick), 0.01,
-                     "the physical-B selected node drag starts its range at the destination cell")
-        fuzzyCompare(selectionFill.x + selectionFill.width,
-                     selectedEdge(destinationTick + step), 0.01,
-                     "the physical-B selected node drag ends one cell after its destination")
+        var selectedFrame = selectionFrame()
+        verify(paintedEdge(selectedFrame, selectedEdge(destinationTick)),
+               "the physical-B selected node drag starts its range at the destination cell")
+        verify(paintedEdge(selectedFrame, selectedEdge(destinationTick + step) - 1),
+               "the physical-B selected node drag ends one cell after its destination")
         compare(writtenNodeAt(endTick), null,
                 "the physical-B node drag removes its former source cell")
         verify(session.canUndo, "both completed physical-B gestures retain undo history")

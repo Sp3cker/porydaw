@@ -42,7 +42,10 @@ func drawerAutomationCancellationAndNoOps(_ report: CheckReport, suite: Document
                   message: "cancelling ends the gesture synchronously")
     report.expectEqual(expected: before, actual: fixture.snapshot, cppID: drawerAutomationCancelID,
                        what: "a cancelled gesture mutates nothing")
-    report.expect(fixture.page.previewRects.isEmpty && !fixture.page.previewLabelVisible
+    let cancelledPreview = AutomationDrawerProbe(fixture.page.drawingContent())
+    report.expect(
+        cancelledPreview.valid && cancelledPreview.previewNodes.isEmpty
+            && cancelledPreview.previewRuns.isEmpty && !fixture.page.previewLabelVisible
                   && !fixture.page.bandVisible && !fixture.page.hoverVisible,
                   cppID: drawerAutomationCancelID,
                   message: "cancel clears every published node preview label band and hover primitive")
@@ -54,7 +57,10 @@ func drawerAutomationCancellationAndNoOps(_ report: CheckReport, suite: Document
                   cppID: drawerAutomationCancelID,
                   message: "the cancelled lane accepts a fresh node press")
     fixture.page.cancelSectionInteraction()
-    report.expect(!fixture.page.interactionActive && fixture.page.previewRects.isEmpty,
+    let secondPreview = AutomationDrawerProbe(fixture.page.drawingContent())
+    report.expect(
+        !fixture.page.interactionActive && secondPreview.valid
+            && secondPreview.previewNodes.isEmpty && secondPreview.previewRuns.isEmpty,
                   cppID: drawerAutomationCancelID,
                   message: "second cancellation retires the new capture without a transient")
 
@@ -345,7 +351,10 @@ func drawerAutomationInflightDragInvalidation(_ report: CheckReport, suite: Docu
                                    buttons: 1)
     report.expect(switched.page.hasGesture, cppID: switchID, message: "the drag is live")
     switched.activate(switched.volumeLane)
-    report.expect(switched.page.previewRects.isEmpty, cppID: switchID,
+    let switchedPreview = AutomationDrawerProbe(switched.page.drawingContent())
+    report.expect(
+        switchedPreview.valid && switchedPreview.previewNodes.isEmpty
+            && switchedPreview.previewRuns.isEmpty, cppID: switchID,
                   message: "parameter switch removes every provisional node marker rectangle")
     report.expect(!switched.page.previewLabelVisible && !switched.page.bandVisible
                   && !switched.page.hoverVisible, cppID: switchID,

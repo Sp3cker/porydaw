@@ -1,4 +1,3 @@
-.import "EditorDrawerPageSupport.js" as PageSupport
 .import "EditorDrawerAutomationTabsSupport.js" as AutomationTabsSupport
 
     /// The drawn fill of one node marker: the delegate itself fills the plot and
@@ -150,8 +149,13 @@
         return known[0].y + (known[0].value - value) * scale
     }
 
-    /// The drawn preview markers of a live gesture.
-    function automationPreviewItems(testCase) {
-        return PageSupport.collectByNames(testCase, AutomationTabsSupport.automationPageItem(testCase),
-                                       ["automationPreviewNode"], [])
+    function automationPreviewRegion(testCase, image, point, radius) {
+        var input = AutomationTabsSupport.automationPlotInput(testCase)
+        var origin = input.mapToItem(testCase.surface, point.x, point.y)
+        var scaleX = image.width / testCase.surface.width
+        var scaleY = image.height / testCase.surface.height
+        return { x0: Math.max(0, Math.floor((origin.x - radius) * scaleX)),
+                 y0: Math.max(0, Math.floor((origin.y - radius) * scaleY)),
+                 x1: Math.min(image.width - 1, Math.ceil((origin.x + radius) * scaleX)),
+                 y1: Math.min(image.height - 1, Math.ceil((origin.y + radius) * scaleY)) }
     }

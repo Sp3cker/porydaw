@@ -36,29 +36,8 @@ extension VelocityPage {
         setPublished(&detentsAvailable, presented.status == .resolved && presented.map.isPSG)
         let snapshot = buildScene()
         refreshAxisAndHandles(snapshot)
-        publishGrid(snapshot)
-        publishBands(snapshot)
         publishTransient(updateDrawing: false)
         publishDrawingContent()
-    }
-
-    /// Reprojects only the x-dependent scene primitives for a horizontal camera
-    /// scroll. The published value axis is unchanged, so avoid deriving it or
-    /// rebuilding its ruler rows on every pan tick.
-    @QtIgnored
-    public func refreshHorizontalProjection() {
-        guard session != nil else { return }
-        let input = sceneInput(reuseGeometry: true)
-        let projection = VelocityProjection(
-            camera: input.camera, geometry: input.geometry,
-            devicePixelRatio: input.devicePixelRatio, axis: axis)
-        let handles = VelocitySceneSnapshot.buildHandleRows(
-            input, axis: axis, previousHandles: handlesByID)
-        publishHandles(handles)
-        syncRects(gridLines, VelocityScene.grid(input))
-        syncRects(psgBands, VelocityScene.bands(
-            input, axis: axis, projection: projection))
-        publishTransient(updateDrawing: false)
     }
 
     /// Hover and detent changes republish the ruler and handle rows: a content
@@ -113,7 +92,7 @@ extension VelocityPage {
 
     /// Everything one scene build reads, as values: the session's document facts,
     /// the page's live interaction snapshot and its cached grid metrics.
-    private func sceneInput(reuseGeometry: Bool) -> VelocitySceneInput {
+    func sceneInput(reuseGeometry: Bool) -> VelocitySceneInput {
         let session = self.session
         return VelocitySceneInput(
             camera: session?.camera,
@@ -241,23 +220,13 @@ extension VelocityPage {
         return value
     }
 
-    /// Publishes one build's time-grid rows.
-    func publishGrid(_ snapshot: VelocitySceneSnapshot) {
-        syncRects(gridLines, snapshot.grid)
-    }
-
-    /// Publishes one build's PSG level-band rows.
-    func publishBands(_ snapshot: VelocitySceneSnapshot) {
-        syncRects(psgBands, snapshot.bands)
-    }
-
     @QtIgnored func publishDrawingContent(rebuildBands: Bool = true) {
         guard session != nil else { return }
         let input = sceneInput(reuseGeometry: true)
         guard let metrics = input.metrics, let grid = input.grid else { return }
         if rebuildBands { drawingBands = VelocityScene.modelBands(input, axis: axis) }
         let data = DrawerStaticsContent.pack(
-            axis: metrics.timeAxis, grid: grid, baseFontPx: baseFontPx,
+            axis: metrics.timeAxis, grid: grid, metrics: metrics,
             palette: input.palette, bands: drawingBands,
             transient: drawingTransientRects())
         guard drawingContentData != data else { return }
@@ -287,7 +256,6 @@ extension VelocityPage {
     }
 
     @QtIgnored func publishTransient(updateDrawing: Bool = true) {
-        var rects: [SceneRect] = []
         setPublished(&rampVisible, false)
         setPublished(&rampLength, 0)
         setPublished(&rampSlopeY, 0)
@@ -305,36 +273,11 @@ extension VelocityPage {
                 setPublished(&rampColor, palette.primaryText)
                 setPublished(&rampVisible, rampLength > 0)
             case .band, .pendingBand:
-                let minX = min(gesture.pressX, gesture.bandX) - projection.scrollOffsetX
-                let maxX = max(gesture.pressX, gesture.bandX) - projection.scrollOffsetX
-                let minY = min(gesture.pressY, gesture.bandY)
-                let maxY = max(gesture.pressY, gesture.bandY)
-                rects.append(SceneRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY,
-                                       fillColor: palette.selectionFill,
-                                       primitiveName: "velocityBandFill"))
-                let dash = 4 * geometry.pixel
-                let gap = 2 * geometry.pixel
-                VelocityScene.appendDashed(&rects, horizontal: true, fixed: minY, from: minX,
-                                           to: maxX, dash: dash, gap: gap,
-                                           physicalPixel: geometry.pixel,
-                                           color: palette.selectionEdge)
-                VelocityScene.appendDashed(&rects, horizontal: true, fixed: maxY, from: minX,
-                                           to: maxX, dash: dash, gap: gap,
-                                           physicalPixel: geometry.pixel,
-                                           color: palette.selectionEdge)
-                VelocityScene.appendDashed(&rects, horizontal: false, fixed: minX, from: minY,
-                                           to: maxY, dash: dash, gap: gap,
-                                           physicalPixel: geometry.pixel,
-                                           color: palette.selectionEdge)
-                VelocityScene.appendDashed(&rects, horizontal: false, fixed: maxX, from: minY,
-                                           to: maxY, dash: dash, gap: gap,
-                                           physicalPixel: geometry.pixel,
-                                           color: palette.selectionEdge)
+                break
             case .relative, .paint, .pan:
                 break
             }
         }
-        syncRects(transientRects, rects)
         publishReadout()
         if updateDrawing { publishDrawingContent(rebuildBands: false) }
     }

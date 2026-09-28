@@ -79,8 +79,9 @@
                 return voiceMarkerLines(testCase).length === drawnBefore + 1
             }, 1000, "the accepted picker inserted exactly one voice change")
             var drawn = voiceMarkerLines(testCase)
+            var input = voicePlotInput(testCase)
             for (var i = 0; i < drawn.length; ++i) {
-                if (Math.abs(drawn[i].x - candidate) < 14)
+                if (Math.abs(drawn[i].mapToItem(input, 0, 0).x - candidate) < 14)
                     return drawn[i]
             }
             return null
@@ -95,7 +96,7 @@
         for (var x = start; x < input.width - 4; x += 24) {
             var free = true
             for (var i = 0; i < lines.length; ++i) {
-                if (Math.abs(lines[i].x - x) < reach) {
+                if (Math.abs(lines[i].mapToItem(input, 0, 0).x - x) < reach) {
                     free = false
                     break
                 }

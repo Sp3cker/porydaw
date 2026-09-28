@@ -156,9 +156,6 @@ struct VelocitySceneSnapshot {
     let axisGraduations: [SceneRect]
     let axisMarkers: [SceneRect]
     let axisLabels: [SceneText]
-    let grid: [SceneRect]
-    let bands: [SceneRect]
-
     /// The full static build: the value axis for the presented context, the note
     /// handle rows, the ruler rows and labels, the time grid and the PSG bands.
     @MainActor
@@ -171,9 +168,7 @@ struct VelocitySceneSnapshot {
             axisTicks: parts.rows.ticks,
             axisGraduations: parts.rows.graduations,
             axisMarkers: parts.rows.markers,
-            axisLabels: parts.rows.labels,
-            grid: VelocityScene.grid(input),
-            bands: VelocityScene.bands(input, axis: parts.axis, projection: parts.projection))
+            axisLabels: parts.rows.labels)
     }
 
     /// The scoped build a hover, a pointer exit or a detent change republishes:

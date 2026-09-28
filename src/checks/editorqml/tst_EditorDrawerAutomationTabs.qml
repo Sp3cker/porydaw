@@ -126,8 +126,6 @@ EditorDrawerTestSupport {
         mouseMove(AutomationTabsSupport.automationPlotInput(testCase), 4, 4)
 
         // The plot's own facts: the grid, the value axis and the lane's nodes.
-        verify(findChild(page, "automationGridLines"), "the page composed its time grid")
-        verify(findChild(page, "automationValueLines"), "the page composed its value axis")
         verify(findChild(page, "automationReadout"), "the page composed its context readout")
         verify(findChild(page, "automationHoverLabel"), "the page composed its hover label")
         verify(findChild(page, "automationPreviewLabel"), "the page composed its gesture readout")
@@ -151,8 +149,50 @@ EditorDrawerTestSupport {
                   + AutomationTabsSupport.automationModel(testCase).nodeCount + ")")
         compare(AutomationTabsSupport.automationNodeItems(testCase).length > 0, true,
                 "the lane with written events drew its nodes")
-        compare(AutomationTabsSupport.automationCurveItems(testCase).length > 0, true,
-                "the lane with written events drew its curve")
+        var node = AutomationTabsSupport.automationNodeItems(testCase).filter(function(item) {
+            return !item.model.phantom
+        }).sort(function(a, b) { return a.model.tick - b.model.tick }).pop()
+        var curveX = plot.width * 0.875
+        wait(0)
+        waitForRendering(testCase.surface)
+        var frame = grabImage(testCase.surface)
+        var axis = findChild(page, "automationAxis")
+        var background = PixelSupport.channelsOf(testCase, testCase.drawerPalette().rollBackground)
+        var barColor = String(testCase.drawerPalette().gridLineBar)
+        var bar = PixelSupport.channelsOf(testCase, barColor)
+        var alpha = parseInt(barColor.slice(1, 3), 16) / 255
+        var blendedBar = bar.map(function(channel, index) {
+            return Math.round(alpha * channel + (1 - alpha) * background[index])
+        })
+        var gridPoint = plot.mapToItem(testCase.surface, 0, plot.height * 0.63)
+        var gridRow = Math.round(gridPoint.y * frame.height / testCase.surface.height)
+        var gridStart = Math.ceil(gridPoint.x * frame.width / testCase.surface.width) + 8
+        var gridEnd = Math.floor((gridPoint.x + plot.width) * frame.width
+                                 / testCase.surface.width) - 4
+        var gridRegion = { x0: gridStart, x1: gridEnd, y0: gridRow, y1: gridRow }
+        verify(axis && axis.visible
+               && PixelSupport.nearestPixel(testCase, frame, gridRegion, blendedBar).distance <= 8
+               && PixelSupport.nearestPixel(testCase, frame, gridRegion, background).distance <= 8
+               && Math.max.apply(null, blendedBar.map(function(channel, index) {
+                   return Math.abs(channel - background[index])
+               })) > 8,
+               "the page composed its time grid")
+        var scaleInk = PixelSupport.channelsOf(testCase, testCase.drawerPalette().separator)
+        var scaleLabels = PageSupport.collectByName(testCase, plot, "automationScaleLabel", [])
+        verify(axis && axis.width > 0 && axis.height > 0 && scaleLabels.some(function(label) {
+            var point = plot.mapToItem(testCase.surface, 3, label.y + label.height / 2)
+            var tx = Math.round(point.x * frame.width / testCase.surface.width)
+            var ty = Math.round(point.y * frame.height / testCase.surface.height)
+            return PixelSupport.nearestPixel(testCase, frame,
+                       { x0: tx - 1, x1: tx + 1, y0: ty - 3, y1: ty + 3 }, scaleInk).distance < 16
+        }), "the page composed its value axis")
+        var scene = plot.mapToItem(testCase.surface, curveX, node.model.y)
+        var px = Math.round(scene.x * frame.width / testCase.surface.width)
+        var py = Math.round(scene.y * frame.height / testCase.surface.height)
+        var ink = PixelSupport.channelsOf(testCase, testCase.drawerPalette().automationNodeInk)
+        verify(PixelSupport.nearestPixel(testCase, frame,
+                   { x0: px - 1, x1: px + 1, y0: py - 1, y1: py + 1 }, ink).distance < 30,
+               "the lane with written events drew its curve")
         compare(findChild(page, "automationReadout").visible, true,
                 "the readout is drawn while the lane holds a value at the shared tick")
         PageSupport.auditVisibleTextInk(testCase, page, "automation page")
@@ -255,10 +295,20 @@ EditorDrawerTestSupport {
         AutomationTabsSupport.pressAutomationTabWithControl(testCase, ghostTab)
         tryVerify(function() { return bootstrap.automationGhostParameters().length > 0 }, 2000,
                   "the Control press pinned the Tempo row as a ghost")
-        tryVerify(function() {
-            var drawn = AutomationTabsSupport.automationCurveItems(testCase)
-            return drawn.length > 0
-        }, 2000, "the selector drew the active curve over its ghost")
+        wait(0)
+        waitForRendering(testCase.surface)
+        var ghosted = grabImage(testCase.surface)
+        var plot = AutomationTabsSupport.automationPlot(testCase)
+        var nodes = AutomationTabsSupport.automationNodeItems(testCase).filter(function(item) {
+            return !item.model.phantom
+        }).sort(function(a, b) { return a.model.tick - b.model.tick })
+        var scene = plot.mapToItem(testCase.surface, plot.width * 0.875, nodes[nodes.length - 1].model.y)
+        var px = Math.round(scene.x * ghosted.width / testCase.surface.width)
+        var py = Math.round(scene.y * ghosted.height / testCase.surface.height)
+        var ink = PixelSupport.channelsOf(testCase, testCase.drawerPalette().automationNodeInk)
+        verify(PixelSupport.nearestPixel(testCase, ghosted,
+                   { x0: px - 1, x1: px + 1, y0: py - 1, y1: py + 1 }, ink).distance < 30,
+               "the selector drew the active curve over its ghost")
         compare(bootstrap.automationLaneTicks(), ticksBefore,
                 "pinning a ghost wrote nothing to the lane")
         AutomationTabsSupport.pressAutomationTabWithControl(testCase, ghostTab)

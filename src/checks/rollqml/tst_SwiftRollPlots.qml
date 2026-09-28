@@ -780,7 +780,7 @@ TestCase {
         var position = plot.mapToItem(s, plot.width * 0.82, localY / dpr)
         var x = Math.round(position.x * dpr)
         var y = Math.round(position.y * dpr)
-        var before = grabImage(s)
+        var before = RollNoteFaces.grab(testCase, s)
         var gutterBefore = RollNoteFaces.grab(testCase, gutter)
         var natural = expectedTint(before, x, y)
         var second = expectedTint(before, x, Math.round(y - 2 * h))
@@ -788,8 +788,7 @@ TestCase {
         verify(Math.abs(Qt.color(grid.palette.scaleHighlight).a - 51 / 255) < 0.001,
                "Highlight retains the fork's translucent tint")
         transport.setScaleHighlight(true)
-        waitForRendering(plot)
-        var highlighted = grabImage(s)
+        var highlighted = RollNoteFaces.grab(testCase, s)
         verify(pixelMatches(highlighted, x, y, natural),
                "Highlight tints the scale row at the fork composite")
         verify(pixelMatches(highlighted, x, Math.round(y - h),
@@ -814,7 +813,7 @@ TestCase {
         waitForRendering(plot)
         transport.setScaleRoot(1)
         waitForRendering(plot)
-        var rooted = grabImage(s)
+        var rooted = RollNoteFaces.grab(testCase, s)
         verify(pixelMatches(rooted, x, Math.round(y - 2 * h),
                             {r: before.red(x, Math.round(y - 2 * h)),
                              g: before.green(x, Math.round(y - 2 * h)),
@@ -824,7 +823,7 @@ TestCase {
         transport.setScaleRoot(0)
         transport.setScaleType(1)
         waitForRendering(plot)
-        var minor = grabImage(s)
+        var minor = RollNoteFaces.grab(testCase, s)
         verify(pixelMatches(minor, x, Math.round(y - 4 * h),
                             {r: before.red(x, Math.round(y - 4 * h)),
                              g: before.green(x, Math.round(y - 4 * h)),
@@ -855,10 +854,10 @@ TestCase {
                "A026 the occupied Fold row is wholly inside the mounted roll viewport")
         var foldedSurfaceY = Math.round(
             plot.mapToItem(s, 0, foldedY / dpr).y * dpr)
-        var foldedBefore = grabImage(s)
+        var foldedBefore = RollNoteFaces.grab(testCase, s)
         transport.setScaleHighlight(true)
         waitForRendering(plot)
-        var folded = grabImage(s)
+        var folded = RollNoteFaces.grab(testCase, s)
         verify(pixelMatches(folded, x, foldedSurfaceY,
                             expectedTint(foldedBefore, x, foldedSurfaceY)),
                "Highlight tints a visible occupied Fold row")

@@ -326,8 +326,10 @@ EditorDrawerTestSupport {
         var presenter = testCase.surface.otherEventsPresenter
         var grid = testCase.surface.gridModel
         var ruler = findChild(testCase.surface, "timelineRulerInput")
+        var rulerMarks = findChild(testCase.surface, "timelineQuickRulerMarks")
         var rulerMenu = testCase.surface.rulerMenu
-        verify(band !== null && ruler !== null, "the Other Events band and the production ruler are mounted")
+        verify(band !== null && ruler !== null && rulerMarks !== null,
+               "the Other Events band and the production ruler are mounted")
         grid.setCameraHScroll(0)
         tryVerify(function() { return grid.cameraScrollX === 0 }, 3000,
                   "the camera parks at the origin before the loop update")
@@ -336,8 +338,9 @@ EditorDrawerTestSupport {
         var before = Qt.rect(band.x, band.y, band.width, band.height)
         var countBefore = presenter.labelCount
         function markerX(name) {
-            var marker = findChild(testCase.surface, name)
-            return marker === null ? null : marker.mapToItem(ruler, 0, 0).x
+            wait(0)
+            var face = rulerMarks.noteFace(name)
+            return face.x === undefined ? null : rulerMarks.mapToItem(ruler, face.x, face.y).x
         }
         function rulerX(tick) {
             return tick * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX

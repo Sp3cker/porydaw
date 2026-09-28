@@ -208,13 +208,8 @@ public final class VelocityPage: EditorDrawerPage {
     /// Accepted prompt values also seed subsequently drawn notes, including no-op edits.
     @QtIgnored public var onVelocityAccepted: ((UInt8) -> Void)?
 
-    public var gridLines: QListModel<SceneRect> = QListModel()
     @QtTracked public var contentRevision = 0
     public func drawingContent() -> Data { drawingContentData }
-    public var psgBands: QListModel<SceneRect> = QListModel()
-    /// The gesture transient's rects. `transient` alone is a reserved QML
-    /// keyword, so the published name carries its own noun.
-    public var transientRects: QListModel<SceneRect> = QListModel()
     public var axisTicks: QListModel<SceneRect> = QListModel()
     public var axisGraduations: QListModel<SceneRect> = QListModel()
     public var axisMarkers: QListModel<SceneRect> = QListModel()
@@ -400,16 +395,13 @@ public final class VelocityPage: EditorDrawerPage {
         rebuildContent()
     }
 
-    /// Camera-only publication: the same notes at new plot positions. Nothing
-    /// that feeds the value axis changed, so the build derives the same axis and
-    /// the page publishes exactly the rows it published before.
     @QtIgnored
     public func refreshCamera() {
         guard session != nil else { return }
-        let snapshot = buildScene()
-        publishHandles(snapshot.handles)
-        publishGrid(snapshot)
-        publishBands(snapshot)
+        let input = sceneInput(reuseGeometry: true)
+        publishHandles(
+            VelocitySceneSnapshot.buildHandleRows(
+                input, axis: axis, previousHandles: handlesByID))
         publishTransient(updateDrawing: false)
     }
 

@@ -248,20 +248,29 @@ func drawerAutomationNodeDragAndPhantomOutcomes(_ report: CheckReport, suite: Do
                                                  button: AutomationQtButton.left),
                       cppID: phantomID, message: "the origin phantom takes its press")
         _ = scrolled.page.pointerMove(x: 0, y: y - 30, buttons: AutomationQtButton.left)
-        let firstCurve = scrolled.page.previewRects.first {
-            $0.primitiveName == "automationPreviewCurve"
+        let firstPreview = AutomationDrawerProbe(scrolled.page.drawingContent())
+        let firstCurve = firstPreview.previewRuns.first {
+            $0.color == SceneRectPacking.argb(scrolled.page.palette.selectionEdge)
         }
-        report.expect(firstCurve != nil && (firstCurve?.width ?? 0) > independentHitRadius * 2,
+        let pixelsPerTick = scrolled.session.camera.snapshot.pixelsPerTick
+        report.expect(
+            firstPreview.valid && firstCurve != nil
+                && (Double(firstCurve?.end ?? 0) - Double(firstCurve?.start ?? 0)) * pixelsPerTick
+                    > independentHitRadius * 2,
                       cppID: phantomID,
                       message: "an activated phantom paints a full held-value preview curve")
         _ = scrolled.page.pointerMove(x: 0, y: targetY - 30, buttons: AutomationQtButton.left)
-        let movedCurve = scrolled.page.previewRects.first {
-            $0.primitiveName == "automationPreviewCurve"
+        let movedPreview = AutomationDrawerProbe(scrolled.page.drawingContent())
+        let movedCurve = movedPreview.previewRuns.first {
+            $0.color == SceneRectPacking.argb(scrolled.page.palette.selectionEdge)
         }
-        report.expect(movedCurve != nil && (movedCurve?.width ?? 0) > independentHitRadius * 2,
+        report.expect(
+            movedPreview.valid && movedCurve != nil
+                && (Double(movedCurve?.end ?? 0) - Double(movedCurve?.start ?? 0)) * pixelsPerTick
+                    > independentHitRadius * 2,
                       cppID: phantomID,
                       message: "a moved phantom retains its full preview curve")
-        let curveDelta = (movedCurve?.y ?? -1) - (firstCurve?.y ?? -1)
+        let curveDelta = Double(movedCurve?.y ?? -1) - Double(firstCurve?.y ?? -1)
         report.expect(abs(curveDelta) > 0.5 / scrolled.page.devicePixelRatio
                       && curveDelta * (targetY - y) > 0,
                       cppID: phantomID,

@@ -4,6 +4,7 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
+import "RollNoteFaces.js" as RollNoteFaces
 
 ShellDrawerParitySupport {
     id: testCase
@@ -14,6 +15,29 @@ ShellDrawerParitySupport {
         var model = automationModel()
         var fills = collectByName(page, "automationNodeFill", [])
         var node = null
+        var preview = findChild(page, "automationPreviewRects")
+        verify(preview && preview.width > 0, "the mounted plot has a transient preview renderer")
+        function previewAt(x, y) {
+            var frame = RollNoteFaces.grab(testCase, preview)
+            var sx = frame.width / preview.width
+            var sy = frame.height / preview.height
+            var ink = String(page.gridPalette.selectionEdge).slice(-6)
+            var rgb = [parseInt(ink.slice(0, 2), 16),
+                       parseInt(ink.slice(2, 4), 16),
+                       parseInt(ink.slice(4, 6), 16)]
+            var radius = Math.ceil(model.baseFontPx * 3 / 4)
+            for (var py = Math.max(0, Math.floor((y - radius) * sy));
+                 py <= Math.min(frame.height - 1, Math.ceil((y + radius) * sy)); ++py) {
+                for (var px = Math.max(0, Math.floor((x - radius) * sx));
+                     px <= Math.min(frame.width - 1, Math.ceil((x + radius) * sx)); ++px) {
+                    if (Math.max(Math.abs(frame.red(px, py) - rgb[0]),
+                                 Math.abs(frame.green(px, py) - rgb[1]),
+                                 Math.abs(frame.blue(px, py) - rgb[2])) < 24)
+                        return true
+                }
+            }
+            return false
+        }
         var arm = model.baseFontPx * 3
         for (var f = 0; f < fills.length && !node; ++f) {
             if (!fills[f].visible)
@@ -29,15 +53,19 @@ ShellDrawerParitySupport {
         mouseMove(input, from.x, from.y)
         mousePress(input, from.x, from.y, Qt.LeftButton)
         mouseMove(input, from.x + arm, from.y, -1, Qt.LeftButton)
-        tryVerify(function() { return model.previewRects.rowCount() > 0 }, 3000,
+        mouseMove(input, from.x + 2 * arm, from.y, -1, Qt.LeftButton)
+        tryVerify(function() { return previewAt(from.x + arm, from.y) }, 3000,
                   "a real node drag stages a point preview before geometry changes")
         compare(revision(), before, "the held node preview has not edited the song")
+        var stagedRevision = model.contentRevision
         shell.width *= 1.08
         tryCompare(model, "interactionActive", false, 3000,
                    "resizing the mounted plot cancels its held node drag")
-        compare(model.previewRects.rowCount(), 0,
-                "the geometry rebuild retires the provisional node preview")
-        mouseRelease(input, from.x + arm, from.y, Qt.LeftButton)
+        tryVerify(function() {
+            return model.contentRevision > stagedRevision
+                && !previewAt(from.x + arm, from.y)
+        }, 3000, "the geometry rebuild retires the provisional node preview")
+        mouseRelease(input, from.x + 2 * arm, from.y, Qt.LeftButton)
         compare(revision(), before,
                 "the stale node release after geometry rebuild cannot edit the song")
         from = node.mapToItem(input, node.width / 2, node.height / 2)
@@ -125,17 +153,38 @@ ShellDrawerParitySupport {
                    "⇧ Drag: draw ramp · ⌥ Drag: draw in ticks · ⌘ Drag: snap to neutral value · ⇧ Wheel: scroll horizontally",
                    3000, "the exact sweep hint recovers at the stationary dismissal point")
         compare(revision(), before, "shortcut hover and menu dismissal never edit the song")
-        mouseMove(input, input.width * 0.08, input.height * 0.85)
-        mousePress(input, input.width * 0.08, input.height * 0.85, Qt.RightButton)
-        mouseMove(input, input.width * 0.18, input.height * 0.85, -1, Qt.RightButton)
+        var statics = findChild(page, "automationStatics")
+        var idleFrame = RollNoteFaces.grab(testCase, statics)
+        mouseMove(input, input.width * 0.25, input.height * 0.85)
+        mousePress(input, input.width * 0.25, input.height * 0.85, Qt.RightButton)
+        mouseMove(input, input.width * 0.4, input.height * 0.85, -1, Qt.RightButton)
         tryCompare(model, "bandVisible", true, 3000,
                    "a real right drag stages its visible selection band")
         compare(revision(), before, "the held right band cannot edit the song")
-        mouseRelease(input, input.width * 0.18, input.height * 0.85, Qt.RightButton)
+        mouseRelease(input, input.width * 0.4, input.height * 0.85, Qt.RightButton)
         tryCompare(model, "bandVisible", false, 3000,
                    "right-band release retires the drag preview")
-        tryVerify(function() { return model.selectionRects.rowCount() === 3 }, 3000,
-                  "right-band release publishes its selection fill and two edges")
+        wait(0)
+        var selectedFrame = RollNoteFaces.grab(testCase, statics)
+        var edgeInk = String(page.gridPalette.selectionEdge).slice(-6).toLowerCase()
+        var edgeRgb = [parseInt(edgeInk.slice(0, 2), 16),
+                       parseInt(edgeInk.slice(2, 4), 16),
+                       parseInt(edgeInk.slice(4, 6), 16)]
+        var probeY = Math.floor(selectedFrame.height * 0.35)
+        var paintedEdges = 0
+        for (var px = 0; px < selectedFrame.width; ++px) {
+            if (selectedFrame.alpha(px, probeY) > 0
+                    && Math.max(Math.abs(selectedFrame.red(px, probeY) - edgeRgb[0]),
+                                Math.abs(selectedFrame.green(px, probeY) - edgeRgb[1]),
+                                Math.abs(selectedFrame.blue(px, probeY) - edgeRgb[2])) < 24)
+                ++paintedEdges
+        }
+        var fillX = Math.floor(selectedFrame.width * 0.33)
+        verify(paintedEdges >= 2
+               && (selectedFrame.red(fillX, probeY) !== idleFrame.red(fillX, probeY)
+                   || selectedFrame.green(fillX, probeY) !== idleFrame.green(fillX, probeY)
+                   || selectedFrame.blue(fillX, probeY) !== idleFrame.blue(fillX, probeY)),
+               "right-band release publishes its selection fill and two edges")
         compare(revision(), before, "right-band selection leaves the song unchanged")
         var grid = gridModel()
         var pixelsPerTick = grid.beatWidth / grid.ticksPerBeat

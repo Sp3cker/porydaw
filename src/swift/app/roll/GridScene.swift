@@ -80,33 +80,16 @@ public final class SceneText {
             "horizontal": horizontal, "vertical": vertical,
         ]
     }
-
-    @QtIgnored
-    var signature: String {
-        let rectSig = sceneTextDictSignature(labelRect)
-        let bgSig = sceneTextDictSignature(labelBackgroundRect)
-        let clipSig = sceneTextDictSignature(labelClipRect)
-        let fontSig = sceneTextDictSignature(labelFont)
-        return rectSig + "|" + bgSig + "|" + clipSig + "|" + fontSig
-            + "|" + labelText + "|" + labelColor + "|" + labelBackground + "|"
-            + "\(labelHorizontalAlignment)|\(labelVerticalAlignment)"
-    }
 }
 
 @MainActor
 @QtBridgeable
 public final class GridScene {
 
-    public var rulerGutterChrome: QListModel<SceneRect> = QListModel()
-    public var rulerChrome: QListModel<SceneRect> = QListModel()
-    public var rulerMarks: QListModel<SceneRect> = QListModel()
     public var cameraScroll: QListModel<SceneRect> = QListModel()
-
-    public var rulerTextModel: QListModel<SceneText> = QListModel()
 
     @QtTracked public var contentRevision = 0
 
-    var rulerTextSignatures: [String] = []
     @QtIgnored var drawingContentData = Data()
     @QtIgnored var drawingContentKey: RollDrawingContentKey?
     @QtIgnored var noteRecordCount = 0
@@ -118,47 +101,6 @@ public final class GridScene {
 
     public func drawingContent() -> Data { drawingContentData }
 
-    struct ContentWindow: Equatable {
-        static let cullingChunkPixels = 1024.0
-        var left: Double
-        var right: Double
-        var extentLeft: Double
-        var extentRight: Double
-        private var contentRight: Double
-
-        init(camera: EditorCamera, contentEndTick: Int, previous: ContentWindow?) {
-            let snapshot = camera.snapshot
-            let chunk = Self.cullingChunkPixels
-            extentLeft = floor(snapshot.minHScroll / chunk) * chunk
-            let end = max(snapshot.maxHScroll, Double(contentEndTick) * snapshot.pixelsPerTick)
-            contentRight = ceil(end / chunk) * chunk
-            let padding = 2 * max(1, ceil(snapshot.viewportWidth / chunk)) * chunk
-            let requiredRight = contentRight + (ceil(snapshot.viewportWidth / chunk) + 1) * chunk
-            if let previous, previous.contentRight == contentRight,
-               previous.extentRight >= requiredRight {
-                extentRight = previous.extentRight
-            } else {
-                extentRight = requiredRight + padding
-            }
-            let visibleRight = snapshot.scrollX + snapshot.viewportWidth
-            if let previous, previous.extentLeft == extentLeft,
-               previous.extentRight == extentRight, previous.contentRight == contentRight,
-               (previous.left == extentLeft || snapshot.scrollX >= previous.left + chunk),
-               (previous.right == extentRight || visibleRight <= previous.right - chunk) {
-                self = previous
-                return
-            }
-            left = max(extentLeft, floor((snapshot.scrollX - padding) / chunk) * chunk)
-            right = min(extentRight, max(left + 3 * chunk,
-                ceil((visibleRight + padding) / chunk) * chunk))
-            left = max(extentLeft, min(left, right - 3 * chunk))
-        }
-    }
-
-    @QtIgnored
-    var staticKey: StaticKey?
-    @QtIgnored
-    var contentWindow: ContentWindow?
     struct KeyboardWidthKey: Equatable {
         let bank: ObjectIdentifier?
         let program: Int
@@ -170,7 +112,6 @@ public final class GridScene {
 
     @QtIgnored
     func invalidateStatic() {
-        staticKey = nil
         paletteContentCache = nil
     }
 
@@ -185,14 +126,7 @@ public final class GridScene {
 
     public init(typography: Typography = Typography(baseFontPx: 13)) {
         hoverChipFont = typography.caption.map
-        for model in rectModels() {
-            model.enablePackedRows { SceneRectPacking.pack($0) }
-        }
-    }
-
-    @QtIgnored
-    private func rectModels() -> [QListModel<SceneRect>] {
-        [rulerGutterChrome, rulerChrome, rulerMarks, cameraScroll]
+        cameraScroll.enablePackedRows { SceneRectPacking.pack($0) }
     }
 
     @QtIgnored

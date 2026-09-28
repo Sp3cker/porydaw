@@ -332,7 +332,8 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
     }
     let volumeWidth = page.plotWidth
     let volumeHeight = page.plotHeight
-    let volumeGrid = (0..<page.gridLines.count).map { page.gridLines[$0].x }
+    let volumeDrawing = AutomationDrawerProbe(page.drawingContent())
+    let volumeGrid = volumeDrawing.gridDescriptor
     fixture.activate(.tempo)
     report.expect(page.publishedCurveRuns.contains {
         $0.primitiveName == "automationCurve" && $0.fillColor == "#EA3C3C"
@@ -346,18 +347,23 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
                        what: "Tempo shares the active lane's plot width")
     report.expectEqual(expected: volumeHeight, actual: page.plotHeight, cppID: drawerAutomationPaintingModelID,
                        what: "Tempo shares the active lane's plot height")
+    let tempoDrawing = AutomationDrawerProbe(page.drawingContent())
     report.expect(volumeWidth > 0 && volumeHeight > 0
                       && page.plotWidth == volumeWidth && page.plotHeight == volumeHeight
-                      && (page.gridLines.count == 0 || page.gridLines[0].y == 0),
+            && tempoDrawing.valid && tempoDrawing.axisRects.first?.y == 0,
                   cppID: drawerAutomationPaintingModelID,
                   message: "Tempo and Volume share the complete plot body including its top edge")
-    report.expectEqual(expected: volumeGrid, actual: (0..<page.gridLines.count).map { page.gridLines[$0].x },
-                       cppID: drawerAutomationPaintingModelID,
-                       what: "Tempo shares the active lane's grid centers")
+    report.expect(
+        volumeDrawing.valid && tempoDrawing.valid
+            && !volumeGrid.isEmpty && volumeGrid == tempoDrawing.gridDescriptor,
+        cppID: drawerAutomationPaintingModelID,
+        message: "Tempo shares the active lane's grid centers")
     fixture.activate(fixture.panLane)
     let shortY = page.projection?.points.first(where: { $0.tick == 24 })?.y ?? -1
-    let shortGrid = page.gridLines.count > 0 ? (0..<page.gridLines.count).map { page.gridLines[$0].x } : []
-    report.expect(!shortGrid.isEmpty, cppID: drawerAutomationPaintingModelID,
+    let shortDrawing = AutomationDrawerProbe(page.drawingContent())
+    let shortGrid = shortDrawing.gridDescriptor
+    report.expect(
+        shortDrawing.valid && !shortGrid.isEmpty, cppID: drawerAutomationPaintingModelID,
                   message: "the plot draws its time grid")
     let beforeHeight = page.plotHeight
     page.configureBody(width: 480, height: 240, gutter: 0, devicePixelRatio: 1,
@@ -367,23 +373,32 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
                   message: "drawer growth moves the value axis")
     report.expect(page.plotHeight > beforeHeight, cppID: drawerAutomationPaintingModelID,
                   message: "drawer growth increases the lane body's own height")
-    let tallGrid = (0..<page.gridLines.count).map { page.gridLines[$0].x }
-    report.expectEqual(expected: shortGrid, actual: tallGrid, cppID: drawerAutomationPaintingModelID,
-                       what: "drawer growth keeps every grid line's horizontal center")
-    let drawnGrid = (0..<page.gridLines.count).map { page.gridLines[$0] }
-    report.expect(drawnGrid.contains {
-        $0.primitiveName == "automationFrameTop" && $0.y == 0
-            && $0.width == page.plotWidth && $0.fillColor == page.palette.separator
-    }, cppID: drawerAutomationPaintingModelID,
+    let tallDrawing = AutomationDrawerProbe(page.drawingContent())
+    let tallGrid = tallDrawing.gridDescriptor
+    report.expect(
+        tallDrawing.valid && shortGrid == tallGrid,
+        cppID: drawerAutomationPaintingModelID,
+        message: "drawer growth keeps every grid line's horizontal center")
+    let drawnAxis = tallDrawing.axisRects
+    report.expect(
+        tallDrawing.valid
+            && drawnAxis.first.map {
+                $0.start == 0 && $0.end == UInt32(page.plotWidth) && $0.y == 0
+                    && $0.color == SceneRectPacking.argb(page.palette.separator) && $0.flags == 3
+            } == true, cppID: drawerAutomationPaintingModelID,
                   message: "the resized top frame spans the new body in separator ink")
-    report.expect(drawnGrid.contains {
-        $0.primitiveName == "automationFrameBottom"
-            && $0.y + $0.height == page.plotHeight
-            && $0.width == page.plotWidth && $0.fillColor == page.palette.separator
-    }, cppID: drawerAutomationPaintingModelID,
+    report.expect(
+        drawnAxis.dropFirst().first.map {
+            $0.start == 0 && $0.end == UInt32(page.plotWidth)
+                && Double($0.y + $0.height) == page.plotHeight
+                && $0.color == SceneRectPacking.argb(page.palette.separator) && $0.flags == 3
+        } == true, cppID: drawerAutomationPaintingModelID,
                   message: "the resized bottom frame spans the new body in separator ink")
-    report.expectEqual(expected: 3, actual: (0..<page.valueLines.count).filter {
-        page.valueLines[$0].primitiveName == "automationValueRule"
+    let ruleColor = SceneRectPacking.argb(page.palette.gridLineSub2)
+    report.expectEqual(
+        expected: 3,
+        actual: drawnAxis.dropFirst(2).filter {
+            $0.color == ruleColor && $0.start == 0 && $0.end == UInt32(page.plotWidth)
     }.count, cppID: drawerAutomationPaintingModelID,
                        what: "the centered lane keeps its three value rules")
     report.expectEqual(expected: ["c_v+63", "c_v-64", "c_v+0"], actual: (0..<page.valueLabels.count).map { page.valueLabels[$0].labelText },
@@ -397,15 +412,17 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
         (page.valueLabels[$0].labelRect["x"] as? Double ?? page.plotWidth) < page.plotWidth / 4
     }, cppID: drawerAutomationPaintingModelID,
                   message: "each drawn scale label hugs the left quarter of the plot")
-    let ticks = (0..<page.valueLines.count).map { page.valueLines[$0] }
-        .filter { $0.primitiveName == "automationEdgeTick" }
+    let ticks = drawnAxis.dropFirst(2).filter {
+        $0.color == SceneRectPacking.argb(page.palette.separator)
+            && $0.start == 0 && $0.end < UInt32(page.plotWidth / 4)
+    }
     let heights = page.projection?.scaleLabels.map(\.y) ?? []
     report.expect(ticks.count == 3 && heights.count == 3 && ticks.allSatisfy {
-        $0.x == 0 && $0.width > 0 && $0.width < page.plotWidth / 4
+                $0.flags == 3 && $0.end > 0 && Double($0.end) < page.plotWidth / 4
     }, cppID: drawerAutomationPaintingModelID,
                   message: "exactly three short left-edge ticks mark maximum neutral and minimum")
     report.expect(heights.allSatisfy { y in
-        ticks.filter { abs($0.y + $0.height / 2 - y) <= 2 }.count == 1
+            ticks.filter { abs(Double($0.y + $0.height / 2) - y) <= 2 }.count == 1
     }, cppID: drawerAutomationPaintingModelID,
                   message: "every edge tick aligns with its own scale value after growth")
     let labelsBefore = (0..<page.valueLabels.count).map { page.valueLabels[$0].labelText }
@@ -414,14 +431,20 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
         report.expectEqual(expected: labelsBefore, actual: (0..<page.valueLabels.count).map { page.valueLabels[$0].labelText },
                            cppID: drawerAutomationPaintingModelID,
                            what: "a hover pass preserves the scale labels")
-        report.expectEqual(expected: 3, actual: (0..<page.valueLines.count).filter {
-            page.valueLines[$0].primitiveName == "automationValueRule"
+        let hoveredAxis = AutomationDrawerProbe(page.drawingContent())
+        report.expectEqual(
+            expected: 3,
+            actual: hoveredAxis.axisRects.dropFirst(2).filter {
+                $0.color == ruleColor && $0.start == 0 && $0.end == UInt32(page.plotWidth)
         }.count, cppID: drawerAutomationPaintingModelID,
                            what: "a hover pass appends no duplicate value rules")
-        report.expect(heights.allSatisfy { y in
-            (0..<page.valueLines.count).map { page.valueLines[$0] }.filter {
-                $0.primitiveName == "automationEdgeTick"
-                    && abs($0.y + $0.height / 2 - y) <= 2
+        report.expect(
+            hoveredAxis.valid
+                && heights.allSatisfy { y in
+                    hoveredAxis.axisRects.dropFirst(2).filter {
+                        $0.color == SceneRectPacking.argb(page.palette.separator)
+                            && $0.start == 0 && $0.end < UInt32(page.plotWidth / 4)
+                            && abs(Double($0.y + $0.height / 2) - y) <= 2
             }.count == 1
         }, cppID: drawerAutomationPaintingModelID,
                       message: "hovering preserves each left-edge tick at its label height")
@@ -538,11 +561,20 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
     page.selectRange(from: 24, to: 120, lanes: [fixture.panLane])
     fixture.activate(fixture.panLane)
     let selectedNodes = page.publishedNodes.filter(\.selected)
+    let selectionDrawing = AutomationDrawerProbe(page.drawingContent())
     report.expect(selectedNodes.map(\.tick) == [24]
                       && selectedNodes.allSatisfy {
                           $0.ringRadius > $0.radius && $0.ringColor == page.palette.selectionRing
                       }
-                      && page.selectionRects.count > 0,
+            && selectionDrawing.valid
+            && selectionDrawing.selectionRects.contains {
+                $0.start == 24 && $0.end == 120
+                    && $0.color == SceneRectPacking.argb(page.palette.selectionFill)
+            }
+            && selectionDrawing.selectionEdges.count == 2
+            && selectionDrawing.selectionEdges.first?.tick == 24
+            && selectionDrawing.selectionEdges.last?.tick == 120
+            && selectionDrawing.selectionEdges.last?.dx == -1,
                   cppID: drawerAutomationPaintingModelID,
                   message: "selection rings and reticles compose")
     report.expect(selectedNodes.map(\.tick) == [24]

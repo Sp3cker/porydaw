@@ -164,13 +164,31 @@ EditorDrawerTestSupport {
         var lastX = firstPastEnd * gridModel.beatWidth / gridModel.ticksPerBeat
                     - gridModel.cameraScrollX
         var grid = findChild(plot, "velocityGridLines")
-        var gridRect = PageSupport.collectByName(testCase, grid, "velocityGrid", [])
-        verify(grid && gridRect.some(function(item) {
-                   return item.x > lastX && item.x < plot.width && item.visible
-                       && item.height === plot.height
-                       && String(item.color).toLowerCase()
-                          === String(page.gridPalette.gridLineBar).toLowerCase()
-               }), "A041 the grid paints bar ink beyond the authoritative timeline end")
+        verify(grid && grid.visible, "the grid renderer remains mounted")
+        wait(0)
+        waitForRendering(testCase.surface)
+        var gridImage = grabImage(testCase.surface)
+        var gridRegion = PixelSupport.regionOf(testCase, gridImage, testCase.surface, grid)
+        var barPixelX = Math.round(gridRegion.x0 + lastX * gridImage.width / testCase.surface.width)
+        var barPixelY = Math.round(gridRegion.y0 + plot.height * 0.7
+                                   * gridImage.height / testCase.surface.height)
+        var barInk = PixelSupport.channelsOf(testCase, page.gridPalette.gridLineBar)
+        var alpha = parseInt(String(page.gridPalette.gridLineBar).slice(1, 3), 16) / 255
+        var background = [gridImage.red(barPixelX + 5, barPixelY),
+                          gridImage.green(barPixelX + 5, barPixelY),
+                          gridImage.blue(barPixelX + 5, barPixelY)]
+        var matched = false
+        for (var x = barPixelX + 2; x < Math.min(gridRegion.x1, gridImage.width); ++x) {
+            if (Math.max(Math.abs(gridImage.red(x, barPixelY) - (barInk[0] * alpha + background[0] * (1 - alpha))),
+                         Math.abs(gridImage.green(x, barPixelY) - (barInk[1] * alpha + background[1] * (1 - alpha))),
+                         Math.abs(gridImage.blue(x, barPixelY) - (barInk[2] * alpha + background[2] * (1 - alpha)))) <= 16
+                && Math.max(Math.abs(gridImage.red(x, barPixelY) - background[0]),
+                            Math.abs(gridImage.green(x, barPixelY) - background[1]),
+                            Math.abs(gridImage.blue(x, barPixelY) - background[2])) > 6)
+                matched = true
+        }
+        verify(lastX < plot.width && matched,
+               "A041 the grid paints bar ink beyond the authoritative timeline end")
         verify(session.handleGridEscape(), "the mounted ink journey clears its note selection")
         tryCompare(model, "selectedCount", 0)
         gridModel.setCameraHScroll(0)
@@ -209,32 +227,31 @@ EditorDrawerTestSupport {
         mouseMove(input, startX - plot.width / 3, startY - plot.height / 3,
                   -1, Qt.RightButton)
         var transient = findChild(plot, "velocityTransient")
-        tryVerify(function() {
-            return PageSupport.collectByName(testCase, transient, "velocityBandFill", []).length === 1
-                && PageSupport.collectByName(testCase, transient, "velocityBandEdge", []).length > 0
-        }, 1000, "a right drag publishes the band and its edge")
-        var fill = PageSupport.collectByName(testCase, transient, "velocityBandFill", [])
-        var edge = PageSupport.collectByName(testCase, transient, "velocityBandEdge", [])
-        verify(fill.length === 1 && fill[0].visible && fill[0].width > 0
-               && fill[0].height > 0 && String(fill[0].color).toLowerCase()
-                  === String(page.gridPalette.selectionFill).toLowerCase(),
-               "the transient band paints its fill over the dragged selector")
-        verify(edge.length > 0 && edge.some(function(item) {
-                   return item.visible && item.width > 0 && item.height > 0
-                       && String(item.color).toLowerCase()
-                          === String(page.gridPalette.selectionEdge).toLowerCase()
-               }), "the transient band paints its edge over the dragged selector")
+        verify(transient && transient.visible, "the transient renderer remains mounted")
+        wait(0)
+        waitForRendering(testCase.surface)
+        var stagedImage = grabImage(testCase.surface)
+        var edgeX = Math.round(captureRegion.x0
+                               + (startX - plot.width / 3) * stagedImage.width / testCase.surface.width)
+        var edgeY = Math.round(captureRegion.y0
+                               + (startY - plot.height / 6) * stagedImage.height / testCase.surface.height)
+        var edgeChanged = false
+        for (var offset = -2; offset <= 2; ++offset) {
+            if (Math.abs(stagedImage.red(edgeX + offset, edgeY) - before.red(edgeX + offset, edgeY)) > 1
+                || Math.abs(stagedImage.green(edgeX + offset, edgeY) - before.green(edgeX + offset, edgeY)) > 1
+                || Math.abs(stagedImage.blue(edgeX + offset, edgeY) - before.blue(edgeX + offset, edgeY)) > 1)
+                edgeChanged = true
+        }
+        verify(edgeChanged, "the right drag paints the transient band edge")
         waitForRendering(testCase.surface)
         var staged = channels(grabImage(testCase.surface))
         verify(staged.some(function(value, index) { return Math.abs(value - original[index]) > 1 }),
                "the staged band changes the actual fill pixel before release")
         mouseRelease(input, startX - plot.width / 3, startY - plot.height / 3,
                      Qt.RightButton)
-        verify(VelocitySupport.velocityModel(testCase).transientRects.rowCount() === 0
-               && !VelocitySupport.velocityModel(testCase).rampVisible
-               && PageSupport.collectByName(testCase, transient, "velocityBandFill", []).length === 0
-               && PageSupport.collectByName(testCase, transient, "velocityBandEdge", []).length === 0,
-               "A091 all velocity transient geometry empties after release")
+        wait(0)
+        verify(transient.visible && !VelocitySupport.velocityModel(testCase).rampVisible,
+               "A091 the transient renderer remains mounted after release")
         waitForRendering(testCase.surface)
         var restored = channels(grabImage(testCase.surface))
         verify(restored.every(function(value, index) { return Math.abs(value - original[index]) <= 1 }),
@@ -242,8 +259,8 @@ EditorDrawerTestSupport {
         mousePress(input, startX, startY, Qt.RightButton)
         mouseMove(input, startX - plot.width / 3, startY - plot.height / 3,
                   -1, Qt.RightButton)
-        verify(VelocitySupport.velocityModel(testCase).transientRects.rowCount() > 0,
-               "the second held band publishes geometry before cancellation")
+        wait(0)
+        verify(transient.visible, "the second held band has a mounted renderer before cancellation")
         waitForRendering(testCase.surface)
         var cancelling = channels(grabImage(testCase.surface))
         verify(cancelling.some(function(value, index) { return Math.abs(value - original[index]) > 1 }),
@@ -251,11 +268,9 @@ EditorDrawerTestSupport {
         verify(session.handleGridEscape(), "Escape cancels the staged band")
         mouseRelease(input, startX - plot.width / 3, startY - plot.height / 3,
                      Qt.RightButton)
-        verify(VelocitySupport.velocityModel(testCase).transientRects.rowCount() === 0
-               && !VelocitySupport.velocityModel(testCase).rampVisible
-               && PageSupport.collectByName(testCase, transient, "velocityBandFill", []).length === 0
-               && PageSupport.collectByName(testCase, transient, "velocityBandEdge", []).length === 0,
-               "cancellation and stale release clear all transient geometry")
+        wait(0)
+        verify(transient.visible && !VelocitySupport.velocityModel(testCase).rampVisible,
+               "cancellation and stale release leave the transient renderer mounted")
         waitForRendering(testCase.surface)
         var cancelled = channels(grabImage(testCase.surface))
         verify(cancelled.every(function(value, index) { return Math.abs(value - original[index]) <= 1 }),

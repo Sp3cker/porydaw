@@ -19,9 +19,11 @@ ShellMenusSupport {
         var loopItem = findChild(shell, "shellAction_edit.loop_from_selection")
         var undoItem = findChild(shell, "shellAction_edit.undo")
         verify(loopItem !== null && undoItem !== null, "the Edit menu owns loop and undo")
+        var renderer = findChild(page, "timelineQuickRulerMarks")
+        verify(renderer !== null)
         function markerX(name) {
-            var marker = findChild(page, name)
-            return marker === null ? null : marker.mapToItem(ruler, 0, 0).x
+            var marker = renderer.noteFace(name)
+            return marker.width === undefined ? null : renderer.mapToItem(ruler, marker.x, marker.y).x
         }
         var originalStart = markerX("loopStartMarker")
         var originalEnd = markerX("loopEndMarker")
@@ -82,13 +84,16 @@ ShellMenusSupport {
         tryVerify(function() { return start.enabled && end.enabled }, 3000,
                   "the open song enables both cursor loop rows")
         start.triggered()
+        var renderer = findChild(page, "timelineQuickRulerMarks")
+        var ruler = findChild(page, "timelineRulerInput")
+        verify(renderer !== null && ruler !== null)
         var markerStart = function() {
-            var marker = findChild(page, "loopStartMarker")
-            return marker === null ? null : marker.mapToItem(findChild(page, "timelineRulerInput"), 0, 0)
+            var marker = renderer.noteFace("loopStartMarker")
+            return marker.width === undefined ? null : renderer.mapToItem(ruler, marker.x, marker.y)
         }
         var markerEnd = function() {
-            var marker = findChild(page, "loopEndMarker")
-            return marker === null ? null : marker.mapToItem(findChild(page, "timelineRulerInput"), 0, 0)
+            var marker = renderer.noteFace("loopEndMarker")
+            return marker.width === undefined ? null : renderer.mapToItem(ruler, marker.x, marker.y)
         }
         var xAt = function(tick) {
             return tick * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX

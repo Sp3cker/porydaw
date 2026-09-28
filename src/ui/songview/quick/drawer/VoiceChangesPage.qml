@@ -86,8 +86,7 @@ FocusScope {
         id: emptyModel
 
         readonly property var markers: []
-        readonly property var heldSpans: []
-        readonly property var gridLines: []
+        readonly property int contentRevision: 0
         readonly property var gutterTexts: []
         readonly property var pickerRows: []
         readonly property var menuRows: []
@@ -277,20 +276,23 @@ FocusScope {
             color: page.gridPalette.outline
         }
 
-        TimelineQuickItem {
+        TimelineRenderer {
             objectName: "voiceGridLines"
             anchors.fill: parent
-            rects: (page.pageModel ? page.pageModel.gridLines : [])
-        }
-
-        TimelineQuickItem {
-            objectName: "voiceHeldSpans"
-            anchors.fill: parent
-            rects: (page.pageModel ? page.pageModel.heldSpans : [])
+            band: 3
+            contentSource: page.pageModel
+            contentRevision: page.pageModel.contentRevision
+            pixelsPerTick: page.gridModel ? page.gridModel.pixelsPerTick : 0
+            scrollX: page.gridModel ? page.gridModel.cameraScrollX : 0
+            devicePixelRatio: page.Screen.devicePixelRatio
         }
 
         // One delegate per marker: the vertical rule at its projected position
         // and the label box Swift laid out (already elided and stair-placed).
+        Item {
+            x: -(page.gridModel ? page.gridModel.cameraScrollX : 0)
+            width: plot.width
+            height: plot.height
         Repeater {
             model: (page.pageModel ? page.pageModel.markers : [])
 
@@ -347,6 +349,7 @@ FocusScope {
                     clip: true
                 }
             }
+        }
         }
 
         // The frozen drag's draft position: the marker itself is projected at

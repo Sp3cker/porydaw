@@ -157,7 +157,7 @@ ShellGridMenuSupport {
         mouseClick(control("timeSignatureDenominator5"))
         mouseClick(control("timeSignatureAccept"))
         tryCompare(timeSigHost, "timeSigPromptOpen", false)
-        tryVerify(function() { return rulerLabelAt("3/32", sourceTick) }, 3000,
+        tryVerify(function() { return rulerSignatureAt(sourceTick) }, 3000,
                   "after Insert Time closes, the mounted signature form edits the grid")
         tryVerify(function() { return grid.appliedRevisionText !== revision }, 3000,
                   "the subsequent signature edit commits its own document revision")

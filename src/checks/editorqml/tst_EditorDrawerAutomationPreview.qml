@@ -13,17 +13,14 @@ EditorDrawerTestSupport {
     name: "EditorDrawerLane"
 
     function automationPreviewCovers(point, radius) {
-        var drawn = AutomationGestureSupport.automationPreviewItems(testCase)
-        for (var i = 0; i < drawn.length; ++i) {
-            var item = drawn[i]
-            if (item.visible && item.width > 0 && item.height > 0
-                && item.x <= point.x + radius && item.x + item.width >= point.x - radius
-                && item.y <= point.y + radius && item.y + item.height >= point.y - radius
-                && String(item.color).toLowerCase()
-                    === testCase.drawerPalette().selectionEdge.toLowerCase())
-                return true
-        }
-        return false
+        var model = AutomationTabsSupport.automationModel(testCase)
+        if (!model.previewLabelVisible)
+            return false
+        wait(0)
+        var image = grabImage(testCase.surface)
+        var region = AutomationGestureSupport.automationPreviewRegion(testCase, image, point, radius)
+        var ink = PixelSupport.channelsOf(testCase, testCase.drawerPalette().selectionEdge)
+        return PixelSupport.nearestPixel(testCase, image, region, ink).distance < 30
     }
 
     function test_productionAutomationDragPreviews() {
@@ -56,44 +53,45 @@ EditorDrawerTestSupport {
                             y: start.y + target.y - armed.y }
             mousePress(input, start.x, start.y, Qt.LeftButton)
             mouseMove(input, armed.x, armed.y, -1, Qt.LeftButton)
-            waitForRendering(input)
+            wait(0)
             mouseMove(input, target.x, target.y, -1, Qt.LeftButton)
-            waitForRendering(input)
+            wait(0)
             tryVerify(function() {
                 return testCase.automationPreviewCovers(drafted, node.model.ringRadius)
             }, 1000, "a held node drag paints its preview at the target")
             compare(bootstrap.automationDocumentRevision(), revision,
                     "the live preview writes nothing")
             mouseRelease(input, target.x, target.y, Qt.LeftButton)
-            tryVerify(function() { return AutomationGestureSupport.automationPreviewItems(testCase).length === 0 },
-                      1000, "the node preview retires on release")
+            tryCompare(model, "previewLabelVisible", false, 1000,
+                       "the node preview retires on release")
             nodes = AutomationGestureSupport.automationLaneNodes(testCase)
             node = nodes[AutomationGestureSupport.automationWrittenNodeIndex(testCase)]
             start = AutomationGestureSupport.automationNodePoint(testCase, node)
             revision = bootstrap.automationDocumentRevision()
             mousePress(input, start.x, start.y, Qt.LeftButton)
             mouseMove(input, start.x + 16, start.y, -1, Qt.LeftButton)
-            tryVerify(function() { return AutomationGestureSupport.automationPreviewItems(testCase).length > 0 },
+            mouseMove(input, start.x + 32, start.y, -1, Qt.LeftButton)
+            var transientPoint = { x: start.x + 16, y: start.y }
+            tryVerify(function() { return testCase.automationPreviewCovers(transientPoint, node.model.ringRadius) },
                       1000, "the second held node publishes a painted transient marker")
-            waitForRendering(testCase.surface)
-            var transientMarker = AutomationGestureSupport.automationPreviewItems(testCase)[0]
+            wait(0)
             var capturedImage = grabImage(testCase.surface)
-            var transientRegion = PixelSupport.regionOf(testCase, capturedImage, testCase.surface, transientMarker)
+            var transientRegion = AutomationGestureSupport.automationPreviewRegion(
+                testCase, capturedImage, transientPoint, node.model.ringRadius)
             var transientInk = PixelSupport.channelsOf(testCase, testCase.drawerPalette().selectionEdge)
             verify(PixelSupport.nearestPixel(testCase, capturedImage, transientRegion, transientInk).distance < 30,
                    "the held transient marker paints real pixels before cancellation")
             mouseMove(input, input.width + 24, start.y, -1, Qt.LeftButton)
-            tryVerify(function() { return model.interactionActive
-                                    && AutomationGestureSupport.automationPreviewItems(testCase).length > 0 },
+            tryVerify(function() { return model.interactionActive && model.previewLabelVisible },
                       1000, "leaving the plot retains the captured node and its visible preview")
             compare(bootstrap.automationDocumentRevision(), revision,
                     "the captured outside-plot node preview never writes early")
             keyClick(Qt.Key_Escape)
             tryVerify(function() {
-                return !model.interactionActive && AutomationGestureSupport.automationPreviewItems(testCase).length === 0
-                       && !model.previewLabelVisible && !model.bandVisible && !model.hoverVisible
+                return !model.interactionActive && !model.previewLabelVisible
+                       && !model.bandVisible && !model.hoverVisible
             }, 1000, "cancel outside the plot retires every visible transient")
-            waitForRendering(testCase.surface)
+            wait(0)
             var clearedImage = grabImage(testCase.surface)
             verify(PixelSupport.nearestPixel(testCase, clearedImage, transientRegion, transientInk).distance > 30,
                    "cancelled transient pixels disappear from the captured drawer")
@@ -107,45 +105,48 @@ EditorDrawerTestSupport {
                        y: Math.max(16, start.y - 20) }
             armed = { x: (start.x + target.x) / 2,
                       y: (start.y + target.y) / 2 }
+            drafted = { x: start.x + target.x - armed.x,
+                        y: start.y + target.y - armed.y }
             revision = bootstrap.automationDocumentRevision()
-            waitForRendering(testCase.surface)
+            wait(0)
             var rasterIdle = grabImage(testCase.surface)
             mousePress(input, start.x, start.y, Qt.LeftButton)
             mouseMove(input, armed.x, armed.y, -1, Qt.LeftButton)
             tryVerify(function() {
-                return AutomationGestureSupport.automationPreviewItems(testCase).length > 0
+                return model.previewLabelVisible
             }, 1000, "the raster lane drag stages its transient marker")
             mouseMove(input, target.x, target.y, -1, Qt.LeftButton)
-            waitForRendering(testCase.surface)
+            wait(0)
             var rasterMoved = grabImage(testCase.surface)
-            var rasterMarker = AutomationGestureSupport.automationPreviewItems(testCase)[0]
-            var rasterRegion = PixelSupport.regionOf(testCase, rasterMoved, testCase.surface, rasterMarker)
+            var rasterRegion = AutomationGestureSupport.automationPreviewRegion(
+                testCase, rasterMoved, drafted, node.model.ringRadius)
             var rasterInk = PixelSupport.channelsOf(testCase, testCase.drawerPalette().selectionEdge)
             verify(PixelSupport.nearestPixel(testCase, rasterMoved, rasterRegion, rasterInk).distance < 30
                    && PixelSupport.nearestPixel(testCase, rasterIdle, rasterRegion, rasterInk).distance > 30,
                    "each staged lane drag paints transient node ink at its projected target")
             keyClick(Qt.Key_Escape)
             tryVerify(function() {
-                return !model.interactionActive && AutomationGestureSupport.automationPreviewItems(testCase).length === 0
+                return !model.interactionActive && !model.previewLabelVisible
             }, 1000, "cancelling the staged raster drag retires its transient")
-            waitForRendering(testCase.surface)
+            wait(0)
             var rasterCleared = grabImage(testCase.surface)
             verify(PixelSupport.nearestPixel(testCase, rasterCleared, rasterRegion, rasterInk).distance > 30,
                    "the cancelled raster drag erases its transient marker pixels")
-            compare(AutomationGestureSupport.automationPreviewItems(testCase).length, 0,
+            compare(model.previewLabelVisible, false,
                     "the cancelled raster drag publishes no transient marker")
             mouseRelease(input, target.x, target.y, Qt.LeftButton)
             compare(bootstrap.automationDocumentRevision(), revision,
                     "the cancelled raster drag commits nothing on release")
             mousePress(input, start.x, start.y, Qt.LeftButton)
             mouseMove(input, armed.x, armed.y, -1, Qt.LeftButton)
+            mouseMove(input, target.x, target.y, -1, Qt.LeftButton)
             tryVerify(function() {
-                return AutomationGestureSupport.automationPreviewItems(testCase).length > 0
+                return testCase.automationPreviewCovers(drafted, node.model.ringRadius)
             }, 1000, "the switching lane drag stages its transient marker")
-            waitForRendering(testCase.surface)
+            wait(0)
             var switchStaged = grabImage(testCase.surface)
-            var switchMarker = AutomationGestureSupport.automationPreviewItems(testCase)[0]
-            var switchRegion = PixelSupport.regionOf(testCase, switchStaged, testCase.surface, switchMarker)
+            var switchRegion = AutomationGestureSupport.automationPreviewRegion(
+                testCase, switchStaged, drafted, node.model.ringRadius)
             var switchInk = PixelSupport.channelsOf(testCase, testCase.drawerPalette().selectionEdge)
             verify(PixelSupport.nearestPixel(testCase, switchStaged, switchRegion, switchInk).distance < 30,
                    "the switching drag paints its transient marker before the parameter switch")
@@ -154,11 +155,11 @@ EditorDrawerTestSupport {
             tryVerify(function() { return bootstrap.automationActiveParameterIndex() === otherLane },
                       1000, "the other parameter activates mid-gesture")
             tryVerify(function() {
-                return AutomationGestureSupport.automationPreviewItems(testCase).length === 0
+                return !model.previewLabelVisible
             }, 1000, "the parameter switch retires the staged transient marker")
-            waitForRendering(testCase.surface)
+            wait(0)
             var switchedFrame = grabImage(testCase.surface)
-            compare(AutomationGestureSupport.automationPreviewItems(testCase).length, 0,
+            compare(model.previewLabelVisible, false,
                     "the parameter switch publishes no staged transient marker")
             verify(PixelSupport.nearestPixel(testCase, switchedFrame, switchRegion, switchInk).distance > 30,
                    "the parameter switch erases the staged transient marker pixels")
@@ -172,16 +173,16 @@ EditorDrawerTestSupport {
             var storedHeight = section.bodyHeight
             mousePress(input, start.x, start.y, Qt.LeftButton)
             mouseMove(input, armed.x, armed.y, -1, Qt.LeftButton)
+            mouseMove(input, target.x, target.y, -1, Qt.LeftButton)
             tryVerify(function() {
-                return AutomationGestureSupport.automationPreviewItems(testCase).length > 0
+                return testCase.automationPreviewCovers(drafted, node.model.ringRadius)
             }, 1000, "the rebuilding lane drag stages its transient marker")
             try {
                 testCase.presenter().setSectionBodyHeight(
                     testCase.automationKind, storedHeight + model.baseFontPx * 2)
                 LayoutSupport.awaitRenderedLayout(testCase)
                 mouseRelease(input, armed.x, armed.y, Qt.LeftButton)
-                verify(!model.bandVisible
-                       && AutomationGestureSupport.automationPreviewItems(testCase).length === 0,
+                verify(!model.bandVisible && !model.previewLabelVisible,
                        "the rebuilt plot keeps no band preview for the staged node lane")
             } finally {
                 testCase.presenter().setSectionBodyHeight(testCase.automationKind, storedHeight)
@@ -236,7 +237,7 @@ EditorDrawerTestSupport {
                 return !item.model.projected && item.model.selected
             })
             verify(selected.length >= 2, "the real band selects multiple written nodes")
-            waitForRendering(testCase.surface)
+            wait(0)
             var selectedImage = grabImage(testCase.surface)
             var ring = findChild(selected[0], "automationNodeRing")
             verify(ring && ring.visible && ring.width > 0,
@@ -258,7 +259,7 @@ EditorDrawerTestSupport {
             revision = bootstrap.automationDocumentRevision()
             mousePress(input, first.x, first.y, Qt.LeftButton)
             mouseMove(input, first.x + 16, first.y, -1, Qt.LeftButton)
-            waitForRendering(input)
+            wait(0)
             mouseMove(input, first.x + 32, first.y, -1, Qt.LeftButton)
             tryVerify(function() {
                 return testCase.automationPreviewCovers(
@@ -277,7 +278,7 @@ EditorDrawerTestSupport {
             revision = bootstrap.automationDocumentRevision()
             mousePress(input, blank.x, blank.y, Qt.LeftButton)
             mouseMove(input, armX, blank.y, -1, Qt.LeftButton)
-            waitForRendering(input)
+            wait(0)
             mouseMove(input, finish, blank.y, -1, Qt.LeftButton)
             tryVerify(function() {
                 return testCase.automationPreviewCovers(
@@ -298,7 +299,7 @@ EditorDrawerTestSupport {
             mousePress(input, blank.x, blank.y, Qt.LeftButton, Qt.ShiftModifier)
             mouseMove(input, (blank.x + finish) / 2, (blank.y + endY) / 2,
                       -1, Qt.LeftButton, Qt.ShiftModifier)
-            waitForRendering(input)
+            wait(0)
             mouseMove(input, finish, endY, -1, Qt.LeftButton, Qt.ShiftModifier)
             tryVerify(function() {
                 return testCase.automationPreviewCovers(
@@ -430,12 +431,12 @@ EditorDrawerTestSupport {
                     "the live preview writes nothing")
             waitForRendering(testCase.surface)
             var draftImage = grabImage(testCase.surface)
-            var draftNodes = AutomationGestureSupport.automationPreviewItems(testCase)
-            verify(draftNodes.length > 0, "the held pencil exposes painted draft markers")
+            verify(testCase.automationPreviewCovers({ x: endX, y: endY }, 8),
+                   "the held pencil exposes painted draft markers")
             var previewTint = PixelSupport.channelsOf(testCase, testCase.drawerPalette().selectionEdge)
             verify(PixelSupport.nearestPixel(testCase, draftImage,
-                   PixelSupport.regionOf(testCase, draftImage, testCase.surface, draftNodes[draftNodes.length - 1]),
-                   previewTint).distance < 30,
+                   AutomationGestureSupport.automationPreviewRegion(testCase, draftImage,
+                       { x: endX, y: endY }, 8), previewTint).distance < 30,
                    "the held pencil paints its draft marker in the selection tint")
             mouseRelease(input, endX, endY, Qt.LeftButton)
             tryVerify(function() { return bootstrap.automationDocumentRevision() === revision + 1 },

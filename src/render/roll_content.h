@@ -254,6 +254,13 @@ class Reader
         std::memcpy(&v, &bits, 8);
         return v;
     }
+    float f32()
+    {
+        const uint32_t bits = u32();
+        float v = 0;
+        std::memcpy(&v, &bits, 4);
+        return v;
+    }
     QString utf8(size_t n)
     {
         if (remaining() < n) {

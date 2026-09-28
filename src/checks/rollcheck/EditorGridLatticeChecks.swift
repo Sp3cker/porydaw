@@ -130,64 +130,56 @@ func checkContentWindowBoundaryReversal(_ report: CheckReport) {
     _ = camera.setHScroll(1023)
     var input = GridSceneInput(
         metrics: metrics, grid: RollGrid(axis: axis, clockTicks: 1, metrics: metrics),
-        palette: GridPalette(), camera: camera, contentEndTick: 32_768,
-        rulerHeight: metrics.baseFontPx * 2, fontSpec: { _ in [:] })
+        palette: GridPalette(), camera: camera, fontSpec: { _ in [:] })
     let scene = GridScene()
     scene.rebuildStatic(input)
     scene.rebuildNotes(input)
-    let initialWindow = scene.contentWindow
     let initialRevision = scene.contentRevision
+    let initialContent = scene.drawingContent()
     let initialSegments = RollContentProbe(scene).segments
     var retained = !initialSegments.isEmpty
     for scroll in [1025.0, 1023, 1025, 1023, 1025, 1023] {
         _ = input.camera.setHScroll(scroll)
         scene.rebuildStatic(input)
         scene.rebuildNotes(input)
-        retained = retained && scene.contentWindow == initialWindow
-            && scene.contentRevision == initialRevision
+        retained =
+            retained && scene.contentRevision == initialRevision
+            && scene.drawingContent() == initialContent
             && RollContentProbe(scene).segments == initialSegments
     }
     report.expect(retained, cppID: contentWindowID,
-                  message: "two-pixel reversals across a chunk boundary retain the published time marks")
+        message: "two-pixel camera reversals leave content revision and blob unchanged")
 
-    var previousWindow = scene.contentWindow
-    var lastReprovision: Double?
-    var reprovisions = 0
-    var spaced = true
-    var covered = true
+    var monotonicRetained = true
     var reversalRetained = true
     for scroll in stride(from: 1025.0, through: 16_383, by: 128) {
         _ = input.camera.setHScroll(scroll)
         scene.rebuildStatic(input)
-        if let window = scene.contentWindow {
-            covered = covered && window.left <= scroll && window.right >= scroll + 1024
-        } else {
-            covered = false
-        }
-        if scene.contentWindow != previousWindow {
-            if let lastReprovision {
-                spaced = spaced && scroll - lastReprovision >= 2 * camera.snapshot.viewportWidth
-            }
-            lastReprovision = scroll
-            reprovisions += 1
-            previousWindow = scene.contentWindow
-            _ = input.camera.setHScroll(scroll - 2)
-            scene.rebuildStatic(input)
-            reversalRetained = reversalRetained && scene.contentWindow == previousWindow
-        }
+        scene.rebuildNotes(input)
+        monotonicRetained =
+            monotonicRetained
+            && scene.contentRevision == initialRevision
+            && scene.drawingContent() == initialContent
+        _ = input.camera.setHScroll(scroll - 2)
+        scene.rebuildStatic(input)
+        scene.rebuildNotes(input)
+        reversalRetained =
+            reversalRetained
+            && scene.contentRevision == initialRevision
+            && scene.drawingContent() == initialContent
     }
-    report.expect(covered && spaced && reprovisions > 0 && reprovisions <= 8,
-                  cppID: contentWindowID,
-                  message: "monotonic scroll keeps visible coverage and reprovisions no more often than two viewports")
+    report.expect(
+        monotonicRetained, cppID: contentWindowID,
+        message: "monotonic camera scroll leaves content revision and blob unchanged")
     report.expect(reversalRetained, cppID: contentWindowID,
-                  message: "a reverse step after reprovision retains the newly published content window")
+        message: "a reverse camera step leaves content revision and blob unchanged")
     var resizeInput = input
     resizeInput.camera = camera
     resizeInput.camera.updateViewport(width: 1023, rollHeight: 320)
     scene.rebuildStatic(resizeInput)
     scene.rebuildNotes(resizeInput)
-    let resizeWindow = scene.contentWindow
     let resizeRevision = scene.contentRevision
+    let resizeContent = scene.drawingContent()
     let resizeProbe = RollContentProbe(scene)
     let rows = resizeProbe.rows.map(\.pitch)
     let segments = resizeProbe.segments
@@ -197,10 +189,11 @@ func checkContentWindowBoundaryReversal(_ report: CheckReport) {
         scene.rebuildStatic(resizeInput)
         scene.rebuildNotes(resizeInput)
         let probe = RollContentProbe(scene)
-        resizeRetained = resizeRetained && scene.contentWindow == resizeWindow
-            && scene.contentRevision == resizeRevision
+        resizeRetained =
+            resizeRetained && scene.contentRevision == resizeRevision
+            && scene.drawingContent() == resizeContent
             && probe.rows.map(\.pitch) == rows && probe.segments == segments
     }
     report.expect(resizeRetained, cppID: contentWindowID,
-                  message: "width reversals across a chunk boundary retain provisioned rows and time marks")
+        message: "width reversals leave content revision and blob unchanged")
 }

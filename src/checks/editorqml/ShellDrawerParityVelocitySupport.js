@@ -355,6 +355,8 @@
             testCase.mouseRelease(input, bandEndX, bandEndY, Qt.RightButton)
             testCase.verify(testCase.waitForNative(function() { return !model.interactionActive }, 3000),
                    "releasing the right-band gesture relinquishes its pointer capture")
+            testCase.wait(0)
+            testCase.waitForRendering(capture)
             var clearedFrame = testCase.grabImage(capture)
             testCase.verify(!Raster.pixelsDiffer(testCase, restingFrame, clearedFrame, midX, midY)
                    && !Raster.pixelsDiffer(testCase, restingFrame, clearedFrame, paintedEdge.x, paintedEdge.y),
@@ -415,18 +417,18 @@
             testCase.mouseRelease(input, stackedHandle.x + VelocityInput.velocityPlotOrigin(grid), stackedHandle.y, Qt.RightButton)
             grid.setCameraHScroll(1e9)
             var timelineEndTick = grid.cameraScrollX * grid.ticksPerBeat / grid.beatWidth
-            var barsAfterEnd = testCase.collectByName(plot, "velocityGrid", []).filter(function(row) {
-                var tick = (row.x + row.width / 2 + grid.cameraScrollX)
-                           * grid.ticksPerBeat / grid.beatWidth
-                return String(row.fillColor).toLowerCase()
-                           === String(page.gridPalette.gridLineBar).toLowerCase()
-                    && tick > timelineEndTick && row.x > 3 && row.x < input.width - 8
-            })
-            testCase.verify(barsAfterEnd.length > 0,
-                   "the grid exposes a painted bar after the camera's authoritative timeline end")
-            var pastBar = barsAfterEnd[0]
+            var gridRenderer = testCase.findChild(plot, "velocityGridLines")
+            testCase.verify(gridRenderer && gridRenderer.visible,
+                            "the velocity grid renderer remains mounted")
+            var barTicks = grid.ticksPerBeat * 4
+            var pastTick = (Math.floor(timelineEndTick / barTicks) + 1) * barTicks
+            var barX = pastTick * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX
+            testCase.verify(barX > 3 && barX < input.width - 8,
+                            "the visible plot extends to a bar after the authoritative timeline end")
+            testCase.wait(0)
+            testCase.waitForRendering(capture)
             var gridFrame = testCase.grabImage(capture)
-            var pastPoint = pastBar.mapToItem(capture, pastBar.width / 2, input.height * 0.82)
+            var pastPoint = gridRenderer.mapToItem(capture, barX, input.height * 0.82)
             var pixelX = Math.round(pastPoint.x * gridFrame.width / capture.width)
             var pixelY = Math.round(pastPoint.y * gridFrame.height / capture.height)
             var neighborInk = [gridFrame.red(pixelX + 5, pixelY),
@@ -434,9 +436,12 @@
                                gridFrame.blue(pixelX + 5, pixelY)]
             var expectedBarInk = Raster.compositedColor(testCase, neighborInk, page.gridPalette.gridLineBar)
             var pastEndBarPainted = false
-            for (var offset = -2; offset <= 2; ++offset) {
-                if (Raster.pixelDistance(testCase, gridFrame, pixelX + offset, pixelY, expectedBarInk) <= 16
-                    && Raster.pixelDistance(testCase, gridFrame, pixelX + offset, pixelY, neighborInk) > 6)
+            var endPoint = gridRenderer.mapToItem(capture, input.width - 2, input.height * 0.82)
+            var endPixelX = Math.min(gridFrame.width,
+                                     Math.round(endPoint.x * gridFrame.width / capture.width))
+            for (var x = pixelX + 2; x < endPixelX; ++x) {
+                if (Raster.pixelDistance(testCase, gridFrame, x, pixelY, expectedBarInk) <= 16
+                    && Raster.pixelDistance(testCase, gridFrame, x, pixelY, neighborInk) > 6)
                     pastEndBarPainted = true
             }
             testCase.verify(pastEndBarPainted,

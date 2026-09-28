@@ -113,20 +113,12 @@ public final class AutomationPage: EditorDrawerPage {
     /// published count beside the model for the same reason as the tabs.
     public var nodes: QListModel<AutomationNodeHandle> = QListModel()
     public var nodeCount: Int = 0
-    /// The step curve's horizontal runs, ghost pins first.
-    public var curveRuns: QListModel<SceneRect> = QListModel()
-    /// The shared time grid.
-    public var gridLines: QListModel<SceneRect> = QListModel()
-    /// The value axis: the three scale rules.
-    public var valueLines: QListModel<SceneRect> = QListModel()
+    @QtTracked public var contentRevision = 0
+    public func drawingContent() -> Data { drawingContentData }
     /// The value axis labels, at the plot's left edge and curve-true height.
     public var valueLabels: QListModel<SceneText> = QListModel()
     /// Labels for pinned curves, measured and placed at their own curve heights.
     public var ghostNameLabels: QListModel<SceneText> = QListModel()
-    /// The explicit time selection's band, per covered lane.
-    public var selectionRects: QListModel<SceneRect> = QListModel()
-    /// The live gesture's draft nodes.
-    public var previewRects: QListModel<SceneRect> = QListModel()
     /// The range press's own band, drawn in plot coordinates.
     public var bandVisible: Bool = false
     public var bandRect: [String: QVariantSettable] = AutomationPage.rect(0, 0, 0, 0)
@@ -249,6 +241,8 @@ public final class AutomationPage: EditorDrawerPage {
     @QtIgnored var tabSnapshots: [AutomationTabHandle] = []
     @QtIgnored var nodeSnapshots: [AutomationNodeHandle] = []
     @QtIgnored var curveRunSnapshots: [SceneRect] = []
+    @QtIgnored var drawingContentData = Data()
+    @QtIgnored var drawingCameraOnly = false
     @QtIgnored var menuRowSnapshots: [AutomationMenuRowHandle] = []
     @QtIgnored let projectionFacts: AutomationProjectionCache = AutomationProjectionCache()
 

@@ -130,34 +130,14 @@ extension AutomationPage {
             applyPreviewDraft(AutomationPreviewDraft.resolve(gesture: gesture, frozen: frozen))
         }
         guard let facts = frozen, !previewPoints.isEmpty else {
-            syncRects(previewRects, [])
+            publishDrawingContent()
             previewLabelVisible = false
             previewLabelText = ""
             previewLabelRect = Self.rect(0, 0, 0, 0)
             return
         }
+        publishDrawingContent()
         let projection = rampProjection ?? makeProjection(facts: facts, camera: gestureCamera)
-        let extent = nodePaint.nodeRadius
-        let limit = max(0, plotWidth)
-        var rects = previewPoints.map { point in
-            SceneRect(x: (min(max(0, projection.x(point.tick)), limit) - extent).rounded(),
-                      y: (projection.y(point.value, metadata: facts.metadata) - extent).rounded(),
-                      width: 2 * extent, height: 2 * extent, fillColor: palette.selectionEdge,
-                      primitiveName: "automationPreviewNode")
-        }
-        if case let .phantom(transaction) = gesture, transaction.drag.exceeded {
-            let next = facts.snapshot.displaySeries.first {
-                $0.tick > transaction.target.original.tick
-            }
-            let end = min(max(0, next.map { projection.x($0.tick) } ?? limit), limit)
-            if end > 0 {
-                let y = projection.y(transaction.target.current.value, metadata: facts.metadata)
-                rects.append(SceneRect(x: 0, y: (y - 1).rounded(), width: end,
-                                       height: 2, fillColor: palette.selectionEdge,
-                                       primitiveName: "automationPreviewCurve"))
-            }
-        }
-        syncRects(previewRects, rects)
         let labelPoint: AutomationLanePoint?
         if case let .node(transaction) = gesture { labelPoint = transaction.grabbed?.current }
         else { labelPoint = previewPoints.last }
@@ -367,17 +347,6 @@ extension AutomationPage {
 
     // MARK: Internals: model synchronisation
 
-    func syncRects(_ model: QListModel<SceneRect>, _ rects: [SceneRect]) {
-        model.update {
-            let common = min(model.count, rects.count)
-            for index in 0..<common where !model[index].matches(rects[index]) {
-                model[index] = rects[index]
-            }
-            if model.count != rects.count {
-                model.replaceSubrange(common..<model.count, with: rects[common...])
-            }
-        }
-    }
 
     func syncTexts(_ model: QListModel<SceneText>, _ texts: [SceneText]) {
         model.update {

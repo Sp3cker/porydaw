@@ -187,47 +187,6 @@ enum VelocityScene {
         return rows
     }
 
-    /// The vertical grid over the visible plot: `composeBandedGrid`'s
-    /// subdivisions plus the beat, fine-beat and bar lines.
-    static func grid(_ input: VelocitySceneInput) -> [SceneRect] {
-        guard let camera = input.camera, let metrics = input.metrics,
-              input.plotHeight > 0, input.plotWidth > input.rulerWidth else { return [] }
-        guard var grid = input.grid else { return [] }
-        grid.metrics = metrics
-        let physicalPixel = max(input.geometry.pixel, 0.0001)
-        let roundingMargin = physicalPixel / 2
-        let beginTick = camera.tickAtContentX(-roundingMargin)
-        let endTick = camera.tickAtContentX(input.plotWidth - physicalPixel + roundingMargin) + 1
-        guard endTick > beginTick else { return [] }
-        let range = (begin: Tick(max(0, beginTick.rounded(.down))),
-                     end: Tick(max(1, endTick.rounded(.up))))
-        let stroke = metrics.gridLineStroke
-        var rects: [SceneRect] = []
-        grid.forEachSubdivision(from: range.begin, to: range.end, camera: camera) { tick, level in
-            let x = camera.displayX(tick: Double(tick), origin: 0, dpr: input.devicePixelRatio)
-            let color = level == 1 ? input.palette.gridLineSub1
-                : level == 2 ? input.palette.gridLineSub2 : input.palette.gridLineSub3
-            rects.append(SceneRect(x: x - stroke / 2, y: 0, width: stroke,
-                                   height: input.plotHeight, fillColor: color,
-                                   primitiveName: "velocityGrid"))
-        }
-        var segment = metrics.timeAxis.segmentAt(range.begin)
-        var finest = grid.gridTicksAt(range.begin, camera: camera) == 1
-        metrics.timeAxis.forEachGridLine(from: range.begin, to: range.end) { tick, isBar, _, _ in
-            if tick >= segment.next {
-                segment = metrics.timeAxis.segmentAt(tick)
-                finest = grid.gridTicksAt(tick, camera: camera) == 1
-            }
-            let x = camera.displayX(tick: Double(tick), origin: 0, dpr: input.devicePixelRatio)
-            rects.append(SceneRect(
-                x: x - stroke / 2, y: 0, width: stroke, height: input.plotHeight,
-                fillColor: isBar ? input.palette.gridLineBar
-                    : finest ? input.palette.gridLineBeatFine : input.palette.gridLineBeat,
-                primitiveName: "velocityGrid"))
-        }
-        return rects
-    }
-
     static func modelBands(_ input: VelocitySceneInput, axis: VelocityAxisModel) -> [DrawerStaticRect] {
         guard input.plotHeight > 0 else { return [] }
         var rects: [DrawerStaticRect] = []
@@ -267,69 +226,6 @@ enum VelocityScene {
                     tickStart: start, tickEnd: end,
                     y: Float(axis.levelBoundaryToY(level, map: context.map) - stroke / 2),
                     height: Float(stroke), argb: argb))
-        }
-    }
-
-    /// PSG level bands: one horizontal boundary per level inside each voice
-    /// context section whose map resolves exactly to a PSG voice. A section
-    /// whose map is unknown draws no level line rather than a guessed layout.
-    static func bands(_ input: VelocitySceneInput, axis: VelocityAxisModel,
-                      projection: VelocityProjection) -> [SceneRect] {
-        guard let camera = input.camera, input.plotHeight > 0,
-              input.plotWidth > input.rulerWidth else { return [] }
-        let color = input.palette.separator
-        let first = Tick(max(0, camera.tickAtContentX(0).rounded(.down)))
-        let last = max(Tick(first + 1), Tick(camera.tickAtContentX(input.plotWidth).rounded(.up)))
-        var sectionTick = first
-        var rects: [SceneRect] = []
-        var guardCounter = 0
-        let resolve = input.source.resolver()
-        while sectionTick < last, guardCounter < 4096 {
-            guardCounter += 1
-            let context = resolve(sectionTick, nil)
-            let sectionEnd = min(last, context.endTick ?? last)
-            if sectionEnd <= sectionTick { break }
-            if context.status == .resolved, context.map.isPSG, context.map.levelCount > 1 {
-                let left = min(max(camera.displayX(tick: Double(sectionTick), origin: 0, dpr: input.devicePixelRatio), 0),
-                               input.plotWidth)
-                let right = min(max(camera.displayX(tick: Double(sectionEnd), origin: 0, dpr: input.devicePixelRatio), 0),
-                                input.plotWidth)
-                if right > left {
-                    let sectionMap = context.map
-                    for level in 0..<(context.map.levelCount - 1) {
-                        let y = axis.levelBoundaryToY(level, map: sectionMap)
-                        rects.append(SceneRect(
-                            x: left, y: y - input.geometry.gridLineStroke / 2,
-                            width: right - left, height: input.geometry.gridLineStroke,
-                            fillColor: color, primitiveName: "velocityBand"))
-                    }
-                }
-            }
-            sectionTick = sectionEnd
-        }
-        return rects
-    }
-
-    /// One dashed band edge of the gesture transient. The page supplies the
-    /// physical pixel and edge colour the reticle draws with.
-    static func appendDashed(_ rects: inout [SceneRect], horizontal: Bool, fixed: Double,
-                             from: Double, to: Double, dash: Double, gap: Double,
-                             physicalPixel: Double, color: String) {
-        let period = dash + gap
-        guard period > 0, to > from else { return }
-        var position = from
-        while position < to {
-            let end = min(position + dash, to)
-            if horizontal {
-                rects.append(SceneRect(x: position, y: fixed - physicalPixel / 2,
-                                       width: end - position, height: physicalPixel,
-                                       fillColor: color, primitiveName: "velocityBandEdge"))
-            } else {
-                rects.append(SceneRect(x: fixed - physicalPixel / 2, y: position,
-                                       width: physicalPixel, height: end - position,
-                                       fillColor: color, primitiveName: "velocityBandEdge"))
-            }
-            position += period
         }
     }
 }

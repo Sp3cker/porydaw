@@ -20,7 +20,9 @@ func drawerVoiceMarkerProjection(_ report: CheckReport, suite: DocumentSession,
     for (index, tick) in ticks.enumerated() {
         let marker = page.publishedMarkers[index]
         let expectedProgram = programs[index]
-        report.expectEqual(expected: fixture.markerX(tick), actual: marker.x, cppID: drawerVoiceProjectionID,
+        report.expectEqual(
+            expected: fixture.session.camera.contentTickX(tick: Double(tick), dpr: 1),
+            actual: marker.x, cppID: drawerVoiceProjectionID,
                            what: "marker \(tick) draws at the shared camera's projection")
         report.expect(marker.label.hasPrefix(String(format: "%03d", expectedProgram)),
                       cppID: drawerVoiceProjectionID,
@@ -36,7 +38,9 @@ func drawerVoiceMarkerProjection(_ report: CheckReport, suite: DocumentSession,
                       message: "marker \(tick) is inside the visible plot")
     }
     let tail = fixture.session.timeline.lengthTicks > 120 ? 1 : 0
-    report.expectEqual(expected: 2 + tail, actual: page.heldSpans.count, cppID: drawerVoiceProjectionID,
+    let heldSpans = VelocityContentProbe(page.drawingContent())
+    report.expectEqual(
+        expected: 2 + tail, actual: heldSpans.records.count, cppID: drawerVoiceProjectionID,
                        what: "each program section publishes one held span "
                            + "(timeline ends at \(fixture.session.timeline.lengthTicks))")
     report.expect(page.trackAvailable, cppID: drawerVoiceProjectionID,
@@ -59,7 +63,9 @@ func drawerVoiceMarkerProjection(_ report: CheckReport, suite: DocumentSession,
     let projectedDraft = page.publishedMarkers[1]
     report.expect(page.dragPreviewTick != nil
                   && Tick(projectedDraft.tick) == page.dragPreviewTick
-                  && projectedDraft.x == fixture.markerX(Tick(projectedDraft.tick))
+            && projectedDraft.x
+                == fixture.session.camera.contentTickX(
+                    tick: projectedDraft.tick, dpr: 1)
                   && fixture.snapshot == dragBaseline,
                   cppID: drawerVoiceProjectionID,
                   message: "the moving voice draft republishes its marker without committing")
@@ -414,18 +420,21 @@ func drawerVoiceOccurrenceIdentity(_ report: CheckReport, suite: DocumentSession
     // Camera-only refreshes keep the identity and move only the projection.
     let before = page.markerIdentities
     let x = page.publishedMarkers[1].x
-    _ = page.pointerPress(x: x, y: 10, surface: 1, button: 1, modifiers: 0)
+    let viewportX = fixture.markerX(48)
+    _ = page.pointerPress(x: viewportX, y: 10, surface: 1, button: 1, modifiers: 0)
     let frozen = page.frozenOccurrence
     report.expectEqual(expected: VoiceOccurrence(points[1]), actual: frozen, cppID: drawerVoiceIdentityID,
                        what: "the press freezes the marker's own occurrence")
     fixture.session.mutateCamera { $0.setHScroll($0.snapshot.scrollX + 40) }
     report.expectEqual(expected: before, actual: page.markerIdentities, cppID: drawerVoiceIdentityID,
                        what: "a camera scroll changes no marker identity")
-    report.expect(page.publishedMarkers[1].x != x, cppID: drawerVoiceIdentityID,
+    report.expect(
+        page.publishedMarkers[1].x == x && fixture.markerX(48) != viewportX,
+        cppID: drawerVoiceIdentityID,
                   message: "a camera scroll does move the projection")
     report.expectEqual(expected: frozen, actual: page.frozenOccurrence, cppID: drawerVoiceIdentityID,
                        what: "the frozen occurrence survives a camera scroll")
-    _ = page.pointerRelease(x: x, y: 10, button: 1)
+    _ = page.pointerRelease(x: viewportX, y: 10, button: 1)
     report.expect(!page.hasGesture, cppID: drawerVoiceIdentityID,
                   message: "the release ends the gesture without a draft")
 

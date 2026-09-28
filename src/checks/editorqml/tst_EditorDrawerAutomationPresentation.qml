@@ -211,7 +211,6 @@ EditorDrawerTestSupport {
         var labels = PageSupport.collectByName(testCase, plot, "automationScaleLabel", [])
         compare(labels.length, 3, "Pan draws maximum neutral and minimum scale labels")
         var expectedTexts = ["c_v+63", "c_v-64", "c_v+0"]
-        var tickCount = 0
         waitForRendering(testCase.surface)
         var scaleImage = grabImage(testCase.surface)
         verify(labels.every(function(label) {
@@ -220,13 +219,14 @@ EditorDrawerTestSupport {
         var heights = [testCase.automationProjectedY(plot, 63, -64, 63),
                        testCase.automationProjectedY(plot, 0, -64, 63),
                        testCase.automationProjectedY(plot, -64, -64, 63)]
+        var tickInk = PixelSupport.channelsOf(testCase, testCase.drawerPalette().separator)
+        var tickCount = 0
         for (var i = 0; i < heights.length; ++i) {
-            var point = plot.mapToItem(testCase.surface, 0, heights[i])
+            var point = plot.mapToItem(testCase.surface, 3, heights[i])
             var px = Math.round(point.x * scaleImage.width / testCase.surface.width)
             var py = Math.round(point.y * scaleImage.height / testCase.surface.height)
-            if (px >= 0 && py >= 0 && px < scaleImage.width && py < scaleImage.height
-                && [scaleImage.red(px, py), scaleImage.green(px, py),
-                    scaleImage.blue(px, py)].join(",") === "91,86,82")
+            if (PixelSupport.nearestPixel(testCase, scaleImage,
+                    { x0: px - 1, x1: px + 1, y0: py - 1, y1: py + 1 }, tickInk).distance < 16)
                 ++tickCount
         }
         compare(tickCount, 3, "three independently projected Pan scale heights paint edge ticks")

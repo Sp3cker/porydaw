@@ -6,11 +6,59 @@ import Porydaw.Ui
 
 ShellGridMenuSupport {
     id: testCase
+    function stageVisibleAutomationPoint() {
+        var view = surface()
+        var toggle = findChild(view, "drawerToggle_automation")
+        verify(toggle && toggle.visible, "the automation drawer toggle is mounted")
+        if (!view.drawerPresenter.automationSection.visible)
+            mouseClick(toggle, toggle.width / 2, toggle.height / 2)
+        var page = null
+        tryVerify(function() {
+            page = findChild(view, "automationPage")
+            return page && page.visible && page.height > 0
+        }, 3000, "the automation page is mounted")
+        var plot = findChild(page, "automationPlotInput")
+        verify(plot && plot.width > 0 && plot.height > 0, "the automation plot accepts a pointer")
+        var beforeCount = page.pageModel.nodeCount
+        var y = plot.height / 2
+        mousePress(plot, plot.width * 0.3, y, Qt.LeftButton)
+        mouseMove(plot, plot.width * 0.45, y, -1, Qt.LeftButton)
+        mouseRelease(plot, plot.width * 0.45, y, Qt.LeftButton)
+        tryVerify(function() { return page.pageModel.nodeCount > beforeCount }, 3000,
+                  "the plotted gesture writes a point")
+        return { page: page, plot: plot }
+    }
+
+    function stagedNodePoint(staged) {
+        wait(0)
+        function visit(item) {
+            if (item.objectName === "automationNode" && item.model
+                    && !item.model.projected && !item.model.phantom) {
+                var fill = findChild(item, "automationNodeFill")
+                if (fill) {
+                    var point = fill.mapToItem(staged.plot, fill.width / 2, fill.height / 2)
+                    if (point.x > 0 && point.x < staged.plot.width
+                            && point.y > 0 && point.y < staged.plot.height)
+                        return point
+                }
+            }
+            for (var i = 0; i < item.children.length; ++i) {
+                var candidate = visit(item.children[i])
+                if (candidate)
+                    return candidate
+            }
+            return null
+        }
+        var point = visit(staged.page)
+        verify(point, "the written point has a visible plotted hit target")
+        return point
+    }
 
     function test_automationPointMenuRendersDeleteBeforeDismissal() {
         openSong()
-        var staged = stageAutomationMenuPoint()
-        mouseClick(staged.plot, staged.node.x, staged.node.y, Qt.RightButton)
+        var staged = stageVisibleAutomationPoint()
+        var point = stagedNodePoint(staged)
+        mouseClick(staged.plot, point.x, point.y, Qt.RightButton)
         tryCompare(staged.page.pageModel, "menuOpen", true)
         var menu = staged.page.menu
         tryCompare(menu, "visible", true, 3000,
@@ -36,7 +84,7 @@ ShellGridMenuSupport {
 
     function test_automationHeldBPointerStrokeKeepsPencil() {
         openSong()
-        var staged = stageAutomationMenuPoint()
+        var staged = stageVisibleAutomationPoint()
         var model = staged.page.pageModel
         var plot = staged.plot
         var roll = control("swiftRollInput")
@@ -63,11 +111,12 @@ ShellGridMenuSupport {
 
     function test_automationPointMenuYieldsToPublishedDivisionMenu() {
         openSong()
-        var staged = stageAutomationMenuPoint()
+        var staged = stageVisibleAutomationPoint()
         var model = staged.page.pageModel
         var grid = surface().gridModel
         var revision = grid.appliedRevisionText
-        mouseClick(staged.plot, staged.node.x, staged.node.y, Qt.RightButton)
+        var point = stagedNodePoint(staged)
+        mouseClick(staged.plot, point.x, point.y, Qt.RightButton)
         tryCompare(model, "menuOpen", true)
         compare(model.menuRowCount, 2, "the point menu captures the written node")
         mouseClick(control("timelineRulerDivisionControl"))
@@ -86,7 +135,7 @@ ShellGridMenuSupport {
 
     function test_automationBandMissFallsThroughToTimeMenu() {
         openSong()
-        var staged = stageAutomationMenuPoint()
+        var staged = stageVisibleAutomationPoint()
         var plot = staged.plot
         var model = staged.page.pageModel
         var startX = plot.width * 0.25

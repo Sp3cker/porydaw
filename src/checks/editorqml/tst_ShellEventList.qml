@@ -77,6 +77,7 @@ ShellEventListSupport {
         const band = findChild(surface, "swiftRollBand")
         const drawer = findChild(surface, "editorDrawer")
         const ruler = findChild(surface, "timelineQuickRuler")
+        const rulerMarks = findChild(ruler, "timelineQuickRulerMarks")
         const controls = findChild(surface, "timelineRulerControls")
         const headers = findChild(surface, "timelineQuickTrackHeaders")
         const horizontal = findChild(surface, "timelineHorizontalScrollBar")
@@ -86,7 +87,8 @@ ShellEventListSupport {
         const rollInput = findChild(surface, "swiftRollInput")
         const rollContent = findChild(surface, "rollContentBand")
         const vertical = findChild(surface, "timelineRollScrollBar")
-        verify(band && drawer && ruler && controls && headers && horizontal && status
+        verify(band && drawer && ruler && rulerMarks && rulerMarks.band === 2
+               && controls && headers && horizontal && status
                && rollGutter && rollPlot && rollInput && rollContent && vertical,
                "editor bands remain addressable when the list replaces the roll")
         verify(waitForNative(function() {
@@ -97,7 +99,7 @@ ShellEventListSupport {
                 && page.height === drawer.y - surface.gridModel.rulerHeight
         }, 3000), "event list occupies only the roll band up to the drawer")
         verify(waitForNative(function() {
-            return ruler.visible && controls.visible && headers.visible
+            return ruler.visible && rulerMarks.visible && controls.visible && headers.visible
                 && drawer.visible && horizontal.visible && status.visible
         }, 3000), "ruler with Grid controls, headers, drawer, scrollbar and status remain visible")
         verify(waitForNative(function() {

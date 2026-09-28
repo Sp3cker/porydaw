@@ -323,10 +323,15 @@ ShellWindowSupport {
         tryCompare(page.pageModel, "isPencilMode", true, 3000)
         function visibleNode(item) {
             if (item.objectName === "automationNode" && item.model
-                    && !item.model.projected && !item.model.phantom
-                    && item.model.x > item.model.radius
-                    && item.model.x < plot.width - item.model.radius)
-                return item
+                    && !item.model.projected && !item.model.phantom) {
+                var fill = findChild(item, "automationNodeFill")
+                if (fill) {
+                    var point = fill.mapToItem(plot, fill.width / 2, fill.height / 2)
+                    if (point.x > fill.width / 2
+                            && point.x < plot.width - fill.width / 2)
+                        return { model: item.model, point: point }
+                }
+            }
             for (var index = 0; index < item.children.length; ++index) {
                 var candidate = visibleNode(item.children[index])
                 if (candidate)
@@ -334,12 +339,13 @@ ShellWindowSupport {
             }
             return null
         }
+        wait(0)
         var node = visibleNode(page)
         verify(node, "a written Volume node is visible for hover deletion")
         var plotted = findChild(surface, "automationPlot")
         plotted.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(plotted, "activeFocus", true, 3000)
-        mouseMove(plot, node.model.x, node.model.y)
+        mouseMove(plot, node.point.x, node.point.y)
         tryVerify(function() { return page.pageModel.hoverDisplay.hasNode }, 3000)
         var hoverTick = node.model.tick
         var pointsBeforeHover = JSON.stringify(writtenTicks(page, []))

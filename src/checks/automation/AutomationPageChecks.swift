@@ -331,6 +331,7 @@ internal func runAutomationPageChecks(_ report: CheckReport, session: DocumentSe
     defer { clipboardState.restore() }
     drawerAutomationParameterCatalogAndMetadata(report)
     drawerAutomationLaneProjection(report, suite: session, service: service)
+    drawerAutomationDrawingContentChecks(report, suite: session, service: service)
     drawerAutomationPointIdentityAndStaleness(report, suite: session, service: service)
     drawerAutomationScaleLabelsAndLaneCounts(report, suite: session, service: service)
     drawerAutomationRowStackAndSelectionIndicators(report, suite: session, service: service)

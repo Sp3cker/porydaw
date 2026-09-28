@@ -1,7 +1,50 @@
 import QtQuick
 import QtTest
+import "RollNoteFaces.js" as RollNoteFaces
 
 ShellGridInputSupport {
+    id: testCase
+    function automationBand(page, plot, priorFrame) {
+        wait(0)
+        var statics = findChild(page, "automationStatics")
+        if (!statics || !statics.visible)
+            return null
+        var frame = RollNoteFaces.grab(testCase, statics)
+        var ink = String(page.gridPalette.selectionEdge).slice(-6).toLowerCase()
+        var rgb = [parseInt(ink.slice(0, 2), 16),
+                   parseInt(ink.slice(2, 4), 16),
+                   parseInt(ink.slice(4, 6), 16)]
+        var sample = plot.mapToItem(statics, plot.width / 2, plot.height * 0.65)
+        var y = Math.floor(sample.y * frame.height / statics.height)
+        var first = -1
+        var last = -1
+        for (var x = 0; x < frame.width; ++x) {
+            if (frame.alpha(x, y) > 0
+                    && Math.max(Math.abs(frame.red(x, y) - rgb[0]),
+                                Math.abs(frame.green(x, y) - rgb[1]),
+                                Math.abs(frame.blue(x, y) - rgb[2])) < 24) {
+                if (first < 0)
+                    first = x
+                last = x
+            }
+        }
+        if (first < 0)
+            return null
+        if (first === last) {
+            if (!priorFrame)
+                return null
+            var edge = frame.width - 4
+            if (frame.red(edge, y) === priorFrame.red(edge, y)
+                    && frame.green(edge, y) === priorFrame.green(edge, y)
+                    && frame.blue(edge, y) === priorFrame.blue(edge, y))
+                return null
+            last = frame.width - 1
+        }
+        var start = statics.mapToItem(plot, first * statics.width / frame.width, sample.y)
+        var end = statics.mapToItem(plot, last * statics.width / frame.width, sample.y)
+        return { x: start.x, width: end.x - start.x }
+    }
+
     function test_mountedAutomationDragDeleteUndoPreservesRoll() {
         openRoute101()
         var surface = selectedSurface()
@@ -41,9 +84,12 @@ ShellGridInputSupport {
                   "a real Volume sweep writes nodes")
         function writtenNodes(item, result) {
             if (item.objectName === "automationNode" && item.model
-                && !item.model.projected && !item.model.phantom)
-                result.push({tick: item.model.tick, x: item.model.x,
-                             y: item.model.y, selected: item.model.selected})
+                && !item.model.projected && !item.model.phantom) {
+                var fill = findChild(item, "automationNodeFill")
+                var point = fill.mapToItem(plot, fill.width / 2, fill.height / 2)
+                result.push({tick: item.model.tick, x: point.x,
+                             y: point.y, selected: item.model.selected})
+            }
             for (var child = 0; child < item.children.length; ++child)
                 writtenNodes(item.children[child], result)
             return result
@@ -92,8 +138,8 @@ ShellGridInputSupport {
         dragRight(plot, bandStart, moved.y, bandEnd, moved.y)
         var selectedBand = null
         tryVerify(function() {
-            selectedBand = findChild(page, "automationSelectionFill")
-            return selectedBand && selectedBand.visible && selectedBand.width > 0
+            selectedBand = automationBand(page, plot)
+            return selectedBand && selectedBand.width > 0
                 && writtenNodes(page, []).some(function(node) {
                     return node.tick === grabbed.tick && node.selected
                 })
@@ -123,8 +169,8 @@ ShellGridInputSupport {
                 "held Shift range move leaves the applied document revision unchanged")
         mouseRelease(plot, endX, selectedNode.y, Qt.LeftButton, Qt.ShiftModifier)
         tryVerify(function() {
-            selectedBand = findChild(page, "automationSelectionFill")
-            return selectedBand && selectedBand.visible && selectedBand.x > bandBefore
+            selectedBand = automationBand(page, plot)
+            return selectedBand && selectedBand.x > bandBefore
                 && writtenNodes(page, []).some(function(node) {
                     return node.selected && originalTicks.indexOf(node.tick) === -1
                 })
@@ -152,8 +198,8 @@ ShellGridInputSupport {
         dragRight(plot, restoredBandStart, selectedNode.y,
                   restoredBandEnd, selectedNode.y)
         tryVerify(function() {
-            var restoredBand = findChild(page, "automationSelectionFill")
-            return restoredBand && restoredBand.visible && restoredBand.width > 0
+            var restoredBand = automationBand(page, plot)
+            return restoredBand && restoredBand.width > 0
                 && writtenNodes(page, []).some(function(node) {
                     return shiftedTicks.indexOf(node.tick) !== -1 && node.selected
                 })
@@ -183,9 +229,12 @@ ShellGridInputSupport {
             var nodes = []
             function visit(item) {
                 if (item.objectName === "automationNode" && item.model
-                    && !item.model.projected && !item.model.phantom)
-                    nodes.push({tick: item.model.tick, x: item.model.x,
-                                y: item.model.y, selected: item.model.selected})
+                    && !item.model.projected && !item.model.phantom) {
+                    var fill = findChild(item, "automationNodeFill")
+                    var point = fill.mapToItem(plot, fill.width / 2, fill.height / 2)
+                    nodes.push({tick: item.model.tick, x: point.x,
+                                y: point.y, selected: item.model.selected})
+                }
                 for (var child = 0; child < item.children.length; ++child)
                     visit(item.children[child])
             }
@@ -252,10 +301,11 @@ ShellGridInputSupport {
             return node.tick === lfoStart.tick && node.selected
         }), "the same real ruler interval covers its LFO source")
         activate("Tempo")
-        var mixedBand = findChild(page, "automationSelectionFill")
-        verify(mixedBand && mixedBand.visible && mixedBand.width > 0,
+        var mixedBand = automationBand(page, plot)
+        verify(mixedBand && mixedBand.width > 0,
                "the mounted mixed-track interval paints a visible range band")
         var mixedBandX = mixedBand.x
+        var mixedBandFrame = RollNoteFaces.grab(testCase, findChild(page, "automationStatics"))
         var tempoBefore = written().map(function(node) { return [node.tick, node.x, node.y] })
         var revisionBefore = grid.appliedRevisionText
         var armX = tempoStart.x + Qt.styleHints.startDragDistance + 2
@@ -276,8 +326,8 @@ ShellGridInputSupport {
             })
         }, 3000, "mixed Shift release moves the selected Tempo point")
         tryVerify(function() {
-            mixedBand = findChild(page, "automationSelectionFill")
-            return mixedBand && mixedBand.visible && mixedBand.width > 0
+            mixedBand = automationBand(page, plot, mixedBandFrame)
+            return mixedBand && mixedBand.width > 0
                 && mixedBand.x > mixedBandX
         }, 3000, "mixed Shift release translates the rendered selection interval")
         verify(grid.appliedRevisionText !== revisionBefore,

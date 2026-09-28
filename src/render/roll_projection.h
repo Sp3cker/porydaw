@@ -185,6 +185,31 @@ void forEachGridLine(const RollContent::TimeAxis &axis, uint64_t begin, uint64_t
     }
 }
 
+template <typename Visit>
+void forEachNumberedGridLine(const RollContent::TimeAxis &axis, uint64_t begin, uint64_t end,
+                             Visit &&visit)
+{
+    uint64_t bar = 1;
+    const RollContent::GridSegment *current = nullptr;
+    forEachGridLine(axis, begin, end,
+                    [&](const RollContent::GridSegment &segment, uint64_t tick, bool isBar) {
+        if (&segment != current) {
+            const auto first = axis.segments.data();
+            const auto target = &segment;
+            const auto previous = current ? current + 1 : first;
+            for (auto it = previous; it != target; ++it) {
+                const uint64_t measure = uint64_t(it->beatTicks) * it->beatsPerBar;
+                const uint64_t ticks = it->next - it->start;
+                bar += ticks / measure + (ticks % measure != 0);
+            }
+            current = target;
+        }
+        const uint64_t k = (tick - segment.start) / segment.beatTicks;
+        visit(segment, tick, isBar, bar + k / segment.beatsPerBar,
+              k % segment.beatsPerBar + 1);
+    });
+}
+
 inline QString keyName(int pitch)
 {
     static const char *const names[] = {"C",  "C#", "D",  "D#", "E",  "F",

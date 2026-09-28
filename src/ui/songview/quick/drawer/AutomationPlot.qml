@@ -43,16 +43,16 @@ Item {
         color: plot.gridPalette.rollBackground
     }
 
-    TimelineQuickItem {
-        objectName: "automationGridLines"
+    TimelineRenderer {
+        objectName: "automationAxis"
         anchors.fill: parent
-        rects: (plot.pageModel ? plot.pageModel.gridLines : [])
-    }
-
-    TimelineQuickItem {
-        objectName: "automationValueLines"
-        anchors.fill: parent
-        rects: (plot.pageModel ? plot.pageModel.valueLines : [])
+        band: 3
+        drawerLayer: 0
+        contentSource: plot.pageModel
+        contentRevision: plot.pageModel ? plot.pageModel.contentRevision : 0
+        pixelsPerTick: plot.gridModel.pixelsPerTick
+        scrollX: plot.gridModel.cameraScrollX
+        devicePixelRatio: plot.devicePixelRatio
     }
 
     Repeater {
@@ -81,16 +81,17 @@ Item {
         }
     }
 
-    TimelineQuickItem {
-        objectName: "automationSelectionRects"
-        anchors.fill: parent
-        rects: (plot.pageModel ? plot.pageModel.selectionRects : [])
-    }
 
-    TimelineQuickItem {
-        objectName: "automationCurveRuns"
+    TimelineRenderer {
+        objectName: "automationStatics"
         anchors.fill: parent
-        rects: (plot.pageModel ? plot.pageModel.curveRuns : [])
+        band: 3
+        drawerLayer: 1
+        contentSource: plot.pageModel
+        contentRevision: plot.pageModel ? plot.pageModel.contentRevision : 0
+        pixelsPerTick: plot.gridModel.pixelsPerTick
+        scrollX: plot.gridModel.cameraScrollX
+        devicePixelRatio: plot.devicePixelRatio
     }
 
     Repeater {
@@ -149,6 +150,10 @@ Item {
     }
 
     // Draw published nodes and the origin phantom with selected/hover rings.
+    Item {
+        x: -plot.gridModel.cameraScrollX
+        width: plot.width + plot.gridModel.cameraScrollX
+        height: plot.height
     Repeater {
         model: (plot.pageModel ? plot.pageModel.nodes : [])
 
@@ -161,7 +166,7 @@ Item {
             readonly property var s: model ? model.spec : ({})
 
             objectName: node.s.primitiveName + (node.s.phantom ? "Phantom" : "")
-            x: 0
+            x: node.s.phantom ? plot.gridModel.cameraScrollX : 0
             y: 0
             width: plot.width
             height: plot.height
@@ -208,6 +213,7 @@ Item {
             }
         }
     }
+    }
 
     // The range press's own band.
     Rectangle {
@@ -225,10 +231,16 @@ Item {
     }
 
     // The frozen gesture's draft markers.
-    TimelineQuickItem {
+    TimelineRenderer {
         objectName: "automationPreviewRects"
         anchors.fill: parent
-        rects: (plot.pageModel ? plot.pageModel.previewRects : [])
+        band: 3
+        drawerLayer: 2
+        contentSource: plot.pageModel
+        contentRevision: plot.pageModel ? plot.pageModel.contentRevision : 0
+        pixelsPerTick: plot.gridModel.pixelsPerTick
+        scrollX: plot.gridModel.cameraScrollX
+        devicePixelRatio: plot.devicePixelRatio
     }
 
     // The hover value label and the live gesture's own readout.

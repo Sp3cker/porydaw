@@ -5,6 +5,7 @@ import EditorQmlCheck 1.0
 import Porydaw.Ui
 import "EditorDrawerLayoutSupport.js" as LayoutSupport
 import "EditorDrawerPageSupport.js" as PageSupport
+import "EditorDrawerPixelSupport.js" as PixelSupport
 import "EditorDrawerAutomationTabsSupport.js" as AutomationTabsSupport
 import "EditorDrawerAutomationGestureSupport.js" as AutomationGestureSupport
 import "EditorDrawerAutomationMenuSupport.js" as AutomationMenuSupport
@@ -188,10 +189,35 @@ EditorDrawerTestSupport {
         verify(empty >= 0, "the selector offers an empty parameter lane")
         var snap = grid.snapTicks
         var visible = grid.visibleGridTicks
-        var gridLines = findChild(AutomationTabsSupport.automationPageItem(testCase), "automationGridLines")
-        var drawn = PageSupport.collectByNames(testCase, gridLines, ["automationGrid"], [])
-        verify(drawn.length > 0, "the empty lane still paints grid lines")
-        var before = drawn.map(function(line) { return line.x })
+        var plot = AutomationTabsSupport.automationPlot(testCase)
+        function gridRaster() {
+            wait(0)
+            waitForRendering(testCase.surface)
+            var frame = grabImage(testCase.surface)
+            var origin = plot.mapToItem(testCase.surface, 0, plot.height * 0.63)
+            var y = Math.round(origin.y * frame.height / testCase.surface.height)
+            var row = []
+            for (var x = Math.ceil(origin.x * frame.width / testCase.surface.width) + 8;
+                 x < Math.floor((origin.x + plot.width) * frame.width / testCase.surface.width) - 4; ++x)
+                row.push([frame.red(x, y), frame.green(x, y), frame.blue(x, y)])
+            return row
+        }
+        var before = gridRaster()
+        var background = PixelSupport.channelsOf(testCase, testCase.drawerPalette().rollBackground)
+        var barColor = String(testCase.drawerPalette().gridLineBar)
+        var bar = PixelSupport.channelsOf(testCase, barColor)
+        var alpha = parseInt(barColor.slice(1, 3), 16) / 255
+        var blended = bar.map(function(channel, index) {
+            return Math.round(channel * alpha + background[index] * (1 - alpha))
+        })
+        function near(pixel, color) {
+            return Math.max.apply(null, pixel.map(function(channel, index) {
+                return Math.abs(channel - color[index])
+            })) <= 8
+        }
+        verify(before.some(function(pixel) { return near(pixel, blended) && !near(pixel, background) })
+               && before.some(function(pixel) { return near(pixel, background) }),
+               "the empty lane still paints grid lines")
         var revision = bootstrap.automationDocumentRevision()
         var cursor = grid.editCursorTick
         var split = testCase.surface.timelineSplitX
@@ -206,8 +232,7 @@ EditorDrawerTestSupport {
         compare(grid.snapTicks, snap, "activating an empty lane preserves the grid resolution")
         compare(grid.visibleGridTicks, visible,
                 "activating an empty lane preserves the grid resolution")
-        compare(PageSupport.collectByNames(testCase, gridLines, ["automationGrid"], [])
-                .map(function(line) { return line.x }), before,
+        compare(JSON.stringify(gridRaster()), JSON.stringify(before),
                 "activating an empty lane preserves the grid resolution")
         compare(bootstrap.automationDocumentRevision(), revision,
                 "the empty activation writes nothing")

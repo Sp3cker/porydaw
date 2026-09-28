@@ -259,15 +259,6 @@ struct VoiceMarkerProjectionInput {
     var displayX: (Tick) -> Double
 }
 
-struct VoiceSpanProjectionInput {
-    var entries: [VoiceProjectionEntry]
-    var firstProgram: Int
-    var lengthTicks: Tick
-    var plotWidth: Double
-    var plotHeight: Double
-    var color: String
-    var displayX: (Tick) -> Double
-}
 
 struct VoiceGutterProjectionInput {
     var plotHeight: Double
@@ -290,14 +281,6 @@ struct VoiceReadoutProjection {
     var rect: [String: QVariantSettable]
 }
 
-struct VoiceGridProjectionColors {
-    var subdivision1: String
-    var subdivision2: String
-    var subdivision3: String
-    var bar: String
-    var beat: String
-    var fineBeat: String
-}
 
 /// Pure layout/projection of lane data into published marker, span, picker and
 /// menu records. The page supplies camera, palette and interaction facts.
@@ -344,30 +327,6 @@ enum VoiceChangesProjection {
         return result
     }
 
-    static func spans(_ input: VoiceSpanProjectionInput) -> [SceneRect] {
-        var program = input.firstProgram
-        var spanStart: Tick = 0
-        var rects: [SceneRect] = []
-        func appendSpan(from begin: Tick, to end: Tick) {
-            let left = min(max(input.displayX(begin), 0), input.plotWidth)
-            let right = min(max(input.displayX(end), 0), input.plotWidth)
-            let rect = SceneRect(x: left, y: 0, width: max(0, right - left),
-                                 height: input.plotHeight, fillColor: input.color,
-                                 primitiveName: "voiceHeldSpan")
-            if rect.width > 0 { rects.append(rect) }
-        }
-        for entry in input.entries {
-            if program >= 0, entry.tick > spanStart {
-                appendSpan(from: spanStart, to: entry.tick)
-            }
-            program = entry.value
-            spanStart = entry.tick
-        }
-        if program >= 0, input.lengthTicks > spanStart {
-            appendSpan(from: spanStart, to: input.lengthTicks)
-        }
-        return rects
-    }
 
     static func gutterTexts(_ input: VoiceGutterProjectionInput) -> [SceneText] {
         let top = max(0, (input.plotHeight - input.titleHeight - input.captionHeight) / 2)
@@ -404,49 +363,6 @@ enum VoiceChangesProjection {
             rect: VoiceMarkerHandle.rect(pad, 0, max(0, plotWidth - 2 * pad), plotHeight))
     }
 
-    static func grid(metrics: GridMetrics, camera: EditorCamera, plotWidth: Double,
-                     grid source: RollGrid,
-                     plotHeight: Double, colors: VoiceGridProjectionColors,
-                     displayX: (Tick) -> Double) -> [SceneRect] {
-        let physicalPixel = max(metrics.pixel, 0.0001)
-        let roundingMargin = physicalPixel / 2
-        let beginTick = camera.tickAtContentX(-roundingMargin)
-        let endTick = camera.tickAtContentX(plotWidth - physicalPixel + roundingMargin) + 1
-        guard endTick > beginTick else { return [] }
-        let range = (begin: Tick(max(0, beginTick.rounded(.down))),
-                     end: Tick(max(1, endTick.rounded(.up))))
-        let stroke = metrics.gridLineStroke
-        var grid = source
-        grid.metrics = metrics
-        var rects: [SceneRect] = []
-        grid.forEachSubdivision(from: range.begin, to: range.end, camera: camera) { tick, level in
-            let color = level == 1 ? colors.subdivision1
-                : level == 2 ? colors.subdivision2 : colors.subdivision3
-            rects.append(SceneRect(
-                x: displayX(tick) - stroke / 2,
-                y: 0,
-                width: stroke,
-                height: plotHeight,
-                fillColor: color,
-                primitiveName: "voiceGrid"))
-        }
-        var segment = metrics.timeAxis.segmentAt(range.begin)
-        var finest = grid.gridTicksAt(range.begin, camera: camera) == 1
-        metrics.timeAxis.forEachGridLine(from: range.begin, to: range.end) { tick, isBar, _, _ in
-            if tick >= segment.next {
-                segment = metrics.timeAxis.segmentAt(tick)
-                finest = grid.gridTicksAt(tick, camera: camera) == 1
-            }
-            rects.append(SceneRect(
-                x: displayX(tick) - stroke / 2,
-                y: 0,
-                width: stroke,
-                height: plotHeight,
-                fillColor: isBar ? colors.bar : finest ? colors.fineBeat : colors.beat,
-                primitiveName: "voiceGrid"))
-        }
-        return rects
-    }
 
     static func markers(_ input: VoiceMarkerProjectionInput,
                         reusing previous: [String: VoiceMarkerHandle] = [:])
@@ -465,7 +381,7 @@ enum VoiceChangesProjection {
             let old = previous[entry.identity]
             let view = input.slots.indices.contains(entry.value) ? input.slots[entry.value] : nil
             let labelX = input.displayX(entry.tick) + input.pad
-            let maxWidth = max(0, input.plotWidth - labelX)
+            let maxWidth = max(0, input.plotWidth - input.pad)
             let drawn: String
             let labelWidth: Double
             if let old, old.tick == Double(entry.tick), old.value == entry.value {
@@ -479,7 +395,7 @@ enum VoiceChangesProjection {
                     : source
                 labelWidth = min(input.caption.advance(drawn), maxWidth)
             }
-            let offscreen = labelX + labelWidth < 0 || labelX > input.plotWidth || labelWidth <= 0
+            let offscreen = labelWidth <= 0
             var labelY = centerY
             if !offscreen {
                 if labelX < lastXEnd + input.gap, canStair {
@@ -554,9 +470,6 @@ enum VoiceChangesProjection {
         }
     }
 
-    static func syncRects(_ model: QListModel<SceneRect>, _ values: [SceneRect]) {
-        syncModel(model, values, matches: { $0.matches($1) })
-    }
 
     static func syncTexts(_ model: QListModel<SceneText>, _ values: [SceneText]) {
         syncModel(model, values, matches: textMatches)

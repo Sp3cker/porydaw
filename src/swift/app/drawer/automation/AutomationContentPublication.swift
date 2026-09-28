@@ -106,20 +106,15 @@ extension AutomationPage {
     /// Every drawn primitive of one build.
     func publishContent(_ session: DocumentSession?) {
         guard let session, let lane = projection else {
-            syncRects(gridLines, [])
-            syncRects(valueLines, [])
             syncTexts(ghostNameLabels, [])
             syncTexts(valueLabels, [])
-            syncRects(curveRuns, [])
             curveRunSnapshots = []
             syncNodes([])
-            syncRects(selectionRects, [])
             return
         }
         let projection = makeProjection(
             facts: facts(parameter: lane.parameter, modifiers: .init(), session: session),
             camera: session.camera)
-        publishGrid(session)
         publishValueAxis(lane)
         publishGhostNames(session)
         var runs: [SceneRect] = []
@@ -127,10 +122,8 @@ extension AutomationPage {
             appendCurve(ghost, projection: projection, isGhost: true, into: &runs)
         }
         appendCurve(lane, projection: projection, isGhost: false, into: &runs)
-        syncRects(curveRuns, runs)
         curveRunSnapshots = runs
         syncNodes(nodeHandles(lane, projection: projection))
-        syncRects(selectionRects, selectionBand(lane, projection: projection))
     }
 
     /// Reprojects the active and pinned lanes for a horizontal camera scroll
@@ -144,7 +137,6 @@ extension AutomationPage {
             return
         }
         projection = lane
-        publishGrid(session)
         publishGhostNames(session)
         var runs: [SceneRect] = []
         for ghost in ghostProjections(session) {
@@ -153,76 +145,20 @@ extension AutomationPage {
         }
         appendCurve(lane, projection: cameraProjection, isGhost: false,
                     into: &runs)
-        syncRects(curveRuns, runs)
         curveRunSnapshots = runs
         syncNodes(nodeHandles(lane, projection: cameraProjection))
-        syncRects(selectionRects, selectionBand(lane, projection: cameraProjection))
+        drawingCameraOnly = true
+        defer { drawingCameraOnly = false }
         publishOverlays()
-    }
-
-    /// The shared time grid: the roll's own subdivision, beat, fine-beat and bar
-    /// lines, through the same grid metrics the roll and the sibling pages use.
-    func publishGrid(_ session: DocumentSession) {
-        guard plotHeight > 0, plotWidth > 0, projection != nil else {
-            syncRects(gridLines, [])
-            return
-        }
-        let camera = session.camera
-        let metrics = gridMetrics(session)
-        var grid = session.grid
-        grid.metrics = metrics
-        let physicalPixel = max(metrics.pixel, 0.0001)
-        let roundingMargin = physicalPixel / 2
-        let beginTick = camera.tickAtContentX(-roundingMargin)
-        let endTick = camera.tickAtContentX(plotWidth - physicalPixel + roundingMargin) + 1
-        guard endTick > beginTick else {
-            syncRects(gridLines, [])
-            return
-        }
-        let range = (begin: Tick(max(0, beginTick.rounded(.down))),
-                     end: Tick(max(1, endTick.rounded(.up))))
-        let stroke = metrics.gridLineStroke
-        var rects: [SceneRect] = []
-        grid.forEachSubdivision(from: range.begin, to: range.end, camera: camera) { tick, level in
-            let color = level == 1 ? palette.gridLineSub1
-                : level == 2 ? palette.gridLineSub2 : palette.gridLineSub3
-            rects.append(SceneRect(x: xForTick(tick) - stroke / 2, y: 0, width: stroke,
-                                   height: plotHeight, fillColor: color,
-                                   primitiveName: "automationGrid"))
-        }
-        var segment = metrics.timeAxis.segmentAt(range.begin)
-        var finest = grid.gridTicksAt(range.begin, camera: camera) == 1
-        metrics.timeAxis.forEachGridLine(from: range.begin, to: range.end) { tick, isBar, _, _ in
-            if tick >= segment.next {
-                segment = metrics.timeAxis.segmentAt(tick)
-                finest = grid.gridTicksAt(tick, camera: camera) == 1
-            }
-            rects.append(SceneRect(
-                x: xForTick(tick) - stroke / 2, y: 0, width: stroke, height: plotHeight,
-                fillColor: isBar ? palette.gridLineBar
-                    : finest ? palette.gridLineBeatFine : palette.gridLineBeat,
-                primitiveName: "automationGrid"))
-        }
-        let frame = max(1 / devicePixelRatio, fontPxF(baseFontPx, 1.0 / 12.0))
-        rects.append(SceneRect(x: 0, y: 0, width: plotWidth, height: frame,
-                               fillColor: palette.separator, primitiveName: "automationFrameTop"))
-        rects.append(SceneRect(x: 0, y: plotHeight - frame, width: plotWidth, height: frame,
-                               fillColor: palette.separator, primitiveName: "automationFrameBottom"))
-        syncRects(gridLines, rects)
     }
 
     /// The value axis: one rule at each scale value, with its label at the plot's
     /// left edge and curve-true height.
     func publishValueAxis(_ lane: AutomationLaneProjection) {
-        let stroke = max(1, fontPxF(baseFontPx, 1.0 / 12.0))
         let height = captionMetrics?.height ?? fontPx(baseFontPx, 1)
         let pad = Typography(baseFontPx: Int(baseFontPx.rounded())).space(.one)
-        var lines: [SceneRect] = []
         var labels: [SceneText] = []
         for label in lane.scaleLabels {
-            lines.append(SceneRect(x: 0, y: (label.y - stroke / 2).rounded(), width: plotWidth,
-                                   height: stroke, fillColor: palette.gridLineSub2,
-                                   primitiveName: "automationValueRule"))
             let width = max(fontPx(baseFontPx, 2),
                             (captionMetrics?.advance(label.text) ?? 0).rounded())
             let y = min(max(0, label.y - height / 2), max(0, plotHeight - height))
@@ -230,13 +166,6 @@ extension AutomationPage {
                                     text: label.text, color: palette.primaryText,
                                     font: captionFont))
         }
-        let tickLength = Typography(baseFontPx: Int(baseFontPx.rounded())).space(.half) * 3
-        for label in lane.scaleLabels {
-            lines.append(SceneRect(x: 0, y: (label.y - stroke / 2).rounded(),
-                                   width: Double(tickLength), height: stroke,
-                                   fillColor: palette.separator, primitiveName: "automationEdgeTick"))
-        }
-        syncRects(valueLines, lines)
         syncTexts(valueLabels, labels)
     }
 
@@ -302,7 +231,11 @@ extension AutomationPage {
                             projection: AutomationProjection,
                             phantom: Bool) -> AutomationNodeHandle {
         let node = AutomationNodeHandle()
-        node.x = phantom ? 0 : projection.x(point.tick)
+        node.x =
+            phantom
+            ? 0
+            : projection.camera.contentTickX(
+                tick: Double(point.tick), dpr: devicePixelRatio)
         node.y = point.y
         node.tick = Double(point.tick)
         node.value = point.value

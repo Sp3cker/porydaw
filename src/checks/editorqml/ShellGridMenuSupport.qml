@@ -5,6 +5,7 @@ import ShellQmlCheck 1.0
 import Porydaw.Ui
 import "NativeWait.js" as NativeWait
 import "RollNoteFaces.js" as RollNoteFaces
+import "GatedVisualsHelpers.js" as Visuals
 
 TestCase {
     id: testCase
@@ -231,25 +232,35 @@ TestCase {
     }
 
     function loopMarkerAt(name, tick) {
-        var marker = findChild(surface(), name)
-        return marker !== null
-            && Math.abs(marker.mapToItem(control("timelineRulerInput"), 0, 0).x
-                        + 0.5 - rulerTickX(tick)) <= 0.75
+        var renderer = control("timelineQuickRulerMarks")
+        var marker = renderer.noteFace(name)
+        if (!marker || marker.width === undefined)
+            return false
+        var point = renderer.mapToItem(control("timelineRulerInput"), marker.x, marker.y)
+        return Math.abs(point.x + marker.width / 2 - rulerTickX(tick)) <= 0.75
     }
 
     function loopMarkerAbsent(name) {
-        return findChild(surface(), name) === null
+        return control("timelineQuickRulerMarks").noteFace(name).width === undefined
     }
 
-    function rulerLabelAt(text, tick) {
-        var ruler = control("timelineRulerInput")
-        var labels = control("timelineQuickRulerMarks").parent.children
+    function rulerSignatureAt(tick) {
+        var grid = surface().gridModel
         var x = rulerTickX(tick)
-        for (var index = 0; index < labels.length; ++index) {
-            var label = labels[index]
-            var labelX = label.mapToItem(ruler, 0, 0).x
-            if (label.labelText === text && labelX >= x - 1
-                && labelX <= x + surface().gridModel.baseFontPx)
+        if (timeSigHost.timeSigChipTick(x, grid.rulerMarkerRowHeight / 2) !== tick)
+            return false
+        var renderer = control("timelineQuickRulerMarks")
+        var image = RollNoteFaces.grab(testCase, renderer)
+        var dpr = image.width / renderer.width
+        var px = Math.round(x * dpr)
+        var py = Math.round(Math.min(3, grid.rulerMarkerRowHeight / 2) * dpr)
+        var ink = Visuals.channels(grid.palette.primaryText)
+        for (var dx = -2; dx <= 2; ++dx) {
+            if (px + dx < 0 || px + dx >= image.width)
+                continue
+            if (Math.abs(image.red(px + dx, py) - ink[0]) <= 20
+                && Math.abs(image.green(px + dx, py) - ink[1]) <= 20
+                && Math.abs(image.blue(px + dx, py) - ink[2]) <= 20)
                 return true
         }
         return false
@@ -330,39 +341,5 @@ TestCase {
         mouseMove(ruler, endX, y, -1, Qt.LeftButton)
         mouseRelease(ruler, endX, y, Qt.LeftButton)
         return { startX: startX, endX: endX, midX: (startX + endX) / 2 }
-    }
-
-    function stageAutomationMenuPoint() {
-        var view = surface()
-        var toggle = findChild(view, "drawerToggle_automation")
-        verify(toggle && toggle.visible, "the automation drawer toggle is mounted")
-        mouseClick(toggle, toggle.width / 2, toggle.height / 2)
-        var page = null
-        tryVerify(function() {
-            page = findChild(view, "automationPage")
-            return page && page.visible && page.height > 0
-        }, 3000, "the automation page is mounted")
-        var plot = findChild(page, "automationPlotInput")
-        verify(plot && plot.width > 0 && plot.height > 0, "the automation plot accepts a pointer")
-        var y = plot.height / 2
-        mousePress(plot, plot.width * 0.3, y, Qt.LeftButton)
-        mouseMove(plot, plot.width * 0.45, y, -1, Qt.LeftButton)
-        mouseRelease(plot, plot.width * 0.45, y, Qt.LeftButton)
-        tryVerify(function() { return page.pageModel.nodeCount > 1 }, 3000,
-                  "the plotted gesture writes a point")
-        function writtenNode(item) {
-            if (item.objectName === "automationNode" && item.model
-                && !item.model.projected && !item.model.phantom)
-                return item.model
-            for (var index = 0; index < item.children.length; ++index) {
-                var node = writtenNode(item.children[index])
-                if (node)
-                    return node
-            }
-            return null
-        }
-        var node = writtenNode(page)
-        verify(node !== null, "the written point has a plotted hit target")
-        return { page: page, plot: plot, node: node }
     }
 }

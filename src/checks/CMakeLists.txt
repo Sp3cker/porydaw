@@ -262,6 +262,7 @@ if(APPLE)
         velocity/VelocityContentProbe.swift
         drawerpresentation/VoiceChangesPageChecks.swift
         automation/AutomationPageChecks.swift
+        automation/AutomationDrawingContentChecks.swift
         host/HostBehaviorChecks.swift
         trackheaders/TrackHeadersChecks.swift
         trackheaders/TrackHeadersInputChecks.swift

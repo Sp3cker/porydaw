@@ -6,6 +6,7 @@ import Porydaw.Ui
 import "EditorDrawerPageSupport.js" as PageSupport
 import "EditorDrawerAutomationTabsSupport.js" as AutomationTabsSupport
 import "EditorDrawerAutomationGestureSupport.js" as AutomationGestureSupport
+import "EditorDrawerPixelSupport.js" as PixelSupport
 import "EditorDrawerAutomationMenuSupport.js" as AutomationMenuSupport
 
 EditorDrawerTestSupport {
@@ -40,8 +41,17 @@ EditorDrawerTestSupport {
         mousePress(input, free.x, free.y, Qt.LeftButton)
         mouseMove(input, Math.min(input.width - 4, free.x + 80), free.y, -1, Qt.LeftButton)
         mouseMove(input, Math.min(input.width - 4, free.x + 160), free.y, -1, Qt.LeftButton)
-        tryVerify(function() { return AutomationGestureSupport.automationPreviewItems(testCase).length > 0 }, 1000,
-                  "the moving sweep published its draft markers")
+        tryVerify(function() {
+            if (!model.previewLabelVisible)
+                return false
+            wait(0)
+            var image = grabImage(testCase.surface)
+            var point = { x: free.x + Math.min(input.width - 4, free.x + 160)
+                                - Math.min(input.width - 4, free.x + 80), y: free.y }
+            var region = AutomationGestureSupport.automationPreviewRegion(testCase, image, point, 8)
+            var ink = PixelSupport.channelsOf(testCase, testCase.drawerPalette().selectionEdge)
+            return PixelSupport.nearestPixel(testCase, image, region, ink).distance < 30
+        }, 1000, "the moving sweep published its draft markers")
         mouseRelease(input, Math.min(input.width - 4, free.x + 160), free.y, Qt.LeftButton)
         var swept = bootstrap.automationLaneValues()
         compare(swept !== before, true,

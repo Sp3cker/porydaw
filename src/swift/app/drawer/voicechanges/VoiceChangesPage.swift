@@ -171,8 +171,8 @@ public final class VoiceChangesPage: EditorDrawerPage {
     // MARK: Published models
 
     public var markers: QListModel<VoiceMarkerHandle> = QListModel()
-    public var heldSpans: QListModel<SceneRect> = QListModel()
-    public var gridLines: QListModel<SceneRect> = QListModel()
+    @QtTracked public var contentRevision = 0
+    public func drawingContent() -> Data { drawingContentData }
     public var pickerRows: QListModel<VoicePickerRowHandle> = QListModel()
     public var menuRows: QListModel<VoiceMenuRowHandle> = QListModel()
 
@@ -244,20 +244,12 @@ public final class VoiceChangesPage: EditorDrawerPage {
     @QtIgnored var playing = false
     private var lastContextKey: VoiceContextKey?
     @QtIgnored let pickerCache = VoicePickerProjectionCache()
-    @QtIgnored var metricsKey: MetricsKey?
-    @QtIgnored var cachedMetrics: GridMetrics?
     @QtIgnored var entriesRevision: UInt64?
     @QtIgnored var entriesTrack: Int?
     @QtIgnored var cachedEntries: [VoiceProjectionEntry] = []
+    @QtIgnored var drawingContentData = Data()
     @QtIgnored var markerLookup: [String: VoiceMarkerHandle] = [:]
 
-    struct MetricsKey: Equatable {
-        var revision: UInt64
-        var font: Double
-        var dpr: Double
-        var width: Double
-        var height: Double
-    }
 
     public init(baseFontPx: Double = VoiceChangesPagePolicy.seedBaseFontPx) {
         let base = baseFontPx.isFinite && baseFontPx > 0
@@ -278,8 +270,6 @@ public final class VoiceChangesPage: EditorDrawerPage {
     public func attach(session: DocumentSession, palette: GridPalette) {
         cancelSectionInteraction()
         self.session = session
-        metricsKey = nil
-        cachedMetrics = nil
         entriesRevision = nil
         entriesTrack = nil
         pickerCache.refresh(slots: session.bankSlots)
@@ -300,9 +290,11 @@ public final class VoiceChangesPage: EditorDrawerPage {
         presentedContextStartTick = 0
         let scene = VoiceChangesSceneSnapshot.detached
         publishMarkers([])
-        publishSpans(scene.spans)
-        publishGrid(scene.gridLines)
         publishGutter(scene.gutterTexts)
+        if !drawingContentData.isEmpty {
+            drawingContentData = Data()
+            contentRevision &+= 1
+        }
     }
 
     // MARK: Composition input

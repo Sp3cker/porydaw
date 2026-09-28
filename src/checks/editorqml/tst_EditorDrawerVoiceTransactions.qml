@@ -201,7 +201,7 @@ EditorDrawerTestSupport {
         var marker = null
         var lines = VoiceSupport.voiceMarkerLines(testCase)
         for (var i = 0; i < lines.length; ++i) {
-            if (Math.abs(lines[i].x - column) < 14) marker = lines[i]
+            if (Math.abs(lines[i].mapToItem(input, 0, 0).x - column) < 14) marker = lines[i]
         }
         verify(marker, "the inserted marker remains drawn for Change Voice")
         var point = input.mapFromItem(marker.parent, marker.x + 1,

@@ -15,8 +15,11 @@ struct VelocityContentProbe {
     }
     struct Metrics {
         let baseFontPx: Double
+        let detailMinPxPerBeat: Double
+        let autoGridMinCell: Double
         let strokeBase: Double
-        let dashGap: Double
+        let spaceHalf: Double
+        let spaceTwo: Double
         let dashLength: Double
     }
 
@@ -34,6 +37,7 @@ struct VelocityContentProbe {
     let records: [Rect]
     let palette: [UInt32]
     let metrics: Metrics?
+    let dashPattern: (dashDevicePx: Double, gapDevicePx: Double)?
     let segments: [Segment]
     let ticksPerBeat: UInt32
     let feel: UInt8
@@ -74,6 +78,7 @@ struct VelocityContentProbe {
         var palette: [UInt32] = []
         var records: [Rect] = []
         var metrics: Metrics?
+        var dashPattern: (dashDevicePx: Double, gapDevicePx: Double)?
         var segments: [Segment] = []
         var ticksPerBeat: UInt32 = 0
         var feel: UInt8 = 0
@@ -98,8 +103,9 @@ struct VelocityContentProbe {
             case 1:
                 let values = (0..<15).map { _ in section.f64() }
                 metrics = Metrics(
-                    baseFontPx: values[0], strokeBase: values[8],
-                    dashGap: values[9], dashLength: values[11])
+                    baseFontPx: values[0], detailMinPxPerBeat: values[6],
+                    autoGridMinCell: values[7], strokeBase: values[8],
+                    spaceHalf: values[9], spaceTwo: values[10], dashLength: values[11])
             case 3:
                 palette = (0..<section.u16()).map { _ in section.u32() }
             case 7:
@@ -129,11 +135,16 @@ struct VelocityContentProbe {
                     valid = false
                     break
                 }
-                records = (0..<count).map { _ in
+                records.append(
+                    contentsOf: (0..<count).map { _ in
                     Rect(
                         tickStart: section.u32(), tickEnd: section.u32(), y: section.f32(),
                         height: section.f32(), argb: section.u32(), flags: section.u8())
-                }
+                    })
+            case 13:
+                break
+            case 14:
+                dashPattern = (section.f64(), section.f64())
             default:
                 known = false
             }
@@ -144,6 +155,7 @@ struct VelocityContentProbe {
         self.records = records
         self.palette = palette
         self.metrics = metrics
+        self.dashPattern = dashPattern
         self.segments = segments
         self.ticksPerBeat = ticksPerBeat
         self.feel = feel
@@ -191,11 +203,18 @@ func drawerVelocityContentBlobChecks(
         message: "velocity content frames a time axis and the fixture's bar color")
     report.expect(
         decoded.metrics?.baseFontPx == base
+            && decoded.metrics?.detailMinPxPerBeat == fontPx(base, 5.0 / 6.0)
+            && decoded.metrics?.autoGridMinCell == fontPx(base, 4.0 / 3.0)
+            && (decoded.metrics?.detailMinPxPerBeat ?? 0) > 0
+            && (decoded.metrics?.autoGridMinCell ?? 0) > 0
             && decoded.metrics?.strokeBase == fontPx(base, 1.0 / 6.0)
-            && decoded.metrics?.dashGap == fontPx(base, 1.0 / 6.0)
-            && decoded.metrics?.dashLength == fontPx(base, 1.0 / 3.0),
+            && decoded.metrics?.spaceHalf == fontPx(base, 0.125)
+            && decoded.metrics?.spaceTwo == fontPx(base, 0.5)
+            && decoded.metrics?.dashLength == fontPx(base, 0.25)
+            && decoded.dashPattern?.dashDevicePx == 4
+            && decoded.dashPattern?.gapDevicePx == 2,
         cppID: drawerVelocityProjectionID,
-        message: "velocity metrics carry base-font stroke, dash gap and dash length")
+        message: "velocity metrics carry roll grid values and device-pixel dash pattern")
     report.expect(
         decoded.segments.first?.start == 0
             && decoded.segments.first?.next == UInt64(firstSegment.next)
@@ -231,7 +250,7 @@ func drawerVelocityContentBlobChecks(
         page.contentRevision == revision && page.drawingContent() == initial,
         cppID: drawerVelocityProjectionID,
         message: "zoom-only camera movement preserves velocity blob bytes and revision")
-    page.refreshHorizontalProjection()
+    page.refreshCamera()
     report.expect(
         page.contentRevision == revision && page.drawingContent() == initial,
         cppID: drawerVelocityProjectionID,

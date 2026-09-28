@@ -1,8 +1,9 @@
 #pragma once
 
-#include "roll_content.h"
-#include "roll_projection.h"
+#include "drawer_scene.h"
+#include "roll_labels.h"
 #include "roll_scene.h"
+#include "ruler_scene.h"
 
 #include <QtCore/qhash.h>
 #include <QtCore/qobject.h>
@@ -17,28 +18,12 @@
 
 struct SGFontMetrics;
 
-namespace RollRender {
-
-struct Label {
-    RollProjection::Rect rect;
-    RollProjection::Rect background;
-    bool hasBackground = false;
-    QString text;
-    QString family;
-    int pixelSize = 0;
-    int weight = 0;
-    double letterSpacing = 0;
-    int horizontalAlignment = 0;
-    uint32_t color = 0;
-};
-
-} // namespace RollRender
-
 class TimelineRenderer : public QQuickItem
 {
     Q_OBJECT
     QML_NAMED_ELEMENT(TimelineRenderer)
     Q_PROPERTY(int band READ band WRITE setBand NOTIFY bandChanged)
+    Q_PROPERTY(int drawerLayer READ drawerLayer WRITE setDrawerLayer NOTIFY drawerLayerChanged)
     Q_PROPERTY(QObject *contentSource READ contentSource WRITE setContentSource
                    NOTIFY contentSourceChanged)
     Q_PROPERTY(int contentRevision READ contentRevision WRITE setContentRevision
@@ -70,6 +55,8 @@ class TimelineRenderer : public QQuickItem
 
     [[nodiscard]] int band() const { return m_bandRole; }
     void setBand(int band);
+    [[nodiscard]] int drawerLayer() const { return m_drawerLayer; }
+    void setDrawerLayer(int layer);
     [[nodiscard]] QObject *contentSource() const { return m_contentSource; }
     void setContentSource(QObject *source);
     [[nodiscard]] int contentRevision() const { return m_contentRevision; }
@@ -99,6 +86,7 @@ class TimelineRenderer : public QQuickItem
 
   signals:
     void bandChanged();
+    void drawerLayerChanged();
     void contentSourceChanged();
     void contentRevisionChanged();
     void pixelsPerTickChanged();
@@ -137,10 +125,10 @@ class TimelineRenderer : public QQuickItem
     void rebuildScene();
     void buildPlot();
     void buildKeyboard();
+    void buildRuler();
+    void buildDrawer();
     void appendNoteLabels();
     void appendKeyLabels();
-    RollRender::Label *appendLabel(const RollProjection::Rect &rect, QString text, uint8_t fontId,
-                                   int pixelSize, int horizontalAlignment, uint32_t argb);
     SGFontMetrics *metricsFor(uint8_t fontId, int pixelSize);
     int fittedPixelSize(uint8_t fontId, double rowHeight, FitMemo &memo);
     double advance(uint8_t fontId, int pixelSize, int pitch, const QString &text,
@@ -152,12 +140,14 @@ class TimelineRenderer : public QQuickItem
     bool m_bandSelectionActive = false;
     int m_hoverPitch = -1;
     int m_bandRole = 0;
+    int m_drawerLayer = 0;
     QPointer<QObject> m_contentSource;
     int m_contentRevision = 0;
     bool m_contentDirty = true;
     int m_fetchedRevision = -1;
     bool m_sceneDirty = true;
     RollContent::Content m_content;
+    DrawerContent::Content m_drawerContent;
 
     std::vector<PaintedNote> m_painted;
     std::vector<uint32_t> m_visibleNotes;
@@ -166,6 +156,7 @@ class TimelineRenderer : public QQuickItem
     std::vector<RollRender::Label> m_labels;
     RollProjection::Rect m_previewBox;
     bool m_hasPreview = false;
+    RulerScene::Markers m_rulerMarkers;
 
     QHash<quint64, SGFontMetrics *> m_fontMetrics;
     FitMemo m_keyLabelFit;

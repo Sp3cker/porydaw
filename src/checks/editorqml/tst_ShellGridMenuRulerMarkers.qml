@@ -173,7 +173,7 @@ ShellGridMenuSupport {
         var revision = grid.appliedRevisionText
         timeSigHost.acceptTimeSigPrompt(5, 2)
         tryVerify(function() {
-            return grid.appliedRevisionText !== revision && rulerLabelAt("5/4", chipTick)
+            return grid.appliedRevisionText !== revision && rulerSignatureAt(chipTick)
         }, 3000, "F1: the 5/4 chip renders at the snap-aligned ruler tick")
 
         tryVerify(function() { return !timeSigHost.timeSigPromptOpen }, 3000)
@@ -202,7 +202,7 @@ ShellGridMenuSupport {
         tryVerify(rulerMenuGone, 3000,
                   "the Remove Time Signature activation closes the ruler menu")
         tryVerify(function() {
-            return grid.appliedRevisionText !== revision && !rulerLabelAt("5/4", chipTick)
+            return grid.appliedRevisionText !== revision && !rulerSignatureAt(chipTick)
         }, 3000, "Remove Time Signature deletes the explicit chip at its exact tick")
 
         var f3X = rulerTickX(chipTick + 2 * cell)
@@ -222,7 +222,7 @@ ShellGridMenuSupport {
         tryVerify(rulerMenuGone, 3000,
                   "Escape dismisses the F3 ruler menu")
         session.requestUndo()
-        verify(waitForNative(function() { return rulerLabelAt("5/4", chipTick) }, 5000),
+        verify(waitForNative(function() { return rulerSignatureAt(chipTick) }, 5000),
                "one undo restores the removed F1 chip")
         menu = openRulerMenu(rulerTickX(chipTick), markerY)
         clickRow(menu, rulerRowIndex(menu, 10))

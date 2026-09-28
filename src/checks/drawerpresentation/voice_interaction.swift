@@ -269,7 +269,9 @@ func drawerVoiceCancellationPaths(_ report: CheckReport, suite: DocumentSession,
                   message: "detach cancels every interaction")
     report.expectEqual(expected: 0, actual: page.markerIdentities.count, cppID: drawerVoiceCancellationID,
                        what: "detach publishes no marker")
-    report.expectEqual(expected: 0, actual: page.heldSpans.count, cppID: drawerVoiceCancellationID,
+    report.expectEqual(
+        expected: 0, actual: VelocityContentProbe(page.drawingContent()).records.count,
+        cppID: drawerVoiceCancellationID,
                        what: "detach publishes no held span")
     report.expectEqual(expected: baseline, actual: fixture.snapshot, cppID: drawerVoiceCancellationID,
                        what: "detach wrote nothing")

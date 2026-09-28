@@ -369,8 +369,7 @@ public final class DocumentWorkspace {
             voiceChangesPage.refreshCamera()
             automationPage.refreshCamera()
         } else {
-            velocityPage.refreshHorizontalProjection()
-            voiceChangesPage.refreshHorizontalProjection()
+            velocityPage.refreshCamera()
             automationPage.refreshHorizontalProjection()
         }
     }

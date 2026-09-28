@@ -59,7 +59,16 @@ void TimelineRenderer::setBand(int band)
     if (m_bandRole == band)
         return;
     m_bandRole = band;
+    m_contentDirty = true;
     emit bandChanged();
+    sceneChanged();
+}
+void TimelineRenderer::setDrawerLayer(int layer)
+{
+    if (m_drawerLayer == layer)
+        return;
+    m_drawerLayer = layer;
+    emit drawerLayerChanged();
     sceneChanged();
 }
 
@@ -196,6 +205,25 @@ void TimelineRenderer::updatePolish()
 
 QVariantMap TimelineRenderer::noteFace(const QString &primitiveName)
 {
+    if (m_bandRole == 2) {
+        int index = -1;
+        if (primitiveName == QStringLiteral("loopStartMarker"))
+            index = 0;
+        else if (primitiveName == QStringLiteral("loopEndMarker"))
+            index = 1;
+        if (index < 0)
+            return {};
+        ensureScene();
+        if (m_rulerMarkers.visible[size_t(index)]) {
+            const Rect &line = m_rulerMarkers.lines[size_t(index)];
+            return {{QStringLiteral("x"), line.x},
+                    {QStringLiteral("y"), line.y},
+                    {QStringLiteral("width"), line.w},
+                    {QStringLiteral("height"), line.h},
+                    {QStringLiteral("fill"), RollProjection::argbToHex(line.argb)}};
+        }
+        return {};
+    }
     static const QString prefix = QStringLiteral("gridNote_");
     if (!primitiveName.startsWith(prefix))
         return {};
@@ -234,18 +262,21 @@ void TimelineRenderer::fetchContent(int revision)
     m_sceneDirty = true;
     m_fetchedRevision = revision;
     RollContent::Content next;
+    DrawerContent::Content drawerNext;
     if (m_contentSource) {
         QByteArray blob;
         if (!QMetaObject::invokeMethod(m_contentSource.data(), "drawingContent",
                                        Qt::DirectConnection, Q_RETURN_ARG(QByteArray, blob)))
             qFatal("TimelineRenderer: contentSource drawingContent() invocation failed");
-        if (!RollContent::decode(blob, next))
+        if (m_bandRole == 3 ? !DrawerContent::decode(blob, drawerNext)
+                            : !RollContent::decode(blob, next))
             qFatal("TimelineRenderer: malformed drawingContent blob");
     }
     if (next.fonts != m_content.fonts)
         clearFontCaches();
     else if (next.keyboardNames != m_content.keyboardNames)
         m_keyLabelAdvances = AdvanceTable{};
+    m_drawerContent = std::move(drawerNext);
     m_content = std::move(next);
 }
 
@@ -314,31 +345,18 @@ void TimelineRenderer::rebuildScene()
     m_labels.clear();
     m_painted.clear();
     m_hasPreview = false;
-    if (!m_content.hasMetrics || !m_camera.finite() || width() <= 0 || height() <= 0)
+    m_rulerMarkers = RulerScene::Markers{};
+    if (!(m_bandRole == 3 ? m_drawerContent.common.hasMetrics : m_content.hasMetrics)
+        || !m_camera.finite() || width() <= 0 || height() <= 0)
         return;
     if (m_bandRole == 0)
         buildPlot();
     else if (m_bandRole == 1)
         buildKeyboard();
-}
-
-RollRender::Label *TimelineRenderer::appendLabel(const Rect &rect, QString text, uint8_t fontId,
-                                                 int pixelSize, int horizontalAlignment,
-                                                 uint32_t argb)
-{
-    const RollContent::FontSpec *spec = m_content.font(fontId);
-    if (!spec)
-        return nullptr;
-    RollRender::Label &label = m_labels.emplace_back();
-    label.rect = rect;
-    label.text = std::move(text);
-    label.family = spec->family;
-    label.pixelSize = pixelSize > 0 ? pixelSize : spec->pixelSize;
-    label.weight = spec->weight;
-    label.letterSpacing = spec->letterSpacing;
-    label.horizontalAlignment = horizontalAlignment;
-    label.color = argb;
-    return &label;
+    else if (m_bandRole == 2)
+        buildRuler();
+    else if (m_bandRole == 3)
+        buildDrawer();
 }
 
 void TimelineRenderer::buildPlot()
@@ -358,6 +376,11 @@ void TimelineRenderer::buildPlot()
     RollScene::appendBandSelection(frame, band, m_over);
     RollScene::appendTimeSelection(frame, m_over);
     RollScene::appendLoop(frame, m_over);
+}
+
+void TimelineRenderer::buildDrawer()
+{
+    DrawerScene::append(m_drawerContent, m_camera, width(), height(), m_drawerLayer, m_under);
 }
 
 void TimelineRenderer::appendNoteLabels()
@@ -385,8 +408,9 @@ void TimelineRenderer::appendNoteLabels()
                 advance(RollContent::fontNoteValue, size, velocity, text, m_noteValueAdvances);
             if (!(box.w >= width + m.valueAllowance))
                 return;
-            appendLabel(box, text, RollContent::fontNoteValue, size, Qt::AlignHCenter,
-                        RollProjection::aaContrastInk(box.argb, light, dark));
+            RollRender::appendLabel(m_content, m_labels, box, text, RollContent::fontNoteValue,
+                                    size, Qt::AlignHCenter,
+                                    RollProjection::aaContrastInk(box.argb, light, dark));
         };
         for (const PaintedNote &note : m_painted) {
             if (!(note.flags & RollContent::noteGhost))
@@ -417,8 +441,9 @@ void TimelineRenderer::appendNoteLabels()
         const Rect rect{note.box.x + spaceHalf, note.box.y + spaceHalf,
                         std::max(0.0, note.box.w - 2 * spaceHalf),
                         std::max(0.0, note.box.h - 2 * spaceHalf)};
-        appendLabel(rect, text, RollContent::fontNoteName, 0, Qt::AlignLeft,
-                    RollProjection::aaContrastInk(note.box.argb, light, dark));
+        RollRender::appendLabel(
+            m_content, m_labels, rect, text, RollContent::fontNoteName, 0, Qt::AlignLeft,
+            RollProjection::aaContrastInk(note.box.argb, light, dark));
     }
 }
 
@@ -459,8 +484,8 @@ void TimelineRenderer::appendKeyLabels()
             : keyboardWidth - inset;
         const bool drumBlack = c.drumMode && black;
         const Rect rect{0, top, labelWidth, bottom - top};
-        RollRender::Label *label = appendLabel(
-            rect, text, RollContent::fontKeyLabel, fit, Qt::AlignRight,
+        RollRender::Label *label = RollRender::appendLabel(
+            m_content, m_labels, rect, text, RollContent::fontKeyLabel, fit, Qt::AlignRight,
             c.color(drumBlack ? RollPaletteSlot::KeyboardWhite : RollPaletteSlot::KeyboardLabel));
         if (label && c.drumMode) {
             label->hasBackground = true;
@@ -469,4 +494,13 @@ void TimelineRenderer::appendKeyLabels()
                                                        : RollPaletteSlot::KeyboardWhite)};
         }
     }
+}
+
+void TimelineRenderer::buildRuler()
+{
+    const RulerScene::Frame frame{
+        m_content, m_camera, width(), height(),
+        {metricsFor(RollContent::fontRuler, 0), metricsFor(RollContent::fontBeat, 0),
+         metricsFor(RollContent::fontBold, 0), metricsFor(RollContent::fontSig, 0)}};
+    RulerScene::append(frame, m_under, m_labels, m_rulerMarkers);
 }

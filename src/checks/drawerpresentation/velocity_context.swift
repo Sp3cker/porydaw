@@ -490,7 +490,7 @@ func drawerVelocityPlayheadDiagnostics(_ report: CheckReport, session: DocumentS
     fixture.session.mutateCamera { camera in
         camera.setHScroll(camera.snapshot.scrollX + 12)
     }
-    page.refreshHorizontalProjection()
+    page.refreshCamera()
     report.expect(page.axisLabels.asArray.count == stableLabels.count
                   && zip(stableLabels, page.axisLabels.asArray).allSatisfy { $0 === $1 }
                   && page.handles.asArray.count == stableCount,
