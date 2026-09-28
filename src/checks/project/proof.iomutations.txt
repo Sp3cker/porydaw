@@ -14,6 +14,9 @@ Swift counterpart: src/swift/app/ProjectService.swift
 Swift counterpart: src/swift/app/ProjectService+Bank.swift
 Swift counterpart: src/checks/workspace/session_support.swift
 Swift/QML counterpart: src/checks/editorqml/tst_ShellOpenFailure.qml
+Swift counterpart: src/checks/songlist/SongRegistrationChecks.swift
+Task-171 SHA-256: src/checks/songlist/SongRegistrationChecks.swift cb263ba3cb6a6dc68fef2ee6215680a7a0b24bc3997109a261c5a7d16e2bb1d2
+Task-171 verification: PASS — swiftcore-projectsession, projectstore-songsmk, shell-songs (handoff-reported; not rerun by ledger writer).
 Task-133 SHA-256: src/checks/workspace/session_io.swift 263f8f731a1da7764000cbfcb0d70dc48d748cd612bf9e989a76d7859c6c330c
 Task-133 SHA-256: src/swift/app/ProjectService.swift a9c7beb76b82b446d62d962f5caedf648191b5f5130adddeff55771d720a1aa3
 Task-133 SHA-256: src/swift/app/ProjectService+Bank.swift f457ad20951ee6c17c5211af1bd1ad50b83eb939910602cf807d4e768fc5f647
@@ -992,8 +995,8 @@ Original expression:
   QVERIFY(std::holds_alternative<PreviewCleanupCompleted>(m_fixture->results().back()))
 
 A077 | ProjectIoMutationsTest::creationCollisionRefusesLeavingStray | src/checks/project/iomutations.cpp:476
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes tempo-meta stripping only, not creation refusal or stray-byte preservation.
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP — project open prepares the fixture; this setup guard is not a migrated behavior assertion.
 Source context since previous assertion:
   ;
   }
@@ -1007,8 +1010,8 @@ Original expression:
   QVERIFY2(opened, qPrintable(error))
 
 A078 | ProjectIoMutationsTest::creationCollisionRefusesLeavingStray | src/checks/project/iomutations.cpp:481
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes tempo-meta stripping only, not creation refusal or stray-byte preservation.
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP — source-song open prepares the fixture; this setup guard is not a migrated behavior assertion.
 Source context since previous assertion:
   ;
       if (!opened)
@@ -1020,8 +1023,8 @@ Original expression:
   QVERIFY2(initial, qPrintable(error))
 
 A079 | ProjectIoMutationsTest::creationCollisionRefusesLeavingStray | src/checks/project/iomutations.cpp:490
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes tempo-meta stripping only, not creation refusal or stray-byte preservation.
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP — stray preparation/read establishes seeded fixture state; not a migrated behavior assertion.
 Source context since previous assertion:
   ;
       if (!initial)
@@ -1038,8 +1041,8 @@ Original expression:
                qPrintable(stray.errorString()))
 
 A080 | ProjectIoMutationsTest::creationCollisionRefusesLeavingStray | src/checks/project/iomutations.cpp:492
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes tempo-meta stripping only, not creation refusal or stray-byte preservation.
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP — stray preparation/read establishes seeded fixture state; not a migrated behavior assertion.
 Source context since previous assertion:
   ;
 
@@ -1047,8 +1050,8 @@ Original expression:
   QCOMPARE(stray.write(strayBytes), static_cast<qint64>(strayBytes.size()))
 
 A081 | ProjectIoMutationsTest::creationCollisionRefusesLeavingStray | src/checks/project/iomutations.cpp:499
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes tempo-meta stripping only, not creation refusal or stray-byte preservation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The wait-for-command-result transport is retired; Swift creation is synchronous, and A082 checks its command result.
 Source context since previous assertion:
   ;
       stray.close();
@@ -1062,8 +1065,8 @@ Original expression:
   QVERIFY2(m_fixture->waitFor(resultBase + 1, error), qPrintable(error))
 
 A082 | ProjectIoMutationsTest::creationCollisionRefusesLeavingStray | src/checks/project/iomutations.cpp:501
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes tempo-meta stripping only, not creation refusal or stray-byte preservation.
+Disposition: MATCHED
+Mapping: S036 — typed project command failure for colliding creation.
 Source context since previous assertion:
   ;
       const auto *const failure = std::get_if<CommandFailure>(&m_fixture->results().back());
@@ -1072,8 +1075,8 @@ Original expression:
   QVERIFY(failure)
 
 A083 | ProjectIoMutationsTest::creationCollisionRefusesLeavingStray | src/checks/project/iomutations.cpp:503
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes tempo-meta stripping only, not creation refusal or stray-byte preservation.
+Disposition: MATCHED
+Mapping: S037 — collision failure has a nonempty message naming its label.
 Source context since previous assertion:
   ;
       if (failure)
@@ -1082,8 +1085,8 @@ Original expression:
   QVERIFY(!failure->message.isEmpty())
 
 A084 | ProjectIoMutationsTest::creationCollisionRefusesLeavingStray | src/checks/project/iomutations.cpp:505
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes tempo-meta stripping only, not creation refusal or stray-byte preservation.
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP — stray read prepares the A085 byte-preservation comparison; not a migrated behavior assertion.
 Source context since previous assertion:
   ;
       const std::optional<QByteArray> preserved = readBytes(strayPath, error);
@@ -1092,8 +1095,8 @@ Original expression:
   QVERIFY2(preserved, qPrintable(error))
 
 A085 | ProjectIoMutationsTest::creationCollisionRefusesLeavingStray | src/checks/project/iomutations.cpp:507
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes tempo-meta stripping only, not creation refusal or stray-byte preservation.
+Disposition: MATCHED
+Mapping: S038 — collision leaves the independently seeded stray bytes exact.
 Source context since previous assertion:
   ;
       if (preserved)
@@ -1102,8 +1105,8 @@ Original expression:
   QCOMPARE(*preserved, strayBytes)
 
 A086 | ProjectIoMutationsTest::creationCollisionRefusesLeavingStray | src/checks/project/iomutations.cpp:508
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes tempo-meta stripping only, not creation refusal or stray-byte preservation.
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP — test-owned cleanup removes the collision fixture stray file; not a migrated behavior assertion.
 Source context since previous assertion:
   ;
 
@@ -1111,8 +1114,8 @@ Original expression:
   QVERIFY(QFile::remove(strayPath))
 
 A087 | ProjectIoMutationsTest::creationCollisionRefusesLeavingStray | src/checks/project/iomutations.cpp:509
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes tempo-meta stripping only, not creation refusal or stray-byte preservation.
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP — test-owned cleanup confirms the collision fixture stray file is absent; not a migrated behavior assertion.
 Source context since previous assertion:
   ;
 
@@ -1425,3 +1428,18 @@ S035 | sessionSaveReceipts | src/checks/workspace/session_save.swift
 Anchor: message "A071 bank-recipe save reports that song flags were written"
 Line: 277
 Predicate: report.expect(recipe.flagsWritten, cppID: id, message: "A071 bank-recipe save reports that song flags were written")
+
+S036 | runSongCreationChecks | src/checks/songlist/SongRegistrationChecks.swift
+Anchor: message "A082: the colliding create returns a typed project command failure"
+Line: 393
+Predicate: report.expect(typedFailure, cppID: collisionId, message: "A082: the colliding create returns a typed project command failure")
+
+S037 | runSongCreationChecks | src/checks/songlist/SongRegistrationChecks.swift
+Anchor: message "A083: the collision failure names its label in a nonempty message"
+Line: 398
+Predicate: report.expect(!failureMessage.isEmpty && failureMessage.contains(label), cppID: collisionId, message: "A083: the collision failure names its label in a nonempty message")
+
+S038 | runSongCreationChecks | src/checks/songlist/SongRegistrationChecks.swift
+Anchor: message "A085: collision leaves the independently seeded stray bytes exact"
+Line: 401
+Predicate: report.expect(preservedBytes == Data("do not overwrite this stray MIDI".utf8), cppID: collisionId, message: "A085: collision leaves the independently seeded stray bytes exact")

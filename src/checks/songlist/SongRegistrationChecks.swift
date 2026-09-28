@@ -190,6 +190,7 @@ internal func runSongRegistrationChecks(_ report: CheckReport, fixtureRoot: Stri
     }
     runSongRegistrationBackfillChecks(report, fixtureRoot: fixtureRoot)
     runSongRegistrationAliasChecks(report, fixtureRoot: fixtureRoot)
+    runSongCreationChecks(report, fixtureRoot: fixtureRoot)
 }
 
 @MainActor
@@ -337,4 +338,85 @@ private func runSongRegistrationAliasChecks(_ report: CheckReport, fixtureRoot: 
             }
         } catch { report.fail(id, "alias scenario failed: \(error)") }
     }
+}
+
+@MainActor
+private func runSongCreationChecks(_ report: CheckReport, fixtureRoot: String) {
+    let successId = "swiftcore/SongCreation::fromCurrentSong"
+    do {
+        let fixture = try registrationFixture(fixtureRoot, name: "creation-success")
+        let sourceBytes = try fixture.read("sound/songs/midi/mus_first.mid")
+        let service = ProjectService()
+        defer { try? runBlocking { await service.close() } }
+        try runBlocking { try await service.open(root: fixture.root) }
+        try runBlocking { try await service.createSong(label: "mus_new_song", from: "mus_first") }
+        let songs = try runBlocking { try await service.songs() }
+        let created = songs.first { $0.label == "mus_new_song" }
+        report.expectEqual(expected: "MUS_NEW_SONG", actual: created?.constant, cppID: successId,
+                           what: "created song derives a unique new constant from its label")
+        report.expectEqual(expected: "MUSIC_PLAYER_BGM", actual: created?.player, cppID: successId,
+                           what: "created song inherits the selected source player")
+        report.expectEqual(expected: true, actual: created?.registered, cppID: successId,
+                           what: "created song is registered and visible in the dock listing")
+        report.expectEqual(expected: [String](), actual: created?.registrationGaps, cppID: successId,
+                           what: "created song has no missing registration entries")
+        report.expectEqual(expected: sourceBytes,
+                           actual: try fixture.read("sound/songs/midi/mus_new_song.mid"),
+                           cppID: successId, what: "created MIDI copies the selected song bytes exactly")
+        let opened = try runBlocking { try await service.openSong(label: "mus_new_song") }
+        report.expectEqual(expected: "mus_new_song", actual: opened.label, cppID: successId,
+                           what: "created song reopens as its new identity")
+        report.expectEqual(expected: ["-R50", "-G_test_vg", "-V100"],
+                           actual: opened.config.rawFlags, cppID: successId,
+                           what: "reopened song inherits the selected song configuration")
+    } catch { report.fail(successId, "creation scenario failed: \(error)") }
+
+    let collisionId = "swiftcore/SongCreation::collisionRefusesLeavingStray"
+    do {
+        let fixture = try registrationFixture(fixtureRoot, name: "creation-collision")
+        let label = "mus_creation_stray"
+        let relative = "sound/songs/midi/\(label).mid"
+        try fixture.write(relative, "do not overwrite this stray MIDI")
+        let service = ProjectService()
+        defer { try? runBlocking { await service.close() } }
+        try runBlocking { try await service.open(root: fixture.root) }
+        let original = try runBlocking { try await service.songs() }
+        var failure: ProjectServiceError?
+        do {
+            try runBlocking { try await service.createSong(label: label, from: "mus_first") }
+        } catch {
+            failure = error as? ProjectServiceError
+        }
+        let typedFailure: Bool
+        if case .operationFailed? = failure { typedFailure = true }
+        else { typedFailure = false }
+        report.expect(typedFailure, cppID: collisionId,
+                      message: "A082: the colliding create returns a typed project command failure")
+        let failureMessage: String
+        if case let .operationFailed(message)? = failure { failureMessage = message }
+        else { failureMessage = "" }
+        report.expect(!failureMessage.isEmpty && failureMessage.contains(label), cppID: collisionId,
+                      message: "A083: the collision failure names its label in a nonempty message")
+        let preservedBytes = try fixture.read(relative)
+        report.expect(preservedBytes == Data("do not overwrite this stray MIDI".utf8),
+                      cppID: collisionId,
+                      message: "A085: collision leaves the independently seeded stray bytes exact")
+        report.expectEqual(expected: fixture.bytes(fixture.table),
+                           actual: try fixture.read("sound/song_table.inc"), cppID: collisionId,
+                           what: "collision does not modify the song registration table")
+        report.expectEqual(expected: fixture.bytes(fixture.header),
+                           actual: try fixture.read("include/constants/songs.h"), cppID: collisionId,
+                           what: "collision does not modify the registration constants")
+        report.expectEqual(expected: fixture.bytes("mus_onboardcheck.mid: -R50 -G_test_vg -V100\n" +
+                                                   "mus_first.mid: -R50 -G_test_vg -V100\n"),
+                           actual: try fixture.read("sound/songs/midi/midi.cfg"), cppID: collisionId,
+                           what: "collision does not create song flags or rewrite existing flags")
+        report.expectEqual(expected: original,
+                           actual: try runBlocking { try await service.songs() }, cppID: collisionId,
+                           what: "collision leaves the project listing unchanged")
+        report.expectEqual(expected: false,
+                           actual: FileManager.default.fileExists(
+                            atPath: fixture.path("sound/songs/midi/\(label).s")),
+                           cppID: collisionId, what: "collision leaves no generated MIDI assembly output")
+    } catch { report.fail(collisionId, "collision scenario failed: \(error)") }
 }

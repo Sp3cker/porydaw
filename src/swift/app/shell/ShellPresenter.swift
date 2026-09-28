@@ -17,6 +17,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
 
     private static let actions: [Action] = [
         Action("file.open_project"),
+        Action("file.new_song"),
         Action("songs.find"),
         Action("file.save_song"),
         Action("file.close_tab"),
@@ -248,6 +249,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         }
         switch id {
         case "songs.find": return session.projectOpen
+        case "file.new_song": return session.projectOpen && session.songOpen
         case "file.save_song": return session.songOpen && !session.saveInProgress
         case "file.close_tab": return session.songTabs.selectedPage != nil
         case "edit.undo": return session.songOpen && session.canUndo
@@ -318,6 +320,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         switch id {
         case "file.open_project": chooseProjectRequested()
         case "songs.find": session.songDockController().presenter.focusSearch()
+        case "file.new_song": session.songDockController().requestNewSong()
         case "file.save_song": session.requestSave()
         case "file.close_tab":
             session.songTabs.requestClose(tabId: session.songTabs.selectedId)

@@ -19,6 +19,7 @@ TestCase {
     ShellQmlBootstrap { id: bootstrap }
     TabsDrawerProbe { id: fileProbe }
     Component { id: shellComponent; ShellWindow { width: 1100; height: 550; visible: true } }
+    SignalSpy { id: failureSpy; signalName: "operationFailed" }
 
     function init() {
         originalProjectRoot = bootstrap.projectRoot
@@ -68,6 +69,17 @@ TestCase {
     }
     function presenter() { return shell.shellPresenter.session.songDockController().songListPresenter() }
     function controller() { return shell.shellPresenter.session.songDockController() }
+    function windowShortcut(name) {
+        const delegates = shell.contentItem.children
+        for (const delegate of delegates) {
+            const objects = delegate.data
+            for (const object of objects || []) {
+                if (object.objectName === name)
+                    return object
+            }
+        }
+        return null
+    }
     function compareRole(item, role, name) {
         verify(!!item, name + " is mounted for " + role)
         const expected = shell.shellPresenter.session.typographyFonts[role]
@@ -114,6 +126,152 @@ TestCase {
         verify(Math.abs(actual.y - expected.y) <= tolerance, name + " y: " + actual.y)
         verify(Math.abs(item.width - expected.w) <= tolerance, name + " width: " + item.width)
         verify(Math.abs(item.height - expected.h) <= tolerance, name + " height: " + item.height)
+    }
+
+    function test_newSongShortcutCreatesFromSelectedSong() {
+        verify(bootstrap.prepareSongActionFixture("open-delete"),
+               "the new-song journey uses its own copied project")
+        const root = bootstrap.projectRoot
+        const source = root + "/sound/songs/midi/mus_route101.mid"
+        const target = root + "/sound/songs/midi/musclone.mid"
+        compare(fileProbe.fileFingerprint(source), "471:d31e7c4a0a32a53f",
+                "the original song starts with independently pinned MIDI bytes")
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "the production shell mounts the New Song shortcut")
+        shell.requestActivate()
+        const session = shell.shellPresenter.session
+        session.openProjectAndSong(root, "mus_route101")
+        verify(waitForNative(function() {
+            return session.songOpen && session.songTabs.selectedPage
+                && session.songTabs.selectedPage.isReady
+        }, 30000), "the current source song is ready before the shortcut")
+        const priorId = session.songTabs.selectedId
+        const shortcut = windowShortcut("shellShortcut_file.new_song")
+        verify(shortcut !== null && shortcut.enabled,
+               "the registered New Song window shortcut is mounted and enabled")
+        list().forceActiveFocus()
+        keySequence(StandardKey.New)
+        verify(waitForNative(function() { return controller().confirmation === "create" }, 5000),
+               "the real New shortcut opens the Songs dock name prompt")
+        const nameField = findChild(shell, "songNewName")
+        const dialog = findChild(shell, "songConfirmationDialog")
+        verify(nameField !== null && dialog !== null && nameField.activeFocus,
+               "the mounted prompt focuses its visible name entry")
+        const accept = dialog.standardButton(Dialog.Ok)
+        compare(accept.text, "Create", "the New Song accept action is titled Create")
+        compare(accept.enabled, false, "an empty song name cannot be accepted")
+        keyClick(Qt.Key_Return)
+        compare(controller().confirmation, "create",
+                "Return cannot accept the prompt while its name is invalid")
+        for (const key of [Qt.Key_M, Qt.Key_U, Qt.Key_S, Qt.Key_C, Qt.Key_L,
+                           Qt.Key_O, Qt.Key_N, Qt.Key_E])
+            keyClick(key)
+        compare(nameField.text, "musclone", "real text input enters the song label")
+        compare(accept.enabled, true, "a valid label enables the mounted Create button")
+        keyClick(Qt.Key_Return)
+        verify(waitForNative(function() {
+            return !controller().busy && session.songTabs.tabCount === 2
+                && session.songTabs.selectedPage
+                && session.songTabs.selectedPage.title === "musclone"
+                && session.songTabs.selectedPage.isReady
+        }, 30000), "Create registers, opens and selects a new playable song tab")
+        compare(fileProbe.fileFingerprint(target), "471:d31e7c4a0a32a53f",
+                "the new MIDI contains the source's independently pinned bytes")
+        verify(session.songTabs.selectedId !== priorId,
+               "creation selects a distinct tab while retaining the original")
+        compare(row(presenter().currentSongId).song.label, "musclone",
+                "the Songs dock selects the newly opened song")
+    }
+
+    function test_newSongEscapeCancelsWithoutMutation() {
+        verify(bootstrap.prepareSongActionFixture("open-delete"),
+               "the Escape journey stages an isolated copied project")
+        const root = bootstrap.projectRoot
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "the mounted shell presents the Escape journey")
+        shell.requestActivate()
+        const session = shell.shellPresenter.session
+        session.openProjectAndSong(root, "mus_route101")
+        verify(waitForNative(function() {
+            return session.songOpen && session.songTabs.selectedPage
+                && session.songTabs.selectedPage.isReady
+        }, 30000), "the current source is ready before cancelling creation")
+        const priorId = session.songTabs.selectedId
+        const originalFiles = registrationBytes()
+        const priorCount = presenter().rowCount
+        list().forceActiveFocus()
+        keySequence(StandardKey.New)
+        verify(waitForNative(function() { return controller().confirmation === "create" }, 5000),
+               "the mounted New Song prompt opens before Escape")
+        const field = findChild(shell, "songNewName")
+        verify(field !== null && field.activeFocus,
+               "Escape starts from the focused production song-name entry")
+        keyClick(Qt.Key_M)
+        compare(field.text, "m", "the cancelled prompt contains typed draft input")
+        keyClick(Qt.Key_Escape)
+        verify(waitForNative(function() { return controller().confirmation === "" }, 5000),
+               "Escape dismisses the prompt and cancels the draft")
+        compare(fileProbe.fileFingerprint(root + "/sound/songs/midi/m.mid"), "",
+                "Escape creates no MIDI file for the draft label")
+        compare(JSON.stringify(registrationBytes()), JSON.stringify(originalFiles),
+                "Escape leaves registration and song flags untouched")
+        compare(session.songTabs.selectedId, priorId,
+                "Escape keeps the original tab selected")
+        compare(session.songTabs.tabCount, 1, "Escape adds no song tab")
+        compare(presenter().rowCount, priorCount, "Escape leaves the Songs dock unchanged")
+    }
+
+    function test_newSongCollisionRefusesWithoutTouchingTabsOrBytes() {
+        verify(bootstrap.prepareSongDeletionFixture("cancel"),
+               "the colliding song journey uses its own copied project")
+        const root = bootstrap.projectRoot
+        const stray = root + "/sound/songs/midi/mus_stray_test.mid"
+        const expectedStray = "471:d31e7c4a0a32a53f"
+        compare(fileProbe.fileFingerprint(stray), expectedStray,
+                "the test-owned stray begins with the independent literal MIDI fingerprint")
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "the production shell mounts the collision prompt")
+        shell.requestActivate()
+        const session = shell.shellPresenter.session
+        session.openProjectAndSong(root, "mus_route101")
+        verify(waitForNative(function() {
+            return session.songOpen && session.songTabs.selectedPage
+                && session.songTabs.selectedPage.isReady
+        }, 30000), "the current song opens before the collision attempt")
+        const priorId = session.songTabs.selectedId
+        const priorCount = presenter().rowCount
+        const originalFiles = registrationBytes()
+        failureSpy.target = session
+        failureSpy.clear()
+        list().forceActiveFocus()
+        keySequence(StandardKey.New)
+        verify(waitForNative(function() { return controller().confirmation === "create" }, 5000),
+               "the registered window shortcut presents the mounted name prompt")
+        const field = findChild(shell, "songNewName")
+        const dialog = findChild(shell, "songConfirmationDialog")
+        verify(field !== null && field.activeFocus && dialog !== null,
+               "the collision label is entered in the real prompt")
+        for (const key of [Qt.Key_M, Qt.Key_U, Qt.Key_S, Qt.Key_Underscore, Qt.Key_S,
+                           Qt.Key_T, Qt.Key_R, Qt.Key_A, Qt.Key_Y, Qt.Key_Underscore,
+                           Qt.Key_T, Qt.Key_E, Qt.Key_S, Qt.Key_T])
+            keyClick(key)
+        compare(field.text, "mus_stray_test", "real typing names the existing stray MIDI")
+        compare(dialog.standardButton(Dialog.Ok).enabled, true,
+                "an unregistered stray must reach the service collision check")
+        mouseClick(dialog.standardButton(Dialog.Ok))
+        verify(waitForNative(function() { return failureSpy.count === 1 && !controller().busy }, 30000),
+               "the colliding create reports one production error")
+        verify(failureSpy.signalArguments[0][0].indexOf("mus_stray_test") >= 0,
+               "the mounted failure names the colliding label")
+        compare(fileProbe.fileFingerprint(stray), expectedStray,
+                "the refusal preserves every byte of the independently pinned stray")
+        compare(JSON.stringify(registrationBytes()), JSON.stringify(originalFiles),
+                "the refusal leaves all registration and flag files unchanged")
+        compare(session.songTabs.tabCount, 1, "collision leaves the original tab count")
+        compare(session.songTabs.selectedId, priorId, "collision leaves the original tab selected")
+        compare(presenter().rowCount, priorCount, "collision leaves the Songs dock listing unchanged")
+        compare(fileProbe.fileFingerprint(root + "/sound/songs/midi/mus_stray_test.s"), "",
+                "collision produces no stray MIDI assembly output")
     }
 
     function test_deleteSongConfirmationBranches() {

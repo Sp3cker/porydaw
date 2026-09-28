@@ -14,6 +14,7 @@ public final class SongDockController {
     @QtTracked public var confirmationDetail = ""
     @QtTracked public var deletableVoicegroup = ""
     @QtTracked public var busy = false
+    @QtTracked public var newSongLabel = ""
 
     private weak var session: ApplicationSession?
     private var service: ProjectService?
@@ -103,6 +104,17 @@ public final class SongDockController {
         }
     }
 
+    public func requestNewSong() {
+        guard !busy, confirmation.isEmpty, service != nil,
+              session?.songTabs.selectedPage != nil else { return }
+        newSongLabel = ""
+        confirmation = "create"
+    }
+
+    public func validNewSongLabel(label: String) -> Bool {
+        ProjectService.isValidSongLabel(label)
+    }
+
     public func cancelConfirmation() { clearConfirmation() }
 
     private func hasUnsavedSong(_ label: String) -> Bool {
@@ -113,8 +125,11 @@ public final class SongDockController {
         guard !busy, let service else { return }
         let registration = registrationPlan
         let deletion = deletionPlan
-        let label = confirmationLabel
-        guard (confirmation == "register" && registration != nil) ||
+        let creating = confirmation == "create"
+        let label = creating ? newSongLabel : confirmationLabel
+        let sourceLabel = session?.songTabs.selectedPage?.title
+        guard (creating && validNewSongLabel(label: label) && sourceLabel != nil) ||
+              (confirmation == "register" && registration != nil) ||
               (confirmation == "delete" && deletion != nil) else { return }
         if deletion != nil, hasUnsavedSong(label) {
             session?.operationFailed(message: "Save or close \(label) before deleting its MIDI file.")
@@ -125,6 +140,9 @@ public final class SongDockController {
         operation = Task { [weak self] in
             guard let self else { return }
             do {
+                if creating, let sourceLabel {
+                    try await service.createSong(label: label, from: sourceLabel)
+                }
                 if let registration {
                     _ = try await service.registerSong(registration)
                 } else if let deletion {
@@ -136,6 +154,9 @@ public final class SongDockController {
                 guard !Task.isCancelled, self.service === service else { return }
                 self.presenter.setSongs(songs)
                 self.session?.refreshSongLabels(songs.map(\.label))
+                if creating {
+                    self.session?.openSongFromDock(label: label, newTab: true)
+                }
                 if deletion != nil, let tab = self.session?.songTabs.tab(label: label) {
                     self.session?.songTabs.requestClose(tabId: tab.tabId)
                 }
@@ -154,6 +175,7 @@ public final class SongDockController {
         deletionPlan = nil
         confirmation = ""
         confirmationLabel = ""
+        newSongLabel = ""
         registrationConstant = ""
         confirmationDetail = ""
         deletableVoicegroup = ""
