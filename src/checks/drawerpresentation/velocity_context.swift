@@ -98,11 +98,15 @@ func drawerVelocityProjectionRefresh(_ report: CheckReport, session: DocumentSes
     let moved = fixture.handle(note)!
     let stableX = fixture.session.camera.contentTickX(tick: Double(note.tick), dpr: page.devicePixelRatio)
     let displayX = fixture.session.camera.displayX(tick: Double(note.tick), origin: 0, dpr: page.devicePixelRatio)
-    report.expect(moved.x == stableX && moved.x != oldX && moved.x + page.handlesOriginX == displayX
+    // The shared camera scroll, snapped exactly like the plot content the
+    // handle container translates by: the independent origin the roll uses.
+    let snappedScroll = (fixture.session.camera.snapshot.scrollX * page.devicePixelRatio).rounded()
+        / page.devicePixelRatio
+    report.expect(moved.x == stableX && moved.x != oldX && moved.x - snappedScroll == displayX
                       && moved.y == oldY && moved.value == oldValue,
                   cppID: drawerVelocityProjectionID, message: "camera refresh moves the handle without changing its value axis")
     let row = page.handles[1]
-    report.expect(row.x == stableX && row.x + page.handlesOriginX == displayX, cppID: drawerVelocityProjectionID,
+    report.expect(row.x == stableX && row.x - snappedScroll == displayX, cppID: drawerVelocityProjectionID,
                   message: "the QML model receives the moved handle")
     report.expectEqual(expected: oldY, actual: row.y, cppID: drawerVelocityProjectionID,
                        what: "camera refresh preserves the node's marker-y value")

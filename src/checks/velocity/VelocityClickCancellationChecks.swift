@@ -1,7 +1,7 @@
 import Foundation
 import PorydawApp
+import PorydawAppCommands
 import PorydawCore
-
 @MainActor
 func drawerVelocityPressCancelRestores(_ report: CheckReport, session: DocumentSession, service: ProjectService) {
     let fixture = drawerVelocityVelocityFixture(session: session, service: service)
@@ -465,3 +465,118 @@ func drawerVelocityLifecycleCancellation(_ report: CheckReport, session: Documen
         report.fail(drawerVelocityCancellationID, "could not undo the voicegroup switch: \(error)")
     }
 }
+
+@MainActor
+func drawerVelocityOverlapNodeDragCancelRestores(_ report: CheckReport, session: DocumentSession, service: ProjectService) {
+    let fixture = drawerVelocityVelocityFixture(session: session, service: service)
+    let notes = fixture.notes
+    guard notes.count >= 3 else {
+        report.fail(drawerVelocityCancellationID, "the synthetic fixture published fewer than three notes")
+        return
+    }
+    let page = fixture.page
+    let document = fixture.document
+    guard let overlapIDs = try? document.addNotes([
+        NewNote(track: 0, tick: 12, pitch: 61, duration: 24, velocity: notes[0].velocity)
+    ]), let overlapID = overlapIDs.first else {
+        report.fail(drawerVelocityCancellationID, "the overlap note was not inserted")
+        return
+    }
+    page.refreshFromDocument()
+    guard let overlap = document.note(overlapID),
+          let circles = fixture.handle(overlap),
+          let stem = fixture.handle(notes[0]),
+          abs(circles.y - stem.y) < 0.001,
+          circles.x > stem.x, circles.x < stem.endX else {
+        report.fail(drawerVelocityCancellationID, "the overlap node does not cover the earlier stem")
+        return
+    }
+    fixture.session.setSelectedNotes([notes[0].id])
+    page.refreshFromDocument()
+    guard fixture.session.selectedNoteOrder == [notes[0].id] else {
+        report.fail(drawerVelocityCancellationID, "the press-time selection did not latch")
+        return
+    }
+    // Opaque pre-stimulus byte snapshot for the cancel-point comparison below.
+    let beforeBytes = coreTimeBytes(document)
+    let beforeRevision = document.revision
+    let beforeUndo = document.history.undoCount
+    _ = page.pointerPress(x: circles.x, y: circles.y, surface: 1, button: 1, modifiers: 0)
+    _ = page.pointerMove(x: circles.x, y: circles.y - 20, buttons: 1)
+    report.expect(page.interactionActive && fixture.session.selectedNoteOrder == [overlapID],
+                  cppID: drawerVelocityCancellationID,
+                  message: "beginning an overlap-node drag did not target the visible following node")
+    _ = page.handleEscape()
+    _ = page.pointerRelease(x: circles.x, y: circles.y - 20, button: 1)
+    report.expect(!page.interactionActive && fixture.session.selectedNoteOrder == [notes[0].id]
+                      && coreTimeBytes(document) == beforeBytes && document.revision == beforeRevision
+                      && document.history.undoCount == beforeUndo,
+                  cppID: drawerVelocityCancellationID,
+                  message: "cancelling an overlap-node drag did not restore its pre-press selection")
+}
+
+@MainActor
+func drawerVelocityStemDragGuardsEdits(_ report: CheckReport, session: DocumentSession, service: ProjectService) {
+    let fixture = drawerVelocityVelocityFixture(session: session, service: service)
+    let notes = fixture.notes
+    guard notes.count >= 3 else {
+        report.fail(drawerVelocityCancellationID, "the synthetic fixture published fewer than three notes")
+        return
+    }
+    let page = fixture.page
+    let document = fixture.document
+    fixture.session.setSelectedNotes([notes[0].id, notes[2].id])
+    page.refreshFromDocument()
+    guard fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id] else {
+        report.fail(drawerVelocityCancellationID, "the press-time selection did not latch")
+        return
+    }
+    guard let stem = fixture.handle(notes[0]) else {
+        report.fail(drawerVelocityCancellationID, "the fixture's target note has no published handle")
+        return
+    }
+    let stemX = stem.x + stem.hitRadius + 2
+    guard stem.endX - stem.x >= stem.hitRadius + 3 else {
+        report.fail(drawerVelocityCancellationID, "the target stem spans less than one hit diameter")
+        return
+    }
+    for handle in fixture.handles where handle.noteIdText != stem.noteIdText {
+        let dx = handle.x - stemX
+        let dy = handle.y - stem.y
+        if dx * dx + dy * dy <= handle.hitRadius * handle.hitRadius {
+            report.fail(drawerVelocityCancellationID, "the stem point touches another node")
+            return
+        }
+    }
+    // Opaque pre-stimulus byte snapshot for the edit-key and cancel comparisons below.
+    let beforeBytes = coreTimeBytes(document)
+    let beforeRevision = document.revision
+    let beforeUndo = document.history.undoCount
+    _ = page.pointerPress(x: stemX, y: stem.y, surface: 1, button: 1, modifiers: 0)
+    _ = page.pointerMove(x: stemX, y: stem.y - 20, buttons: 1)
+    report.expect(page.interactionActive && fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id],
+                  cppID: drawerVelocityCancellationID,
+                  message: "selected velocity-stem drag did not retain its captured note selection")
+    let grid = PianoGrid(session: fixture.session)
+    let automation = AutomationPage()
+    automation.attach(session: fixture.session, palette: GridPalette())
+    defer { automation.detach() }
+    let ruler = RulerMenuPresenter(session: fixture.session, grid: grid, automation: automation)
+    let router = EditorCommandRouter(session: fixture.session, grid: grid, automation: automation,
+                                     rulerMenu: ruler, velocity: page)
+    router.perform(.nudgeRight)
+    router.perform(.delete)
+    report.expect(coreTimeBytes(document) == beforeBytes
+                      && fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id]
+                      && document.revision == beforeRevision && document.history.undoCount == beforeUndo,
+                  cppID: drawerVelocityCancellationID,
+                  message: "an edit key mutated selection or notes during a live velocity gesture")
+    _ = page.handleEscape()
+    _ = page.pointerRelease(x: stemX, y: stem.y - 20, button: 1)
+    report.expect(!page.interactionActive && fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id]
+                      && coreTimeBytes(document) == beforeBytes && document.revision == beforeRevision
+                      && document.history.undoCount == beforeUndo,
+                  cppID: drawerVelocityCancellationID,
+                  message: "first Escape did not cancel the velocity gesture and restore its selection")
+}
+

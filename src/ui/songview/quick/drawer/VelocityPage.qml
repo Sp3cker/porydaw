@@ -90,7 +90,6 @@ FocusScope {
         readonly property string contextDiagnostic: ""
         readonly property bool readoutVisible: false
         readonly property bool detentsEnabled: true
-        readonly property double handlesOriginX: 0
         readonly property double baseFontPx: 13
         readonly property bool promptOpen: false
         readonly property string promptDraft: ""
@@ -123,6 +122,9 @@ FocusScope {
                                        ? (page.gridModel.trackHeaderWidth || 0)
                                          + page.gridModel.keyboardWidth : 0
     readonly property real plotWidth: Math.max(page.width - page.plotOrigin, 0)
+    /// The snapped surface scroll the handle container translates by. It tracks
+    /// the scene scroll row below, never a queued bridge scalar.
+    property real contentScrollX: 0
     /// This page's own base-font seed, for the window before a document is
     /// presented.
     readonly property real seedBaseFontPx: 13
@@ -280,7 +282,24 @@ FocusScope {
         Accessible.focusable: false
     }
 
-    // ---- plot ---------------------------------------------------------------
+    // Scroll and handle rows update in one dataChanged sweep, so the container
+    // translation never lags a queued bridge NOTIFY.
+    Repeater {
+        id: scrollCarrier
+
+        model: page.gridModel ? page.gridModel.scene.cameraScroll : []
+        delegate: Item {
+            required property var frame
+            onFrameChanged: applyScrollFrame()
+            Component.onCompleted: applyScrollFrame()
+            function applyScrollFrame() {
+                if (frame) {
+                    var dpr = page.Screen.devicePixelRatio
+                    page.contentScrollX = Math.round(frame.x * dpr) / dpr
+                }
+            }
+        }
+    }
 
     Item {
         id: plot
@@ -314,70 +333,75 @@ FocusScope {
         // its ring and its unfilled center exactly as the row model publishes it,
         // and a single selected note keeps its outline while a multi-selection
         // dims the unselected rows.
-        Repeater {
-            model: (page.pageModel ? page.pageModel.handles : [])
+        Item {
+            id: handleContent
 
-            // Handles publish scroll-stable x; each delegate adds the page's
-            // single scroll origin to its own x, so scroll-only camera changes
-            // move one scalar instead of invalidating every row's model. The
-            // drawn properties below are child items positioned from the stable
-            // spec, never overrides of the delegate's own geometry.
-            delegate: Item {
-                id: node
+            width: parent.width
+            height: parent.height
+            // Stable rows translate once here from the surface scroll carrier,
+            // same-turn like the roll plot content.
+            x: -page.contentScrollX
 
-                required property var model
-                // One packed spec per handle: every child binding reads the
-                // local map instead of paying a metaCall per property.
-                readonly property var s: model ? model.spec : ({})
+            Repeater {
+                model: (page.pageModel ? page.pageModel.handles : [])
 
-                x: page.pageModel.handlesOriginX
+                // Handles publish scroll-stable x; scrolling moves only the
+                // container above, never each row's model.
+                delegate: Item {
+                    id: node
 
-                Rectangle {
-                    objectName: node.s.primitiveName + "Stem"
-                    x: Math.min(node.s.x, node.s.endX)
-                    y: node.s.y - node.s.stemWidth / 2
-                    width: Math.max(1, Math.abs(node.s.endX - node.s.x))
-                    height: node.s.stemWidth
-                    color: node.s.stemColor
-                }
+                    required property var model
+                    // One packed spec per handle: every child binding reads the
+                    // local map instead of paying a metaCall per property.
+                    readonly property var s: model ? model.spec : ({})
 
-                Rectangle {
-                    objectName: node.s.primitiveName + "Ring"
-                    visible: node.s.selected
-                    x: node.s.x - node.s.ringRadius
-                    y: node.s.y - node.s.ringRadius
-                    width: 2 * node.s.ringRadius
-                    height: 2 * node.s.ringRadius
-                    radius: node.s.ringRadius
-                    color: "transparent"
-                    border.color: node.s.ringColor
-                    border.width: node.s.ringWidth
-                }
+                    Rectangle {
+                        objectName: node.s.primitiveName + "Stem"
+                        x: Math.min(node.s.x, node.s.endX)
+                        y: node.s.y - node.s.stemWidth / 2
+                        width: Math.max(1, Math.abs(node.s.endX - node.s.x))
+                        height: node.s.stemWidth
+                        color: node.s.stemColor
+                    }
 
-                Rectangle {
-                    objectName: node.s.primitiveName + "Fill"
-                    x: node.s.x - node.s.nodeRadius
-                    y: node.s.y - node.s.nodeRadius
-                    width: 2 * node.s.nodeRadius
-                    height: 2 * node.s.nodeRadius
-                    radius: node.s.nodeRadius
-                    color: node.s.fillColor
-                    border.width: node.s.selected || !node.s.dimmed
-                                  ? node.s.outlineWidth : 0
-                    border.color: node.s.outlineColor
-                }
+                    Rectangle {
+                        objectName: node.s.primitiveName + "Ring"
+                        visible: node.s.selected
+                        x: node.s.x - node.s.ringRadius
+                        y: node.s.y - node.s.ringRadius
+                        width: 2 * node.s.ringRadius
+                        height: 2 * node.s.ringRadius
+                        radius: node.s.ringRadius
+                        color: "transparent"
+                        border.color: node.s.ringColor
+                        border.width: node.s.ringWidth
+                    }
 
-                Rectangle {
-                    objectName: node.s.primitiveName + "Hover"
-                    visible: node.s.hovered && !node.s.selected
-                    x: node.s.x - node.s.outlineRadius
-                    y: node.s.y - node.s.outlineRadius
-                    width: 2 * node.s.outlineRadius
-                    height: 2 * node.s.outlineRadius
-                    radius: node.s.outlineRadius
-                    color: "transparent"
-                    border.color: node.s.ringColor
-                    border.width: node.s.ringWidth
+                    Rectangle {
+                        objectName: node.s.primitiveName + "Fill"
+                        x: node.s.x - node.s.nodeRadius
+                        y: node.s.y - node.s.nodeRadius
+                        width: 2 * node.s.nodeRadius
+                        height: 2 * node.s.nodeRadius
+                        radius: node.s.nodeRadius
+                        color: node.s.fillColor
+                        border.width: node.s.selected || !node.s.dimmed
+                                      ? node.s.outlineWidth : 0
+                        border.color: node.s.outlineColor
+                    }
+
+                    Rectangle {
+                        objectName: node.s.primitiveName + "Hover"
+                        visible: node.s.hovered && !node.s.selected
+                        x: node.s.x - node.s.outlineRadius
+                        y: node.s.y - node.s.outlineRadius
+                        width: 2 * node.s.outlineRadius
+                        height: 2 * node.s.outlineRadius
+                        radius: node.s.outlineRadius
+                        color: "transparent"
+                        border.color: node.s.ringColor
+                        border.width: node.s.ringWidth
+                    }
                 }
             }
         }
@@ -416,21 +440,20 @@ FocusScope {
 
             onPressed: (mouse) => {
                 plotMoves.flush()
-                // Handles and gestures live in scroll-stable x; the plot input
-                // arrives in plot space, so it sheds the published origin once
-                // at the boundary. The ruler keeps its own local coordinates.
+                // Plot input arrives in plot space; adding the carrier scroll
+                // restores the handles' scroll-stable space.
                 mouse.accepted =
-                    page.pageModel.pointerPress(mouse.x - page.pageModel.handlesOriginX,
+                    page.pageModel.pointerPress(mouse.x + page.contentScrollX,
                                                 mouse.y, page.plotSurface,
                                                 mouse.button, mouse.modifiers)
             }
             onPositionChanged: (mouse) => plotMoves.enqueue(
-                mouse.x - page.pageModel.handlesOriginX, mouse.y, mouse.buttons, mouse.modifiers)
+                mouse.x + page.contentScrollX, mouse.y, mouse.buttons, mouse.modifiers)
             onReleased: (mouse) => {
                 plotMoves.flush()
                 plotHint.settleRelease(plotInput.mapToItem(null, mouse.x, mouse.y))
                 mouse.accepted = page.pageModel.pointerRelease(
-                    mouse.x - page.pageModel.handlesOriginX, mouse.y, mouse.button)
+                    mouse.x + page.contentScrollX, mouse.y, mouse.button)
             }
             onCanceled: {
                 plotMoves.flush()

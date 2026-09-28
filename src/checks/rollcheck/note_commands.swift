@@ -7,6 +7,7 @@ import PorydawCore
 func runNoteCommandChecks(_ report: CheckReport, session: DocumentSession) {
     checkKeyboardDuplicateNotes(report, session: session)
     checkKeyboardDuplicatePrefersTimeSelection(report, session: session)
+    checkRollNoteDragGuardsSharedCommands(report, session: session)
     checkKeyboardSplitNotesGrid(report, session: session)
     checkKeyboardSplitAtEditCursor(report, session: session)
     checkKeyboardSplitNoop(report, session: session)
@@ -582,4 +583,62 @@ private func checkKeyboardNoteCommandPopupActivation(
                           cppID: id, message: "one undo restores the pre-menu document")
         }
     }
+}
+
+@MainActor
+private func checkRollNoteDragGuardsSharedCommands(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::rollNoteDragGuardsSharedCommands"
+    let originalSelection = session.selectedNoteOrder
+    let originalCamera = session.camera.snapshot
+    let grid = makeCameraGrid(session: session)
+    var seededID: NoteID?
+    defer {
+        if let seededID, session.document.note(seededID) != nil {
+            session.document.deleteNotes([seededID])
+        }
+        session.setSelectedNotes(originalSelection)
+        _ = session.mutateCamera {
+            $0.restore(pixelsPerBeat: originalCamera.pixelsPerBeat,
+                       keyHeight: originalCamera.keyHeight,
+                       scrollX: originalCamera.scrollX, scrollY: originalCamera.scrollY)
+        }
+    }
+    guard let pitch = session.camera.projection.pitch(
+        atY: 160, keyHeight: session.camera.snapshot.keyHeight,
+        scrollY: session.camera.snapshot.scrollY, dpr: grid.devicePixelRatio),
+        pitch <= 115,
+        let added = try? session.document.addNotes([
+            NewNote(track: grid.trackIndex, tick: 24, pitch: UInt8(pitch),
+                    duration: 7, velocity: 80)
+        ]), added.count == 1 else {
+        report.fail(id, "roll-gesture fixture could not seed its note")
+        return
+    }
+    let target = added[0]
+    seededID = target
+    grid.refreshFromSession()
+    guard let rect = firstRect(named: "gridNote_\(target.rawValue)", in: grid.scene.pianoNoteFills) else {
+        report.fail(id, "roll-gesture fixture note is not projected")
+        return
+    }
+    let dpr = grid.devicePixelRatio
+    let pressX = rect.x - floor(grid.cameraScrollX * dpr + 0.5) / dpr + rect.width / 2
+    let pressY = rect.y - floor(grid.cameraScrollY * dpr + 0.5) / dpr + rect.height / 2
+    session.setSelectedNotes([target])
+    // Opaque pre-stimulus byte snapshot for the cancel-point comparison below.
+    let beforeBytes = coreTimeBytes(session.document)
+    let beforeRevision = session.document.revision
+    let beforeUndo = session.document.history.undoCount
+    grid.beginPointer(x: pressX, y: pressY, modifiers: 0)
+    grid.updatePointer(x: pressX + grid.dragDistance + 4, y: pressY)
+    report.expect(grid.interactionActive && session.selectedNoteOrder == [target],
+                  cppID: id, message: "roll note drag did not become a live gesture")
+    grid.performCommand(command: EditCommand.delete.rawValue)
+    _ = grid.handleEscape()
+    grid.endPointer(x: pressX + grid.dragDistance + 4, y: pressY)
+    report.expect(!grid.interactionActive && coreTimeBytes(session.document) == beforeBytes
+                      && session.selectedNoteOrder == [target]
+                      && session.document.revision == beforeRevision
+                      && session.document.history.undoCount == beforeUndo,
+                  cppID: id, message: "roll gesture did not block Delete and restore selection on Escape")
 }

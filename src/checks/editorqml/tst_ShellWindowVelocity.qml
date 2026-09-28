@@ -119,11 +119,19 @@ ShellWindowSupport {
         verify(pair.length === 2 && pair[0].velocity === pair[1].velocity,
                "the earlier stem and following node share a plotted height")
         function nodeFor(id) {
-            for (var item of velocityPlot.children) {
+            function walk(item) {
                 if (item.model && item.model.noteIdText === String(id))
                     return findChild(item, "velocityNodeFill")
+                if (item.children) {
+                    for (var child of item.children) {
+                        var found = walk(child)
+                        if (found !== null)
+                            return found
+                    }
+                }
+                return null
             }
-            return null
+            return walk(velocityPlot)
         }
         function overlap() {
             var earlier = nodeFor(pair[0].id)
@@ -185,14 +193,11 @@ ShellWindowSupport {
         var revision = grid.appliedRevisionText
         var undoBefore = shell.shellPresenter.session.canUndo
         var overlapHit = overlap()
-        // Model-direct rendered truth: the press point derives from the same
-        // stable handle row plus origin the capture hit-test compares against.
-        // Resolving through rendered delegate geometry instead rests on the
-        // separately published origin scalar, so any skew between the rows
-        // and that scalar presents exactly as a paint-capture miss.
-        var originX = shell.shellPresenter.session.velocityPage().handlesOriginX
+        // The press point uses the stable handle row plus the shared scroll offset,
+        // so any row/scroll skew shows as a paint-capture miss.
+        var dpr = grid.devicePixelRatio > 0 ? grid.devicePixelRatio : 1
+        var originX = -Math.round(grid.cameraScrollX * dpr) / dpr
         press = { x: overlapHit.node.parent.model.x + originX, y: overlapHit.node.parent.model.y }
-        roll.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(roll, "activeFocus", true, 3000)
         mousePress(input, press.x, press.y, Qt.LeftButton)
         mouseMove(input, press.x, press.y - nodeFor(pair[1].id).height * 2,
@@ -365,5 +370,9 @@ ShellWindowSupport {
                 "the cancelled drag leaves no undoable song transaction")
         compare(session.canRedo, false,
                 "the cancelled drag leaves no redoable song transaction")
+        var rollInput = findChild(surface, "swiftRollInput")
+        verify(rollInput, "the roll input exists for the termination cursor check")
+        verify(rollInput.cursorShape !== Qt.ClosedHandCursor,
+                "A122 gesture termination leaves no closed-hand pan cursor")
     }
 }

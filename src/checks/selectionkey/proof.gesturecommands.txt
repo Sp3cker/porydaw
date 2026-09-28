@@ -7,7 +7,7 @@ Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellGridInput.qml
 Additional Swift counterpart: src/checks/automation/automationcanvaslayout.swift
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
-Additional Swift counterpart: src/checks/rollcheck/note_commands.swift
+Additional Swift counterpart: src/checks/rollcheck/note_commands.swift (SHA-256 bb0144ac40732c7af625d8bc3c99576b8366a9b6182959c978ee0228dbba7270)
 Additional Swift counterpart: src/checks/nativegraphics/PlayheadFeatureChecks.swift
 Additional Swift counterpart: src/checks/velocity/VelocityRollCoreChecks.swift
 Additional Swift counterpart: src/checks/keyboard/KeybindingRegistryChecks.swift
@@ -20,8 +20,8 @@ Task 180 verification result: PASS 1/1 — Camera 9 passed, Focus 7 passed, 0 fa
 Task 180 verification command: deno task verify --filter swiftcore --verbose
 Task 180 verification result: PASS 12/37 ok, 25 skipped (Task180 implementer handoff; ledger writer did not rerun the lane).
 
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run.
+Task 181 verification command: deno task verify --filter swiftcore --verbose
+Task 181 verification result: PASS 12/37 (implementer handoff at agent://Task181; ledger writer did not rerun). Fresh swiftcore execution evidence includes the roll note-drag predicates indexed S034-S035.
 
 Command: deno task verify --filter swiftcore --verbose and deno task verify:shell --filter shell-grid-input --verbose
 Result: PASS - task-58 implementer-recorded runs on the frozen sources: swiftcore 12/36
@@ -40,7 +40,7 @@ Correction pass (controller review): the roll.delete binding rows map to the pro
 KeybindingRegistry predicates (src/checks/keyboard/KeybindingRegistryChecks.swift) instead of
 retiring as native keymap queries.
 
-Counts: MATCHED 3, PARTIAL 4, GAP 0, RETIRED-REPRESENTATION 10
+Counts: MATCHED 7, PARTIAL 0, GAP 0, RETIRED-REPRESENTATION 10
 
 A001 | SelectionKeyGestureTest::rollNoteDragGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:42
 Disposition: MATCHED
@@ -166,35 +166,12 @@ Original expression:
                "production roll geometry did not expose the fixture note for the drag")
 
 A006 | SelectionKeyGestureTest::rollNoteDragGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:92
-Disposition: PARTIAL
-Mapping/reason: PARTIAL - the drag's ownership is proved behaviorally (S019 'delete is refused while a pointer gesture owns the grid' mid-press, plus S012) and the grid's live-gesture flag is asserted for the middle pan (S016 'the page publishes the live pan', S021); unproved as stated: no predicate reads a note-body drag's own live-gesture state (grid.interactionActive or the 'Moving ...' status text).
-Source context since previous assertion:
-  ;
-      const QPoint rollPress = windowPoint(*mRollInput, rollPoint);
-      const QByteArray rollBeforeGesture = document().smf().write();
-      const uint64_t revisionBefore = document().revision();
-      const int undoDepthBefore = document().undoStack()->count();
-      mouseMove(rollPress);
-      mousePress(Qt::LeftButton, rollPress);
-      mouseMove(rollPress + QPoint(QApplication::startDragDistance() + 4, 0));
-
-Original expression:
-  QTRY_VERIFY2(view().userGestureActive(), "roll note drag did not become a live gesture")
+Disposition: MATCHED
+Mapping: S034
 
 A007 | SelectionKeyGestureTest::rollNoteDragGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:96
-Disposition: PARTIAL
-Mapping/reason: PARTIAL - the pieces execute: the mid-press Delete is a consumed no-op (S019, S012) and its release commits nothing (S020, S013), while the roll grid's Escape cancellation keeps the history depth, the song bytes and the drag selection (S024, S025) and clears its previews (S023); unproved as stated: no fixture chains drag, Delete, Escape and release on one roll gesture, and the note-move flavor asserts neither the undo depth nor the post-release gesture state (S014 covers the bytes and the retained selection only).
-Source context since previous assertion:
-  ;
-      selectionkey::deliverKey(window(), deleteKey->key(), deleteKey->keyboardModifiers());
-      QTest::keyClick(window(), Qt::Key_Escape);
-      mouseRelease(Qt::LeftButton, rollPress);
-
-Original expression:
-  QVERIFY2(!view().userGestureActive() && document().smf().write() == rollBeforeGesture &&
-                   noteSelectionIs({mWorld->notes[0]}) && document().revision() == revisionBefore &&
-                   document().undoStack()->count() == undoDepthBefore,
-               "roll gesture did not block Delete and restore selection on Escape")
+Disposition: MATCHED
+Mapping: S035
 
 A008 | SelectionKeyGestureTest::automationPanGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:105
 Disposition: MATCHED
@@ -406,3 +383,14 @@ Anchor: message "automation gesture did not block Delete and preserve its time s
 
 S033 | test_productionAutomationPanGuardsSharedCommands | src/checks/editorqml/tst_EditorDrawerAutomationFocus.qml
 Anchor: message "second Escape after automation cancellation did not clear time selection"
+S034 | checkRollNoteDragGuardsSharedCommands | src/checks/rollcheck/note_commands.swift
+Source line: 635
+cppID: swiftcore/PianoRoll::rollNoteDragGuardsSharedCommands
+Predicate: report.expect(grid.interactionActive && session.selectedNoteOrder == [target], cppID: id, message: "roll note drag did not become a live gesture")
+Anchor: message "roll note drag did not become a live gesture"
+
+S035 | checkRollNoteDragGuardsSharedCommands | src/checks/rollcheck/note_commands.swift
+Source line: 643
+cppID: swiftcore/PianoRoll::rollNoteDragGuardsSharedCommands
+Predicate: report.expect(!grid.interactionActive && coreTimeBytes(session.document) == beforeBytes && session.selectedNoteOrder == [target] && session.document.revision == beforeRevision && session.document.history.undoCount == beforeUndo, cppID: id, message: "roll gesture did not block Delete and restore selection on Escape")
+Anchor: message "roll gesture did not block Delete and restore selection on Escape"

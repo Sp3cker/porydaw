@@ -167,6 +167,8 @@ internal func runVelocityPageChecks(_ report: CheckReport, session: DocumentSess
     drawerVelocityBandExpandContract(report, session: session, service: service)
     drawerVelocityPressCancelRestores(report, session: session, service: service)
     drawerVelocityBandCancelRestores(report, session: session, service: service)
+    drawerVelocityOverlapNodeDragCancelRestores(report, session: session, service: service)
+    drawerVelocityStemDragGuardsEdits(report, session: session, service: service)
     drawerVelocityPrimaryTrackSwitchCancels(report, session: session, service: service)
     drawerVelocityLifecycleCancellation(report, session: session, service: service)
     drawerVelocityStackedHitPriority(report, session: session, service: service)

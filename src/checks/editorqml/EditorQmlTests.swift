@@ -168,7 +168,7 @@ enum EditorQmlLane {
             ("SharedPlayhead", "sharedPlayheadRendersRollAndVisibleBodies sharedPlayheadHidesOutOfViewportAndReprojects sharedPlayheadSuspendsFollowForEveryInteraction"),
             ("Chrome", "numericFieldWindowShortcutPriority_data numericFieldWindowShortcutPriority bundledFontsResolveInEditorLane otherEventsBandMountsBetweenDrawerAndScrollbar otherEventsProjectionHoverAndWheel drawerTypographyFromMountedSession productionDrawerBlankBarFocus"),
             ("Headers", "quickSurfacePublishesAndRendersHeaders trackActivityRenderedMeterParity headerVoiceChangeAltersRetainedRaster hoveringHeadersDoesNotCreateTooltip headerCtrlScopeKeepsPrimaryAndRendersOverlay"),
-            ("VelocityRaster", "productionVelocityPageMountsAndRenders productionVelocityMountedInk productionVelocityTransientInk productionVelocityDetentRepaint"),
+            ("VelocityRaster", "productionVelocityPageMountsAndRenders productionVelocityMountedInk productionVelocityScrollAlignment productionVelocityTransientInk productionVelocityDetentRepaint"),
             ("VelocityHitTargets", "productionVelocityCoincidentNodePriority productionVelocityStemGestureCancellation productionVelocityOverlapTargetsVisibleNode"),
             ("VelocityEditing", "velocityHintsResumeAfterOutsideRelease productionVelocityPointerEdit productionVelocityNumericInput productionVelocityCancellation productionVelocityPlayheadPerformance productionVelocityContextIsExact"),
             ("VelocityPrompt", "productionVelocityPromptTransaction productionVelocityPromptButtonsAndFocus productionVelocityPromptValidationAndDismissal productionVelocityPromptBoundedKeys"),

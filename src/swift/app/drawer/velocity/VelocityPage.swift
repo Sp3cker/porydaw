@@ -61,10 +61,8 @@ enum VelocityModifier {
 
 // MARK: - Published note handle
 
-/// One published note handle: stable identity, scroll-stable plot geometry,
-/// displayed value and state. QML draws only these values (adding the page's
-/// single scroll origin), and the page's own hit tests read the
-/// same objects, so a pointer lands on exactly what the renderer drew.
+/// One published note handle in scroll-stable plot space; QML draws it in one
+/// scroll-shifted container and hit tests read the same objects.
 @MainActor
 @QtBridgeable
 public final class VelocityHandle {
@@ -219,13 +217,9 @@ public final class VelocityPage: EditorDrawerPage {
     public var axisGraduations: QListModel<SceneRect> = QListModel()
     public var axisMarkers: QListModel<SceneRect> = QListModel()
     public var axisLabels: QListModel<SceneText> = QListModel()
-    /// The note handles' rows in scroll-stable x. Delegates add
-    /// `handlesOriginX` to restore plot positions.
+    /// The note handles' rows in scroll-stable x. Production QML translates one
+    /// container from the scene scroll row to restore plot positions.
     public var handles: QListModel<VelocityHandle> = QListModel()
-    /// The scroll-stable handles' plot offset: the negated snapped scroll the
-    /// delegates add to their published x, so scroll-only camera changes move
-    /// one scalar instead of invalidating every handle row.
-    public var handlesOriginX: Double = 0
 
     /// Distinct content rebuilds: shared-playhead movement inside one voice
     /// context, and repeated equal publications, rebuild nothing.

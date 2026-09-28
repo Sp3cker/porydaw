@@ -120,7 +120,7 @@
                "the unselected note paints the semantic dimmed mid ink")
         testCase.compare(outsiderFill.border.width, 0,
                 "a dimmed note no longer paints an ordinary black outline")
-        testCase.mouseMove(input, outsiderFill.parent.model.x + model.handlesOriginX,
+        testCase.mouseMove(input, outsiderFill.parent.model.x + VelocityInput.velocityPlotOrigin(grid),
                            outsiderFill.parent.model.y, -1, Qt.NoButton)
         testCase.verify(testCase.waitForNative(function() {
             return model.hoveredNoteText === String(notes[2].id)
@@ -196,7 +196,7 @@
         var outside = testCase.velocityHandleFor(notes[2].id)
         testCase.verify(first && later && outside && first.selected && later.selected
                && !outside.selected, "the drawn velocity handles retain the exact drag selection")
-        var pressX = first.x + model.handlesOriginX
+        var pressX = first.x + VelocityInput.velocityPlotOrigin(grid)
         var pressY = first.y
         var endY = unlockAtPress
             ? Math.round(pressY - (pressY - later.y) * 7 / 8)
@@ -401,18 +401,18 @@
             })
             testCase.verify(stackedRing && stackedRing.visible,
                    "the stacked velocity node owns a visible selected ring")
-            testCase.mousePress(input, stackedHandle.x + model.handlesOriginX, stackedHandle.y, Qt.LeftButton)
+            testCase.mousePress(input, stackedHandle.x + VelocityInput.velocityPlotOrigin(grid), stackedHandle.y, Qt.LeftButton)
             var leftStackFrame = testCase.grabImage(capture)
             testCase.verify(Raster.paintedColor(testCase, leftStackFrame, capture, stackedRing,
                                 page.gridPalette.selectionRing),
                    "left-pressing the selected stacked velocity node paints highlight ink")
-            testCase.mouseRelease(input, stackedHandle.x + model.handlesOriginX, stackedHandle.y, Qt.LeftButton)
-            testCase.mousePress(input, stackedHandle.x + model.handlesOriginX, stackedHandle.y, Qt.RightButton)
+            testCase.mouseRelease(input, stackedHandle.x + VelocityInput.velocityPlotOrigin(grid), stackedHandle.y, Qt.LeftButton)
+            testCase.mousePress(input, stackedHandle.x + VelocityInput.velocityPlotOrigin(grid), stackedHandle.y, Qt.RightButton)
             var pressedStackFrame = testCase.grabImage(capture)
             testCase.verify(Raster.paintedColor(testCase, pressedStackFrame, capture, stackedRing,
                                 page.gridPalette.selectionRing),
                    "right-pressing the selected stacked velocity node keeps its highlight ink")
-            testCase.mouseRelease(input, stackedHandle.x + model.handlesOriginX, stackedHandle.y, Qt.RightButton)
+            testCase.mouseRelease(input, stackedHandle.x + VelocityInput.velocityPlotOrigin(grid), stackedHandle.y, Qt.RightButton)
             grid.setCameraHScroll(1e9)
             var timelineEndTick = grid.cameraScrollX * grid.ticksPerBeat / grid.beatWidth
             var barsAfterEnd = testCase.collectByName(plot, "velocityGrid", []).filter(function(row) {

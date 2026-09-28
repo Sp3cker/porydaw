@@ -327,4 +327,42 @@ EditorDrawerTestSupport {
                       1000, "deleting the staged voice change restores the song context")
         }
     }
+    function test_productionVelocityScrollAlignment() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.surface.gridModel.resetCameraScroll()
+        session.handleGridEscape()
+        VelocitySupport.mountProductionVelocity(testCase, "velocity-scroll-alignment")
+        var model = VelocitySupport.velocityModel(testCase)
+        var plot = VelocitySupport.velocityPlot(testCase)
+        var input = VelocitySupport.velocityPlotInput(testCase)
+        var gridModel = testCase.surface.gridModel
+        gridModel.setCameraHScroll(0)
+        var nodes = VelocitySupport.velocityNodes(testCase)
+        verify(nodes.length > 0, "the staged song exposes a node before the scroll")
+        tryVerify(function() {
+            nodes = VelocitySupport.velocityNodes(testCase)
+            var node = nodes[0]
+            var center = node.mapToItem(input, node.width / 2, node.height / 2)
+            return center.x >= 0 && center.x < input.width
+                && center.y > 0 && center.y < input.height
+        }, 3000, "a staged node is inside the mounted plot before the scroll")
+        var node = nodes[0]
+        var stableX = node.parent.model.x
+        var before = node.mapToItem(input, node.width / 2, node.height / 2)
+        var scroll0 = gridModel.cameraScrollX
+        var dpr = model.devicePixelRatio > 0 ? model.devicePixelRatio : 1
+        function snap(value) { return Math.round(value * dpr) / dpr }
+        var target = Math.min(scroll0 + gridModel.beatWidth, gridModel.cameraMaxHScroll)
+        if (!(target > scroll0))
+            skip("the staged song fits without horizontal scroll")
+        gridModel.setCameraHScroll(target)
+        // Same-turn read: no pump, no wait. The container translates from the
+        // scene scroll row in the same sweep, so the drawn handle already moved.
+        var after = node.mapToItem(input, node.width / 2, node.height / 2)
+        verify(after.x !== before.x, "scroll moves the mounted velocity handle in the same turn")
+        verify(Math.abs((before.x - after.x) - (snap(target) - snap(scroll0))) < 0.01
+               && node.parent.model.x === stableX,
+               "the moved handle tracks the snapped scroll delta with stable rows")
+        gridModel.setCameraHScroll(0)
+    }
 }

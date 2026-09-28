@@ -9,9 +9,11 @@ Additional Swift counterpart: src/checks/host/HostBehaviorChecks.swift :: hostNo
 Additional Swift counterpart: src/checks/workspace/session_view_state_fanout.swift (SHA-256 a856e21e1f145a33665fd7776a3b89635677e316ac21e3c6c6a3249339c587523)
 Additional QML counterpart: src/checks/editorqml/tst_ShellTabsClose.qml (SHA-256 d4d05854ffc009768dc7c56f0e6c90bf6beb53d7f3fac5d8f9a8ac4dc08df736)
 
-Additional Swift counterpart: src/checks/velocity/VelocityClickCancellationChecks.swift (SHA-256 a6c01dfed6222a92baf0a66cd197d2478c66308846d19e19f26a01cf00c713cb)
-Additional QML counterpart: src/checks/editorqml/tst_ShellWindowVelocity.qml (SHA-256 704d960146aa25775af130f7105e4c72834062b259476631c95e0d258ea45b93)
+Additional Swift counterpart: src/checks/velocity/VelocityClickCancellationChecks.swift (SHA-256 35e2781445d126ca180843e5a513245d4b9d1312b9d3c885aede3c2b0ea48b8c)
+Additional QML counterpart: src/checks/editorqml/tst_ShellWindowVelocity.qml (SHA-256 857442f15569025b8f2aa9e5b3042c91eaf8c1eea007c548fc947d94609710ca)
 Additional QML counterpart: src/checks/editorqml/tst_EditorDrawerAutomationCamera.qml (SHA-256 afb3956545b95e48794d47db703447b2b6032dab49abf778b7ebd08f846011af)
+Task 181 verification command: deno task verify:shell --filter shellwindow-velocity --verbose
+Task 181 verification result: PASS (implementer handoff at agent://Task181; ledger writer did not rerun). S064 is anchored to the executed cursor predicate in test_kVelocityGestureTermination on the mounted velocity surface (page-switch, drawer-hide, focus-loss, tab-switch, and Escape data rows).
 
 
 
@@ -810,14 +812,8 @@ A121 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:526
 Disposition: RETIRED-REPRESENTATION
 
 A122 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:528
-Disposition: GAP
-Mapping/reason: Swift MouseHints owns the override cursor not being the closed-hand pan cursor; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-          const QCursor *cursor = QApplication::overrideCursor();
-
-Original expression:
-  QVERIFY(!cursor || cursor->shape() != Qt::ClosedHandCursor)
+Disposition: MATCHED
+Mapping: S064
 
 A123 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:548
 Disposition: RETIRED-REPRESENTATION
@@ -1562,3 +1558,8 @@ Anchor: message "the pan keeps its grab and motion after the band focus moves"
 
 S063 | test_productionAutomationPanLifecycleFocusGrabAndInterruptions | src/checks/editorqml/tst_EditorDrawerAutomationCamera.qml
 Anchor: message "the released pan leaves no grab and writes nothing"
+
+S064 | test_kVelocityGestureTermination | src/checks/editorqml/tst_ShellWindowVelocity.qml
+Source line: 376
+Predicate: verify(rollInput.cursorShape !== Qt.ClosedHandCursor, "A122 gesture termination leaves no closed-hand pan cursor")
+Anchor: message "A122 gesture termination leaves no closed-hand pan cursor"

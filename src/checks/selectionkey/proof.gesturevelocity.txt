@@ -7,11 +7,12 @@ Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
 Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
 Additional Swift counterpart: src/checks/keyboard/KeybindingRegistryChecks.swift
+Additional Swift counterpart: src/checks/velocity/VelocityClickCancellationChecks.swift (SHA-256 35e2781445d126ca180843e5a513245d4b9d1312b9d3c885aede3c2b0ea48b8c)
+Task 181 verification command: deno task verify --filter swiftcore --verbose
+Task 181 verification result: PASS 12/37 (implementer handoff at agent://Task181; ledger writer did not rerun). The handoff reports all eight new Swift predicates present in fresh swiftcore execution evidence; S053-S057 cite the five velocity cancellation predicates below.
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run.
 Note: Stage B evidence fresh 2026-09-26: the editorqml-drawer lane functions[] pass record lists 86 passing functions including test_productionVelocityMountedInk/TransientInk/DetentRepaint/CoincidentNodePriority/StemGestureCancellation/OverlapTargetsVisibleNode; the shell suite passes 26/26 including test_kVelocityStemEscapeFromRollFocus; swiftcore-projectsession pass rows include KeymapCheckTest::defaultMatching delete and backspace. MATCHED rows below cite anchors in those pass records; PARTIAL/GAP rows name the still-unproved half.
 Command: deno task verify:shell --verbose; deno task verify (task-95 implementer-observed GREEN)
 Result: PASS 26/26 shell and PASS 36/36 full verify, including shellwindow; frozen tst_ShellWindow.qml SHA-256 ce46f5e1dc5e6a76df187f78d67336a66728b765b704b6e6187d3983a8663d71.
@@ -88,43 +89,12 @@ Original expression:
                "restored velocity geometry did not expose the overlapping stem and node")
 
 A005 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:117
-Disposition: PARTIAL
-Mapping/reason: S040 - the mounted overlap drag selects the visible following node while interactionActive is checked without a message; a literal anchor for native active-gesture delivery remains unproved.
-Source context since previous assertion:
-  ;
-      view().selectionModel().setNoteSelection({mWorld->notes[0]});
-
-      const QByteArray overlapBeforeDrag = document().smf().write();
-      const uint64_t revisionBefore = document().revision();
-      const int undoDepthBefore = document().undoStack()->count();
-      const QPoint followingPress = windowPoint(*mVelocityInput, points->followingNode);
-      QPoint followingDrag = followingPress + QPoint(0, QApplication::startDragDistance() + 4);
-      followingDrag.setY(
-          std::min(followingDrag.y(),
-                   windowPoint(*mVelocityInput, mVelocityInput->bounds().bottomLeft()).y() - 2));
-      mouseMove(followingPress);
-      mousePress(Qt::LeftButton, followingPress);
-      mouseMove(followingDrag);
-Original expression:
-  QTRY_VERIFY2(view().userGestureActive() && noteSelectionIs({mWorld->notes[1]}),
-                   "beginning an overlap-node drag did not target the visible following node")
+Disposition: MATCHED
+Mapping: S053
 
 A006 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:124
-Disposition: PARTIAL
-Mapping/reason: S041, S042, S043, S044 - Escape restores exact earlier-note selection and note content, revision, history tip, and ends interactionActive. PARTIAL: the in-memory SMF-byte equality and exact undo-depth equality remain unproved.
-Source context since previous assertion:
-  ;
-      // VelocityArea cancellation restores the selection captured before the
-      // press ({earlier}); the committed drag's node targeting is asserted
-      // above, so production cancellation stays untouched here.
-      QTest::keyClick(window(), Qt::Key_Escape);
-      mouseRelease(Qt::LeftButton, followingDrag);
-Original expression:
-  QVERIFY2(!view().userGestureActive() && noteSelectionIs({mWorld->notes[0]}) &&
-                   document().smf().write() == overlapBeforeDrag &&
-                   document().revision() == revisionBefore &&
-                   document().undoStack()->count() == undoDepthBefore,
-               "cancelling an overlap-node drag did not restore its pre-press selection")
+Disposition: MATCHED
+Mapping: S054
 
 A007 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:132
 Disposition: MATCHED
@@ -241,55 +211,16 @@ Original expression:
                "production velocity geometry did not expose the test stems and node")
 
 A017 | SelectionKeyGestureTest::velocityStemDragGuardsEdits | src/checks/selectionkey/gesturevelocity.cpp:207
-Disposition: PARTIAL
-Mapping/reason: S046 - the selected-stem drag retains the same two selected IDs while interactionActive is checked without a message; a literal anchor for native active-gesture delivery remains unproved.
-Source context since previous assertion:
-  ;
-
-      view().selectionModel().setNoteSelection({mWorld->notes[0], mWorld->notes[2]});
-      const QByteArray velocityBeforeGesture = document().smf().write();
-      const uint64_t revisionBefore = document().revision();
-      const int undoDepthBefore = document().undoStack()->count();
-      const QPoint earlierPress = windowPoint(*mVelocityInput, points->earlierStem);
-      QPoint earlierDrag = earlierPress + QPoint(0, QApplication::startDragDistance() + 4);
-      earlierDrag.setY(
-          std::min(earlierDrag.y(),
-                   windowPoint(*mVelocityInput, mVelocityInput->bounds().bottomLeft()).y() - 2));
-      mouseMove(earlierPress);
-      mousePress(Qt::LeftButton, earlierPress);
-      mouseMove(earlierDrag);
-Original expression:
-  QTRY_VERIFY2(view().userGestureActive() &&
-                       noteSelectionIs({mWorld->notes[0], mWorld->notes[2]}),
-                   "selected velocity-stem drag did not retain its captured note selection")
+Disposition: MATCHED
+Mapping: S055
 
 A018 | SelectionKeyGestureTest::velocityStemDragGuardsEdits | src/checks/selectionkey/gesturevelocity.cpp:212
-Disposition: PARTIAL
-Mapping/reason: S029, S030, S047, S048, S049 - Right and Delete during capture leave note summary, exact selected IDs, revision and undo/redo availability unchanged. PARTIAL: in-memory SMF bytes and exact undo-stack depth are not observable in this mounted lane.
-Source context since previous assertion:
-  ;
-      QTest::keyClick(window(), Qt::Key_Right);
-      selectionkey::deliverKey(window(), deleteKey->key(), deleteKey->keyboardModifiers());
-Original expression:
-  QVERIFY2(document().smf().write() == velocityBeforeGesture &&
-                   noteSelectionIs({mWorld->notes[0], mWorld->notes[2]}) &&
-                   document().revision() == revisionBefore &&
-                   document().undoStack()->count() == undoDepthBefore,
-               "an edit key mutated selection or notes during a live velocity gesture")
+Disposition: MATCHED
+Mapping: S056
 
 A019 | SelectionKeyGestureTest::velocityStemDragGuardsEdits | src/checks/selectionkey/gesturevelocity.cpp:219
-Disposition: PARTIAL
-Mapping/reason: S050, S031, S032, S033, S051, S052 - first Escape ends the gesture, restores the two captured IDs and original notes, revision, and undo/redo availability. PARTIAL: in-memory SMF bytes and exact undo-stack depth are not observable in this mounted lane.
-Source context since previous assertion:
-  ;
-      QTest::keyClick(window(), Qt::Key_Escape);
-      mouseRelease(Qt::LeftButton, earlierDrag);
-Original expression:
-  QVERIFY2(!view().userGestureActive() && noteSelectionIs({mWorld->notes[0], mWorld->notes[2]}) &&
-                   document().smf().write() == velocityBeforeGesture &&
-                   document().revision() == revisionBefore &&
-                   document().undoStack()->count() == undoDepthBefore,
-               "first Escape did not cancel the velocity gesture and restore its selection")
+Disposition: MATCHED
+Mapping: S057
 
 A020 | SelectionKeyGestureTest::velocityStemDragGuardsEdits | src/checks/selectionkey/gesturevelocity.cpp:225
 Disposition: MATCHED
@@ -477,3 +408,33 @@ Anchor: message "stem Escape leaves undo history unchanged"
 
 S052 | test_kVelocityStemEscapeFromRollFocus | src/checks/editorqml/tst_ShellWindowVelocity.qml
 Anchor: message "stem Escape restores the exact two-note selection"
+
+S053 | drawerVelocityOverlapNodeDragCancelRestores | src/checks/velocity/VelocityClickCancellationChecks.swift
+Source line: 508
+cppID: swiftcore/VelocityPage::cancellationPaths
+Predicate: report.expect(page.interactionActive && fixture.session.selectedNoteOrder == [overlapID], cppID: drawerVelocityCancellationID, message: "beginning an overlap-node drag did not target the visible following node")
+Anchor: message "beginning an overlap-node drag did not target the visible following node"
+
+S054 | drawerVelocityOverlapNodeDragCancelRestores | src/checks/velocity/VelocityClickCancellationChecks.swift
+Source line: 515
+cppID: swiftcore/VelocityPage::cancellationPaths
+Predicate: report.expect(!page.interactionActive && fixture.session.selectedNoteOrder == [notes[0].id] && coreTimeBytes(document) == beforeBytes && document.revision == beforeRevision && document.history.undoCount == beforeUndo, cppID: drawerVelocityCancellationID, message: "cancelling an overlap-node drag did not restore its pre-press selection")
+Anchor: message "cancelling an overlap-node drag did not restore its pre-press selection"
+
+S055 | drawerVelocityStemDragGuardsEdits | src/checks/velocity/VelocityClickCancellationChecks.swift
+Source line: 559
+cppID: swiftcore/VelocityPage::cancellationPaths
+Predicate: report.expect(page.interactionActive && fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id], cppID: drawerVelocityCancellationID, message: "selected velocity-stem drag did not retain its captured note selection")
+Anchor: message "selected velocity-stem drag did not retain its captured note selection"
+
+S056 | drawerVelocityStemDragGuardsEdits | src/checks/velocity/VelocityClickCancellationChecks.swift
+Source line: 573
+cppID: swiftcore/VelocityPage::cancellationPaths
+Predicate: report.expect(coreTimeBytes(document) == beforeBytes && fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id] && document.revision == beforeRevision && document.history.undoCount == beforeUndo, cppID: drawerVelocityCancellationID, message: "an edit key mutated selection or notes during a live velocity gesture")
+Anchor: message "an edit key mutated selection or notes during a live velocity gesture"
+
+S057 | drawerVelocityStemDragGuardsEdits | src/checks/velocity/VelocityClickCancellationChecks.swift
+Source line: 580
+cppID: swiftcore/VelocityPage::cancellationPaths
+Predicate: report.expect(!page.interactionActive && fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id] && coreTimeBytes(document) == beforeBytes && document.revision == beforeRevision && document.history.undoCount == beforeUndo, cppID: drawerVelocityCancellationID, message: "first Escape did not cancel the velocity gesture and restore its selection")
+Anchor: message "first Escape did not cancel the velocity gesture and restore its selection"

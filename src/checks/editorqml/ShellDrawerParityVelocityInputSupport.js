@@ -1,3 +1,9 @@
+    // The plot origin the handle container translates by: the shared camera
+    // scroll snapped to the device grid, replacing the retired bridge scalar.
+    function velocityPlotOrigin(grid) {
+        var dpr = grid.devicePixelRatio > 0 ? grid.devicePixelRatio : 1
+        return -Math.round(grid.cameraScrollX * dpr) / dpr
+    }
     function mountedRawVelocityGesture(testCase, input, grid, notes) {
         var ruler = testCase.findChild(testCase.velocityPageItem(), "velocityRulerInput")
         var roll = testCase.rollInput()
@@ -26,7 +32,7 @@
                 "the mounted raw drag begins with a later velocity of 87")
         var first = testCase.velocityHandleFor(notes[0].id)
         var later = testCase.velocityHandleFor(notes[1].id)
-        var originX = testCase.session().velocityPage().handlesOriginX
+        var originX = velocityPlotOrigin(grid)
         testCase.verify(first.selected && later.selected && first.x + originX > 0 && first.x + originX < input.width,
                "the mounted raw drag captures both visible note columns")
         var baseline = grid.fetchNoteSummary()
@@ -95,7 +101,7 @@
         var first = testCase.velocityHandleFor(notes[0].id)
         var middle = testCase.velocityHandleFor(notes[2].id)
         var later = testCase.velocityHandleFor(notes[1].id)
-        var originX = testCase.session().velocityPage().handlesOriginX
+        var originX = velocityPlotOrigin(grid)
         var pressX = 2 * middle.x - later.x + originX
         testCase.verify(first.selected && middle.selected && later.selected
                && first.x < middle.x && middle.x < later.x
@@ -192,13 +198,13 @@
             var endY = yFor(locked ? 73 : 91)
             var pressX = first.x - first.hitRadius * 2
             var pressY = startY + (endY - startY) * (pressX - first.x) / (later.x - first.x)
-            pressX += model.handlesOriginX
+            pressX += velocityPlotOrigin(grid)
             var snapshot = grid.fetchNoteSummary()
             before = Number(testCase.revision())
             testCase.mousePress(input, pressX, pressY, Qt.LeftButton,
                        locked ? Qt.NoModifier : Qt.ControlModifier)
-            testCase.mouseMove(input, first.x + model.handlesOriginX, startY, -1, Qt.LeftButton, Qt.NoModifier)
-            testCase.mouseMove(input, later.x + model.handlesOriginX, endY, -1, Qt.LeftButton, Qt.NoModifier)
+            testCase.mouseMove(input, first.x + velocityPlotOrigin(grid), startY, -1, Qt.LeftButton, Qt.NoModifier)
+            testCase.mouseMove(input, later.x + velocityPlotOrigin(grid), endY, -1, Qt.LeftButton, Qt.NoModifier)
             var expectedFirst = locked ? expectedSnap : 37
             var expectedLast = locked ? expectedSnap : 91
             testCase.verify(testCase.waitForNative(function() {
@@ -223,7 +229,7 @@
                     "the mounted paint sweep keeps the committed roll unchanged")
             testCase.compare(Number(testCase.revision()), before,
                     "the mounted paint sweep defers its revision until release")
-            testCase.mouseRelease(input, later.x + model.handlesOriginX, endY, Qt.LeftButton)
+            testCase.mouseRelease(input, later.x + velocityPlotOrigin(grid), endY, Qt.LeftButton)
             testCase.verify(testCase.waitForNative(function() {
                 var values = JSON.parse(grid.fetchNoteSummary())
                 return values.some(function(note) {

@@ -274,15 +274,20 @@ ShellGridInputSupport {
         compare(fill.width, startX - farX, "the expanded velocity band spans the horizontal press distance")
         compare(fill.height, startY - farY, "the expanded velocity band spans the vertical press distance")
         // Handles publish scroll-stable x; the rendered note sits at the
-        // published origin offset, exactly as the mounted delegates draw it.
-        var originX = page.pageModel.handlesOriginX
-        var targetNode = null
-        for (var child of plot.children) {
-            if (child.model && child.model.noteIdText === String(target.id)) {
-                targetNode = child.model
-                break
+        // shared camera scroll offset, exactly as the mounted delegates draw it.
+        var dpr = grid.devicePixelRatio > 0 ? grid.devicePixelRatio : 1
+        var originX = -Math.round(grid.cameraScrollX * dpr) / dpr
+        function findHandleRow(item) {
+            for (var child of item.children) {
+                if (child.model && child.model.noteIdText === String(target.id))
+                    return child.model
+                var nested = findHandleRow(child)
+                if (nested !== null)
+                    return nested
             }
+            return null
         }
+        var targetNode = findHandleRow(plot)
         verify(targetNode && targetNode.x + originX > fill.x
                && targetNode.x + originX < fill.x + fill.width
                && targetNode.y > fill.y && targetNode.y < fill.y + fill.height,
