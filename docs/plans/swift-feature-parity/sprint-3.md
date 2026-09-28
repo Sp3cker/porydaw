@@ -42,8 +42,12 @@ stay PARTIAL.
 User rulings this sprint: insert-cursor commits never seek or move the playhead in any
 transport state (8f6d41d2, deliberate deviation from fork `mainwindow.cpp:520-528`; Go to
 Start still rewinds); the ~115 ms anti-click settle hold on resume stays; blank-slot undo
-tokens survive an external source refresh, matching the fork (78). Open decision:
-catalog-outage status path (Swift scan has none). Fork oracle: `fceecd88`
+tokens survive an external source refresh, matching the fork (78); a voicegroup switch is
+an undoable edit (deliberate deviation: the fork switch is display-only); fork states that
+Swift guards make unreachable close as RETIRED-REPRESENTATION with refusal predicates —
+track beyond the used tracks (159), time-signature edit under Insert Time (168), null
+voicegroup (166). Open decisions: catalog-outage status path (Swift scan has none);
+pending-reload input gate. Fork oracle: `fceecd88`
 (`git show fceecd88:<path>`).
 
 ## 1. Objective and success criteria
