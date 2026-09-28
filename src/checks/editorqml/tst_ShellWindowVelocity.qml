@@ -273,6 +273,17 @@ ShellWindowSupport {
         mousePress(plot, hit.x, hit.y, Qt.LeftButton)
         mouseMove(plot, hit.x, dragY, -1, Qt.LeftButton)
         tryCompare(page, "interactionActive", true, 3000)
+        compare(node.parent.model.preview, true,
+                "the mounted node shows its held velocity preview before termination")
+        if (terminalRoute) {
+            compare(session.canUndo, true,
+                    "the setup edit leaves one undoable song transaction before close")
+        } else {
+            compare(session.canUndo, false,
+                    "the held velocity gesture creates no undoable song transaction")
+        }
+        compare(session.canRedo, false,
+                "the held velocity gesture creates no redoable song transaction")
         tryCompare(plot, "pressed", true, 3000)
         var closingId = session.songTabs.selectedId
         if (data.route === "page-switch") {
@@ -299,11 +310,17 @@ ShellWindowSupport {
         if (terminalRoute) {
             tryCompare(session.songTabs, "pendingCloseId", closingId, 3000)
             tryCompare(page, "interactionActive", false, 3000)
+            compare(node.parent.model.preview, false,
+                    "the close gate removes the mounted node's held preview")
             mouseRelease(plot, hit.x, dragY, Qt.LeftButton)
             compare(page.selectedCount, 1, "the close gate preserves the selected note")
             compare(grid.noteSummary, beforeNotes, "the close gate writes no velocity")
             compare(grid.appliedRevisionText, beforeRevision,
                     "the close gate does not advance document revision")
+            compare(session.canUndo, true,
+                    "the close gate keeps the earlier setup edit undoable")
+            compare(session.canRedo, false,
+                    "the close gate creates no redoable velocity transaction")
             compare(session.documentDirty, true,
                     "the earlier setup edit remains unsaved until Discard")
             session.songTabs.confirmDiscard()
@@ -330,10 +347,16 @@ ShellWindowSupport {
         tryCompare(page, "interactionActive", false, 3000)
         mouseRelease(plot, hit.x, dragY, Qt.LeftButton)
         tryCompare(plot, "pressed", false, 3000)
+        compare(node.parent.model.preview, false,
+                "the termination route removes the mounted node's held preview")
         compare(page.selectedCount, 1, "cancellation keeps the selected note")
         compare(grid.noteSummary, beforeNotes, "a cancelled drag never writes note values")
         compare(grid.appliedRevisionText, beforeRevision,
                 "a cancelled drag never increments the document revision")
         compare(session.documentDirty, false, "a cancelled drag never dirties the document")
+        compare(session.canUndo, false,
+                "the cancelled drag leaves no undoable song transaction")
+        compare(session.canRedo, false,
+                "the cancelled drag leaves no redoable song transaction")
     }
 }

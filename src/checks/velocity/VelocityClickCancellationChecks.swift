@@ -341,4 +341,127 @@ func drawerVelocityLifecycleCancellation(_ report: CheckReport, session: Documen
                   && bankFixture.document.note(note.id)?.velocity == velocity,
                   cppID: drawerVelocityCancellationID,
                   message: "the bank edit leaves song revision, note velocity and MIDI bytes unchanged")
+
+    guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
+        report.fail(drawerVelocityCancellationID, "voicegroup switch fixture root is unavailable")
+        return
+    }
+    let scratch = FileManager.default.temporaryDirectory
+        .appendingPathComponent("swiftcore-velocity-voicegroup-\(UUID().uuidString)", isDirectory: true)
+    let switchService = ProjectService()
+    defer {
+        do {
+            try runBlocking { await switchService.close() }
+        } catch {
+            report.fail(drawerVelocityCancellationID, "could not close the voicegroup switch service: \(error)")
+        }
+        // Scratch removal is best-effort after the isolated service closes.
+        try? FileManager.default.removeItem(at: scratch)
+    }
+    let switchSession: DocumentSession
+    do {
+        try FileManager.default.copyItem(at: URL(filePath: fixtureRoot), to: scratch)
+        try runBlocking { try await switchService.open(root: scratch.path) }
+        let loaded = try runBlocking { try await switchService.openSong(label: "mus_gym") }
+        let switchDocument = SongDocument(file: drawerVelocityVelocityPageFixture(),
+                                          config: loaded.config, source: loaded.source,
+                                          trackBudget: loaded.trackBudget)
+        switchSession = DocumentSession(document: switchDocument, service: switchService,
+                                        lease: loaded.bank, slots: loaded.bankSlots,
+                                        dirty: loaded.bankDirty, loadName: loaded.bankLoadName)
+    } catch {
+        report.fail(drawerVelocityCancellationID, "could not stage the alternate voicegroup: \(error)")
+        return
+    }
+    let switchFixture = drawerVelocityVelocityFixture(session: switchSession, service: switchService)
+    guard let switchNote = switchFixture.notes.first else {
+        report.fail(drawerVelocityCancellationID, "voicegroup switch has no note")
+        return
+    }
+    let switchAudio: NativeAudio
+    do {
+        switchAudio = try NativeAudio()
+    } catch {
+        report.fail(drawerVelocityCancellationID, "voicegroup switch cannot create audio: \(error)")
+        return
+    }
+    let switchPlayhead = SharedPlayheadPresenter()
+    let switchGuides = PlayheadGuidesPresenter()
+    let switchEventList = EventListPresenter()
+    let switchWorkspace = DocumentWorkspace(
+        session: switchFixture.session, audio: switchAudio, playhead: switchPlayhead,
+        playheadGuides: switchGuides, eventList: switchEventList, palette: GridPalette(),
+        typography: Typography(baseFontPx: 13), callbacks: DocumentWorkspace.Callbacks(
+            changeTrackVoiceRequested: { _ in },
+            revealTrackVoiceRequested: { _ in },
+            gridCommandAvailabilityChanged: {}, sessionStateChanged: {},
+            publicationFailed: { _ in }, timeSignaturePromptInvalidated: { _, _ in }))
+    defer {
+        switchWorkspace.teardown()
+        withExtendedLifetime((switchAudio, switchPlayhead, switchGuides, switchEventList)) {}
+    }
+    switchWorkspace.activate()
+    let switchPage = switchWorkspace.velocityPage
+    switchPage.configureBody(width: 400, height: 120, rulerWidth: 56, devicePixelRatio: 1,
+                             baseFontPx: 13, dragDistance: 10)
+    switchFixture.session.setSelectedNotes([switchNote.id])
+    guard let switchHandle = switchPage.publishedHandlesSnapshot.first(where: {
+        $0.noteIdText == "\(switchNote.id.rawValue)"
+    }), switchFixture.document.state.config.voicegroupArgument == "_fixture_rich" else {
+        report.fail(drawerVelocityCancellationID, "voicegroup switch needs the original bank and a drawn note")
+        return
+    }
+    let switchRevision = switchFixture.document.revision
+    let switchUndoCount = switchFixture.document.history.undoCount
+    let switchBytes = coreTimeBytes(switchFixture.document)
+    _ = switchPage.pointerPress(x: switchHandle.x, y: switchHandle.y,
+                                surface: 1, button: 1, modifiers: 0)
+    _ = switchPage.pointerMove(x: switchHandle.x, y: switchHandle.y - 30, buttons: 1)
+    guard switchPage.hasGesture && switchPage.interactionActive
+        && switchPage.frozenPreview[switchNote.id] != nil else {
+        report.fail(drawerVelocityCancellationID, "voicegroup switch drag did not stage a preview")
+        return
+    }
+    do {
+        try runBlocking { try await switchFixture.session.selectVoicegroup("_fixture_alt") }
+    } catch {
+        report.fail(drawerVelocityCancellationID, "voicegroup switch failed to load its alternate bank: \(error)")
+        return
+    }
+    report.expect(switchFixture.session.bankLoadName == "fixture_alt",
+                  cppID: drawerVelocityCancellationID,
+                  message: "the dock switch adopts the alternate voicegroup")
+    report.expect(!switchPage.hasGesture && !switchPage.interactionActive,
+                  cppID: drawerVelocityCancellationID,
+                  message: "A114 voicegroup replacement ends the held velocity gesture")
+    report.expect(coreTimeBytes(switchFixture.document) == switchBytes,
+                  cppID: drawerVelocityCancellationID,
+                  message: "A115 voicegroup replacement leaves the MIDI bytes unchanged")
+    report.expect(switchFixture.document.revision == switchRevision + 1,
+                  cppID: drawerVelocityCancellationID,
+                  message: "A116 voicegroup replacement advances revision only for its config edit")
+    report.expect(switchFixture.document.history.undoCount == switchUndoCount + 1,
+                  cppID: drawerVelocityCancellationID,
+                  message: "A117 voicegroup replacement adds only its config undo entry")
+    report.expect(switchPage.frozenPreview.isEmpty,
+                  cppID: drawerVelocityCancellationID,
+                  message: "A118 voicegroup replacement clears the held velocity preview")
+    report.expect(switchFixture.session.selectedNoteOrder == [switchNote.id],
+                  cppID: drawerVelocityCancellationID,
+                  message: "A120 voicegroup replacement preserves the selected note")
+    report.expect(!switchPage.pointerRelease(x: switchHandle.x, y: switchHandle.y - 30, button: 1),
+                  cppID: drawerVelocityCancellationID,
+                  message: "the late release after voicegroup replacement is inert")
+    report.expect(switchFixture.document.notes(in: 0).map(\.velocity) == [100, 64, 32],
+                  cppID: drawerVelocityCancellationID,
+                  message: "voicegroup replacement cannot commit any staged note velocity")
+    do {
+        let undone = try runBlocking { try await switchFixture.session.undo() }
+        report.expect(undone && switchFixture.document.state.config.voicegroupArgument == "_fixture_rich"
+                      && switchFixture.document.notes(in: 0).map(\.velocity) == [100, 64, 32],
+                      cppID: drawerVelocityCancellationID,
+                      message: "undoing the switch reverts its config without undoing a velocity edit")
+    } catch {
+        report.fail(drawerVelocityCancellationID, "could not undo the voicegroup switch: \(error)")
+    }
 }

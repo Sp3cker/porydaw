@@ -6,8 +6,11 @@ Original SHA-256: 4083b59bbb5e88019ed164c1296e3f8ea36e3a6fe6673d8b0ef74316dbdbae
 Swift counterpart: src/checks/velocity/VelocityClickSelectionChecks.swift (drawerVelocityPrimaryTrackSwitchCancels :267-312; drawerVelocityLifecycleCancellation :315-383 plus bank route :384-461); src/checks/velocity/VelocityPageChecks.swift call-list entry; src/checks/editorqml/tst_ShellWindow.qml test_kVelocityGestureTermination plus data (:976-1083)
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 Additional Swift counterpart: src/checks/host/HostBehaviorChecks.swift :: hostNoteDiscovery + hostVelocityGestureContracts + hostVelocityExactGestures + hostLifecycleTermination + hostPlayheadFollowing + hostVelocityAxisVoice + hostCosmeticOnly + hostDocumentMutationUndoRedo (SHA-256 a1111c650e15f0e9fbbaac9c335e567f83311324bc34b9366a8686495f92c0f1)
-Additional Swift counterpart: src/checks/workspace/session_view_state_fanout.swift (SHA-256 a856e21e1f145a33665fd7776a3b89635677e316ac21e3c6ca3249339c587523)
+Additional Swift counterpart: src/checks/workspace/session_view_state_fanout.swift (SHA-256 a856e21e1f145a33665fd7776a3b89635677e316ac21e3c6c6a3249339c587523)
 Additional QML counterpart: src/checks/editorqml/tst_ShellTabsClose.qml (SHA-256 d4d05854ffc009768dc7c56f0e6c90bf6beb53d7f3fac5d8f9a8ac4dc08df736)
+
+Additional Swift counterpart: src/checks/velocity/VelocityClickCancellationChecks.swift (SHA-256 a6c01dfed6222a92baf0a66cd197d2478c66308846d19e19f26a01cf00c713cb)
+Additional QML counterpart: src/checks/editorqml/tst_ShellWindowVelocity.qml (SHA-256 704d960146aa25775af130f7105e4c72834062b259476631c95e0d258ea45b93)
 
 
 NATIVE is no longer used: every site that observed a native-window, embedding, delivery, framebuffer, settings, popup, or harness obligation is RETIRED-REPRESENTATION, because the mechanism that carried it is gone (this C++ file was deleted at 31ea635f, appears in no CMake target, and checkcatalog.cpp registers no host entry; re-verified 2026-09-24). GAP sites are behavior assertions whose Swift owners exist but whose original predicates have no executed Swift equivalent; each mapping names the owner verified under src/swift/app. The Reference revision and Original SHA-256 below were re-verified against each other (git show <revision>:<path> | shasum -a 256) before any retirement claim.
@@ -27,6 +30,14 @@ Task 144 verification result: PASS 1/75 ok (Task144 implementer handoff; ledger 
 Execution evidence: Task144 handoff predicates correspond to S029-S042 below; ShellTabsClose predicate corresponds to S031. No missing or ambiguous assertions among assigned sites.
 Task 161 verification command: deno task verify --filter swiftcore-projectsession
 Task 161 verification result: PASS (Task161 implementer handoff; ledger writer ran no lane). The final HostBehaviorChecks.swift SHA-256 is a1111c650e15f0e9fbbaac9c335e567f83311324bc34b9366a8686495f92c0f1; execution evidence covers predicates S043-S049.
+
+Task 166 verification command: deno task verify --filter swiftcore-projectsession
+Task 166 verification result: PASS (implementer handoff). The lane calls runVelocityPageChecks from SessionChecks.swift, which invokes drawerVelocityLifecycleCancellation; that function's voicegroup replacement scenario executes the A114-A120 predicates. Swift counterpart SHA-256: a6c01dfed6222a92baf0a66cd197d2478c66308846d19e19f26a01cf00c713cb.
+Task 166 shell verification command: deno task verify:shell --filter shellwindow
+Task 166 shell verification result: PASS 12/76 (implementer handoff). QML counterpart SHA-256: 704d960146aa25775af130f7105e4c72834062b259476631c95e0d258ea45b93. The shell lane is supporting context; the A114-A120 mappings cite the Swift replacement execution, not the QML routes.
+
+Task 166 proof-structure command: deno task proof check
+Task 166 proof-structure result: successful; zero structural errors; 63 proof files, 4601 indexed C++ sites, 4711 anchors resolved (0 historical); strict-mapping debt warning: 293 sites. Ledger-writer run. This checks structure, tallies and anchor resolution, not semantic parity or execution.
 
 A001 | twoTabReadySessionWithTwoNoteSeed | src/checks/host/tst_hostintegration.cpp:145
 Disposition: RETIRED-REPRESENTATION
@@ -787,57 +798,29 @@ A113 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:508
 Disposition: RETIRED-REPRESENTATION
 
 A114 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:515
-Disposition: PARTIAL
-Mapping/reason: Partial velocity-termination correspondence: gesture teardown asserted at presenter level for page-switch, drawer-hide, pointer-ungrabbed, focus-loss, window-deactivated, hidden and escape (VelocityClickSelectionChecks.swift), for primary-track switch (ibid.:301), for bank edit through DocumentWorkspace (ibid.:447-449), and through the production shell for page-switch, drawer-hide, focus-loss, tab-switch, last-tab-close, song-reload and escape (tst_ShellWindow.qml,1075 interactionActive false; Swift interactionActive is the analogue of the retired userGestureActive accessor); task-67 HostBehaviorChecks adds track-replace (S007), song-replacement (S008) and song-null (S009) teardown executions with hasGesture false; unproved condition: voice-replace and voice-null executions have no Swift equivalent.
-Source context since previous assertion:
-  ;
-          } else if (route == QStringLiteral("quick-deactivate")) {
-              QEvent event(QEvent::WindowDeactivate);
-              QApplication::sendEvent(quickWindow, &event);
-          } else {
-              QTest::keyClick(quickWindow, Qt::Key_Escape);
-          }
+Disposition: MATCHED
+Mapping: S050 — replacement execution ends the live velocity gesture; the fork voice-null route is unreachable in Swift because DocumentSession.selectVoicegroup rejects empty at :390 and bankLease is non-optional at :75.
 
-Original expression:
-  QTRY_VERIFY(!view.userGestureActive())
 
 A115 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:518
-Disposition: PARTIAL
-Mapping/reason: Partial velocity-termination correspondence: song bytes unchanged by the cancelled drag asserted via coreTimeBytes for the seven presenter routes (VelocityClickSelectionChecks.swift), via document snapshot for primary-track switch (ibid.:304,307), via revision plus MIDI bytes plus note velocity for bank edit (ibid.:456-460; bank history legitimately advances on applyBankEdit per ibid.:443-446, so the predicate covers song revision, MIDI bytes and note velocity only), and via noteSummary for shell routes including tab-switch, last-tab-close and song-reload (tst_ShellWindow.qml,1079); task-67 HostBehaviorChecks adds track-replace (S007), song-replacement (S008) and song-null (S009) teardown executions preserving document snapshot and song bytes; unproved condition: voice-replace and voice-null executions have no Swift equivalent.
-Source context since previous assertion:
-  ;
-          QTest::mouseRelease(quickWindow, Qt::LeftButton, Qt::NoModifier, dragWindow);
-          buttonHeld = false;
+Disposition: MATCHED
+Mapping: S051 — replacement preserves MIDI bytes; the fork voice-null route is unreachable in Swift because DocumentSession.selectVoicegroup rejects empty at :390 and bankLease is non-optional at :75.
 
-Original expression:
-  QCOMPARE(document.smf().write(), midi)
 
 A116 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:519
-Disposition: PARTIAL
-Mapping/reason: Partial velocity-termination correspondence: revision unchanged by the cancelled drag asserted via document snapshot for the seven presenter routes (VelocityClickSelectionChecks.swift), for primary-track switch (ibid.:304,307), and for bank edit (ibid.:456-458; bank history legitimately advances on applyBankEdit per ibid.:443-446, so the predicate covers song revision, MIDI bytes and note velocity only), and via appliedRevisionText for shell routes including tab-switch, last-tab-close and song-reload (tst_ShellWindow.qml,1080-1081); task-67 HostBehaviorChecks adds song-replacement (S008) and song-null (S009) teardown executions preserving the document snapshot; unproved condition: voice-replace and voice-null executions have no Swift equivalent.
-Source context since previous assertion:
-  ;
+Disposition: MATCHED
+Mapping: S052 — revision advances +1 for the config edit; the fork voice-null route is unreachable in Swift because DocumentSession.selectVoicegroup rejects empty at :390 and bankLease is non-optional at :75.
 
-Original expression:
-  QCOMPARE(document.revision(), revision)
 
 A117 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:520
-Disposition: PARTIAL
-Mapping/reason: Partial velocity-termination correspondence: history depth unchanged asserted via undoCount for the seven presenter routes (VelocityClickSelectionChecks.swift) and corroborated for primary-track switch by snapshot reachability (ibid.:304 canUndo/canRedo); shell routes assert revision text only and the bank route asserts revision, bytes and velocity only, so undo-depth for bank, tab-switch, last-tab-close and song-reload executions is unproved; task-67 HostBehaviorChecks adds song-replacement (S008) and song-null (S009) teardown executions with undoCount unchanged; unproved condition also includes voice-replace and voice-null executions (no Swift equivalent).
-Source context since previous assertion:
-  ;
+Disposition: MATCHED
+Mapping: S053 — history depth advances +1 for the config edit; the fork voice-null route is unreachable in Swift because DocumentSession.selectVoicegroup rejects empty at :390 and bankLease is non-optional at :75.
 
-Original expression:
-  QCOMPARE(document.undoStack()->count(), undo)
 
 A118 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:521
-Disposition: PARTIAL
-Mapping/reason: Partial velocity-termination correspondence: preview cleared asserted via frozenPreview.isEmpty for the seven presenter routes (VelocityClickSelectionChecks.swift), primary-track switch (ibid.:302) and bank edit (ibid.:447-449); shell routes assert gesture teardown via interactionActive false (tst_ShellWindow.qml,1075) without a frozenPreview-emptiness predicate; task-67 HostBehaviorChecks adds track-replace (S007), song-replacement (S008) and song-null (S009) teardown executions clearing frozenPreview; unproved condition: voice-replace and voice-null executions have no Swift equivalent.
-Source context since previous assertion:
-  ;
+Disposition: MATCHED
+Mapping: S054 — replacement clears the held velocity preview; the fork voice-null route is unreachable in Swift because DocumentSession.selectVoicegroup rejects empty at :390 and bankLease is non-optional at :75.
 
-Original expression:
-  QVERIFY(!view.previewVelocity(notes[0].noteId))
 
 A119 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:523
 Disposition: PARTIAL
@@ -850,14 +833,9 @@ Original expression:
   QVERIFY(view.selectionModel().noteSelection().empty())
 
 A120 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:525
-Disposition: PARTIAL
-Mapping/reason: Partial velocity-termination correspondence: selection preserved for page-switch, drawer-hide, pointer-ungrabbed, focus-loss, window-deactivated, hidden and escape (VelocityClickSelectionChecks.swift), for bank edit (ibid.:450-452), and for shell routes (tst_ShellWindow.qml,1078 selectedCount 1); unproved condition: voice-replace and voice-null executions (no voicegroup-switch cancel plumbing, owned by another branch).
-Source context since previous assertion:
-  ;
-          else
+Disposition: MATCHED
+Mapping: S055 — replacement preserves the selected note; the fork voice-null route is unreachable in Swift because DocumentSession.selectVoicegroup rejects empty at :390 and bankLease is non-optional at :75.
 
-Original expression:
-  QVERIFY(!view.selectionModel().noteSelection().empty())
 
 A121 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:526
 Disposition: RETIRED-REPRESENTATION
@@ -1556,3 +1534,39 @@ Source line: 424
 cppID: swiftcore/HostBehaviorChecks::documentMutationUndoRedo
 Predicate: report.expect(redone && document.history.undoIndex == beforeRedoIndex + 1, cppID: id, message: "A133: redo during a live velocity preview moves the index forward by one")
 Anchor: message "A133: redo during a live velocity preview moves the index forward by one"
+
+S050 | drawerVelocityLifecycleCancellation | src/checks/velocity/VelocityClickCancellationChecks.swift
+Source line: 436
+cppID: swiftcore/VelocityPage::cancellationPaths
+Predicate: report.expect(!switchPage.hasGesture && !switchPage.interactionActive, cppID: drawerVelocityCancellationID, message: "A114 voicegroup replacement ends the held velocity gesture")
+Anchor: message "A114 voicegroup replacement ends the held velocity gesture"
+
+S051 | drawerVelocityLifecycleCancellation | src/checks/velocity/VelocityClickCancellationChecks.swift
+Source line: 439
+cppID: swiftcore/VelocityPage::cancellationPaths
+Predicate: report.expect(coreTimeBytes(switchFixture.document) == switchBytes, cppID: drawerVelocityCancellationID, message: "A115 voicegroup replacement leaves the MIDI bytes unchanged")
+Anchor: message "A115 voicegroup replacement leaves the MIDI bytes unchanged"
+
+S052 | drawerVelocityLifecycleCancellation | src/checks/velocity/VelocityClickCancellationChecks.swift
+Source line: 442
+cppID: swiftcore/VelocityPage::cancellationPaths
+Predicate: report.expect(switchFixture.document.revision == switchRevision + 1, cppID: drawerVelocityCancellationID, message: "A116 voicegroup replacement advances revision only for its config edit")
+Anchor: message "A116 voicegroup replacement advances revision only for its config edit"
+
+S053 | drawerVelocityLifecycleCancellation | src/checks/velocity/VelocityClickCancellationChecks.swift
+Source line: 445
+cppID: swiftcore/VelocityPage::cancellationPaths
+Predicate: report.expect(switchFixture.document.history.undoCount == switchUndoCount + 1, cppID: drawerVelocityCancellationID, message: "A117 voicegroup replacement adds only its config undo entry")
+Anchor: message "A117 voicegroup replacement adds only its config undo entry"
+
+S054 | drawerVelocityLifecycleCancellation | src/checks/velocity/VelocityClickCancellationChecks.swift
+Source line: 448
+cppID: swiftcore/VelocityPage::cancellationPaths
+Predicate: report.expect(switchPage.frozenPreview.isEmpty, cppID: drawerVelocityCancellationID, message: "A118 voicegroup replacement clears the held velocity preview")
+Anchor: message "A118 voicegroup replacement clears the held velocity preview"
+
+S055 | drawerVelocityLifecycleCancellation | src/checks/velocity/VelocityClickCancellationChecks.swift
+Source line: 451
+cppID: swiftcore/VelocityPage::cancellationPaths
+Predicate: report.expect(switchFixture.session.selectedNoteOrder == [switchNote.id], cppID: drawerVelocityCancellationID, message: "A120 voicegroup replacement preserves the selected note")
+Anchor: message "A120 voicegroup replacement preserves the selected note"

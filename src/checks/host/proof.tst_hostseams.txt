@@ -24,6 +24,9 @@ Task 144 verification command: /usr/bin/lockf -t 1800 /tmp/porydaw-build.lock /u
 Task 144 verification result: PASS 1/36 ok (Task144 implementer handoff; ledger writer ran no lane). The frozen session_view_state_fanout.swift SHA-256 is a856e21e1f145a33665fd7776a3b89635677e316ac21e3c6ca3249339c587523; handoff reports the lane passed.
 Execution evidence: Task144 handoff predicates correspond to S010 below. No missing or ambiguous assertion among the assigned site.
 
+Task 166 proof-structure command: deno task proof check
+Task 166 proof-structure result: successful; zero structural errors; 63 proof files, 4601 indexed C++ sites, 4711 anchors resolved (0 historical); strict-mapping debt warning: 293 sites. Ledger-writer run. This checks structure, tallies and anchor resolution, not semantic parity or execution.
+
 A001 | automationPlotFillsHostViewport | src/checks/host/tst_hostseams.cpp:41
 Disposition: RETIRED-REPRESENTATION
 
@@ -152,14 +155,9 @@ Original expression:
   QVERIFY(view.grid().snapTicksAt(12) > 0)
 
 A017 | editorEndpointsUpdateCameraAndResolveGridVoice | src/checks/host/tst_hostseams.cpp:83
-Disposition: PARTIAL
-Mapping/reason: Voice slot zero at the drawer context is now asserted by the executed hostCameraEndpoints predicate (S005); the bank-pointer identity (voice.voice == &host.bank().voices[0]) has no Swift counterpart and stays unproved.
-Source context since previous assertion:
-  ;
-          const DrawerPageVoiceContext voice = view.voiceContext(12);
+Disposition: RETIRED-REPRESENTATION
+Mapping: S005 — slot resolution is proven by the Swift predicate; the C++ bank-pointer equality is retired representation.
 
-Original expression:
-  QCOMPARE(voice.voice, &host.bank().voices[0])
 
 A018 | editorEndpointsUpdateCameraAndResolveGridVoice | src/checks/host/tst_hostseams.cpp:84
 Disposition: MATCHED
