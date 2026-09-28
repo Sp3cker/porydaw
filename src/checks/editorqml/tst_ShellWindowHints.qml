@@ -140,7 +140,7 @@ ShellWindowSupport {
         mouseMove(plot, plot.width / 2, plot.height / 2)
         tryVerify(function() { return hints.text.length > 0 && caption.text === hints.text },
                   3000, "the footer caption mirrors the current hint text")
-        tryCompare(hints, "text", "⇧Right-drag: select time · ⌘Wheel: zoom key height · ⇧Wheel: scroll horizontally", 3000)
+        tryCompare(hints, "text", "⇧ Right-drag: select time · ⌘ Wheel: zoom key height · ⇧ Wheel: scroll horizontally", 3000)
         var plotHint = hints.text
         verify(caption.text === plotHint,
                "the footer caption holds the full plot hint string")
@@ -169,7 +169,7 @@ ShellWindowSupport {
         var gutter = findChild(surface, "timelineQuickRollGutter")
         mouseMove(gutter, gutter.width / 2, gutter.height / 2)
         tryVerify(function() { return hints.text.length > 0 && hints.text !== plotHint }, 3000)
-        tryCompare(hints, "text", "⌘Wheel: zoom key height · ⇧Wheel: scroll horizontally", 3000)
+        tryCompare(hints, "text", "⌘ Wheel: zoom key height · ⇧ Wheel: scroll horizontally", 3000)
         var gutterHint = hints.text
         tryVerify(function() { return caption.text === gutterHint }, 3000,
                   "the footer caption holds the full hint after the profile changes")

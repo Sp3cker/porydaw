@@ -301,6 +301,36 @@ ShellWindowSupport {
                 "clean numeric editing leaves no pending dirty-tab close")
     }
 
+    function test_bUnloadedEditCommandsStayDisabled() {
+        settings.setString("lastProjectDir", "")
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "the unloaded production ShellWindow mounts")
+        shell.requestActivate()
+        tryCompare(shell, "active", true, 3000,
+                   "the unloaded shell window becomes active")
+        var session = shell.shellPresenter.session
+        compare(session.songOpen, false,
+                "the unloaded shell opens no song workspace")
+        var editMenu = findChild(shell.menuBar, "shellEditMenu")
+        var timeMenu = editMenu ? findChild(editMenu, "shellTimeMenu") : null
+        verify(editMenu && timeMenu
+               && findChild(editMenu, "shellAction_roll.copy")
+               && findChild(editMenu, "shellAction_roll.solo_tracks")
+               && findChild(timeMenu, "shellAction_edit.insert_time")
+               && findChild(timeMenu, "shellAction_edit.delete_time"),
+               "the unloaded shell publishes its edit command set through the Edit menu")
+        verify(session.songTabs.selectedPage === null,
+               "the unloaded shell binds no song page target")
+        compare(shell.shellPresenter.actionEnabled("roll.copy"), false,
+                "the unloaded shell disables Copy with no workspace")
+        compare(shell.shellPresenter.actionEnabled("roll.solo_tracks"), false,
+                "the unloaded shell disables Solo with no workspace")
+        compare(shell.shellPresenter.actionEnabled("edit.insert_time"), false,
+                "the unloaded shell disables Insert Time with no workspace")
+        compare(shell.shellPresenter.actionEnabled("edit.delete_time"), false,
+                "the unloaded shell disables Delete Time with no workspace")
+    }
+
     function test_fPencilLatchTextAndSpaceOwnership() {
         openTwoSongShell()
         var surface = selectedSurface()

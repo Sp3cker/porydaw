@@ -15,7 +15,8 @@ Additional Swift counterpart: src/checks/workspace/session_playback.swift
 Additional Swift counterpart: src/checks/workspace/session_save.swift
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
-Additional Swift counterpart: src/checks/editorqml/tst_ShellWindowHints.qml (SHA-256 e07f77fb998e569c610aed2c36717e5d8d7d8fb2a3aac5f9a03bac3c785e58e4)
+Additional Swift counterpart: src/checks/editorqml/tst_ShellWindowHints.qml (SHA-256 09c2e376cfe8abcea1303660d4555ee4c19db0732cdd89e32b956ff2950eac73)
+Additional Swift counterpart: src/checks/editorqml/tst_ShellWindowShortcuts.qml (SHA-256 42769e7a61e05152e48b9cf0453b54fdaf5afb145ba1513b83c7b4b422200b91)
 Additional Swift counterpart: src/checks/editorqml/tst_ShellMenus.qml
 Additional Swift counterpart: src/checks/drawerpresentation/drawer_state.swift
 Additional Swift counterpart: src/checks/drawerpresentation/drawer_basics.swift
@@ -32,10 +33,11 @@ src/checks/editorqml/tst_ShellMenus.qml execute the Edit-menu clauses this ledge
 rows now carry that counterpart beside their tst_ShellWindow.qml rows — the head clipboard group
 (S208 on A074), the eight nested command submenus (S209/S210 on A075/A076) and the Time and
 Tracks submenu action lists (S211 on A077/A078, S212 on A079). No open row of this ledger is
-executed by the new menu predicates: A069–A072, A082–A085 and A094–A099 stay GAP on their native
+executed by the new menu predicates: A069–A072 and A082–A085 remain GAP on their native
 QAction pointer-identity/wiring reasons (the Swift app has no QWidget layer; the "stay NATIVE"
-summary above is not the disposition these rows carry), and A087–A091 stay GAP for the missing
-explicit rebind(nullptr) seam. Every S anchor still resolves against the task-46 tst_ShellWindow.qml
+summary above is not the disposition these rows carry); A094–A099 were GAP then and are now
+reconciled under Task 200. A087–A091 stayed GAP for the missing explicit rebind(nullptr) seam.
+Every S anchor still resolves against the task-46 tst_ShellWindow.qml
 (S193 at :608, S194 at :623, S195 at :641, S196 at :612, S207 at :645) and against the unchanged
 functions S186–S191/S197; no counterpart hash of a task-46 source is pinned in this ledger, so no
 re-pin was needed. The pinned Original SHA-256 is the historical C++ original and is unchanged.
@@ -57,6 +59,7 @@ Task 193 execution evidence (controller/implementer handoff; ledger agent did no
 For A164/A171, the fork snapshot is limited to `Sidecar::dirPath` (`.porydaw`), and `projectSidecarSnapshot` mirrors that recursive sidecar-path-to-bytes snapshot. For A173–A181, the duplicate-engine-destination rejected remap is unreachable through Swift production paths; each S anchor records the corresponding no-op result after live document ingress.
 Task 198 shellwindow-hints execution evidence (implementer/controller handoff; ledger agent did not rerun): `deno task verify:shell --filter shellwindow-hints --verbose` — 1/76 PASS. The frozen QML source above is registered as `shellwindow-hints` in ShellQmlEntries.swift with Route 101 and Littleroot fixtures; the six mounted QML test functions below execute on that lane. This ledger agent verified the frozen source SHA-256 directly.
 Task 198 reconciled A188/A204/A208/A217/A224/A227/A250/A253/A255/A258/A260 as MATCHED and A262–A267 as RETIRED-REPRESENTATION. The plot hint wording residual is documented on A250; no parity claim is made for the modifier-glyph spacing. A262 retires Qt hint-source identity because the mounted hints object has no currentSource channel. A263–A267 retire enlarged-font scenarios because production typography is captured once at launch (ApplicationSession.swift:190–191) and SettingsDialog has no font control. Original SHA-256 and Reference revision above are historical pins and were not recomputed.
+Task 200 source hashes verified against the settled tree: tst_ShellWindowShortcuts.qml 42769e7a61e05152e48b9cf0453b54fdaf5afb145ba1513b83c7b4b422200b91; tst_ShellWindowHints.qml 09c2e376cfe8abcea1303660d4555ee4c19db0732cdd89e32b956ff2950eac73; tst_ShellTabsMouseHints.qml 66f895b14811feba96c44768b7f5583500903551f0425a7ec879eadd09dcc974; tst_ShellDrawerParityAutomation.qml 95c8738284476368810f056b46f71b11331546abc190122afe05a6935bd1c776; src/swift/app/MouseHints.swift 43b8b50971c4f72b241808a55f82756786be2074cc8f151fa30bc12586396fe6. MouseHints.swift restores fork fragment() spacing. Implementer/controller-reported lanes PASS: shellwindow-hints, shell-tabs-mouse-hints, shell-drawer-parity-automation, shellwindow-shortcuts; ledger agent did not rerun them.
 
 A001 | MainWindowRoutingStateTest::drawerSeedProjection | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:52
 Disposition: RETIRED-REPRESENTATION
@@ -734,8 +737,8 @@ Disposition: MATCHED
 Mapping: S191
 
 A094 | MainWindowRoutingStateTest::editActionsStartUnboundWithNoWorkspace | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:271
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S360 positively observes the unloaded shell publishing its Edit-menu command set; the native QAction-set identity itself has no Swift counterpart.
 Source context since previous assertion:
     }
 
@@ -750,40 +753,40 @@ Original expression:
         QVERIFY(window.m_editActions)
 
 A095 | MainWindowRoutingStateTest::editActionsStartUnboundWithNoWorkspace | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:272
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping: S361
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(!window.m_editActions->target())
 
 A096 | MainWindowRoutingStateTest::editActionsStartUnboundWithNoWorkspace | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:273
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping: S362
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(!window.m_copyAction->isEnabled())
 
 A097 | MainWindowRoutingStateTest::editActionsStartUnboundWithNoWorkspace | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:274
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping: S363
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(!window.m_soloAction->isEnabled())
 
 A098 | MainWindowRoutingStateTest::editActionsStartUnboundWithNoWorkspace | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:275
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping: S364
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(!window.m_insertTimeAction->isEnabled())
 
 A099 | MainWindowRoutingStateTest::editActionsStartUnboundWithNoWorkspace | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:276
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping: S365
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1418,7 +1421,7 @@ Mapping/reason: S237 directly checks the real plot hover publishes non-empty hin
 
 A250 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:728
 Disposition: MATCHED
-Mapping/reason: S346, S357; S357 pins the plot hint literal and S346 checks the full caption (the Swift literal is “⇧Right-drag” without a space after the modifier glyph, while the fork renders “⇧ Right-drag”; noted wording residual, not a blocker).
+Mapping/reason: S346, S357; S357 pins the exact plot hint literal and S346 checks the full caption; the fork's fragment() spacing is restored in MouseHints.swift.
 
 A251 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:730
 Disposition: MATCHED
@@ -2646,16 +2649,46 @@ Source line: 248
 Predicate: verify(hintCentered(), "the enlarged-font hide-meter clause retires; the unmetered center executes at the production font")
 
 S357 | test_rMouseHintStatusPresentation | src/checks/editorqml/tst_ShellWindowHints.qml
-Anchor: message "⇧Right-drag: select time · ⌘Wheel: zoom key height · ⇧Wheel: scroll horizontally"
+Anchor: message "⇧ Right-drag: select time · ⌘ Wheel: zoom key height · ⇧ Wheel: scroll horizontally"
 Source line: 143
-Predicate: tryCompare(hints, "text", "⇧Right-drag: select time · ⌘Wheel: zoom key height · ⇧Wheel: scroll horizontally", 3000)
+Predicate: tryCompare(hints, "text", "⇧ Right-drag: select time · ⌘ Wheel: zoom key height · ⇧ Wheel: scroll horizontally", 3000)
 
 S358 | test_rMouseHintStatusPresentation | src/checks/editorqml/tst_ShellWindowHints.qml
-Anchor: message "⌘Wheel: zoom key height · ⇧Wheel: scroll horizontally"
+Anchor: message "⌘ Wheel: zoom key height · ⇧ Wheel: scroll horizontally"
 Source line: 172
-Predicate: tryCompare(hints, "text", "⌘Wheel: zoom key height · ⇧Wheel: scroll horizontally", 3000)
+Predicate: tryCompare(hints, "text", "⌘ Wheel: zoom key height · ⇧ Wheel: scroll horizontally", 3000)
 
 S359 | test_rMouseHintStatusPresentation | src/checks/editorqml/tst_ShellWindowHints.qml
 Anchor: message "the footer caption holds the full hint after the profile changes"
 Source line: 174
 Predicate: tryVerify(function() { return caption.text === gutterHint }, 3000, "the footer caption holds the full hint after the profile changes")
+
+S360 | test_bUnloadedEditCommandsStayDisabled | src/checks/editorqml/tst_ShellWindowShortcuts.qml
+Anchor: message "the unloaded shell publishes its edit command set through the Edit menu"
+Source line: 316
+Predicate: verify(editMenu && timeMenu && findChild(editMenu, "shellAction_roll.copy") && findChild(editMenu, "shellAction_roll.solo_tracks") && findChild(timeMenu, "shellAction_edit.insert_time") && findChild(timeMenu, "shellAction_edit.delete_time"), "the unloaded shell publishes its edit command set through the Edit menu")
+
+S361 | test_bUnloadedEditCommandsStayDisabled | src/checks/editorqml/tst_ShellWindowShortcuts.qml
+Anchor: message "the unloaded shell binds no song page target"
+Source line: 322
+Predicate: verify(session.songTabs.selectedPage === null, "the unloaded shell binds no song page target")
+
+S362 | test_bUnloadedEditCommandsStayDisabled | src/checks/editorqml/tst_ShellWindowShortcuts.qml
+Anchor: message "the unloaded shell disables Copy with no workspace"
+Source line: 324
+Predicate: compare(shell.shellPresenter.actionEnabled("roll.copy"), false, "the unloaded shell disables Copy with no workspace")
+
+S363 | test_bUnloadedEditCommandsStayDisabled | src/checks/editorqml/tst_ShellWindowShortcuts.qml
+Anchor: message "the unloaded shell disables Solo with no workspace"
+Source line: 326
+Predicate: compare(shell.shellPresenter.actionEnabled("roll.solo_tracks"), false, "the unloaded shell disables Solo with no workspace")
+
+S364 | test_bUnloadedEditCommandsStayDisabled | src/checks/editorqml/tst_ShellWindowShortcuts.qml
+Anchor: message "the unloaded shell disables Insert Time with no workspace"
+Source line: 328
+Predicate: compare(shell.shellPresenter.actionEnabled("edit.insert_time"), false, "the unloaded shell disables Insert Time with no workspace")
+
+S365 | test_bUnloadedEditCommandsStayDisabled | src/checks/editorqml/tst_ShellWindowShortcuts.qml
+Anchor: message "the unloaded shell disables Delete Time with no workspace"
+Source line: 330
+Predicate: compare(shell.shellPresenter.actionEnabled("edit.delete_time"), false, "the unloaded shell disables Delete Time with no workspace")

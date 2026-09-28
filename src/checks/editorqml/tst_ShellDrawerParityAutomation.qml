@@ -65,20 +65,20 @@ ShellDrawerParitySupport {
         tryCompare(model, "hoverVisible", true, 3000,
                    "plot entry presents the background hover")
         tryCompare(hint, "text",
-                   "⇧Drag: draw ramp · ⌥Drag: draw in ticks · ⌘Drag: snap to neutral value · ⇧Wheel: scroll horizontally",
+                   "⇧ Drag: draw ramp · ⌥ Drag: draw in ticks · ⌘ Drag: snap to neutral value · ⇧ Wheel: scroll horizontally",
                    3000, "plot entry publishes the exact sweep hint in the shell")
         input.forceActiveFocus(Qt.MouseFocusReason)
         keyClick(Qt.Key_B)
         tryCompare(model, "isPencilMode", true, 3000,
                    "the mounted shell dispatches B to arm the pencil")
         tryCompare(hint, "text",
-                   "⌘Drag: draw freehand · ⇧Drag: hold value · ⌥Right-drag: draw in ticks · ⇧Wheel: scroll horizontally",
+                   "⌘ Drag: draw freehand · ⇧ Drag: hold value · ⌥ Right-drag: draw in ticks · ⇧ Wheel: scroll horizontally",
                    3000, "the pencil shortcut replaces the shell hint text")
         keyClick(Qt.Key_B)
         tryCompare(model, "isPencilMode", false, 3000,
                    "the second mounted B key returns to sweep mode")
         tryCompare(hint, "text",
-                   "⇧Drag: draw ramp · ⌥Drag: draw in ticks · ⌘Drag: snap to neutral value · ⇧Wheel: scroll horizontally",
+                   "⇧ Drag: draw ramp · ⌥ Drag: draw in ticks · ⌘ Drag: snap to neutral value · ⇧ Wheel: scroll horizontally",
                    3000, "sweep hint returns after the second shortcut")
 
         mouseMove(gutter, gutter.width / 2, gutter.height / 2)
@@ -90,7 +90,7 @@ ShellDrawerParitySupport {
         tryCompare(model, "hoverVisible", true, 3000,
                    "returning from gutter restores plot hover")
         tryCompare(hint, "text",
-                   "⇧Drag: draw ramp · ⌥Drag: draw in ticks · ⌘Drag: snap to neutral value · ⇧Wheel: scroll horizontally",
+                   "⇧ Drag: draw ramp · ⌥ Drag: draw in ticks · ⌘ Drag: snap to neutral value · ⇧ Wheel: scroll horizontally",
                    3000, "returning from gutter restores the exact sweep hint")
 
         var fills = collectByName(page, "automationNodeFill", [])
@@ -122,7 +122,7 @@ ShellDrawerParitySupport {
         tryCompare(model, "menuOpen", false, 3000,
                    "the outside pointer click closes the automation menu")
         tryCompare(hint, "text",
-                   "⇧Drag: draw ramp · ⌥Drag: draw in ticks · ⌘Drag: snap to neutral value · ⇧Wheel: scroll horizontally",
+                   "⇧ Drag: draw ramp · ⌥ Drag: draw in ticks · ⌘ Drag: snap to neutral value · ⇧ Wheel: scroll horizontally",
                    3000, "the exact sweep hint recovers at the stationary dismissal point")
         compare(revision(), before, "shortcut hover and menu dismissal never edit the song")
         mouseMove(input, input.width * 0.08, input.height * 0.85)

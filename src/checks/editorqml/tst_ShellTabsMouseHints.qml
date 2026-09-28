@@ -18,7 +18,7 @@ ShellTabsSupport {
         bar.presenter.setOutputVolume(50)
         tryCompare(dial, "value", 50)
         mouseMove(dial, dial.width / 2, dial.height / 2)
-        tryCompare(hint, "text", "⇧Drag: adjust finely · ⌘Wheel: step by ten", 3000,
+        tryCompare(hint, "text", "⇧ Drag: adjust finely · ⌘ Wheel: step by ten", 3000,
                    "hovering the real output dial publishes its drag profile")
         var dialProfile = hint.text
         mousePress(dial, dial.width / 2, dial.height / 2, Qt.LeftButton)
@@ -49,7 +49,7 @@ ShellTabsSupport {
             ? scroll.thumbPos + scroll.thumbLength / 2 : scroll.height / 2
         mouseMove(roll, roll.width / 2, roll.height / 2)
         tryCompare(hint, "text",
-                   "⇧Right-drag: select time · ⌘Wheel: zoom key height · ⇧Wheel: scroll horizontally",
+                   "⇧ Right-drag: select time · ⌘ Wheel: zoom key height · ⇧ Wheel: scroll horizontally",
                    3000, "roll hover precedes the scrollbar's empty profile")
         mouseMove(scroll, thumbX, thumbY)
         tryCompare(hint, "text", "", 3000,
@@ -62,7 +62,7 @@ ShellTabsSupport {
         compare(hint.text, "", "the scrollbar keeps its empty profile across the grab")
         mouseRelease(scroll, rollInScroll.x, rollInScroll.y, Qt.LeftButton)
         tryCompare(hint, "text",
-                   "⇧Right-drag: select time · ⌘Wheel: zoom key height · ⇧Wheel: scroll horizontally",
+                   "⇧ Right-drag: select time · ⌘ Wheel: zoom key height · ⇧ Wheel: scroll horizontally",
                    3000, "releasing the scrollbar over the roll reveals the roll profile")
 
         var header = findChild(surface, "timelineTrackHeadersInput")
@@ -85,7 +85,7 @@ ShellTabsSupport {
         tryCompare(header, "containsMouse", true, 3000,
                    "real pointer hover reaches the first track header source")
         tryCompare(hint, "text",
-                   "⌘Click: add track to selection · ⇧Click: add range to selection",
+                   "⌘ Click: add track to selection · ⇧ Click: add range to selection",
                    3000, "hovering the first header publishes its track-scope profile")
         var headerProfile = hint.text
         var revision = surface.gridModel.appliedRevisionText
@@ -118,7 +118,7 @@ ShellTabsSupport {
         tryCompare(roll, "containsMouse", true, 3000,
                    "the stationary pointer really hovers the roll source")
         tryCompare(hint, "text",
-                   "⇧Right-drag: select time · ⌘Wheel: zoom key height · ⇧Wheel: scroll horizontally",
+                   "⇧ Right-drag: select time · ⌘ Wheel: zoom key height · ⇧ Wheel: scroll horizontally",
                    3000, "stationary roll hover publishes its distinct roll profile")
         var rollProfile = hint.text
         header.forceActiveFocus(Qt.OtherFocusReason)
@@ -164,7 +164,7 @@ ShellTabsSupport {
         tryCompare(rollB, "containsMouse", true, 3000,
                    "the second tab roll receives real pointer hover")
         tryCompare(hint, "text",
-                   "⇧Right-drag: select time · ⌘Wheel: zoom key height · ⇧Wheel: scroll horizontally",
+                   "⇧ Right-drag: select time · ⌘ Wheel: zoom key height · ⇧ Wheel: scroll horizontally",
                    3000, "B's live roll claims the visible mouse hint")
         tabs().selectTab(a)
         tryCompare(tabs(), "selectedId", a, 3000,
@@ -172,7 +172,7 @@ ShellTabsSupport {
         tryCompare(pageOf(b), "visible", false, 3000,
                    "switching to A hides the original B hint source")
         tryVerify(function() {
-            return hint.text !== "⇧Right-drag: select time · ⌘Wheel: zoom key height · ⇧Wheel: scroll horizontally"
+            return hint.text !== "⇧ Right-drag: select time · ⌘ Wheel: zoom key height · ⇧ Wheel: scroll horizontally"
         }, 3000, "B's hidden roll cannot keep its hint over A's event list")
         var rollA = findChild(surfaceOf(a), "swiftRollInput")
         tabs().setSelectedTabEventsVisible(false)
@@ -185,19 +185,19 @@ ShellTabsSupport {
         tryCompare(rollA, "containsMouse", true, 3000,
                    "the selected first tab roll receives new pointer hover")
         tryCompare(hint, "text",
-                   "⇧Right-drag: select time · ⌘Wheel: zoom key height · ⇧Wheel: scroll horizontally",
+                   "⇧ Right-drag: select time · ⌘ Wheel: zoom key height · ⇧ Wheel: scroll horizontally",
                    3000, "A's actual roll hover reclaims the visible hint")
         tabs().requestClose(a)
         tryCompare(tabs(), "selectedId", b, 5000,
                    "closing A selects the surviving B document")
         mouseMove(rollB, rollB.width / 2, rollB.height / 2)
         tryCompare(hint, "text",
-                   "⇧Right-drag: select time · ⌘Wheel: zoom key height · ⇧Wheel: scroll horizontally",
+                   "⇧ Right-drag: select time · ⌘ Wheel: zoom key height · ⇧ Wheel: scroll horizontally",
                    3000, "B's real roll hover reclaims its profile after closing A")
         verify(waitForNative(function() { return pageOf(a) === null }, 5000),
                "closing A destroys its old pointer owner")
         compare(hint.text,
-                "⇧Right-drag: select time · ⌘Wheel: zoom key height · ⇧Wheel: scroll horizontally",
+                "⇧ Right-drag: select time · ⌘ Wheel: zoom key height · ⇧ Wheel: scroll horizontally",
                 "destroying A cannot clear the surviving B roll profile")
     }
 }
