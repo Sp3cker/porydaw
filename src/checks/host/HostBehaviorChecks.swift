@@ -1,5 +1,6 @@
 import Foundation
 @testable import PorydawApp
+import PorydawAppAudio
 import PorydawCore
 import PorydawPlayback
 
@@ -573,6 +574,90 @@ private func hostBandGeometry(_ report: CheckReport, session: DocumentSession,
                   && fixture.page.plotOrigin == Double(gutter)
                   && fixture.page.plotWidth == Double(width - gutter),
                   cppID: id, message: "plot origins sit at the split and right edges meet band edges")
+    guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
+        report.fail(id, "project-session fixture root is unavailable for band geometry")
+        return
+    }
+    let root = stageTestProject(in: fixtureRoot, projectName: "swiftcore-host-band-geometry")
+    let shell = ShellPresenter()
+    let app = shell.session
+    defer {
+        app.hostClosing()
+        app.acknowledgeGridDetached()
+    }
+    app.openProjectAndSong(path: root, label: "mus_session_test")
+    let deadline = Date().addingTimeInterval(25)
+    while !app.songOpen && app.lastSaveError.isEmpty && Date() < deadline {
+        _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+    }
+    guard app.songOpen, let page = app.songTabs.selectedPage,
+          let audio = app.transportAudio else {
+        report.fail(id, "copied project did not open with audio and an automation band: \(app.lastSaveError)")
+        return
+    }
+    let liveDrawer = page.drawerPresenter()
+    liveDrawer.configureLayout(hostWidth: width, hostHeight: height, gutterWidth: gutter,
+                               fontPx: font, appFontLineSpacing: fontPx(font, 1))
+    liveDrawer.setSectionVisible(kind: DrawerSectionKind.automation.rawValue,
+                                 visible: true, drawerOwnsFocus: false)
+    let band = liveDrawer.automationSection
+    let settings = PreferencesStore()
+    let previousMode = settings.string(key: "theme.mode", fallback: "")
+    let hadMode = settings.hasValue(key: "theme.mode")
+    defer {
+        if hadMode {
+            settings.setString(key: "theme.mode", value: previousMode)
+        } else {
+            settings.remove(key: "theme.mode")
+        }
+        settings.synchronize()
+        shell.restoreAppearance()
+    }
+    shell.restoreAppearance()
+    let originalColor = app.palette.windowBackground
+    let nextMode = shell.themeMode == "dark-neutral-high" ? "vanilla" : "dark-neutral-high"
+    let firstSample = audio.playheadSamples
+    app.play()
+    let playbackDeadline = Date().addingTimeInterval(5)
+    while (audio.transport != AudioTransportState.playing.rawValue
+           || audio.playheadSamples <= firstSample + UInt64(audio.sampleRate / 20))
+          && Date() < playbackDeadline {
+        _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+    }
+    guard audio.transport == AudioTransportState.playing.rawValue,
+          audio.playheadSamples > firstSample + UInt64(audio.sampleRate / 20) else {
+        report.fail(id, "copied song did not reach steady null-backend playback")
+        return
+    }
+    defer { app.stop() }
+    let metrics = EditorDrawerMetrics.resolve(baseFontPx: font,
+                                              appFontLineSpacing: fontPx(font, 1))
+    report.expect(band.available && band.visible && !band.contentUrl.isEmpty
+                  && band.bodyX == 0 && band.bodyWidth == width
+                  && band.bodyHeight >= metrics.minimumBody
+                  && band.handleHeight == metrics.handleHeight,
+                  cppID: id,
+                  message: "A008: the automation band publishes measured body and handle geometry during steady playback")
+    let beforeValues = [band.bodyX, band.bodyY, band.bodyWidth, band.bodyHeight,
+                        band.handleY, band.handleHeight, band.toggleX, band.toggleY,
+                        band.toggleSize, liveDrawer.plotOrigin, liveDrawer.plotWidth]
+    let beforeAvailable = band.available
+    let beforeVisible = band.visible
+    let beforeUrl = band.contentUrl
+    settings.setString(key: "theme.mode", value: nextMode)
+    settings.synchronize()
+    shell.restoreAppearance()
+    guard shell.themeMode == nextMode, app.palette.windowBackground != originalColor else {
+        report.fail(id, "production appearance restore did not apply a different palette")
+        return
+    }
+    report.expect(band.available == beforeAvailable && band.visible == beforeVisible
+                  && band.contentUrl == beforeUrl
+                  && [band.bodyX, band.bodyY, band.bodyWidth, band.bodyHeight,
+                      band.handleY, band.handleHeight, band.toggleX, band.toggleY,
+                      band.toggleSize, liveDrawer.plotOrigin, liveDrawer.plotWidth] == beforeValues,
+                  cppID: id,
+                  message: "A142: restoring a different appearance preserves every measured automation band geometry field")
 }
 
 @MainActor

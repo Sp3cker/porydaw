@@ -5,7 +5,7 @@ Original: src/checks/host/tst_hostintegration.cpp
 Original SHA-256: 4083b59bbb5e88019ed164c1296e3f8ea36e3a6fe6673d8b0ef74316dbdbae10
 Swift counterpart: src/checks/velocity/VelocityClickSelectionChecks.swift (drawerVelocityPrimaryTrackSwitchCancels :267-312; drawerVelocityLifecycleCancellation :315-383 plus bank route :384-461); src/checks/velocity/VelocityPageChecks.swift call-list entry; src/checks/editorqml/tst_ShellWindow.qml test_kVelocityGestureTermination plus data (:976-1083)
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
-Additional Swift counterpart: src/checks/host/HostBehaviorChecks.swift :: hostNoteDiscovery + hostVelocityGestureContracts + hostVelocityExactGestures + hostLifecycleTermination + hostPlayheadFollowing + hostVelocityAxisVoice + hostCosmeticOnly + hostDocumentMutationUndoRedo (SHA-256 a1111c650e15f0e9fbbaac9c335e567f83311324bc34b9366a8686495f92c0f1)
+Additional Swift counterpart: src/checks/host/HostBehaviorChecks.swift :: hostNoteDiscovery + hostVelocityGestureContracts + hostVelocityExactGestures + hostLifecycleTermination + hostPlayheadFollowing + hostVelocityAxisVoice + hostCosmeticOnly + hostDocumentMutationUndoRedo + hostBandGeometry (SHA-256 1be477ecc9ed246d2d37ca6a0a855b027b889bbe187101599da17b62c22fe16a)
 Additional Swift counterpart: src/checks/workspace/session_view_state_fanout.swift (SHA-256 a856e21e1f145a33665fd7776a3b89635677e316ac21e3c6c6a3249339c587523)
 Additional QML counterpart: src/checks/editorqml/tst_ShellTabsClose.qml (SHA-256 d4d05854ffc009768dc7c56f0e6c90bf6beb53d7f3fac5d8f9a8ac4dc08df736)
 
@@ -38,6 +38,9 @@ Task 166 shell verification result: PASS 12/76 (implementer handoff). QML counte
 
 Task 166 proof-structure command: deno task proof check
 Task 166 proof-structure result: successful; zero structural errors; 63 proof files, 4601 indexed C++ sites, 4711 anchors resolved (0 historical); strict-mapping debt warning: 293 sites. Ledger-writer run. This checks structure, tallies and anchor resolution, not semantic parity or execution.
+Task 174 verification lane: swiftcore-projectsession
+Task 174 verification result: PASS (Task 174 handoff). The final HostBehaviorChecks.swift SHA-256 is 1be477ecc9ed246d2d37ca6a0a855b027b889bbe187101599da17b62c22fe16a. The lane invokes runHostBehaviorChecks from SessionChecks.swift; hostBandGeometry runs the A008 and A142 predicates indexed at S056-S057.
+
 
 A001 | twoTabReadySessionWithTwoNoteSeed | src/checks/host/tst_hostintegration.cpp:145
 Disposition: RETIRED-REPRESENTATION
@@ -99,18 +102,8 @@ Original expression:
   QVERIFY2(found, "required route101 fixture has no steady 120-tick voice context")
 
 A008 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:184
-Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the automation band layout geometry presence; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-          view.setFollowPlayhead(false);
-          view.setPlayheadSample(session->active->timeline()->sampleForTick(first), true);
-          settle();
-          const auto automationGeometry =
-              view.timelineBandLayout().geometry(songview::TimelineBand::Automation);
-
-Original expression:
-  QVERIFY(automationGeometry.has_value())
+Disposition: MATCHED
+Mapping: S056
 
 A009 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:188
 Disposition: RETIRED-REPRESENTATION
@@ -979,15 +972,8 @@ A141 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hos
 Disposition: RETIRED-REPRESENTATION
 
 A142 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:606
-Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the automation band layout geometry presence; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-          const auto geometry =
-              view.timelineBandLayout().geometry(songview::TimelineBand::Automation);
-
-Original expression:
-  QVERIFY(geometry.has_value())
+Disposition: MATCHED
+Mapping: S057
 
 A143 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:608
 Disposition: RETIRED-REPRESENTATION
@@ -1303,109 +1289,109 @@ S010 | hostCosmeticOnly | src/checks/host/HostBehaviorChecks.swift
 Anchor: message "pan attempts leave song bytes, revision and undo depth untouched"
 
 S011 | hostNoteDiscovery | src/checks/host/HostBehaviorChecks.swift
-Source line: 50
+Source line: 51
 cppID: swiftcore/HostBehaviorChecks::noteDiscovery
 Predicate: report.expect(twoNotes.selectedNotes.count == 2, cppID: id, message: "A004: the ready two-note seed selects exactly two notes")
 Anchor: message "A004: the ready two-note seed selects exactly two notes"
 
 S012 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
-Source line: 215
+Source line: 217
 cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
 Predicate: report.expect(noopResult == baseline.revision && DocumentSnapshot(document) == baseline && fixture.session.selectedNotes == Set(selected) && (try? document.state.file.encoded()) == baselineBytes && noop.previewVelocity(firstID) == 127 && noop.previewVelocity(secondID) == 64, cppID: id, message: "A044: an unchanged gesture leaves revision, notes, selection and previews intact")
 Anchor: message "A044: an unchanged gesture leaves revision, notes, selection and previews intact"
 
 S013 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
-Source line: 221
+Source line: 223
 cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
 Predicate: report.expect(document.history.undoIndex == undoIndex, cppID: id, message: "A045: an unchanged gesture does not advance the history index")
 Anchor: message "A045: an unchanged gesture does not advance the history index"
 
 S014 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
-Source line: 243
+Source line: 245
 cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
 Predicate: report.expect(gesture.previewVelocity(firstID) == 1, cppID: id, message: "A053: the first frozen preview has exact velocity one")
 Anchor: message "A053: the first frozen preview has exact velocity one"
 
 S015 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
-Source line: 245
+Source line: 247
 cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
 Predicate: report.expect(gesture.previewVelocity(secondID) == 65, cppID: id, message: "A054: the second frozen preview has exact velocity sixty-five")
 Anchor: message "A054: the second frozen preview has exact velocity sixty-five"
 
 S016 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
-Source line: 256
+Source line: 258
 cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
 Predicate: report.expect(document.note(firstID)?.velocity == 1, cppID: id, message: "A063: the held first note lands at exact velocity one")
 Anchor: message "A063: the held first note lands at exact velocity one"
 
 S017 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
-Source line: 260
+Source line: 262
 cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
 Predicate: report.expect(document.history.undoIndex == undoIndex + 1 && fixture.session.selectedNotes == Set(selected), cppID: id, message: "A065: the exact commit retains both selected notes at the next history index")
 Anchor: message "A065: the exact commit retains both selected notes at the next history index"
 
 S018 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
-Source line: 272
+Source line: 274
 cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
 Predicate: report.expect(fixture.session.selectedNotes == Set(selected) && document.note(firstID)?.velocity == 127 && document.note(secondID)?.velocity == 64, cppID: id, message: "A066: undo restores both selected notes and their seeded velocities")
 Anchor: message "A066: undo restores both selected notes and their seeded velocities"
 
 S019 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
-Source line: 319
+Source line: 321
 cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
 Predicate: report.expect(document.revision == staleRevision + 1, cppID: id, message: "A070: only the external edit advances the stale revision")
 Anchor: message "A070: only the external edit advances the stale revision"
 
 S020 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
-Source line: 321
+Source line: 323
 cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
 Predicate: report.expect(document.history.undoIndex == undoIndex + 2, cppID: id, message: "A071: the stale rejection adds no history entry after the external edit")
 Anchor: message "A071: the stale rejection adds no history entry after the external edit"
 
 S021 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
-Source line: 323
+Source line: 325
 cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
 Predicate: report.expect(document.note(firstID) != nil, cppID: id, message: "A072: the stale first note remains findable after rejection")
 Anchor: message "A072: the stale first note remains findable after rejection"
 
 S022 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
-Source line: 325
+Source line: 327
 cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
 Predicate: report.expect(document.note(secondID) != nil, cppID: id, message: "A073: the externally edited second note remains findable after rejection")
 Anchor: message "A073: the externally edited second note remains findable after rejection"
 
 S023 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
-Source line: 327
+Source line: 329
 cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
 Predicate: report.expect(document.note(firstID)?.velocity == 1, cppID: id, message: "A074: stale rejection leaves the first note at velocity one")
 Anchor: message "A074: stale rejection leaves the first note at velocity one"
 
 S024 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
-Source line: 329
+Source line: 331
 cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
 Predicate: report.expect(document.note(secondID)?.velocity == 66, cppID: id, message: "A075: the external edit lands velocity sixty-six on the second note")
 Anchor: message "A075: the external edit lands velocity sixty-six on the second note"
 
 S025 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
-Source line: 331
+Source line: 333
 cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
 Predicate: report.expect(fixture.page.frozenPreview[firstID] == nil, cppID: id, message: "A076: rejection clears the first stale preview")
 Anchor: message "A076: rejection clears the first stale preview"
 
 S026 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
-Source line: 333
+Source line: 335
 cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
 Predicate: report.expect(fixture.page.frozenPreview[secondID] == nil, cppID: id, message: "A077: rejection clears the second stale preview")
 Anchor: message "A077: rejection clears the second stale preview"
 
 S027 | hostVelocityExactGestures | src/checks/host/HostBehaviorChecks.swift
-Source line: 335
+Source line: 337
 cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
 Predicate: report.expect(fixture.session.selectedNotes == Set(selected), cppID: id, message: "A078: rejection preserves the restored two-note selection")
 Anchor: message "A078: rejection preserves the restored two-note selection"
 
 S028 | hostVelocityGestureContracts | src/checks/host/HostBehaviorChecks.swift
-Source line: 146
+Source line: 148
 cppID: swiftcore/HostBehaviorChecks::velocityGestureContracts
 Predicate: report.expect(document.note(note.id)?.velocity == 1 && document.revision == before.revision + 1, cppID: id, message: "A028: the first pointer gesture commits velocity one in one revision")
 Anchor: message "A028: the first pointer gesture commits velocity one in one revision"
@@ -1494,43 +1480,43 @@ Predicate: report.expect(reopened.document.history.undoCount == freshSecondDepth
 Anchor: message "A172 second song fresh open restores its independently recorded history depth"
 
 S043 | hostDocumentMutationUndoRedo | src/checks/host/HostBehaviorChecks.swift
-Source line: 382
+Source line: 383
 cppID: swiftcore/HostBehaviorChecks::documentMutationUndoRedo
 Predicate: report.expect(document.revision == revision + 1, cppID: id, message: "A127: live-preview document mutation advances the revision by one")
 Anchor: message "A127: live-preview document mutation advances the revision by one"
 
 S044 | hostDocumentMutationUndoRedo | src/checks/host/HostBehaviorChecks.swift
-Source line: 384
+Source line: 385
 cppID: swiftcore/HostBehaviorChecks::documentMutationUndoRedo
 Predicate: report.expect(document.history.undoIndex == undoIndex + 1, cppID: id, message: "A128: live-preview document mutation advances the undo index by one")
 Anchor: message "A128: live-preview document mutation advances the undo index by one"
 
 S045 | hostDocumentMutationUndoRedo | src/checks/host/HostBehaviorChecks.swift
-Source line: 386
+Source line: 387
 cppID: swiftcore/HostBehaviorChecks::documentMutationUndoRedo
 Predicate: report.expect(document.history.undoCount == undoCount + 1, cppID: id, message: "A129: live-preview document mutation appends one undo entry")
 Anchor: message "A129: live-preview document mutation appends one undo entry"
 
 S046 | hostDocumentMutationUndoRedo | src/checks/host/HostBehaviorChecks.swift
-Source line: 404
+Source line: 405
 cppID: swiftcore/HostBehaviorChecks::documentMutationUndoRedo
 Predicate: report.expect(undone && document.revision == beforeUndoRevision + 1, cppID: id, message: "A130: undo during a live velocity preview advances the revision by one")
 Anchor: message "A130: undo during a live velocity preview advances the revision by one"
 
 S047 | hostDocumentMutationUndoRedo | src/checks/host/HostBehaviorChecks.swift
-Source line: 406
+Source line: 407
 cppID: swiftcore/HostBehaviorChecks::documentMutationUndoRedo
 Predicate: report.expect(undone && document.history.undoIndex == beforeUndoIndex - 1, cppID: id, message: "A131: undo during a live velocity preview moves the index back by one")
 Anchor: message "A131: undo during a live velocity preview moves the index back by one"
 
 S048 | hostDocumentMutationUndoRedo | src/checks/host/HostBehaviorChecks.swift
-Source line: 422
+Source line: 423
 cppID: swiftcore/HostBehaviorChecks::documentMutationUndoRedo
 Predicate: report.expect(redone && document.revision == beforeRedoRevision + 1, cppID: id, message: "A132: redo during a live velocity preview advances the revision by one")
 Anchor: message "A132: redo during a live velocity preview advances the revision by one"
 
 S049 | hostDocumentMutationUndoRedo | src/checks/host/HostBehaviorChecks.swift
-Source line: 424
+Source line: 425
 cppID: swiftcore/HostBehaviorChecks::documentMutationUndoRedo
 Predicate: report.expect(redone && document.history.undoIndex == beforeRedoIndex + 1, cppID: id, message: "A133: redo during a live velocity preview moves the index forward by one")
 Anchor: message "A133: redo during a live velocity preview moves the index forward by one"
@@ -1570,3 +1556,15 @@ Source line: 451
 cppID: swiftcore/VelocityPage::cancellationPaths
 Predicate: report.expect(switchFixture.session.selectedNoteOrder == [switchNote.id], cppID: drawerVelocityCancellationID, message: "A120 voicegroup replacement preserves the selected note")
 Anchor: message "A120 voicegroup replacement preserves the selected note"
+
+S056 | hostBandGeometry | src/checks/host/HostBehaviorChecks.swift
+Source line: 635
+cppID: swiftcore/HostBehaviorChecks::bandGeometry
+Predicate: report.expect(band.available && band.visible && !band.contentUrl.isEmpty && band.bodyX == 0 && band.bodyWidth == width && band.bodyHeight >= metrics.minimumBody && band.handleHeight == metrics.handleHeight, cppID: id, message: "A008: the automation band publishes measured body and handle geometry during steady playback")
+Anchor: message "A008: the automation band publishes measured body and handle geometry during steady playback"
+
+S057 | hostBandGeometry | src/checks/host/HostBehaviorChecks.swift
+Source line: 654
+cppID: swiftcore/HostBehaviorChecks::bandGeometry
+Predicate: report.expect(band.available == beforeAvailable && band.visible == beforeVisible && band.contentUrl == beforeUrl && [band.bodyX, band.bodyY, band.bodyWidth, band.bodyHeight, band.handleY, band.handleHeight, band.toggleX, band.toggleY, band.toggleSize, liveDrawer.plotOrigin, liveDrawer.plotWidth] == beforeValues, cppID: id, message: "A142: restoring a different appearance preserves every measured automation band geometry field")
+Anchor: message "A142: restoring a different appearance preserves every measured automation band geometry field"
