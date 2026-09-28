@@ -5,8 +5,11 @@ Original: src/checks/workspace/tabs_scale.cpp
 Original SHA-256: 894f94698b3406b5de8a2188e78ad8984253105cea29a061f86c0590561a933f
 Swift counterpart: src/checks/workspace/SessionChecks.swift
 Swift counterpart: src/checks/editorqml/tst_ShellTransport.qml
+Swift counterpart: src/checks/editorqml/tst_ShellTransportSession.qml
+Counterpart SHA-256: ccbdc68b3785d572a5a686afa99d7b7893b0dff83d64dbea89f2b8eb3fa000e5
 Swift counterpart: src/checks/rollcheck/scale_editing.swift
 Swift counterpart: src/checks/workspace/session_editor_semantics.swift
+Counterpart SHA-256: 5a1429df42078185754dd70ac998c993982145ece768eb4f1b91bf7c8a643aad
 Swift counterpart: src/checks/workspace/session_io.swift
 Swift counterpart: src/checks/workspace/session_playback.swift
 Swift counterpart: src/checks/workspace/session_save.swift
@@ -21,7 +24,7 @@ Shared SHA-256: 79d2a5010d685bd2a2ec6547db1c7430319c5006b18827f97fed1d49239ac306
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 WorkspaceTabsTest::scaleRouting drives the transport scale widgets across two tabs: per-tab root/id/highlight/fold state, widget reflection on selection, track-switch persistence, and delete/undo scale retention.
-tabs_scale.cpp contributes 54 sites: 38 MATCHED, 4 PARTIAL, 2 GAP, 10 RETIRED-REPRESENTATION.
+tabs_scale.cpp contributes 54 sites: 44 MATCHED, 0 PARTIAL, 0 GAP, 10 RETIRED-REPRESENTATION.
 
 Task 42 note (scale selector mounted; A010-A054 re-reconciled individually): the earlier
 "feature not yet ported: scale selector" reason that A012-A054 carried is retired. The
@@ -35,13 +38,11 @@ checkPerTabScaleState (S202 through S207, swiftcore-projectsession lane), and
 scale_editing.swift:240-246 runFoldScaleIntegrationChecks (S187, S208, S209, same lane).
 Mapping rule applied row by row: MATCHED cites an executing message-anchored predicate
 whose assertion would fail if the site's clause were negated for the same state variable
-and direction; a different fixture value is acceptable only where the reason records it
-(A018 reads firstRoot 9 against S204's 9 and S196's 9; A025 reads secondRoot 2 against
-S204's root 4). A021 and A023 stay GAP because no executing predicate reads Fold after a
-Highlight/root/type-only edit. A027, A033, A050 and A054 are recorded PARTIAL rather than
-MATCHED, each reason naming the conjunct that no executed predicate observes. The tally
-line above is reconciled to this file's actual dispositions; its earlier 6 MATCHED /
-0 PARTIAL / 38 GAP / 10 RETIRED line predated task 42.
+and direction; fixture differences are stated in the mapping reason for that site.
+Task 42 recorded its dispositions before the toggle-path assertions below were added.
+Its A021/A023 GAP and A027/A033/A050/A054 PARTIAL statuses are superseded by this
+Task 43 reconciliation; current counts are reported above. Historical pin/hash data
+elsewhere in the preamble remains unchanged.
 Counterpart-hash check at this revision: session_fixtures.swift still hashes to the recorded
 bad9687a1301619c8bee2268a96a52ac104fe34ebe1eccd6b05a38ffb11ac741, while session_support.swift
 now hashes to e1c905ca3181cb561a357abd6d9d70a63a397cd2ac7ae4cdc1d722e38909bd39 and the
@@ -50,22 +51,17 @@ recorded 79d2a5010d685bd2a2ec6547db1c7430319c5006b18827f97fed1d49239ac306 is tha
 ledgers) and the drift is reported here instead of being silently re-pinned; the rows
 mapped above were read from the final sources at this revision.
 
-Command: deno task verify:shell --filter shell-transport --verbose
-Result: PASS after the controller corrected tst_ShellTransport.qml:503/534 to
-  fold.Accessible.checked (the implementer's run before that correction reported 18 passed,
-  1 failed at line 534 - fold.checked undefined versus true); the ledger agent did not
-  re-run the filter.
-Command: deno task verify --filter swiftcore-projectsession --verbose --qt projectSession -silent
-Result: PASS 4/4, 0 failures (8.36s) - implementer-run on this frozen revision; not re-observed
-  by this bookkeeping pass.
-Command: deno task verify:qml-roll --verbose
-Result: PASS swiftroll-window (23.84s) - implementer-run on this frozen revision; not
-  re-observed by this bookkeeping pass.
-Task 42 execution evidence: build/proof-evidence/shell-transport.json lists
-  test_scaleControlsFollowSelectedTab among its executed functions, and
-  build/proof-evidence/swiftcore-projectsession.json carries the message rows for S202
-  through S209, so every predicate cited above classifies as executed under
-  deno task proof check --executed.
+Task 43 reconciliation: A021/S210, A023/S211, A027/S212, A033/S213, A054/S214,
+and A050/S215 cite the exact predicates below. The QML checks execute in
+test_scaleFoldHighlightPerTabTogglePaths (shell-transport-session); S215 executes
+through editorSelectionCommandChecks in swiftcore-projectsession and uses
+cppID swiftcore/ApplicationSession::tabsScale. Fork pin: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea,
+tabs_scale.cpp:58-157.
+
+Execution evidence supplied by the controller for this handoff: shell-transport-session
+PASS and swiftcore-projectsession PASS. This bookkeeping pass did not rerun either lane.
+The source hashes above were checked with shasum -a 256 before editing; proof check below
+is structural/tally validation only and is not semantic parity evidence.
 
 No native execution remains: the QtTest suites declared in
 src/checks/workspace/tst_workspacesessions.h (WorkspaceTabsTest::scaleRouting)
@@ -199,8 +195,8 @@ Original expression:
   QVERIFY(first->view().scaleHighlight())
 
 A021 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:67
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no executing predicate reads Fold after a Highlight/root/type-only edit. S191 and S192 compare only scaleHighlight and S204 sets Fold itself before asserting, so the first tab's Fold-still-off clause has no equivalent assertion; the missing conjunct belongs after first.setScale(highlight: true) in session_editor_semantics.swift:161-165 or after the mounted Highlight clicks at tst_ShellTransport.qml:505-511.
+Disposition: MATCHED
+Mapping/reason: S210 directly verifies !bar.presenter.scaleFold immediately after the first tab's mounted Highlight edit in the executing two-tab QML journey; the assertion observes the same Fold-still-off behavior.
 Source context since previous assertion:
   ;
 Original expression:
@@ -217,8 +213,8 @@ Original expression:
   QVERIFY(!first->view().scaleHighlight())
 
 A023 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:70
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the same missing conjunct as A021 - S192 asserts only the Highlight toggle conjunct and no executing predicate reads Fold after the Highlight toggle cycle.
+Disposition: MATCHED
+Mapping/reason: S211 directly verifies !bar.presenter.scaleFold after the first tab's mounted Highlight toggle-off click in the executing toggle-path journey, proving Fold remains off through the toggle.
 Source context since previous assertion:
   ;
 Original expression:
@@ -248,9 +244,8 @@ Original expression:
   QCOMPARE(view.scaleId(), secondScale)
 
 A027 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:97
-Disposition: PARTIAL
-Mapping: S205, S208
-Mapping/reason: S208 (scale_editing.swift:245-246) requires Fold set and Highlight off after a primary-track change made while Highlight was off, covering this clause's track-selection trigger, and S205 requires the second session's root and scale after its writes. Unproved: no executing predicate reads Highlight after the second tab's root/type edits or after its Fold click, so the Highlight-still-off clause has no equivalent assertion for those triggers.
+Disposition: MATCHED
+Mapping/reason: S212 directly verifies !bar.presenter.scaleHighlight after the second tab's root/type and Fold edits. The pinned fork's selectTrack(originalTrack) re-selects the already-primary track, covered by S187/S208; the mounted QML surface has no track-selection ingress, so this mapping does not claim to prove a QML track-selection action.
 Source context since previous assertion:
   ;
 Original expression:
@@ -304,9 +299,8 @@ Original expression:
   QVERIFY(!view.scaleHighlight() && view.scaleFold())
 
 A033 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:107
-Disposition: PARTIAL
-Mapping: S197, S208
-Mapping/reason: The Highlight conjunct is entailed - the mounted flow clicks Fold after Highlight was enabled and S197 (tst_ShellTransport.qml:528) requires the restored first tab's Highlight still set, with S208 pinning Highlight/Fold independence. Unproved: no executing predicate observes a Fold toggle turning Fold off (S193 asserts only the on transition), so the Fold-off conjunct has no equivalent assertion.
+Disposition: MATCHED
+Mapping/reason: S213 verifies bar.presenter.scaleHighlight && !bar.presenter.scaleFold after the second tab's mounted Fold-off click, directly observing both the preserved Highlight and cleared Fold conjuncts.
 Source context since previous assertion:
   ;
       highlight->click();
@@ -470,9 +464,8 @@ Original expression:
   QVERIFY(view.scaleHighlight() && view.scaleFold())
 
 A050 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:151
-Disposition: PARTIAL
-Mapping: S204, S209
-Mapping/reason: S204 requires both sessions' history identities unchanged after their scale writes and S209 (scale_editing.swift:170-171) requires no history entry from Fold toggles and track switches, so the view-only part of this clause is pinned. Unproved: no executing predicate reads a document's dirty flag after the fixture's track delete/undo sequence, which is what !second->document().isDirty() asserts.
+Disposition: MATCHED
+Mapping/reason: S215 requires !document.isDirty after adding, selecting, deleting, and undoing both track edits in the same Swift fixture; its cppID is swiftcore/ApplicationSession::tabsScale, and the helper is called from editorSelectionCommandChecks in the swiftcore-projectsession lane.
 Source context since previous assertion:
   ;
       if (addedTrack)
@@ -509,9 +502,8 @@ Original expression:
   QVERIFY(first->view().scaleHighlight())
 
 A054 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:156
-Disposition: PARTIAL
-Mapping: S195, S205
-Mapping/reason: S195 pins Fold tab independence for the first tab enabled and the second tab off, and S205 requires the first session's Fold preserved after the second session's writes. Unproved: the mirrored instance this site reads (the first tab's Fold left off after the second tab's Fold was enabled) has no equivalent assertion.
+Disposition: MATCHED
+Mapping/reason: S214 directly verifies !bar.presenter.scaleFold after reopening the first tab following the second tab's Fold enablement, matching the first-tab Fold-stays-off independence behavior.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1171,3 +1163,27 @@ Anchor: message "selected-track change preserves Fold and leaves Highlight off"
 S209 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
 Anchor: message "scale view changes push no history entry"
   scale_editing.swift:163-171 session.setScale(fold: true) / setScale(fold: false) plus a primary-track round trip when a second engine track exists, then report.expect(document.history.currentIdentity == identity).
+ 
+S210 | test_scaleFoldHighlightPerTabTogglePaths | src/checks/editorqml/tst_ShellTransportSession.qml
+Anchor: message "first tab Fold stays off after its Highlight edit"
+  tst_ShellTransportSession.qml:95 verify(!bar.presenter.scaleFold) after the first tab Highlight click.
+
+S211 | test_scaleFoldHighlightPerTabTogglePaths | src/checks/editorqml/tst_ShellTransportSession.qml
+Anchor: message "first tab Fold stays off after its Highlight toggle"
+  tst_ShellTransportSession.qml:98 verify(!bar.presenter.scaleFold) after the first tab Highlight toggle-off click.
+
+S212 | test_scaleFoldHighlightPerTabTogglePaths | src/checks/editorqml/tst_ShellTransportSession.qml
+Anchor: message "second tab Highlight stays off after its Fold edit"
+  tst_ShellTransportSession.qml:112 verify(!bar.presenter.scaleHighlight) after the second tab root/type and Fold edits.
+
+S213 | test_scaleFoldHighlightPerTabTogglePaths | src/checks/editorqml/tst_ShellTransportSession.qml
+Anchor: message "second tab Fold toggle clears Fold and keeps Highlight"
+  tst_ShellTransportSession.qml:120-121 verify(bar.presenter.scaleHighlight && !bar.presenter.scaleFold) after the second tab Fold-off click.
+
+S214 | test_scaleFoldHighlightPerTabTogglePaths | src/checks/editorqml/tst_ShellTransportSession.qml
+Anchor: message "first tab Fold stays off after the second tab enables Fold"
+  tst_ShellTransportSession.qml:128 verify(!bar.presenter.scaleFold) after reopening the first tab.
+
+S215 | checkScaleDeleteUndoLeavesCleanDocument | src/checks/workspace/session_editor_semantics.swift
+Anchor: message "deleting then undoing every track edit leaves the document clean"
+  session_editor_semantics.swift:227-228 report.expect(!document.isDirty, cppID: "swiftcore/ApplicationSession::tabsScale", message: "deleting then undoing every track edit leaves the document clean").

@@ -77,6 +77,57 @@ ShellTransportSupport {
         compare(bar.presenter.scaleFold, true, "first tab restores Fold")
     }
 
+    // Fork tabs_scale.cpp:58-157 drives root/type/Highlight/Fold across two tabs;
+    // this journey reads Fold/Highlight at each point the existing journey skips.
+    function test_scaleFoldHighlightPerTabTogglePaths() {
+        var bar = openShell()
+        var root = findChild(bar, "transportScaleRoot")
+        var type = findChild(bar, "transportScaleType")
+        var highlight = findChild(bar, "transportScaleHighlight")
+        var fold = findChild(bar, "transportScaleFold")
+        verify(root && type && highlight && fold, "toggle-path journey mounts the scale controls")
+        bar = openSong()
+        var session = shell.shellPresenter.session
+        bar.presenter.setScaleRoot(9)
+        bar.presenter.setScaleType(2)
+        mouseClick(highlight, highlight.width / 2, highlight.height / 2)
+        compare(bar.presenter.scaleHighlight, true, "toggle-path journey stages the first Highlight edit")
+        verify(!bar.presenter.scaleFold, "first tab Fold stays off after its Highlight edit")
+        mouseClick(highlight, highlight.width / 2, highlight.height / 2)
+        compare(bar.presenter.scaleHighlight, false, "toggle-path journey stages the Highlight toggle off")
+        verify(!bar.presenter.scaleFold, "first tab Fold stays off after its Highlight toggle")
+        mouseClick(highlight, highlight.width / 2, highlight.height / 2)
+        compare(bar.presenter.scaleHighlight, true, "toggle-path journey restores the first Highlight edit")
+        session.openSong("mus_littleroot_test")
+        verify(waitForNative(function() {
+            return session.songTabs.tabCount === 2 && bar.presenter.scaleRoot === 0
+        }, 30000), "toggle-path journey opens the second tab with default scale")
+        bar.presenter.setScaleRoot(2)
+        bar.presenter.setScaleType(12)
+        verify(waitForNative(function() {
+            return bar.presenter.scaleRoot === 2 && bar.presenter.scaleType === 12
+        }, 5000), "toggle-path journey stages the second tab root and type edits")
+        mouseClick(fold, fold.width / 2, fold.height / 2)
+        compare(bar.presenter.scaleFold, true, "toggle-path journey stages the second tab Fold edit")
+        verify(!bar.presenter.scaleHighlight, "second tab Highlight stays off after its Fold edit")
+        mouseClick(highlight, highlight.width / 2, highlight.height / 2)
+        compare(bar.presenter.scaleHighlight, true, "toggle-path journey stages the second Highlight edit")
+        mouseClick(highlight, highlight.width / 2, highlight.height / 2)
+        compare(bar.presenter.scaleHighlight, false, "toggle-path journey stages the second Highlight toggle")
+        mouseClick(highlight, highlight.width / 2, highlight.height / 2)
+        compare(bar.presenter.scaleHighlight, true, "toggle-path journey restores the second Highlight edit")
+        mouseClick(fold, fold.width / 2, fold.height / 2)
+        verify(bar.presenter.scaleHighlight && !bar.presenter.scaleFold,
+               "second tab Fold toggle clears Fold and keeps Highlight")
+        mouseClick(fold, fold.width / 2, fold.height / 2)
+        compare(bar.presenter.scaleFold, true, "toggle-path journey restores the second tab Fold edit")
+        session.openSong("mus_route101")
+        verify(waitForNative(function() {
+            return bar.presenter.scaleRoot === 9 && bar.presenter.scaleType === 2
+        }, 30000), "toggle-path journey reselects the first tab")
+        verify(!bar.presenter.scaleFold, "first tab Fold stays off after the second tab enables Fold")
+    }
+
     function test_rulerCommitMovesCursorOnlyInEveryTransportState() {
         var bar = openShell()
         var session = shell.shellPresenter.session

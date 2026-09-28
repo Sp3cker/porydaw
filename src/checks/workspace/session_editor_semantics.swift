@@ -193,6 +193,39 @@ internal func editorSelectionCommandChecks(_ report: CheckReport, suite: Documen
                        what: "direct activation cannot bypass pointer gesture arbitration")
     grid.inputCancelled(reason: GridCancelReason.pointerUngrabbed.rawValue)
     checkPerTabScaleState(report, suite: suite, service: service)
+    checkScaleDeleteUndoLeavesCleanDocument(report, suite: suite, service: service)
+}
+
+// Fork tabs_scale.cpp:149-151 stage track selection plus Highlight/Fold writes
+// around deleteTrack(0)/undo; only the dirty flag below is otherwise unread.
+@MainActor
+private func checkScaleDeleteUndoLeavesCleanDocument(_ report: CheckReport, suite: DocumentSession,
+                                                     service: ProjectService) {
+    let id = "swiftcore/ApplicationSession::tabsScale"
+    let document = SongDocument(file: makeMidiFixture(), config: suite.document.state.config,
+                                source: suite.document.source, trackBudget: suite.document.trackBudget)
+    let session = DocumentSession(document: document, service: service,
+                                  lease: suite.bankLease, slots: suite.bankSlots,
+                                  dirty: false, loadName: suite.bankLoadName, sampleRate: 48_000)
+    session.setScale(highlight: true)
+    session.setScale(fold: true)
+    guard let extra = document.addTrack(voice: 0) else {
+        report.fail(id, "could not add a track for the delete-undo clean-document read")
+        return
+    }
+    session.selectPrimaryTrack(extra)
+    session.selectPrimaryTrack(0)
+    document.deleteTrack(0)
+    guard document.history.undoDocument() else {
+        report.fail(id, "could not undo the deleted track for the clean-document read")
+        return
+    }
+    guard document.history.undoDocument() else {
+        report.fail(id, "could not undo the added track for the clean-document read")
+        return
+    }
+    report.expect(!document.isDirty, cppID: id,
+                  message: "deleting then undoing every track edit leaves the document clean")
 }
 
 @MainActor
