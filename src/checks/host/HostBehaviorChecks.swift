@@ -9,6 +9,8 @@ internal func runHostBehaviorChecks(_ report: CheckReport, session: DocumentSess
                                     service: ProjectService, fixtureRoot: String) {
     let route = hostNoteDiscovery(report, fixtureRoot: fixtureRoot, suite: session, service: service)
     hostVelocityMarker(report, route: route)
+    hostSeededTrackDiscovery(report, route: route)
+    hostSteadyVoiceContext(report, route: route)
     hostVelocityGestureContracts(report, session: session, service: service)
     hostDocumentMutationUndoRedo(report, session: session, service: service)
     hostLifecycleTermination(report, session: session, service: service)
@@ -737,4 +739,63 @@ private func hostAutomationTempo(_ report: CheckReport, session: DocumentSession
     report.expect(index >= 0 && fixture.page.activateParameter(index: index)
                   && fixture.page.activeParameter == .tempo, cppID: id,
                   message: "the tempo parameter index resolves")
+}
+
+@MainActor
+private func hostSeededTrackDiscovery(_ report: CheckReport, route: DocumentSession?) {
+    let id = "swiftcore/HostBehaviorChecks::seededContext"
+    guard let route else {
+        report.fail(id, "the route101 host session did not open for the two-note discovery")
+        return
+    }
+    let discovered = (0..<route.document.engineTracks.usedTrackCount).first {
+        route.document.notes(in: $0).count >= 2
+    } ?? -1
+    report.expect(discovered >= 0, cppID: id,
+                  message: "A003: the route101 host session exposes a track holding two notes")
+}
+
+@MainActor
+private func hostSteadyVoiceContext(_ report: CheckReport, route: DocumentSession?) {
+    let id = "swiftcore/HostBehaviorChecks::seededContext"
+    guard let route else {
+        report.fail(id, "the route101 host session did not open for the steadiness search")
+        return
+    }
+    let page = VelocityPage(baseFontPx: GridCameraPolicy.seedBaseFontPx)
+    page.attach(session: route, palette: GridPalette())
+    let font = GridCameraPolicy.seedBaseFontPx
+    page.configureBody(width: fontPx(font, 30), height: fontPx(font, 9),
+                       rulerWidth: fontPx(font, 4), devicePixelRatio: 1,
+                       baseFontPx: font, dragDistance: page.dragDistance)
+    // Mirror of the fork's candidate search: the first tick whose 120-tick
+    // window holds its voice slot and name with strictly rising samples.
+    var first: Tick? = nil
+    var candidate: Tick = 0
+    while candidate < 4096 && first == nil {
+        page.refreshPlayhead(tick: Double(candidate), playing: true)
+        let slot = page.context.slot
+        let voice = page.context.map.voiceName
+        var previousSample = route.timeline.sample(for: candidate)
+        var steady = true
+        var offset: Tick = 1
+        while offset <= 120 {
+            let tick = candidate + offset
+            page.refreshPlayhead(tick: Double(tick), playing: true)
+            let sample = route.timeline.sample(for: tick)
+            if page.context.slot != slot || page.context.map.voiceName != voice
+                || sample <= previousSample {
+                steady = false
+                break
+            }
+            previousSample = sample
+            offset += 1
+        }
+        if steady {
+            first = candidate
+        }
+        candidate += 1
+    }
+    report.expect(first != nil, cppID: id,
+                  message: "A007: the route101 host session holds a steady 120-tick voice context")
 }

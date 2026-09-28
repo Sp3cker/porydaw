@@ -8,8 +8,8 @@ Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml (convert
 Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawerChrome.qml (converted QML drawer lane; SHA-256 a0ddbcff188c61a83decf9941bace5d7afb8beca96fb21ec12871fdc4da60fdb)
 Additional Swift counterpart: src/checks/rollqml/tst_SwiftRollPlots.qml (converted QML roll lane; SHA-256 4f5e2ec6bc71fa3ec2755698931bb702bc9d8e7fc957f84ae74497253d2717be)
 Additional Swift counterpart: src/checks/drawerpresentation/other_events_band.swift
-Additional Swift counterpart: src/checks/rollcheck/ruler_loop_menu.swift
-Additional Swift counterpart: src/checks/host/HostBehaviorChecks.swift :: hostNoteDiscovery + hostVelocityMarker + hostCosmeticOnly + hostAutomationTempo + hostPlayheadFollowing + hostVelocityAxisVoice (SHA-256 e310f9ed4cefe927cfdbe7ffae749e4ae2c82f9029a1f72e69c6ce498e4f7336)
+Additional Swift counterpart: src/checks/rollcheck/ruler_loop_menu.swift (SHA-256 07f5e83388a8bc6ea3bec7be70619a230c3dd45052b2649800d22e323de252ad)
+Additional Swift counterpart: src/checks/host/HostBehaviorChecks.swift :: hostNoteDiscovery + hostVelocityMarker + hostCosmeticOnly + hostAutomationTempo + hostPlayheadFollowing + hostVelocityAxisVoice (SHA-256 4d82d459293030ecca63000a37e2645dd907c5e8e740379dff4bf6f23aeab2cc)
 Additional Swift counterpart: src/checks/automation/automationselection.swift :: hostTempoRangeAndBandRows (SHA-256 3b1854346596713dc5a14302792285923980fa443daae2b8f342c57d03b74d41)
 Additional Swift counterpart: src/checks/trackheaders/TrackHeadersChecks.swift :: hostDrawerSoloAndRemap (SHA-256 26dca6c03e329fa782b976bc3e871fc1f80d55ff41938c1fe3dc9ab6fb8fc5ca)
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
@@ -889,16 +889,8 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: the retired native lane captured the other-events band raster and guarded the capture; no Swift predicate captures band pixels.
 
 A137 | loopMarkersReachTimelineButNotTheOtherEventsRaster | src/checks/host/tst_hostadapter.cpp:500
-Disposition: PARTIAL
-Mapping/reason: S021 (src/checks/rollcheck/ruler_loop_menu.swift :: checkRulerLoopSetAndUndo) builds the playback timeline from a document whose loop markers were set and asserts its loop fields; unproved: the native timeline handle guard itself (Swift's PlaybackTimeline.build is non-optional, so the null case has no counterpart).
-Source context since previous assertion:
-  ;
-          host.document().setLoopTick(false, 6);
-          host.document().setLoopTick(true, 18);
-          std::unique_ptr<MidiTimeline> loopTimeline = host.document().buildTimeline(44100.0);
-
-Original expression:
-  QVERIFY(loopTimeline)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S138 proves a loop-marked document builds a timeline with loop information; Swift’s non-optional build makes the native null-timeline guard unreachable.
 
 A138 | loopMarkersReachTimelineButNotTheOtherEventsRaster | src/checks/host/tst_hostadapter.cpp:501
 Disposition: MATCHED
@@ -1789,3 +1781,9 @@ S137 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_Editor
 Source line: 159
 Predicate: tooltip.visible === false
 Anchor: message "A133 leaving for the ruler hides the mounted tooltip"
+
+S138 | checkRulerLoopBuildTotality | src/checks/rollcheck/ruler_loop_menu.swift
+Source line: 107
+cppID: swiftcore/PianoRoll::rulerLoopMenuBuildTotality
+Predicate: report.expect(marked.hasLoop, cppID: id, message: "A137: the loop-marked document always builds a looped timeline")
+Anchor: message "A137: the loop-marked document always builds a looped timeline"

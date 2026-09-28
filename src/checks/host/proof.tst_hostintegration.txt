@@ -5,7 +5,7 @@ Original: src/checks/host/tst_hostintegration.cpp
 Original SHA-256: 4083b59bbb5e88019ed164c1296e3f8ea36e3a6fe6673d8b0ef74316dbdbae10
 Swift counterpart: src/checks/velocity/VelocityClickSelectionChecks.swift (drawerVelocityPrimaryTrackSwitchCancels :267-312; drawerVelocityLifecycleCancellation :315-383 plus bank route :384-461); src/checks/velocity/VelocityPageChecks.swift call-list entry; src/checks/editorqml/tst_ShellWindow.qml test_kVelocityGestureTermination plus data (:976-1083)
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
-Additional Swift counterpart: src/checks/host/HostBehaviorChecks.swift :: hostNoteDiscovery + hostVelocityGestureContracts + hostVelocityExactGestures + hostLifecycleTermination + hostPlayheadFollowing + hostVelocityAxisVoice + hostCosmeticOnly + hostDocumentMutationUndoRedo + hostBandGeometry (SHA-256 ddf9269a98f9143c088ba0cd6a4f00f3b21f727899346922a2f0864779d06f2f)
+Additional Swift counterpart: src/checks/host/HostBehaviorChecks.swift :: hostNoteDiscovery + hostVelocityGestureContracts + hostVelocityExactGestures + hostLifecycleTermination + hostPlayheadFollowing + hostVelocityAxisVoice + hostCosmeticOnly + hostDocumentMutationUndoRedo + hostBandGeometry (SHA-256 4d82d459293030ecca63000a37e2645dd907c5e8e740379dff4bf6f23aeab2cc)
 Additional Swift counterpart: src/checks/workspace/session_view_state_fanout.swift (SHA-256 a856e21e1f145a33665fd7776a3b89635677e316ac21e3c6c6a3249339c587523)
 Additional QML counterpart: src/checks/editorqml/tst_ShellTabsClose.qml (SHA-256 39d1426b8b0ab46b1c6d02dd52c936fbfc5c09e19d758b13f3f9e4fc2d4c301a)
 
@@ -51,6 +51,8 @@ Task 166 proof-structure result: successful; zero structural errors; 63 proof fi
 Task 174 verification lane: swiftcore-projectsession
 Task 174 verification result: PASS (Task 174 handoff). The final HostBehaviorChecks.swift SHA-256 is 1be477ecc9ed246d2d37ca6a0a855b027b889bbe187101599da17b62c22fe16a. The lane invokes runHostBehaviorChecks from SessionChecks.swift; hostBandGeometry runs the A008 and A142 predicates indexed at S056-S057.
 Current A119 reconciliation: frozen src/checks/host/HostBehaviorChecks.swift SHA-256 ddf9269a98f9143c088ba0cd6a4f00f3b21f727899346922a2f0864779d06f2f; swiftcore-projectsession executes runHostBehaviorChecks via SessionChecks.swift, including hostLifecycleTermination's song-null/replacement loop and the outgoing selectedNotes.isEmpty predicate S065. Controller-provided observed verification: swiftcore 12/37 PASS; shell-tabs 7/76 PASS; full verify:shell 76/76 PASS. The mounted tst_ShellTabsClose.qml test_kSelectedCloseWithVelocitySelection independently supports outgoing-tab selection cleanup (no A-id; SHA-256 above). Ledger writer did not rerun verification.
+Task 195 verification lanes: swiftcore; shellwindow-velocity
+Task 195 verification result: swiftcore 12/37 PASS; shellwindow-velocity PASS (Task195 final handoff; ledger writer did not rerun). Frozen HostBehaviorChecks.swift SHA-256: 4d82d459293030ecca63000a37e2645dd907c5e8e740379dff4bf6f23aeab2cc. S066-S067 index the route101 seeded-track and steady-voice-context predicates below.
 
 
 A001 | twoTabReadySessionWithTwoNoteSeed | src/checks/host/tst_hostintegration.cpp:145
@@ -60,13 +62,8 @@ A002 | twoTabReadySessionWithTwoNoteSeed | src/checks/host/tst_hostintegration.c
 Disposition: RETIRED-REPRESENTATION
 
 A003 | twoTabReadySessionWithTwoNoteSeed | src/checks/host/tst_hostintegration.cpp:147
-Disposition: PARTIAL
-Mapping/reason: Two-note track discovery is now asserted by the executed hostNoteDiscovery predicate (S001: track zero projects two seeded notes); the two-tab ready-session state itself has no Swift counterpart and stays unproved.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(twoNoteTrack(session->active->document()) >= 0)
+Disposition: MATCHED
+Mapping: S066
 
 A004 | twoTabReadySessionWithTwoNoteSeed | src/checks/host/tst_hostintegration.cpp:148
 Disposition: PARTIAL
@@ -84,33 +81,8 @@ A006 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cp
 Disposition: RETIRED-REPRESENTATION
 
 A007 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:178
-Disposition: PARTIAL
-Mapping/reason: Presentation-voice resolution of the steady context is now asserted by the executed hostPlayheadFollowing predicate (S006); the 120-tick steadiness search itself has no Swift counterpart and stays unproved.
-Source context since previous assertion:
-  ;
-          uint64_t first = 0;
-          bool found = false;
-          for (uint64_t candidate = 0; candidate < 4096 && !found; ++candidate) {
-              const DrawerPageVoiceContext context = view.voiceContext(candidate);
-              uint64_t previousSample = 0;
-              found = true;
-              for (uint64_t offset = 0; offset <= 120; ++offset) {
-                  const DrawerPageVoiceContext next = view.voiceContext(candidate + offset);
-                  const uint64_t sample =
-                      session->active->timeline()->sampleForTick(candidate + offset);
-                  if (next.voice != context.voice || next.voiceSlot != context.voiceSlot ||
-                      (offset && sample <= previousSample)) {
-                      found = false;
-                      break;
-                  }
-                  previousSample = sample;
-              }
-              if (found)
-                  first = candidate;
-          }
-
-Original expression:
-  QVERIFY2(found, "required route101 fixture has no steady 120-tick voice context")
+Disposition: MATCHED
+Mapping: S067
 
 A008 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:184
 Disposition: MATCHED
@@ -1256,7 +1228,7 @@ S010 | hostCosmeticOnly | src/checks/host/HostBehaviorChecks.swift
 Anchor: message "pan attempts leave song bytes, revision and undo depth untouched"
 
 S011 | hostNoteDiscovery | src/checks/host/HostBehaviorChecks.swift
-Source line: 51
+Source line: 53
 cppID: swiftcore/HostBehaviorChecks::noteDiscovery
 Predicate: report.expect(twoNotes.selectedNotes.count == 2, cppID: id, message: "A004: the ready two-note seed selects exactly two notes")
 Anchor: message "A004: the ready two-note seed selects exactly two notes"
@@ -1560,7 +1532,19 @@ Predicate: verify(rollInput.cursorShape !== Qt.ClosedHandCursor, "A122 gesture t
 Anchor: message "A122 gesture termination leaves no closed-hand pan cursor"
 
 S065 | hostLifecycleTermination | src/checks/host/HostBehaviorChecks.swift
-Source line: 480
+Source line: 482
 cppID: swiftcore/HostBehaviorChecks::lifecycleTermination
 Predicate: report.expect(outgoing.session.selectedNotes.isEmpty, cppID: id, message: "song teardown clears the outgoing note selection")
 Anchor: message "song teardown clears the outgoing note selection"
+
+S066 | hostSeededTrackDiscovery | src/checks/host/HostBehaviorChecks.swift
+Source line: 754
+cppID: swiftcore/HostBehaviorChecks::seededContext
+Predicate: report.expect(discovered >= 0, cppID: id, message: "A003: the route101 host session exposes a track holding two notes")
+Anchor: message "A003: the route101 host session exposes a track holding two notes"
+
+S067 | hostSteadyVoiceContext | src/checks/host/HostBehaviorChecks.swift
+Source line: 799
+cppID: swiftcore/HostBehaviorChecks::seededContext
+Predicate: report.expect(first != nil, cppID: id, message: "A007: the route101 host session holds a steady 120-tick voice context")
+Anchor: message "A007: the route101 host session holds a steady 120-tick voice context"

@@ -10,6 +10,7 @@ let rulerSeedTick: Tick = 88 - (88 % 6)
 @MainActor
 func runRulerLoopMenuChecks(_ report: CheckReport, session: DocumentSession) {
     checkRulerLoopSetAndUndo(report, session: session)
+    checkRulerLoopBuildTotality(report, session: session)
     checkRulerSignatureRemoval(report, session: session)
     checkRulerInsertTime(report, session: session)
     checkRenderedRulerMenuCommands(report, session: session)
@@ -92,4 +93,17 @@ private func checkRulerSelectedKeyboardScope(_ report: CheckReport, session: Doc
                       && document.history.currentIdentity == postSeedIdentity,
                       cppID: id, message: "A039 ruler transpose and sweep unwind to post-seed bytes")
     }
+}
+
+@MainActor
+func checkRulerLoopBuildTotality(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::rulerLoopMenuBuildTotality"
+    let document = rulerMenuDocument(session)
+    // The fork's :500 guard holds a nullable build; Swift's build is total,
+    // so the clause's law is that the marked document builds a looped timeline.
+    document.setLoop(end: false, tick: 6)
+    document.setLoop(end: true, tick: 18)
+    let marked = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
+    report.expect(marked.hasLoop, cppID: id,
+                  message: "A137: the loop-marked document always builds a looped timeline")
 }
