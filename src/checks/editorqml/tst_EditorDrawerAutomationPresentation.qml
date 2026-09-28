@@ -317,39 +317,15 @@ EditorDrawerTestSupport {
         AutomationTabsSupport.automationModel(testCase).isPencilMode = true
         AutomationTabsSupport.clickAutomationTab(testCase, tempo)
         mouseMove(input, input.width / 2, input.height / 2)
-        var pencil = findChild(testCase.surface, "automationPencilCursor")
-        tryVerify(function() { return pencil && pencil.visible }, 1000,
-                  "pencil mode remains visibly armed across the Tempo switch")
-        compare(input.cursorShape, Qt.BlankCursor,
-                "the switched Tempo lane uses the custom pencil cursor")
-        compare(pencil.width, 16, "the armed pencil keeps its sixteen-pixel logical frame")
-        compare(pencil.sourceSize.width, Math.round(16 * Screen.devicePixelRatio),
-                "the armed pencil decodes its artwork at the declared lane DPR")
-        waitForRendering(testCase.surface)
-        var pencilFirst = grabImage(testCase.surface)
-        var pencilRect = PixelSupport.regionOf(testCase, pencilFirst, testCase.surface, pencil)
-        mouseMove(input, input.width / 4, input.height * 3 / 4)
-        waitForRendering(testCase.surface)
-        var pencilSecond = grabImage(testCase.surface)
-        var pencilInk = 0
-        for (var pxx = pencilRect.x0; pxx <= pencilRect.x1; ++pxx) {
-            for (var pyy = pencilRect.y0; pyy <= pencilRect.y1; ++pyy) {
-                if (pxx < 0 || pyy < 0 || pxx >= pencilFirst.width || pyy >= pencilFirst.height)
-                    continue
-                var wasWhite = pencilFirst.red(pxx, pyy) >= 240
-                        && pencilFirst.green(pxx, pyy) >= 240 && pencilFirst.blue(pxx, pyy) >= 240
-                var wasBlack = pencilFirst.red(pxx, pyy) <= 20
-                        && pencilFirst.green(pxx, pyy) <= 20 && pencilFirst.blue(pxx, pyy) <= 20
-                if ((wasWhite || wasBlack)
-                        && (pencilFirst.red(pxx, pyy) !== pencilSecond.red(pxx, pyy)
-                            || pencilFirst.green(pxx, pyy) !== pencilSecond.green(pxx, pyy)
-                            || pencilFirst.blue(pxx, pyy) !== pencilSecond.blue(pxx, pyy)))
-                    ++pencilInk
-            }
-        }
-        verify(pencilInk >= 3,
-               "the armed pencil paints its artwork ink inside its sixteen-pixel cursor frame")
+        var pencil = findChild(testCase.surface, "automationPlotCursor")
+        tryVerify(function() {
+            return pencil && String(pencil.source) === "qrc:/cursors/pencil.png"
+        }, 1000, "pencil mode remains visibly armed across the Tempo switch")
+        tryCompare(input, "cursorShape", Qt.BitmapCursor, 1000,
+                   "the switched Tempo lane uses the custom pencil cursor")
         AutomationTabsSupport.automationModel(testCase).isPencilMode = false
+        tryCompare(input, "cursorShape", Qt.ArrowCursor, 1000,
+                   "disarming the pencil restores the arrow cursor")
     }
 
     function test_automationPresentationInactiveInclusionPixels() {

@@ -245,29 +245,6 @@ FocusScope {
         hintService: page.hintService
         hintScopeAllowed: page.hintScopeAllowed
         plotSurface: page.plotSurface
-        pencilCursorVisible: pencilCursor.visible
-    }
-
-    Image {
-        id: pencilCursor
-        objectName: "automationPencilCursor"
-        parent: page.Window.window ? page.Window.window.contentItem : page
-        readonly property point pointer: plot.input.mapToItem(parent, plot.input.mouseX, plot.input.mouseY)
-        x: pointer.x
-        y: pointer.y - 15
-        width: 16
-        height: 16
-        source: "qrc:/cursors/pencil.png"
-        sourceSize.width: Math.round(16 * page.Screen.devicePixelRatio)
-        sourceSize.height: Math.round(16 * page.Screen.devicePixelRatio)
-        smooth: false
-        z: 10000
-        visible: page.visible && page.Window.window !== null && page.Window.window.active
-            && status === Image.Ready && page.pageModel.isPencilMode
-            && page.pageModel.cursorKind <= 1 && !page.pageModel.menuOpen && !page.pageModel.promptOpen
-            && (plot.input.containsMouse || plot.input.pressed)
-            && pointer.x >= 0 && pointer.y >= 0 && pointer.x < parent.width && pointer.y < parent.height
-        Accessible.ignored: true
     }
 
     // ---- modal and local surfaces -------------------------------------------

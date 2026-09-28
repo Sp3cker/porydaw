@@ -1,5 +1,7 @@
 #include "item_cursor.h"
 
+#include <algorithm>
+
 #include <QtCore/qmath.h>
 #include <QtGui/qguiapplication.h>
 #include <QtGui/qicon.h>
@@ -14,6 +16,11 @@ QCursor centeredCursor(const QPixmap &pixmap)
         QGuiApplication::platformName() == QLatin1String("xcb") ? 1.0 : pixmap.devicePixelRatio();
     return QCursor(pixmap, qRound(pixmap.width() / (2.0 * dpr)),
                    qRound(pixmap.height() / (2.0 * dpr)));
+}
+
+QCursor bottomLeftCursor(const QPixmap &pixmap)
+{
+    return QCursor(pixmap, 0, std::max(0, qRound(pixmap.height() / pixmap.devicePixelRatio()) - 1));
 }
 
 } // namespace
@@ -65,6 +72,16 @@ void ItemCursor::setExtent(int extent)
     emit extentChanged();
 }
 
+void ItemCursor::setHotSpot(HotSpot hotSpot)
+{
+    if (m_hotSpot == hotSpot)
+        return;
+    m_hotSpot = hotSpot;
+    m_pixmapCursors.clear();
+    apply();
+    emit hotSpotChanged();
+}
+
 void ItemCursor::setDevicePixelRatio(qreal devicePixelRatio)
 {
     if (m_devicePixelRatio == devicePixelRatio)
@@ -80,8 +97,10 @@ QCursor ItemCursor::pixmapCursor()
     auto it = m_pixmapCursors.find(m_source);
     if (it == m_pixmapCursors.end()) {
         const QIcon icon(QQmlFile::urlToLocalFileOrQrc(m_source));
-        it = m_pixmapCursors.insert(
-            m_source, centeredCursor(icon.pixmap(QSize(m_extent, m_extent), m_devicePixelRatio)));
+        const QPixmap pixmap = icon.pixmap(QSize(m_extent, m_extent), m_devicePixelRatio);
+        it = m_pixmapCursors.insert(m_source, m_hotSpot == HotSpot::BottomLeft
+                                                  ? bottomLeftCursor(pixmap)
+                                                  : centeredCursor(pixmap));
     }
     return *it;
 }

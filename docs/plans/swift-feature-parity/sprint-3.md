@@ -81,7 +81,10 @@ RETIRED-REPRESENTATION under the atomic-reload ruling, with task 176's refusal-p
 pattern; (4) directional left/right resize cursor art ports (rollcheck resize
 A002–A004/A027/A028) — LANDED: native `ItemCursor` (`src/app/item_cursor.cpp`) applies the
 fork's left/right-drag bitmap cursors on the roll; the rows stay PARTIAL — the applied
-pixmap's image identity, size and hotspot are not read back to QML; (5) the New
+pixmap's image identity, size and hotspot are not read back to QML. The automation pencil
+moved from the QML overlay to the same `ItemCursor` (fork `automationcanvas.cpp:246-261`
+bottom-left tip); automation presentation A037 closed on the DPR-2 pointer move and the
+ledger was deleted; (5) the New
 Song taken-name hint keeps fork parity — registered labels only, strays refuse at Create;
 (6) tabs_transport A062 stays open permanently, and test-only reads stay banned; (7) a real
 ShellWindow close harness is built in `verify:shell` (hostintegration A162/A174–A185,

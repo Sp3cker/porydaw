@@ -163,47 +163,17 @@ EditorDrawerTestSupport {
         try {
             LayoutSupport.focusControl(testCase, input)
             waitForRendering(testCase.surface)
-            var firstX = input.width / 3
-            var firstY = input.height / 4
-            mouseMove(input, firstX, firstY)
-            var pencil = findChild(testCase.surface, "automationPencilCursor")
+            mouseMove(input, input.width / 3, input.height / 4)
+            var pencil = findChild(testCase.surface, "automationPlotCursor")
             verify(pencil !== null, "the profiled production automation page owns its pencil artwork")
             tryVerify(function() { return input.containsMouse }, 2000,
                       "real profile pointer movement enters the plotted automation input")
-            tryVerify(function() { return pencil.visible }, 2000,
-                      "the profiled plot displays its custom pencil after real movement")
-            var first = input.mapToItem(pencil.parent, firstX, firstY)
-            var physicalTolerance = 1 / bootstrap.profileDpr
-            var tipOffset = pencil.height - 1
-            tryVerify(function() { return Math.abs(pencil.x - first.x) <= physicalTolerance },
-                      2000, "the profiled pencil's horizontal origin follows the mapped pointer")
             tryVerify(function() {
-                return Math.abs(pencil.y + tipOffset - first.y) <= physicalTolerance
-            }, 2000, "the profiled pencil's vertical tip follows the mapped pointer")
-            var previousX = pencil.x
-            var previousY = pencil.y
-            var secondX = input.width / 2
-            var secondY = input.height / 3
-            mouseMove(input, secondX, secondY)
-            var second = input.mapToItem(pencil.parent, secondX, secondY)
-            tryVerify(function() {
-                return input.containsMouse && pencil.visible
-                    && Math.abs(pencil.x - second.x) <= physicalTolerance
-                    && Math.abs(pencil.x - previousX) > physicalTolerance
-            }, 2000, "the profiled pencil moves horizontally with a second real pointer move")
-            tryVerify(function() {
-                return input.containsMouse && pencil.visible
-                    && Math.abs(pencil.y + tipOffset - second.y) <= physicalTolerance
-                    && Math.abs(pencil.y - previousY) > physicalTolerance
-            }, 2000, "the profiled pencil moves vertically with a second real pointer move")
-            waitForRendering(testCase.surface)
-            compare(input.cursorShape, Qt.BlankCursor,
-                    "the profiled pencil replaces the native plot cursor")
-            var expectedPhysical = Math.round(16 * bootstrap.profileDpr)
-            compare(pencil.sourceSize.width, expectedPhysical,
-                    "the 16-pixel pencil artwork decodes at the profile's physical width")
-            compare(pencil.sourceSize.height, expectedPhysical,
-                    "the profiled pencil keeps its horizontal and vertical decoded scale")
+                return input.cursorShape === Qt.BitmapCursor
+                    && String(pencil.source) === "qrc:/cursors/pencil.png"
+            }, 2000, "the profiled plot displays its custom pencil after real movement")
+            compare(pencil.devicePixelRatio, bootstrap.profileDpr,
+                    "the pencil cursor is built at the profile's device pixel ratio")
         } finally {
             model.isPencilMode = false
         }

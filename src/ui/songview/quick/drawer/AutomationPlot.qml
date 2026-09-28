@@ -17,7 +17,6 @@ Item {
     required property var hintService
     required property bool hintScopeAllowed
     required property int plotSurface
-    required property bool pencilCursorVisible
     property alias input: plotInput
 
     function cursorFor(kind) {
@@ -316,8 +315,20 @@ Item {
         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
         hoverEnabled: true
         preventStealing: true
-        cursorShape: plot.pencilCursorVisible ? Qt.BlankCursor
-            : plot.cursorFor(plot.pageModel ? plot.pageModel.cursorKind : 0)
+
+        ItemCursor {
+            readonly property var pageModel: plot.pageModel
+            readonly property int kind: pageModel ? pageModel.cursorKind : 0
+            readonly property bool pencilArmed: pageModel !== null && pageModel.isPencilMode
+                && kind <= 1 && !pageModel.menuOpen && !pageModel.promptOpen
+            objectName: "automationPlotCursor"
+            target: plotInput
+            shape: plot.cursorFor(kind)
+            source: pencilArmed ? "qrc:/cursors/pencil.png" : ""
+            extent: 16
+            hotSpot: ItemCursor.BottomLeft
+            devicePixelRatio: plot.devicePixelRatio
+        }
 
         onPressed: mouse => {
             plotMoves.flush()
