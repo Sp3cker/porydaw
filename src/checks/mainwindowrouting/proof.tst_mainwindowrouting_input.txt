@@ -70,6 +70,11 @@ test_eTimeAndTracksMenuContainment, whose editIds list task 46 extended with son
 four loop actions while the S191 literal itself is unchanged); no counterpart hash of a task-46
 source is pinned in this ledger, so no re-pin was needed. The pinned Original SHA-256 is the
 historical C++ original and is unchanged.
+Task 197 final source SHA-256: src/checks/workspace/session_edit_routing.swift 2ffdbc56c129f4a2b25b1e388c84e5a02ae57161785c6bce1540266e36b1852d
+Task 197 final source SHA-256: src/checks/editorqml/tst_ShellWindowFocus.qml 2305226608c88c6af198321d5bae29fe207770a25a0995a92efb204282c2da61
+Task 197 final source SHA-256: src/checks/editorqml/tst_ShellWindowPrompts.qml 5080753d9d5849dd3947a46e15a83cbb7068edfbd2208bba72fb01a7d94f8600
+Task 197 verification: PASS swiftcore (12/37 ok, 25 skipped), shellwindow-focus (1/76 ok), and shellwindow-prompts (1/76 ok; 23 assertions), reported by the implementer in agent://Task197; ledger writer did not rerun the lanes.
+Task 197 execution evidence: predicates S425-S438 were reported executed in the corresponding lanes; proof:check --executed previously reported only stale S232/S233 anchors (Task 197 implementer handoff).
 
 A001 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:101
 Disposition: RETIRED-REPRESENTATION
@@ -223,12 +228,12 @@ Disposition: RETIRED-REPRESENTATION
 Mapping: S412 - native `QVERIFY2(quickWindow && velocityToggle, "the active tab's persistent velocity drawer toggle is unavailable")` at 5f768e3:src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:180 pins native Quick-window/toggle pointer lookup; the mounted shell sees its real roll and toggle.
 
 A036 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:183
-Disposition: PARTIAL
-Mapping/reason: S411 - the mounted shell delivers A while the velocity toggle is targeted, and the helper tests its activeFocus without a message before every shortcut. PARTIAL: no message-anchored predicate pins the focused toggle itself or native QApplication focus identity.
+Disposition: MATCHED
+Mapping: S437 - the focused velocity toggle holds activeFocus while the mounted A shortcut is delivered.
 
 A037 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:184
-Disposition: PARTIAL
-Mapping/reason: S411 - the mounted A shortcut tests QML activeFocus before delivery and observes the automation section. PARTIAL: native QQuickWindow activeFocusItem pointer identity is not observed as a separate message-anchored predicate.
+Disposition: RETIRED-REPRESENTATION
+Mapping: S438 documents QML activeFocus semantics; fork QCOMPARE(quickWindow->activeFocusItem(), velocityToggle) at 5f768e34:tst_mainwindowrouting_input.cpp:184 pins native pointer identity, not available in QML.
 
 A038 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:191
 Disposition: MATCHED
@@ -806,123 +811,52 @@ Disposition: MATCHED
 Mapping: S248
 
 A154 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:710
-Disposition: PARTIAL
-Mapping: S230, S231, S232
-Mapping/reason: Swift ruler/prompt predicates S230-S232 execute the command behavior; unproved: the mounted ruler/menu click and prompt ingress.
-Source context since previous assertion:
-
-        const QByteArray before = tab.document().smf().write();
-        const QByteArray inactiveBefore = session->a->document().smf().write();
-        const int undoIndex = tab.document().undoStack()->index();
-        const uint64_t revision = tab.document().revision();
-        const uint64_t insertSpan = view.grid().segmentAt(target).beatTicks;
-
-Original expression:
-        QVERIFY2(quick_popup::clickMenuRow(*live, insertRow),
-                 "the ruler Insert Time row did not receive a real click")
+Disposition: MATCHED
+Mapping: S432 - the mounted ruler Insert Time row receives the real click.
 
 A155 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:713
-Disposition: PARTIAL
-Mapping: S231, S232
-Mapping/reason: Swift ruler/prompt predicates S230-S232 execute the command behavior; unproved: the mounted ruler/menu click and prompt ingress.
-Source context since previous assertion:
-        const InsertTimePromptSession opened = openedInsertTimePrompt(view);
-Original expression:
-        QVERIFY2(opened.window && opened.popup, qUtf8Printable(opened.diagnostic))
+Disposition: MATCHED
+Mapping: S433 - the mounted Insert Time prompt opens after the ruler menu action.
 
 A156 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:714
-Disposition: PARTIAL
-Mapping: S232
-Mapping/reason: Swift ruler/prompt predicates S230-S232 execute the command behavior; unproved: the mounted ruler/menu click and prompt ingress.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY2(enterInsertTimeValues(*opened.window, QKeySequence(Qt::Key_0),
-                                       QKeySequence(Qt::Key_1), QKeySequence(Qt::Key_0)),
-                 "the ruler-flow Insert Time fields could not be edited")
+Disposition: MATCHED
+Mapping: S434 - the ruler Insert Time fields accept the typed 0/1/0 span.
 
 A157 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:717
-Disposition: PARTIAL
-Mapping: S232
-Mapping/reason: Swift ruler/prompt predicates S230-S232 execute the command behavior; unproved: the mounted ruler/menu click and prompt ingress.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY2(quick_popup::clickPromptButton(*opened.popup, QLatin1String("insertTimeAccept")),
-                 "the ruler-flow Insert Time prompt has no OK button")
+Disposition: MATCHED
+Mapping: S435 - the mounted ruler Insert Time prompt exposes its OK button.
 
 A158 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:721
-Disposition: PARTIAL
-Mapping: S232
-Mapping/reason: Swift ruler/prompt predicates S230-S232 execute the command behavior; unproved: the mounted ruler/menu click and prompt ingress.
-Source context since previous assertion:
-        QCoreApplication::processEvents();
-        songview::QuickPopupSession *const popup = quick_popup::popupSession(view);
-Original expression:
-        QVERIFY(popup && !popup->isOpen())
+Disposition: MATCHED
+Mapping: S436 - accepting the ruler form closes the mounted prompt.
 
 A159 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:722
-Disposition: PARTIAL
-Mapping: S232
-Mapping/reason: S232 executes the document commit and history check; unproved: the mounted ruler/menu click and prompt ingress.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(tab.document().undoStack()->index(), undoIndex + 1)
+Disposition: MATCHED
+Mapping: S425 - the ruler insertion advances the active history exactly once.
 
 A160 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:723
-Disposition: PARTIAL
-Mapping: S232
-Mapping/reason: S232 executes the document commit and history check; unproved: the mounted ruler/menu click and prompt ingress.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(tab.document().revision(), revision + 1)
+Disposition: MATCHED
+Mapping: S426 - the ruler insertion advances the active revision exactly once.
 
 A161 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:725
-Disposition: PARTIAL
-Mapping: S232
-Mapping/reason: S232 executes the shifted-note behavior; unproved: the mounted ruler/menu click and prompt ingress.
-Source context since previous assertion:
-        DocNote shifted;
-Original expression:
-        QVERIFY(tab.document().findNote(source->noteId, &shifted))
+Disposition: MATCHED
+Mapping: S427 - the ruler insertion retains the shifted active note.
 
 A162 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:726
-Disposition: PARTIAL
-Mapping: S232
-Mapping/reason: S232 executes the shifted-note behavior; unproved: the mounted ruler/menu click and prompt ingress.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(shifted.tick, source->tick + insertSpan)
+Disposition: MATCHED
+Mapping: S428 - the ruler insertion shifts the active note by one beat.
 
 A163 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:727
-Disposition: PARTIAL
-Mapping: S233
-Mapping/reason: S233 executes inactive-song byte preservation; unproved: the mounted ruler/menu click and prompt ingress.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(session->a->document().smf().write(), inactiveBefore)
+Disposition: MATCHED
+Mapping: S429 - the ruler insertion leaves the inactive song bytes identical.
 
 A164 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:729
-Disposition: PARTIAL
-Mapping: S233
-Mapping/reason: S233 executes undo byte restoration; unproved: the mounted ruler/menu click and prompt ingress.
-Source context since previous assertion:
-        tab.document().undoStack()->undo();
-Original expression:
-        QCOMPARE(tab.document().smf().write(), before)
+Disposition: MATCHED
+Mapping: S430 - one undo restores the exact ruler-inserted bytes.
 
 A165 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:730
-Disposition: PARTIAL
-Mapping: S233
-Mapping/reason: S233 executes undo byte restoration; unproved: the mounted ruler/menu click and prompt ingress.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(session->a->document().smf().write(), inactiveBefore)
+Disposition: MATCHED
+Mapping: S431 - one undo leaves the inactive song bytes identical.
 
 A166 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:736
 Disposition: GAP
@@ -1879,12 +1813,6 @@ Anchor: message "the insert-time ruler menu anchors the edit cursor"
 S231 | runEditRoutingChecks | src/checks/workspace/session_edit_routing.swift
 Anchor: message "the cursor ruler action opens the standalone Insert Time prompt"
 
-S232 | runEditRoutingChecks | src/checks/workspace/session_edit_routing.swift
-Anchor: message "insert time routes the active song and restores undo bytes"
-
-S233 | runEditRoutingChecks | src/checks/workspace/session_edit_routing.swift
-Anchor: message "one undo restores both the active and inactive song bytes"
-
 S234 | runEditRoutingChecks | src/checks/workspace/session_edit_routing.swift
 Anchor: message "delete time ripples scoped and whole-song selections"
 
@@ -2427,3 +2355,45 @@ Anchor: message "focused velocity chrome Ctrl+Shift+P toggles only Polyphony"
 
 S424 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
 Anchor: message "A092: the 3/64 signature gives the source segment one tick per beat and three beats per bar"
+
+S425 | runEditRoutingChecks | src/checks/workspace/session_edit_routing.swift
+Anchor: message "the ruler insertion advances the active history exactly once"
+
+S426 | runEditRoutingChecks | src/checks/workspace/session_edit_routing.swift
+Anchor: message "the ruler insertion advances the active revision exactly once"
+
+S427 | runEditRoutingChecks | src/checks/workspace/session_edit_routing.swift
+Anchor: message "the ruler insertion retains the shifted active note"
+
+S428 | runEditRoutingChecks | src/checks/workspace/session_edit_routing.swift
+Anchor: message "the ruler insertion shifts the active note by one beat"
+
+S429 | runEditRoutingChecks | src/checks/workspace/session_edit_routing.swift
+Anchor: message "the ruler insertion leaves the inactive song bytes identical"
+
+S430 | runEditRoutingChecks | src/checks/workspace/session_edit_routing.swift
+Anchor: message "one undo restores the exact ruler-inserted bytes"
+
+S431 | runEditRoutingChecks | src/checks/workspace/session_edit_routing.swift
+Anchor: message "one undo leaves the inactive song bytes identical"
+
+S432 | test_eRulerInsertTimeRowClickCommitsTypedSpan | src/checks/editorqml/tst_ShellWindowPrompts.qml
+Anchor: message "the ruler Insert Time row receives the real click"
+
+S433 | test_eRulerInsertTimeRowClickCommitsTypedSpan | src/checks/editorqml/tst_ShellWindowPrompts.qml
+Anchor: message "the ruler Insert Time row opens the mounted prompt"
+
+S434 | test_eRulerInsertTimeRowClickCommitsTypedSpan | src/checks/editorqml/tst_ShellWindowPrompts.qml
+Anchor: message "the ruler Insert Time fields accept the typed 0/1/0 span"
+
+S435 | test_eRulerInsertTimeRowClickCommitsTypedSpan | src/checks/editorqml/tst_ShellWindowPrompts.qml
+Anchor: message "the ruler Insert Time prompt exposes its OK button"
+
+S436 | test_eRulerInsertTimeRowClickCommitsTypedSpan | src/checks/editorqml/tst_ShellWindowPrompts.qml
+Anchor: message "accepting the ruler form closes the mounted prompt"
+
+S437 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindowFocus.qml
+Anchor: message "the velocity toggle holds focus while the mounted A shortcut is delivered"
+
+S438 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindowFocus.qml
+Anchor: message "the window focus chain reaches the mounted editor surface"

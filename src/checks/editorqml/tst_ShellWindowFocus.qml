@@ -63,6 +63,11 @@ ShellWindowSupport {
         }
         var beforeChrome = [automationSection.visible, section.visible,
                             voiceSection.visible, polyDock.visible]
+        toggle.forceActiveFocus(Qt.TabFocusReason)
+        tryCompare(toggle, "activeFocus", true, 3000,
+                   "the velocity toggle holds focus while the mounted A shortcut is delivered")
+        verify(focusBelongsTo(surface),
+               "the window focus chain reaches the mounted editor surface")
         checkChromeShortcut(Qt.Key_A, Qt.NoModifier, 0,
                             "focused velocity chrome A toggles only Automation")
         compare(automationSection.visible, true,

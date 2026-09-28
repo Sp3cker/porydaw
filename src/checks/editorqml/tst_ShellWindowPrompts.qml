@@ -250,6 +250,88 @@ ShellWindowSupport {
         compare(selectedSurface().gridModel.fetchNoteSummary(), otherNotes,
                 "insertion leaves the inactive tab unchanged")
     }
+    // Fork ruler flow: real row click, typed 0/1/0, accept, then commit.
+    function test_eRulerInsertTimeRowClickCommitsTypedSpan() {
+        var firstId = openTwoSongShell()
+        var tabs = shell.shellPresenter.session.songTabs
+        var activeId = tabs.selectedId
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var menu = surface.rulerMenu
+        var siblingButton = findChild(shell.sceneLoader.item, "songTabSelect_" + firstId)
+        var activeButton = findChild(shell.sceneLoader.item, "songTabSelect_" + activeId)
+        mouseClick(siblingButton, siblingButton.width / 3, siblingButton.height / 2)
+        tryCompare(tabs, "selectedId", firstId)
+        var siblingNotes = selectedSurface().gridModel.fetchNoteSummary()
+        mouseClick(activeButton, activeButton.width / 3, activeButton.height / 2)
+        tryCompare(tabs, "selectedId", activeId)
+        surface = selectedSurface()
+        grid = surface.gridModel
+        menu = surface.rulerMenu
+        var page = findChild(shell.sceneLoader.item, "songTab_" + activeId)
+        var ruler = findChild(page, "timelineRulerInput")
+        verify(ruler && ruler.width > 0, "the selected tab mounts its time ruler")
+        var before = grid.appliedRevisionText
+        var original = JSON.parse(grid.fetchNoteSummary())
+        var span = grid.ticksPerBeat
+        mouseClick(ruler, ruler.width * 0.08, ruler.height * 0.75, Qt.RightButton)
+        tryVerify(function() { return menu.isOpen }, 3000)
+        var target = menu.targetTick()
+        compare(grid.editCursorTick, target,
+                "the ruler click parks the edit cursor at its snapped target")
+        var panel = null
+        tryVerify(function() {
+            panel = findChild(surface, "quickMenuPanelRoot")
+            return panel !== null && panel.visible
+        }, 5000)
+        tryVerify(function() { return panel.rowItem(0) !== null }, 3000)
+        compare(panel.rowItem(0).itemData.actionId, 1)
+        compare(panel.rowItem(0).itemData.enabled, true)
+        var insertRow = panel.rowItem(0)
+        mouseClick(insertRow, insertRow.width / 2, insertRow.height / 2)
+        tryCompare(menu, "isOpen", false, 3000,
+                   "the ruler Insert Time row receives the real click")
+        tryCompare(menu, "insertTimePromptOpen", true, 3000,
+                   "the ruler Insert Time row opens the mounted prompt")
+        var bars = null
+        var beats = null
+        var fractions = null
+        tryVerify(function() {
+            bars = findChild(surface, "insertTimeBars")
+            beats = findChild(surface, "insertTimeBeats")
+            fractions = findChild(surface, "insertTimeBeatFractions")
+            return !!findChild(surface, "insertTimePrompt") && bars && beats && fractions
+        }, 3000)
+        tryCompare(bars, "activeFocus", true, 3000)
+        keyClick(Qt.Key_0)
+        keyClick(Qt.Key_Tab)
+        tryCompare(beats, "activeFocus", true, 3000)
+        keyClick(Qt.Key_Backspace)
+        keyClick(Qt.Key_1)
+        keyClick(Qt.Key_Tab)
+        tryCompare(fractions, "activeFocus", true, 3000)
+        keyClick(Qt.Key_Backspace)
+        keyClick(Qt.Key_0)
+        verify(bars.text === "0" && beats.text === "1" && fractions.text === "0",
+               "the ruler Insert Time fields accept the typed 0/1/0 span")
+        var accept = findChild(surface, "insertTimeAccept")
+        verify(accept !== null, "the ruler Insert Time prompt exposes its OK button")
+        mouseClick(accept, accept.width / 2, accept.height / 2)
+        tryCompare(menu, "insertTimePromptOpen", false, 3000,
+                   "accepting the ruler form closes the mounted prompt")
+        tryVerify(function() { return findChild(surface, "insertTimePrompt") === null }, 3000)
+        tryVerify(function() { return grid.appliedRevisionText !== before }, 3000,
+                  "the ruler-accepted span commits the selected song")
+        var shifted = JSON.parse(grid.fetchNoteSummary())
+        verify(shifted.some(function(note, index) {
+            return !note.ghost && original[index].tick >= target
+                && note.tick === original[index].tick + span
+        }), "the ruler-accepted form shifts later active-song notes by one beat")
+        mouseClick(siblingButton, siblingButton.width / 3, siblingButton.height / 2)
+        tryCompare(tabs, "selectedId", firstId)
+        compare(selectedSurface().gridModel.fetchNoteSummary(), siblingNotes,
+                "the ruler insertion leaves the inactive tab unchanged")
+    }
 
     function test_eStandaloneInsertTimeZeroClickClosesWithoutEdit() {
         openTwoSongShell()

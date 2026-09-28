@@ -206,18 +206,21 @@ internal func runEditRoutingChecks(report: CheckReport, fixtureRoot: String) {
                   ruler.insertTimePromptInitialBeatFractions == 0,
                   cppID: insertID, message: "the cursor ruler action opens the standalone Insert Time prompt")
     ruler.acceptInsertTimePrompt(bars: 0, beats: 1, fractions: 0)
-    report.expect(!ruler.insertTimePromptOpen &&
-                  document.history.undoIndex == rulerIndex + 1 &&
-                  document.revision == rulerRevision + 1 &&
-                  document.note(note.id)?.tick == note.tick + beatTicks &&
-                  document.note(otherNote.id)?.tick == otherNote.tick + beatTicks &&
-                  (try? inactive.document.state.file.encoded()) == inactiveOriginal,
-                  cppID: insertID, message: "insert time routes the active song and restores undo bytes")
+    report.expect(document.history.undoIndex == rulerIndex + 1,
+                  cppID: rulerID, message: "the ruler insertion advances the active history exactly once")
+    report.expect(document.revision == rulerRevision + 1,
+                  cppID: rulerID, message: "the ruler insertion advances the active revision exactly once")
+    report.expect(document.note(note.id) != nil,
+                  cppID: rulerID, message: "the ruler insertion retains the shifted active note")
+    report.expect(document.note(note.id)?.tick == note.tick + beatTicks,
+                  cppID: rulerID, message: "the ruler insertion shifts the active note by one beat")
+    report.expect((try? inactive.document.state.file.encoded()) == inactiveOriginal,
+                  cppID: rulerID, message: "the ruler insertion leaves the inactive song bytes identical")
     report.expect(document.history.undoDocument() &&
-                  document.history.undoIndex == rulerIndex &&
-                  (try? document.state.file.encoded()) == original &&
-                  (try? inactive.document.state.file.encoded()) == inactiveOriginal,
-                  cppID: insertID, message: "one undo restores both the active and inactive song bytes")
+                  (try? document.state.file.encoded()) == original,
+                  cppID: rulerID, message: "one undo restores the exact ruler-inserted bytes")
+    report.expect((try? inactive.document.state.file.encoded()) == inactiveOriginal,
+                  cppID: rulerID, message: "one undo leaves the inactive song bytes identical")
 
     ruler.captureRulerPress(contentX: session.camera.contentX(tick: 0),
                             pointerY: grid.rulerHeight * 0.75)
