@@ -8,21 +8,21 @@ Additional Swift counterpart: src/checks/workspace/bank_history_probes.swift
 Additional Swift counterpart: src/checks/workspace/bank_sharing.swift
 Additional Swift counterpart: src/checks/voicelist/voicelist_session.swift
 Additional Swift counterpart: src/checks/workspace/bank_undo_publication.swift
-Task 185 Swift counterpart SHA-256: src/checks/workspace/bank_undo_publication.swift 24261b763aa440a93d224695aa5445c3e978fcb46a90b432d942c48c6749b99c
+Task 185 Swift counterpart SHA-256: src/checks/workspace/bank_undo_publication.swift eb3e70ae0deb2e14af7df3a57af486cf257e0ea2aebdf263f3c1744508cfaec4
 Task 185 review: APPROVE.
-Disposition tally: 70 sites — 65 MATCHED, 2 PARTIAL, 0 GAP, 3 RETIRED-REPRESENTATION.
+Disposition tally: 70 sites — 66 MATCHED, 1 PARTIAL, 0 GAP, 3 RETIRED-REPRESENTATION.
 
 Command: deno task verify --filter swiftcore-bankhistory --verbose.
-Result: 12/37 PASS (controller observation). The S038 predicate literal was
-executed in build/proof-evidence/swiftcore-bankhistory.json under cppID
+Result: 1/37 ok (36 skipped). The S041 predicate literal executed in
+build/proof-evidence/swiftcore-bankhistory.json under cppID
 voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates.
 
 Command: deno task verify --filter swiftcore-projectsession --verbose.
 Result: PASS (implementer/controller report). Both verification results are
 reused from the frozen Swift checks; this ledger pass did not rerun either lane.
 
-Command: deno task proof check.
-Result: 2 errors reported, outside this assigned ledger: src/checks/mainwindowrouting/proof.tst_mainwindowrouting_input.txt S232 and S233, literals not found. Both errors are unrelated to this ledger.
+Command: deno task proof check --executed.
+Result: 0 errors; not executed 0.
 
 
 A001 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:126
@@ -785,8 +785,8 @@ Original expression:
     QVERIFY(cache.pendingOrigin());
 
 A069 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:320
-Disposition: PARTIAL
-Mapping/reason: Related predicate S009 (src/checks/workspace/bank_history_probes.swift historyTransitionRegressions) asserts a hard bank failure keeps the entry available and does not cross it: after the failure the document state is unchanged and a second attempt reaches the same bank action, the observable half of this row's law that the origin tab's hard error ends its transition without crossing. Unproved: this row's coordinator-state conjuncts themselves (cache.bankActionsEnabled() and !cache.pendingOrigin()) — Swift ends the in-flight transition by dropping the pending task, and no Swift value exposes the coordinator gate or a pending origin.
+Disposition: MATCHED
+Mapping: S041
 Source context since previous assertion:
 
     cache.resolveHardError({*identity, QStringLiteral("boom")});
@@ -943,3 +943,9 @@ Execution: SessionChecks.swift:107 calls bankUndoPublicationChecks; cppID voiceg
 Source line: 194
 Predicate: report.expect(origin.document.history.bankTransitionInFlight && app.songTabs.pendingBankTabId == originID && !app.songTabs.closeEnabled(tabId: originID), cppID: id, message: "another tab's failed bank edit leaves the origin's pending transition bound")
 Anchor: message "another tab's failed bank edit leaves the origin's pending transition bound"
+
+S041 | bankUndoPublicationChecks | src/checks/workspace/bank_undo_publication.swift
+Execution: SessionChecks.swift:107 calls bankUndoPublicationChecks; cppID voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates
+Source line: 239
+Predicate: report.expect(app.songTabs.pendingBankTabId == -1 && app.songTabs.closeEnabled(tabId: originID) && origin.bankSlots[0].voice == recovered, cppID: id, message: "an origin hard bank failure releases the pending gate and bank actions accept a new edit")
+Anchor: message "an origin hard bank failure releases the pending gate and bank actions accept a new edit"

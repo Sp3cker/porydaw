@@ -199,4 +199,46 @@ internal func bankUndoPublicationChecks(_ report: CheckReport, fixtureRoot: Stri
                   cppID: id,
                   message: "another tab's failed bank edit leaves the origin's pending transition bound")
     origin.document.history.endBankTransition(heldHard)
+    // The origin's own hard failure releases the coordinator gate: the
+    // thrown bank write ends its transition, so no origin stays pending.
+    guard let originBase = origin.bankSlots[0].voice else {
+        report.fail(id, "origin lacks an editable slot for the own-error gate")
+        return
+    }
+    var moved = originBase
+    moved.release = originBase.release == 255 ? 254 : originBase.release + 1
+    do {
+        _ = try runBlocking {
+            try await origin.applyBankEdit(slot: 0, value: moved, expected: originBase)
+        }
+    } catch {
+        report.fail(id, "origin bank edit failed before the own-error gate: \(error)")
+        return
+    }
+    var staleRetry = moved
+    staleRetry.release = moved.release == 255 ? 254 : moved.release + 1
+    do {
+        _ = try runBlocking {
+            try await origin.applyBankEdit(slot: 0, value: staleRetry, expected: originBase)
+        }
+        report.fail(id, "stale origin bank edit must fail on the own-error gate")
+        return
+    } catch {
+        // Expected: the origin's own hard failure ends its transition.
+    }
+    var recovered = moved
+    recovered.release = moved.release == 255 ? 254 : moved.release + 1
+    do {
+        _ = try runBlocking {
+            try await origin.applyBankEdit(slot: 0, value: recovered, expected: moved)
+        }
+    } catch {
+        report.fail(id, "follow-on origin bank edit failed after the own-error gate: \(error)")
+        return
+    }
+    report.expect(app.songTabs.pendingBankTabId == -1
+                  && app.songTabs.closeEnabled(tabId: originID)
+                  && origin.bankSlots[0].voice == recovered,
+                  cppID: id,
+                  message: "an origin hard bank failure releases the pending gate and bank actions accept a new edit")
 }
