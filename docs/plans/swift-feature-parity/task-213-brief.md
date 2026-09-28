@@ -1,7 +1,7 @@
 # Task 213 brief — the view-state round trip closes on its already-executing joint predicate (re-dispatch of 208)
 
-**HELD — do not dispatch.** Ledger-only closure; needs the user's exception to
-proof-ledger-workflow (see sprint-3.md status header).
+**Released** under the user's 2026-09-28 narrow ledger-only exception: the row's named
+predicate already executes and the evidence file carries it (see sprint-3.md status header).
 
 # Context
 

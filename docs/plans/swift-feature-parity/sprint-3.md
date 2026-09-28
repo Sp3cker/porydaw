@@ -59,9 +59,8 @@ label fold/filter + taken-name gate (41a7ebc4), 211 File → Register Song (8d33
 rename returns roll focus (ae48c95d); 210 review follow-up (5a651eb5). Gate on 5a651eb5:
 verify 37/37, verify:shell 76/76, verify:qml 1/1, verify:qml-roll 1/1, bridge 0, `proof
 check --executed` 0 not executed. **Handoff:** the non-excluded inventory is exhausted (§29
-census). Task 213 is HELD, not dispatched: it is ledger-only, which
-proof-ledger-workflow forbids, and task 201 kept A014 PARTIAL. Do not plan further waves
-until the user rules on the open decisions below.
+census). The user ruled on every open decision on 2026-09-28 (below); task 213 is released
+under the narrow ledger-only exception.
 Known residues: QtBridge queues property notifications, so same-GUI-pass geometry clauses
 (host A095) stay PARTIAL; lanes use the null audio backend, so physical-output conjuncts
 stay PARTIAL.
@@ -72,14 +71,24 @@ tokens survive an external source refresh, matching the fork (78); a voicegroup 
 an undoable edit (deliberate deviation: the fork switch is display-only); fork states that
 Swift guards make unreachable close as RETIRED-REPRESENTATION with refusal predicates —
 track beyond the used tracks (159), time-signature edit under Insert Time (168), null
-voicegroup (166). Open decisions (user): catalog-outage status path (Swift scan has none);
-pending-reload input gate; P3 WAV export; P4 sample studio/import wizard; task 164 QtBridge
-QML→Swift object passing; directional resize cursors; tabs_transport A062; window-close
-harness; theme/settings/sf2 dialogs; a ledger-only exception for rollcheck identity A014
-(213) and project identity's 19 PARTIAL rows whose predicates already execute; whether the
-New Song taken-name hint should also cover stray unregistered files (210 gates registered
-names only; strays refuse at Create). Fork oracle: `fceecd88`
-(`git show fceecd88:<path>`).
+voicegroup (166). Rulings of 2026-09-28: (1) narrow ledger-only exception — a row may close
+in a ledger-only commit only when its named predicate already executes and the evidence
+file carries it; this releases 213 (A014) and project identity's 19 PARTIALs; (2) catalog
+outage ports the fork: the status bar reports "sound directory is unavailable", the last
+valid catalog, tab binding and browser stay usable, recovery refreshes cleanly (savecore
+A016–A026 plus the voicegroupbank write-failure family); (3) pending-reload A025 retires as
+RETIRED-REPRESENTATION under the atomic-reload ruling, with task 176's refusal-predicate
+pattern; (4) directional left/right resize cursor art ports (rollcheck resize
+A002–A004/A027/A028), approved even though it needs a native cursor boundary; (5) the New
+Song taken-name hint keeps fork parity — registered labels only, strays refuse at Create;
+(6) tabs_transport A062 stays open permanently, and test-only reads stay banned; (7) a real
+ShellWindow close harness is built in `verify:shell` (hostintegration A162/A174–A185,
+lifecycle A106–A108); (8) task 164's Event List note reveal is dropped — rollcheck
+presentation A018–A024 close as a deliberate deviation; (9) P3 WAV export ports
+(`file.export_wav`, midi export rows); (10) P4 ports the MIDI-import wizard, sample studio
+plus sample picker, and SF2 zone picker — the no-brand-new-QML rule is relaxed for exactly
+those families, which have no fork QML to adapt; theme/settings dialogs stay excluded.
+Fork oracle: `fceecd88` (`git show fceecd88:<path>`).
 
 ## 1. Objective and success criteria
 
@@ -4052,8 +4061,8 @@ exists and `rollcheck/proof.identity.txt` still reports A014 PARTIAL.
 Row-level census of every remaining open site (`proof sites --area
 <dir>` for all ledgers, GAP and PARTIAL paged to exhaustion): exactly
 one row closes honestly under the controller's standing exclusions —
-the wave is a single re-dispatch, no padding. **Controller: HELD** pending the user's
-ruling on a ledger-only exception (see the status header).
+the wave is a single re-dispatch, no padding. **Released** under the user's 2026-09-28
+narrow ledger-only exception (see the status header).
 
 | Task | Surface / brief | Rows | Group |
 |---|---|---|---|
