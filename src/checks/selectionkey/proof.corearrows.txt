@@ -125,18 +125,8 @@ Original expression:
   QVERIFY2(band->hasActiveFocus(), "Quick band input did not focus its band")
 
 A007 | SelectionKeyCoreTest::incidentalBandClickPreservesSelection | src/checks/selectionkey/corearrows.cpp:159
-Disposition: GAP
-Mapping/reason: GAP - no Swift predicate stages an incidental band or chrome press that must preserve an already eligible note selection: the new multi-note journey's click extends the selection (S016), test_g's chrome press is a drawer resize drag whose retained selection belongs to the windowtier_gestures rows, and the empty-space clicks in the menu lane assert the time selection rather than the note selection. Missing assertion site: a band/ruler press with an eligible note selection that asserts noteSelection() is unchanged.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(songView.selectionModel().noteSelection() == selection,
-               qPrintable(QStringLiteral("%1 band input disturbed the eligible selection: "
-                                         "actual=%2 intended=%3 %4")
-                              .arg(QLatin1String(probe.label),
-                                   describeNoteIds(songView.selectionModel().noteSelection()),
-                                   describeNoteIds(selection), clickDiagnostics)))
+Disposition: MATCHED
+Mapping: S023 (after staging two rendered notes as the eligible selection, each incidental velocity-stem drag, voice-plot center press, ruler center press, and other-events center press is followed by the unchanged selectedIds() predicate)
 
 A008 | SelectionKeyCoreTest::arrowsMoveSelectedNotesAcrossBands | src/checks/selectionkey/corearrows.cpp:190
 Disposition: RETIRED-REPRESENTATION
@@ -391,6 +381,10 @@ Anchor: message "one redo reapplies the selected-note arrow"
 
 S022 | test_gMultiNoteArrowSelectionAndHistory | src/checks/editorqml/tst_ShellWindowEditorKeys.qml
 Anchor: message "Left moves the selected notes back by one snap"
+
+S023 | test_incidentalBandPressPreservesSelection (line 420): verify(selectedIds() === intended, "incidental band press retains the eligible note selection") | src/checks/editorqml/tst_ShellGridInputEditing.qml
+Anchor: message "incidental band press retains the eligible note selection"
+
 
 Shared helpers
 selectDrawnVelocityNote (src/checks/editorqml/tst_ShellWindow.qml) and

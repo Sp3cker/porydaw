@@ -318,5 +318,112 @@ ShellGridInputSupport {
         verify(!noteById(grid, target.id).selected,
                "the contracted velocity band excludes the rendered target")
     }
+    function test_incidentalBandPressPreservesSelection() {
+        settings.setBool("editorDrawer.velocityVisible", true)
+        settings.setInt("editorDrawer.velocityHeight", 173)
+        settings.setBool("editorDrawer.voiceChangesVisible", true)
+        settings.setInt("editorDrawer.voiceChangesHeight", 200)
+        settings.setString("editorDrawer.activePage", "velocity")
+        openRoute101()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var roll = rollInput(surface)
+        verify(roll && roll.visible, "the staged roll takes the selection band")
+        var banded = []
+        var notes = gridNotes(grid)
+        for (var i = 0; i < notes.length; ++i) {
+            var rect = noteBand(roll, surface, notes[i].id)
+            if (rect !== null)
+                banded.push({ id: notes[i].id, rect: rect })
+            if (banded.length === 2)
+                break
+        }
+        verify(banded.length === 2, "two fully visible notes stage the eligible selection")
+        var sx = Math.min(banded[0].rect.sx, banded[1].rect.sx)
+        var sy = Math.min(banded[0].rect.sy, banded[1].rect.sy)
+        var ex = Math.max(banded[0].rect.ex, banded[1].rect.ex)
+        var ey = Math.max(banded[0].rect.ey, banded[1].rect.ey)
+        dragRight(roll, sx, sy, ex, ey)
+        verify(waitForNative(function() {
+            var a = noteById(grid, banded[0].id)
+            var b = noteById(grid, banded[1].id)
+            return a && b && a.selected && b.selected
+        }, 5000), "the mounted band sweep stages the eligible note selection")
+        function selectedIds() {
+            return gridNotes(grid).filter(function(n) { return n.selected })
+                .map(function(n) { return n.id }).sort(function(a, b) { return a - b }).join(",")
+        }
+        var intended = selectedIds()
+        verify(intended.length > 0, "the eligible selection is non-empty before the incidental presses")
+        // One row per fork probe in kCoreBands; the single verify below is
+        // the fork's :159 predicate, executed once per incidental surface.
+        function findStemRow(item, wanted) {
+            for (var child of item.children) {
+                if (child.model && child.model.noteIdText === String(wanted))
+                    return child.model
+                var nested = findStemRow(child, wanted)
+                if (nested !== null)
+                    return nested
+            }
+            return null
+        }
+        // Velocity mirrors the fork probe: a threshold-crossing drag from
+        // the selected stem retains the group instead of collapsing it.
+        function pressVelocityStem() {
+            var page = findChild(surface, "velocityPage")
+            var plot = findChild(page, "velocityPlot")
+            var input = findChild(page, "velocityPlotInput")
+            verify(page && plot && input && input.visible, "the mounted velocity plot takes the stem drag")
+            var stemId = banded[0].id
+            var stem = findStemRow(plot, stemId)
+            if (stem === null) {
+                stemId = banded[1].id
+                stem = findStemRow(plot, stemId)
+            }
+            verify(stem !== null, "the staged selection publishes a velocity stem")
+            var dpr = grid.devicePixelRatio > 0 ? grid.devicePixelRatio : 1
+            var originX = -Math.round(grid.cameraScrollX * dpr) / dpr
+            var px = Math.max(1, Math.min(input.width - 1, Math.round(stem.x + originX)))
+            var py = Math.max(1, Math.min(input.height - 1, Math.round(stem.y)))
+            verify(px > 1 && px < input.width - 1 && py > 1 && py < input.height - 1,
+                   "the selected stem lands inside the mounted velocity plot")
+            var beforeVelocity = noteById(grid, stemId).velocity
+            var dy = py < input.height / 2 ? 14 : -14
+            mousePress(input, px, py, Qt.LeftButton)
+            mouseMove(input, px, py + dy, -1, Qt.LeftButton)
+            mouseRelease(input, px, py + dy, Qt.LeftButton)
+            verify(waitForNative(function() {
+                var current = noteById(grid, stemId)
+                return current && current.velocity !== beforeVelocity
+            }, 5000), "the mounted stem drag reaches the staged note")
+        }
+        function pressCenter(objectName, staging) {
+            var target = findChild(surface, objectName)
+            verify(target && target.visible, staging)
+            mouseClick(target, target.width / 2, target.height / 2, Qt.LeftButton)
+        }
+        var probes = [
+            { press: pressVelocityStem },
+            { press: function() {
+                pressCenter("voicePlotInput", "the mounted voice plot takes the incidental press")
+            } },
+            { press: function() {
+                pressCenter("timelineRulerInput", "the mounted ruler takes the incidental press")
+            } },
+            { press: function() {
+                pressCenter("timelineOtherEventsInput",
+                            "the mounted other-events band takes the incidental press")
+            } },
+        ]
+        for (var p = 0; p < probes.length; ++p) {
+            probes[p].press()
+            verify(selectedIds() === intended, "incidental band press retains the eligible note selection")
+        }
+        // Later tests stage draws against the full-height plot: leave the
+        // drawer exactly as the untouched prefs found it.
+        settings.setBool("editorDrawer.velocityVisible", false)
+        settings.setBool("editorDrawer.voiceChangesVisible", false)
+        settings.setString("editorDrawer.activePage", "")
+    }
 
 }
