@@ -50,6 +50,7 @@ Gate on 82ebde21: verify 37/37, verify:shell 76/76, verify:qml 1/1, verify:qml-r
 bridge 0, `proof check --executed` 0 not executed. Census: 42 ledgers; open rows 887 (762 GAP
 + 125 PARTIAL); strict debt 233. UX deviation awaiting the user: directional left/right resize
 cursor art (rollcheck resize A002–A004/A027/A028; Swift shows one SizeHorCursor).
+Next: wave 206–208 (§26).
 Known residues: QtBridge queues property notifications, so same-GUI-pass geometry clauses
 (host A095) stay PARTIAL; lanes use the null audio backend, so physical-output conjuncts
 stay PARTIAL.
@@ -3595,3 +3596,230 @@ pairwise write-set disjointness; no application suite was run.
   New Voicegroup creation surfaces, visual baselines, physical DPR-2 pixels,
   ruled-deviation conjuncts (input A015/A017/A019, viewcache A046's
   bank-only-dirt close refusal, selftest transport A009–A013).
+
+## 26. Wave 206–208 — the mounted coordinator gate, view-state and item-alternate residuals
+
+### Selection and bounded briefs
+
+Planning baseline: 42 ledgers; `proof check` 0 errors; strict-mapping debt
+233; open rows 887 (762 GAP + 125 PARTIAL). HEAD `82ebde21` — wave 200–204
+landed, 205 skipped (its VG03 retirement contradicts the wired creation
+ingress; VoiceEditor.qml:320 → requestNewVoicegroup keeps
+voicegroupsourceediting A086–A092 and viewcache A069's siblings GAP), and
+the closed state/swiftqtml/rollcheck-selection/scale_editing/automationgesturecheck
+ledgers deleted. Working tree carries the user's untracked
+`docs/plans/swift-clipboard-cutover/`, `swift-keybindings-integration/`,
+`.omp/rules/swift-typecheck-complexity.md` and `profiler/`.
+
+New controller rulings applied to this census: directional resize cursor
+art (rollcheck resize A002–A004/A027/A028) is a UX deviation pending the
+user, not a retirement; a `!("prop" in obj)` refusal on a never-existing
+property is tautological and banned — retirement predicates must
+positively observe the real replacement surface; a production property
+added only for a check is banned even when renderer precedent exists
+(tabs_transport A062 stays GAP); a real runtime event the lanes cannot
+synthesize (WindowDeactivate, foreign-app window) stays open.
+
+Row-level census of every remaining open site (`proof sites --area <dir>`
+for all 42 ledgers; per-ledger tallies under the table):
+
+| Area / ledger | Open | Status |
+|---|---|---|
+| automation hover | 1P | A133 in flight separately |
+| automation presentation | 1P | physical DPR-2 pixels |
+| host adapter | 1G + 1P + 1NS | A079 parity decision pending user; A095 queued-notification residue |
+| host integration | 7G + 3P | window-close harness (A162/A174–A185); WindowDeactivate ingress (A087/A091); A004 fixture-parity residue |
+| host seams | 0 | closed; ledger file `proof.tst_hostseams.txt` still present — deletion owed with C++ sources already gone |
+| mainwindowrouting input | 17G + 3P | fixture-seed guards parked; ruled deviations A015/A017/A019 |
+| mainwindowrouting lifecycle | 20G + 23P | swift-project-store (sidecars, view-state, reopen); window-close A106–A108; pending-reload gate A025; representation residuals |
+| mainwindowrouting native | 28G | Cocoa/QAction/signal-count/focus/native-delivery; A047/A048 keep the foreign-window ingress block (their "no byte surface" note is stale: `document.state.file.encoded()` exists, but the foreign-app window is unsynthesizable) |
+| midi export | 13P | P3 WAV bundle; no export surface |
+| nativegraphics | 27G | native windowing boundary |
+| onboardcheck import | 33G + 12NS | MIDI-import wizard unported (P4) |
+| project identity | 19P | no Swift value-type ingress |
+| project ioflow | 25G + 8P + 2NS | swift-project-store command envelope |
+| project iomutations | 21G + 10NS | swift-project-store fixture/teardown guards; ghost-ID ingress ban (workspace A099/A100) |
+| project workspace | 58G + 11NS | swift-project-store session store |
+| retained | 18G | native boundaries harness |
+| rollcheck identity | 1P | A014 residual — task 208 |
+| rollcheck presentation | 7P | QtBridge object passing (164/A018–A024) |
+| rollcheck resize | 5P | directional cursors — user decision pending |
+| samplecheck | 387G + 74N | P4 sample studio |
+| swiftrollgated | 2G | ED11 clipboard text ownership |
+| themelayout color | 2P | A038 — task 206; A039 sample editor (P4) |
+| themelayout settings | 33G + 1P | theme dialog / QHeaderView (owner decisions, native); A019 — task 206 |
+| visual | 37G + 7P | unported dialogs/pickers + frozen baselines |
+| voicegroup bank | 15P | no value-type ingress + savecore write-failure family |
+| voicegroup viewcache | 2P | A046 ruled deviation stays; A069 — task 207 |
+| voicegroup sourceediting | 7G | VG03 open decision (creation ingress wired) |
+| voicegroupsave presentation | 6G | VG03 create flow |
+| voicegroupsave savecore | 11G | catalog-outage decision |
+| workspace session | 2G | swift-project-store sidecars |
+| workspace selftest timeline | 4P | Null-backend physical output |
+| workspace selftest transport | 7P | Null-backend physical output + ruled deviations |
+| workspace tabs_transport | 1G | A062 — banned test-only read |
+
+Under the new rulings only three residuals can close honestly:
+
+- **themelayout settings A019** (`tst_themelayout_settings.cpp:178` at
+  `97dc7fea`): the parked note says GridPalette exposes no alternate
+  surface — stale. `EventListCell.qml:72` renders odd rows in
+  `page.tableAlternateBackground`, a real mounted surface already
+  reachable on `tst_ShellEventListPresentation.qml`. One predicate
+  observes the mounted second-row delegate's background color —
+  MATCHED. The cell background Rectangle needs an id so the lane can
+  read it (a production handle, not a test-only property: it names the
+  existing rendered stripe).
+- **themelayout color A038** (`tst_themelayout_color.cpp:205`): S020 is
+  the fork's else branch (contrast-100 grid luminance above the default
+  when the default sits above the roll surface) that no shipped preset
+  reaches. The banned-tautology ruling does not apply: the enumeration
+  over shipped themes IS the real replacement surface — an executed
+  predicate asserting every shipped preset's default grid luminance sits
+  at-or-below its roll surface positively observes real theme data.
+  Closes RETIRED-REPRESENTATION with that executed refusal in
+  `ThemeColorChecks.swift`.
+- **viewcache A069** (`tst_voicegroupviewcache.cpp:320` at `a7fcaa3e`):
+  `SongTabsController.pendingBankTabId` and `closeEnabled(tabId:)` are
+  published production values (SongTabs.qml close gate reads them), so
+  `cache.bankActionsEnabled() && !cache.pendingOrigin()` after the
+  origin's own hard error IS observable: `pendingBankTabId == -1`,
+  `closeEnabled(originID)` restored, and a follow-on `applyBankEdit`
+  succeeds (the re-enabled bank actions). `bank_undo_publication.swift`
+  already mounts `app.songTabs` through a two-tab fixture; extend it
+  with the own-identity hard failure — MATCHED.
+- **rollcheck identity A014** (`identity.cpp:223`): the residual claimed
+  no predicate observes cosmetics retained together with runtime fields
+  across the restore — stale. `identity.swift:205-215` (S021) asserts
+  exactly that conjunct (`session.editorViewState == cosmetics` AND all
+  runtime fields AND document state) on the mounted session, a real
+  production read on the real replacement surface. Close MATCHED; the
+  task re-verifies S021's executed evidence and refreshes the mapping —
+  a mapping correction riding the same commit that already owns this
+  ledger, not a standalone reconciliation.
+
+Everything else in the open inventory is excluded: parked on
+user/owner decisions (directional cursors, theme dialog, drawer-toggle
+centring, catalog outage, pending-reload gate, VG03), swift-project-store,
+QtBridge object passing, window-close harness, WindowDeactivate/
+foreign-window ingress, native/Cocoa/QAction boundaries, physical
+audio/DPR-2, ED11, frozen visual baselines, fixture-parity residues, the
+P3 WAV bundle and the P4 wizard/sample-studio families, and the banned
+test-only read (tabs_transport A062). The inventory is otherwise
+excluded — three tasks, no padding:
+
+| Task | Surface / brief | Rows | Group |
+|---|---|---|---|
+| 206 | [The mounted event-list stripe and the shipped-theme enumeration close the themelayout residuals](task-206-brief.md) | settings A019 (1 PARTIAL → MATCHED), color A038 (1 PARTIAL → RR) | A |
+| 207 | [The mounted tab coordinator proves the hard-error gate release](task-207-brief.md) | viewcache A069 (1 PARTIAL → MATCHED) | A |
+| 208 | [The view-state round trip closes on its already-executing joint predicate](task-208-brief.md) | rollcheck identity A014 (1 PARTIAL → MATCHED); identity ledger deletes on zero | A |
+
+### What was excluded and why — census evidence
+
+- **207 keeps A046 PARTIAL**: the peer-immediate-close conjunct under
+  bank-only dirt is a user-ruled deviation (Swift refuses close on
+  bank-only dirt to protect unsaved edits); the standing ruled-deviation
+  exclusion list carries it and this wave does not re-litigate.
+- **208 is a mapping correction, not reconciliation**: S021 already
+  discharges the joint clause; nothing else in the identity ledger is
+  open, so the ledger file deletes in the same commit per the closed-
+  ledger rule (identity.cpp's `Deleted in:` header stands).
+- **No task touches an excluded family**: the VG03 rows stay GAP,
+  tabs_transport A062 stays GAP (test-only read banned), resize
+  directionals stay PARTIAL pending the user, and no predicate asserts
+  `!("prop" in obj)` on a never-existing property anywhere — every
+  closure above observes a mounted, existing surface.
+- **`proof.tst_hostseams.txt` still ships** at zero open rows with its
+  C++ source deleted; no task claims the deletion — it rides with the
+  controller's housekeeping since nothing in the wave edits that file's
+  row dispositions.
+
+### User-visible Swift feature gaps needing a decision (for the controller)
+
+- Directional left/right note-edge resize cursors: Swift publishes one
+  named SizeHorCursor for both edges (rollcheck resize
+  A002–A004/A027/A028, 5 PARTIAL).
+- MIDI-import wizard surface unported (onboardcheck import, 33G + 12NS).
+- Settings/theme/sample-editor/sf2-zone-picker dialogs and the sample
+  picker browser unported (visual dialogs/browsers, themelayout
+  settings theme-dialog family, color A039, host adapter A079's
+  toggle-centring variant).
+- WAV export: `file.export_wav` registers a keybinding
+  (KeybindingRegistry.swift:113) with no production handler or surface
+  (midiexport 13P).
+- Song-label validation has no Swift ingress: Swift song labels are
+  plain Strings, so `SongName::create` spelling validation
+  (visual chrome A007, voicegroupbank label guards, project identity)
+  has no mounted law; whether the Swift shell should adopt the
+  validation or treat it as fork-representation is a user call.
+- New Voicegroup creation (VG03): the ingress is wired
+  (VoiceEditor.qml:320 → requestNewVoicegroup) but
+  `onNewVoicegroupRequested` is unassigned — the create dialog/flow is a
+  user-visible hole holding voicegroupsourceediting A086–A092,
+  voicegroupsave presentation A032–A037 and viewcache A069's sibling
+  rows open.
+- Sample studio (P4): pitch/loop/DSP surfaces unported (samplecheck
+  387G + 74N).
+
+### Conflict matrix and dispatch groups
+
+Write sets are pairwise disjoint; ledgers are per-task disjoint so the
+single ledger writer applies each set serially.
+
+| Task | Ledger files | Check/predicate files |
+|---|---|---|
+| 206 | `themelayout/proof.tst_themelayout_settings.txt`, `themelayout/proof.tst_themelayout_color.txt` | `src/ui/songview/quick/EventListCell.qml` (stripe id), `src/checks/editorqml/tst_ShellEventListPresentation.qml`, `src/checks/themecolor/ThemeColorChecks.swift` |
+| 207 | `voicegroup/proof.tst_voicegroupviewcache.txt` | `src/checks/workspace/bank_undo_publication.swift` |
+| 208 | `rollcheck/proof.identity.txt` (deletes on close) | mapping correction only; `src/checks/rollcheck/identity.swift` referenced, edits only if execution evidence is missing |
+
+| Group | Tasks | Note |
+|---|---|---|
+| A | 206, 207, 208 | Independent writers. 206 owns both themelayout ledgers; no sibling touches `tst_ShellEventListPresentation.qml` or `ThemeColorChecks.swift`. |
+
+### Shared constraints and verification ownership
+
+The §16–§25 contracts continue: fork clauses win; one predicate per fork
+clause with its unique complete literal; each A-id on exactly one
+predicate; expectations independent of production projections; a fork
+state unreachable in Swift closes as RETIRED-REPRESENTATION with
+executed refusal predicates that positively observe the real replacement
+surface — `!("prop" in obj)`-style refusals on never-existing properties
+are banned; no test-only APIs or ingress — real production entry points
+and real published values only (`pendingBankTabId`/`closeEnabled` are
+published; the EventListCell stripe id names an existing rendered
+surface); fail-closed staging; no Qt.callLater, no focus memory, no
+second dispatcher; queued QtBridge notifications keep same-GUI-pass
+clauses PARTIAL. Ledger rows are edited only in the commit whose code
+and checks prove them; closed rows use the compact form. Writers run
+their brief's focused lanes under the lock/175-second alarm; no
+project-wide builds, tests, formatters or linters mid-flight; the
+controller owns the project-wide gate once after sources settle.
+Planning validation for this docs-only commit checked brief
+links/headings, pinned fork citations, row statuses (`proof sites` per
+area: themelayout settings 33G/1P + color 2P, viewcache 2P, rollcheck
+identity 1P), lane registrations (`shell-event-list-presentation`,
+`swiftcore`/`swiftcore-bankhistory` for the probe files), production
+observability (`SongTabsController.swift:318-328`,
+`EventListCell.qml:72`, `identity.swift:205-215`), and pairwise
+write-set disjointness; no application suite was run.
+
+### Deferred and excluded
+
+- Unlock paths unchanged: the user's QtBridge object passing (164 +
+  rollcheck presentation A018–A024), `swift-project-store` (sidecar/
+  view-state/session families), theme-dialog and hostadapter A079
+  centring, a real window-close harness (hostintegration A162/A174–A185),
+  catalog-outage savecore rows, the hostadapter A095 same-GUI-pass
+  residue, the identity/voicegroupbank guard-tail reconciliation gate,
+  WindowDeactivate and foreign-window ingress (A087/A091, native
+  A047/A048 context), physical audio (selftest conjuncts,
+  tabs_transport physical rows), directional resize cursors, the
+  wizard/sample-studio/import families, and the P3 WAV export surface.
+- Strict-mapping debt (233) untouched by design.
+- Standing exclusions unchanged: savecore A016–A026, pending-reload
+  input gate, transport A009/A010/A013, ImageIO, ED11 clipboard text
+  ownership, VG03 create-flow rows (voicegroupsourceediting A086–A092,
+  voicegroupsave A032–A037), visual baselines, physical DPR-2 pixels,
+  banned test-only reads (tabs_transport A062), ruled-deviation
+  conjuncts (input A015/A017/A019, viewcache A046's bank-only-dirt close
+  refusal, selftest transport A009–A013).
