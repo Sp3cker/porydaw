@@ -4026,3 +4026,123 @@ points (`ShellPresenter.swift:18-81,250-368`,
 registrations (`swiftcore-projectsession`, `shell-songs`,
 `shell-menus`, `verify:qml-roll`'s `swiftroll-window`), and pairwise
 write-set disjointness; no application suite was run.
+
+## 29. Task 213 — the last residual: rollcheck identity A014 and the exhaustion census
+
+### Selection and dispatch
+
+Planning baseline: 39 ledgers; open rows 871 (749 GAP + 122 PARTIAL);
+HEAD `1468db90` — wave 210–212 landed (`41a7ebc4`, `8d338281`,
+`ae48c95d`; feature ports, no ledger rows claimed) and `proof list`
+confirms wave 206–209's closures (sourceediting and
+voicegroupsave-presentation ledgers deleted at `b986ba08`, hostseams
+deleted at `0c1fce67`). Task 208's scope never dispatched: no commit
+exists and `rollcheck/proof.identity.txt` still reports A014 PARTIAL.
+
+Row-level census of every remaining open site (`proof sites --area
+<dir>` for all ledgers, GAP and PARTIAL paged to exhaustion): exactly
+one row closes honestly under the controller's standing exclusions —
+the wave is a single re-dispatch, no padding:
+
+| Task | Surface / brief | Rows | Group |
+|---|---|---|---|
+| 213 | [The view-state round trip closes on its already-executing joint predicate](task-213-brief.md) | rollcheck identity A014 (1 PARTIAL → MATCHED); identity ledger deletes on zero | A |
+
+A014's analysis from §26 stands verbatim, now stronger: the executed
+evidence is already on disk —
+`build/proof-evidence/swiftcore-projectsession.json` carries the S021
+row literal "restoring captured live runtime state preserves all
+camera grid owner cursor and cosmetic values without MIDI edits", so
+the closure is a mapping refresh plus ledger deletion, no new checks.
+
+### Exhaustion census — per-ledger exclusion breakdown
+
+Every other open row is excluded by a standing user decision, an
+unported feature family, an unsynthesizable boundary, or a banned/
+ruled technique. Per-ledger, with each exclusion grounded in the row's
+recorded reason:
+
+| Ledger | Open | Why every row stays open |
+|---|---|---|
+| automation hover | 1P | A133 automation hover — user exclusion. |
+| automation presentation | 1P | A037 physical DPR-2 ink pixels — user exclusion. |
+| host adapter | 1G + 1P + 1NS | A079 drawer-toggle centring — user exclusion. A095 same-GUI-pass publication residue: QtBridge queues property notifications, so the canonical band rect publishes one pass later; ruled technique constraint. |
+| host integration | 7G + 3P | Window-close harness (A162/A174–A185, 7G) — user exclusion. WindowDeactivate routes A087/A091 — user exclusion. A004 fixture-parity residue: the deleted two-tab route fixture context is unexercised by design. |
+| mainwindowrouting input | 17G + 3P | Fixture-seed guards/note-lookup probes for the deleted Qt two-song MainWindow session (A088/A090/A123/A125/A147/A169/A171/A173/A191…) — deleted-harness residues, no Swift counterpart by design. Ruled deviations A015/A017/A019 (focus retention, cursor-domain publication, ruler commit) stay PARTIAL. |
+| mainwindowrouting lifecycle | 20G + 23P | swift-project-store family — project-store backend exclusion: two-song open fixture, QSettings view-state persistence, porydawSnapshot sidecars, tab reopen readiness. Window-close A106–A108 — window-close harness exclusion. Pending-reload input gate A025 — user exclusion. PARTIALs are deleted-Qt-session residual conjuncts (tab identity, readiness, CommandEnvelope event representation) — no mounted counterpart. |
+| mainwindowrouting native | 28G | native/Cocoa/QAction boundaries — user exclusion: Cocoa activation, foreign-window synthesis (A047–A049/A057 also unsynthesizable even though `document.state.file.encoded()` exists), QAction signal counts, native focus routing, Cocoa-only QSKIP gates, unexposed project-snapshot root (A078). |
+| midi export | 13P | P3 WAV export — user exclusion; all PARTIALs are setup/error-envelope conjuncts around the unported WAV render. |
+| nativegraphics | 27G | native windowing boundary — native/Cocoa exclusion; the C++ Rig harness has no Swift counterpart. |
+| onboardcheck import | 33G + 12NS | P4 MIDI-import wizard — user exclusion; every row pins the unported wizard flow. |
+| project identity | 19P | Stale-disposition reconciliation, not surface work: `runProjectIdentitySuite` (CoreCheckSupport.swift:187 → ProjectIdentityChecks.swift) already executes SongName A001–A008, VoicegroupId A009–A019 and recipe A020+ predicates naming each row; belongs to the ledger-agent gate per §28's ruling. |
+| project ioflow | 25G + 8P + 2NS | swift-project-store command envelope — project-store backend exclusion: CommandFailure/result-event identity, SamplesProbed events, async completion timing; the 8P are backend-envelope residues with only consumer-facing halves proved. |
+| project iomutations | 21G + 10NS | swift-project-store fixture/teardown guards — project-store backend exclusion; ghost-ID ingress ban (workspace A099/A100) — the fork and prior briefs forbid adding ghost VoicegroupId ingress. |
+| project workspace | 58G + 2P + 11NS | swift-project-store session store — project-store backend exclusion; A099/A100 ghost-ingress PARTIALs share the ban. |
+| retained | 18G | native boundaries harness — native boundary exclusion; no Swift counterpart suite identified. |
+| rollcheck identity | 1P | **Task 213** — the one honest closure. |
+| rollcheck presentation | 7P | QtBridge object passing (task-164 family) — user exclusion: A018–A024 pin `lookupEvent`-style object-return ingress. |
+| rollcheck resize | 5P | Directional resize cursors — user exclusion. |
+| samplecheck analysis/decoder/dsp/editor/integration/project/soundfont | 408G + 71N | P4 sample studio — user exclusion: analysis (21G), decoder (93G), dsp (61G+6N), editor (80G+50N), integration (68G+3N), project (63G), soundfont (22G+12N). |
+| swiftrollgated clipboard | 2G | ED11 clipboard text ownership — user exclusion. |
+| themelayout color | 1P | A039 pins the unported sample editor's 3.0-contrast pair — P4 exclusion. |
+| themelayout settings | 33G | Theme/settings dialogs + themelayout owner decisions — user exclusions: 12 native-lane-dead rows, the theme-dialog family (visibility, mode radios, sliders, dialog geometry) and the owner-decision residues (polyphony-panel layout scaling, QWizard style, QHeaderView section-border rules). |
+| visual browsers | 5G + 3P | P4 sample picker — user exclusion; the 3P are mounted-voicegroup/picker-harness residues. |
+| visual chrome | 3G + 4P | Visual baselines — user exclusion: A001/A018 pin frozen QWidget chrome PNGs with no converted-window owner; A020/A021/A023/A024 are frozen polyphony-baseline partials. A007 additionally parks with the value-type reconciliation gate (§28). |
+| visual dialogs | 24G | theme/settings/sf2 dialogs + wizard family — user exclusions: settings (6), theme (1), sample editor (4), Sf2ZonePicker (1), new-song/MIDI-import wizard (12). |
+| visual quick | 5G | Visual baselines — user exclusion: frozen QQuick framebuffer PNGs (roll/drum rendering, drum labels, pitch-bend popup). |
+| voicegroup bank | 15P | A089–A093 savecore write-failure family — catalog-outage exclusion (the fork fails the save through an unknown synth definition; the Swift row blocks on the immutable flag). A001–A022 fixture/label-guard conjuncts park with the value-type reconciliation gate. A044/A048–A050 foreign-lease/blocker-file setup conjuncts — project-store fixture boundary. |
+| voicegroup viewcache | 1P | A046 ruled deviation stays PARTIAL — user-ruled close-refusal on bank-only dirt protects unsaved edits. |
+| voicegroupsave savecore | 11G | Catalog outage A016–A026 — user exclusion. |
+| workspace session | 2G | swift-project-store sidecars — project-store backend exclusion: no owner for the sidecar write path, so close/restore rewrite refusals are unobservable. |
+| workspace selftest timeline | 4P | Physical audio output — Null backend plays no real samples, so strict renderer-progress conjuncts stay PARTIAL. |
+| workspace selftest transport | 7P | Physical audio output (A005/A007/A011/A015 renderer-sample conjuncts) plus user-ruled deviations A009/A010/A013 (cursor commits never seek transport). |
+| workspace tabs_transport | 1G | A062 banned test-only read — the song-volume publication needs a read that exists only for the check. |
+
+The non-excluded open inventory is exhausted: after A014 every open
+row waits on a user ruling, an unported feature (P3 WAV, P4 wizard/
+sample family), the project-store backend, a native/unsynthesizable
+boundary, or a banned proof technique.
+
+### Conflict matrix
+
+Single task; no sibling write sets.
+
+| Task | Ledger files | Check files |
+|---|---|---|
+| 213 | `rollcheck/proof.identity.txt` (close A014, then delete file) | `src/checks/rollcheck/identity.swift` reference only |
+
+### Shared constraints and verification ownership
+
+The §16–§28 contracts continue: fork clauses win; compact closed-row
+form; the ledger deletes in the same commit that closes its last row;
+no test-only reads, no `!("prop" in obj)` refusals on never-existing
+properties, no project-wide gates mid-flight. The writer runs
+`proof check --executed` and the `swiftcore-projectsession` lane under
+the lock/175-second alarm; the controller owns the project-wide gate
+once after sources settle. Planning validation for this docs-only
+commit ran the full per-ledger `proof sites --status GAP/PARTIAL`
+census (paged to exhaustion: 749 + 122 rows), confirmed task 208 never
+landed (`git log`, row still PARTIAL), confirmed S021's executed
+evidence row literal in `build/proof-evidence/swiftcore-projectsession.
+json`, re-checked identity.swift:194-215 against the fork site
+`85b97239:identity.cpp:220-230`, and grounded every exclusion table
+entry in the row's recorded `why:` reason; no application suite was
+run.
+
+### Deferred and excluded
+
+Standing exclusions unchanged and now exhaustive: savecore catalog
+outage (A016–A026 plus the voicegroupbank write-failure family),
+pending-reload input gate, P3 WAV export, P4 sample studio/import
+wizard/sample picker, task-164 QtBridge object passing,
+WindowDeactivate routes, physical DPR-2 pixels, tabs_transport A062,
+window-close harness, native/Cocoa/QAction boundaries, visual
+baselines, themelayout owner decisions, ED11, project-store backend,
+directional resize cursors, theme/settings/sf2 dialogs, drawer-toggle
+centring A079, automation hover A133, ruled deviations (input
+A015/A017/A019, viewcache A046, selftest transport A009–A013), the
+value-type reconciliation gate (project identity, voicegroupbank
+label guards, visual chrome A007), physical audio output, banned
+techniques (ghost-ID ingress, test-only reads, same-GUI-pass
+notification timing A095), and deleted-harness fixture-parity
+residues.
