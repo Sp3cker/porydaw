@@ -222,9 +222,12 @@ ShellPitchBendSupport {
         keyClick(Qt.Key_Escape)
         tryCompare(opened.editor, "isOpen", false)
         compare(opened.grid.cursorKind, 3,
-                "the roll keeps its note-edge cursor across dismissal")
-        tryCompare(opened.roll, "cursorShape", Qt.SizeHorCursor, 5000,
-                   "the roll's advertised cursor remains horizontal resize")
+                "the roll keeps its right note-edge cursor across dismissal")
+        tryCompare(opened.roll, "cursorShape", Qt.BitmapCursor, 5000,
+                   "the roll's advertised cursor remains the right-drag art")
+        compare(String(findChild(opened.view, "swiftRollCursor").source),
+                "qrc:/cursors/right-drag.png",
+                "the dismissed popup leaves the right-drag art bound")
     }
 
     function test_reanchorTargetsNewNoteGraph() {

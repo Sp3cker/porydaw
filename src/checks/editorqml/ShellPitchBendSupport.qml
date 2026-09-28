@@ -284,9 +284,9 @@ TestCase {
                                         face.height / 2)
             mouseMove(roll, edge.x, edge.y)
             tryCompare(grid, "cursorKind", 3, 5000,
-                       "the hovered note edge advertises horizontal resize")
-            tryCompare(roll, "cursorShape", Qt.SizeHorCursor, 5000,
-                       "the note-edge cursor binding observes the roll kind")
+                       "the hovered right note edge advertises its resize grip")
+            tryCompare(roll, "cursorShape", Qt.BitmapCursor, 5000,
+                       "the note-edge cursor binding shows the custom edge art")
         }
         roll.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(roll, "activeFocus", true, 5000,

@@ -13,8 +13,8 @@ enum QtFact {
 enum GridCursorKind: Int {
     case arrow = 0
     case openHand = 1
-    case sizeVertical = 2
-    case sizeHorizontal = 3
+    case leftEdge = 2
+    case rightEdge = 3
     case closedHand = 4
 }
 

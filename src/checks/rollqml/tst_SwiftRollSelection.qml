@@ -336,11 +336,26 @@ TestCase {
             mouseMove(roll, edge.x, edge.y)
             if (!waitForNative(function() { return g.cursorKind === 3 }, 3000))
                 continue
-            verify(waitForNative(function() { return roll.cursorShape === Qt.SizeHorCursor }, 5000),
-                   "the edge hover shows the resize cursor")
+            var cursor = findChild(surf, "swiftRollCursor")
+            verify(cursor !== null, "the roll input carries its production cursor binding")
+            verify(waitForNative(function() {
+                return roll.cursorShape === Qt.BitmapCursor
+                    && String(cursor.source) === "qrc:/cursors/right-drag.png"
+            }, 5000), "the right edge hover shows the right-drag cursor art")
+            compare(cursor.extent, Math.max(1, Math.round(g.baseFontPx * 2)),
+                    "the edge cursor art is sized to two base font pixels")
+            compare(cursor.devicePixelRatio, g.devicePixelRatio,
+                    "the edge cursor art follows the roll device pixel ratio")
+            var leftEdge = item.mapToItem(roll, 1, item.height / 2)
+            mouseMove(roll, leftEdge.x, leftEdge.y)
+            verify(waitForNative(function() {
+                return g.cursorKind === 2 && roll.cursorShape === Qt.BitmapCursor
+                    && String(cursor.source) === "qrc:/cursors/left-drag.png"
+            }, 5000), "the left edge hover shows the left-drag cursor art")
             mouseMove(roll, center.x, center.y)
-            verify(waitForNative(function() { return g.cursorKind === 0 }, 5000),
-                   "the note body restores the arrow")
+            verify(waitForNative(function() {
+                return g.cursorKind === 0 && roll.cursorShape === Qt.ArrowCursor
+            }, 5000), "the note body restores the arrow")
             probed = true
         }
         verify(probed, "a fully visible wide note takes the cursor probe")

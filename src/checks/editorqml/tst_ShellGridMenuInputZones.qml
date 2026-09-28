@@ -128,15 +128,23 @@ ShellGridMenuSupport {
         mouseRelease(roll, target.point.x, target.point.y, Qt.LeftButton)
         var note = findChild(surface(), "gridNote_" + target.note.id)
         verify(note !== null && note.width > surface().gridModel.drawThreshold * 2)
+        var cursor = control("swiftRollCursor")
         var edge = note.mapToItem(roll, 1, note.height / 2)
         mouseMove(roll, edge.x, edge.y)
-        tryCompare(roll, "cursorShape", Qt.SizeHorCursor)
+        tryVerify(function() {
+            return String(cursor.source) === "qrc:/cursors/left-drag.png"
+                && roll.cursorShape === Qt.BitmapCursor
+        }, 5000, "the left note edge shows the left-drag cursor art")
         edge = note.mapToItem(roll, note.width - 1, note.height / 2)
         mouseMove(roll, edge.x, edge.y)
-        tryCompare(roll, "cursorShape", Qt.SizeHorCursor)
+        tryVerify(function() {
+            return String(cursor.source) === "qrc:/cursors/right-drag.png"
+                && roll.cursorShape === Qt.BitmapCursor
+        }, 5000, "the right note edge shows the right-drag cursor art")
         var body = note.mapToItem(roll, note.width / 2, note.height / 2)
         mouseMove(roll, body.x, body.y)
         tryCompare(roll, "cursorShape", Qt.ArrowCursor)
+        compare(String(cursor.source), "", "the note body drops the edge cursor art")
     }
 
     function test_rollKeysEditTimeScopedNotesAndEmptyClickClearsBand() {

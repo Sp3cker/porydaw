@@ -160,14 +160,27 @@ Item {
 
                         Component.onCompleted:
                             root.gridModel.dragDistance = Qt.styleHints.startDragDistance
-                        cursorShape: {
-                            switch (root.gridModel.cursorKind) {
-                            case 4: return Qt.ClosedHandCursor
-                            case 1: return Qt.OpenHandCursor
-                            case 2:
-                            case 3: return Qt.SizeHorCursor
-                            default: return Qt.ArrowCursor
+
+                        ItemCursor {
+                            id: rollCursor
+                            objectName: "swiftRollCursor"
+                            target: rollInput
+                            shape: {
+                                switch (root.gridModel.cursorKind) {
+                                case 4: return Qt.ClosedHandCursor
+                                case 1: return Qt.OpenHandCursor
+                                default: return Qt.ArrowCursor
+                                }
                             }
+                            source: {
+                                switch (root.gridModel.cursorKind) {
+                                case 2: return "qrc:/cursors/left-drag.png"
+                                case 3: return "qrc:/cursors/right-drag.png"
+                                default: return ""
+                                }
+                            }
+                            extent: root.gridModel.resizeCursorExtent
+                            devicePixelRatio: root.gridModel.devicePixelRatio
                         }
 
                         onPressed: function(mouse) {

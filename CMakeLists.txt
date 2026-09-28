@@ -197,6 +197,8 @@ qt_add_library(porydaw_app STATIC
     src/app/clipboard_host.cpp
     src/app/qml_engine_host.h
     src/app/qml_engine_host.cpp
+    src/app/item_cursor.h
+    src/app/item_cursor.cpp
     src/ui/songview/quick/swiftroll/native/font_metrics.cpp
     src/ui/songview/quick/swiftroll/native/font_metrics.h
     src/audio/audioengine.cpp
@@ -344,11 +346,15 @@ qt_add_resources(porydaw_app "transport_icons"
         resources/transport-resonance.svg
 )
 
-qt_add_resources(porydaw_app "drawer_cursors"
+qt_add_resources(porydaw_app "cursor_images"
     PREFIX "/cursors"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources"
     FILES
+        resources/left-drag.png
+        resources/left-drag@2x.png
         resources/pencil.png
+        resources/right-drag.png
+        resources/right-drag@2x.png
 )
 
 # The application owns its Quick Controls style on every platform: Fusion
@@ -363,6 +369,9 @@ qt_add_resources(porydaw_app "controls_style"
 
 target_include_directories(porydaw_app PUBLIC
     src
+)
+target_include_directories(porydaw_app PRIVATE
+    src/app
 )
 target_include_directories(porydaw_app SYSTEM PUBLIC
     ${PORYAAAA_DIR}/third_party

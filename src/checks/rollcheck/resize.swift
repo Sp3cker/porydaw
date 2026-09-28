@@ -310,6 +310,12 @@ private func checkResizeAbutting(_ report: CheckReport, session: DocumentSession
     let y = rect.y + rect.height / 2
     let pullLeft = session.camera.displayX(tick: Double(g.tick + g.duration - snap), origin: 0,
                                            dpr: grid.devicePixelRatio)
+    grid.updateHover(x: boundary - inset, y: y)
+    report.expect(grid.cursorKind == 3, cppID: id,
+                  message: "boundary-left hover shows the first note's right-drag cursor")
+    grid.updateHover(x: boundary + inset, y: y)
+    report.expect(grid.cursorKind == 2, cppID: id,
+                  message: "boundary-right hover shows the second note's left-drag cursor")
     grid.beginPointer(x: boundary - inset, y: y, modifiers: 0)
     report.expect(grid.activeNoteId == ids[0].rawValue && grid.statusText.contains("Resizing"),
                   cppID: id, message: "boundary-left grip targets the first note")
@@ -377,10 +383,10 @@ private func checkResizeHoverCursor(_ report: CheckReport, session: DocumentSess
     let y = rect.y + rect.height / 2
     grid.updateHover(x: rect.x + rect.width - 1, y: y)
     report.expect(grid.cursorKind == 3, cppID: id,
-                  message: "the right edge grip publishes the horizontal resize cursor")
+                  message: "the right edge grip publishes the right-drag cursor")
     grid.updateHover(x: rect.x, y: y)
-    report.expect(grid.cursorKind == 3, cppID: id,
-                  message: "the left edge grip publishes the horizontal resize cursor")
+    report.expect(grid.cursorKind == 2, cppID: id,
+                  message: "the left edge grip publishes the left-drag cursor")
     grid.updateHover(x: rect.x + rect.width / 2, y: y)
     report.expect(grid.cursorKind == 0, cppID: id,
                   message: "the note body publishes the arrow cursor")

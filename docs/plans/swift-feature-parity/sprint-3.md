@@ -79,7 +79,8 @@ valid catalog, tab binding and browser stay usable, recovery refreshes cleanly (
 A016–A026 plus the voicegroupbank write-failure family); (3) pending-reload A025 retires as
 RETIRED-REPRESENTATION under the atomic-reload ruling, with task 176's refusal-predicate
 pattern; (4) directional left/right resize cursor art ports (rollcheck resize
-A002–A004/A027/A028), approved even though it needs a native cursor boundary; (5) the New
+A002–A004/A027/A028) — LANDED: native `ItemCursor` (`src/app/item_cursor.cpp`) applies the
+fork's left/right-drag bitmap cursors on the roll; `proof.resize.txt` closed and deleted; (5) the New
 Song taken-name hint keeps fork parity — registered labels only, strays refuse at Create;
 (6) tabs_transport A062 stays open permanently, and test-only reads stay banned; (7) a real
 ShellWindow close harness is built in `verify:shell` (hostintegration A162/A174–A185,
