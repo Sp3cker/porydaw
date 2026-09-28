@@ -4,6 +4,7 @@ import PorydawApp
 import EditorQmlCheck 1.0
 import Porydaw.Ui
 import "EditorDrawerPixelSupport.js" as PixelSupport
+import "EditorDrawerLayoutSupport.js" as LayoutSupport
 import "EditorDrawerAutomationTabsSupport.js" as AutomationTabsSupport
 import "EditorDrawerAutomationGestureSupport.js" as AutomationGestureSupport
 
@@ -99,6 +100,95 @@ EditorDrawerTestSupport {
             mouseRelease(input, input.width + 24, start.y, Qt.LeftButton)
             compare(bootstrap.automationDocumentRevision(), revision,
                     "the cancelled captured node commits nothing on release")
+            nodes = AutomationGestureSupport.automationLaneNodes(testCase)
+            node = nodes[AutomationGestureSupport.automationWrittenNodeIndex(testCase)]
+            start = AutomationGestureSupport.automationNodePoint(testCase, node)
+            target = { x: Math.min(input.width - 16, start.x + 32),
+                       y: Math.max(16, start.y - 20) }
+            armed = { x: (start.x + target.x) / 2,
+                      y: (start.y + target.y) / 2 }
+            revision = bootstrap.automationDocumentRevision()
+            waitForRendering(testCase.surface)
+            var rasterIdle = grabImage(testCase.surface)
+            mousePress(input, start.x, start.y, Qt.LeftButton)
+            mouseMove(input, armed.x, armed.y, -1, Qt.LeftButton)
+            tryVerify(function() {
+                return AutomationGestureSupport.automationPreviewItems(testCase).length > 0
+            }, 1000, "the raster lane drag stages its transient marker")
+            mouseMove(input, target.x, target.y, -1, Qt.LeftButton)
+            waitForRendering(testCase.surface)
+            var rasterMoved = grabImage(testCase.surface)
+            var rasterMarker = AutomationGestureSupport.automationPreviewItems(testCase)[0]
+            var rasterRegion = PixelSupport.regionOf(testCase, rasterMoved, testCase.surface, rasterMarker)
+            var rasterInk = PixelSupport.channelsOf(testCase, testCase.drawerPalette().selectionEdge)
+            verify(PixelSupport.nearestPixel(testCase, rasterMoved, rasterRegion, rasterInk).distance < 30
+                   && PixelSupport.nearestPixel(testCase, rasterIdle, rasterRegion, rasterInk).distance > 30,
+                   "each staged lane drag paints transient node ink at its projected target")
+            keyClick(Qt.Key_Escape)
+            tryVerify(function() {
+                return !model.interactionActive && AutomationGestureSupport.automationPreviewItems(testCase).length === 0
+            }, 1000, "cancelling the staged raster drag retires its transient")
+            waitForRendering(testCase.surface)
+            var rasterCleared = grabImage(testCase.surface)
+            verify(PixelSupport.nearestPixel(testCase, rasterCleared, rasterRegion, rasterInk).distance > 30,
+                   "the cancelled raster drag erases its transient marker pixels")
+            compare(AutomationGestureSupport.automationPreviewItems(testCase).length, 0,
+                    "the cancelled raster drag publishes no transient marker")
+            mouseRelease(input, target.x, target.y, Qt.LeftButton)
+            compare(bootstrap.automationDocumentRevision(), revision,
+                    "the cancelled raster drag commits nothing on release")
+            mousePress(input, start.x, start.y, Qt.LeftButton)
+            mouseMove(input, armed.x, armed.y, -1, Qt.LeftButton)
+            tryVerify(function() {
+                return AutomationGestureSupport.automationPreviewItems(testCase).length > 0
+            }, 1000, "the switching lane drag stages its transient marker")
+            waitForRendering(testCase.surface)
+            var switchStaged = grabImage(testCase.surface)
+            var switchMarker = AutomationGestureSupport.automationPreviewItems(testCase)[0]
+            var switchRegion = PixelSupport.regionOf(testCase, switchStaged, testCase.surface, switchMarker)
+            var switchInk = PixelSupport.channelsOf(testCase, testCase.drawerPalette().selectionEdge)
+            verify(PixelSupport.nearestPixel(testCase, switchStaged, switchRegion, switchInk).distance < 30,
+                   "the switching drag paints its transient marker before the parameter switch")
+            var otherLane = lanes[(lane + 1) % lanes.length]
+            AutomationTabsSupport.clickAutomationTab(testCase, otherLane)
+            tryVerify(function() { return bootstrap.automationActiveParameterIndex() === otherLane },
+                      1000, "the other parameter activates mid-gesture")
+            tryVerify(function() {
+                return AutomationGestureSupport.automationPreviewItems(testCase).length === 0
+            }, 1000, "the parameter switch retires the staged transient marker")
+            waitForRendering(testCase.surface)
+            var switchedFrame = grabImage(testCase.surface)
+            compare(AutomationGestureSupport.automationPreviewItems(testCase).length, 0,
+                    "the parameter switch publishes no staged transient marker")
+            verify(PixelSupport.nearestPixel(testCase, switchedFrame, switchRegion, switchInk).distance > 30,
+                   "the parameter switch erases the staged transient marker pixels")
+            AutomationTabsSupport.clickAutomationTab(testCase, lanes[lane])
+            tryVerify(function() { return bootstrap.automationActiveParameterIndex() === lanes[lane] },
+                      1000, "the original parameter accepts a fresh gesture after the switch")
+            mouseRelease(input, start.x, start.y, Qt.LeftButton)
+            compare(bootstrap.automationDocumentRevision(), revision,
+                    "the switched capture commits nothing on release")
+            var section = testCase.section(testCase.automationKind)
+            var storedHeight = section.bodyHeight
+            mousePress(input, start.x, start.y, Qt.LeftButton)
+            mouseMove(input, armed.x, armed.y, -1, Qt.LeftButton)
+            tryVerify(function() {
+                return AutomationGestureSupport.automationPreviewItems(testCase).length > 0
+            }, 1000, "the rebuilding lane drag stages its transient marker")
+            try {
+                testCase.presenter().setSectionBodyHeight(
+                    testCase.automationKind, storedHeight + model.baseFontPx * 2)
+                LayoutSupport.awaitRenderedLayout(testCase)
+                mouseRelease(input, armed.x, armed.y, Qt.LeftButton)
+                verify(!model.bandVisible
+                       && AutomationGestureSupport.automationPreviewItems(testCase).length === 0,
+                       "the rebuilt plot keeps no band preview for the staged node lane")
+            } finally {
+                testCase.presenter().setSectionBodyHeight(testCase.automationKind, storedHeight)
+                LayoutSupport.awaitRenderedLayout(testCase)
+            }
+            compare(bootstrap.automationDocumentRevision(), revision,
+                    "the rebuilt staged drag commits nothing")
             var nextLane = lanes[(lane + 1) % lanes.length]
             AutomationTabsSupport.clickAutomationTab(testCase, nextLane)
             tryVerify(function() { return bootstrap.automationActiveParameterIndex() === nextLane },

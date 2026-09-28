@@ -108,6 +108,90 @@ EditorDrawerTestSupport {
         var emptyBadge = findChild(AutomationTabsSupport.revealAutomationTab(testCase, empty),
                                    "automationParameterEventCount")
         compare(emptyBadge.opacity, 0, "an empty tab keeps its event badge transparent")
+        var nodeInk = PixelSupport.channelsOf(testCase, testCase.drawerPalette().automationNodeInk)
+        var nodeRadius = Math.max(1, Math.round(model.baseFontPx * 3 / 16))
+        var grid = testCase.surface.gridModel
+        function rasterX(tick) { return tick * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX }
+        AutomationTabsSupport.clickAutomationTab(testCase, tempo)
+        tryVerify(function() { return bootstrap.automationActiveParameterIndex() === tempo },
+                  2000, "Tempo is active for the isolated node raster")
+        var tempoPoints = bootstrap.automationLaneValues().split(",").filter(function(pair) {
+            return pair.length > 0
+        }).map(function(pair) {
+            var columns = pair.split(":")
+            return { tick: Number(columns[0]), value: Number(columns[1]) }
+        }).sort(function(a, b) { return a.tick - b.tick })
+        verify(tempoPoints.length > 0, "the Tempo fixture has a written marker")
+        var tempoNode = tempoPoints[Math.floor(tempoPoints.length / 2)]
+        mouseMove(gutter, gutter.width / 2, gutter.height / 2)
+        tryVerify(function() { return model.hoverVisible === false }, 2000,
+                  "leaving the Tempo plot clears its hover")
+        waitForRendering(testCase.surface)
+        var tempoFrame = grabImage(testCase.surface)
+        var tempoIsolated = PixelSupport.isolatedNodeInkDistance(
+            testCase, tempoFrame, testCase.surface, plot,
+            rasterX(tempoNode.tick),
+            testCase.automationProjectedY(plot, tempoNode.value, 20, 255),
+            nodeRadius, nodeInk)
+        verify(tempoIsolated < 30,
+               "the written Tempo marker paints isolated node ink clear of its step")
+        AutomationTabsSupport.clickAutomationTab(testCase, pan)
+        tryVerify(function() { return bootstrap.automationActiveParameterIndex() === pan },
+                  2000, "Pan is active for the isolated node raster")
+        var panPoints = bootstrap.automationLaneValues().split(",").filter(function(pair) {
+            return pair.length > 0
+        }).map(function(pair) {
+            var columns = pair.split(":")
+            return { tick: Number(columns[0]), value: Number(columns[1]) }
+        }).sort(function(a, b) { return a.tick - b.tick })
+        verify(panPoints.length >= 2, "the Pan fixture has separated markers")
+        var panLabels = PageSupport.collectByName(testCase, plot, "automationScaleLabel", [])
+        var highLabel = null
+        var lowLabel = null
+        for (var l = 0; l < panLabels.length; ++l) {
+            if (panLabels[l].text === "c_v+63") highLabel = panLabels[l]
+            if (panLabels[l].text === "c_v-64") lowLabel = panLabels[l]
+        }
+        verify(highLabel && lowLabel, "the Pan lane draws its value endpoints")
+        var panTop = highLabel.y + highLabel.height / 2
+        var panBottom = lowLabel.y + lowLabel.height / 2
+        function panMappedY(value) { return panTop + (127 - value) * (panBottom - panTop) / 127 }
+        var panNode = panPoints[Math.floor(panPoints.length / 2)]
+        mouseMove(gutter, gutter.width / 2, gutter.height / 2)
+        tryVerify(function() { return model.hoverVisible === false }, 2000,
+                  "leaving the node plot clears its hover")
+        waitForRendering(testCase.surface)
+        var nodeFrame = grabImage(testCase.surface)
+        var panIsolated = PixelSupport.isolatedNodeInkDistance(
+            testCase, nodeFrame, testCase.surface, plot,
+            rasterX(panNode.tick), panMappedY(panNode.value), nodeRadius, nodeInk)
+        verify(tempoIsolated < 30 && panIsolated < 30,
+               "both written lanes paint isolated node ink clear of their steps")
+        verify(AutomationGestureSupport.automationNodesAtTick(testCase, 144).length > 0,
+               "the Pan fixture writes its tick-144 marker")
+        var freeRow = AutomationGestureSupport.automationFreePoint(testCase)
+        verify(freeRow, "the Pan selection has a free band row")
+        mousePress(input, rasterX(144) + 1, freeRow.y, Qt.RightButton)
+        mouseMove(input, rasterX(144) + 48, freeRow.y, -1, Qt.RightButton)
+        mouseRelease(input, rasterX(144) + 48, freeRow.y, Qt.RightButton)
+        var reticleRange = bootstrap.automationSelectionRange()
+        verify(reticleRange.length > 0 && reticleRange.split(":")[0] === "144",
+               "the Pan drag selects from its tick-144 marker")
+        mouseMove(gutter, gutter.width / 2, gutter.height / 2)
+        tryVerify(function() { return model.hoverVisible === false }, 2000,
+                  "leaving the plot clears the selection hover")
+        waitForRendering(testCase.surface)
+        var reticleFrame = grabImage(testCase.surface)
+        var edgeInk = PixelSupport.channelsOf(testCase, testCase.drawerPalette().selectionEdge)
+        var reticleScene = plot.mapToItem(testCase.surface, rasterX(144) + 0.5, input.height * 0.18)
+        var reticleScaleX = reticleFrame.width / testCase.surface.width
+        var reticleScaleY = reticleFrame.height / testCase.surface.height
+        var reticleRegion = { x0: Math.round(reticleScene.x * reticleScaleX) - 2,
+                              y0: Math.round(reticleScene.y * reticleScaleY) - 2,
+                              x1: Math.round(reticleScene.x * reticleScaleX) + 2,
+                              y1: Math.round(reticleScene.y * reticleScaleY) + 2 }
+        verify(PixelSupport.nearestPixel(testCase, reticleFrame, reticleRegion, edgeInk).distance < 30,
+               "the Pan selection paints its leading reticle edge at the selected node")
     }
 
     function test_automationPresentationGhostAxisAndResize() {
@@ -238,6 +322,33 @@ EditorDrawerTestSupport {
                   "pencil mode remains visibly armed across the Tempo switch")
         compare(input.cursorShape, Qt.BlankCursor,
                 "the switched Tempo lane uses the custom pencil cursor")
+        compare(pencil.width, 16, "the armed pencil keeps its sixteen-pixel logical frame")
+        compare(pencil.sourceSize.width, Math.round(16 * Screen.devicePixelRatio),
+                "the armed pencil decodes its artwork at the declared lane DPR")
+        waitForRendering(testCase.surface)
+        var pencilFirst = grabImage(testCase.surface)
+        var pencilRect = PixelSupport.regionOf(testCase, pencilFirst, testCase.surface, pencil)
+        mouseMove(input, input.width / 4, input.height * 3 / 4)
+        waitForRendering(testCase.surface)
+        var pencilSecond = grabImage(testCase.surface)
+        var pencilInk = 0
+        for (var pxx = pencilRect.x0; pxx <= pencilRect.x1; ++pxx) {
+            for (var pyy = pencilRect.y0; pyy <= pencilRect.y1; ++pyy) {
+                if (pxx < 0 || pyy < 0 || pxx >= pencilFirst.width || pyy >= pencilFirst.height)
+                    continue
+                var wasWhite = pencilFirst.red(pxx, pyy) >= 240
+                        && pencilFirst.green(pxx, pyy) >= 240 && pencilFirst.blue(pxx, pyy) >= 240
+                var wasBlack = pencilFirst.red(pxx, pyy) <= 20
+                        && pencilFirst.green(pxx, pyy) <= 20 && pencilFirst.blue(pxx, pyy) <= 20
+                if ((wasWhite || wasBlack)
+                        && (pencilFirst.red(pxx, pyy) !== pencilSecond.red(pxx, pyy)
+                            || pencilFirst.green(pxx, pyy) !== pencilSecond.green(pxx, pyy)
+                            || pencilFirst.blue(pxx, pyy) !== pencilSecond.blue(pxx, pyy)))
+                    ++pencilInk
+            }
+        }
+        verify(pencilInk >= 3,
+               "the armed pencil paints its artwork ink inside its sixteen-pixel cursor frame")
         AutomationTabsSupport.automationModel(testCase).isPencilMode = false
     }
 

@@ -15,6 +15,11 @@ Command: implementer-reported verification (exact commands not provided)
 Result: PASS — swiftcore (12/36), shell-grid-input-keyboard, editorqml-drawer on the source snapshots above. This proof-only writer did not rerun the lanes.
 Prior execution evidence recorded before this task: deno task verify --filter swiftcore-projectsession --verbose, swiftcore-projectsession (1/36); deno task verify:qml --verbose, editorqml-drawer (1/1), full verify:shell (26/26), and full verify (36/36) on earlier source snapshots. This proof-only writer did not rerun those suites.
 
+Task 183 settled predicate-source SHA-256:
+- 9eb2f2ad2fcce3c7c3369f0ad9605f6029bc8f22f10662b29932b97564a6808b — src/checks/editorqml/tst_EditorDrawerAutomationPreview.qml
+Task 183 execution: AutomationPreview is registered by EditorQmlTests.swift:189. The switch-cancellation predicates are `test_productionAutomationDragPreviews`.
+Task 183 implementer-reported evidence (agent://Task183; not rerun by this proof pass): six focused editorqml-drawer selectors PASS; the full verify:qml invocation had unrelated foreign failures, so no full-lane PASS is claimed.
+
 A001 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:64
 Disposition: RETIRED-REPRESENTATION
 Mapping/reason: S070; native row-handle prerequisite `QVERIFY(pan.valid())` at fceecd88, replaced by the real fixture's Pan activation before selected-ring checks.
@@ -419,19 +424,12 @@ Disposition: MATCHED
 Mapping: S057, S058
 
 A103 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:425
-Disposition: PARTIAL
-Mapping/reason: S084, S087; parameter switch empties preview rectangle publication and mounted Escape cancellation erases painted pixels, but no mounted pixel probe asserts that a parameter switch itself erases the transient marker. Unproved: switch-triggered painted rectangle disappearance.
-Original expression:
-  QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).rects.empty());
+Disposition: MATCHED
+Mapping: S108 — switching parameters mid-drag removes the staged transient marker from mounted publication.
 
 A104 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:426
-Disposition: PARTIAL
-Mapping/reason: S085, S089; switching parameters removes preview readout, band and hover publications; mounted Escape cancellation clears captured transient pixels, but switch-triggered disappearance of triangle pixels is not independently sampled. Unproved: actual transient triangle paint after a parameter switch.
-Source context since previous assertion:
-
-
-Original expression:
-  QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).triangles.empty());
+Disposition: MATCHED
+Mapping: S109 — the staged transient marker pixel disappears from the captured drawer immediately after the parameter switch.
 
 A105 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:427
 Disposition: MATCHED
@@ -851,3 +849,12 @@ Anchor: message "the physical-B selected node drag starts its range at the desti
 
 S107 | test_automationHeldPencilAndNodeDragKeepPhysicalB | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
 Anchor: message "the physical-B selected node drag ends one cell after its destination"
+S108 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawerAutomationPreview.qml
+Source line: 162
+Predicate: AutomationGestureSupport.automationPreviewItems(testCase).length === 0
+Anchor: message "the parameter switch publishes no staged transient marker"
+
+S109 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawerAutomationPreview.qml
+Source line: 164
+Predicate: PixelSupport.nearestPixel(testCase, switchedFrame, switchRegion, switchInk).distance > 30
+Anchor: message "the parameter switch erases the staged transient marker pixels"

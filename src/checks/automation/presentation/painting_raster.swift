@@ -91,6 +91,13 @@ func drawerAutomationRasterScrolledPhantom(_ report: CheckReport, suite: Documen
                       && originalBytes == (try? fixture.document.captureSave().bytes),
                       cppID: id, message: "the cancelled phantom retains exact document bytes")
         fixture.activate(parameter)
+        page.pointerLeave()
+        report.expect(fixture.snapshot == original
+                      && originalBytes != nil
+                      && originalBytes == (try? fixture.document.captureSave().bytes)
+                      && fixture.document.history.undoIndex == originalIndex,
+                      cppID: id,
+                      message: "the reactivated phantom leave retains the complete scrolled snapshot, serialized bytes and history index")
         _ = page.pointerMove(x: 0, y: sourceY, buttons: 0)
         let rearmed = page.pointerPress(x: 0, y: sourceY, surface: 1,
                                        button: AutomationQtButton.left)
@@ -165,4 +172,11 @@ func drawerAutomationRasterHalfOpenGeometry(_ report: CheckReport, suite: Docume
                            scope: .tracks([0])),
                        actual: fixture.session.timeSelection, cppID: id,
                        what: "the retained fork selection has exact endpoints, track scope, empty lane list and false Tempo flag")
+    fixture.activate(.tempo)
+    report.expect(fixture.page.publishedTabs.first(where: { $0.tempo })?.active == true
+                  && fixture.session.timeSelection == AutomationTimeSelection(
+                      range: TimeRange(startTick: 48, endTick: 73),
+                      scope: .tracks([0])),
+                  cppID: id,
+                  message: "switching to the away Tempo lane retains the exact fork half-open selection")
 }

@@ -176,6 +176,32 @@ EditorDrawerTestSupport {
         var scaleY = (idleRegion.y1 - idleRegion.y0 + 1) / input.height
         var insertX = Math.round(idleRegion.x0 + model.hoverDisplay.guideX * scaleX)
         var insertY = Math.round(idleRegion.y0 + model.hoverDisplay.ghostY * scaleY)
+        var hoverTick = model.hoverTick
+        var lanePairs = bootstrap.automationLaneValues().split(",").filter(function(pair) {
+            return pair.length > 0
+        }).map(function(pair) {
+            var columns = pair.split(":")
+            return { tick: Number(columns[0]), value: Number(columns[1]) }
+        })
+        var heldValue = -1
+        for (var v = 0; v < lanePairs.length; ++v) {
+            if (lanePairs[v].tick <= hoverTick)
+                heldValue = lanePairs[v].value
+        }
+        verify(heldValue >= 0, "the background hover sits at or after a written tick")
+        var grid = testCase.surface.gridModel
+        function hoverPlotX(tick) { return tick * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX }
+        var hoverPad = Math.round(Math.max(model.baseFontPx * 3 / 16 + model.baseFontPx / 12,
+                                           model.baseFontPx * 9 / 32 + model.baseFontPx / 10))
+        function hoverPlotY(value) {
+            return input.height - hoverPad - value * (input.height - 2 * hoverPad) / 127
+        }
+        verify(Math.abs(model.hoverDisplay.guideX - hoverPlotX(hoverTick)) <= 1.5,
+               "the background hover projects its guide from the hovered tick")
+        verify(Math.abs(model.hoverDisplay.ghostY - hoverPlotY(heldValue)) <= 1.5,
+               "the background hover projects its ghost from the held value")
+        var probeX = Math.round(idleRegion.x0 + hoverPlotX(hoverTick) * scaleX)
+        var probeY = Math.round(idleRegion.y0 + hoverPlotY(heldValue) * scaleY)
         var guideY = Math.round(idleRegion.y0 + Math.max(4, input.height * 0.18) * scaleY)
         var gutter = AutomationTabsSupport.automationGutter(testCase)
         mouseMove(gutter, gutter.width / 2, gutter.height / 2)
@@ -206,6 +232,10 @@ EditorDrawerTestSupport {
                 ghostPixelsChanged = true
         }
         verify(ghostPixelsChanged, "the filled held-value ghost changes plot pixels until leave")
+        verify(backgroundGrab.red(probeX, probeY) !== clearedImage.red(probeX, probeY)
+               || backgroundGrab.green(probeX, probeY) !== clearedImage.green(probeX, probeY)
+               || backgroundGrab.blue(probeX, probeY) !== clearedImage.blue(probeX, probeY),
+               "the insertion ghost changes its center pixel against the cleared plot")
         ringed = 0
         laneNodes = AutomationGestureSupport.automationLaneNodes(testCase)
         for (var k = 0; k < laneNodes.length; ++k) {
@@ -215,6 +245,18 @@ EditorDrawerTestSupport {
         compare(ringed, 0, "leaving the plot unrings every node")
         compare(bootstrap.automationDocumentRevision(), revision,
                 "leaving the plot writes nothing")
+        mouseMove(input, gapX, free.y)
+        tryVerify(function() { return model.hoverVisible === true }, 2000,
+                  "a move after the first leave revives the insertion hover")
+        mouseMove(gutter, gutter.width / 2, gutter.height / 2)
+        tryVerify(function() { return model.hoverVisible === false }, 2000,
+                  "a second leave clears the insertion hover")
+        waitForRendering(testCase.surface)
+        var secondCleared = grabImage(testCase.surface)
+        verify(secondCleared.red(probeX, probeY) === clearedImage.red(probeX, probeY)
+               && secondCleared.green(probeX, probeY) === clearedImage.green(probeX, probeY)
+               && secondCleared.blue(probeX, probeY) === clearedImage.blue(probeX, probeY),
+               "the second plot leave restores the insertion target pixel")
         mouseMove(input, point.x, point.y)
         tryVerify(function() { return model.hoverVisible === true }, 2000,
                   "a move after a leave revives the hover")

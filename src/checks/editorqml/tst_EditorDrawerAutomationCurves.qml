@@ -75,6 +75,8 @@ EditorDrawerTestSupport {
             return phantom !== undefined && phantom !== null
                 && phantom.model.tick === 144 && phantom.model.value === 95
         }, 2000, "the scrolled tick-144 value-95 Pan source draws its origin phantom")
+        waitForRendering(testCase.surface)
+        var scrolledIdle = grabImage(testCase.surface)
         var delta = y < input.height / 2 ? 30 : -30
         mouseMove(input, 1, y)
         tryCompare(input, "cursorShape", Qt.ArrowCursor, 2000,
@@ -97,6 +99,22 @@ EditorDrawerTestSupport {
                     phantomFrame, AutomationTabsSupport.automationPlot(testCase),
                     0, y, AutomationTabsSupport.automationModel(testCase).baseFontPx), 10,
                 "the clipped origin phantom paints palette ring ink in both visible quadrants")
+        var idleQuadrants = testCase.forkRingQuadrants(
+                    scrolledIdle, AutomationTabsSupport.automationPlot(testCase),
+                    0, y, model.baseFontPx)
+        var hoverQuadrants = testCase.forkRingQuadrants(
+                    phantomFrame, AutomationTabsSupport.automationPlot(testCase),
+                    0, y, model.baseFontPx)
+        verify(idleQuadrants === 0 && hoverQuadrants === 10,
+               "the origin phantom hover changes scrolled-idle pixels to ring ink in both visible quadrants")
+        var phantomScene = AutomationTabsSupport.automationPlot(testCase).mapToItem(testCase.surface, 0, y)
+        var phantomPx = Math.round(phantomScene.x * phantomFrame.width / testCase.surface.width)
+        var phantomPy = Math.round(phantomScene.y * phantomFrame.height / testCase.surface.height)
+        var fillChannels = PixelSupport.channelsOf(testCase, testCase.drawerPalette().windowText)
+        verify(Math.abs(phantomFrame.red(phantomPx, phantomPy) - fillChannels[0]) <= 12
+               && Math.abs(phantomFrame.green(phantomPx, phantomPy) - fillChannels[1]) <= 12
+               && Math.abs(phantomFrame.blue(phantomPx, phantomPy) - fillChannels[2]) <= 12,
+               "the scrolled origin phantom paints its center fill at the plotted origin")
         var phantomHint = hint.text
         model.isPencilMode = true
         var pencilPoint = AutomationGestureSupport.automationFreePoint(testCase)
@@ -513,6 +531,58 @@ EditorDrawerTestSupport {
         }
         forkSelection(72)
         forkSelection(73)
+        AutomationMenuSupport.openAutomationTabMenu(testCase, tempoTab)
+        verify(AutomationMenuSupport.triggerAutomationMenuRow(testCase, 5),
+               "the away journey clears Tempo before its controlled markers")
+        ++edits
+        tryVerify(function() { return bootstrap.automationLaneEventCount() === 0 },
+                  2000, "clearing Tempo empties the away lane")
+        AutomationTabsSupport.clickAutomationTab(testCase, tempoTab)
+        tryVerify(function() { return bootstrap.automationActiveParameterIndex() === tempoTab },
+                  2000, "Tempo is active for the away-lane repaint")
+        model.isPencilMode = true
+        mousePress(input, xAt(48) + 1, yAt(200), Qt.LeftButton)
+        mouseRelease(input, xAt(48) + 1, yAt(200), Qt.LeftButton)
+        ++edits
+        mousePress(input, xAt(144) + 1, yAt(60), Qt.LeftButton)
+        mouseRelease(input, xAt(144) + 1, yAt(60), Qt.LeftButton)
+        ++edits
+        model.isPencilMode = false
+        tryVerify(function() {
+            return AutomationGestureSupport.automationNodesAtTick(testCase, 48).length > 0
+                && AutomationGestureSupport.automationNodesAtTick(testCase, 144).length > 0
+        }, 2000, "the controlled Tempo markers are drawn")
+        var awayValues = bootstrap.automationLaneValues().split(",").filter(function(pair) {
+            return pair.length > 0
+        }).map(function(pair) {
+            var columns = pair.split(":")
+            return { tick: Number(columns[0]), value: Number(columns[1]) }
+        })
+        var awayNode = null
+        for (var a = 0; a < awayValues.length; ++a) {
+            if (awayValues[a].tick === 144)
+                awayNode = awayValues[a]
+        }
+        verify(awayNode, "the away Tempo lane keeps its tick-144 marker")
+        var awayGutter = AutomationTabsSupport.automationGutter(testCase)
+        mouseMove(awayGutter, awayGutter.width / 2, awayGutter.height / 2)
+        tryVerify(function() { return model.hoverVisible === false }, 2000,
+                  "leaving the away plot clears its hover")
+        waitForRendering(testCase.surface)
+        var away = grabImage(testCase.surface)
+        var secondRegion = testCase.automationPaintRegion(away, plot, xAt(72), forkY(80), 1.5)
+        verify(PixelSupport.nearestPixel(testCase, away, secondRegion, ink).distance > 30,
+               "the away Tempo plot paints no Pan ink at the unselected second point")
+        var awayDisc = testCase.automationPaintRegion(away, plot, xAt(144), yAt(awayNode.value),
+                                                      model.baseFontPx * 3 / 16 + 1)
+        verify(PixelSupport.nearestPixel(testCase, away, awayDisc, ink).distance < 30,
+               "the away Tempo marker paints lane ink across its node disc")
+        var awayExact = testCase.automationPaintRegion(away, plot, xAt(144), yAt(awayNode.value), 2)
+        verify(PixelSupport.nearestPixel(testCase, away, awayExact, ink).distance < 30,
+               "the away Tempo marker paints lane ink at its exact projected framebuffer pixel")
+        AutomationTabsSupport.clickAutomationTab(testCase, panTab)
+        tryVerify(function() { return bootstrap.automationActiveParameterIndex() === panTab },
+                  2000, "Pan is active again after the away-lane repaint")
         } finally {
             model.isPencilMode = false
             for (var edit = 0; edit < edits; ++edit)

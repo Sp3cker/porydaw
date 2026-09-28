@@ -38,6 +38,14 @@ Task 119 frozen source SHA-256: 9b7fd07ab387ae2d8609ff724297c7583389394bcf12ed3e
 Task 119 frozen source SHA-256: 018fe9026672cc5f710a4fc6b59940420a72d564e373855f5dd0f03799f8873e (src/checks/editorqml/ShellQmlEntries.swift)
 
 
+Task 183 settled predicate-source SHA-256:
+- c0e83c70edf771df3266a52c829f5b5a2d347adaf75b0c75be9fdb58516229c3 — src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
+- bd8b835955d7a7f4de453023e9dbdf47b204eb14f7d832a17446b6979a1cd525 — src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
+- 9eb2f2ad2fcce3c7c3369f0ad9605f6029bc8f22f10662b29932b97564a6808b — src/checks/editorqml/tst_EditorDrawerAutomationPreview.qml
+- f653e5cd35d2ce18a88fe02785f52a43c74bbd77821fc8cffce4ad96b218b19a — src/checks/automation/presentation/painting_raster.swift
+Task 183 execution: QML functions are registered as AutomationHover (EditorQmlTests.swift:178), AutomationCurves (line 179), and AutomationPreview (line 189). Swift raster checks run through SessionChecks.swift:84 -> runAutomationPageChecks (AutomationPageChecks.swift:328) -> drawerAutomationRasterScrolledPhantom (line 339), cppID `automation/raster/AutomationRasterTest::hoverGhostRingAndLeaveClear`.
+Task 183 implementer-reported evidence (agent://Task183; not rerun by this proof pass): `deno task verify --filter swiftcore` PASS 12/37 twice; six focused editorqml-drawer selectors PASS. The full verify:qml invocation had unrelated foreign failures; no full-lane PASS is claimed.
+
 A001 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:322
 Disposition: RETIRED-REPRESENTATION
 
@@ -95,14 +103,8 @@ Original expression:
   QVERIFY(hasFilledNodeAt(insertion.layer, insertionCenter));
 
 A012 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:357
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S009, S012 prove primary ink at the independently projected insertion-ghost center. Missing: neither compares the same target pixel against its idle-frame value as this original assertion does.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(pixelChangedAt(idle.framebuffer, insertion.framebuffer,
-                             insertionCenter + framebufferOffset));
+Disposition: MATCHED
+Mapping: S031 — independent tick/value projection compares the same mounted insertion-ghost center pixel against the captured cleared plot; the production guide/ghost positions are premise guards only.
 
 A013 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:364
 Disposition: MATCHED
@@ -222,14 +224,8 @@ Original expression:
                                  insertionCenter + framebufferOffset));
 
 A025 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:397
-Disposition: GAP
-Mapping/reason: GAP: the QML round trip checks one leave only; no predicate proves a second leave restores the full target pixel as this original assertion requires.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(pixelMatchesIdleAt(idle.framebuffer, left.framebuffer,
-                                 insertionCenter + framebufferOffset));
+Disposition: MATCHED
+Mapping: S032 — after a second leave, the independently projected insertion target pixel exactly matches all RGB channels of the cleared plot frame.
 
 A026 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:410
 Disposition: NATIVE-SETUP
@@ -311,25 +307,12 @@ Original expression:
   QCOMPARE(phantomHover.valueText, laneAdapter.valueText(lane.nodeValue));
 
 A032 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:436
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S007 proves the mounted scrolled phantom paints the expected hover-ring ink in both visible quadrants. Missing: the QML predicate does not compare the phantom's hovered frame against its scrolled-idle frame at that annulus.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(hasAnnulusPixelChanges(scrolledIdle.framebuffer, phantomHover.framebuffer,
-                                     framebufferOrigin + plotOrigin,
-                                     nodelane::hoverRingRadius(geometry), 2 * layout::singlePixel()));
+Disposition: MATCHED
+Mapping: S033 — the executing mounted journey compares scrolled-idle and hovered phantom frames and finds ring ink in both visible quadrants.
 
 A033 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:439
-Disposition: GAP
-Mapping/reason: GAP: the mounted phantom raster checks ring pixels but does not verify that the origin phantom's center fill is present.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(hasFilledNodeAt(
-          fixture().quickScene().layer(songview::TimelineQuickLayer::AutomationNodes), plotOrigin));
+Disposition: MATCHED
+Mapping: S034 — the mounted origin phantom center pixel matches the palette window-text fill color within the recorded channel tolerance.
 
 A034 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:447
 Disposition: MATCHED
@@ -354,15 +337,8 @@ A036 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation
 Disposition: RETIRED-REPRESENTATION
 
 A037 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:463
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S003 proves node-shaped physical pixels at the independently projected Pan drag target, and the Swift predicate covers Pan and Tempo preview geometry. Missing: the mounted pixel check is Pan-only, while this original row covers both lane adapters.
-Source context since previous assertion:
-
-      const auto draggedTransient =
-          fixture().quickScene().layer(songview::TimelineQuickLayer::AutomationTransient);
-
-Original expression:
-  QVERIFY(hasFilledNodeAt(draggedTransient, dragTarget));
+Disposition: MATCHED
+Mapping: S003, S035 — the mounted transient marker paints selection-edge ink at its independently projected target for each staged Tempo and Volume lane drag.
 
 A038 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:464
 Disposition: MATCHED
@@ -395,13 +371,8 @@ Original expression:
   QVERIFY(isClear(observeHover(fixture())));
 
 A044 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:482
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S004 checks the exact document snapshot during the uncommitted drag. Missing: no assertion checks the complete snapshot after the original scrolled pointer-leave transition.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(snapshot(fixture().document()) == scrolled);
+Disposition: MATCHED
+Mapping: S036 — after lane reactivation and pointer leave, the model fixture retains the complete snapshot, serialized bytes and history index.
 
 A045 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:483
 Disposition: RETIRED-REPRESENTATION
@@ -698,6 +669,35 @@ S030 | drawerAutomationRasterScrolledPhantom | src/checks/automation/presentatio
 Source line: 59
 Predicate: fixture.snapshot == original && originalBytes != nil && originalBytes == (try? fixture.document.captureSave().bytes) && fixture.document.history.undoIndex == originalIndex
 Anchor: message "double scrolled phantom pointer leave retains the original snapshot, serialized bytes and history index"
+S031 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
+Source line: 238
+Predicate: backgroundGrab.red(probeX, probeY) !== clearedImage.red(probeX, probeY) || backgroundGrab.green(probeX, probeY) !== clearedImage.green(probeX, probeY) || backgroundGrab.blue(probeX, probeY) !== clearedImage.blue(probeX, probeY)
+Anchor: message "the insertion ghost changes its center pixel against the cleared plot"
+
+S032 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawerAutomationHover.qml
+Source line: 259
+Predicate: secondCleared.red(probeX, probeY) === clearedImage.red(probeX, probeY) && secondCleared.green(probeX, probeY) === clearedImage.green(probeX, probeY) && secondCleared.blue(probeX, probeY) === clearedImage.blue(probeX, probeY)
+Anchor: message "the second plot leave restores the insertion target pixel"
+
+S033 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
+Source line: 109
+Predicate: idleQuadrants === 0 && hoverQuadrants === 10
+Anchor: message "the origin phantom hover changes scrolled-idle pixels to ring ink in both visible quadrants"
+
+S034 | test_productionAutomationOriginPhantomCurveRaster | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
+Source line: 117
+Predicate: Math.abs(phantomFrame.red(phantomPx, phantomPy) - fillChannels[0]) <= 12 && Math.abs(phantomFrame.green(phantomPx, phantomPy) - fillChannels[1]) <= 12 && Math.abs(phantomFrame.blue(phantomPx, phantomPy) - fillChannels[2]) <= 12
+Anchor: message "the scrolled origin phantom paints its center fill at the plotted origin"
+
+S035 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawerAutomationPreview.qml
+Source line: 126
+Predicate: PixelSupport.nearestPixel(testCase, rasterMoved, rasterRegion, rasterInk).distance < 30 && PixelSupport.nearestPixel(testCase, rasterIdle, rasterRegion, rasterInk).distance > 30
+Anchor: message "each staged lane drag paints transient node ink at its projected target"
+
+S036 | drawerAutomationRasterScrolledPhantom | src/checks/automation/presentation/painting_raster.swift
+Source line: 95
+Predicate: fixture.snapshot == original && originalBytes != nil && originalBytes == (try? fixture.document.captureSave().bytes) && fixture.document.history.undoIndex == originalIndex
+Anchor: message "the reactivated phantom leave retains the complete scrolled snapshot, serialized bytes and history index"
 
 
 Shared helpers

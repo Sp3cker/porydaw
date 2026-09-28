@@ -71,6 +71,37 @@
         }
         return { pixel: best ? best : [0, 0, 0], at: bestAt, distance: bestDistance }
     }
+    // Nearest channel distance to the target ink inside the node disc, ignoring
+    // the vertical/horizontal step lines through the center and the disc edge.
+    function isolatedNodeInkDistance(testCase, image, anchor, plot, x, y, radius, target) {
+        var origin = plot.mapToItem(anchor, x, y)
+        var sx = image.width / anchor.width
+        var sy = image.height / anchor.height
+        var cx = origin.x * sx
+        var cy = origin.y * sy
+        var outer = (radius + 1) * (sx + sy) / 2
+        var line = 1.5 * (sx + sy) / 2
+        var best = 256
+        for (var px = Math.floor(cx - outer); px <= Math.ceil(cx + outer); ++px) {
+            for (var py = Math.floor(cy - outer); py <= Math.ceil(cy + outer); ++py) {
+                if (px < 0 || py < 0 || px >= image.width || py >= image.height)
+                    continue
+                if (image.alpha(px, py) !== 255)
+                    continue
+                if (Math.abs(px - cx) <= line || Math.abs(py - cy) <= line)
+                    continue
+                var dx = px - cx, dy = py - cy
+                if (dx * dx + dy * dy > outer * outer)
+                    continue
+                var distance = Math.max(Math.abs(image.red(px, py) - target[0]),
+                                        Math.abs(image.green(px, py) - target[1]),
+                                        Math.abs(image.blue(px, py) - target[2]))
+                if (distance < best)
+                    best = distance
+            }
+        }
+        return best
+    }
 
     function renderDiagnostics(testCase, image, control, region, fill, tintMatch, background, tint) {
         if (!image || !region || !fill || !tintMatch)

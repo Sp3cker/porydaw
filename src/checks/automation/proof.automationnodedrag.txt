@@ -19,6 +19,11 @@ Result: PASS — deno task verify --filter swiftcore --verbose on this worktree 
 Delta snapshot: the counterpart hashes above were re-pinned for the delta that added the Escape-cancel, Delete-key arbiter and idle-quiescence predicates (drawerAutomationKeyboardIngress, drawerAutomationBandEscape) and restored the double-click-once deletion. The implementing lane reported deno task verify --filter swiftcore --verbose PASS (10.08 s) for its own snapshot; the band-escape, arbiter and quiescence predicates were not covered by a verification result supplied to this ledger task, so no execution claim is made for them here. Task-57 evidence: the controller-supplied build/proof-evidence/swiftcore-projectsession.json pass rows execute the keyboard-ingress escape-cancel predicate cited as S197 and the stale-release rebuild-abort predicate cited as S198 below (both in src/checks/automation/automationcanvasediting.swift, unmodified since that evidence run). Fresh evidence: the controller re-ran verify --filter swiftcore to 12/12 PASS after Task57's final comment-only edit (build/proof-evidence/swiftcore-projectsession.json, newer than all cited Swift sources, messages unchanged); its pass rows execute the node-drag tick/commit, scrolled-origin phantom, and selected-range predicates cited as S199-S202 below, closing A001/A002/A008/A009/A014/A015/A019-A021/A040/A041/A043/A045/A046.
 Converted-window command: deno task verify:qml --verbose
 
+Task 183 settled predicate-source SHA-256:
+- 9eb2f2ad2fcce3c7c3369f0ad9605f6029bc8f22f10662b29932b97564a6808b — src/checks/editorqml/tst_EditorDrawerAutomationPreview.qml
+Task 183 execution: AutomationPreview is registered by EditorQmlTests.swift:189. The Escape cancellation and geometry rebuild predicates are `test_productionAutomationDragPreviews` checks.
+Task 183 implementer-reported evidence (agent://Task183; not rerun by this proof pass): six focused editorqml-drawer selectors PASS; the full verify:qml invocation had unrelated foreign failures, so no full-lane PASS is claimed.
+
 A001 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:151
 Disposition: MATCHED
 Mapping: S199
@@ -544,21 +549,12 @@ Disposition: MATCHED
 Mapping: S057, S058, S204 (held curve and a real mounted node preview are visible before cancellation).
 
 A056 | AutomationEditingTest::escapeCancelsAdapterDrag | src/checks/automation/automationnodedrag.cpp:471
-Disposition: PARTIAL
-Mapping/reason: S205, S206 prove a staged mounted node preview is absent after a geometry cancellation; S207 proves an Escape clears published primitives, but not after activating a node drag in that same gesture. Unproved: transient removal specifically after Escape of an activated node drag.
-Source context since previous assertion:
-
-      keyClick(Qt::Key_Escape, Qt::NoModifier);
-
-
-Original expression:
-  QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).triangles.empty());
+Disposition: MATCHED
+Mapping: S210 — an activated mounted node drag is cancelled by Escape and its transient marker pixel probe returns to the pre-gesture ink absence.
 
 A057 | AutomationEditingTest::escapeCancelsAdapterDrag | src/checks/automation/automationnodedrag.cpp:472
-Disposition: PARTIAL
-Mapping/reason: S205, S206 prove a staged mounted node preview is absent after a geometry cancellation; S207 clears all published rectangles on Escape before activation. Unproved: all transient rectangle primitives absent after Escape of an activated node drag.
-Original expression:
-  QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).rects.empty());
+Disposition: MATCHED
+Mapping: S211 — Escape ends the activated mounted node drag and removes every published transient marker rectangle.
 
 A058 | AutomationEditingTest::escapeCancelsAdapterDrag | src/checks/automation/automationnodedrag.cpp:473
 Disposition: MATCHED
@@ -630,10 +626,8 @@ Disposition: MATCHED
 Mapping: S155
 
 A067 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:523
-Disposition: PARTIAL
-Mapping/reason: S208 proves parameter switch clears a staged node drag's band; S209 proves geometry rebuild clears a staged range band's preview; S205 proves geometry rebuild clears staged node rectangles. Unproved: no selected-lane band preview surviving the geometry rebuild of that same staged node drag.
-Original expression:
-  QVERIFY(!m_page->canvas()->bandPreviewContainsLane(findRow(rowId(adapter))));
+Disposition: MATCHED
+Mapping: S212 — rebuilding the held node-drag plot leaves no selected-lane band preview and no transient node marker.
 
 A068 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:526
 Disposition: MATCHED
@@ -1293,3 +1287,17 @@ Anchor: message "parameter switch removes the preview readout band and hover ove
 
 S209 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
 Anchor: message "the resized plot has no stale range preview"
+S210 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawerAutomationPreview.qml
+Source line: 134
+Predicate: PixelSupport.nearestPixel(testCase, rasterCleared, rasterRegion, rasterInk).distance > 30
+Anchor: message "the cancelled raster drag erases its transient marker pixels"
+
+S211 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawerAutomationPreview.qml
+Source line: 136
+Predicate: AutomationGestureSupport.automationPreviewItems(testCase).length === 0
+Anchor: message "the cancelled raster drag publishes no transient marker"
+
+S212 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawerAutomationPreview.qml
+Source line: 185
+Predicate: !model.bandVisible && AutomationGestureSupport.automationPreviewItems(testCase).length === 0
+Anchor: message "the rebuilt plot keeps no band preview for the staged node lane"

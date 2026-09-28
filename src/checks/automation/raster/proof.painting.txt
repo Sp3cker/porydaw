@@ -23,6 +23,12 @@ Task 119 frozen source SHA-256: c3569d9307ee6ae8ef0a2c3ba27554642a1bb9236f5c73ae
 Swift execution path: SessionChecks.swift:84 calls `runAutomationPageChecks`; AutomationPageChecks.swift:338 invokes `drawerAutomationRasterHalfOpenGeometry` with its C++ proof ID.
 Task 119 frozen source SHA-256: 85645d72d5fa964e8911dfbb441f6aeea55b46616c886ad1ece3dafe84e565ad (src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml)
 Task 119 frozen source SHA-256: 9b7fd07ab387ae2d8609ff724297c7583389394bcf12ed3eb73ad8c2f7bfc6b7 (src/checks/editorqml/EditorQmlTests.swift)
+Task 183 settled predicate-source SHA-256:
+- c0e83c70edf771df3266a52c829f5b5a2d347adaf75b0c75be9fdb58516229c3 — src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
+- f653e5cd35d2ce18a88fe02785f52a43c74bbd77821fc8cffce4ad96b218b19a — src/checks/automation/presentation/painting_raster.swift
+Task 183 execution: the curves function is registered in AutomationCurves (EditorQmlTests.swift:179); Swift raster checks run through SessionChecks.swift:84 -> runAutomationPageChecks (AutomationPageChecks.swift:328) -> drawerAutomationRasterHalfOpenGeometry (AutomationPageChecks.swift:338), cppID `automation/raster/AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes`.
+Task 183 implementer-reported evidence (agent://Task183; not rerun by this proof pass): `deno task verify --filter swiftcore` PASS 12/37 twice; six focused editorqml-drawer selectors PASS. The full verify:qml invocation had unrelated foreign failures; no full-lane PASS is claimed.
+
 A001 | AutomationRasterTest::init | src/checks/automation/raster/painting.cpp:218
 Disposition: RETIRED-REPRESENTATION
 
@@ -156,14 +162,8 @@ Original expression:
           highlight));
 
 A018 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:360
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S043 checks the mounted half-open selection reticle endpoint and unchanged node count in the Swift model fixture. Missing: it does not inspect the retired AutomationSelection layer revision counter that this site asserted.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(scene.layer(songview::TimelineQuickLayer::AutomationSelection).revision >
-              selectionBefore);
+Disposition: RETIRED-REPRESENTATION
+Mapping: S043 — the internal layer-revision counter is retired; the consumer-visible selected-reticle endpoint remains proved by the mounted selection behavior predicate.
 
 A019 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:362
 Disposition: RETIRED-REPRESENTATION
@@ -178,32 +178,12 @@ A022 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/auto
 Disposition: RETIRED-REPRESENTATION
 
 A023 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:388
-Disposition: GAP
-Mapping/reason: GAP: no executing QML predicate covers this negative layer-color observation (no curve color at the second point node probe, so the unselected point stays unpainted); automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/painting.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
-Source context since previous assertion:
-
-      NodeLane &awayLane = awayKind == LaneKind::Tempo ? static_cast<NodeLane &>(tempoLane)
-                                                       : static_cast<NodeLane &>(ccLane);
-      const int awayNode = awayKind == LaneKind::Tempo ? kTempoNode : kCcNode;
-      const qreal awayNodeY =
-          nodelane::valueY(awayLane, geometry.body, fixture().geometry(), awayNode);
-      const int second = kind == LaneKind::Tempo ? kTempoSecond : kCcSecond;
-      const qreal secondY = nodelane::valueY(lane, geometry.body, fixture().geometry(), second);
-      const qreal secondX = fixture().projection().displayX(kSecondTick, fixture().automationDpr());
-
-Original expression:
-  QVERIFY(!layerHasColorIn(scene.layer(songview::TimelineQuickLayer::AutomationNodes),
-                               nodeProbe(secondX, secondY, nodeRadius), geometry.curveColor));
+Disposition: MATCHED
+Mapping: S052 — the away Tempo frame contains no Pan ink in the independently projected second-point probe.
 
 A024 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:390
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/painting.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(layerHasColorIn(scene.layer(songview::TimelineQuickLayer::AutomationNodes),
-                              nodeProbe(nodeX, awayNodeY, nodeRadius), awayGeometry.curveColor));
+Disposition: MATCHED
+Mapping: S053 — the mounted away Tempo marker paints lane ink in the independently projected node-disc probe, clear of its step.
 
 A025 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:393
 Disposition: RETIRED-REPRESENTATION
@@ -216,26 +196,12 @@ Original expression:
   QVERIFY2(error.isEmpty() && !away.isNull(), qPrintable(error));
 
 A026 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:394
-Disposition: GAP
-Mapping/reason: GAP: no executing QML pixel predicate covers these captured QImage curve/node pixels; automation raster harness deleted, Swift drawer asserts model state only. No-ingress fact retained: src/checks/automation/raster/painting.cpp deleted in 31ea635f, in no CMake target, no automation lane in checkcatalog; legacy widget drawer (src/ui/editordrawer/*) in no target, automation QSG paint path removed in c17d966f.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(framebufferHasColorNear(away, framebufferOrigin + QPointF(nodeX, awayNodeY),
-                                      awayGeometry.curveColor));
+Disposition: MATCHED
+Mapping: S054 — the exact projected framebuffer pixel at the away Tempo marker contains lane ink within the original fork-probe tolerance.
 
 A027 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:397
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: S045 asserts the exact retained [48,73) endpoints and track scope, empty lane list and false Tempo flag in the Swift Pan selection fixture. Missing: it does not change to or render the away lane before checking retained selection, as this C++ sequence does.
-Source context since previous assertion:
-
-      const auto retained = fixture().view().selectionModel().timeSelection();
-
-Original expression:
-  QVERIFY(retained.startTick == selection.startTick && retained.endTick == selection.endTick &&
-              retained.scope == selection.scope && retained.tempo == selection.tempo &&
-              retained.lanes == selection.lanes);
+Disposition: MATCHED
+Mapping: S055 — after activating the away Tempo lane, the Swift fixture checks the tab is active and the exact fork half-open selection remains unchanged.
 
 A028 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:403
 Disposition: RETIRED-REPRESENTATION
@@ -593,3 +559,23 @@ S051 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editor
 Source line: 511
 Predicate: compare(c, 0, fine ? "[48,73) Pan C" : "[48,72) Pan C")
 Anchor: message "the [48,73) Pan C ring paints no selection-ink quadrants"
+
+S052 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
+Source line: 575
+Predicate: PixelSupport.nearestPixel(testCase, away, secondRegion, ink).distance > 30
+Anchor: message "the away Tempo plot paints no Pan ink at the unselected second point"
+
+S053 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
+Source line: 579
+Predicate: PixelSupport.nearestPixel(testCase, away, awayDisc, ink).distance < 30
+Anchor: message "the away Tempo marker paints lane ink across its node disc"
+
+S054 | test_productionAutomationLeadInStepAndSelectionPixels | src/checks/editorqml/tst_EditorDrawerAutomationCurves.qml
+Source line: 582
+Predicate: PixelSupport.nearestPixel(testCase, away, awayExact, ink).distance < 30
+Anchor: message "the away Tempo marker paints lane ink at its exact projected framebuffer pixel"
+
+S055 | drawerAutomationRasterHalfOpenGeometry | src/checks/automation/presentation/painting_raster.swift
+Source line: 181
+Predicate: page.publishedTabs.first(where: { $0.tempo })?.active == true && fixture.session.timeSelection == AutomationTimeSelection(range: TimeRange(startTick: 48, endTick: 73), scope: .tracks([0]))
+Anchor: message "switching to the away Tempo lane retains the exact fork half-open selection"

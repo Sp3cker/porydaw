@@ -17,6 +17,11 @@ Converted-window command: deno task verify:qml --verbose
 Task-104 evidence (final frozen check sources): `deno task verify --filter swiftcore-projectsession --verbose` PASS (1/36), `deno task verify:qml --verbose` PASS (1/1), `deno task verify` PASS (36/36), as reported by the implementer after the raw-tick pencil repair. Full shell was 25/26 while another task's shell check was in flight; no full-shell PASS is claimed. Predicate source SHA-256: painting.swift 76f443a9914cad0a6a0192bf52c782fcd24a5d924d37e1ce109543363257448a; tst_EditorDrawer.qml 965f3ca94ef732845716d735ac9502a57b8c7c77308ff7a2396af95bd184d30b.
 
 
+Task 183 settled predicate-source SHA-256:
+- da3beed53cdd30a9d511dde0c1d5ed8f11ad093b6ee7aad7563390ab7c2d791f — src/checks/editorqml/tst_EditorDrawerAutomationPresentation.qml
+Task 183 execution: AutomationPresentation is registered by EditorQmlTests.swift:180; `test_automationPresentationCurveTabAndBadgePixels` executes the isolated marker and reticle pixel predicates.
+Task 183 implementer-reported evidence (agent://Task183; not rerun by this proof pass): six focused editorqml-drawer selectors PASS; the full verify:qml invocation had unrelated foreign failures, so no full-lane PASS is claimed.
+
 A001 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:109
 Disposition: MATCHED
 Mapping: S030
@@ -89,15 +94,8 @@ Disposition: MATCHED
 Mapping: S044
 
 A018 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:177
-Disposition: PARTIAL
-Mapping/reason: S045, S060 — the first written Tempo marker publishes lane ink and the mounted scan finds that ink near its independently mapped position, but the step's vertical ink at tick 96 can satisfy the same pixel probe without a painted marker; unproved: isolated node-ring pixels.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(checks::support::layerHasColorIn(
-          scene->layer(songview::TimelineQuickLayer::AutomationNodes), nodeProbe(node, radius),
-          tempo.color));
+Disposition: MATCHED
+Mapping: S062 — the mounted Tempo marker has isolated node ink outside its step line at the independently projected node position.
 
 A019 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:180
 Disposition: MATCHED
@@ -174,15 +172,8 @@ Disposition: MATCHED
 Mapping: S057, S048
 
 A038 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:268
-Disposition: PARTIAL
-Mapping/reason: S045, S049, S060, S061 — written Tempo and CC markers publish lane ink and mounted probes find nearby ink, but both positions may also contain vertical step ink; unproved: node-ring pixels isolated from the curve in both parameterized lanes.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(checks::support::layerHasColorIn(
-          scene->layer(songview::TimelineQuickLayer::AutomationNodes), nodeProbe(point, radius),
-          lane.color));
+Disposition: MATCHED
+Mapping: S063 — the mounted Tempo and Pan marker probes each find isolated node ink clear of their step curves.
 
 A039 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:272
 Disposition: MATCHED
@@ -220,23 +211,8 @@ Disposition: MATCHED
 Mapping: S058, S050
 
 A048 | AutomationEditingTest::selectionRingsAndReticlesComposed | src/checks/automation/automationpainting.cpp:335
-Disposition: PARTIAL
-Mapping/reason: S059, S051 — mounted Tempo and Pan selections paint their range endpoint edges, but their probes are at the endpoint rather than the selected node's first-tick reticle or adjacent fill; unproved: edge/fill ink at the selected node's independently mapped reticle position.
-Source context since previous assertion:
-
-      const QColor edge = themes::color(themes::Role::song_view_selection_edge);
-      const QColor fill = themes::color(themes::Role::song_view_selection_fill);
-      const qreal firstX = nodePoint(view, *m_automationInput, lane, kFirstNodeTick, nodeValue).x();
-      const qreal lastX =
-          nodePoint(view, *m_automationInput, lane, kFirstNodeTick + 1, nodeValue).x();
-      const QRectF reticle((firstX + lastX) / 2.0 - 2.0, lane.body.top() + 2.0, 4.0, 6.0);
-
-Original expression:
-  QVERIFY(checks::support::layerHasColorIn(
-                  scene->layer(songview::TimelineQuickLayer::AutomationSelection), reticle, edge) ||
-              checks::support::layerHasColorIn(
-                  scene->layer(songview::TimelineQuickLayer::AutomationSelection),
-                  QRectF(firstX + 4.0, lane.body.center().y() - 2.0, 8.0, 4.0), fill));
+Disposition: MATCHED
+Mapping: S064 — the mounted Pan selection paints selection-edge ink at the independently mapped leading reticle of its selected tick-144 node.
 
 A049 | AutomationEditingTest::selectionRingsAndReticlesComposed | src/checks/automation/automationpainting.cpp:341
 Disposition: MATCHED
@@ -484,3 +460,17 @@ Anchor: message "the first written Tempo marker carries lane ink"
 
 S061 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift
 Anchor: message "written CC step markers publish the same lane ink"
+S062 | test_automationPresentationCurveTabAndBadgePixels | src/checks/editorqml/tst_EditorDrawerAutomationPresentation.qml
+Source line: 137
+Predicate: tempoIsolated < 30
+Anchor: message "the written Tempo marker paints isolated node ink clear of its step"
+
+S063 | test_automationPresentationCurveTabAndBadgePixels | src/checks/editorqml/tst_EditorDrawerAutomationPresentation.qml
+Source line: 169
+Predicate: tempoIsolated < 30 && panIsolated < 30
+Anchor: message "both written lanes paint isolated node ink clear of their steps"
+
+S064 | test_automationPresentationCurveTabAndBadgePixels | src/checks/editorqml/tst_EditorDrawerAutomationPresentation.qml
+Source line: 194
+Predicate: PixelSupport.nearestPixel(testCase, reticleFrame, reticleRegion, edgeInk).distance < 30
+Anchor: message "the Pan selection paints its leading reticle edge at the selected node"

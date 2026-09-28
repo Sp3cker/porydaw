@@ -5,6 +5,11 @@ Original: src/checks/automation/presentation/tst_automationpresentation.cpp
 Original SHA-256: 0d15772061c1b3e0e74b1e55c3bcdc8b0823d965504346fba2a8cc010170b0a9
 Swift counterpart: src/checks/automation/presentation/tst_automationpresentation.swift
 
+Task 183 settled predicate-source SHA-256:
+- da3beed53cdd30a9d511dde0c1d5ed8f11ad093b6ee7aad7563390ab7c2d791f — src/checks/editorqml/tst_EditorDrawerAutomationPresentation.qml
+Task 183 execution: AutomationPresentation is registered by EditorQmlTests.swift:180; `test_automationPresentationGhostAxisAndResize` runs the mounted pencil predicate at the lane DPR. It does not execute a DPR-2 pencil pixel probe.
+Task 183 implementer-reported evidence (agent://Task183; not rerun by this proof pass): six focused editorqml-drawer selectors PASS; the full verify:qml invocation had unrelated foreign failures, so no full-lane PASS is claimed.
+
 A001 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:176
 Disposition: RETIRED-REPRESENTATION
 Mapping/reason: S031 — fork `QVERIFY2(m_document->adoptSmf(presentationSmf(), song, &error), qPrintable(error))` guarded deleted native EditorRig adoption; the mounted Swift document has no such ingress.
@@ -140,7 +145,7 @@ Mapping/reason: S026, S027, S028, S029, S030
 
 A037 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:384
 Disposition: PARTIAL
-Mapping/reason: S036/S038/S039/S040/S041/S042/S043/S044/S045/S046 prove DPR-two move acceptance, visible cursor, decoded 32-pixel scale and two real pointer positions in registered DPR2 children; unproved: permanent physical DPR2 pencil ink-pixel predicate. One-off PNG observation from Task111: `/tmp/task111-dpr2-font12.png`, 1800x1400, independently mapped pencil center (1172,1056)=(246,246,246,255), exterior (1220,1056)=(212,204,199,255), logical (586,528)=(176,166,161,255); QtTest `grabImage` reported logical 900x700 and temporary PNG checks were removed, so this observation does not close the raster conjunct.
+Mapping/reason: PARTIAL: S036, S038-S047 prove DPR-two move acceptance in the Swift fixture, declared-lane-DPR mounted pencil ink, cursor-frame placement and decoded scale, but no executing mounted DPR-2 pencil ink-pixel predicate exists. S047 sees ink inside the cursor frame at the lane DPR only; the physical DPR-2 ink pixels remain unproved. Historical Task111 PNG observation is not executed evidence.
 Original expression:
   QVERIFY(canvas->pointerMove(plotPointerInput(plotPoint, host)))
 
@@ -312,3 +317,7 @@ Anchor: message "the profiled pencil moves vertically with a second real pointer
 
 S046 | test_referenceProfileBeforeCapturePencilCursorScale | src/checks/editorqml/tst_EditorDrawerReferenceProfiles.qml
 Anchor: message "the profiled pencil replaces the native plot cursor"
+S047 | test_automationPresentationGhostAxisAndResize | src/checks/editorqml/tst_EditorDrawerAutomationPresentation.qml
+Source line: 351
+Predicate: pencilInk >= 3
+Anchor: message "the armed pencil paints its artwork ink inside its sixteen-pixel cursor frame"
