@@ -44,11 +44,24 @@ func drawerAutomationRasterScrolledPhantom(_ report: CheckReport, suite: Documen
                            what: "the fork phantom hover has exactly its original source-value text")
         report.expect(page.hoverVisible && page.publishedNodes.filter(\.hovered).count == 1,
                       cppID: id, message: "exactly one scrolled phantom shows the hover ring")
+        _ = page.pointerMove(x: 0, y: sourceY, buttons: 0)
+        report.expect(fixture.snapshot == original
+                      && originalBytes != nil
+                      && originalBytes == (try? fixture.document.captureSave().bytes)
+                      && fixture.document.history.undoIndex == originalIndex,
+                      cppID: id,
+                      message: "repeated scrolled phantom hover retains the original snapshot, serialized bytes and history index")
         page.pointerLeave()
         page.pointerLeave()
         report.expect(!page.hoverVisible && page.hoverText.isEmpty
                       && !page.publishedNodes.contains(where: \.hovered),
                       cppID: id, message: "a repeated plot leave keeps the phantom hover state clear")
+        report.expect(fixture.snapshot == original
+                      && originalBytes != nil
+                      && originalBytes == (try? fixture.document.captureSave().bytes)
+                      && fixture.document.history.undoIndex == originalIndex,
+                      cppID: id,
+                      message: "double scrolled phantom pointer leave retains the original snapshot, serialized bytes and history index")
         _ = page.pointerMove(x: 0, y: sourceY, buttons: 0)
         let pressed = page.pointerPress(x: 0, y: sourceY, surface: 1,
                                         button: AutomationQtButton.left)
