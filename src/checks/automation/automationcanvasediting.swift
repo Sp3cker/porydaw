@@ -397,19 +397,21 @@ func drawerAutomationInflightDragInvalidation(_ report: CheckReport, suite: Docu
     let pencil = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [])
     pencil.activate(pencil.panLane)
     pencil.page.isPencilMode = true
+    let pencilProjection = pencil.page.makeProjection(
+        facts: pencil.facts(pencil.panLane), camera: pencil.session.camera)
+    let endX = pencil.x(168)
+    let endCell = pencilProjection.cell(atRawTick: pencilProjection.rawTick(atX: endX))
     _ = pencil.page.pointerPress(x: pencil.x(72), y: pencil.y(pencil.panLane, 40),
                                  surface: 1, button: 1)
     _ = pencil.page.pointerMove(x: pencil.x(120), y: pencil.y(pencil.panLane, 70), buttons: 1)
     pencil.page.isPencilMode = false
     report.expect(pencil.page.isPainting && pencil.page.hasGesture, cppID: pencilID,
                   message: "switching away from pencil retains the held stroke")
-    _ = pencil.page.pointerMove(x: pencil.x(168), y: pencil.y(pencil.panLane, 92),
-                                buttons: 1, modifiers: AutomationQtModifier.control)
-    _ = pencil.page.pointerRelease(x: pencil.x(168), y: pencil.y(pencil.panLane, 92),
-                                   button: 1, modifiers: AutomationQtModifier.control)
+    _ = pencil.page.pointerMove(x: endX, y: pencil.y(pencil.panLane, 92), buttons: 1)
+    _ = pencil.page.pointerRelease(x: endX, y: pencil.y(pencil.panLane, 92), button: 1)
     report.expect(pencil.lanePoints(pencil.panLane).contains {
-        $0.tick >= 166 && $0.tick <= 168 && $0.value == 92
-    }, cppID: pencilID, message: "retained pencil commits its value-92 endpoint near tick 168")
+        $0.tick == endCell.tickBegin && $0.value == 92
+    }, cppID: pencilID, message: "retained pencil commits its value-92 endpoint at the exact snapped cell")
 
     let nodeID = "automation/AutomationEditingTest::pencilModeChangeRetainsNodeGesture"
     let node = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(72, 64)])
@@ -425,6 +427,17 @@ func drawerAutomationInflightDragInvalidation(_ report: CheckReport, suite: Docu
     report.expect(node.page.hasGesture && !node.page.isPainting, cppID: nodeID,
                   message: "switching to pencil retains the captured node drag")
     _ = node.page.pointerMove(x: targetX, y: node.y(node.panLane, 96), buttons: 1)
+    let nodeFacts = node.facts(node.panLane)
+    let nodeProjection = node.page.makeProjection(facts: nodeFacts, camera: node.session.camera)
+    let mappedTarget = node.page.mappedPoint(
+        x: startX + targetX - activationX, y: node.y(node.panLane, 96), facts: nodeFacts,
+        modifiers: .init(), projection: nodeProjection)
+    report.expect(mappedTarget.tick == 168, cppID: nodeID,
+                  message: "the pre-release node pointer maps to tick 168")
+    report.expect(mappedTarget.value == 96, cppID: nodeID,
+                  message: "the pre-release node pointer maps to value 96")
+    report.expect(node.page.previewPoints.contains { $0.tick == 168 && $0.value == 96 },
+                  cppID: nodeID, message: "the held node projects tick-168 value-96 before release")
     _ = node.page.pointerRelease(x: targetX, y: node.y(node.panLane, 96), button: 1)
     report.expect(node.lanePoints(node.panLane).contains { $0.tick == 168 && $0.value == 96 },
                   cppID: nodeID, message: "retained node drag commits tick-168 value-96")

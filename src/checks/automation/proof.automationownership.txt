@@ -7,13 +7,13 @@ Original SHA-256: 986eb97c6899cb8d0af1564890076508b4ee2b4b075444c4c7ff2498c29bb8
 Swift counterpart: src/checks/automation/automationselection.swift
 Additional Swift counterpart: src/checks/automation/presentation/painting.swift
 Additional Swift counterpart: src/checks/automation/domain/gestureNodeDrag.swift
-Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
-Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml
+Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift (SHA-256 784a5be1302976237ee1087b96bbf9030384d3e54301b89f80e047a1e7bef0c3)
+Additional QML counterpart: src/checks/editorqml/tst_EditorDrawer.qml
+Additional QML counterpart: src/checks/editorqml/tst_ShellGridInputKeyboard.qml (SHA-256 d489e0ac99d2a51c625bd35f481e57d1d50c3e7bd1e401b88fd94f7a3d79aefc)
 
-Command: deno task verify --filter swiftcore-projectsession --verbose
-Result: GREEN — implementer-reported locked swiftcore-projectsession (1/36 filtered harnesses PASS) on frozen automationcanvasediting.swift SHA-256 f01c950de983755f17834b7c78da8cf88cac872253a6496387bf5e404b5a1dff and automationselection.swift SHA-256 3b4363f9a06abdc4ed55f88700f34078061b857a87af4dddb864725da7585c9c. This proof-only writer did not rerun the lane.
-Converted-window command: deno task verify:qml --verbose
-Converted-window result: GREEN — implementer-reported locked editorqml-drawer (1/1 PASS), frozen tst_EditorDrawer.qml SHA-256 0dfa48f745c7203db3aa184fbc8557595a39c9a5d32c16b801dbd9f89d83edcc. Full verify:shell 26/26 PASS and full verify 36/36 PASS on the same settled sources; this proof-only writer did not rerun the suites.
+Command: implementer-reported verification (exact commands not provided)
+Result: PASS — swiftcore (12/36), shell-grid-input-keyboard, editorqml-drawer on the source snapshots above. This proof-only writer did not rerun the lanes.
+Prior execution evidence recorded before this task: deno task verify --filter swiftcore-projectsession --verbose, swiftcore-projectsession (1/36); deno task verify:qml --verbose, editorqml-drawer (1/1), full verify:shell (26/26), and full verify (36/36) on earlier source snapshots. This proof-only writer did not rerun those suites.
 
 A001 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:64
 Disposition: RETIRED-REPRESENTATION
@@ -191,95 +191,35 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: S053
 
 A045 | AutomationEditingTest::pencilModeChangeRetainsPencilGesture | src/checks/automation/automationownership.cpp:186
-Disposition: PARTIAL
-Mapping/reason: S077; the held pencil survives a direct tool-mode change, but no mounted predicate delivers the physical B key while that stroke is held. Unproved: tool key not delivered during held gesture in a mounted shell journey.
-Source context since previous assertion:
-
-      const QKeyCombination shortcut = action->shortcut()[0];
-
-Original expression:
-  QVERIFY(shortcut.key() != Qt::Key_unknown);
+Disposition: MATCHED
+Mapping: S095
 
 A046 | AutomationEditingTest::pencilModeChangeRetainsPencilGesture | src/checks/automation/automationownership.cpp:195
 Disposition: RETIRED-REPRESENTATION
 Mapping/reason: S053
 
 A047 | AutomationEditingTest::pencilModeChangeRetainsPencilGesture | src/checks/automation/automationownership.cpp:200
-Disposition: PARTIAL
-Mapping/reason: S077, S078; mode change retains and commits the stroke, but its value-92 endpoint is accepted at ticks 166–168 rather than proved at the original snapped cell and no physical B key is delivered while held. Unproved: exact cell tick and held-key ingress.
-Source context since previous assertion:
-
-      mouseMove(automation_test::windowFromContent(page(), automationInput(), end));
-      mouseRelease(Qt::LeftButton,
-                   automation_test::windowFromContent(page(), automationInput(), end));
-
-
-Original expression:
-  QTRY_VERIFY(pointAt(tab().document(), endCell.tickBegin).has_value());
+Disposition: MATCHED
+Mapping: S096
 
 A048 | AutomationEditingTest::pencilModeChangeRetainsPencilGesture | src/checks/automation/automationownership.cpp:202
-Disposition: PARTIAL
-Mapping/reason: S078; the committed value-92 endpoint exists near tick 168, but the predicate does not require the original endCell.tickBegin or physical B-key delivery during capture. Unproved: exact snapped cell and held-key ingress.
-Source context since previous assertion:
-
-      const std::optional<DocLanePoint> endPoint = pointAt(tab().document(), endCell.tickBegin);
-
-Original expression:
-  QVERIFY(endPoint.has_value());
+Disposition: MATCHED
+Mapping: S097
 
 A049 | AutomationEditingTest::pencilModeChangeRetainsPencilGesture | src/checks/automation/automationownership.cpp:203
-Disposition: PARTIAL
-Mapping/reason: S078; the held stroke commits value 92, but the original `endPoint` is at endCell.tickBegin and the check permits ticks 166–168 and switches mode directly rather than through B. Unproved: value at the exact snapped cell after held-key ingress.
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(endPoint->value, 92);
+Disposition: MATCHED
+Mapping: S098
 
 A050 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:210
 Disposition: RETIRED-REPRESENTATION
 
 A051 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:235
-Disposition: PARTIAL
-Mapping/reason: S080; the retained node drag commits at tick 168, but the original probe checks pointer mapping before release; the Swift predicate observes the committed endpoint only. Unproved: pre-release pointer-mapping tick.
-Source context since previous assertion:
-
-      setPencilMode(false);
-      tab().document().writeLanePoints(0, kPanController, 0, CoreTimeDefaults::kNoTick, {{72, 64}});
-      songview::EditorSelectionModel::TimeSelection selection;
-      selection.startTick = 72;
-      selection.endTick = 96;
-      selection.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
-      selection.lanes = {{0, kPanController}};
-      tab().view().selectionModel().setTimeSelection(selection);
-
-      const QPointF source = inputPoint(pan, 72, 64);
-      const QPointF target = inputPoint(pan, 168, 96);
-      const int activationDistance = AutomationGeometry::resolve().nodeDragActivationDistance + 2;
-      const QPointF activation = source + QPointF(activationDistance, 0.0);
-      const QPoint sourceWindow =
-          automation_test::windowFromContent(page(), automationInput(), source);
-      const QPoint targetWindow =
-          automation_test::windowFromContent(page(), automationInput(), target);
-      const QPoint activationWindow =
-          automation_test::windowFromContent(page(), automationInput(), activation);
-      const QPoint endWindow = activationWindow + (targetWindow - sourceWindow);
-      const QPointF effectiveTarget = automation_test::effectiveDragContent(
-          page(), automationInput(), sourceWindow, activationWindow, endWindow);
-      const AutomationProjection::PointerMapping effectiveTargetMapping =
-          pointerMapping(pan, effectiveTarget);
-
-Original expression:
-  QCOMPARE(effectiveTargetMapping.point.tick, uint64_t{168});
+Disposition: MATCHED
+Mapping: S099
 
 A052 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:236
-Disposition: PARTIAL
-Mapping/reason: S080; the retained node drag commits value 96, but the original probe checks pointer mapping before release; the Swift predicate observes the committed endpoint only. Unproved: pre-release pointer-mapping value.
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(effectiveTargetMapping.point.value, 96);
+Disposition: MATCHED
+Mapping: S100
 
 A053 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:239
 Disposition: RETIRED-REPRESENTATION
@@ -290,78 +230,36 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: S053
 
 A055 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:242
-Disposition: PARTIAL
-Mapping/reason: S079; the captured node remains a drag after a direct mode change, but no mounted predicate delivers physical B while the node is held. Unproved: tool key not delivered during held gesture in a mounted shell journey.
-Source context since previous assertion:
-
-      const QKeyCombination shortcut = action->shortcut()[0];
-
-Original expression:
-  QVERIFY(shortcut.key() != Qt::Key_unknown);
+Disposition: MATCHED
+Mapping: S101
 
 A056 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:246
 Disposition: RETIRED-REPRESENTATION
 Mapping/reason: S053
 
 A057 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:251
-Disposition: PARTIAL
-Mapping/reason: S079, S080; the node drag survives direct mode change and commits at 168/value96, but no physical B key is delivered during that captured drag. Unproved: held-key ingress.
-Source context since previous assertion:
-
-      mouseMove(activationWindow);
-      mouseMove(endWindow);
-      mouseRelease(Qt::LeftButton, endWindow);
-
-
-Original expression:
-  QTRY_VERIFY(pointAt(tab().document(), 168).has_value());
+Disposition: MATCHED
+Mapping: S102
 
 A058 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:253
-Disposition: PARTIAL
-Mapping/reason: S080; tick-168/value96 node is committed after direct mode change, without a mounted B-key transition while captured. Unproved: held-key ingress.
-Source context since previous assertion:
-
-      const std::optional<DocLanePoint> movedPoint = pointAt(tab().document(), 168);
-
-Original expression:
-  QVERIFY(movedPoint.has_value());
+Disposition: MATCHED
+Mapping: S103
 
 A059 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:254
-Disposition: PARTIAL
-Mapping/reason: S080; value96 is committed at tick168 after direct mode change, without a mounted B-key transition while captured. Unproved: held-key ingress.
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(movedPoint->value, 96);
+Disposition: MATCHED
+Mapping: S104
 
 A060 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:255
-Disposition: PARTIAL
-Mapping/reason: S081; old tick-72 source disappears after direct mode change, without a mounted B-key transition while captured. Unproved: held-key ingress.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!pointAt(tab().document(), 72).has_value());
+Disposition: MATCHED
+Mapping: S105
 
 A061 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:257
-Disposition: PARTIAL
-Mapping/reason: S082; retained selected node drag starts its shifted range at tick168, without a mounted B-key transition while captured. Unproved: held-key ingress.
-Source context since previous assertion:
-
-      const auto &movedSelection = tab().view().selectionModel().timeSelection();
-
-Original expression:
-  QCOMPARE(movedSelection.startTick, uint64_t(168));
+Disposition: MATCHED
+Mapping: S106
 
 A062 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:258
-Disposition: PARTIAL
-Mapping/reason: S083; retained selected node drag ends its shifted range at tick192, without a mounted B-key transition while captured. Unproved: held-key ingress.
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(movedSelection.endTick, uint64_t(192));
+Disposition: MATCHED
+Mapping: S107
 
 A063 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:259
 Disposition: MATCHED
@@ -866,7 +764,7 @@ S077 | drawerAutomationInflightDragInvalidation | src/checks/automation/automati
 Anchor: message "switching away from pencil retains the held stroke"
 
 S078 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
-Anchor: message "retained pencil commits its value-92 endpoint near tick 168"
+Anchor: message "retained pencil commits its value-92 endpoint at the exact snapped cell"
 
 S079 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "switching to pencil retains the captured node drag"
@@ -915,3 +813,41 @@ Anchor: message "the tick-144 Pan ring paints the selection tint"
 
 S094 | test_productionAutomationPanSelectedRingPixels | src/checks/editorqml/tst_EditorDrawerAutomationPreview.qml
 Anchor: message "the excluded tick-192 Pan ring paints no selection tint"
+S095 | test_automationHeldPencilAndNodeDragKeepPhysicalB | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
+Anchor: message "physical B disarms pencil mode while its stroke is held"
+
+S096 | test_automationHeldPencilAndNodeDragKeepPhysicalB | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
+Anchor: message "the physical-B pencil stroke paints a node at its exact snapped cell"
+
+S097 | test_automationHeldPencilAndNodeDragKeepPhysicalB | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
+Anchor: message "the B-switched pencil endpoint responds to hover at its snapped cell"
+
+S098 | test_automationHeldPencilAndNodeDragKeepPhysicalB | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
+Anchor: message "the physical-B pencil endpoint carries value 92"
+
+S099 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "the pre-release node pointer maps to tick 168"
+
+S100 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
+Anchor: message "the pre-release node pointer maps to value 96"
+
+S101 | test_automationHeldPencilAndNodeDragKeepPhysicalB | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
+Anchor: message "physical B arms pencil mode during the captured node drag"
+
+S102 | test_automationHeldPencilAndNodeDragKeepPhysicalB | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
+Anchor: message "the physical-B node drag paints its exact snapped destination"
+
+S103 | test_automationHeldPencilAndNodeDragKeepPhysicalB | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
+Anchor: message "the B-switched moved node responds to hover at its destination cell"
+
+S104 | test_automationHeldPencilAndNodeDragKeepPhysicalB | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
+Anchor: message "the physical-B node drag commits value 96 at its destination"
+
+S105 | test_automationHeldPencilAndNodeDragKeepPhysicalB | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
+Anchor: message "the physical-B node drag removes its former source cell"
+
+S106 | test_automationHeldPencilAndNodeDragKeepPhysicalB | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
+Anchor: message "the physical-B selected node drag starts its range at the destination cell"
+
+S107 | test_automationHeldPencilAndNodeDragKeepPhysicalB | src/checks/editorqml/tst_ShellGridInputKeyboard.qml
+Anchor: message "the physical-B selected node drag ends one cell after its destination"

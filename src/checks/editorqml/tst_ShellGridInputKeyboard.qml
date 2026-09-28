@@ -353,4 +353,144 @@ ShellGridInputSupport {
                "released thumb permits the selected-note Delete edit")
     }
 
+    function test_automationHeldPencilAndNodeDragKeepPhysicalB() {
+        settings.setBool("editorDrawer.automationVisible", true)
+        settings.setInt("editorDrawer.automationHeight", 220)
+        settings.setString("editorDrawer.activePage", "automations")
+        var session = openRoute101()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var page = null
+        tryVerify(function() {
+            page = findChild(surface, "automationPage")
+            return page && page.visible && page.height > 0
+        }, 3000, "the production automation page opens in the shell")
+        var input = findChild(page, "automationPlotInput")
+        var model = session.automationPage()
+        verify(input && input.width > 0 && input.height > 0 && model,
+               "the mounted automation plot and page owner are ready")
+        var pixelsPerTick = grid.beatWidth / grid.ticksPerBeat
+        var step = grid.snapTicks
+        var startX = input.width * 0.66
+        var endX = input.width * 0.78
+        var endTick = Math.floor((endX + grid.cameraScrollX) / pixelsPerTick / step) * step
+        var padding = Math.round(Math.max(model.baseFontPx * (3 / 16 + 1 / 12),
+                                          model.baseFontPx * (9 / 32 + 1 / 10)))
+        var startY = padding + (127 - 36) * (input.height - 2 * padding) / 127
+        var endY = padding + (127 - 92) * (input.height - 2 * padding) / 127
+        function writtenNodeAt(tick) {
+            function search(item) {
+                if (!item)
+                    return null
+                if (item.objectName === "automationNodeFill" && item.parent.model
+                        && !item.parent.model.projected && item.parent.model.tick === tick)
+                    return item
+                for (var i = 0; i < item.children.length; ++i) {
+                    var found = search(item.children[i])
+                    if (found)
+                        return found
+                }
+                return null
+            }
+            return search(page)
+        }
+        input.forceActiveFocus(Qt.OtherFocusReason)
+        keyClick(Qt.Key_B)
+        tryCompare(model, "isPencilMode", true, 3000,
+                   "physical B arms pencil mode in the mounted shell")
+        var before = Number(grid.appliedRevisionText)
+        mousePress(input, startX, startY, Qt.LeftButton)
+        tryCompare(model, "interactionActive", true, 3000,
+                   "the held pencil stroke captures the automation plot")
+        keyClick(Qt.Key_B)
+        tryCompare(model, "isPencilMode", false, 3000,
+                   "physical B disarms pencil mode while its stroke is held")
+        compare(model.interactionActive, true,
+                "the held pencil stroke survives the physical B mode switch")
+        mouseMove(input, (startX + endX) / 2, (startY + endY) / 2, -1, Qt.LeftButton)
+        mouseMove(input, endX, endY, -1, Qt.LeftButton)
+        compare(Number(grid.appliedRevisionText), before,
+                "the B-switched pencil gesture writes nothing before release")
+        mouseRelease(input, endX, endY, Qt.LeftButton)
+        tryCompare(grid, "appliedRevisionText", String(before + 1), 3000,
+                   "the held B-switched pencil stroke commits one history edit")
+        tryVerify(function() { return writtenNodeAt(endTick) !== null }, 3000,
+                  "the physical-B pencil stroke paints a node at its exact snapped cell")
+        var sourceFill = writtenNodeAt(endTick)
+        compare(sourceFill.parent.model.value, 92,
+                "the physical-B pencil endpoint carries value 92")
+        var pencilPoint = sourceFill.mapToItem(input, sourceFill.width / 2,
+                                                sourceFill.height / 2)
+        mouseMove(input, pencilPoint.x, pencilPoint.y)
+        tryVerify(function() {
+            return model.hoverDisplay.hasNode && model.hoverDisplay.nodeTick === endTick
+        }, 3000, "the B-switched pencil endpoint responds to hover at its snapped cell")
+        var bandY = input.height - model.baseFontPx
+        var bandStartX = endTick * pixelsPerTick - grid.cameraScrollX + 1
+        var bandEndX = (endTick + step) * pixelsPerTick - grid.cameraScrollX + 1
+        mousePress(input, bandStartX, bandY, Qt.RightButton)
+        mouseMove(input, bandStartX,
+                  bandY - Qt.styleHints.startDragDistance - model.baseFontPx,
+                  -1, Qt.RightButton)
+        mouseMove(input, bandEndX, bandY, -1, Qt.RightButton)
+        mouseRelease(input, bandEndX, bandY, Qt.RightButton)
+        tryVerify(function() { return model.selectionRects.rowCount() === 3 }, 3000,
+                  "the right-button band paints selection fill and its two edges")
+        sourceFill = writtenNodeAt(endTick)
+        verify(sourceFill && sourceFill.parent.model.selected,
+               "the written node carries the real band selection into its drag")
+        var source = sourceFill.mapToItem(input, sourceFill.width / 2, sourceFill.height / 2)
+        var destinationTick = endTick + 2 * step
+        var destinationX = destinationTick * pixelsPerTick - grid.cameraScrollX
+        var destinationY = padding + (127 - 96) * (input.height - 2 * padding) / 127
+        verify(destinationX < input.width - model.baseFontPx,
+               "the node destination fits in the visible automation plot")
+        var activationX = source.x + Qt.styleHints.startDragDistance + 2
+        var releaseX = activationX + destinationX - source.x
+        mousePress(input, source.x, source.y, Qt.LeftButton)
+        tryCompare(model, "interactionActive", true, 3000,
+                   "the written automation node is captured before the mode key")
+        input.forceActiveFocus(Qt.OtherFocusReason)
+        keyClick(Qt.Key_B)
+        tryCompare(model, "isPencilMode", true, 3000,
+                   "physical B arms pencil mode during the captured node drag")
+        compare(model.interactionActive, true,
+                "the captured node drag survives physical B")
+        mouseMove(input, activationX, source.y, -1, Qt.LeftButton)
+        mouseMove(input, releaseX, destinationY, -1, Qt.LeftButton)
+        compare(Number(grid.appliedRevisionText), before + 1,
+                "the held B-switched node drag defers its document edit")
+        mouseRelease(input, releaseX, destinationY, Qt.LeftButton)
+        tryCompare(grid, "appliedRevisionText", String(before + 2), 3000,
+                   "the B-switched node drag commits one history edit")
+        tryVerify(function() { return writtenNodeAt(destinationTick) !== null }, 3000,
+                  "the physical-B node drag paints its exact snapped destination")
+        compare(writtenNodeAt(destinationTick).parent.model.value, 96,
+                "the physical-B node drag commits value 96 at its destination")
+        var movedFill = writtenNodeAt(destinationTick)
+        var movedPoint = movedFill.mapToItem(input, movedFill.width / 2,
+                                             movedFill.height / 2)
+        mouseMove(input, movedPoint.x, movedPoint.y)
+        tryVerify(function() {
+            return model.hoverDisplay.hasNode
+                   && model.hoverDisplay.nodeTick === destinationTick
+        }, 3000, "the B-switched moved node responds to hover at its destination cell")
+        tryVerify(function() { return model.selectionRects.rowCount() === 3 }, 3000,
+                   "the physically B-switched node drag retains its selected band")
+        var selectionFill = model.selectionRects.data(model.selectionRects.index(0, 0), 0)
+        var pixelRatio = input.Screen.devicePixelRatio
+        function selectedEdge(tick) {
+            return Math.round((tick * pixelsPerTick - grid.cameraScrollX) * pixelRatio)
+                   / pixelRatio
+        }
+        fuzzyCompare(selectionFill.x, selectedEdge(destinationTick), 0.01,
+                     "the physical-B selected node drag starts its range at the destination cell")
+        fuzzyCompare(selectionFill.x + selectionFill.width,
+                     selectedEdge(destinationTick + step), 0.01,
+                     "the physical-B selected node drag ends one cell after its destination")
+        compare(writtenNodeAt(endTick), null,
+                "the physical-B node drag removes its former source cell")
+        verify(session.canUndo, "both completed physical-B gestures retain undo history")
+    }
+
 }
