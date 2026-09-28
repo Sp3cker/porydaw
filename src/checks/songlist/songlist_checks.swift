@@ -361,6 +361,33 @@ private func songListPreferenceRestore(_ report: CheckReport) {
                        cppID: id, what: "stored song filters restore into the songs presenter")
 }
 
+// MARK: - New Song label laws (fork newsongwizard identity field)
+
+@MainActor
+private func songListNewSongLabelLaws(_ report: CheckReport) {
+    let id = "swiftcore/SongList::newSongLabelLaws"
+    let presenter = SongListPresenter()
+    report.expectEqual(expected: "mus_x", actual: presenter.normalizeSongLabel(text: "Mus_X"),
+                       cppID: id, what: "typed capitals fold to lowercase in the name field")
+    report.expectEqual(expected: "muic", actual: presenter.normalizeSongLabel(text: "mu$ic"),
+                       cppID: id, what: "characters outside the name alphabet never reach the field")
+    report.expectEqual(expected: "lives", actual: presenter.normalizeSongLabel(text: "9lives"),
+                       cppID: id, what: "a leading digit never leads the name field")
+    report.expectEqual(expected: "", actual: presenter.normalizeSongLabel(text: ""),
+                       cppID: id, what: "an empty name normalizes to an empty name")
+    report.expectEqual(expected: "mus_x9", actual: presenter.normalizeSongLabel(text: "mus_x9"),
+                       cppID: id, what: "an accepted label is already its own normalization")
+    presenter.setSongs(songListFixture())
+    report.expectEqual(expected: true, actual: presenter.songLabelTaken(label: "mus_route101"),
+                       cppID: id, what: "a playable snapshot song trips the taken hint")
+    report.expectEqual(expected: true, actual: presenter.songLabelTaken(label: "mus_ghost"),
+                       cppID: id, what: "a mid-less table entry still trips the taken hint")
+    report.expectEqual(expected: false, actual: presenter.songLabelTaken(label: "mus_stray"),
+                       cppID: id, what: "an unregistered stray reaches the service refusal, not the hint")
+    report.expectEqual(expected: false, actual: presenter.songLabelTaken(label: "mus_free_song"),
+                       cppID: id, what: "a free label leaves the taken hint off")
+}
+
 // MARK: - Entry point
 
 @MainActor
@@ -372,4 +399,5 @@ internal func runSongListModelChecks(_ report: CheckReport) {
     songListSelectionAndActivation(report)
     songListRestoreFilters(report)
     songListPreferenceRestore(report)
+    songListNewSongLabelLaws(report)
 }

@@ -47,6 +47,9 @@ extension ProjectService {
     /// Copies a playable song's MIDI and flags under a new registered identity.
     public func createSong(label: String, from sourceLabel: String) async throws {
         let store = try requireStore()
+        // The mounted field normalizes per keystroke; the service agrees
+        // with the validated field so direct callers take the same set.
+        let label = await SongListPresenter().normalizeSongLabel(text: label)
         guard Self.isValidSongLabel(label) else {
             throw ProjectServiceError.operationFailed("Invalid song label: \(label).")
         }

@@ -37,8 +37,10 @@ Basic.Dialog {
                     : controller.confirmation === "register" ? qsTr("Register") : qsTr("Delete")
             })
             ok.enabled = Qt.binding(function() {
-                return controller.confirmation !== "create"
-                    || controller.validNewSongLabel(nameField.text)
+                if (controller.confirmation !== "create")
+                    return true
+                return nameField.text.length > 0
+                    && !controller.songListPresenter().songLabelTaken(nameField.text)
             })
         }
     }
@@ -61,11 +63,28 @@ Basic.Dialog {
             Layout.fillWidth: true
             visible: dialog.controller.confirmation === "create"
             placeholderText: qsTr("mus_new_song")
-            onTextChanged: dialog.controller.newSongLabel = text
+            onTextChanged: {
+                const normalized = dialog.controller.songListPresenter().normalizeSongLabel(text)
+                if (normalized !== text) {
+                    const cursor = cursorPosition
+                    text = normalized
+                    cursorPosition = Math.min(cursor, text.length)
+                }
+                dialog.controller.newSongLabel = text
+            }
             onAccepted: {
                 if (dialog.footer.standardButton(Dialog.Ok).enabled)
                     dialog.accept()
             }
+        }
+        Label {
+            objectName: "songConfirmationTaken"
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
+            text: qsTr("A song named %1 already exists.").arg(nameField.text)
+            visible: dialog.controller.confirmation === "create"
+                && nameField.text.length > 0
+                && dialog.controller.songListPresenter().songLabelTaken(nameField.text)
         }
         Label {
             objectName: "songConfirmationDetail"

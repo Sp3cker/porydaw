@@ -274,6 +274,87 @@ TestCase {
                 "collision produces no stray MIDI assembly output")
     }
 
+    function test_newSongNameFieldFoldsFiltersAndRefusesLeadingDigit() {
+        verify(bootstrap.prepareSongActionFixture("open-delete"),
+               "the folded-name journey uses its own copied project")
+        const root = bootstrap.projectRoot
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "the production shell mounts the folding name prompt")
+        shell.requestActivate()
+        const session = shell.shellPresenter.session
+        session.openProjectAndSong(root, "mus_route101")
+        verify(waitForNative(function() {
+            return session.songOpen && session.songTabs.selectedPage
+                && session.songTabs.selectedPage.isReady
+        }, 30000), "the current source song is ready before folding input")
+        list().forceActiveFocus()
+        keySequence(StandardKey.New)
+        verify(waitForNative(function() { return controller().confirmation === "create" }, 5000),
+               "the real New shortcut opens the Songs dock name prompt")
+        const field = findChild(shell, "songNewName")
+        const dialog = findChild(shell, "songConfirmationDialog")
+        verify(field !== null && field.activeFocus && dialog !== null,
+               "folded input enters through the real mounted prompt")
+        const accept = dialog.standardButton(Dialog.Ok)
+        keyClick(Qt.Key_M, Qt.ShiftModifier)
+        compare(field.text, "m", "a typed capital folds to lowercase in the field")
+        keyClick(Qt.Key_U, Qt.ShiftModifier)
+        compare(field.text, "mu", "consecutive capitals keep folding per keystroke")
+        keyClick(Qt.Key_Dollar)
+        compare(field.text, "mu", "a character outside the name alphabet never reaches the field")
+        keyClick(Qt.Key_Home)
+        keyClick(Qt.Key_9)
+        compare(field.text, "mu", "a leading digit never leads the mounted field")
+        compare(controller().newSongLabel, "mu", "the folded text publishes to the creation label")
+        compare(accept.enabled, true, "the folded free label enables the mounted Create button")
+        const taken = findChild(shell, "songConfirmationTaken")
+        verify(taken !== null && !taken.visible,
+               "no taken hint shows for the free folded label")
+    }
+
+    function test_newSongTakenNameDisablesCreateWithHint() {
+        verify(bootstrap.prepareSongActionFixture("open-delete"),
+               "the taken-name journey uses its own copied project")
+        const root = bootstrap.projectRoot
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "the production shell mounts the taken-name prompt")
+        shell.requestActivate()
+        const session = shell.shellPresenter.session
+        session.openProjectAndSong(root, "mus_route101")
+        verify(waitForNative(function() {
+            return session.songOpen && session.songTabs.selectedPage
+                && session.songTabs.selectedPage.isReady
+        }, 30000), "the current source song is ready before the taken-name attempt")
+        list().forceActiveFocus()
+        keySequence(StandardKey.New)
+        verify(waitForNative(function() { return controller().confirmation === "create" }, 5000),
+               "the real New shortcut opens the Songs dock name prompt")
+        const field = findChild(shell, "songNewName")
+        const dialog = findChild(shell, "songConfirmationDialog")
+        verify(field !== null && field.activeFocus && dialog !== null,
+               "the taken label is entered in the real prompt")
+        const accept = dialog.standardButton(Dialog.Ok)
+        for (const key of [Qt.Key_M, Qt.Key_U, Qt.Key_S, Qt.Key_Underscore, Qt.Key_R,
+                           Qt.Key_O, Qt.Key_U, Qt.Key_T, Qt.Key_E, Qt.Key_1, Qt.Key_0, Qt.Key_1])
+            keyClick(key)
+        compare(field.text, "mus_route101", "real typing names the open snapshot song")
+        const taken = findChild(shell, "songConfirmationTaken")
+        verify(taken !== null && taken.visible,
+               "the taken name shows the mounted collision hint")
+        compare(taken.text, "A song named mus_route101 already exists.",
+                "the mounted hint carries the fork's collision wording")
+        compare(accept.enabled, false, "a taken name disables the mounted Create button")
+        keyClick(Qt.Key_Return)
+        compare(controller().confirmation, "create",
+                "Return cannot accept the prompt while its name is taken")
+        field.selectAll()
+        for (const key of [Qt.Key_M, Qt.Key_U, Qt.Key_S, Qt.Key_N, Qt.Key_E, Qt.Key_W])
+            keyClick(key)
+        compare(field.text, "musnew", "a fresh label replaces the taken draft")
+        compare(taken.visible, false, "the hint clears for the free label")
+        compare(accept.enabled, true, "the free label re-enables the mounted Create button")
+    }
+
     function test_deleteSongConfirmationBranches() {
         for (const branch of ["cancel", "opt-out", "opt-in"]) {
             verify(bootstrap.prepareSongDeletionFixture(branch),

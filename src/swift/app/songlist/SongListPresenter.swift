@@ -96,6 +96,9 @@ public final class SongListPresenter {
 
     private var songs: [SongListing] = []
     private var visible: [SongListing] = []
+    /// The unfiltered snapshot input: table entries with or without MIDI
+    /// plus unregistered strays. The taken hint reads here, not the feed.
+    private var allListings: [SongListing] = []
     private var knownPrefixes: [String] = []
     /// Restored category awaiting its first rebuild; a category the project
     /// doesn't have falls back to All.
@@ -114,6 +117,7 @@ public final class SongListPresenter {
     @QtIgnored
     public func setSongs(_ newSongs: [SongListing]) {
         let category = categoryPrefix()
+        allListings = newSongs
         songs = newSongs.filter(\.isPlayable)
         rebuildCategories()
         if songs.isEmpty { pendingCategory = category }
@@ -256,6 +260,29 @@ public final class SongListPresenter {
     /// Register Song enablement: any song with missing registration entries.
     public func canRegister(songId: Int) -> Bool {
         songs.first { $0.id == songId }?.registrationIncomplete ?? false
+    }
+
+    // MARK: - New Song name laws (fork newsongwizard identity field)
+
+    /// Folds typed capitals to lowercase, drops characters outside
+    /// [a-z0-9_], and drops a leading digit: the field always holds a
+    /// folded ^[a-z_][a-z0-9_]*$ prefix. Idempotent and allocation-light.
+    public func normalizeSongLabel(text: String) -> String {
+        var out = ""
+        out.reserveCapacity(text.count)
+        for ch in text.lowercased() {
+            guard ch.isASCII, ch == "_" || ch.isLowercase || ch.isNumber else { continue }
+            if out.isEmpty, ch.isNumber { continue }
+            out.append(ch)
+        }
+        return out
+    }
+
+    /// Exact-match membership over the registered snapshot rows: table
+    /// entries with or without MIDI trip the taken hint, while unregistered
+    /// stray files reach the service refusal instead of the prompt gate.
+    public func songLabelTaken(label: String) -> Bool {
+        allListings.contains { $0.registered && $0.label == label }
     }
 
     // MARK: - Rebuilds (SongListPanel::rebuildCategories/rebuildList)
