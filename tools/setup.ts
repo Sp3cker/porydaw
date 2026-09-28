@@ -169,7 +169,7 @@ async function ensureToolset(python: NativeBuildPython): Promise<Toolset> {
   await Deno.mkdir(cacheDirectory, { recursive: true });
   const environmentPython = setupVirtualEnvironmentPython(root);
   const expectedToolsetVersion =
-    `aqtinstall=${aqtInstall}\nclang-format=22\npython=${python.version}\n`;
+    `aqtinstall=${aqtInstall}\npython=${python.version}\n`;
   const environmentExists = await exists(environmentPython);
   let currentMarker = "";
   try {
@@ -192,14 +192,13 @@ async function ensureToolset(python: NativeBuildPython): Promise<Toolset> {
         virtualEnvironment,
       ],
     );
-    await run("installing Qt and formatter setup tools", environmentPython, [
+    await run("installing Qt setup tools", environmentPython, [
       "-m",
       "pip",
       "install",
       "--disable-pip-version-check",
       "--upgrade",
       aqtInstall,
-      "clang-format==22.*",
     ]);
     await Deno.writeTextFile(toolsetMarker, expectedToolsetVersion);
   }

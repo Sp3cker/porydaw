@@ -22,5 +22,5 @@ Text contrast is the top priority of any UI change. See
 - Cross-platform: Fusion style plus `ThemedWindow` owns every palette role;
   never the platform style/palette; every top-level window derives from it.
 - If a theme role is missing, do not invent a literal: stop and request it.
-- Verify: `deno task verify:shell --filter shell-text-contrast --verbose`.
+- Verify: `deno task checks:shell --filter shell-text-contrast`.
   New surfaces/popups must be reachable by that audit.

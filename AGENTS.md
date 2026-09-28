@@ -83,7 +83,7 @@ This initializes and verifies the main checkout's shared
 Push every commit made on any Porydaw branch to its corresponding GitHub
 remote branch. Do not leave unpushed commits behind when handing off work.
 
-## Build & verify
+## Build & checks
 
 When writing an implementation plan, put the exact covering verification commands
 and what they cover in the task brief. Implementers reuse them unless scope changes
@@ -93,15 +93,18 @@ Agents SHALL use `deno task`. Do not invoke `cmake` / `cmake --build` directly;
 the tasks configure and compile.
 
 ```bash
-deno task build:app                          # porydaw app only
+deno task build:app [--release]              # porydaw app only (build/debug or build/release)
 deno task build:checks                       # app + checks + mid2agb
-deno task verify                             # native check runner harnesses (builds first)
-deno task verify --filter swiftcore --verbose  # Swift core/presenter suites
-deno task verify:shell [--filter <entry>] --verbose  # production ShellWindow QML lanes
-deno task verify:qml --verbose               # editor drawer QML lane
-deno task verify:qml-roll --verbose          # Swift roll window QML lane
-deno task format [--check] [files...]
+deno task checks                             # native check runner harnesses (builds first)
+deno task checks --filter swiftcore          # Swift core/presenter suites
+deno task checks:shell [--filter <entry>]    # production ShellWindow QML lanes
+deno task checks:qml                         # editor drawer QML lane
+deno task checks:qml-roll                    # Swift roll window QML lane
+deno task format [--check] [--base <ref>] [files...]  # swift-format on changed Swift lines
 ```
+
+A failed build prints its errors and `build/<config>/build.log`. Read that log for
+more detail; rebuilding prints nothing new.
 
 Swift LSP (sourcekit-lsp) has no background indexing: run `deno task lsp:swift` after CMake reconfigures or Swift edits — stale references/rename lie silently, and rename needs `timeout >= 120` cold. References empty while hover works means the server predates the index: kill the `sourcekit-lsp` processes; the next query cold-starts.
 
@@ -115,7 +118,7 @@ prove them. No standalone reconciliation, re-pinning, or gap-closing passes.
 Windows builds use MSVC: the `msvc2022_64` Qt kit and a Visual Studio
 developer environment. Run builds and checks from an "x64 Native Tools" /
 Developer PowerShell so `cl` and `ninja` resolve. The Windows build is not
-self-contained until packaging; before launching a binary from `build/`,
+self-contained until packaging; before launching a binary from `build\debug\Release\`,
 prepend the Qt runtime directories in the same PowerShell process:
 
 ```powershell
@@ -124,11 +127,11 @@ $env:Path = "$qt\bin;" + $env:Path
 $env:QT_PLUGIN_PATH = "$qt\plugins"
 $env:QML2_IMPORT_PATH = "$qt\qml"
 npx --yes deno task build:app
-Start-Process -FilePath "$PWD\build\porydaw.exe" -WorkingDirectory "$PWD\build"
+Start-Process -FilePath "$PWD\build\debug\Release\porydaw.exe" -WorkingDirectory "$PWD\build\debug\Release"
 ```
 
 `Start-Process` inherits the environment of the PowerShell process that
-launches it. Do not launch `build\porydaw.exe` from a fresh process without
+launches it. Do not launch `build\debug\Release\porydaw.exe` from a fresh process without
 setting all three variables. A missing `Path` produces a `Qt6*.dll` /
 `vcruntime140*.dll` loader popup. Missing Qt plugin or QML import paths can
 produce an immediate `0xc0000602` fail-fast in `Qt6Core.dll` when Porydaw

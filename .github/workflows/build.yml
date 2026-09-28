@@ -13,16 +13,19 @@ jobs:
   format:
     runs-on: ubuntu-latest
     steps:
+      # Full history: changed lines are measured from the merge-base with the base.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
 
-      - name: Install clang-format
-        run: pip install 'clang-format==22.*'
-
+      # swift-format ships with the runner image's Swift toolchain.
       - name: Check formatting
-        run: deno task format:check
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before || 'HEAD' }}
+        run: deno task format --check --base "$BASE"
 
   build-linux:
     runs-on: ubuntu-latest
@@ -176,7 +179,7 @@ jobs:
         run: >-
           QT_QUICK_BACKEND=software
           deno run --allow-read --allow-write --allow-run
-          --allow-env=ASAN_OPTIONS,DISPLAY,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS
+          --allow-env=ASAN_OPTIONS,DISPLAY,PORYDAW_SAMPLE_CORPUS
           tools/run_checks.ts build-asan/porydaw_checks
           --no-windowing-checks --pool=1
           --exclude=vgsavecheck --exclude=tabcheck --exclude=onboardcheck

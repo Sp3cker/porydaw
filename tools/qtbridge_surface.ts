@@ -26,16 +26,6 @@ type Check =
   | "SUGAR_OPTIONAL_RETURN"
   | "SIGNAL_NEVER_OBSERVED"
   | "HANDLER_NEVER_EMITTED";
-const CHECKS: Check[] = [
-  "UNREACHABLE_QML",
-  "UNANNOTATED_MEMBER",
-  "REDUNDANT_TRACKED",
-  "UNTRACKED_CUSTOM_TYPE",
-  "REDUNDANT_IGNORED",
-  "SUGAR_OPTIONAL_RETURN",
-  "SIGNAL_NEVER_OBSERVED",
-  "HANDLER_NEVER_EMITTED",
-];
 
 type Finding = { check: Check; path: string; line: number; detail: string };
 type Member = {
@@ -536,7 +526,7 @@ async function main(): Promise<void> {
       !Deno.args.includes("--update-baseline"))
   ) {
     console.error(
-      "usage: deno task verify:bridge | deno task bridge:baseline",
+      "usage: deno task checks:bridge | deno task bridge:baseline",
     );
     Deno.exit(2);
   }
@@ -566,13 +556,6 @@ async function main(): Promise<void> {
   signalChecks(qml, [...swift, ...checkSwift], classes, findings);
   const ordered = sortFindings(findings);
   const keys = [...new Set(ordered.map(key))].sort();
-  const counts = new Map<Check, number>();
-  for (const finding of ordered) {
-    counts.set(finding.check, (counts.get(finding.check) ?? 0) + 1);
-  }
-  for (const check of CHECKS) {
-    console.log(`${check}: ${counts.get(check) ?? 0}`);
-  }
   let baseline: { pin: string; findings: string[] };
   try {
     baseline = JSON.parse(await Deno.readTextFile(BASELINE));

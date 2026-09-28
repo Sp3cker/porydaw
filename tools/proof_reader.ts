@@ -25,7 +25,7 @@ const HELP = `usage: deno task proof <command> [options]
   check [--executed [dir]] [--strict-mappings]
       Check proof structure and resolve every anchor against its source file.
       With --executed, also classify each anchor against the JSON evidence in
-      dir (default build/debug/proof-evidence) written by the verify lanes.
+      dir (default build/debug/proof-evidence) written by the checks lanes.
       With --strict-mappings, additionally fail on every MATCHED site that
       cites no predicate whose anchor is a message anchor — Mapping:,
       Mapping/reason: and Swift: lines citing only function/deleted anchors,
@@ -524,12 +524,12 @@ async function loadEvidence(dir: string): Promise<EvidenceFile[]> {
     }
   } catch {
     throw new Error(
-      `no proof evidence in ${dir}; run the verify lanes first`,
+      `no proof evidence in ${dir}; run the checks lanes first`,
     );
   }
   if (!paths.length) {
     throw new Error(
-      `no proof evidence in ${dir}; run the verify lanes first`,
+      `no proof evidence in ${dir}; run the checks lanes first`,
     );
   }
   paths.sort();

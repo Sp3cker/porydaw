@@ -41,23 +41,24 @@ Swift 6.4.0 and Qt 6.11.2; Windows Swift build support is pending.
 
 ## Contributing
 
-Code formatting is enforced with Deno and clang-format (major version 22 — output differs between major versions). Before opening a pull request, run:
+Swift is formatted with swift-format, which ships with the Swift toolchain (`swift format`;
+config in `.swift-format`). Only Swift lines you change are formatted, so untouched code keeps
+its existing style. TypeScript under `tools/` is formatted with `deno fmt`. Before opening a
+pull request, run:
 
 ```bash
-deno task format          # reformat TypeScript and C/C++ sources in place
-deno task format:check    # what CI runs
+deno task format                              # format uncommitted Swift changes and tools/*.ts
+deno task format --check --base origin/fork-main  # what CI checks for a pull request
 ```
-
-QML is deliberately excluded from clang-format. Explicit QML paths make `deno task format` reject the entire file list before changing anything; `.clang-format-ignore` also protects QML files at every directory depth from direct clang-format invocations.
 
 Build and run the check sweep with Deno:
 
 ```bash
-deno task verify                             # native check runner harnesses (builds first)
-deno task verify --filter swiftcore --verbose  # Swift core/presenter suites
-deno task verify:shell --verbose               # production ShellWindow QML lanes
-deno task verify:qml --verbose                 # editor drawer QML lane
-deno task verify:qml-roll --verbose            # Swift roll window QML lane
+deno task checks                             # native check runner harnesses (builds first)
+deno task checks --filter swiftcore          # Swift core/presenter suites
+deno task checks:shell                       # production ShellWindow QML lanes
+deno task checks:qml                         # editor drawer QML lane
+deno task checks:qml-roll                    # Swift roll window QML lane
 ```
 
 ### Startup profiling

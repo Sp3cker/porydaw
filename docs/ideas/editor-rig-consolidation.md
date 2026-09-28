@@ -69,7 +69,7 @@ reading it plus one 87-line rig header.
    + automation geometry helpers`. Sequencing note: lane points are seeded
    before timeline build; document mutation must precede `EditorRig::create`.
    ~150–200 LOC net. *(Implementation: `task` subagent; verify with
-   `deno task verify --filter automation-gestures`.)*
+   `deno task checks --filter automation-gestures`.)*
 2. `rollcheck*` satellites (`rollcheckpsgvelocity`, `rollcheckautomation*`,
    `rollcheckdrawer`, `rollcheckplayhead`) — each drops its embedded
    assembly block; the mega-TUs get easier to split afterwards (follow-up,
@@ -80,7 +80,7 @@ reading it plus one 87-line rig header.
    ~11 consumers share the same assembly. Preserve its exact behavior
    (non-native window check, setSong-before-setDocument order, no resize).
 
-Each wave: migrate, `deno task build:checks`, full `deno task verify`
+Each wave: migrate, `deno task build:checks`, full `deno task checks`
 (63/63 required), `deno task format`. Assertions are never rewritten
 during migration — same test strength, less plumbing.
 

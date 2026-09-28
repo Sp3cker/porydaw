@@ -1,55 +1,45 @@
-// Singular CLI for porydaw build/verify/format lanes.
-// Builds print only summaries and diagnostics; verify uses a quiet reporter with a live name line.
+// Singular CLI for porydaw build/checks/format lanes. Output is limited to what
+// needs acting on; builds keep their complete output in build/<config>/build.log.
 // Usage:
-// deno task build:app [--release] -> Debug porydaw; --release opts into Release
-// deno task build:checks [--release] -> Debug porydaw + checks + mid2agb
-// deno task build:render [--release] -> Debug porydaw_render_cli; --release opts into Release
-// deno task verify [--verbose] [--filter <name>] [-- <run_checks args>]
-// deno task verify:qml [verify options] -> build editor_qml_tests + mid2agb, run that lane
-// deno task verify:qml-roll [verify options] -> build roll_qml_tests + mid2agb, run that lane
-// deno task verify:shell [verify options] -> build shell_qml_tests + mid2agb, run that lane
-// deno task format [--check] [files...]
+// deno task build:app [--release]     -> porydaw in build/debug (or build/release)
+// deno task build:checks [--release]  -> porydaw + checks + mid2agb
+// deno task build:render [--release]  -> porydaw_render_cli
+// deno task checks [--filter <name>] [...]  -> build, then run porydaw_checks
+// deno task checks:qml | checks:qml-roll | checks:shell [checks options]
+// deno task checks:bridge             -> QtBridge surface guard
+// deno task format [--check] [--base <ref>] [files...]
 
 import { join } from "node:path";
 import type { BuildConfig } from "./local_build_environment.ts";
 import { runBuild, usesMultiConfigBuild } from "./build.ts";
-import { unsupportedSources, unsupportedSourcesError } from "./format.ts";
+import { formatSources } from "./format.ts";
 import {
   type CheckOptions,
+  CHECKS_HELP,
   parseCheckOptions,
-  VERIFY_HELP,
 } from "./checks_options.ts";
+
+type Lane = "checks" | "checks:qml" | "checks:qml-roll" | "checks:shell";
 
 type Subcommand =
   | "build:app"
   | "build:checks"
   | "build:render"
-  | "verify"
-  | "verify:qml"
-  | "verify:qml-roll"
-  | "verify:shell"
-  | "verify:bridge"
+  | Lane
+  | "checks:bridge"
   | "format";
 
 function help(command?: Subcommand): string {
   switch (command) {
-    case "verify":
-      return VERIFY_HELP;
-    case "verify:qml":
+    case "checks":
+      return CHECKS_HELP;
+    case "checks:qml":
+    case "checks:qml-roll":
+    case "checks:shell":
       // Same runner options; only the build targets and harness binary differ.
-      return VERIFY_HELP.replaceAll("deno task verify", "deno task verify:qml");
-    case "verify:qml-roll":
-      return VERIFY_HELP.replaceAll(
-        "deno task verify",
-        "deno task verify:qml-roll",
-      );
-    case "verify:shell":
-      return VERIFY_HELP.replaceAll(
-        "deno task verify",
-        "deno task verify:shell",
-      );
-    case "verify:bridge":
-      return `usage: deno task verify:bridge [--help]
+      return CHECKS_HELP.replaceAll("deno task checks", `deno task ${command}`);
+    case "checks:bridge":
+      return `usage: deno task checks:bridge [--help]
   check Swift/QML QtBridge surface against the baseline (read-only)
 
   deno task bridge:baseline regenerates the baseline, allowing growth`;
@@ -64,34 +54,36 @@ function help(command?: Subcommand): string {
           ? "build the Swift-backed offline renderer"
           : "build the application, checks, and mid2agb"
       }
-  --release       configure and build Release in build/release; default is
-                  Debug in build/debug
-  --verbose, -v   accepted; build output is the same either way
-  --help          show this help without building
+  --release  configure and build Release in build/release; default is Debug
+             in build/debug
+  --help     show this help without building
 
-Examples:
-  deno task ${command}
-  deno task ${command} --release`;
+A failed build prints its errors and the path of the complete log
+(build/<config>/build.log). Read that log; rebuilding adds no detail.`;
     case "format":
-      return `usage: deno task format [--check] [files...] [--help]
-  default: format supported TypeScript and C/C++ sources
-  --check  report formatting differences without editing
-  --help   show this help without running formatters
+      return `usage: deno task format [--check] [--base <ref>] [files...] [--help]
+  default: Swift lines changed since --base, and TypeScript under tools/
+  --check       report unformatted code without editing
+  --base <ref>  measure Swift changes from merge-base(<ref>, HEAD) to the
+                working tree; default HEAD (uncommitted changes only)
+  files         format these .swift/.ts files whole
+  --help        show this help without running formatters
 
 Examples:
-  deno task format --check
-  deno task format tools/cli.ts`;
+  deno task format
+  deno task format --check --base origin/fork-main
+  deno task format src/swift/core/Xcmd.swift`;
     default:
       return `usage: deno task <command> [options]
-  build:app     build the application
-  build:checks  build the application, checks, and mid2agb
-  build:render  build the Swift-backed offline renderer
-  verify        build and run checks
-  verify:qml    build and run the QML drawer lane
-  verify:qml-roll  build and run the QML roll window lane
-  verify:shell  build and run the production QML shell lane
-  verify:bridge  check the Swift/QML QtBridge surface
-  format        format sources (or --check)
+  build:app        build the application
+  build:checks     build the application, checks, and mid2agb
+  build:render     build the Swift-backed offline renderer
+  checks           build and run checks
+  checks:qml       build and run the QML drawer lane
+  checks:qml-roll  build and run the QML roll window lane
+  checks:shell     build and run the production QML shell lane
+  checks:bridge    check the Swift/QML QtBridge surface
+  format           format changed Swift and TypeScript (or --check)
 help: deno task <command> --help`;
   }
 }
@@ -107,85 +99,65 @@ function showHelp(command?: Subcommand): never {
   Deno.exit(0);
 }
 
-function isVerbose(args: string[]): boolean {
-  return args.includes("--verbose") || args.includes("-v");
-}
-
 function buildConfig(args: string[], command: Subcommand): BuildConfig {
-  const unknown = args.find((arg) =>
-    arg !== "--release" && arg !== "--verbose" && arg !== "-v" &&
-    arg !== "--help"
-  );
+  const unknown = args.find((arg) => arg !== "--release" && arg !== "--help");
   if (unknown) usage(command, `unknown argument ${unknown}`);
   if (args.includes("--help")) showHelp(command);
   return args.includes("--release") ? "release" : "debug";
 }
 
-// One verify lane = the build targets it needs plus the harness it runs through
+// One lane = the build targets it needs plus the harness it runs through
 // tools/run_checks.ts. Options, filters and the --qt payload are identical.
-interface VerifyLane {
-  readonly command:
-    | "verify"
-    | "verify:qml"
-    | "verify:qml-roll"
-    | "verify:shell";
+interface CheckLane {
   /** Harness executable name inside the build directory. */
   readonly binary: string;
   buildTargets(options: CheckOptions): string[];
 }
 
-// The application binary is only needed by the production-startup windowed rows.
-function verifyBuildTargets(options: CheckOptions): string[] {
-  const productionStartupSelected = options.filters.length === 0
-    ? !options.exclusions.includes("production-startup")
-    : options.filters.some((filter) => "production-startup".includes(filter)) &&
-      !options.exclusions.includes("production-startup");
-  return [
-    ...(productionStartupSelected ? ["porydaw"] : []),
-    "porydaw_checks",
-    "mid2agb",
-  ];
-}
-
-const VERIFY_LANES: Record<
-  "verify" | "verify:qml" | "verify:qml-roll" | "verify:shell",
-  VerifyLane
-> = {
-  "verify": {
-    command: "verify",
+const LANES: Record<Lane, CheckLane> = {
+  "checks": {
     binary: "porydaw_checks",
-    buildTargets: verifyBuildTargets,
+    // The application binary is only needed by the production-startup rows.
+    buildTargets: (options) => {
+      const productionStartupSelected = options.filters.length === 0
+        ? !options.exclusions.includes("production-startup")
+        : options.filters.some((filter) =>
+          "production-startup".includes(filter)
+        ) &&
+          !options.exclusions.includes("production-startup");
+      return [
+        ...(productionStartupSelected ? ["porydaw"] : []),
+        "porydaw_checks",
+        "mid2agb",
+      ];
+    },
   },
-  // The QML lane is its own executable and manifest, not a porydaw_checks
-  // catalog row; run_checks.ts still needs mid2agb beside the build.
-  "verify:qml": {
-    command: "verify:qml",
+  // The QML lanes are their own executables and manifests, not porydaw_checks
+  // catalog rows; run_checks.ts still needs mid2agb beside the build.
+  "checks:qml": {
     binary: "editor_qml_tests",
     buildTargets: () => ["editor_qml_tests", "mid2agb"],
   },
-  // The roll window lane is its own executable and manifest too; it mounts the
-  // production SwiftRollOverlay against a real ApplicationSession.
-  "verify:qml-roll": {
-    command: "verify:qml-roll",
+  // Mounts the production SwiftRollOverlay against a real ApplicationSession.
+  "checks:qml-roll": {
     binary: "roll_qml_tests",
     buildTargets: () => ["roll_qml_tests", "mid2agb"],
   },
-  "verify:shell": {
-    command: "verify:shell",
+  "checks:shell": {
     binary: "shell_qml_tests",
     buildTargets: () => ["shell_qml_tests", "mid2agb"],
   },
 };
 
-// Inside verify the guard only speaks when it fails.
+// Inside a checks lane the guard only speaks when it fails.
 async function runBridge(args: string[], quiet = false): Promise<void> {
-  if (args.includes("--help")) showHelp("verify:bridge");
+  if (args.includes("--help")) showHelp("checks:bridge");
   const unknown = args.find((arg) =>
     arg !== "--update-baseline" && arg !== "--allow-growth"
   );
-  if (unknown) usage("verify:bridge", `unknown argument ${unknown}`);
+  if (unknown) usage("checks:bridge", `unknown argument ${unknown}`);
   if (args.includes("--allow-growth") && !args.includes("--update-baseline")) {
-    usage("verify:bridge", "--allow-growth requires --update-baseline");
+    usage("checks:bridge", "--allow-growth requires --update-baseline");
   }
   const update = args.includes("--update-baseline");
   if (
@@ -193,7 +165,7 @@ async function runBridge(args: string[], quiet = false): Promise<void> {
     (await Deno.permissions.query({ name: "write", path: "tools" })).state !==
       "granted"
   ) {
-    usage("verify:bridge", "baseline writes require deno task bridge:baseline");
+    usage("checks:bridge", "baseline writes require deno task bridge:baseline");
   }
   const result = await new Deno.Command("deno", {
     args: [
@@ -216,53 +188,49 @@ async function runBridge(args: string[], quiet = false): Promise<void> {
   Deno.exit(result.code);
 }
 
-async function runVerify(
-  rawArgs: string[],
-  lane: VerifyLane,
-): Promise<void> {
-  // Terminal --qt: everything after it is the Qt test payload. It is never
-  // parsed as a runner option — not by the loop below and not by the
-  // no-build/verbose pre-scans. run_checks.ts parses the marker identically.
+async function runChecks(rawArgs: string[], command: Lane): Promise<void> {
+  const lane = LANES[command];
+  // Terminal --qt: everything after it is the Qt test payload and is never
+  // parsed as a runner option. run_checks.ts parses the marker identically.
   const qtIndex = rawArgs.indexOf("--qt");
   const runnerArgs = qtIndex === -1 ? rawArgs : rawArgs.slice(0, qtIndex);
   const qtPayload = qtIndex === -1 ? undefined : rawArgs.slice(qtIndex + 1);
-  const verbose = isVerbose(runnerArgs);
   const filters: string[] = [];
   const passthrough: string[] = [];
+  let verbose = false;
   for (let i = 0; i < runnerArgs.length; i++) {
     const arg = runnerArgs[i];
     if (arg === "--verbose" || arg === "-v") {
-      continue;
+      verbose = true;
     } else if (arg.startsWith("--filter=")) {
       filters.push(arg);
     } else if (arg === "--filter") {
       const next = runnerArgs[++i];
       if (!next || next.startsWith("-")) {
-        usage(lane.command, "--filter requires a value");
+        usage(command, "--filter requires a value");
       }
       filters.push(`--filter=${next}`);
-    } else if (arg === "--all" || arg === "--no-windowing-checks") {
-      passthrough.push(arg);
     } else if (arg === "--") {
       passthrough.push(...runnerArgs.slice(i + 1));
       break;
-    } else if (arg.startsWith("-")) {
-      passthrough.push(arg);
     } else {
       passthrough.push(arg);
     }
   }
 
-  const reporterArgs = verbose ? ["--reporter=verbose"] : [];
-  const args = [...reporterArgs, ...filters, ...passthrough];
+  const args = [
+    ...(verbose ? ["--reporter=verbose"] : []),
+    ...filters,
+    ...passthrough,
+  ];
   if (qtPayload !== undefined) args.push("--qt", ...qtPayload);
   let options;
   try {
     options = parseCheckOptions(args);
   } catch (error) {
-    usage(lane.command, error instanceof Error ? error.message : String(error));
+    usage(command, error instanceof Error ? error.message : String(error));
   }
-  if (options.help) showHelp(lane.command);
+  if (options.help) showHelp(command);
   await runBridge([], true);
   const directory = await runBuild(lane.buildTargets(options), "debug", true);
   const executable = Deno.build.os === "windows"
@@ -275,13 +243,13 @@ async function runVerify(
       : []),
     executable,
   );
-  const cmd = new Deno.Command("deno", {
+  const status = await new Deno.Command("deno", {
     args: [
       "run",
       "--allow-read",
       "--allow-write",
       "--allow-run",
-      "--allow-env=ASAN_OPTIONS,DISPLAY,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS,PORYDAW_CHECK_HOST",
+      "--allow-env=ASAN_OPTIONS,DISPLAY,PORYDAW_SAMPLE_CORPUS,PORYDAW_CHECK_HOST",
       "tools/run_checks.ts",
       binary,
       ...args,
@@ -289,130 +257,66 @@ async function runVerify(
     stdout: "inherit",
     stderr: "inherit",
     stdin: "null",
-  });
-  const status = await cmd.output();
+  }).output();
   Deno.exit(status.code);
 }
 
-async function runFormat(rawArgs: string[]): Promise<void> {
-  const unknown = rawArgs.find((arg) =>
-    arg.startsWith("-") && arg !== "--check" && arg !== "--help"
-  );
-  if (unknown) usage("format", `unknown argument ${unknown}`);
-  if (rawArgs.includes("--help")) showHelp("format");
-  const check = rawArgs.includes("--check");
-
-  const files = rawArgs.filter((a) => a !== "--check");
-
-  // Reject unsupported explicit files up front: a mixed list such as
-  // `deno task format a.ts b.qml` must fail before deno fmt touches the
-  // TypeScript half. tools/format.ts re-applies the same rule when invoked
-  // directly.
-  const bad = unsupportedSources(files.filter((f) => !f.endsWith(".ts")));
-  if (bad.length > 0) {
-    console.error(`format: ${unsupportedSourcesError(bad)}`);
+async function runFormat(args: string[]): Promise<void> {
+  if (args.includes("--help")) showHelp("format");
+  let check = false;
+  let base = "HEAD";
+  const files: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === "--check") check = true;
+    else if (arg.startsWith("--base=")) base = arg.slice("--base=".length);
+    else if (arg === "--base") {
+      const next = args[++i];
+      if (!next || next.startsWith("-")) {
+        usage("format", "--base requires a ref");
+      }
+      base = next;
+    } else if (arg.startsWith("-")) usage("format", `unknown argument ${arg}`);
+    else files.push(arg);
+  }
+  if (!base) usage("format", "--base requires a ref");
+  try {
+    Deno.exit(await formatSources({ check, base, files }));
+  } catch (error) {
+    console.error(`format: ${error instanceof Error ? error.message : error}`);
     Deno.exit(2);
   }
-
-  const tsFiles = files.filter((f) => f.endsWith(".ts"));
-  if (files.length === 0) {
-    const denoFmtArgs = check ? ["fmt", "--check"] : ["fmt"];
-    const denoResult = await new Deno.Command("deno", {
-      args: denoFmtArgs,
-      stdout: "inherit",
-      stderr: "inherit",
-    }).output();
-    if (!denoResult.success) Deno.exit(denoResult.code);
-  } else if (tsFiles.length > 0) {
-    const denoFmtArgs = check
-      ? ["fmt", "--check", ...tsFiles]
-      : ["fmt", ...tsFiles];
-    const denoResult = await new Deno.Command("deno", {
-      args: denoFmtArgs,
-      stdout: "inherit",
-      stderr: "inherit",
-    }).output();
-    if (!denoResult.success) Deno.exit(denoResult.code);
-  }
-
-  const formatArgs = [
-    ...(check ? ["--check"] : []),
-    ...files.filter((f) => !f.endsWith(".ts") || files.length === 0),
-  ];
-  const clangFiles = formatArgs.filter((a) => a !== "--check");
-  if (files.length > 0 && clangFiles.length === 0) {
-    if (!check) {
-      console.log(`format: formatted ${tsFiles.length} TypeScript files`);
-    } else {console.log(
-        `format: all ${tsFiles.length} TypeScript files formatted`,
-      );}
-    return;
-  }
-
-  // Delegate to tools/format.ts for C++ handling (explicit files support)
-  const args = [
-    "run",
-    "--allow-read",
-    "--allow-run",
-    "--allow-env=CLANG_FORMAT",
-    "tools/format.ts",
-    ...formatArgs,
-  ];
-  const result = await new Deno.Command("deno", {
-    args,
-    stdout: "inherit",
-    stderr: "inherit",
-  }).output();
-  Deno.exit(result.code);
 }
 
-const raw = Deno.args.slice(0);
-if (raw.length === 0) usage();
-if (raw[0] === "--help") showHelp();
-let sub = raw[0];
-const rest = raw.slice(1);
-// Normalize hyphen vs colon: build-app -> build:app
-if (sub === "build-app") sub = "build:app";
-if (sub === "build-checks" || sub === "build:check") sub = "build:checks";
-if (sub === "build-render") sub = "build:render";
-if (sub === "verify-qml") sub = "verify:qml";
-if (sub === "verify-qml-roll" || sub === "verify:qmlroll") {
-  sub = "verify:qml-roll";
-}
-if (sub === "verify-shell") sub = "verify:shell";
-const normalized = sub as Subcommand;
-switch (normalized) {
+const [command, ...rest] = Deno.args;
+if (command === undefined) usage();
+if (command === "--help") showHelp();
+switch (command) {
   case "build:app":
-    await runBuild(["porydaw"], buildConfig(rest, "build:app"));
+    await runBuild(["porydaw"], buildConfig(rest, command));
     break;
   case "build:render":
-    await runBuild(["porydaw_render_cli"], buildConfig(rest, "build:render"));
+    await runBuild(["porydaw_render_cli"], buildConfig(rest, command));
     break;
   case "build:checks":
     await runBuild(
       ["porydaw", "porydaw_checks", "mid2agb"],
-      buildConfig(rest, "build:checks"),
+      buildConfig(rest, command),
       true,
     );
     break;
-  case "verify":
-    await runVerify(rest, VERIFY_LANES.verify);
+  case "checks":
+  case "checks:qml":
+  case "checks:qml-roll":
+  case "checks:shell":
+    await runChecks(rest, command);
     break;
-  case "verify:bridge":
+  case "checks:bridge":
     await runBridge(rest);
-    break;
-  case "verify:qml":
-    await runVerify(rest, VERIFY_LANES["verify:qml"]);
-    break;
-  case "verify:qml-roll":
-    await runVerify(rest, VERIFY_LANES["verify:qml-roll"]);
-    break;
-  case "verify:shell":
-    await runVerify(rest, VERIFY_LANES["verify:shell"]);
     break;
   case "format":
     await runFormat(rest);
     break;
   default:
-    usage(undefined, `unknown command ${sub}`);
+    usage(undefined, `unknown command ${command}`);
 }

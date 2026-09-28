@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { swiftToolchainArgument } from "./local_build_environment.ts";
 
 export type SwiftCompiler = {
@@ -160,4 +160,24 @@ export async function checkSwiftCompiler(
   } finally {
     await Deno.remove(directory, { recursive: true });
   }
+}
+
+// swift-format ships as `swift format` beside the compiler in Swift 6 toolchains.
+export function swiftDriver(compiler: SwiftCompiler): string {
+  const name = Deno.build.os === "windows" ? "swift.exe" : "swift";
+  const directory = dirname(compiler.executable);
+  return directory === "." ? name : join(directory, name);
+}
+
+export async function checkSwiftFormat(
+  compiler: SwiftCompiler,
+): Promise<string | undefined> {
+  const driver = swiftDriver(compiler);
+  const result = await runCompiler({ executable: driver, args: [] }, [
+    "format",
+    "--version",
+  ]);
+  return result.success
+    ? undefined
+    : `'${driver} format' (swift-format) is missing; deno task format needs it. Install a complete Swift 6.4 toolchain: https://www.swift.org/install/\n${result.output}`;
 }

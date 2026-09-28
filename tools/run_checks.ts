@@ -13,7 +13,7 @@ import { basename, dirname, join } from "node:path";
 import { createReporter } from "./checks_reporter.ts";
 import type { Reporter } from "./checks_reporter.ts";
 import { wallEstimate } from "./checks_walls.ts";
-import { parseCheckOptions, VERIFY_HELP } from "./checks_options.ts";
+import { CHECKS_HELP, parseCheckOptions } from "./checks_options.ts";
 import { enclosingFunction } from "./proof_anchor.ts";
 
 type ScratchKind = "existing-directory" | "must-not-exist-path" | "unused";
@@ -42,7 +42,7 @@ const encoder = new TextEncoder();
 
 function usage(message?: string): never {
   if (message) console.error(`error: ${message}`);
-  console.error(VERIFY_HELP);
+  console.error(CHECKS_HELP);
   Deno.exit(2);
 }
 
@@ -330,12 +330,10 @@ async function runProcess(
   environment: Readonly<Record<string, string>>,
 ): Promise<CheckResult> {
   const startedAt = performance.now();
-  const profileFile = Deno.env.get("LLVM_PROFILE_FILE");
   const child = new Deno.Command(binary, {
     args,
     env: {
       ASAN_OPTIONS: Deno.env.get("ASAN_OPTIONS") ?? "detect_leaks=0",
-      ...(profileFile ? { LLVM_PROFILE_FILE: profileFile } : {}),
       ...environment,
     },
     stdout: "piped",
@@ -490,7 +488,7 @@ try {
   usage(error instanceof Error ? error.message : String(error));
 }
 if (Deno.args[0] === "--help" || options.help) {
-  console.log(VERIFY_HELP);
+  console.log(CHECKS_HELP);
   Deno.exit(0);
 }
 const {
@@ -674,7 +672,7 @@ if (
     !check.name.startsWith("visual-")
   );
   console.log(
-    `verify: no reviewed ${visualPlatform} visual baselines; skipping visual-* ` +
+    `checks: no reviewed ${visualPlatform} visual baselines; skipping visual-* ` +
       "(use --filter=visual to run them)",
   );
 }

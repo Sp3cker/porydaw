@@ -259,7 +259,7 @@ export async function runBuild(
         : output.split(/\r?\n/).filter((line) => line.trim()).slice(-15),
       log,
     );
-    console.error(`  full log: ${log}`);
+    console.error(`  full log: ${log} (read it; rebuilding adds no detail)`);
     Deno.exit(code || 1);
   };
 

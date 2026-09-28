@@ -49,7 +49,7 @@ export function createReporter(
   function renderLive(name: string): void {
     if (!isQuiet || !isTTY) return;
     current = name;
-    const line = `verify: ${name} (${completed}/${total})`;
+    const line = `checks: ${name} (${completed}/${total})`;
     try {
       Deno.stderr.writeSync(new TextEncoder().encode(`\r${line}\x1b[K`));
     } catch {
@@ -108,11 +108,11 @@ export function createReporter(
         (platformSkipped > 0 ? `, ${platformSkipped} platform-skipped` : "");
       if (failures.length === 0) {
         console.log(
-          `\nverify: ${runnable}/${totalManifest} ok (${sec}s${skippedPart})`,
+          `\nchecks: ${runnable}/${totalManifest} ok (${sec}s${skippedPart})`,
         );
       } else {
         console.log(
-          `\nverify: ${
+          `\nchecks: ${
             runnable - failures.length
           }/${totalManifest} ok, ${failures.length} failed (${sec}s${skippedPart})`,
         );

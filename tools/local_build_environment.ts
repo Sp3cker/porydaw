@@ -76,12 +76,6 @@ export function setupVirtualEnvironmentPython(root = Deno.cwd()): string {
     : join(setupVirtualEnvironment(root), "bin", "python");
 }
 
-export function setupClangFormat(root = Deno.cwd()): string {
-  return Deno.build.os === "windows"
-    ? join(setupVirtualEnvironment(root), "Scripts", "clang-format.exe")
-    : join(setupVirtualEnvironment(root), "bin", "clang-format");
-}
-
 export function qtInstallationDirectory(
   root: string,
   installation: QtInstallation,

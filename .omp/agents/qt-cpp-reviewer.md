@@ -55,7 +55,7 @@ python3 .omp/vendor/qt-cpp-review/references/lint-scripts/qt_review_lint.py <fil
 1. Load the pack, then read the files you will change and their existing patterns.
 2. Make the smallest change that satisfies the request and the skill constraints.
 3. Re-run the linter and the six missions on the files you touched.
-4. If a focused harness exists for the change, run `deno task verify --filter <name>`. Skip project-wide suites unless asked.
+4. If a focused harness exists for the change, run `deno task checks --filter <name>`. Skip project-wide suites unless asked.
 
 ## Output
 

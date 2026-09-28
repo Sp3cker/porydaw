@@ -21,4 +21,4 @@ scope: "tool:edit(*.swift), tool:write(*.swift), tool:edit(*.qml), tool:write(*.
 - Keep Qt 6 imports versionless, use `Connections { function onX() {} }`, and declare delegate inputs with `required property`. These are the established QML binding conventions.
 - Read `model.X` only inside delegates backed by `QListModel`/`QTableModel` of bridged row types. Model roles derive from registered row-property names.
 
-Full normative text and enforcement: `docs/plans/qtbridge-surface/spec.md`; guard: `deno task verify:bridge`.
+Full normative text and enforcement: `docs/plans/qtbridge-surface/spec.md`; guard: `deno task checks:bridge`.
