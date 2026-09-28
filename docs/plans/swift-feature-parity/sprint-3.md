@@ -50,7 +50,9 @@ Gate on 82ebde21: verify 37/37, verify:shell 76/76, verify:qml 1/1, verify:qml-r
 bridge 0, `proof check --executed` 0 not executed. Census: 42 ledgers; open rows 887 (762 GAP
 + 125 PARTIAL); strict debt 233. UX deviation awaiting the user: directional left/right resize
 cursor art (rollcheck resize A002–A004/A027/A028; Swift shows one SizeHorCursor).
-Next: wave 206–208 (§26).
+Next: wave 206–208 (§26) plus task 209 (§27), the wired VG03 New
+Voicegroup creation flow (user-dispatched; write set disjoint from the
+wave).
 Known residues: QtBridge queues property notifications, so same-GUI-pass geometry clauses
 (host A095) stay PARTIAL; lanes use the null audio backend, so physical-output conjuncts
 stay PARTIAL.
@@ -3822,4 +3824,87 @@ write-set disjointness; no application suite was run.
   voicegroupsave A032–A037), visual baselines, physical DPR-2 pixels,
   banned test-only reads (tabs_transport A062), ruled-deviation
   conjuncts (input A015/A017/A019, viewcache A046's bank-only-dirt close
-  refusal, selftest transport A009–A013).
+  refusal, selftest transport A009–A013). VG03 create-flow rows promote
+  to task 209 in §27.
+
+## 27. Task 209 — the wired New Voicegroup creation flow (VG03)
+
+### Selection and brief
+
+Planning baseline unchanged from §26: 42 ledgers; open rows 887 (762 GAP
++ 125 PARTIAL). Wave 206–208 is in flight on independent write sets; this
+task is user-dispatched and disjoint.
+
+VoiceEditor.qml:320 already calls `requestNewVoicegroup`, but
+`VoiceListController.onNewVoicegroupRequested` (`VoiceListController.
+swift:148`) is assigned by nobody — the mounted "New..." button is a
+user-visible dead end. This is the completion of what task 205 refused
+to retire: the fork's whole create flow survives in the oracle — guarded
+name/source dialog (`workspaceui_project.cpp:597-654`), fail-closed
+project op writing `sound/voicegroups/<name>.inc` plus the hub include
+(`projectio.cpp:389-406`, `voicegroupsource.cpp:1797-1932`), catalog
+rebuild, and `_<name>` assigned as an undoable cfg edit that rebinds the
+bank (`workspaceui_project.cpp:206-216`). Task 171's New Song layering
+(0c9f378d) is the model: `ProjectService` op behind the store writer,
+controller-owned prompt state, SongConfirmDialog-idiom QML, undoable
+assignment through `session.selectVoicegroup`, collision refusal that
+reads before it writes.
+
+Every Swift piece except the file writer and the prompt exists:
+`selectVoicegroup` is the undoable -G + rebind seam, `bankLease.
+sourcePath`/`sectionLabel` carry the copy source, `RegistrationLines`
+is byte-faithful hub editing, `voicegroupArgs()` rescans on call, and
+`setVoicegroupChoices`/`refresh(from:)` republish the selector. The
+missing hub (`sound/voice_groups.inc` absent) is a success no-op per
+the fork; a missing `sound/voicegroups/` directory refuses at the
+service — the per-file layout refusal maps there, not to a prompt probe.
+
+Both spec ledgers carry only these rows as GAP, so both hit zero open
+rows and delete in the proving commit (C++ sources already deleted).
+The fork's second New-Voicegroup ingress (`CreateSongInput.newVoicegroup`
+inside the New Song flow) has no open row pinning it and stays out.
+
+| Task | Surface / brief | Rows | Group |
+|---|---|---|---|
+| 209 | [The mounted New Voicegroup prompt creates a per-file group and assigns it undoably](task-209-brief.md) | sourceediting A086–A092 (7 GAP → MATCHED, ledger deletes), voicegroupsave presentation A032–A037 (6 GAP → MATCHED, ledger deletes) | B |
+
+### Excluded and blocked — census evidence
+
+- savecore A016–A026 (catalog outage) stays GAP — standing user decision.
+- voicegroupbank (15P) and viewcache (A046 ruled deviation; A069 owned by
+  task 207) untouched — different ledgers, different rows.
+- The sourceediting GAP block is creation-only: A086–A092 close on the
+  written file, the hub line, `voicegroup_load` fidelity, resolved-tone
+  equality and `voicegroupArgs` membership — no test-only ingress.
+
+### Conflict matrix
+
+| Task | Ledger files | Check/predicate files | Production files |
+|---|---|---|---|
+| 209 | `voicegroup/proof.voicegroupsourceediting.txt`, `voicegroupsave/proof.presentation.txt` (both delete on zero) | `src/checks/workspace/voicegroup_creation.swift` (new), `SessionChecks.swift` (one call line), `src/checks/voicelist/voicelist_session.swift`, `src/checks/editorqml/tst_ShellVoicegroup.qml`, `src/checks/CMakeLists.txt` | `src/swift/project/VoicegroupSource+Create.swift` (new) + `src/swift/project/CMakeLists.txt`, `src/swift/app/ProjectService+Bank.swift`, `src/swift/app/voicelist/VoiceListController.swift`, `src/swift/app/ApplicationSession{,+Audio}.swift`, `src/ui/songview/quick/docks/VoicegroupNewDialog.qml` (new) + `VoicegroupPanel.qml` + `VoiceEditor.qml` (objectName), `src/ui/shell/ShellWindow.qml`, root `CMakeLists.txt` |
+
+| Group | Tasks | Note |
+|---|---|---|
+| A | 206, 207, 208 | In flight; their write sets share no file or ledger with 209 (207's SessionChecks row is a bank_undo_publication extension — 209 appends one unrelated call line). |
+| B | 209 | Independent writer; only conflict surface is `SessionChecks.swift`'s bankhistory call list, disjoint by line. |
+
+### Shared constraints and verification ownership
+
+The §16–§26 contracts continue; the §26 banned-pattern list applies
+verbatim (no `!("prop" in obj)` refusals, no test-only reads, real
+ingress only — `requestNewVoicegroup` + `selectVoicegroup`, no
+Qt.callLater, fail-closed staging). Verify lanes:
+`deno task verify --filter swiftcore-bankhistory --verbose`,
+`deno task verify --filter swiftcore-projectsession --verbose`,
+`deno task verify:shell --filter shell-voicegroup --verbose`, then
+`deno task proof check --executed`. Planning validation for this
+docs-only commit checked the wired ingress (VoiceEditor.qml:320 →
+`VoiceListController.swift:148,388-390` with no assignee), the fork
+clauses at the ledger pins (`voicegroupsourceediting.cpp:337-353` at
+`fbe1015a`; `presentation.cpp:239-255` at `4346c26a`; `voicegroupsource.
+cpp:1797-1932`, `projectio.cpp:389-406`, `workspaceui_project.cpp:
+597-654,206-216` at `fbe1015a`), row statuses (`proof sites`:
+sourceediting 7G = A086–A092 exactly, presentation 6G = A032–A037
+exactly), lane registrations (`swiftcore-bankhistory`,
+`swiftcore-projectsession`, `shell-voicegroup`), and write-set
+disjointness against §26 tasks; no application suite was run.
