@@ -107,6 +107,62 @@ ShellGridMenuSupport {
         tryVerify(function() { return grid.appliedRevisionText !== before }, 3000)
     }
 
+    function test_insertTimeFormPreventsInterveningSignatureEditFromMountedMenu() {
+        openSong()
+        var ruler = control("timelineRulerInput")
+        var grid = surface().gridModel
+        var menuOwner = surface().rulerMenu
+        var x = ruler.width * 0.35
+        var y = ruler.height * 0.75
+        var menu = openRulerMenu(x, y)
+        var sourceTick = grid.editCursorTick
+        clickRow(menu, rulerRowIndex(menu, 1))
+        tryCompare(menuOwner, "insertTimePromptOpen", true)
+        tryVerify(function() { return findChild(surface(), "insertTimeBars") !== null },
+                  3000)
+        var revision = grid.appliedRevisionText
+        var notes = grid.noteSummary
+        var cursor = grid.editCursorTick
+        var editMenu = findChild(shell, "shellEditMenu")
+        var timeMenu = findChild(shell, "shellTimeMenu")
+        var signatureAction = findChild(shell, "shellAction_edit.edit_time_signature")
+        verify(editMenu !== null && timeMenu !== null && signatureAction !== null,
+               "the shell mounts the Time submenu while Insert Time is open")
+        editMenu.open()
+        timeMenu.open()
+        compare(signatureAction.enabled, false,
+                "the mounted Time menu disables signature editing while Insert Time is open")
+        mouseClick(signatureAction, signatureAction.width / 2, signatureAction.height / 2)
+        compare(menuOwner.insertTimePromptOpen, true,
+                "clicking the disabled signature row leaves the Insert Time form open")
+        compare(timeSigHost.timeSigPromptOpen, false,
+                "the disabled signature row cannot replace the active form")
+        compare(grid.appliedRevisionText, revision,
+                "a blocked signature edit cannot change the document")
+        compare(grid.noteSummary, notes,
+                "a blocked signature edit preserves the projected notes")
+        compare(grid.editCursorTick, cursor,
+                "a blocked signature edit preserves the edit cursor")
+
+        mouseClick(control("insertTimeCancel"))
+        tryCompare(menuOwner, "insertTimePromptOpen", false)
+        menu = openRulerMenu(rulerTickX(sourceTick), ruler.height * 0.25)
+        clickRow(menu, rulerRowIndex(menu, 9))
+        tryCompare(timeSigHost, "timeSigPromptOpen", true)
+        tryVerify(function() { return findChild(surface(), "timeSignatureNumerator") !== null },
+                  3000)
+        var numerator = control("timeSignatureNumerator")
+        tryCompare(numerator, "activeFocus", true)
+        keyClick(Qt.Key_3)
+        mouseClick(control("timeSignatureDenominator5"))
+        mouseClick(control("timeSignatureAccept"))
+        tryCompare(timeSigHost, "timeSigPromptOpen", false)
+        tryVerify(function() { return rulerLabelAt("3/32", sourceTick) }, 3000,
+                  "after Insert Time closes, the mounted signature form edits the grid")
+        tryVerify(function() { return grid.appliedRevisionText !== revision }, 3000,
+                  "the subsequent signature edit commits its own document revision")
+    }
+
     function test_rulerRightPressCapturesAndReleaseOpensAtReleasePosition() {
         openSong()
         var ruler = control("timelineRulerInput")

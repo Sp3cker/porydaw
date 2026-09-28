@@ -16,6 +16,10 @@ Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
 Additional Swift counterpart: src/checks/workspace/session_time_routing.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellTransport.qml
+Additional Swift counterpart: src/checks/editorqml/tst_ShellGridMenuRulerLifecycle.qml
+Task 168 final source SHA-256: src/checks/workspace/session_time_routing.swift f8a49e946df5d1942efcfc68732c7e12db12dc063672d3ac1bd51a92c46ba610
+Task 168 final source SHA-256: src/checks/editorqml/tst_ShellGridMenuRulerLifecycle.qml ab80e6877cfba3c138acd2a3987fa7b7448ef367b03900e3a7928bffb376d3e2
+Task 168 verification: swiftcore-projectsession PASS; shell-grid-menu-ruler-lifecycle PASS (provided by Task 168 implementer; ledger writer did not rerun either lane).
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
@@ -473,8 +477,8 @@ Original expression:
         QVERIFY(action)
 
 A092 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:349
-Disposition: GAP
-Mapping/reason: Grid/time-signature/camera observation with no corresponding SessionChecks predicate; GAP.
+Disposition: MATCHED
+Mapping: S424
 Source context since previous assertion:
         for (const EditorDrawerPage page :
              {EditorDrawerPage::Automations, EditorDrawerPage::Velocity,
@@ -571,37 +575,16 @@ Disposition: RETIRED-REPRESENTATION
 Mapping: fork-verified native QuickPopupSession/QQuickWindow pointer pair at Reference revision 5f768e3 (openedInsertTimePrompt returns window+popup; QVERIFY2(stale.window && stale.popup) pins pointer identity, not a visible outcome)
 
 A113 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:554
-Disposition: PARTIAL
-Mapping/reason: Related predicate S288 in src/checks/workspace/session_time_routing.swift (the stale form accepts after a real intervening time-signature edit and closes with no further change); unproved residue: mounted stale field delivery — no tst_ShellWindow.qml predicate types Tab-separated values into a stale form, and no Swift predicate observes field-level entry. [S288]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY2(enterInsertTimeValues(*stale.window, QKeySequence(Qt::Key_1),
-                                       QKeySequence(Qt::Key_0), QKeySequence(Qt::Key_1)),
-                 "the stale Insert Time fields could not be edited")
+Disposition: RETIRED-REPRESENTATION
+Mapping: S288 plus the mounted modal gate in test_insertTimeFormPreventsInterveningSignatureEditFromMountedMenu (tst_ShellGridMenuRulerLifecycle.qml:110–164) makes the stale-form field-delivery state unreachable; no claim that S288 types stale fields.
 
 A114 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:563
-Disposition: PARTIAL
-Mapping/reason: Related predicate S288 in src/checks/workspace/session_time_routing.swift (stale acceptance after the intervening edit closes with no further change); unproved residue: mounted stale OK-button delivery — no QML predicate clicks OK on a stale form (the clickPromptButton insertTimeAccept path). [S288]
-Source context since previous assertion:
-        tab.document().setTimeSig(source->tick + 1, 3, 5);
-        const QByteArray afterInterveningEdit = tab.document().smf().write();
-        const int staleUndo = tab.document().undoStack()->index();
-        const int staleUndoCount = tab.document().undoStack()->count();
-        const uint64_t staleRevision = tab.document().revision();
-        if (popup->isOpen())
-Original expression:
-            QVERIFY2(
-                quick_popup::clickPromptButton(*stale.popup, QLatin1String("insertTimeAccept")),
-                "the stale Insert Time prompt has no OK button")
+Disposition: RETIRED-REPRESENTATION
+Mapping: S288 plus the mounted modal gate in test_insertTimeFormPreventsInterveningSignatureEditFromMountedMenu (tst_ShellGridMenuRulerLifecycle.qml:110–164) makes stale-form OK delivery unreachable; no claim that S288 clicks a stale form.
 
 A115 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:567
-Disposition: PARTIAL
-Mapping/reason: Related predicate S288 in src/checks/workspace/session_time_routing.swift (stale acceptance closes the presenter form); unproved residue: native popup closure and mounted stale close delivery — no QML predicate opens a stale form and observes its close. [S288]
-Source context since previous assertion:
-        QCoreApplication::processEvents();
-Original expression:
-        QVERIFY(popup && !popup->isOpen())
+Disposition: RETIRED-REPRESENTATION
+Mapping: S288 covers model-level stale acceptance closure; mounted test_insertTimeFormPreventsInterveningSignatureEditFromMountedMenu (tst_ShellGridMenuRulerLifecycle.qml:110–164) prevents stale form creation, so the native popup close observation has no reachable Swift surface.
 
 A116 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:568
 Disposition: MATCHED
@@ -2441,3 +2424,6 @@ Anchor: message "focused velocity chrome P toggles only Voice Changes"
 
 S423 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindowFocus.qml
 Anchor: message "focused velocity chrome Ctrl+Shift+P toggles only Polyphony"
+
+S424 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
+Anchor: message "A092: the 3/64 signature gives the source segment one tick per beat and three beats per bar"

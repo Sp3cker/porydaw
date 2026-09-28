@@ -67,6 +67,16 @@ internal func runTimeRoutingChecks(report: CheckReport, suite: DocumentSession,
     }
     let originalIndex = document.history.undoIndex
     document.setTimeSignature(tick: 0, numerator: 3, denominatorPower: 6)
+    let signatureAxis = TimeAxis(map: TimeMap(
+        ticksPerBeat: UInt32(document.ticksPerBeat),
+        timeSigs: document.timeSignatures.map {
+            TimeSigPoint(tick: $0.tick, numerator: $0.numerator,
+                         denomPow2: $0.denominatorPower)
+        }))
+    let sourceSegment = signatureAxis.segmentAt(source.tick)
+    report.expect(sourceSegment.beatTicks == 1 && sourceSegment.beatsPerBar == 3,
+                  cppID: insertID,
+                  message: "A092: the 3/64 signature gives the source segment one tick per beat and three beats per bar")
     guard let promptBytes = try? document.state.file.encoded() else {
         report.fail(insertID, "3/64 insertion fixture did not encode")
         return
