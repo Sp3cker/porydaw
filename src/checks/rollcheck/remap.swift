@@ -93,7 +93,9 @@ private final class RemapProbe {
     let session: DocumentSession
     let headers: TrackHeadersPresenter
     private(set) var documentChanges: [(remapped: Bool, selected: Int?, scope: Set<Int>,
-                                         muted: Set<Int>, soloed: Set<Int>)] = []
+                                         muted: Set<Int>, soloed: Set<Int>, notes: Set<NoteID>,
+                                         time: AutomationTimeSelection?, cosmetics: EditorViewState,
+                                         timelineTrackZeroName: String)] = []
 
     init(session: DocumentSession, headers: TrackHeadersPresenter) {
         self.session = session
@@ -103,7 +105,9 @@ private final class RemapProbe {
     func receive(_ change: SessionChange) {
         guard change.domains.contains(.document) else { return }
         documentChanges.append((change.trackRemap != nil, session.selectedTrack,
-                                session.selectedTracks, session.mutedTracks, session.soloedTracks))
+                                session.selectedTracks, session.mutedTracks, session.soloedTracks,
+                                session.selectedNotes, session.timeSelection, session.editorViewState,
+                                session.timeline.tracks[0].name))
         headers.documentDidChange(change)
     }
 
@@ -302,10 +306,32 @@ private func checkRemapDelete(_ report: CheckReport, probe: RemapProbe) {
         report.fail(id, "deletion fixture needs a note owned by track 1")
         return
     }
+    session.applyTimeSelection(activeTime)
     session.setSelectedNotes([removedNote.id])
+    guard session.selectedNotes == [removedNote.id], session.timeSelection == nil,
+          session.selectedTrack == 0, session.selectedTracks == [0, 1],
+          session.mutedTracks == [0, 1], session.soloedTracks == [1],
+          session.editorViewState == deletedCosmetics else {
+        report.fail(id, "deletion fixture did not stage the fork's note-only owner state")
+        return
+    }
     let selectedNoteBeforeDelete = session.selectedNotes.contains(removedNote.id)
     document.deleteTrack(1)
     let deleted = document.state
+    let deletePublication = probe.documentChanges.last
+    report.expect(probe.documentChanges.count == 1 && deletePublication?.remapped == true
+                  && deletePublication?.selected == 0
+                  && deletePublication?.notes.isEmpty == true && deletePublication?.time == nil
+                  && deletePublication?.muted == [0] && deletePublication?.soloed == []
+                  && deletePublication?.cosmetics == EditorViewState()
+                  && session.selectedNotes.isEmpty && session.timeSelection == nil,
+                  cppID: id, message: "A044 deletion publishes no removed-owner note, time, mute, solo, or CC74 state")
+    report.expect(probe.documentChanges.count == 1 && deletePublication?.selected == 0
+                  && deletePublication?.scope == [0] && deletePublication?.muted == [0]
+                  && deletePublication?.soloed == []
+                  && deletePublication?.cosmetics == EditorViewState()
+                  && session.selectedTrack == 0 && session.selectedTracks == [0],
+                  cppID: id, message: "A045 deletion falls back to track zero with its surviving scope and mute")
     probe.expectPublication(report, cppID: id, phase: "delete", remapped: true,
                             selected: 0, scope: [0], muted: [0], soloed: [])
     report.expect(selectedNoteBeforeDelete && session.selectedTrack == 0
@@ -319,6 +345,19 @@ private func checkRemapDelete(_ report: CheckReport, probe: RemapProbe) {
     report.expect(document.history.currentIdentity != identity, cppID: id,
                   message: "delete records one document transaction")
     report.expect(document.history.undoDocument(), cppID: id, message: "delete undo succeeds")
+    let undoPublication = probe.documentChanges.last
+    report.expect(probe.documentChanges.count == 1 && undoPublication?.remapped == true
+                  && undoPublication?.notes.isEmpty == true && undoPublication?.time == nil
+                  && undoPublication?.muted == [0] && undoPublication?.soloed == []
+                  && undoPublication?.cosmetics == EditorViewState()
+                  && session.selectedNotes.isEmpty && session.timeSelection == nil,
+                  cppID: id, message: "A048 undo does not revive deleted-owner selections, controls, or CC74 state")
+    report.expect(probe.documentChanges.count == 1 && undoPublication?.selected == 0
+                  && undoPublication?.scope == [0] && undoPublication?.muted == [0]
+                  && undoPublication?.soloed == []
+                  && undoPublication?.cosmetics == EditorViewState()
+                  && session.selectedTrack == 0 && session.selectedTracks == [0],
+                  cppID: id, message: "A049 undo retains track zero as primary with only its mute and scope")
     probe.expectPublication(report, cppID: id, phase: "delete undo", remapped: true,
                             selected: 0, scope: [0], muted: [0], soloed: [])
     report.expect(selectedNoteBeforeDelete && session.selectedNotes.isEmpty
@@ -366,8 +405,20 @@ private func checkRemapMetadata(_ report: CheckReport, probe: RemapProbe) {
     session.setEditorViewState(remapCosmetics(0, 1))
     session.clearTimeSelection()
     let rebuilds = probe.headers.rowRebuildCount
+    let originalTimelineName = session.timeline.tracks[0].name
+    guard originalTimelineName != "rollcheck remap metadata" else {
+        report.fail(id, "metadata fixture already bears the requested rename")
+        return
+    }
     document.renameTrack(0, to: "rollcheck remap metadata")
     let renamed = document.state
+    let renamePublication = probe.documentChanges.last
+    report.expect(probe.documentChanges.count == 1 && renamePublication?.remapped == false
+                  && renamePublication?.selected == 1 && renamePublication?.scope == [0, 1]
+                  && renamePublication?.muted == [0] && renamePublication?.soloed == [1]
+                  && renamePublication?.cosmetics == remapCosmetics(0, 1)
+                  && renamePublication?.timelineTrackZeroName == "rollcheck remap metadata",
+                  cppID: id, message: "A056 metadata rename rebuilds the timeline without remapping owners")
     probe.expectPublication(report, cppID: id, phase: "metadata edit", remapped: false,
                             selected: 1, scope: [0, 1], muted: [0], soloed: [1])
     expectRetained(report, probe: probe, id: id,
@@ -378,6 +429,15 @@ private func checkRemapMetadata(_ report: CheckReport, probe: RemapProbe) {
     report.expect(document.history.currentIdentity != identity, cppID: id,
                   message: "metadata edit records one document transaction")
     report.expect(document.history.undoDocument(), cppID: id, message: "metadata undo succeeds")
+    let metadataUndoPublication = probe.documentChanges.last
+    report.expect(probe.documentChanges.count == 1 && metadataUndoPublication?.remapped == false
+                  && metadataUndoPublication?.selected == 1
+                  && metadataUndoPublication?.scope == [0, 1]
+                  && metadataUndoPublication?.muted == [0]
+                  && metadataUndoPublication?.soloed == [1]
+                  && metadataUndoPublication?.cosmetics == remapCosmetics(0, 1)
+                  && metadataUndoPublication?.timelineTrackZeroName == originalTimelineName,
+                  cppID: id, message: "A057 metadata undo rebuilds the original timeline without remapping owners")
     probe.expectPublication(report, cppID: id, phase: "metadata undo", remapped: false,
                             selected: 1, scope: [0, 1], muted: [0], soloed: [1])
     expectRetained(report, probe: probe, id: id,
@@ -386,6 +446,15 @@ private func checkRemapMetadata(_ report: CheckReport, probe: RemapProbe) {
     report.expect(document.state == before && document.history.currentIdentity == identity,
                   cppID: id, message: "one metadata undo restores the original name")
     report.expect(document.history.redoDocument(), cppID: id, message: "metadata redo succeeds")
+    let metadataRedoPublication = probe.documentChanges.last
+    report.expect(probe.documentChanges.count == 1 && metadataRedoPublication?.remapped == false
+                  && metadataRedoPublication?.selected == 1
+                  && metadataRedoPublication?.scope == [0, 1]
+                  && metadataRedoPublication?.muted == [0]
+                  && metadataRedoPublication?.soloed == [1]
+                  && metadataRedoPublication?.cosmetics == remapCosmetics(0, 1)
+                  && metadataRedoPublication?.timelineTrackZeroName == "rollcheck remap metadata",
+                  cppID: id, message: "A058 metadata redo rebuilds the renamed timeline without remapping owners")
     probe.expectPublication(report, cppID: id, phase: "metadata redo", remapped: false,
                             selected: 1, scope: [0, 1], muted: [0], soloed: [1])
     expectRetained(report, probe: probe, id: id,
