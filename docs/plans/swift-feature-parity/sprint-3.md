@@ -2977,3 +2977,115 @@ was run.
 - Strict-mapping debt untouched by design. Standing exclusions unchanged: savecore
   A016–A026, pending-reload input gate, P3 WAV, P4 sample studio, transport
   A009/A010/A013, physical audio, ImageIO, ED11 clipboard text ownership.
+
+
+## 22. Wave 179–187 — the freed drawer, raster and roll surfaces
+
+### Selection and bounded briefs
+
+Planning baseline: 62 ledgers; HEAD `0504b68b` (the QML-performance wave landed
+the velocity drawer, OtherEvents, roll rendering, the shell test hosts and the
+registration files; full gate green: verify 36/36 → verify:shell 76/76,
+verify:qml, verify:qml-roll, `proof check --executed` clean). Every file §20/§21
+excluded as foreign is now free; nothing is dirty except the user's untracked
+`docs/plans/swift-clipboard-cutover/`, `docs/plans/swift-keybindings-integration/`,
+`.omp/rules/swift-typecheck-complexity.md` and `profiler/`.
+
+The wave has one lane-red fix task plus eight surface tasks, each verified
+against the live tree and each ledger's pinned fork revision:
+
+| Task | Surface / brief | Rows | Group |
+|---|---|---|---|
+| 179 | [Menu focus is synchronous and survives dismissal arbitration](task-179-brief.md) | check fix only (no ledger rows) | A — dispatches first |
+| 180 | [The automation drawer pan owns band focus, the input grab and shared commands](task-180-brief.md) | hostintegration A083/A085/A087/A089/A091/A098 (6 GAP); gesturecommands A016/A017 (2 PARTIAL) | A |
+| 181 | [Velocity gestures are byte/history-invariant on cancel, and handles track scroll in the same frame](task-181-brief.md) | gesturevelocity A005/A006/A017–A019 (5 PARTIAL); gesturecommands A005–A007 (3 PARTIAL); hostintegration A119/A122 (1 PARTIAL + 1 GAP); scroll-lag fix | A |
+| 182 | [Every drawer band publishes its geometry through show, hide and Event List swap](task-182-brief.md) | hostadapter A098/A118/A140 (3 GAP) + A113 (1 PARTIAL) + tooltip anchors A123/A129/A131–A133 | A |
+| 183 | [Mounted automation raster completes the pointer-visible pixel contract](task-183-brief.md) | raster interaction A012/A032/A037/A044 (4 PARTIAL) + A025/A033 (2 GAP); raster painting A018/A027 (2 PARTIAL) + A023/A024/A026 (3 GAP); nodedrag A056/A057/A067; ownership A103/A104; painting A018/A038/A048; presentation A037 | A |
+| 184 | [Automation gestures compare the full document snapshot at every staged mid-point](task-184-brief.md) | automationgesturecheck contract A063, crosslane A001/A011, hover A013, parity A007/A010/A011/A015/A016; automationselection A124/A131–A133; hover A017 | A |
+| 185 | [A pending bank transition gates close and bank actions on its origin tab only](task-185-brief.md) | voicegroupviewcache A046/A047/A068 (3 GAP; registered divergence flagged) | A |
+| 186 | [An incidental band or chrome press preserves an eligible note selection](task-186-brief.md) | corearrows A007 (1 GAP) | A |
+| 187 | [The songs surface keeps its category list through close and reopen](task-187-brief.md) | workspace/session A017 (1 GAP) | A |
+
+### What was excluded and why
+
+- Automation raster was previously assessed as "no Swift framebuffer readback";
+  that is stale: the mounted drawer lane already raster-proves ink via
+  `grabImage` (`tst_EditorDrawerAutomationCurves.qml`/`Preview`/`Hover`), so the
+  raster ledgers' surviving pixel tails are task 183, not a standing block.
+- Mouse-grabber identity (`quickWindow->mouseGrabberItem()`) has no direct QML
+  counterpart; 180 proves the observable contract (events keep reaching the
+  grabbing item outside its bounds, grab ends on release/ungrab/page switch)
+  and the focused-band publication. If that proves truly unobservable the rows
+  close as RETIRED-REPRESENTATION with refusal predicates per the standing
+  ruling — the brief carries both paths.
+- velocity-context scroll-alignment: no dedicated ledger row covers same-turn
+  scroll alignment; `hostadapter` A095's same-GUI-pass conjunct stays PARTIAL
+  (QtBridge queues notifications — standing residue). 181 carries the
+  `handlesOriginX` container-translate fix per the controller ruling, proven by
+  a mounted scroll-alignment predicate, not a ledger row.
+- 164 stays blocked on QtBridge QML→Swift object passing; its
+  `rollcheck/presentation` A018–A024 conjuncts remain untouched.
+- Ledger-only closures stay forbidden: rollcheck/resize cursor-bitmap
+  conjuncts (A002–A004/A020/A027/A028) and rollcheck/identity A014 are
+  representation/anchor tails with no missing behavior; they ride only
+  incidentally inside a surface commit. Same for hostintegration A003/A004/A007
+  fixture-context tails.
+- Unchanged blocks: automation raster's `interaction` A025 second-leave needs
+  no new ingress beyond 183's added second-leave predicate; automationhover
+  MouseHints source-token rows (A108/A121/A123/A126/A133/A143) name a native
+  pointer-token identity that has no observable Swift surface; mainwindowrouting
+  input/state/lifecycle/native remainders (fixture guards, `swift-project-store`
+  sidecars, native window close, QAction/focusWidget); workspace session
+  A024/A042 (sidecar path, no Swift owner) and tabs_transport A062 (physical
+  audio readback); project ioflow/iomutations/workspace protocol deferrals;
+  themelayout settings (owner decision); onboardcheck import wizard; native
+  boundaries; voicegroup source creation (VG03); voicegroupbank tails
+  (savecore family A087–A093 pending user decision); samplecheck (P4);
+  swiftrollgated ED11 text ownership; visual browsers/dialogs/quick/chrome
+  baselines. All standing exclusions are unchanged.
+
+### Conflict matrix and dispatch groups
+
+Write sets are pairwise disjoint (each brief lists its exact set). Two pairs
+share ledgers over disjoint A-row subsets — hostintegration (180: A083–A098;
+181: A119/A122) and gesturecommands (180: A016/A017; 181: A005–A007) — applied
+serially by the single ledger writer. Conditional production repairs stay in
+the owning file set; no two tasks write the same file.
+
+| Group | Tasks | Note |
+|---|---|---|
+| A | 180, 181, 182, 183, 184, 185, 186, 187 | Independent writers; 179 dispatches first (it fixes a red-check root cause and touches `AutomationMenu.qml`/`EditorSurface*.qml` that 180/183's mounted probes drive). Ledger rows serialized through the ledger writer. |
+
+### Shared constraints and verification ownership
+
+The §16–§21 contracts continue: fork clauses win; one predicate per clause with
+its unique complete literal; each A-id on exactly one predicate; independent
+literal expectations; fail-closed staging; real production ingress and real
+input; no Qt.callLater, no focus memory, no second dispatcher, no test-only
+ingress/API, no idempotence guards; WCAG AA beats parity; DPR claims gate on
+the lane's declared DPR; queued QtBridge notifications keep same-GUI-pass
+clauses PARTIAL. Ledger rows are edited only in the commit whose code and
+checks prove them; closed rows use the compact form. Writers run their brief's
+focused lanes under the lock/175-second alarm (macOS Qt desktop for mounted
+lanes); no project-wide builds, tests, formatters or linters mid-flight; the
+controller owns the project-wide gate once after sources settle. Planning
+validation for this docs-only commit checked brief links/headings, pinned fork
+citations, row statuses (`proof sites` per area), lane registrations
+(`shellwindow-label-commands`, `shell-grid-menu-automation`, `editorqml-drawer`,
+`swiftroll-window`, `shell-grid-input`, `shellwindow`, `shellwindow-velocity`,
+`shell-songs`, `swiftcore`, `swiftcore-projectsession`, `swiftcore-bankhistory`),
+and pairwise write-set disjointness; no application suite was run.
+
+### Deferred and excluded
+
+- Unlock paths: the user's QtBridge object passing (164 and rollcheck
+  presentation A018–A024), `swift-project-store` (lifecycle sidecar/view-state
+  families), the theme-dialog and hostadapter A079 centring decisions, a real
+  window-close harness (hostintegration A174–A185, A162), the catalog-outage
+  savecore rows, and the hostadapter A095 same-GUI-pass residue.
+- Strict-mapping debt untouched by design; reductions only ride incidentally
+  inside 182/183's surface commits (their tooltip/anchor landings).
+- Standing exclusions unchanged: savecore A016–A026, pending-reload input gate,
+  P3 WAV, P4 sample studio, transport A009/A010/A013, physical audio, ImageIO,
+  ED11 clipboard text ownership, New Voicegroup creation surfaces, visual
+  baselines.
