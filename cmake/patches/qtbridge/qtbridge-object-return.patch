@@ -25,44 +25,7 @@ diff --git a/Sources/QtBridge/QAbstractListModel.swift b/Sources/QtBridge/QAbstr
 index 07004bc..4eebb7b 100644
 --- a/Sources/QtBridge/QAbstractListModel.swift
 +++ b/Sources/QtBridge/QAbstractListModel.swift
-@@ -65,6 +65,12 @@ internal final class QAbstractListModel {
-     private var elementAt: ((Int) -> Any)?
-     private var replaceAt: ((Int, QVariant) -> Bool)?
-     private let userRole: Int32 = ItemDataRole.UserRole
-+    /// Reserved role whose data() read returns the whole model as one packed
-+    /// QVariant(QByteArray), produced by the provider registered through
-+    /// QListModel.enablePackedRows. Registered lazily so role names only
-+    /// appear when a consumer can decode them.
-+    private var packedRowsRole: Int32 = -1
-+    private var packedRowsProvider: (() -> Data)? = nil
-     private var roles: [Int32: String] = [:]
- 
-     internal func bind<Owner: AnyObject, Element>(owner: Owner,
-@@ -102,12 +108,23 @@ internal final class QAbstractListModel {
-         }
-     }
- 
-+    internal func enablePackedRows(_ provider: @escaping () -> Data) {
-+        if packedRowsRole < 0 {
-+            packedRowsRole = ItemDataRole.UserRole + 1_000
-+            roles[packedRowsRole] = "packedRows"
-+        }
-+        packedRowsProvider = provider
-+    }
-+
-     public func rowCount(_ parent: QModelIndex) -> Int32 {
-         guard parent.isValid() == false, let count = count else { return 0 }
-         return Int32(count())
-     }
- 
-     public func data(_ index: QModelIndex, _ role: Int32) -> QVariant {
-+        if role == packedRowsRole, let packedRowsProvider, index.isValid() {
-+            return QVariant(value: packedRowsProvider())
-+        }
-         guard index.isValid(), let count = count, let elementAt = elementAt
-         else { return QVariant() }
-         let row = Int(index.row())
-@@ -146,7 +163,29 @@ internal final class QAbstractListModel {
+@@ -146,7 +146,29 @@ internal final class QAbstractListModel {
  
      public func roleNames() -> [Int32: String] { roles }
  
@@ -92,7 +55,7 @@ index 07004bc..4eebb7b 100644
          if roles.isEmpty {
              getCppModel().emitDataChanged(topLeft, bottomRight, nil, 0)
          } else {
-@@ -162,6 +201,15 @@ internal final class QAbstractListModel {
+@@ -162,6 +184,15 @@ internal final class QAbstractListModel {
  
      internal func endInsertRows() -> Void { return getCppModel().endInsertRows() }
  
@@ -112,34 +75,7 @@ diff --git a/Sources/QtBridge/QListModel.swift b/Sources/QtBridge/QListModel.swi
 index 1705eed..c7164ee 100644
 --- a/Sources/QtBridge/QListModel.swift
 +++ b/Sources/QtBridge/QListModel.swift
-@@ -1,6 +1,8 @@
- // Copyright (C) 2025 The Qt Company Ltd.
- // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
- 
-+import Foundation
-+
- /// A Swift collection that exposes its elements to QML views.
- ///
- /// The elements stored in the list become accessible from QML,
-@@ -93,6 +95,17 @@ public final class QListModel<Element: QVariantGettable>: @MainActor RandomAcces
-         self.init(elements)
-     }
- 
-+    /// Registers the model's `packedRows` role: data() answers it with one
-+    /// QVariant(QByteArray) packed by `provider` over the current rows, so
-+    /// consumers (e.g. QuickDisplayList) fetch every row in a single bridge
-+    /// crossing instead of per-row role reads.
-+    /// - Parameter provider: Serializes `storage` into the packed layout.
-+    public func enablePackedRows(_ provider: @escaping ([Element]) -> Data) {
-+        model.enablePackedRows { [weak self] in
-+            provider(self?.storage ?? [])
-+        }
-+    }
-+
-     /// The position of the first element in the list.
-     public var startIndex: Int { storage.startIndex }
- 
-@@ -109,6 +122,33 @@ public final class QListModel<Element: QVariantGettable>: @MainActor RandomAcces
+@@ -109,6 +109,33 @@ public final class QListModel<Element: QVariantGettable>: @MainActor RandomAcces
          }
      }
  
@@ -173,7 +109,7 @@ index 1705eed..c7164ee 100644
      /// Inserts, removes or replaces elements within
      /// the specified range.
      ///
-@@ -172,6 +212,19 @@ public final class QListModel<Element: QVariantGettable>: @MainActor RandomAcces
+@@ -172,6 +199,19 @@ public final class QListModel<Element: QVariantGettable>: @MainActor RandomAcces
          model.endResetModel()
      }
  
@@ -279,19 +215,6 @@ index 077729f..7e81b4a 100644
          metaObjectBuilder.registerInitializer(initFn: self.init)
          metaObjectBuilder.registerQmlElement(from: Self.self)
      }
-diff --git a/Sources/QtBridgeCpp/CMakeLists.txt b/Sources/QtBridgeCpp/CMakeLists.txt
-index 943d39b..af3339f 100644
---- a/Sources/QtBridgeCpp/CMakeLists.txt
-+++ b/Sources/QtBridgeCpp/CMakeLists.txt
-@@ -8,6 +8,8 @@ set(QTBRIDGE_CPP_SOURCES
-     callbackbase.cpp
-     metaparamslist.cpp
-     qappcpp.cpp
-+    include/quickdisplaylistitem.h
-+    quickdisplaylistitem.cpp
-     qobjectproxy.cpp
-     qobjectproxyimpl.cpp
-     qtestappcpp.cpp
 diff --git a/Sources/QtBridgeCpp/abstractlistmodel.cpp b/Sources/QtBridgeCpp/abstractlistmodel.cpp
 index 3c5db0e..57fc6f7 100644
 --- a/Sources/QtBridgeCpp/abstractlistmodel.cpp
@@ -327,18 +250,6 @@ index 3c5db0e..57fc6f7 100644
  void QAbstractListModelCpp::beginRemoveRows(const QModelIndex &parent, int first, int last) {
      m_impl->beginRemoveRows(parent, first, last);
  }
-diff --git a/Sources/QtBridgeCpp/include/QtBridgeCpp.h b/Sources/QtBridgeCpp/include/QtBridgeCpp.h
-index 3e3f056..a0fccfb 100644
---- a/Sources/QtBridgeCpp/include/QtBridgeCpp.h
-+++ b/Sources/QtBridgeCpp/include/QtBridgeCpp.h
-@@ -9,6 +9,7 @@
- #include "callbackbase.h"
- #include "metaparamslist.h"
- #include "qappcpp.h"
-+#include "quickdisplaylistitem.h"
- #include "qobjectproxy.h"
- #include "qobjectproxyimpl.h"
- #include "qtestappcpp.h"
 diff --git a/Sources/QtBridgeCpp/include/abstractlistmodel.h b/Sources/QtBridgeCpp/include/abstractlistmodel.h
 index 173a912..f18fbc0 100644
 --- a/Sources/QtBridgeCpp/include/abstractlistmodel.h
@@ -435,84 +346,14 @@ index 8efd93c..3eb3144 100644
      ~QTestAppCpp() = default;
  
      void setImportPath(const char *path);
-diff --git a/Sources/QtBridgeCpp/include/quickdisplaylistitem.h b/Sources/QtBridgeCpp/include/quickdisplaylistitem.h
-new file mode 100644
-index 0000000..61a0c1b
---- /dev/null
-+++ b/Sources/QtBridgeCpp/include/quickdisplaylistitem.h
-@@ -0,0 +1,63 @@
-+#pragma once
-+
-+#include <QtCore/qabstractitemmodel.h>
-+#include <QtCore/qpointer.h>
-+#include <QtQuick/qquickitem.h>
-+
-+#include <vector>
-+
-+class QuickDisplayListItem : public QQuickItem
-+{
-+    Q_OBJECT
-+    Q_PROPERTY(QAbstractItemModel *rects READ rects WRITE setRects NOTIFY rectsChanged)
-+    // When true, one invisible QQuickItem child mirrors every snapshot row so
-+    // QML/tests keep objectName lookup and per-row geometry without delegate
-+    // reads crossing the bridge. Costs one child per row; opt-in per item.
-+    Q_PROPERTY(bool exposeRows READ exposeRows WRITE setExposeRows NOTIFY exposeRowsChanged)
-+
-+public:
-+    explicit QuickDisplayListItem(QQuickItem *parent = nullptr);
-+
-+    QAbstractItemModel *rects() const;
-+    void setRects(QAbstractItemModel *rects);
-+
-+    bool exposeRows() const;
-+    void setExposeRows(bool exposeRows);
-+
-+signals:
-+    void rectsChanged();
-+    void exposeRowsChanged();
-+
-+protected:
-+    QSGNode *updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) override;
-+
-+private:
-+    struct Rect {
-+        float x;
-+        float y;
-+        float width;
-+        float height;
-+        unsigned char red;
-+        unsigned char green;
-+        unsigned char blue;
-+        unsigned char alpha;
-+    };
-+    struct Row {
-+        Rect rect;
-+        QByteArray name;
-+        QVariant color;
-+        QString fillColor;
-+    };
-+
-+    void rebuildSnapshot();
-+    void syncExposedRows(const std::vector<Row> &rows);
-+    void clearExposedRows();
-+
-+    QPointer<QAbstractItemModel> m_rects;
-+    QHash<int, QByteArray> m_roleNames;
-+    std::vector<Rect> m_snapshot;
-+    std::vector<QPointer<QQuickItem>> m_rowItems;
-+    bool m_exposeRows = false;
-+};
-+
-+void registerQuickDisplayListQmlType();
 diff --git a/Sources/QtBridgeCpp/qappcpp.cpp b/Sources/QtBridgeCpp/qappcpp.cpp
 index 7e91abd..1922e24 100644
 --- a/Sources/QtBridgeCpp/qappcpp.cpp
 +++ b/Sources/QtBridgeCpp/qappcpp.cpp
-@@ -2,12 +2,21 @@
+@@ -2,12 +2,19 @@
  // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only
  
  #include "qappcpp.h"
-+#include "quickdisplaylistitem.h"
  
  #include <QtGui/qguiapplication.h>
  #include <QtQml/qqmlapplicationengine.h>
@@ -526,11 +367,10 @@ index 7e91abd..1922e24 100644
 +
  QAppCpp::QAppCpp()
  {
-+    registerQuickDisplayListQmlType();
  }
  
  QAppCpp::~QAppCpp()
-@@ -44,7 +53,10 @@ int QAppCpp::run(int argc, char **argv)
+@@ -44,7 +51,10 @@ int QAppCpp::run(int argc, char **argv)
          engine.addImportPath(path);
  
      engine.setInitialProperties(m_map);
@@ -573,358 +413,6 @@ index 43b202c..0172a58 100644
  };
  
  QObjectProxy::QObjectProxy(void *owner)
-diff --git a/Sources/QtBridgeCpp/qtestappcpp.cpp b/Sources/QtBridgeCpp/qtestappcpp.cpp
-index 169c7c9..060a93c 100644
---- a/Sources/QtBridgeCpp/qtestappcpp.cpp
-+++ b/Sources/QtBridgeCpp/qtestappcpp.cpp
-@@ -2,11 +2,17 @@
- // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only
- 
- #include "qtestappcpp.h"
-+#include "quickdisplaylistitem.h"
- 
- #include <QtQuickTest/quicktest.h>
- #include <QtQml/QQmlEngine>
- #include <QtCore/qobject.h>
- 
-+QTestAppCpp::QTestAppCpp()
-+{
-+    registerQuickDisplayListQmlType();
-+}
-+
- void QTestAppCpp::setImportPath(const char *path)
- {
-     m_importPath = std::string(path);
-diff --git a/Sources/QtBridgeCpp/quickdisplaylistitem.cpp b/Sources/QtBridgeCpp/quickdisplaylistitem.cpp
-new file mode 100644
-index 0000000..2e2693a
---- /dev/null
-+++ b/Sources/QtBridgeCpp/quickdisplaylistitem.cpp
-@@ -0,0 +1,324 @@
-+#include "quickdisplaylistitem.h"
-+
-+#include <QtCore/qhash.h>
-+#include <QtCore/qvariant.h>
-+#include <QtGui/qcolor.h>
-+#include <QtQml/qqml.h>
-+#include <QtQuick/qsggeometry.h>
-+#include <QtQuick/qsgnode.h>
-+#include <QtQuick/qsgvertexcolormaterial.h>
-+
-+#include <cmath>
-+#include <cstring>
-+#include <mutex>
-+
-+namespace {
-+
-+class RectGeometryNode final : public QSGGeometryNode
-+{
-+public:
-+    RectGeometryNode()
-+        : geometry(QSGGeometry::defaultAttributes_ColoredPoint2D(), 0)
-+    {
-+        geometry.setDrawingMode(QSGGeometry::DrawTriangles);
-+        geometry.setVertexDataPattern(QSGGeometry::DynamicPattern);
-+        setGeometry(&geometry);
-+        setMaterial(&material);
-+    }
-+
-+    QSGGeometry geometry;
-+    QSGVertexColorMaterial material;
-+    int allocatedRectCount = 0;
-+};
-+
-+int requiredRole(const QHash<int, QByteArray> &roles, const QByteArray &name)
-+{
-+    const int role = roles.key(name, -1);
-+    if (role < 0)
-+        qFatal("QuickDisplayList model is missing the required '%s' role", name.constData());
-+    return role;
-+}
-+
-+}
-+
-+QuickDisplayListItem::QuickDisplayListItem(QQuickItem *parent)
-+    : QQuickItem(parent)
-+{
-+    setFlag(ItemHasContents, true);
-+}
-+
-+QAbstractItemModel *QuickDisplayListItem::rects() const
-+{
-+    return m_rects;
-+}
-+
-+void QuickDisplayListItem::setRects(QAbstractItemModel *rects)
-+{
-+    if (m_rects == rects)
-+        return;
-+
-+    if (m_rects)
-+        disconnect(m_rects, nullptr, this, nullptr);
-+    m_rects = rects;
-+
-+    if (m_rects) {
-+        // Rebuild synchronously on terminal model signals. Batched writers
-+        // (QListModel::update) emit one notification per pass, so a direct
-+        // rescan is O(layers) per sync; a queued rebuild instead paints one
-+        // stale frame whenever an UpdateRequest is already pending, which
-+        // shows up as content flicker during camera moves.
-+        connect(m_rects, &QAbstractItemModel::modelReset, this,
-+                &QuickDisplayListItem::rebuildSnapshot);
-+        connect(m_rects, &QAbstractItemModel::dataChanged, this,
-+                &QuickDisplayListItem::rebuildSnapshot);
-+        connect(m_rects, &QAbstractItemModel::rowsInserted, this,
-+                &QuickDisplayListItem::rebuildSnapshot);
-+        connect(m_rects, &QAbstractItemModel::rowsRemoved, this,
-+                &QuickDisplayListItem::rebuildSnapshot);
-+        connect(m_rects, &QAbstractItemModel::rowsMoved, this,
-+                &QuickDisplayListItem::rebuildSnapshot);
-+        connect(m_rects, &QAbstractItemModel::layoutChanged, this,
-+                &QuickDisplayListItem::rebuildSnapshot);
-+        connect(m_rects, &QObject::destroyed, this, [this] {
-+            m_rects = nullptr;
-+            rebuildSnapshot();
-+        });
-+        // Role names are set at bind time and never change afterward; cache
-+        // them so a rebuild crosses for the row blob only.
-+        m_roleNames = m_rects->roleNames();
-+    } else {
-+        m_roleNames.clear();
-+    }
-+
-+    rebuildSnapshot();
-+    emit rectsChanged();
-+}
-+
-+void QuickDisplayListItem::rebuildSnapshot()
-+{
-+    m_snapshot.clear();
-+    std::vector<Row> exposed;
-+    if (m_rects) {
-+        const auto &roles = m_roleNames;
-+        const int packedRole = roles.key("packedRows", -1);
-+        const int frameRole = roles.key("frame", -1);
-+        const int colorRole = roles.key("fillColor", -1);
-+        const int nameRole = roles.key("primitiveName", -1);
-+
-+        if (packedRole >= 0 && m_rects->rowCount() > 0) {
-+            // One crossing: Swift packs every row into {count}{x,y,w,h,argb,
-+            // nameLen,utf8} little-endian; C++ decodes straight out of the blob.
-+            const QByteArray blob =
-+                m_rects->data(m_rects->index(0, 0), packedRole).toByteArray();
-+            const char *p = blob.constData();
-+            const char *const end = p + blob.size();
-+            if (blob.size() >= 4) {
-+                quint32 count;
-+                memcpy(&count, p, 4);
-+                p += 4;
-+                m_snapshot.reserve(size_t(count));
-+                exposed.reserve(size_t(count));
-+                for (quint32 i = 0; i < count && p + 22 <= end; ++i) {
-+                    float f[4];
-+                    memcpy(f, p, 16);
-+                    p += 16;
-+                    quint32 argb;
-+                    memcpy(&argb, p, 4);
-+                    p += 4;
-+                    quint16 nameLen;
-+                    memcpy(&nameLen, p, 2);
-+                    p += 2;
-+                    if (quint64(end - p) < nameLen) break;
-+                    Row row;
-+                    row.name = QByteArray(p, nameLen);
-+                    p += nameLen;
-+                    if (p + 2 > end) break;
-+                    quint16 colorLen;
-+                    memcpy(&colorLen, p, 2);
-+                    p += 2;
-+                    if (quint64(end - p) < colorLen) break;
-+                    row.fillColor = QString::fromUtf8(p, colorLen);
-+                    p += colorLen;
-+                    row.rect = Rect{f[0], f[1], f[2], f[3],
-+                        static_cast<unsigned char>((argb >> 16) & 0xFF),
-+                        static_cast<unsigned char>((argb >> 8) & 0xFF),
-+                        static_cast<unsigned char>(argb & 0xFF),
-+                        static_cast<unsigned char>((argb >> 24) & 0xFF)};
-+                    if (argb == 0xFFFFFFFFu) {
-+                        // Unpackable palette string: parse the carried text.
-+                        const QColor qc(row.fillColor);
-+                        if (!qc.isValid()) continue;
-+                        row.rect.red = static_cast<unsigned char>(qc.red());
-+                        row.rect.green = static_cast<unsigned char>(qc.green());
-+                        row.rect.blue = static_cast<unsigned char>(qc.blue());
-+                        row.rect.alpha = static_cast<unsigned char>(qc.alpha());
-+                        row.color = qc;
-+                    } else {
-+                        row.color = QColor(int(row.rect.red), int(row.rect.green),
-+                                           int(row.rect.blue), int(row.rect.alpha));
-+                    }
-+                    exposed.push_back(row);
-+                    if (!std::isfinite(f[0]) || !std::isfinite(f[1])
-+                        || !std::isfinite(f[2]) || !std::isfinite(f[3]))
-+                        qFatal("QuickDisplayList received invalid rectangle data at row %d", int(i));
-+                    if (f[2] <= 0 || f[3] <= 0 || row.rect.alpha == 0)
-+                        continue;
-+                    m_snapshot.push_back(row.rect);
-+                }
-+            }
-+        } else {
-+            int xRole = -1, yRole = -1, widthRole = -1, heightRole = -1;
-+            if (frameRole < 0) {
-+                xRole = requiredRole(roles, "x");
-+                yRole = requiredRole(roles, "y");
-+                widthRole = requiredRole(roles, "width");
-+                heightRole = requiredRole(roles, "height");
-+            }
-+            requiredRole(roles, "fillColor");
-+            const int count = m_rects->rowCount();
-+            m_snapshot.reserve(size_t(count));
-+            exposed.reserve(size_t(count));
-+            for (int row = 0; row < count; ++row) {
-+                const QModelIndex index = m_rects->index(row, 0);
-+                // Rows exposing a packed "frame" QVariantMap cost two bridge
-+                // crossings instead of five.
-+                float x, y, width, height;
-+                if (frameRole >= 0) {
-+                    const QVariantMap frame =
-+                        m_rects->data(index, frameRole).toMap();
-+                    x = frame.value("x").toFloat();
-+                    y = frame.value("y").toFloat();
-+                    width = frame.value("width").toFloat();
-+                    height = frame.value("height").toFloat();
-+                } else {
-+                    x = m_rects->data(index, xRole).toFloat();
-+                    y = m_rects->data(index, yRole).toFloat();
-+                    width = m_rects->data(index, widthRole).toFloat();
-+                    height = m_rects->data(index, heightRole).toFloat();
-+                }
-+                const QColor color(m_rects->data(index, colorRole).toString());
-+                if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(width)
-+                    || !std::isfinite(height) || !color.isValid())
-+                    qFatal("QuickDisplayList received invalid rectangle data at row %d", row);
-+                Row r{Rect{x, y, width, height,
-+                    static_cast<unsigned char>(color.red()),
-+                    static_cast<unsigned char>(color.green()),
-+                    static_cast<unsigned char>(color.blue()),
-+                    static_cast<unsigned char>(color.alpha())},
-+                    nameRole >= 0
-+                        ? m_rects->data(index, nameRole).toString().toUtf8()
-+                        : QByteArray(),
-+                    color, color.name(QColor::HexArgb)};
-+                exposed.push_back(r);
-+                if (width <= 0 || height <= 0 || color.alpha() == 0)
-+                    continue;
-+                m_snapshot.push_back(r.rect);
-+            }
-+        }
-+    }
-+    if (m_exposeRows)
-+        syncExposedRows(exposed);
-+    else
-+        clearExposedRows();
-+    update();
-+}
-+
-+void QuickDisplayListItem::syncExposedRows(const std::vector<Row> &rows)
-+{
-+    const int count = int(rows.size());
-+    while (int(m_rowItems.size()) < count) {
-+        // Rows hang beside this item (like Repeater delegates) so callers
-+        // iterating the parent item's children see them directly.
-+        auto *item = new QQuickItem(parentItem() ? parentItem() : this);
-+        item->setVisible(true);
-+        item->setFlag(QQuickItem::ItemHasContents, false);
-+        m_rowItems.push_back(item);
-+    }
-+    for (int i = int(m_rowItems.size()) - 1; i >= count; --i) {
-+        if (m_rowItems[size_t(i)])
-+            m_rowItems[size_t(i)]->deleteLater();
-+        m_rowItems.pop_back();
-+    }
-+    for (int i = 0; i < count; ++i) {
-+        auto item = m_rowItems[size_t(i)].data();
-+        if (!item)
-+            continue;
-+        const Row &row = rows[size_t(i)];
-+        item->setX(qreal(row.rect.x));
-+        item->setY(qreal(row.rect.y));
-+        item->setWidth(qreal(row.rect.width));
-+        item->setHeight(qreal(row.rect.height));
-+        item->setObjectName(QString::fromUtf8(row.name));
-+        item->setProperty("fillColor", row.fillColor);
-+        item->setProperty("color", row.color);
-+    }
-+}
-+
-+void QuickDisplayListItem::clearExposedRows()
-+{
-+    for (auto &item : m_rowItems) {
-+        if (item)
-+            item->deleteLater();
-+    }
-+    m_rowItems.clear();
-+}
-+
-+bool QuickDisplayListItem::exposeRows() const
-+{
-+    return m_exposeRows;
-+}
-+
-+void QuickDisplayListItem::setExposeRows(bool exposeRows)
-+{
-+    if (m_exposeRows == exposeRows)
-+        return;
-+    m_exposeRows = exposeRows;
-+    rebuildSnapshot();
-+    emit exposeRowsChanged();
-+}
-+
-+QSGNode *QuickDisplayListItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *)
-+{
-+    if (m_snapshot.empty()) {
-+        delete oldNode;
-+        return nullptr;
-+    }
-+
-+    auto *node = static_cast<RectGeometryNode *>(oldNode);
-+    if (!node)
-+        node = new RectGeometryNode;
-+
-+    const int count = int(m_snapshot.size());
-+    if (node->allocatedRectCount != count) {
-+        node->geometry.allocate(count * 6);
-+        node->allocatedRectCount = count;
-+    }
-+    auto *vertices = node->geometry.vertexDataAsColoredPoint2D();
-+    for (int i = 0; i < count; ++i) {
-+        const Rect &rect = m_snapshot[size_t(i)];
-+        const float right = rect.x + rect.width;
-+        const float bottom = rect.y + rect.height;
-+        const int alpha = rect.alpha;
-+        const auto red = static_cast<unsigned char>((rect.red * alpha + 127) / 255);
-+        const auto green = static_cast<unsigned char>((rect.green * alpha + 127) / 255);
-+        const auto blue = static_cast<unsigned char>((rect.blue * alpha + 127) / 255);
-+        const int vertex = i * 6;
-+        vertices[vertex].set(rect.x, rect.y, red, green, blue, rect.alpha);
-+        vertices[vertex + 1].set(rect.x, bottom, red, green, blue, rect.alpha);
-+        vertices[vertex + 2].set(right, rect.y, red, green, blue, rect.alpha);
-+        vertices[vertex + 3].set(right, rect.y, red, green, blue, rect.alpha);
-+        vertices[vertex + 4].set(rect.x, bottom, red, green, blue, rect.alpha);
-+        vertices[vertex + 5].set(right, bottom, red, green, blue, rect.alpha);
-+    }
-+    node->geometry.markVertexDataDirty();
-+    node->markDirty(QSGNode::DirtyGeometry);
-+    return node;
-+}
-+
-+void registerQuickDisplayListQmlType()
-+{
-+    static std::once_flag once;
-+    std::call_once(once, [] {
-+        qmlRegisterType<QuickDisplayListItem>("QtBridge", 1, 0, "QuickDisplayList");
-+    });
-+}
 diff --git a/Sources/QtBridgeMacros/Extensions.swift b/Sources/QtBridgeMacros/Extensions.swift
 index acce22e..ad3c8c5 100644
 --- a/Sources/QtBridgeMacros/Extensions.swift

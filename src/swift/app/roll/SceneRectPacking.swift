@@ -36,29 +36,4 @@ enum SceneRectPacking {
         return value == 0 ? unparseableColor : value
     }
 
-    static func pack(_ rows: [SceneRect]) -> Data {
-        var data = Data(count: 4 + rows.count * 24)
-        data.withUnsafeMutableBytes { buffer in
-            buffer.storeBytes(of: UInt32(rows.count).littleEndian, toByteOffset: 0, as: UInt32.self)
-            var offset = 4
-            for row in rows {
-                buffer.storeBytes(of: Float32(row.x).bitPattern.littleEndian, toByteOffset: offset, as: UInt32.self)
-                offset += 4
-                buffer.storeBytes(of: Float32(row.y).bitPattern.littleEndian, toByteOffset: offset, as: UInt32.self)
-                offset += 4
-                buffer.storeBytes(of: Float32(row.width).bitPattern.littleEndian, toByteOffset: offset, as: UInt32.self)
-                offset += 4
-                buffer.storeBytes(
-                    of: Float32(row.height).bitPattern.littleEndian, toByteOffset: offset, as: UInt32.self)
-                offset += 4
-                buffer.storeBytes(of: argb(row.fillColor).littleEndian, toByteOffset: offset, as: UInt32.self)
-                offset += 4
-                buffer.storeBytes(of: UInt16(0).littleEndian, toByteOffset: offset, as: UInt16.self)
-                offset += 2
-                buffer.storeBytes(of: UInt16(0).littleEndian, toByteOffset: offset, as: UInt16.self)
-                offset += 2
-            }
-        }
-        return data
-    }
 }

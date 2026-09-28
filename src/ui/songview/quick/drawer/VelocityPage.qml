@@ -184,22 +184,61 @@ FocusScope {
             color: page.gridPalette.chromeBackground
         }
 
-        TimelineQuickItem {
+        Item {
             objectName: "velocityRulerMarks"
             anchors.fill: parent
-            rects: (page.pageModel ? page.pageModel.axisTicks : [])
+            Repeater {
+                model: page.pageModel ? page.pageModel.axisTicks : []
+                delegate: Rectangle {
+                    required property var frame
+                    required property string fillColor
+                    required property string primitiveName
+                    objectName: primitiveName
+                    x: frame.x
+                    y: frame.y
+                    width: frame.width
+                    height: frame.height
+                    color: fillColor
+                }
+            }
         }
 
-        TimelineQuickItem {
+        Item {
             objectName: "velocityRulerGraduations"
             anchors.fill: parent
-            rects: (page.pageModel ? page.pageModel.axisGraduations : [])
+            Repeater {
+                model: page.pageModel ? page.pageModel.axisGraduations : []
+                delegate: Rectangle {
+                    required property var frame
+                    required property string fillColor
+                    required property string primitiveName
+                    objectName: primitiveName
+                    x: frame.x
+                    y: frame.y
+                    width: frame.width
+                    height: frame.height
+                    color: fillColor
+                }
+            }
         }
 
-        TimelineQuickItem {
+        Item {
             objectName: "velocityRulerMarkers"
             anchors.fill: parent
-            rects: (page.pageModel ? page.pageModel.axisMarkers : [])
+            Repeater {
+                model: page.pageModel ? page.pageModel.axisMarkers : []
+                delegate: Rectangle {
+                    required property var frame
+                    required property string fillColor
+                    required property string primitiveName
+                    objectName: primitiveName
+                    x: frame.x
+                    y: frame.y
+                    width: frame.width
+                    height: frame.height
+                    color: fillColor
+                }
+            }
         }
 
         Repeater {

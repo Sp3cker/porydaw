@@ -126,7 +126,6 @@ public final class GridScene {
 
     public init(typography: Typography = Typography(baseFontPx: 13)) {
         hoverChipFont = typography.caption.map
-        cameraScroll.enablePackedRows { SceneRectPacking.pack($0) }
     }
 
     @QtIgnored

@@ -4171,3 +4171,12 @@ label guards, visual chrome A007), physical audio output, banned
 techniques (ghost-ID ingress, test-only reads, same-GUI-pass
 notification timing A095), and deleted-harness fixture-parity
 residues.
+
+## 30. Native timeline renderer (zoom/scroll lag)
+
+Executed per `docs/plans/native-timeline-renderer/plan.md` (see its Status section): roll plot and
+keyboard (`0142cbba`), ruler and drawer pages (`29323eb8`), and the phase 5 cleanup. Zoom and scroll no
+longer rebuild or republish roll, ruler or drawer content; Swift publishes model-space blobs and the
+C++ `TimelineRenderer` (`src/render/`) applies the camera per frame. Proof-ledger impact: one anchor
+(`swiftrollgated/proof.clipboardchecks.txt` S023) re-pointed to its reworded message. Pending user
+decision: adding `src/render/` to the AGENTS.md native-boundary list.

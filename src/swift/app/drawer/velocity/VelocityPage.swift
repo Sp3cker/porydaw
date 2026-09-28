@@ -214,8 +214,7 @@ public final class VelocityPage: EditorDrawerPage {
     public var axisGraduations: QListModel<SceneRect> = QListModel()
     public var axisMarkers: QListModel<SceneRect> = QListModel()
     public var axisLabels: QListModel<SceneText> = QListModel()
-    /// The note handles' rows in scroll-stable x. Production QML translates one
-    /// container from the scene scroll row to restore plot positions.
+    /// Handle rows remain scroll-stable; QML translates their container with the grid camera.
     public var handles: QListModel<VelocityHandle> = QListModel()
 
     /// Distinct content rebuilds: shared-playhead movement inside one voice

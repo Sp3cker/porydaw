@@ -308,9 +308,19 @@ Rectangle {
             color: graphCanvas.lane ? graphCanvas.lane.plotBackground : "transparent"
             clip: true
         }
-        TimelineQuickItem {
-            anchors.fill: parent
-            rects: graphCanvas.lane ? graphCanvas.lane.gridLines : []
+        Repeater {
+            model: graphCanvas.lane ? graphCanvas.lane.gridLines : []
+            delegate: Rectangle {
+                required property var frame
+                required property string fillColor
+                required property string primitiveName
+                objectName: primitiveName
+                x: frame.x
+                y: frame.y
+                width: frame.width
+                height: frame.height
+                color: fillColor
+            }
         }
         Repeater {
             id: renderedCurveSegments

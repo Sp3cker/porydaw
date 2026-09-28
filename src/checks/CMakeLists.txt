@@ -40,8 +40,6 @@ qt_add_executable(porydaw_checks
     fwd.hpp
     audio/tst_audiobackend.cpp
     audio/tst_audiobackend.h
-    quickdisplay/tst_quickdisplaydecode.cpp
-    quickdisplay/tst_quickdisplaydecode.h
     support/checkstartup.cpp
     support/checkstartup.h
     support/songfixture.cpp

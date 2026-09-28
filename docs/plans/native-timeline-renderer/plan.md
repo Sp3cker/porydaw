@@ -3,6 +3,26 @@
 Worktree: `.worktrees/swift-qml-grid` (Swift 6 + QML via QtBridge, Qt 6.11 Homebrew, macOS arm64).
 All file:line citations verified against source on 2026-09-28.
 
+## Status (2026-09-28): executed
+
+Commits on `feature/swift-qml-grid`: `0142cbba` phase 2 (roll plot + keyboard), `29323eb8` phases 3-4
+(ruler band 2, drawer band 3 for velocity / voice changes / automation; other-events stabilization landed
+in `0142cbba`), then the phase 5 cleanup commit (QuickDisplayList removed from the QtBridge patch,
+`TimelineQuickItem.qml` and `src/checks/quickdisplay/` deleted).
+
+Resolved open risks: 1 — `invokeMethod` works once `Data` conforms to `QVariantGettable` (patch) and
+the item passes `Q_RETURN_ARG(QByteArray, …)`. 2 — `projectedNoteBox` moved into the checks target.
+8 — `engine()` kept: `src/app/qml_engine_host.cpp` still consumes it. Open: 3 (AGENTS.md boundary note
+for `src/render/` needs the user's permission). The `cameraScroll` carrier stays: containers must move
+in the same turn as the Swift publish, and QtBridge NOTIFY is queued.
+
+Rulings made during execution: blob sections 12 (`drawerAnchored`), 13 (`layerBreak`, with
+`TimelineRenderer.drawerLayer` and one renderer per z-layer so HEAD paint order is preserved), 14
+(`dashPattern`, device px); grid lines are never shipped, only generated per frame from §7; plain
+right-drag band replaces the selection unless Ctrl is held at release (user-reported bug, C++ parity);
+checks flush with `wait(0)` before reading renderer state; the software scene graph needs
+`QSGTransformNode` layers and an AA-off painter path for pixel parity.
+
 ## Summary
 
 Today every roll/ruler rect and label is a Swift `GridScene` row (`QListModel<SceneRect/SceneText>`,
