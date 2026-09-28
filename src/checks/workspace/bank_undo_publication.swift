@@ -136,7 +136,9 @@ internal func bankUndoPublicationChecks(_ report: CheckReport, fixtureRoot: Stri
                   && app.songTabs.pendingBankTabId == originID
                   && !app.songTabs.closeEnabled(tabId: originID)
                   && app.songTabs.closeEnabled(tabId: peerID)
-                  && closeRefused,
+                  && closeRefused
+                  && !shell.actionEnabled(id: "edit.undo")
+                  && !shell.actionEnabled(id: "edit.redo"),
                   cppID: id,
                   message: "pending bank transition refuses origin-tab close while the non-origin tab stays close-enabled")
     origin.document.history.endBankTransition(held)

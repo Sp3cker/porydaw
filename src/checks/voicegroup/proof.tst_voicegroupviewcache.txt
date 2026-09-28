@@ -8,21 +8,21 @@ Additional Swift counterpart: src/checks/workspace/bank_history_probes.swift
 Additional Swift counterpart: src/checks/workspace/bank_sharing.swift
 Additional Swift counterpart: src/checks/voicelist/voicelist_session.swift
 Additional Swift counterpart: src/checks/workspace/bank_undo_publication.swift
-Task 185 Swift counterpart SHA-256: src/checks/workspace/bank_undo_publication.swift a36b61f2a368bbb3d4c4d0c3690e82300af577f51002fe074424f093c85fdba4
+Task 185 Swift counterpart SHA-256: src/checks/workspace/bank_undo_publication.swift 24261b763aa440a93d224695aa5445c3e978fcb46a90b432d942c48c6749b99c
 Task 185 review: APPROVE.
 Disposition tally: 70 sites — 65 MATCHED, 2 PARTIAL, 0 GAP, 3 RETIRED-REPRESENTATION.
 
 Command: deno task verify --filter swiftcore-bankhistory --verbose.
-Result: PASS (implementer/controller report). Evidence in
-build/proof-evidence/swiftcore-bankhistory.json contains the S038–S040
-predicate literals under cppID voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates.
+Result: 12/37 PASS (controller observation). The S038 predicate literal was
+executed in build/proof-evidence/swiftcore-bankhistory.json under cppID
+voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates.
 
 Command: deno task verify --filter swiftcore-projectsession --verbose.
 Result: PASS (implementer/controller report). Both verification results are
 reused from the frozen Swift checks; this ledger pass did not rerun either lane.
 
 Command: deno task proof check.
-Result: 1 error reported, outside this assigned ledger: src/checks/host/proof.tst_hostadapter.txt S069, literal not found. The error is unrelated to this ledger.
+Result: 2 errors reported, outside this assigned ledger: src/checks/mainwindowrouting/proof.tst_mainwindowrouting_input.txt S232 and S233, literals not found. Both errors are unrelated to this ledger.
 
 
 A001 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:126
@@ -590,7 +590,7 @@ Mapping: S010
 
 A046 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:278
 Disposition: PARTIAL
-Mapping/reason: S038 asserts the origin-scoped pending-transition behavior: beginBankTransition() refuses a second transition, pendingBankTabId remains originID, closeEnabled(originID) is false, requestClose(originID) is refused, and closeEnabled(peerID) is true. Unproved from this original assertion: the distinct bankActionsEnabled() state. User-ruled deviation: the fork permits immediate close of a non-origin tab with bank-only dirt, but Swift intentionally refuses close on bank-only dirt to protect unsaved edits (SongTabSession.isDirty = document.isDirty || bankDirty, src/swift/app/SongTabsController.swift:63-66; rendered close gate src/ui/songview/quick/swiftroll/SongTabs.qml:250). This peer-immediate-close conjunct is not ported.
+Mapping/reason: S038 asserts the origin-scoped pending-transition behavior: beginBankTransition() refuses a second transition, pendingBankTabId remains originID, closeEnabled(originID) is false, requestClose(originID) is refused, closeEnabled(peerID) is true, and bankActionsEnabled() refuses bank actions (published edit.undo/edit.redo are disabled). User-ruled deviation: the fork permits immediate close of a non-origin tab with bank-only dirt, but Swift intentionally refuses close on bank-only dirt to protect unsaved edits (SongTabSession.isDirty = document.isDirty || bankDirty, src/swift/app/SongTabsController.swift:63-66; rendered close gate src/ui/songview/quick/swiftroll/SongTabs.qml:250). This peer-immediate-close conjunct is not ported.
 Source context since previous assertion:
 
 
@@ -929,7 +929,7 @@ Anchor: message "immediate Undo preserves the preceding document edit"
 S038 | bankUndoPublicationChecks | src/checks/workspace/bank_undo_publication.swift
 Execution: SessionChecks.swift:107 calls bankUndoPublicationChecks; cppID voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates
 Source line: 135
-Predicate: report.expect(origin.document.history.beginBankTransition() == nil && app.songTabs.pendingBankTabId == originID && !app.songTabs.closeEnabled(tabId: originID) && app.songTabs.closeEnabled(tabId: peerID) && closeRefused, cppID: id, message: "pending bank transition refuses origin-tab close while the non-origin tab stays close-enabled")
+Predicate: report.expect(origin.document.history.beginBankTransition() == nil && app.songTabs.pendingBankTabId == originID && !app.songTabs.closeEnabled(tabId: originID) && app.songTabs.closeEnabled(tabId: peerID) && closeRefused && !shell.actionEnabled(id: "edit.undo") && !shell.actionEnabled(id: "edit.redo"), cppID: id, message: "pending bank transition refuses origin-tab close while the non-origin tab stays close-enabled")
 Anchor: message "pending bank transition refuses origin-tab close while the non-origin tab stays close-enabled"
 
 S039 | bankUndoPublicationChecks | src/checks/workspace/bank_undo_publication.swift
