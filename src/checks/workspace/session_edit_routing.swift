@@ -6,6 +6,23 @@ import PorydawCoreCheckNative
 
 @MainActor
 internal func runEditRoutingChecks(report: CheckReport, fixtureRoot: String) {
+    let unboundID = "mainwindowrouting/MainWindowRoutingStateTest::editActionProjectionAndIdentity"
+    let shell = ShellPresenter()
+    let app = shell.session
+    report.expect(!app.songOpen && app.songTabs.selectedPage == nil
+                  && app.selectedDocument == nil
+                  && !app.gridCommandAvailable(command: EditCommand.copy.rawValue),
+                  cppID: unboundID,
+                  message: "an empty tab strip has no document-bound command router")
+    report.expect(!shell.actionEnabled(id: "roll.copy"), cppID: unboundID,
+                  message: "the empty shell disables Copy")
+    report.expect(!shell.actionEnabled(id: "roll.solo_tracks"), cppID: unboundID,
+                  message: "the empty shell disables Solo Tracks")
+    report.expect(!shell.actionEnabled(id: "edit.insert_time"), cppID: unboundID,
+                  message: "the empty shell disables Insert Time")
+    report.expect(!shell.actionEnabled(id: "edit.delete_time"), cppID: unboundID,
+                  message: "the empty shell disables Delete Time")
+
     let service = ProjectService()
     let session: DocumentSession
     let inactive: DocumentSession

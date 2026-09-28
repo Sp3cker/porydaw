@@ -19,6 +19,8 @@ Additional Swift counterpart: src/checks/editorqml/tst_ShellMenus.qml
 Additional Swift counterpart: src/checks/drawerpresentation/drawer_state.swift
 Additional Swift counterpart: src/checks/drawerpresentation/drawer_basics.swift
 Additional Swift counterpart: src/checks/editcheck/DocumentTrackChecks.swift
+Task 175 Swift counterpart SHA-256: src/checks/workspace/session_edit_routing.swift 169e54739163706aad8bc81f86918d78826c6b6882e1d028c2f647a930662dfc
+Task 175 ruling source: brief pins fork snapshot 5f768e34; this ledger retains its historical Reference revision 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e.
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Task 65a note (application-wide drawer chrome landed; covering lanes GREEN on the frozen tree — evidence build/proof-evidence/swiftcore-projectsession.json + shellwindow.json, both newer than the cited sources): seed A007–A012 MATCHED (S213/S214 seeded session predicates + S227 chrome round-trip); fanout A015/A016/A020/A022–A024/A026 MATCHED (S215/S218/S219/S222); gating A030–A033 MATCHED (mounted S223/S224); hub A101/A102/A104/A120 MATCHED (change-notification-count ports S225/S226/S216/S217); all-hidden terminal A058 MATCHED (S203). PARTIAL: A019/A021/A025 (same-key sibling half at S222; origin-side tryCompare executes without a message anchor), A053–A055 (origin retention half at S220; sibling-tab page/height mirror unproved), A105–A107 (drawer-chrome half at S216/S221; lane members unproved), A117–A119 (value-silence half at S217; signal counts unproved), A160 (persist legs at S216/S228; sibling lane mirror and combined load-vs-live unproved). RETIRED-REPRESENTATION with fork evidence at the Reference revision: fixture guards A001/A013/A029/A037/A049/A056, QAction shortcut/objectName/context A002–A006, pointer identity/stability A069–A072/A082–A085, band-focus setter A038, focusWidget A047/A048/A061/A062/A065/A066, workspace-selection/band-focus Qt plumbing A059/A060/A063/A064. GAP kept: A014/A057 (no hide-all cross-tab journey), A017/A018/A027/A028 (no A/P active-page predicate), A034–A036 (menu re-enablement unobserved), A039/A040/A042/A043 (QAction-trigger delivery; hide-voice/velocity journeys absent), A103/A111–A114 (no hub/lane-range count predicates), A108–A110/A115/A116/A121–A154 reform (lane identity/remap; deferred to the document engine-track remap ingress), A156–A159/A161–A171 (lane-mutation fanout and doc-purity unproved), A173–A183 (rejected remap incl. A182–A183 with no Swift remapEngineTracks method), A094–A099 (no-workspace edit commands; the mounted no-workspace predicate covers drawer ids only), A087–A091 (no explicit unbind seam), A122 (track-count guard). The move-undo remap publication (S206) stays model-level with SMF byte equality unproved; A143 and A154 stay PARTIAL on the save-lifecycle dirty predicates (S030, S057, S060–S063) with the Qt undo-stack dirtiness wiring unproved.
@@ -678,40 +680,40 @@ Disposition: MATCHED
 Mapping: S191
 
 A087 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:254
-Disposition: GAP
-Mapping/reason: No rebind(null) seam exists in the Swift app, so the unbound-with-selection state is unreachable and no predicate observes a null target after an explicit unbind; the missing seam is named here, not silently dropped. No QWidget layer exists in the Swift app.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S324; Swift has no rebind(null) seam, so the fork state with a live selection and explicitly unbound target is unreachable. Refusal guards: ShellPresenter.swift:247-249, EditorCommandRouter.swift:97-103, ApplicationSession.swift:203-206; sprint-3.md:48-51 rules Swift-guarded fork states RETIRED-REPRESENTATION.
 Source context since previous assertion:
         window.m_editActions->rebind(nullptr);
 Original expression:
         QVERIFY(!window.m_editActions->target())
 
 A088 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:255
-Disposition: GAP
-Mapping/reason: The unbound enablement state is unreachable without the explicit rebind seam (see A087); no predicate observes Copy disabled by an explicit unbind. Missing behavior named here, not silently dropped. No QWidget layer exists in the Swift app.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S325; Swift has no rebind(null) seam, so the fork state with a live selection and explicitly unbound target is unreachable. Refusal guards: ShellPresenter.swift:247-249, EditorCommandRouter.swift:97-103, ApplicationSession.swift:203-206; sprint-3.md:48-51 rules Swift-guarded fork states RETIRED-REPRESENTATION.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(!copy->isEnabled())
 
 A089 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:256
-Disposition: GAP
-Mapping/reason: The unbound enablement state is unreachable without the explicit rebind seam (see A087); no predicate observes Solo disabled by an explicit unbind. Missing behavior named here, not silently dropped. No QWidget layer exists in the Swift app.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S326; Swift has no rebind(null) seam, so the fork state with a live selection and explicitly unbound target is unreachable. Refusal guards: ShellPresenter.swift:247-249, EditorCommandRouter.swift:97-103, ApplicationSession.swift:203-206; sprint-3.md:48-51 rules Swift-guarded fork states RETIRED-REPRESENTATION.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(!solo->isEnabled())
 
 A090 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:257
-Disposition: GAP
-Mapping/reason: Unreachable without the explicit rebind seam (see A087); the Time-menu Insert Time row exists and is matched at A077, but nothing in the Swift app unbinds the command set, so no predicate observes Insert Time disabled by an explicit unbind. Missing behavior named here, not silently dropped. No QWidget layer exists in the Swift app.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S327; Swift has no rebind(null) seam, so the fork state with a live selection and explicitly unbound target is unreachable. Refusal guards: ShellPresenter.swift:247-249, EditorCommandRouter.swift:97-103, ApplicationSession.swift:203-206; sprint-3.md:48-51 rules Swift-guarded fork states RETIRED-REPRESENTATION.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(!insertTime->isEnabled())
 
 A091 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:258
-Disposition: GAP
-Mapping/reason: Unreachable without the explicit rebind seam (see A087); the Time-menu Delete Time row exists and is matched at A078, but nothing in the Swift app unbinds the command set, so no predicate observes Delete Time disabled by an explicit unbind. Missing behavior named here, not silently dropped. No QWidget layer exists in the Swift app.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S328; Swift has no rebind(null) seam, so the fork state with a live selection and explicitly unbound target is unreachable. Refusal guards: ShellPresenter.swift:247-249, EditorCommandRouter.swift:97-103, ApplicationSession.swift:203-206; sprint-3.md:48-51 rules Swift-guarded fork states RETIRED-REPRESENTATION.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -2628,3 +2630,18 @@ Anchor: message "A182 duplicate track destinations reject the pure complete-valu
 
 S323 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
 Anchor: message "A183 rejected pure remap preserves every original editor-value member"
+
+S324 | runEditRoutingChecks | src/checks/workspace/session_edit_routing.swift
+Anchor: message "an empty tab strip has no document-bound command router"
+
+S325 | runEditRoutingChecks | src/checks/workspace/session_edit_routing.swift
+Anchor: message "the empty shell disables Copy"
+
+S326 | runEditRoutingChecks | src/checks/workspace/session_edit_routing.swift
+Anchor: message "the empty shell disables Solo Tracks"
+
+S327 | runEditRoutingChecks | src/checks/workspace/session_edit_routing.swift
+Anchor: message "the empty shell disables Insert Time"
+
+S328 | runEditRoutingChecks | src/checks/workspace/session_edit_routing.swift
+Anchor: message "the empty shell disables Delete Time"
