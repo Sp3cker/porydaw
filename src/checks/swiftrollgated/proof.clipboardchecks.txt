@@ -1385,10 +1385,7 @@ Anchor: message "document shrink privately reconciles extent and reclamps horizo
         cppID: viewportID, message: "document shrink privately reconciles extent and reclamps horizontal scroll")
 
 S023 | checkProjection | src/checks/rollcheck/EditorGridProjectionChecks.swift
-Anchor: message "generated time marks stay inside the one-viewport culling window"
-    report.expect(
-        !markXs.isEmpty && markXs.allSatisfy { $0 >= -cullingWidth - 2 && $0 <= 2 * cullingWidth + 2 },
-        cppID: projectionID, message: "generated time marks stay inside the one-viewport culling window")
+Anchor: message "generated time marks are published once in content order independent of the camera"
 
 S024 | checkProjection | src/checks/rollcheck/EditorGridProjectionChecks.swift
 Anchor: message "generated time marks cover the visible plot"

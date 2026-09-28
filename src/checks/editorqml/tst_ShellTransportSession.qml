@@ -1,5 +1,6 @@
 import QtQuick
 import QtTest
+import "RollNoteFaces.js" as RollNoteFaces
 
 ShellTransportSupport {
 
@@ -495,10 +496,10 @@ ShellTransportSupport {
         }, 3000), "a real roll draw commits a new note while the selected song plays")
         compare(session.documentDirty, true, "the mounted live note edit dirties its selected tab")
         compare(bar.presenter.state, 3, "mounted roll draw cannot stop playback")
-        var item = findChild(surface, "gridNote_" + added.id)
-        verify(item && item.visible, "the newly drawn note paints a movable face")
+        var item = RollNoteFaces.rect(findChild(surface, "timelineRendererPlot"), roll, added.id)
+        verify(item !== null, "the newly drawn note paints a movable face")
         var pxPerTick = grid.beatWidth / grid.ticksPerBeat
-        var centerX = item.mapToItem(roll, item.width / 2, item.height / 2).x
+        var centerX = item.x + item.width / 2
         var centerY = (127 - added.pitch + 0.5) * grid.rowHeight - grid.cameraScrollY
         var dx = grid.snapTicks * pxPerTick
         verify(centerX > 1 && centerX + dx < roll.width - 1 && centerY > grid.rowHeight

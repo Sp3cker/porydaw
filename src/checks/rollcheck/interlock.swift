@@ -53,8 +53,8 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
     }
     let grid = PianoGrid(session: session)
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
-    guard let a = interlockRect(seeded[0], grid: grid),
-          let b = interlockRect(seeded[1], grid: grid),
+    guard let a = selectionRect(seeded[0], grid: grid),
+        let b = selectionRect(seeded[1], grid: grid),
           let beforeSlot = try? session.document.captureSave().bytes else {
         report.fail(id, "gesture-interlock notes were not projected or serialized")
         return
@@ -64,14 +64,10 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
     let bandX = max(ax, bx) + 4, bandY = max(ay, by) + 4
     let beyondBX = bx + (bx < ax ? -4.0 : 4.0)
     let beyondAX = ax + (ax < bx ? -4.0 : 4.0)
-    let dpr = grid.devicePixelRatio
-    let scrollX = floor(grid.cameraScrollX * dpr + 0.5) / dpr
-    let scrollY = floor(grid.cameraScrollY * dpr + 0.5) / dpr
+    let boxes = rollNoteRects(grid)
     let freeX = [400.0, 500, 550, 600].first { x in
-        !(0..<grid.scene.pianoNoteFills.count).contains { index in
-            let rect = grid.scene.pianoNoteFills[index]
-            return rect.x - scrollX <= x && x < rect.x - scrollX + rect.width &&
-                rect.y - scrollY <= ay && ay < rect.y - scrollY + rect.height
+        !boxes.contains { rect in
+            rect.x <= x && x < rect.x + rect.width && rect.y <= ay && ay < rect.y + rect.height
         }
     }
     report.expect(freeX != nil, cppID: id, message: "A002 free draw cell exists")
@@ -177,12 +173,12 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
                 bAuditioned = true
             }
         }
-        grid.updateRightPointer(x: bx + 1, y: by + 1)
+        grid.updateRightPointer(x: bx + 1, y: by + 1, modifiers: 0x0400_0000)
         grid.onAudition = nil
         report.expect(bAuditioned, cppID: id,
                       message: "A011 live right Band auditions B above zero velocity")
-        grid.updateRightPointer(x: beyondAX, y: ay + 4)
-        grid.endRightPointer(x: beyondAX, y: ay + 4)
+        grid.updateRightPointer(x: beyondAX, y: ay + 4, modifiers: 0x0400_0000)
+        grid.endRightPointer(x: beyondAX, y: ay + 4, modifiers: 0x0400_0000)
         report.expect(containsAB(), cppID: id,
                       message: "A012 deferred Ctrl click retains Band token through release")
         report.expect(unchanged(before), cppID: id,
@@ -212,18 +208,4 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
                   message: "A019 all five interlocks preserve the slot undo index")
     report.expect((try? session.document.captureSave().bytes) == beforeSlot, cppID: id,
                   message: "A020 all five interlocks preserve slot MIDI bytes")
-}
-
-@MainActor
-private func interlockRect(_ id: NoteID, grid: PianoGrid) -> SceneRect? {
-    let model = grid.scene.pianoNoteFills
-    for index in 0..<model.count where model[index].primitiveName == "gridNote_\(id.rawValue)" {
-        let rect = model[index]
-        let dpr = grid.devicePixelRatio
-        return SceneRect(x: rect.x - floor(grid.cameraScrollX * dpr + 0.5) / dpr,
-                         y: rect.y - floor(grid.cameraScrollY * dpr + 0.5) / dpr,
-                         width: rect.width, height: rect.height,
-                         fillColor: rect.fillColor, primitiveName: rect.primitiveName)
-    }
-    return nil
 }

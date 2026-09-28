@@ -63,8 +63,9 @@ func runOtherEventsBandChecks(_ report: CheckReport) {
     let camera = EditorCamera(ticksPerBeat: 24, lengthTicks: 48,
                               viewportWidth: base * 12, rollHeight: base * 12, limits: limits)
     let palette = GridPalette()
-    let markers = OtherEventsStrip.markers(items: strip, camera: camera, plotWidth: base * 12,
-                                            baseFontPx: base, palette: palette)
+    let markers = OtherEventsStrip.markers(
+        items: strip, pixelsPerTick: camera.pixelsPerTick,
+        palette: palette)
     let fileMarker = markers.first { $0.track == -1 }
     report.expect(markers.count == strip.count, cppID: "swiftcore/OtherEventsBand::markers",
                   message: "every strip event inside the camera viewport has a marker")
@@ -78,12 +79,6 @@ func runOtherEventsBandChecks(_ report: CheckReport) {
     report.expect(markers.contains { $0.track == 0 && $0.color == PaletteMath.trackIdentityFills[0] },
                   cppID: "swiftcore/OtherEventsBand::markers",
                   message: "track markers use the stable track-identity fill")
-    let narrow = OtherEventsStrip.markers(items: strip, camera: camera,
-                                          plotWidth: camera.contentX(tick: 24) / 2,
-                                          baseFontPx: 13, palette: palette)
-    report.expect(!narrow.contains { $0.tick == 24 },
-                  cppID: "swiftcore/OtherEventsBand::markers",
-                  message: "markers beyond the plot width plus hit slop are culled")
     let lines = OtherEventsStrip.tooltipLines(items: strip, x: camera.contentX(tick: 24),
                                               camera: camera, baseFontPx: 13,
                                               sampleRate: timeline.sampleRate)
@@ -99,8 +94,7 @@ func runOtherEventsBandChecks(_ report: CheckReport) {
                   cppID: "swiftcore/OtherEventsBand::tooltip",
                   message: "more than twelve hovered events yield twelve lines followed by an ellipsis")
     let presenter = OtherEventsBandPresenter()
-    presenter.configure(session: nil, palette: palette, baseFontPx: 13, appFontLineSpacing: 17,
-                        plotWidth: 150)
+    presenter.configure(session: nil, palette: palette, baseFontPx: 13, appFontLineSpacing: 17)
     report.expect(presenter.labelCount == 0 && !presenter.toolTipVisible,
                   cppID: "swiftcore/OtherEventsBand::lifecycle",
                   message: "an unattached band has zero items and no tooltip")

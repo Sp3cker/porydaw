@@ -4,6 +4,7 @@ import PorydawApp
 import RollQmlCheck 1.0
 import Porydaw.Ui
 import "../editorqml/NativeWait.js" as NativeWait
+import "../editorqml/RollNoteFaces.js" as RollNoteFaces
 
 TestCase {
     id: testCase
@@ -156,14 +157,16 @@ TestCase {
         return total
     }
 
-    function noteItem(surf, id) { return findChild(surf, "gridNote_" + id) }
+    function noteItem(surf, id) {
+        return RollNoteFaces.rect(findChild(surf, "timelineRendererPlot"), rollInput(), id)
+    }
 
     function bandForNote(roll, surf, id) {
         var item = noteItem(surf, id)
         if (!item || item.width <= 0 || item.height <= 0)
             return null
-        var topLeft = item.mapToItem(roll, 0, 0)
-        var bottomRight = item.mapToItem(roll, item.width, item.height)
+        var topLeft = { x: item.x, y: item.y }
+        var bottomRight = { x: item.x + item.width, y: item.y + item.height }
         var sx = topLeft.x - 3
         var sy = topLeft.y - 3
         var ex = bottomRight.x + 3
@@ -190,8 +193,8 @@ TestCase {
             var item = noteItem(surf, list[i].id)
             if (!item || item.width <= 0 || item.height <= 0)
                 continue
-            var tl = item.mapToItem(roll, 0, 0)
-            var br = item.mapToItem(roll, item.width, item.height)
+            var tl = { x: item.x, y: item.y }
+            var br = { x: item.x + item.width, y: item.y + item.height }
             if (x >= tl.x - 4 && x <= br.x + 4 && y >= tl.y - 4 && y <= br.y + 4)
                 return true
         }
@@ -233,6 +236,7 @@ TestCase {
         var surf = surface()
         publishedNoteCount(g)
         verify(clearSelection(roll, surf, g), "the suite starts with nothing selected")
+        waitForRendering(testCase)
         var target = null
         var band = null
         for (var candidate of gridNotes(g)) {
@@ -248,7 +252,7 @@ TestCase {
         verify(target !== null, "a fully visible wide note takes a band")
         var item = noteItem(surf, target.id)
         band.ex = band.sx + (item.width + 6) / 2
-        var bordersBefore = g.scene.pianoNoteBordersAndSelection.rowCount()
+        var ringBefore = grabImage(testCase)
         sweepBand(roll, band)
         verify(waitForNative(function() {
             return g.statusText.indexOf("Selecting") !== -1
@@ -256,11 +260,18 @@ TestCase {
         var held = noteById(g, target.id)
         verify(held && !held.selected,
                "the band ring is provisional while committed selection stays empty")
-        verify(g.scene.pianoNoteBordersAndSelection.rowCount() > bordersBefore,
-               "the held band adds a provisional selection frame to the scene")
         waitForRendering(testCase)
+        var ringProbe = roll.mapToItem(testCase, item.x + item.width - 3, item.y + 0.25)
+        var ringDpr = ringBefore.width / testCase.width
+        var ringX = Math.floor(ringProbe.x * ringDpr)
+        var ringY = Math.floor(ringProbe.y * ringDpr)
+        var ringAfter = grabImage(testCase)
+        verify(ringAfter.red(ringX, ringY) !== ringBefore.red(ringX, ringY)
+               || ringAfter.green(ringX, ringY) !== ringBefore.green(ringX, ringY)
+               || ringAfter.blue(ringX, ringY) !== ringBefore.blue(ringX, ringY),
+               "the held band adds a provisional selection frame to the scene")
         var image = grabImage(testCase)
-        var center = item.mapToItem(testCase, item.width - 3, 0.25)
+        var center = roll.mapToItem(testCase, item.x + item.width - 3, item.y + 0.25)
         var dpr = image.width / testCase.width
         var px = Math.floor(center.x * dpr)
         var py = Math.floor(center.y * dpr)
@@ -328,13 +339,14 @@ TestCase {
             var item = noteItem(surf, list[i].id)
             if (!item || item.width < 16 || item.height <= 0)
                 continue
-            var center = item.mapToItem(roll, item.width / 2, item.height / 2)
+            var center = Qt.point(item.x + item.width / 2, item.y + item.height / 2)
             if (center.x < 8 || center.y < 8
                     || center.x > roll.width - 8 || center.y > roll.height - 8)
                 continue
-            var edge = item.mapToItem(roll, item.width - 1, item.height / 2)
+            var edge = Qt.point(item.x + item.width - 1, item.y + item.height / 2)
             mouseMove(roll, edge.x, edge.y)
-            if (!waitForNative(function() { return g.cursorKind === 3 }, 3000))
+            wait(0)
+            if (g.cursorKind !== 3)
                 continue
             var cursor = findChild(surf, "swiftRollCursor")
             verify(cursor !== null, "the roll input carries its production cursor binding")
@@ -342,7 +354,7 @@ TestCase {
                 return roll.cursorShape === Qt.BitmapCursor
                     && String(cursor.source) === "qrc:/cursors/right-drag.png"
             }, 5000), "the right edge hover shows the right-drag cursor art")
-            var leftEdge = item.mapToItem(roll, 1, item.height / 2)
+            var leftEdge = Qt.point(item.x + 1, item.y + item.height / 2)
             mouseMove(roll, leftEdge.x, leftEdge.y)
             verify(waitForNative(function() {
                 return g.cursorKind === 2 && roll.cursorShape === Qt.BitmapCursor
@@ -364,7 +376,7 @@ TestCase {
         var source = firstBandedNote(g, surf, roll, false)
         verify(source !== null, "a rendered note can provide a pencil velocity")
         var item = noteItem(surf, source.id)
-        var center = item.mapToItem(roll, item.width / 2, item.height / 2)
+        var center = Qt.point(item.x + item.width / 2, item.y + item.height / 2)
         var initialVelocity = g.lastVelocity
         g.lastVelocity = source.velocity === 1 ? 127 : 1
         mouseClick(roll, center.x, center.y, Qt.LeftButton)
@@ -442,7 +454,7 @@ TestCase {
         waitForRendering(roll)
         var note = noteItem(surf, exception.id)
         verify(note !== null && note.width > 0, "the folded exception renders")
-        var center = note.mapToItem(roll, note.width / 2, note.height / 2)
+        var center = Qt.point(note.x + note.width / 2, note.y + note.height / 2)
         var stableRows = g.visibleRowCount
         mousePress(roll, center.x, center.y, Qt.LeftButton)
         mouseMove(roll, center.x, center.y - g.rowHeight, -1, Qt.LeftButton)
@@ -482,7 +494,8 @@ TestCase {
             var narrowItem = noteItem(surf, narrowList[n].id)
             if (!narrowItem || narrowItem.width <= 0 || narrowItem.height <= 0)
                 continue
-            var narrowCenter = narrowItem.mapToItem(roll, narrowItem.width / 2, narrowItem.height / 2)
+            var narrowCenter = Qt.point(narrowItem.x + narrowItem.width / 2,
+                                        narrowItem.y + narrowItem.height / 2)
             if (narrowCenter.x < 1 || narrowCenter.y < 1
                     || narrowCenter.x > roll.width - 1 || narrowCenter.y > roll.height - 1)
                 continue

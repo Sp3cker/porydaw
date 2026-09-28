@@ -38,7 +38,8 @@ extension VelocityPage {
         refreshAxisAndHandles(snapshot)
         publishGrid(snapshot)
         publishBands(snapshot)
-        publishTransient()
+        publishTransient(updateDrawing: false)
+        publishDrawingContent()
     }
 
     /// Reprojects only the x-dependent scene primitives for a horizontal camera
@@ -57,7 +58,7 @@ extension VelocityPage {
         syncRects(gridLines, VelocityScene.grid(input))
         syncRects(psgBands, VelocityScene.bands(
             input, axis: axis, projection: projection))
-        publishTransient()
+        publishTransient(updateDrawing: false)
     }
 
     /// Hover and detent changes republish the ruler and handle rows: a content
@@ -72,6 +73,7 @@ extension VelocityPage {
         publishHandles(built.handles)
         publishAxis(built.rows)
         publishReadout()
+        if snapshot == nil { publishDrawingContent() }
     }
 
     /// Applies one build's value axis to the page's published axis values.
@@ -249,8 +251,42 @@ extension VelocityPage {
         syncRects(psgBands, snapshot.bands)
     }
 
-    /// The gesture's transient rendering: the ramp line and the band reticle.
-    @QtIgnored func publishTransient() {
+    @QtIgnored func publishDrawingContent(rebuildBands: Bool = true) {
+        guard session != nil else { return }
+        let input = sceneInput(reuseGeometry: true)
+        guard let metrics = input.metrics, let grid = input.grid else { return }
+        if rebuildBands { drawingBands = VelocityScene.modelBands(input, axis: axis) }
+        let data = DrawerStaticsContent.pack(
+            axis: metrics.timeAxis, grid: grid, baseFontPx: baseFontPx,
+            palette: input.palette, bands: drawingBands,
+            transient: drawingTransientRects())
+        guard drawingContentData != data else { return }
+        drawingContentData = data
+        contentRevision &+= 1
+    }
+
+    private func drawingTransientRects()
+        -> (fill: DrawerStaticRect, frame: DrawerStaticRect)?
+    {
+        guard let gesture, gesture.kind == .band || gesture.kind == .pendingBand,
+            let camera = session?.camera
+        else { return nil }
+        let minX = min(gesture.pressX, gesture.bandX)
+        let maxX = max(gesture.pressX, gesture.bandX)
+        let left = TimeDefaults.tick(from: (minX / camera.snapshot.pixelsPerTick).rounded())
+        let right = TimeDefaults.tick(from: (maxX / camera.snapshot.pixelsPerTick).rounded())
+        let y = Float(min(gesture.pressY, gesture.bandY))
+        let height = Float(abs(gesture.bandY - gesture.pressY))
+        let fill = DrawerStaticRect(
+            tickStart: left, tickEnd: right, y: y, height: height,
+            argb: SceneRectPacking.argb(palette.selectionFill))
+        let frame = DrawerStaticRect(
+            tickStart: left, tickEnd: right, y: y, height: height,
+            argb: SceneRectPacking.argb(palette.selectionEdge), flags: 4)
+        return (fill, frame)
+    }
+
+    @QtIgnored func publishTransient(updateDrawing: Bool = true) {
         var rects: [SceneRect] = []
         setPublished(&rampVisible, false)
         setPublished(&rampLength, 0)
@@ -300,6 +336,7 @@ extension VelocityPage {
         }
         syncRects(transientRects, rects)
         publishReadout()
+        if updateDrawing { publishDrawingContent(rebuildBands: false) }
     }
 
     /// The readout: the hovered or dragged value plus the selection count. An

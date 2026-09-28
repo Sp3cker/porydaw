@@ -1,5 +1,6 @@
 import QtQuick
 import QtTest
+import "RollNoteFaces.js" as RollNoteFaces
 
 ShellGridInputSupport {
     function test_escapeCancel() {
@@ -27,9 +28,8 @@ ShellGridInputSupport {
             return grid.fetchNoteSummary() === before
         }, 5000), "Escape cancels the band without a document edit")
         compare(grid.lastCancelReason, beforeReason, "band Escape leaves the host cancel reason untouched")
-        var idleItem = findChild(surface, "gridNote_" + target.id)
-        verify(idleItem !== null, "the idle note still renders")
-        var center = idleItem.mapToItem(roll, idleItem.width / 2, idleItem.height / 2)
+        var center = RollNoteFaces.center(findChild(surface, "timelineRendererPlot"), roll, target.id)
+        verify(center !== null, "the idle note still renders")
         mouseClick(roll, center.x, center.y, Qt.LeftButton)
         verify(waitForNative(function() {
             var current = noteById(grid, target.id)

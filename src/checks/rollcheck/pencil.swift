@@ -323,12 +323,8 @@ private func checkPencilAbuttingNotes(_ report: CheckReport, session: DocumentSe
         return
     }
     grid.refreshFromSession()
-    let left = (0..<grid.scene.pianoNoteFills.count)
-        .map { grid.scene.pianoNoteFills[$0] }
-        .first { $0.primitiveName == "gridNote_\(note.id.rawValue)" }
-    let right = (0..<grid.scene.pianoNoteFills.count)
-        .map { grid.scene.pianoNoteFills[$0] }
-        .first { $0.primitiveName == "gridNote_\(added[0].rawValue)" }
+    let left = selectionRect(note.id, grid: grid)
+    let right = selectionRect(added[0], grid: grid)
     report.expect(left != nil && right != nil
                       && session.document.notes(in: grid.trackIndex).contains {
                           $0.id == added[0] && $0.tick == nextTick && $0.pitch == note.pitch
@@ -398,10 +394,11 @@ private func checkPointerDrawCancellation(_ report: CheckReport, session: Docume
         let revision = session.document.revision
         grid.beginPointer(x: cell.x, y: cell.y, modifiers: 0)
         grid.updatePointer(x: cell.x + 20, y: cell.y)
-        let preview = grid.scene.pianoDrawPreviewFill.count > 0
+        let preview = RollContentProbe(grid.scene).drawPreview.active
         grid.inputCancelled(reason: reason.rawValue)
         grid.endPointer(x: cell.x + 20, y: cell.y)
-        report.expect(preview && grid.scene.pianoDrawPreviewFill.count == 0
+        report.expect(
+            preview && !RollContentProbe(grid.scene).drawPreview.active
                           && !grid.interactionActive && grid.lastCancelReason == reason.rawValue
                           && session.document.revision == revision,
                       cppID: id,
@@ -415,9 +412,6 @@ private func checkDrawLatchAndCancel(_ report: CheckReport, session: DocumentSes
     let id = "swiftcore/EditorGridCamera::drawLatchAndCancel"
     let grid = makeCameraGrid(session: session)
     let snap = max(1, grid.snapTicks)
-    let dpr = grid.devicePixelRatio
-    let scrollX = floor(grid.cameraScrollX * dpr + 0.5) / dpr
-    let scrollY = floor(grid.cameraScrollY * dpr + 0.5) / dpr
     func emptyCell() -> (x: Double, y: Double, tick: Int, pitch: Int)? {
         for candidateY in [250.0, 200.0, 150.0, 100.0, 50.0] {
             guard let pitch = session.camera.projection.pitch(
@@ -428,11 +422,9 @@ private func checkDrawLatchAndCancel(_ report: CheckReport, session: DocumentSes
                 let tick = Int(session.camera.tickAtContentX(candidateX)) / snap * snap
                 let x = session.camera.displayX(
                     tick: Double(tick), origin: 0, dpr: grid.devicePixelRatio)
-                let occupied = (0..<grid.scene.pianoNoteFills.count).contains { index in
-                    let rect = grid.scene.pianoNoteFills[index]
-                    return rect.x - scrollX < x + 20 && rect.x - scrollX + rect.width > x
-                        && rect.y - scrollY <= candidateY
-                        && rect.y - scrollY + rect.height >= candidateY
+                let occupied = rollNoteRects(grid).contains { rect in
+                    rect.x < x + 20 && rect.x + rect.width > x
+                        && rect.y <= candidateY && rect.y + rect.height >= candidateY
                 }
                 if !occupied { return (x, candidateY, tick, pitch) }
             }
@@ -477,14 +469,13 @@ private func checkDrawLatchAndCancel(_ report: CheckReport, session: DocumentSes
     // Cancel reasons: a live move gesture cancelled by ungrab, focus loss,
     // window deactivation, or hiding commits nothing and records the reason.
     guard let target = session.document.notes(in: grid.trackIndex).first,
-          let targetRect = firstRect(
-              named: "gridNote_\(target.id.rawValue)", in: grid.scene.pianoNoteFills)
+        let targetRect = selectionRect(target.id, grid: grid)
     else {
         report.fail(id, "cancel fixture exposes no projected note")
         return
     }
-    let pressX = targetRect.x - scrollX + targetRect.width / 2
-    let pressY = targetRect.y - scrollY + targetRect.height / 2
+    let pressX = targetRect.x + targetRect.width / 2
+    let pressY = targetRect.y + targetRect.height / 2
     let dragX = Double(snap) * session.camera.snapshot.pixelsPerTick
     for reason in [GridCancelReason.pointerUngrabbed, .focusLost,
                    .windowDeactivated, .hidden] {

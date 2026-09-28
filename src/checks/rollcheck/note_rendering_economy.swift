@@ -27,42 +27,41 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
         report.fail(id, "projection economy fixture has no projected box")
         return
     }
-    func fillSnapshot() -> [String] {
-        (0..<grid.scene.pianoNoteFills.count).map { index in
-            let rect = grid.scene.pianoNoteFills[index]
-            return "\(rect.primitiveName)|\(rect.x)|\(rect.y)"
-                + "|\(rect.width)|\(rect.height)|\(rect.fillColor)"
-        }
+    let scene = grid.scene
+    func fills() -> [UInt64: UInt32] {
+        Dictionary(
+            RollContentProbe(scene).notes.map { ($0.id, $0.fillArgb) },
+            uniquingKeysWith: { first, _ in first })
     }
-    let ring = 3.0 / grid.devicePixelRatio
+    func untouched(since revision: Int, content: Data) -> Bool {
+        scene.contentRevision == revision && scene.drawingContent() == content
+    }
     session.clearSelectedNotes()
     grid.refreshCamera()
-    grid.scene.boxesProjected = 0
-    grid.scene.fillWrites = 0
-    let fillsBefore = fillSnapshot()
+    let fillsBefore = fills()
+    let revisionBefore = scene.contentRevision
     let summaryBefore = grid.fetchNoteSummary()
     session.setSelectedNotes([noteID])
     grid.refreshCamera()
-    report.expect(fillSnapshot() == fillsBefore
-                      && grid.scene.boxesProjected == 0 && grid.scene.fillWrites == 0,
+    report.expect(
+        fills() == fillsBefore && scene.contentRevision == revisionBefore + 1,
                   cppID: id,
-                  message: "a selection-only refresh reuses the published fills with no box or fill work")
-    report.expect(hasFrame(grid.scene.pianoNoteBordersAndSelection, box: box, inset: 0,
-                           thickness: ring, color: grid.palette.selectionRing),
+        message: "a selection-only refresh repacks the content once with unchanged fills")
+    report.expect(
+        RollContentProbe(scene).note(noteID)?.selected == true,
                   cppID: id,
                   message: "a selection-only refresh still republishes the selection ring")
     report.expect(grid.fetchNoteSummary() != summaryBefore,
                   cppID: id,
                   message: "a selection-content change is visible in the pulled note summary")
-    grid.scene.boxesProjected = 0
-    grid.scene.fillWrites = 0
-    let fillsSelected = fillSnapshot()
+    let revisionSelected = scene.contentRevision
+    let contentSelected = scene.drawingContent()
     let summarySelected = grid.fetchNoteSummary()
     let hoverPoint = viewportPoint(grid, x: box.x, y: box.y + box.h / 2)
     grid.updateHover(x: 4, y: hoverPoint.y)
     grid.refreshCamera()
-    report.expect(fillSnapshot() == fillsSelected
-                      && grid.scene.boxesProjected == 0 && grid.scene.fillWrites == 0,
+    report.expect(
+        untouched(since: revisionSelected, content: contentSelected),
                   cppID: id,
                   message: "a hover-only refresh reuses the published fills with no box or fill work")
     report.expect(grid.fetchNoteSummary() == summarySelected,
@@ -71,9 +70,8 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
     grid.clearKeyboardHover()
     session.clearSelectedNotes()
     grid.refreshCamera()
-    grid.scene.boxesProjected = 0
-    grid.scene.fillWrites = 0
-    let fillsPlain = fillSnapshot()
+    let fillsPlain = fills()
+    let revisionPlain = scene.contentRevision
     let summaryPlain = grid.fetchNoteSummary()
     let startTick = Tick(max(0, Int(note.tick) - 2))
     let endTick = Tick(Int(note.tick) + Int(note.duration) + 2)
@@ -81,21 +79,21 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
         range: TimeRange(startTick: startTick, endTick: endTick),
         scope: .tracks([grid.trackIndex])))
     grid.refreshCamera()
-    report.expect(fillSnapshot() == fillsPlain
-                      && grid.scene.boxesProjected == 0 && grid.scene.fillWrites == 0,
+    report.expect(
+        fills() == fillsPlain && scene.contentRevision == revisionPlain + 1,
                   cppID: id,
-                  message: "a highlight-only refresh reuses the published fills with no box or fill work")
+        message: "a highlight-only refresh repacks the content once with unchanged fills")
     report.expect(grid.fetchNoteSummary() == summaryPlain,
                   cppID: id,
                   message: "a highlight-only refresh leaves the pulled note summary byte-identical")
-    report.expect(hasFrame(grid.scene.pianoNoteBordersAndSelection, box: box, inset: 0,
-                           thickness: ring, color: grid.palette.selectionRing),
+    report.expect(
+        RollContentProbe(scene).note(noteID)?.timeCovered == true,
                   cppID: id,
                   message: "a highlight-only refresh still rings the time-covered note")
     session.clearTimeSelection()
-    grid.scene.boxesProjected = 0
-    grid.scene.fillWrites = 0
-    let fillsBeforeScroll = fillSnapshot()
+    grid.refreshCamera()
+    let revisionBeforeScroll = scene.contentRevision
+    let contentBeforeScroll = scene.drawingContent()
     let summaryBeforeScroll = grid.fetchNoteSummary()
     let scrolledX = session.camera.snapshot.scrollX
     session.mutateCamera { _ = $0.scrollByPx(10) }
@@ -104,14 +102,18 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
         return
     }
     grid.refreshCamera()
-    let publishedNote = firstNoteRect(named: "gridNote_\(noteID.rawValue)",
-                                      in: grid.scene.pianoNoteFills)
+    let record = RollContentProbe(scene).note(noteID)
+    let contentBox = record.flatMap {
+        contentNoteBox(
+            grid, session: session, tick: $0.tick, end: $0.tick + $0.duration,
+            pitch: $0.pitch)
+    }
     let cameraBox = grid.projectedNoteBox(
         tick: Int(note.tick), end: Int(note.tick + note.duration),
         pitch: Int(note.pitch))
     let matchesCamera: Bool
-    if let publishedNote, let cameraBox {
-        let viewport = viewportPoint(grid, x: publishedNote.x, y: publishedNote.y)
+    if let contentBox, let cameraBox, grid.cameraScrollX == session.camera.snapshot.scrollX {
+        let viewport = viewportPoint(grid, x: contentBox.x, y: contentBox.y)
         matchesCamera = renderingNear(viewport.x, cameraBox.x)
             && renderingNear(viewport.y, cameraBox.y)
     } else {
@@ -119,13 +121,25 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
     }
     report.expect(matchesCamera, cppID: id,
                   message: "the camera-translated note position matches the projected viewport position")
-    report.expect(fillSnapshot() == fillsBeforeScroll
-                      && grid.scene.boxesProjected == 0 && grid.scene.fillWrites == 0,
+    report.expect(
+        untouched(since: revisionBeforeScroll, content: contentBeforeScroll),
                   cppID: id,
                   message: "an in-window camera scroll republishes no note boxes or fills")
     report.expect(grid.fetchNoteSummary() == summaryBeforeScroll,
                   cppID: id,
                   message: "a camera-only refresh leaves the pulled note summary byte-identical")
+    _ = session.mutateCamera { _ = $0.setTimeZoom(70) }
+    grid.refreshCamera()
+    report.expect(
+        untouched(since: revisionBeforeScroll, content: contentBeforeScroll),
+        cppID: id,
+        message: "a camera zoom leaves the content revision and blob untouched")
+    session.mutateCamera { _ = $0.setKeyHeight(20) }
+    grid.refreshCamera()
+    report.expect(
+        untouched(since: revisionBeforeScroll, content: contentBeforeScroll),
+        cppID: id,
+        message: "a key-height change leaves the content revision and blob untouched")
 }
 
 @MainActor

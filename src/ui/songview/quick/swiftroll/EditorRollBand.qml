@@ -54,16 +54,6 @@ Item {
                 width: root.gridModel.keyboardWidth
                 height: Math.max(parent.height - y, 0)
                 clip: true
-
-                Item {
-                    id: gutterContent
-                    y: -Math.round(root.scrollY
-                                   * root.gridModel.devicePixelRatio)
-                       / root.gridModel.devicePixelRatio
-                    width: parent.width
-                    height: parent.height
-                }
-
                 MouseArea {
                     id: gutterInput
                     anchors.fill: parent
@@ -120,19 +110,6 @@ Item {
 
                 onWidthChanged: root.configureViewport()
                 onHeightChanged: root.configureViewport()
-
-                Item {
-                    id: plotContent
-                    x: -Math.round(root.scrollX
-                                   * root.gridModel.devicePixelRatio)
-                       / root.gridModel.devicePixelRatio
-                    y: -Math.round(root.scrollY
-                                   * root.gridModel.devicePixelRatio)
-                       / root.gridModel.devicePixelRatio
-                    width: parent.width
-                    height: parent.height
-                }
-
                 Item {
                     id: pianoGridSurface
                     objectName: "pianoGridSurface"
@@ -140,10 +117,8 @@ Item {
 
                     PianoRollCanvas {
                         bandSide: rollContentBand
-                        gutterContentSide: gutterContent
-                        plotContentSide: plotContent
                         plotSide: pianoGridSurface
-                        timelineScene: root.gridModel.scene
+                        gridModel: root.gridModel
                     }
 
                     MouseArea {
@@ -193,7 +168,7 @@ Item {
                                     timeMenuPressHandled = root.rulerMenu.menuKind === 2
                                     root.timeMenuFocus = timeMenuPressHandled
                                     if (!timeMenuPressHandled)
-                                        root.gridModel.beginRightPointer(mouse.x, mouse.y)
+                                        root.gridModel.beginRightPointer(mouse.x, mouse.y, mouse.modifiers)
                                 }
                             }
                             else
@@ -217,7 +192,7 @@ Item {
                                 if (rightSweepActive)
                                     root.rulerMenu.endSweep(mouse.x, mouse.y)
                                 else if (!timeMenuPressHandled)
-                                    root.gridModel.endRightPointer(mouse.x, mouse.y)
+                                    root.gridModel.endRightPointer(mouse.x, mouse.y, mouse.modifiers)
                                 rightSweepActive = false
                                 timeMenuPressHandled = false
                             }
@@ -247,7 +222,7 @@ Item {
                                     if (rollInput.rightSweepActive)
                                         root.rulerMenu.updateSweep(x, y)
                                     else if (!rollInput.timeMenuPressHandled)
-                                        root.gridModel.updateRightPointer(x, y)
+                                        root.gridModel.updateRightPointer(x, y, modifiers)
                                 }
                                 else if (buttons & Qt.LeftButton)
                                     root.gridModel.updatePointer(x, y, modifiers)

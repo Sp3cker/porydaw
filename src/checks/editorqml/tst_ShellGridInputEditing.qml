@@ -1,5 +1,6 @@
 import QtQuick
 import QtTest
+import "RollNoteFaces.js" as RollNoteFaces
 
 ShellGridInputSupport {
     function test_drawMoveNeighborTrim() {
@@ -65,10 +66,9 @@ ShellGridInputSupport {
                 && trimmed.duration === 3 * snap
         }, 5000), "body drag moves one note and trims its neighbor")
 
-        var rendered = findChild(surface, "gridNote_" + movingId)
-        verify(rendered !== null && rendered.visible, "the moved note keeps its rendered face")
+        var actual = RollNoteFaces.center(findChild(surface, "timelineRendererPlot"), roll, movingId)
+        verify(actual !== null, "the moved note keeps its rendered face")
         var expected = pointFor(grid, tick + 3 * snap, pitch)
-        var actual = rendered.mapToItem(roll, rendered.width / 2, rendered.height / 2)
         verify(Math.abs(actual.x - (expected.x + snap)) < grid.beatWidth,
               "the rendered face follows the moved tick (x=" + actual.x + " expected~" + expected.x + ")")
     }
@@ -110,13 +110,12 @@ ShellGridInputSupport {
             return leadingId !== 0
         }, 5000), "leading note is drawn")
 
-        var trailingFace = findChild(surface, "gridNote_" + trailingId)
-        var trailingCenter = trailingFace.mapToItem(
-            roll, trailingFace.width / 2, trailingFace.height / 2)
+        var renderer = findChild(surface, "timelineRendererPlot")
+        var trailingCenter = RollNoteFaces.center(renderer, roll, trailingId)
         mouseClick(roll, trailingCenter.x, trailingCenter.y, Qt.LeftButton)
-        var leadingFace = findChild(surface, "gridNote_" + leadingId)
-        var leadingEdge = leadingFace.mapToItem(
-            roll, leadingFace.width - 1, leadingFace.height / 2)
+        var leadingFace = RollNoteFaces.rect(renderer, roll, leadingId)
+        var leadingEdge = Qt.point(leadingFace.x + leadingFace.width - 1,
+                                   leadingFace.y + leadingFace.height / 2)
         mousePress(roll, leadingEdge.x, leadingEdge.y, Qt.LeftButton, Qt.ControlModifier)
         mouseRelease(roll, leadingEdge.x, leadingEdge.y, Qt.LeftButton, Qt.ControlModifier)
         verify(noteById(grid, trailingId).selected && noteById(grid, leadingId).selected,
@@ -187,20 +186,21 @@ ShellGridInputSupport {
             }
             return addedId !== 0
         }, 5000), "left drag adds one document note")
-        verify(findChild(surface, "gridNote_" + addedId) !== null, "the added note renders")
+        var renderer = findChild(surface, "timelineRendererPlot")
+        verify(RollNoteFaces.face(renderer, addedId) !== null, "the added note renders")
 
         roll.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(roll, "activeFocus", true, 3000)
         keySequence(StandardKey.Undo)
         verify(waitForNative(function() {
             return grid.renderedNoteCount === baseline
-                && findChild(surface, "gridNote_" + addedId) === null
+                && RollNoteFaces.face(renderer, addedId) === null
         }, 5000), "Undo removes the added note and its face")
         keySequence(StandardKey.Redo)
         verify(waitForNative(function() {
             var restored = noteById(grid, addedId)
             return restored && restored.tick === addedTick && restored.duration === addedDuration
-                && findChild(surface, "gridNote_" + addedId) !== null
+                && RollNoteFaces.face(renderer, addedId) !== null
         }, 5000), "Redo restores the note and its face")
     }
 
@@ -246,11 +246,11 @@ ShellGridInputSupport {
                 && note.duration === 4 * snap
         })
         verify(target !== undefined && target.selected, "the band target is a selected document note")
-        var face = findChild(surface, "gridNote_" + target.id)
+        var face = RollNoteFaces.rect(findChild(surface, "timelineRendererPlot"), plot, target.id)
         verify(face !== null, "the band target renders a note face")
         var margin = grid.baseFontPx
-        var noteLeft = face.mapToItem(plot, 0, 0).x
-        var noteRight = face.mapToItem(plot, face.width, 0).x
+        var noteLeft = face.x
+        var noteRight = face.x + face.width
         var farX = Math.round(noteLeft - margin)
         var nearX = Math.round(noteRight + margin)
         var startX = Math.round(nearX + margin)

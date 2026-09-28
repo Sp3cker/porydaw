@@ -37,8 +37,6 @@ struct GridTypography {
     let beatHeight: Double
     let boldHeight: Double
     let chipHeight: Double
-    /// Occupied height (ascent + descent, i.e. QFontMetrics height) of the
-    /// fixed note-name face, for the padded row-height gate in NoteNameLabels.
     let noteNameOccupiedHeight: Double
     let noteValueOccupiedHeight: Double
     let noteValueVisible: Bool
@@ -125,8 +123,6 @@ struct GridTypography {
     func chipAdvance(_ text: String) -> Double { chipMetrics.advance(text) }
     func keyLabelAdvance(_ text: String) -> Double { keyLabelMetrics.advance(text) }
 
-    /// Advance of the pitch name in the fixed note-name face, for the
-    /// complete-name-plus-two-trailing-spaces fit rule in NoteNameLabels.
     func noteNameAdvance(pitch: Int) -> Double { noteNameWidths[pitch] }
     func noteValueAdvance(_ text: String) -> Double { noteValueMetrics.advance(text) }
 

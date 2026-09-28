@@ -251,9 +251,9 @@ ShellNoteVisualsSupport {
             if (notes[i].ghost)
                 continue
             var item = noteItem(context.fills, notes[i].id)
-            if (!item || !item.visible)
+            if (!item)
                 continue
-            var point = item.mapToItem(context.plot, 0, 0)
+            var point = context.fills.mapToItem(context.plot, item.x, item.y)
             if (point.x < 2 || point.y < 2
                     || point.x + item.width > context.plot.width - 2
                     || point.y + item.height > context.plot.height - 2)

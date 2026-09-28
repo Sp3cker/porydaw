@@ -5,6 +5,7 @@ import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
 import "NativeWait.js" as NativeWait
+import "RollNoteFaces.js" as RollNoteFaces
 
 TestCase {
     id: testCase
@@ -189,14 +190,12 @@ TestCase {
         var first = JSON.parse(grid.fetchNoteSummary()).find(function(note) {
             return note.selected && !note.ghost
         })
+        var renderer = findChild(surface, "timelineRendererPlot")
         var second = JSON.parse(grid.fetchNoteSummary()).find(function(note) {
-            var item = findChild(surface, "gridNote_" + note.id)
-            return !note.selected && !note.ghost && item && item.visible
-                   && item.width > 0 && item.height > 0
+            return !note.selected && !note.ghost && RollNoteFaces.face(renderer, note.id) !== null
         })
         verify(first && second, "two drawn roll notes are available for the key journey")
-        var target = findChild(surface, "gridNote_" + second.id)
-        var point = target.mapToItem(roll, target.width / 2, target.height / 2)
+        var point = RollNoteFaces.center(renderer, roll, second.id)
         mouseClick(roll, point.x, point.y, Qt.LeftButton, Qt.ShiftModifier)
         var pair = JSON.parse(grid.fetchNoteSummary()).filter(function(note) {
             return note.selected && (note.id === first.id || note.id === second.id)
@@ -211,25 +210,42 @@ TestCase {
     }
 
     function paintedTimeRange(surface, roll) {
-        var overlay = findChild(surface, "timelineQuickPianoOverlay")
-        if (!overlay)
+        var renderer = findChild(surface, "timelineRendererPlot")
+        if (!renderer || renderer.width <= 0 || renderer.height <= 0)
             return null
-        var fill = String(surface.gridModel.palette.selectionFill).toLowerCase()
-        for (var item of overlay.children) {
-            if (item.visible && item.color && String(item.color).toLowerCase() === fill
-                    && item.width > 0 && item.height >= roll.height) {
-                var point = item.mapToItem(roll, 0, 0)
-                return { start: point.x, end: point.x + item.width }
-            }
+        var edge = Qt.color(String(surface.gridModel.palette.selectionEdge))
+        var playheadOverlay = findChild(surface, "sharedPlayhead")
+        if (playheadOverlay)
+            playheadOverlay.visible = false
+        var image = RollNoteFaces.grab(testCase, renderer)
+        if (playheadOverlay)
+            playheadOverlay.visible = true
+        var dpr = image.width / renderer.width
+        var rows = [0.2, 0.5, 0.8].map(function(f) { return Math.floor(image.height * f) })
+        var first = -1
+        var last = -1
+        for (var x = 0; x < image.width; ++x) {
+            var column = rows.every(function(y) {
+                return Math.abs(image.red(x, y) - edge.r * 255) <= 16
+                    && Math.abs(image.green(x, y) - edge.g * 255) <= 16
+                    && Math.abs(image.blue(x, y) - edge.b * 255) <= 16
+            })
+            if (!column)
+                continue
+            if (first < 0)
+                first = x
+            last = x
         }
-        return null
+        if (first < 0 || last - first < 2)
+            return null
+        var origin = renderer.mapToItem(roll, 0, 0)
+        return { start: origin.x + (first + 0.5) / dpr, end: origin.x + (last + 0.5) / dpr }
     }
 
     function mountedNotePoint(surface, roll, id) {
-        var item = findChild(surface, "gridNote_" + id)
-        if (!item || !item.visible || item.width <= 0 || item.height <= 0)
+        var point = RollNoteFaces.center(findChild(surface, "timelineRendererPlot"), roll, id)
+        if (!point)
             return null
-        var point = item.mapToItem(roll, item.width / 2, item.height / 2)
         return point.x >= 0 && point.x <= roll.width && point.y >= 0
                && point.y <= roll.height ? point : null
     }

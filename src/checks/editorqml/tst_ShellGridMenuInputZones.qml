@@ -3,6 +3,7 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
+import "RollNoteFaces.js" as RollNoteFaces
 
 ShellGridMenuSupport {
     id: testCase
@@ -126,22 +127,23 @@ ShellGridMenuSupport {
         mousePress(roll, target.point.x, target.point.y, Qt.LeftButton)
         tryCompare(roll, "activeFocus", true)
         mouseRelease(roll, target.point.x, target.point.y, Qt.LeftButton)
-        var note = findChild(surface(), "gridNote_" + target.note.id)
+        var note = RollNoteFaces.rect(findChild(surface(), "timelineRendererPlot"), roll,
+                                      target.note.id)
         verify(note !== null && note.width > surface().gridModel.drawThreshold * 2)
         var cursor = control("swiftRollCursor")
-        var edge = note.mapToItem(roll, 1, note.height / 2)
+        var edge = Qt.point(note.x + 1, note.y + note.height / 2)
         mouseMove(roll, edge.x, edge.y)
         tryVerify(function() {
             return String(cursor.source) === "qrc:/cursors/left-drag.png"
                 && roll.cursorShape === Qt.BitmapCursor
         }, 5000, "the left note edge shows the left-drag cursor art")
-        edge = note.mapToItem(roll, note.width - 1, note.height / 2)
+        edge = Qt.point(note.x + note.width - 1, note.y + note.height / 2)
         mouseMove(roll, edge.x, edge.y)
         tryVerify(function() {
             return String(cursor.source) === "qrc:/cursors/right-drag.png"
                 && roll.cursorShape === Qt.BitmapCursor
         }, 5000, "the right note edge shows the right-drag cursor art")
-        var body = note.mapToItem(roll, note.width / 2, note.height / 2)
+        var body = Qt.point(note.x + note.width / 2, note.y + note.height / 2)
         mouseMove(roll, body.x, body.y)
         tryCompare(roll, "cursorShape", Qt.ArrowCursor)
         compare(String(cursor.source), "", "the note body drops the edge cursor art")
@@ -190,10 +192,11 @@ ShellGridMenuSupport {
         var occupied = false
         var after = JSON.parse(grid.fetchNoteSummary())
         for (var noteIndex = 0; noteIndex < after.length; ++noteIndex) {
-            var tile = findChild(surface(), "gridNote_" + after[noteIndex].id)
+            var tile = RollNoteFaces.rect(findChild(surface(), "timelineRendererPlot"), roll,
+                                          after[noteIndex].id)
             if (!tile || after[noteIndex].ghost)
                 continue
-            var corner = tile.mapToItem(roll, 0, 0)
+            var corner = tile
             occupied = occupied || (emptyX >= corner.x && emptyX < corner.x + tile.width
                                     && emptyY >= corner.y && emptyY < corner.y + tile.height)
         }

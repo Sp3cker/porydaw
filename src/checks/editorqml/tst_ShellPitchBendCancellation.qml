@@ -3,6 +3,7 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
+import "RollNoteFaces.js" as RollNoteFaces
 
 ShellPitchBendSupport {
     function test_typedControllersSurvivePreviewCancellation() {
@@ -166,13 +167,11 @@ ShellPitchBendSupport {
         verify(roll !== null && plot !== null)
         const note = visibleNote(view, grid, roll, plot)
         verify(note !== null, "a selected track's editable note is revealed: " + noteProbe)
-        const initialFace = findChild(view, "gridNote_" + note.id)
-        const faceY = initialFace.mapToItem(roll, 0, 0).y
+        const renderer = findChild(view, "timelineRendererPlot")
+        const faceY = RollNoteFaces.rect(renderer, roll, note.id).y
         grid.setCameraVScroll(grid.cameraScrollY + faceY - plot.height * 0.1)
         waitForRendering(roll)
-        const anchoredFace = findChild(view, "gridNote_" + note.id)
-        const center = anchoredFace.mapToItem(roll, anchoredFace.width / 2,
-                                             anchoredFace.height / 2)
+        const center = RollNoteFaces.center(renderer, roll, note.id)
         note.x = center.x
         note.y = center.y
         mouseClick(roll, note.x, note.y, Qt.LeftButton)

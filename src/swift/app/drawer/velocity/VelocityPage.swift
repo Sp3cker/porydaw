@@ -209,6 +209,8 @@ public final class VelocityPage: EditorDrawerPage {
     @QtIgnored public var onVelocityAccepted: ((UInt8) -> Void)?
 
     public var gridLines: QListModel<SceneRect> = QListModel()
+    @QtTracked public var contentRevision = 0
+    public func drawingContent() -> Data { drawingContentData }
     public var psgBands: QListModel<SceneRect> = QListModel()
     /// The gesture transient's rects. `transient` alone is a reserved QML
     /// keyword, so the published name carries its own noun.
@@ -261,6 +263,8 @@ public final class VelocityPage: EditorDrawerPage {
     @QtIgnored var axis = VelocityAxisModel()
     @QtIgnored var resolvedContextValue = VelocityVoiceContext(status: .unresolvedVoice)
     @QtIgnored var publishedHandles: [VelocityHandle] = []
+    @QtIgnored var drawingBands: [DrawerStaticRect] = []
+    @QtIgnored var drawingContentData = Data()
     @QtIgnored var gesture: VelocityGestureState?
     @QtIgnored var prompt: VelocityPromptState?
     @QtIgnored var hovered: NoteID?
@@ -406,7 +410,7 @@ public final class VelocityPage: EditorDrawerPage {
         publishHandles(snapshot.handles)
         publishGrid(snapshot)
         publishBands(snapshot)
-        publishTransient()
+        publishTransient(updateDrawing: false)
     }
 
     /// One shared-playhead presentation, delivered by `ApplicationSession`'s

@@ -2,8 +2,6 @@ import Foundation
 import PorydawCore
 import QtBridge
 
-// Everything a scene rebuild needs, projected out of PianoGrid once per
-// rebuild instead of letting GridScene reach back through an owner pointer.
 @MainActor
 struct GridSceneInput {
     var metrics: GridMetrics
@@ -15,30 +13,21 @@ struct GridSceneInput {
     var rulerHeight: Double
     var typography: GridTypography?
     var fontSpec: (GridFontKind) -> [String: QVariantSettable]
+    var fonts: [GridFontKind: GridFontSpec] = [:]
     var notes: [GridNote] = []
     var displayedNote: (GridNote) -> (tick: Int, end: Int, pitch: Int) = {
         ($0.tick, $0.tick + $0.duration, $0.pitch)
     }
-    var isSelected: (NoteID) -> Bool = { _ in false }
+    var selectedNotes: Set<NoteID> = []
     var drawPreview: (tick: Int, duration: Int, pitch: Int)?
     var lastVelocity: Int = 100
     var hoverKey: Int = -1
-    var selectionBand: (x: Double, y: Double, w: Double, h: Double)?
-    /// View menu display modes (ApplicationSession owns the app-wide state;
-    /// PianoGrid mirrors it per tab). Velocity mode re-hues non-ghost fills
-    /// and the draw preview; note-name mode labels selected-track faces.
     var velocityColorMode = false
     var noteNameMode = false
     var showVelocityValues = false
-    /// Advance of a pitch name in the fixed note-name face, and that face's
-    /// occupied height, for the NoteNameLabels gates. Zero without typography,
-    /// in which case no label is built (see rebuildNotes).
-    var noteNameAdvance: (Int) -> Double = { _ in 0 }
-    var noteNameOccupiedHeight = 0.0
     var timeSelection: AutomationTimeSelection? = nil
     var usedTrackCount = 0
     var selectedTrack = 0
-    var geometryStable = false
     var keyboardNames: [String]?
     var keyboardBankIdentity: ObjectIdentifier?
     var keyboardProgram = 0
@@ -48,8 +37,6 @@ extension GridScene {
 
     struct StaticKey: Equatable {
         var pixelsPerTick: Double
-        var keyHeight: Double
-        var projection: PitchProjection
         var dpr: Double
         var baseFontPx: Double
         var keyboardWidth: Double
@@ -57,8 +44,10 @@ extension GridScene {
         var timeAxis: TimeAxis
         var palette: ObjectIdentifier
         var window: ContentWindow
-        var keyboardBankIdentity: ObjectIdentifier?
-        var keyboardProgram: Int
+        var rulerHeight: Double
+        var feel: GridFeel
+        var selection: GridSelection
+        var clockTicks: Tick
     }
 
     private func visibleTicks(_ input: GridSceneInput) -> (begin: Tick, end: Tick) {
@@ -79,107 +68,21 @@ extension GridScene {
         let snapshot = camera.snapshot
         let window = ContentWindow(
             camera: camera, contentEndTick: input.contentEndTick, previous: contentWindow)
-        // The scroll row lives outside the window-keyed early return: the
-        // window quantizes scroll into culling chunks, so small pans and every
-        // vertical scroll must still republish the carrier.
         sync(cameraScroll, [SceneRect(
             x: snapshot.scrollX, y: snapshot.scrollY, width: 0, height: 0,
             fillColor: "")])
         let key = StaticKey(
-            pixelsPerTick: snapshot.pixelsPerTick, keyHeight: snapshot.keyHeight,
-            projection: camera.projection, dpr: m.dpr, baseFontPx: m.baseFontPx,
-            keyboardWidth: m.keyboardWidth, contentEndTick: input.contentEndTick,
-            timeAxis: m.timeAxis, palette: ObjectIdentifier(p), window: window,
-            keyboardBankIdentity: input.keyboardBankIdentity,
-            keyboardProgram: input.keyboardProgram)
-        guard key != staticKey else { return }
-        staticKey = key
-        contentWindow = window
-        let gridW = window.extentRight - window.extentLeft
-        let gridH = camera.projection.totalHeight(keyHeight: snapshot.keyHeight)
-
-        var rows: [SceneRect] = []
-        for row in 0..<camera.projection.visibleRowCount {
-            guard let key = camera.projection.visiblePitch(at: row),
-                  let top = camera.projection.contentRowTop(
-                    row, keyHeight: snapshot.keyHeight, dpr: m.dpr),
-                  let bottom = camera.projection.contentRowBottom(
-                    row, keyHeight: snapshot.keyHeight, dpr: m.dpr)
-            else { continue }
-            if GridScene.isBlackKey(key) {
-                rows.append(SceneRect(
-                    x: window.extentLeft, y: top, width: gridW, height: bottom - top,
-                    fillColor: p.accidentalLane))
-            }
-            if input.scale.highlight && input.scale.contains(key) {
-                rows.append(SceneRect(
-                    x: window.extentLeft, y: top, width: gridW, height: bottom - top,
-                    fillColor: p.scaleHighlight))
-            }
-            rows.append(
-                SceneRect(
-                    x: window.extentLeft, y: bottom - m.gridLineStroke / 2, width: gridW,
-                    height: m.gridLineStroke,
-                    fillColor: key % 12 == 0 ? p.keyboardSeparator : p.rowLine))
+            pixelsPerTick: snapshot.pixelsPerTick, dpr: m.dpr,
+            baseFontPx: m.baseFontPx, keyboardWidth: m.keyboardWidth,
+            contentEndTick: input.contentEndTick, timeAxis: m.timeAxis,
+            palette: ObjectIdentifier(p), window: window,
+            rulerHeight: input.rulerHeight, feel: input.grid.feel,
+            selection: input.grid.selection, clockTicks: input.grid.clockTicks)
+        if key != staticKey {
+            staticKey = key
+            contentWindow = window
+            rebuildRuler(input)
         }
-        sync(pianoGridRows, rows)
-
-        var time: [SceneRect] = [
-            SceneRect(
-                x: window.extentLeft, y: 0, width: -window.extentLeft, height: gridH,
-                fillColor: p.preRollMask)
-        ]
-        let range = visibleTicks(input)
-        input.grid.forEachSubdivision(from: range.begin, to: range.end, camera: camera) { tick, level in
-            let x = camera.contentTickX(tick: Double(tick), dpr: m.dpr)
-            let color = level == 1 ? p.gridLineSub1
-                : level == 2 ? p.gridLineSub2 : p.gridLineSub3
-            time.append(SceneRect(
-                x: x - m.gridLineStroke / 2, y: 0,
-                width: m.gridLineStroke, height: gridH, fillColor: color))
-        }
-        var segment = m.timeAxis.segmentAt(range.begin)
-        var finest = input.grid.gridTicksAt(range.begin, camera: camera) == 1
-        m.timeAxis.forEachGridLine(from: range.begin, to: range.end) { tick, isBar, _, _ in
-            let x = camera.contentTickX(tick: Double(tick), dpr: m.dpr)
-            if tick >= segment.next {
-                segment = m.timeAxis.segmentAt(tick)
-                finest = input.grid.gridTicksAt(tick, camera: camera) == 1
-            }
-            time.append(SceneRect(
-                x: x - m.gridLineStroke / 2, y: 0,
-                width: m.gridLineStroke, height: gridH,
-                fillColor: isBar ? p.gridLineBar : finest ? p.gridLineBeatFine : p.gridLineBeat))
-        }
-        sync(pianoGridTime, time)
-
-        var keys: [SceneRect] = [
-            SceneRect(
-                x: 0, y: 0, width: m.keyboardWidth,
-                height: gridH, fillColor: p.keyboardNatural)
-        ]
-        for row in 0..<camera.projection.visibleRowCount {
-            guard let key = camera.projection.visiblePitch(at: row),
-                  let top = camera.projection.contentRowTop(
-                    row, keyHeight: snapshot.keyHeight, dpr: m.dpr),
-                  let bottom = camera.projection.contentRowBottom(
-                    row, keyHeight: snapshot.keyHeight, dpr: m.dpr)
-            else { continue }
-            if GridScene.isBlackKey(key) {
-                keys.append(SceneRect(
-                    x: 0, y: top, width: m.keyboardWidth,
-                    height: bottom - top, fillColor: p.keyboardBlack))
-            } else if key % 12 == 0 || key % 12 == 5 {
-                keys.append(SceneRect(
-                    x: 0, y: bottom - m.pixel / 2,
-                    width: m.keyboardWidth, height: m.pixel,
-                    fillColor: p.keyboardSeparator))
-            }
-        }
-        sync(pianoKeyboardKeys, keys)
-
-        rebuildRuler(input)
-        rebuildKeyboardText(input)
         rebuildHover(input)
     }
 
@@ -375,50 +278,5 @@ extension GridScene {
         return bar + 1
     }
 
-    private func rebuildKeyboardText(_ input: GridSceneInput) {
-        guard let typography = input.typography else { return }
-        let m = input.metrics
-        let camera = input.camera
-        let snapshot = camera.snapshot
-        let names = input.keyboardNames
-        let isDrum = names != nil
-        let widthKey = KeyboardWidthKey(bank: input.keyboardBankIdentity,
-                                        program: input.keyboardProgram,
-                                        baseFontPx: m.baseFontPx, keyboardWidth: m.keyboardWidth,
-                                        keyHeight: snapshot.keyHeight, dpr: m.dpr)
-        if keyboardWidthKey != widthKey {
-            keyboardWidthKey = widthKey
-            keyboardLabelWidths = names?.enumerated().map { key, name in
-                typography.keyLabelAdvance(name.isEmpty ? GridScene.keyName(key) : name)
-            }
-            keyboardChipWidths = names?.enumerated().map { key, name in
-                typography.chipAdvance(name.isEmpty ? GridScene.keyName(key) : name)
-            }
-        }
-        var records: [SceneText] = []
-        for row in 0..<camera.projection.visibleRowCount {
-            guard let key = camera.projection.visiblePitch(at: row),
-                  isDrum || (!GridScene.isBlackKey(key) && key % 12 == 0),
-                  let top = camera.projection.contentRowTop(
-                    row, keyHeight: snapshot.keyHeight, dpr: m.dpr),
-                  let bottom = camera.projection.contentRowBottom(
-                    row, keyHeight: snapshot.keyHeight, dpr: m.dpr)
-            else { continue }
-            let name = names?[key] ?? ""
-            let text = name.isEmpty ? GridScene.keyName(key) : name
-            let width = isDrum
-                ? max(m.keyboardWidth - m.keyLabelRightInset,
-                      (keyboardLabelWidths?[key] ?? 0) + m.keyLabelRightInset)
-                : m.keyboardWidth - m.keyLabelRightInset
-            let black = isDrum && GridScene.isBlackKey(key)
-            let background = black ? input.palette.keyboardBlack : input.palette.keyboardNatural
-            records.append(SceneText(
-                rect: (0, top, width, bottom - top), text: text,
-                color: black ? input.palette.keyboardNatural : input.palette.keyboardLabel,
-                font: input.fontSpec(.keyLabel), horizontal: 0x2,
-                background: isDrum ? background : "",
-                backgroundRect: isDrum ? (0, top, width, bottom - top) : (0, 0, 0, 0)))
-        }
-        syncText(pianoKeyboardTextModel, records, signatures: &keyboardTextSignatures)
-    }
+
 }

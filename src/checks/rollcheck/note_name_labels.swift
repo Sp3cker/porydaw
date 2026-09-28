@@ -1,8 +1,7 @@
 import QtBridge
 
-/// One note face eligible for a pitch-name label: resolved out of GridScene's
-/// note loop (box, published fill, ghost flag) so this file owns the whole
-/// label decision without reaching back into the scene.
+@testable import PorydawApp
+
 @MainActor
 struct NoteNameFace {
     let pitch: Int
@@ -12,11 +11,8 @@ struct NoteNameFace {
     let ghost: Bool
 }
 
-/// Pitch-name labels on roll notes (View menu, note-name mode). Pure layout:
-/// GridScene resolves the visible faces and publishes the returned records
-/// into `pianoNoteTextModel`, which PianoRollCanvas.qml already renders.
-///
-/// Mirrors TimelineQuickView::synchronizeNoteText + PianoRoll::noteNameFits /
+/// Pitch-name labels on roll notes (View menu, note-name mode). Mirrors
+/// TimelineQuickView::synchronizeNoteText + PianoRoll::noteNameFits /
 /// refreshTextLayout (timelinequickview_pianoroll.cpp, pianoroll.cpp,
 /// pianoroll_geometry.cpp): with the mode on, each visible selected-track
 /// (non-ghost) note carries its pitch name when the fixed face fits the
@@ -71,24 +67,28 @@ enum NoteNameLabels {
         advance: (Int) -> Double, font: [String: QVariantSettable],
         palette: GridPalette
     ) -> [SceneText] {
-        guard faceFits(
-            keyHeight: keyHeight, occupiedHeight: occupiedHeight,
-            pixel: pixel, spaceHalf: spaceHalf)
+        guard
+            faceFits(
+                keyHeight: keyHeight, occupiedHeight: occupiedHeight,
+                pixel: pixel, spaceHalf: spaceHalf)
         else { return [] }
         var records: [SceneText] = []
         for face in faces where !face.ghost {
-            guard nameFits(
-                width: face.box.w, pitch: face.pitch, advance: advance,
-                spaceHalf: spaceHalf, spaceTwo: spaceTwo)
+            guard
+                nameFits(
+                    width: face.box.w, pitch: face.pitch, advance: advance,
+                    spaceHalf: spaceHalf, spaceTwo: spaceTwo)
             else { continue }
             let name = GridScene.keyName(face.pitch)
-            records.append(SceneText(
-                rect: (
-                    face.box.x + spaceHalf, face.box.y + spaceHalf,
-                    max(0, face.box.w - 2 * spaceHalf),
-                    max(0, face.box.h - 2 * spaceHalf)),
-                text: name, color: textColor(fillColor: face.fillColor, palette: palette),
-                font: font, horizontal: 0x1, vertical: 0x80))
+            records.append(
+                SceneText(
+                    rect: (
+                        face.box.x + spaceHalf, face.box.y + spaceHalf,
+                        max(0, face.box.w - 2 * spaceHalf),
+                        max(0, face.box.h - 2 * spaceHalf)
+                    ),
+                    text: name, color: textColor(fillColor: face.fillColor, palette: palette),
+                    font: font, horizontal: 0x1, vertical: 0x80))
         }
         return records
     }
@@ -101,10 +101,11 @@ enum NoteNameLabels {
         for face in faces where !face.ghost {
             let text = String(face.velocity)
             guard face.box.w >= advance(text) + allowance else { continue }
-            records.append(SceneText(
-                rect: face.box, text: text,
-                color: textColor(fillColor: face.fillColor, palette: palette),
-                font: font, horizontal: 0x4, vertical: 0x80))
+            records.append(
+                SceneText(
+                    rect: face.box, text: text,
+                    color: textColor(fillColor: face.fillColor, palette: palette),
+                    font: font, horizontal: 0x4, vertical: 0x80))
         }
         return records
     }

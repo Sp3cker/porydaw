@@ -51,8 +51,9 @@ add_library(PorydawApp STATIC
     roll/GridScene+Notes.swift
     roll/GridScene+Primitives.swift
     roll/NoteCommands.swift
-    roll/NoteNameLabels.swift
     roll/SceneRectPacking.swift
+    roll/RollDrawingContent.swift
+    drawer/DrawerStaticsContent.swift
     pitchbend/PitchBendGeometry.swift
     pitchbend/PitchBendKernel.swift
     pitchbend/PitchBendScene.swift
@@ -65,6 +66,7 @@ add_library(PorydawApp STATIC
     timeline/PlayheadGuides.swift
     timeline/SharedPlayhead.swift
     timeline/TimeAxis.swift
+    timeline/DrawingContentBinary.swift
     timeline/GridGeometry.swift
     timeline/GridPalette.swift
     timeline/GridTypography.swift

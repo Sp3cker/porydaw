@@ -80,14 +80,12 @@ func checkCommandRouting(_ report: CheckReport, session: DocumentSession) {
         grid.fetchNoteSummary() == summaryBeforeCopy
             && session.document.revision == revisionBeforeCopy,
         cppID: id, message: "copy leaves the document and published summary untouched")
-    guard let aRect = firstRect(named: "gridNote_\(a.rawValue)", in: grid.scene.pianoNoteFills)
-    else {
+    guard let aRect = selectionRect(a, grid: grid) else {
         report.fail(id, "command-routing fixture note is not projected")
         return
     }
-    let dpr = grid.devicePixelRatio
-    let pressX = aRect.x - floor(grid.cameraScrollX * dpr + 0.5) / dpr + aRect.width / 2
-    let pressY = aRect.y - floor(grid.cameraScrollY * dpr + 0.5) / dpr + aRect.height / 2
+    let pressX = aRect.x + aRect.width / 2
+    let pressY = aRect.y + aRect.height / 2
     let revisionBeforePress = session.document.revision
     grid.beginPointer(x: pressX, y: pressY, modifiers: 0)
     let midGestureSummary = grid.fetchNoteSummary()

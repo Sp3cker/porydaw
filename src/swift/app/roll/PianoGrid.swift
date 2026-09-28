@@ -58,6 +58,7 @@ public final class PianoGrid {
     var pendingVelocityReanchor: NoteID?
     @QtIgnored
     var selectionAtRightPress: [NoteID] = []
+    @QtIgnored var rightPointerModifiers = 0
     public private(set) var scrollbarGrabActive = false
     @QtIgnored var onCommandAvailabilityChanged: (() -> Void)?
     /// The Set Velocity row's dispatch: the document-bound page opens its own
@@ -101,9 +102,15 @@ public final class PianoGrid {
     @QtTracked public var baseFontPx = 13.0
     @QtTracked public var devicePixelRatio = 1.0
     @QtTracked public var beatWidth = 35.0
+    @QtTracked public var pixelsPerTick = 35.0 / 24.0
     @QtTracked public var rowHeight = 13.0
     @QtTracked public var cameraScrollX = 0.0
     @QtTracked public var cameraScrollY = 0.0
+    @QtTracked public var bandSelectionActive = false
+    @QtTracked public var bandSelectionX = 0.0
+    @QtTracked public var bandSelectionY = 0.0
+    @QtTracked public var bandSelectionWidth = 0.0
+    @QtTracked public var bandSelectionHeight = 0.0
     @QtTracked public var cameraMaxVScroll = 0.0
     @QtTracked public var cameraMinHScroll = 0.0
     @QtTracked public var cameraMaxHScroll = 0.0
@@ -326,16 +333,16 @@ public final class PianoGrid {
 
     public func endPointer(x: Double, y: Double) { endPointerImpl(x: x, y: y) }
 
-    public func beginRightPointer(x: Double, y: Double) {
-        beginRightPointerImpl(x: x, y: y)
+    public func beginRightPointer(x: Double, y: Double, modifiers: Int = 0) {
+        beginRightPointerImpl(x: x, y: y, modifiers: modifiers)
     }
 
-    public func updateRightPointer(x: Double, y: Double) {
-        updateRightPointerImpl(x: x, y: y)
+    public func updateRightPointer(x: Double, y: Double, modifiers: Int = 0) {
+        updateRightPointerImpl(x: x, y: y, modifiers: modifiers)
     }
 
-    public func endRightPointer(x: Double, y: Double) {
-        endRightPointerImpl(x: x, y: y)
+    public func endRightPointer(x: Double, y: Double, modifiers: Int = 0) {
+        endRightPointerImpl(x: x, y: y, modifiers: modifiers)
     }
 
     public func doublePointer(x: Double, y: Double) { doublePointerImpl(x: x, y: y) }

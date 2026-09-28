@@ -42,10 +42,10 @@ public final class OtherEventsBandPresenter {
     public var labelCount: Int = 0
     public var markers: QListModel<OtherEventsMarkerHandle> = QListModel()
     public var markerCount: Int = 0
+    public var markerRevision: Int = 0
     public var markerHalfWidth: Double = 0
     public var markerHalfHeight: Double = 0
     public var gutterInset: Double = 0
-    public var preRollWidth: Double = 0
     public var toolTipVisible: Bool = false
     public var toolTipText: String = ""
     public var toolTipX: Double = 0
@@ -57,7 +57,6 @@ public final class OtherEventsBandPresenter {
     private var session: DocumentSession?
     private var colors: GridPalette?
     private var items: [OtherEventsStripItem] = []
-    private var plotWidth: Double = 0
     private var baseFontPx: Double = GridCameraPolicy.seedBaseFontPx
     private var appFontLineSpacing: Double = 0
     private var publishedMarkers: [OtherEventsMarker] = []
@@ -65,13 +64,12 @@ public final class OtherEventsBandPresenter {
     public init() {}
 
     public func configure(session: DocumentSession?, palette: GridPalette,
-                          baseFontPx: Double, appFontLineSpacing: Double,
-                          plotWidth: Double) {
+        baseFontPx: Double, appFontLineSpacing: Double
+    ) {
         self.session = session
         colors = palette
         self.baseFontPx = baseFontPx
         self.appFontLineSpacing = appFontLineSpacing
-        self.plotWidth = plotWidth
         bandHeight = OtherEventsStrip.bandHeight(baseFontPx: baseFontPx,
             appFontLineSpacing: appFontLineSpacing)
         markerHalfWidth = fontPx(baseFontPx, 1.0 / 3.0)
@@ -83,10 +81,8 @@ public final class OtherEventsBandPresenter {
         refreshDocument()
     }
 
-    public func configureViewport(plotWidth: Double, baseFontPx: Double,
-                                  appFontLineSpacing: Double) {
+    public func configureViewport(baseFontPx: Double, appFontLineSpacing: Double) {
         guard let colors else { return }
-        self.plotWidth = plotWidth
         self.baseFontPx = baseFontPx
         self.appFontLineSpacing = appFontLineSpacing
         bandHeight = OtherEventsStrip.bandHeight(baseFontPx: baseFontPx,
@@ -111,12 +107,11 @@ public final class OtherEventsBandPresenter {
         guard let session, let colors else {
             markerCount = 0
             markers.reset(to: [])
-            preRollWidth = 0
             return
         }
-        preRollWidth = min(plotWidth, max(0, session.camera.contentX(tick: 0)))
-        let next = OtherEventsStrip.markers(items: items, camera: session.camera,
-            plotWidth: plotWidth, baseFontPx: baseFontPx, palette: colors)
+        let next = OtherEventsStrip.markers(
+            items: items,
+            pixelsPerTick: session.camera.pixelsPerTick, palette: colors)
         if next != publishedMarkers {
             publishedMarkers = next
             // In-place writes keep existing delegates alive; reset(to:) would
@@ -133,6 +128,7 @@ public final class OtherEventsBandPresenter {
                     markers.count..<markers.count, with: fresh[markers.count...])
             }
             markerCount = next.count
+            markerRevision += 1
         }
     }
 

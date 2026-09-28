@@ -55,22 +55,22 @@ func checkGhostNotes(_ report: CheckReport, session: DocumentSession) {
     func projected(_ noteID: NoteID) -> GridNote? {
         grid.notes.first { $0.noteId == noteID }
     }
-    func ghostFill(named name: String) -> String? {
-        firstNoteRect(named: name, in: grid.scene.pianoNoteFills)?.fillColor
+    func ghostFill(_ noteID: NoteID) -> UInt32? {
+        probeFill(grid, noteID)
     }
     report.expect(projected(plain.id)?.ghost == false && projected(ghost.id)?.ghost == true,
                   cppID: id, message: "A016 both fixture notes project, other-track note as ghost")
     guard let ghostNote = document.note(ghost.id),
-          let plainNote = document.note(plain.id),
-          let ghostBox = noteBox(grid, session: session, note: ghostNote),
-          let plainBox = noteBox(grid, session: session, note: plainNote) else {
+        let ghostBox = noteBox(grid, session: session, note: ghostNote)
+    else {
         report.fail(id, "ghost fixture has no projected scene box")
         return
     }
     let expectedGhost = PaletteMath.ghostFill(
         track: other, accidentalRow: GridScene.isBlackKey(ghost.pitch),
         rollBackground: grid.palette.rollBackground, accidentalLane: grid.palette.accidentalLane)
-    report.expect(ghostFill(named: "gridNote_\(ghost.id.rawValue)") == expectedGhost,
+    report.expect(
+        ghostFill(ghost.id) == RollContentProbe.argb(expectedGhost),
                   cppID: id, message: "A017 ghost face uses the track-identity mix")
     ShellAppearance.apply(to: grid.palette, mode: "immaterial", contrast: 50)
     grid.refreshFromSession()
@@ -86,26 +86,28 @@ func checkGhostNotes(_ report: CheckReport, session: DocumentSession) {
     let immaterialGhost = PaletteMath.hex(PaletteMath.Oklab(
         lightness: lightness, a: backdrop.a + (identity.a - backdrop.a) * weight,
         b: backdrop.b + (identity.b - backdrop.b) * weight))
-    report.expect(ghostFill(named: "gridNote_\(ghost.id.rawValue)") == immaterialGhost,
+    report.expect(
+        ghostFill(ghost.id) == RollContentProbe.argb(immaterialGhost),
                   cppID: id, message: "A017 immaterial ghost face mixes into its themed roll lane")
     ShellAppearance.apply(to: grid.palette, mode: "vanilla", contrast: 50)
     grid.refreshFromSession()
-    let ring = 3.0 / grid.devicePixelRatio
-    let border = 2.0 / grid.devicePixelRatio
     session.setSelectedNotes([plain.id])
     grid.refreshCamera()
-    report.expect(hasFrame(grid.scene.pianoNoteBordersAndSelection, box: plainBox, inset: 0,
-                           thickness: ring, color: grid.palette.selectionRing),
+    let ringed = RollContentProbe(grid.scene)
+    let plainRecord = ringed.note(plain.id)
+    let ghostRecord = ringed.note(ghost.id)
+    report.expect(
+        plainRecord?.selected == true && plainRecord?.ghost == false
+            && ghostRecord?.ghost == true && ghostRecord?.selected == false,
                   cppID: id, message: "the plain note rings while the ghost face stays flat")
-    report.expect(!hasFrame(grid.scene.pianoNoteBordersAndSelection, box: ghostBox, inset: 0,
-                            thickness: border, color: grid.palette.noteBorder)
-                      && !hasFrame(grid.scene.pianoNoteBordersAndSelection, box: ghostBox, inset: 0,
-                                   thickness: ring, color: grid.palette.selectionRing),
+    report.expect(
+        ghostRecord?.ghost == true && ghostRecord?.timeCovered == false,
                   cppID: id, message: "A017 ghost face edge matches its interior: no border or ring")
     session.setSelectedNotes([ghost.id])
     grid.refreshCamera()
-    report.expect(!hasFrame(grid.scene.pianoNoteBordersAndSelection, box: ghostBox, inset: 0,
-                            thickness: ring, color: grid.palette.selectionRing),
+    let selectedGhost = RollContentProbe(grid.scene).note(ghost.id)
+    report.expect(
+        selectedGhost?.ghost == true && selectedGhost?.timeCovered == false,
                   cppID: id, message: "selecting a ghost publishes no selection ring")
     session.clearSelectedNotes()
     grid.refreshCamera()
@@ -114,20 +116,23 @@ func checkGhostNotes(_ report: CheckReport, session: DocumentSession) {
                       && projected(plain.id)?.ghost == true
                       && projected(ghost.id)?.ghost == false,
                   cppID: id, message: "selecting the other track swaps plain and ghost roles")
-    report.expect(ghostFill(named: "gridNote_\(plain.id.rawValue)")
-                      == PaletteMath.ghostFill(
+    report.expect(
+        ghostFill(plain.id)
+            == RollContentProbe.argb(
+                PaletteMath.ghostFill(
                           track: primary, accidentalRow: GridScene.isBlackKey(plain.pitch),
                           rollBackground: grid.palette.rollBackground,
-                          accidentalLane: grid.palette.accidentalLane)
-                      && ghostFill(named: "gridNote_\(ghost.id.rawValue)")
-                      == grid.palette.noteFill(track: other, velocity: 100),
+                    accidentalLane: grid.palette.accidentalLane))
+            && ghostFill(ghost.id)
+                == RollContentProbe.argb(grid.palette.noteFill(track: other, velocity: 100)),
                   cppID: id, message: "swapped faces follow their new roles")
     grid.setTrack(index: primary)
     grid.setVelocityColorMode(enabled: true)
-    let ghostVelocityFill = ghostFill(named: "gridNote_\(ghost.id.rawValue)")
+    let ghostVelocityFill = ghostFill(ghost.id)
     grid.setVelocityColorMode(enabled: false)
-    report.expect(ghostVelocityFill == expectedGhost
-                      && ghostFill(named: "gridNote_\(ghost.id.rawValue)") == expectedGhost,
+    report.expect(
+        ghostVelocityFill == RollContentProbe.argb(expectedGhost)
+            && ghostFill(ghost.id) == RollContentProbe.argb(expectedGhost),
                   cppID: id, message: "A031 velocity-color mode leaves the ghost fill byte-identical")
     let ghostOrigin = viewportPoint(grid, x: ghostBox.x, y: ghostBox.y)
     let pressX = ghostOrigin.x + ghostBox.w / 2
@@ -167,10 +172,12 @@ func checkGhostNotes(_ report: CheckReport, session: DocumentSession) {
     }
     grid.refreshCamera()
     grid.setNoteNameMode(enabled: true)
-    let labels = grid.scene.pianoNoteTextModel.asArray
-    report.expect(labels.contains { $0.labelText == GridScene.keyName(plain.pitch) },
+    report.expect(
+        noteNameLabeled(grid, session: session, id: plain.id),
                   cppID: id, message: "the wide selected-track note keeps its name label")
-    report.expect(!labels.contains { $0.labelText == GridScene.keyName(ghost.pitch) },
+    report.expect(
+        RollContentProbe(grid.scene).note(ghost.id)?.ghost == true
+            && !noteNameLabeled(grid, session: session, id: ghost.id),
                   cppID: id, message: "A036 ghost notes are never labeled")
     grid.setNoteNameMode(enabled: false)
 }

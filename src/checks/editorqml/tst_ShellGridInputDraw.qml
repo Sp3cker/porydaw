@@ -1,6 +1,7 @@
 import QtQuick
 import QtTest
 import ShellQmlCheck 1.0
+import "RollNoteFaces.js" as RollNoteFaces
 
 ShellGridInputSupport {
     GatedVisualsProbe { id: dprProbe }
@@ -62,12 +63,13 @@ ShellGridInputSupport {
         var top = Math.round(plotOrigin.y * dpr)
         var right = Math.round((plotOrigin.x + plot.width) * dpr)
         var bottom = Math.round((plotOrigin.y + plot.height) * dpr)
+        var revisionBeforeDraw = grid.scene.contentRevision
         mousePress(roll, cell.x, cell.y, Qt.LeftButton)
         mouseMove(roll, cell.x + grid.drawThreshold, cell.y, -1, Qt.LeftButton)
         verify(waitForNative(function() {
             return grid.statusText.indexOf("Drawing") !== -1
         }, 5000), "horizontal travel at the font-derived slop enters the draw gesture")
-        verify(grid.scene.pianoDrawPreviewFill.rowCount() > 0,
+        verify(grid.scene.contentRevision > revisionBeforeDraw,
                "the mounted pending draw publishes its note face while held")
         waitForRendering(shell.contentItem)
         var plain = shellFrame(captureItem)
@@ -155,8 +157,7 @@ ShellGridInputSupport {
                 && candidate.duration === 4 * snap
         })
         verify(note !== undefined && note.selected, "the draw publishes its selected velocity note")
-        var face = findChild(surface, "gridNote_" + note.id)
-        var center = face.mapToItem(roll, face.width / 2, face.height / 2)
+        var center = RollNoteFaces.center(findChild(surface, "timelineRendererPlot"), roll, note.id)
         var travel = Math.ceil(grid.dragDistance) + 6
         var velocity = note.velocity
         mousePress(roll, center.x, center.y, Qt.LeftButton, Qt.ControlModifier)
@@ -195,34 +196,33 @@ ShellGridInputSupport {
                 && candidate.duration === 4 * snap
         })
         verify(note !== undefined && note.selected, "the cancelled drag has a selected note")
-        var face = findChild(surface, "gridNote_" + note.id)
+        var renderer = findChild(surface, "timelineRendererPlot")
+        var face = RollNoteFaces.rect(renderer, roll, note.id)
         verify(face !== null, "the cancelled drag targets a rendered note")
         var center = pointFor(grid, note.tick + 2 * snap, note.pitch)
-        verify(center.x > face.mapToItem(roll, 0, 0).x
-               && center.x < face.mapToItem(roll, face.width, 0).x,
+        verify(center.x > face.x && center.x < face.x + face.width,
                "the modifier press lies horizontally inside the painted note rectangle")
-        verify(center.y > face.mapToItem(roll, 0, 0).y
-               && center.y < face.mapToItem(roll, 0, face.height).y,
+        verify(center.y > face.y && center.y < face.y + face.height,
                "the modifier press lies vertically inside the painted note rectangle")
         var before = grid.fetchNoteSummary()
         var revision = grid.appliedRevisionText
         var undo = session.canUndo
         var redo = session.canRedo
-        var originalFill = face.color.toString()
+        var originalFill = String(face.fill)
         var travel = Math.ceil(grid.dragDistance) + grid.rowHeight
         mousePress(roll, center.x, center.y, Qt.LeftButton, Qt.ControlModifier)
         mouseMove(roll, center.x, center.y + travel, -1, Qt.LeftButton, Qt.ControlModifier)
         tryVerify(function() {
-            var staged = findChild(surface, "gridNote_" + note.id)
-            return staged && staged.color.toString() !== originalFill
+            var staged = RollNoteFaces.face(renderer, note.id)
+            return staged && String(staged.fill) !== originalFill
         }, 1000, "the held modifier drag paints a distinct staged velocity")
         compare(grid.fetchNoteSummary(), before, "the held modifier drag leaves the document unchanged")
         roll.forceActiveFocus(Qt.OtherFocusReason)
         keyClick(Qt.Key_Escape)
         mouseRelease(roll, center.x, center.y + travel, Qt.LeftButton, Qt.ControlModifier)
         tryVerify(function() {
-            var restored = findChild(surface, "gridNote_" + note.id)
-            return restored && restored.color.toString() === originalFill
+            var restored = RollNoteFaces.face(renderer, note.id)
+            return restored && String(restored.fill) === originalFill
         }, 1000, "mounted Escape removes the staged velocity paint")
         compare(grid.fetchNoteSummary(), before, "mounted Escape restores every timeline velocity after a modifier drag")
         compare(grid.appliedRevisionText, revision, "mounted Escape publishes no velocity revision")
@@ -281,9 +281,8 @@ ShellGridInputSupport {
         var drawn = gridNotes(grid).find(function(note) {
             return note.tick === targetTick && note.pitch === lane.pitch
         })
-        var face = findChild(surface, "gridNote_" + drawn.id)
-        verify(face !== null, "the double-clicked note renders")
-        var center = face.mapToItem(roll, face.width / 2, face.height / 2)
+        var center = RollNoteFaces.center(findChild(surface, "timelineRendererPlot"), roll, drawn.id)
+        verify(center !== null, "the double-clicked note renders")
         var parked = grid.editCursorTick
         mouseClick(roll, center.x, center.y, Qt.LeftButton)
         compare(grid.editCursorTick, parked, "clicking a note never parks the edit cursor")

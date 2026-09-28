@@ -13,10 +13,9 @@ ShellClipboardSupport {
         var visible = []
         var all = editableNotes(grid)
         for (var vi = 0; vi < all.length; ++vi) {
-            var probe = findChild(surface, "gridNote_" + all[vi].id)
-            if (!probe)
+            var center = noteCenter(roll, surface, all[vi].id)
+            if (!center)
                 continue
-            var center = probe.mapToItem(roll, probe.width / 2, probe.height / 2)
             if (center.x > 1 && center.y > 1 && center.x < roll.width - 1 && center.y < roll.height - 1)
                 visible.push(all[vi])
         }

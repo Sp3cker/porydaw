@@ -78,10 +78,12 @@ TimelinePanSupport {
             g.reloadVisuals()
             wait(0)
             function padLabel(text) {
-                var labels = keyboardLabels()
-                for (var i = 0; i < labels.length; ++i) {
-                    if (labels[i].text === text)
-                        return labels[i]
+                for (var pitch = 30; pitch <= 45; ++pitch) {
+                    var row = keyRow(pitch)
+                    if (rowVisible(row) && hoveredName(pitch) === text) {
+                        row.text = text
+                        return row
+                    }
                 }
                 return null
             }
@@ -93,7 +95,39 @@ TimelinePanSupport {
                    "A036 the mounted drum keyboard displays adjacent real sample names")
             verify(padLabel("D#2") !== null,
                    "A044 an unnamed pad renders its exact pitch fallback")
-            verify(longPad.width > g.keyboardWidth && longPad.x === 0,
+            var band = findChild(surface(), "rollContentBand")
+            function overflowEnd() {
+                g.clearKeyboardHover()
+                tryCompare(g, "hoverKey", -1, 5000)
+                var image = grabItem(band)
+                var box = gutterBox()
+                var dpr = image.width / band.width
+                var reach = box.mapToItem(band, 0, 0).x
+                var limit = Math.round(Math.min(band.width, reach + g.keyboardWidth + 400) * dpr) - 1
+                function backgroundRun(row, y) {
+                    var x = Math.round((reach + 1) * dpr)
+                    var r = image.red(x, y), gr = image.green(x, y), b = image.blue(x, y)
+                    var end = x
+                    while (++x < limit && x - end <= Math.ceil(row.height * dpr)) {
+                        if (Math.abs(image.red(x, y) - r) <= 2
+                            && Math.abs(image.green(x, y) - gr) <= 2
+                            && Math.abs(image.blue(x, y) - b) <= 2)
+                            end = x
+                    }
+                    return end / dpr
+                }
+                function labelEnd(row) {
+                    var top = box.mapToItem(band, 0, row.y).y
+                    return Math.max(backgroundRun(row, Math.ceil(top * dpr) + 1),
+                                    backgroundRun(row, Math.ceil((top + row.height) * dpr) - 2))
+                }
+                return { end: labelEnd(keyRow(37)), plainEnd: labelEnd(keyRow(39)),
+                         limit: band.width - 1 }
+            }
+            var overflow = overflowEnd()
+            var keyboardEdge = gutterBox().mapToItem(band, g.keyboardWidth, 0).x
+            verify(overflow.end > keyboardEdge && overflow.end > overflow.plainEnd
+                   && longPad.x === 0,
                    "A039 the long label extends past the keyboard without clipping")
             verify(longPad.y >= 0 && longPad.y + longPad.height <= gutter.height,
                    "the loaded accidental pad scrolls into the visible gutter: y="
@@ -115,40 +149,50 @@ TimelinePanSupport {
             hover(longPad, longName)
             hover(padLabel("D#2"), "D#2")
             hover(padLabel("fixture_pluck"), "fixture_pluck")
-            var host = null
-            var stack = [surface()]
-            while (stack.length > 0) {
-                var item = stack.pop()
-                if (item.labelText === longName) {
-                    host = item
-                    break
-                }
-                for (var c = 0; c < item.children.length; ++c)
-                    stack.push(item.children[c])
+            var keyboard = keyboardRenderer()
+            var clipper = null
+            for (var ancestor = keyboard.parent; ancestor && ancestor !== band;
+                 ancestor = ancestor.parent) {
+                if (ancestor.clip)
+                    clipper = ancestor
             }
-            var band = findChild(surface(), "rollContentBand")
-            verify(host && host.parent && host.parent.parent
-                   && host.parent.parent.parent === band
-                   && !host.parent.clip && host.parent.parent.clip
-                   && host.parent.parent.width > g.keyboardWidth && band && !band.clip,
+            verify(band && !band.clip && ancestor === band && clipper
+                   && clipper.width > g.keyboardWidth && overflow.end > keyboardEdge,
                    "A041 the label overflows the gutter but clips at the roll-band bounds")
-            var rendered = host.children[1]
-            verify(rendered.contentWidth <= rendered.width && !rendered.clip,
+            verify(overflow.end < overflow.limit,
                    "A043 the overflow text is actually legible without elision")
             var originalY = longPad.y
             g.setCameraVScroll(g.cameraScrollY + g.rowHeight)
             tryVerify(function() {
                 var shifted = padLabel(longName)
                 return shifted !== null && Math.abs(shifted.y - (originalY - g.rowHeight)) < 1
+                    && overflowEnd().end > keyboardEdge
             }, 5000, "A042 the overflowing label follows exactly one vertical camera scroll")
 
             g.setTrack(1)
             tryCompare(g, "trackIndex", 1, 5000)
             g.reloadVisuals()
-            var melodic = keyboardLabels()
-            verify(melodic.length > 0 && melodic.every(function(label) {
-                return /^C-?\d+$/.test(label.text)
-            }), "A064 the melodic track renders only exact octave-C keyboard names")
+            g.clearKeyboardHover()
+            tryCompare(g, "hoverKey", -1, 5000)
+            waitForRendering(gutterBox())
+            var keys = grabItem(gutterBox())
+            var melodicOk = true
+            var sawC = false
+            for (var p = 0; p < 128; ++p) {
+                var keyRowP = keyRow(p)
+                if (!rowVisible(keyRowP))
+                    continue
+                var ink = rowInk(keys, gutterBox(), keyRowP, g.keyboardWidth / 3,
+                                 g.keyboardWidth - 1) >= 0
+                if (p % 12 === 0) {
+                    sawC = true
+                    melodicOk = melodicOk && ink && /^C-?\d+$/.test(hoveredName(p))
+                } else if ([2, 4, 5, 7, 9, 11].indexOf(p % 12) >= 0) {
+                    melodicOk = melodicOk && !ink
+                }
+            }
+            verify(sawC && melodicOk,
+                   "A064 the melodic track renders only exact octave-C keyboard names")
             verify(padLabel(longName) === null,
                    "A065 the accidental drum name disappears on the melodic track")
             g.setTrack(0)

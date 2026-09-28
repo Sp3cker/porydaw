@@ -5,6 +5,7 @@ import ShellQmlCheck 1.0
 import Porydaw.Ui
 import "GatedVisualsHelpers.js" as Helpers
 import "NativeWait.js" as NativeWait
+import "RollNoteFaces.js" as RollNoteFaces
 
 TestCase {
     id: testCase
@@ -56,15 +57,14 @@ TestCase {
         return page ? findChild(page, "swiftRollOverlay") : null
     }
 
-    function noteDelegates(fills, plot) {
+    function noteDelegates(grid, renderer, plot) {
         var items = []
-        for (var i = 0; i < fills.children.length; ++i) {
-            var c = fills.children[i]
-            if (c && c.fillColor !== undefined && c.fillColor && c.visible) {
-                var at = c.mapToItem(plot, 0, 0)
-                items.push({ x: at.x, y: at.y, width: c.width, height: c.height,
-                             fillColor: c.fillColor })
-            }
+        var notes = JSON.parse(grid.fetchNoteSummary())
+        for (var i = 0; i < notes.length; ++i) {
+            var r = RollNoteFaces.rect(renderer, plot, notes[i].id)
+            if (r)
+                items.push({ x: r.x, y: r.y, width: r.width, height: r.height,
+                             fillColor: r.fill })
         }
         return items
     }
@@ -103,14 +103,15 @@ TestCase {
                "the roll publishes notes")
         var plot = findChild(surface, "timelineQuickRollPlot")
         var input = findChild(surface, "swiftRollInput")
-        var fills = findChild(surface, "timelineQuickPianoNoteFills")
-        var overlay = findChild(surface, "timelineQuickPianoOverlay")
+        var fills = findChild(surface, "timelineRendererPlot")
+        var overlay = fills
         verify(plot !== null, "the roll plot is mounted")
         verify(input !== null, "the roll input is mounted")
         verify(fills !== null, "the note fill layer is mounted")
         verify(overlay !== null, "the overlay layer is mounted")
-        verify(waitForNative(function() { return noteDelegates(fills, plot).length > 0 }, 5000),
-               "the fill layer draws note delegates")
+        verify(waitForNative(function() {
+            return noteDelegates(grid, fills, plot).length > 0
+        }, 5000), "the fill layer draws note delegates")
 
         var sx = plot.width * 0.15
         var sy = plot.height * 0.20
@@ -165,7 +166,7 @@ TestCase {
             }
         verify(probes.length === 2, "two distinct flat pixels sit under the reticle")
 
-        var delegates = noteDelegates(fills, plot)
+        var delegates = noteDelegates(grid, fills, plot)
         var noteProbe = null
         for (var d = 0; d < delegates.length && noteProbe === null; ++d) {
             var nc = delegates[d]
@@ -208,21 +209,12 @@ TestCase {
         mousePress(plot, sx, sy, Qt.RightButton)
         mouseMove(plot, fx, fy, -1, Qt.RightButton)
         verify(waitForNative(function() {
-            var total = 0
-            var fill = 0
-            for (var i = 0; i < overlay.children.length; ++i) {
-                var c = overlay.children[i]
-                if (!c || c.fillColor === undefined || !c.fillColor || !c.visible)
-                    continue
-                var at = c.mapToItem(plot, 0, 0)
-                if (at.x + c.width > reticle.x && at.x < reticle.x + reticle.w
-                        && at.y + c.height > reticle.y && at.y < reticle.y + reticle.h) {
-                    ++total
-                    if (String(c.fillColor).toUpperCase() === selectionFill.toUpperCase())
-                        ++fill
-                }
-            }
-            return total >= 5 && fill >= 1
+            var band = overlay.mapToItem(plot, overlay.bandSelectionX, overlay.bandSelectionY)
+            return overlay.bandSelectionActive
+                && band.x + overlay.bandSelectionWidth > reticle.x
+                && band.x < reticle.x + reticle.w
+                && band.y + overlay.bandSelectionHeight > reticle.y
+                && band.y < reticle.y + reticle.h
         }, 5000), "the drag publishes the selection band over the reticle")
 
         var during = grabImage(shell.contentItem)

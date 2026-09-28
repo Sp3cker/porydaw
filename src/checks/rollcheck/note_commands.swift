@@ -617,13 +617,12 @@ private func checkRollNoteDragGuardsSharedCommands(_ report: CheckReport, sessio
     let target = added[0]
     seededID = target
     grid.refreshFromSession()
-    guard let rect = firstRect(named: "gridNote_\(target.rawValue)", in: grid.scene.pianoNoteFills) else {
+    guard let rect = selectionRect(target, grid: grid) else {
         report.fail(id, "roll-gesture fixture note is not projected")
         return
     }
-    let dpr = grid.devicePixelRatio
-    let pressX = rect.x - floor(grid.cameraScrollX * dpr + 0.5) / dpr + rect.width / 2
-    let pressY = rect.y - floor(grid.cameraScrollY * dpr + 0.5) / dpr + rect.height / 2
+    let pressX = rect.x + rect.width / 2
+    let pressY = rect.y + rect.height / 2
     session.setSelectedNotes([target])
     // Opaque pre-stimulus byte snapshot for the cancel-point comparison below.
     let beforeBytes = coreTimeBytes(session.document)

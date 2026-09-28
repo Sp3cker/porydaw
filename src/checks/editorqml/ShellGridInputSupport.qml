@@ -4,6 +4,7 @@ import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
 import "NativeWait.js" as NativeWait
+import "RollNoteFaces.js" as RollNoteFaces
 
 TestCase {
     id: testCase
@@ -131,15 +132,13 @@ TestCase {
     }
 
     function noteBand(roll, surface, noteId) {
-        var note = findChild(surface, "gridNote_" + noteId)
-        if (!note || note.width <= 0 || note.height <= 0)
+        var note = RollNoteFaces.rect(findChild(surface, "timelineRendererPlot"), roll, noteId)
+        if (!note)
             return null
-        var topLeft = note.mapToItem(roll, 0, 0)
-        var bottomRight = note.mapToItem(roll, note.width, note.height)
-        var sx = topLeft.x - 3
-        var sy = topLeft.y - 3
-        var ex = bottomRight.x + 3
-        var ey = bottomRight.y + 3
+        var sx = note.x - 3
+        var sy = note.y - 3
+        var ex = note.x + note.width + 3
+        var ey = note.y + note.height + 3
         if (sx < 1 || sy < 1 || ex > roll.width - 1 || ey > roll.height - 1)
             return null
         return { sx: sx, sy: sy, ex: ex, ey: ey }

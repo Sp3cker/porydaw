@@ -198,7 +198,6 @@ TestCase {
         compare(background.color.toString(),
                 Qt.color(session.palette.rollBackground).toString(),
                 "the background item carries the session palette's roll background")
-        waitForRendering(surface)
         var image = grabImage(surface)
         verify(image.width > 0 && image.height > 0,
                "the window framebuffer holds the rendered surface")
@@ -393,7 +392,6 @@ TestCase {
             original[gridRoles[i]] = palette[gridRoles[i]]
 
         function grab() {
-            waitForRendering(plot)
             return grabImage(plot)
         }
         function push(contrast) {

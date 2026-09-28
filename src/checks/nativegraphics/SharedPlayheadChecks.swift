@@ -107,52 +107,36 @@ private func sharedPlayheadReplacementSession(_ session: DocumentSession,
                            dirty: false, loadName: session.bankLoadName, sampleRate: 48_000)
 }
 
-/// What the grid publishes as content. The Swift grid exposes scene models rather
-/// than a content-build counter, so the playhead-only invariant is asserted over
-/// the published content itself: a rebuild that changed anything would show here.
+/// What the grid publishes as content: the drawing blob, its revision and the
+/// probe-decoded counts, so a rebuild that changed anything would show here.
 private struct GridContentSnapshot: Equatable {
     var renderedNoteCount: Int
     var noteSummary: String
     var appliedRevisionText: String
     var editCursorTick: Int
     var rulerChromeCount: Int
-    var gridTimeCount: Int
-    var noteFillCount: Int
-    var noteBorderCount: Int
-    var keyboardKeyCount: Int
-    var keyboardTextCount: Int
-    var gridTimeSignature: String
-    var noteFillSignature: String
+    var contentRevision: Int
+    var noteCount: Int
+    var rowCount: Int
+    var keyboardNameCount: Int
+    var drawingContent: Data
 }
 
 @MainActor
 private func gridContentSnapshot(_ grid: PianoGrid) -> GridContentSnapshot {
     let scene = grid.scene
-    var gridTime: [String] = []
-    gridTime.reserveCapacity(min(64, scene.pianoGridTime.count))
-    for index in 0..<min(64, scene.pianoGridTime.count) {
-        let rect = scene.pianoGridTime[index]
-        gridTime.append("\(rect.x),\(rect.width),\(rect.fillColor)")
-    }
-    var fills: [String] = []
-    fills.reserveCapacity(min(64, scene.pianoNoteFills.count))
-    for index in 0..<min(64, scene.pianoNoteFills.count) {
-        let rect = scene.pianoNoteFills[index]
-        fills.append("\(rect.x),\(rect.y),\(rect.width),\(rect.height),\(rect.fillColor)")
-    }
+    let probe = RollContentProbe(scene)
     return GridContentSnapshot(
         renderedNoteCount: grid.renderedNoteCount,
         noteSummary: grid.fetchNoteSummary(),
         appliedRevisionText: grid.appliedRevisionText,
         editCursorTick: grid.editCursorTick,
         rulerChromeCount: scene.rulerChrome.count,
-        gridTimeCount: scene.pianoGridTime.count,
-        noteFillCount: scene.pianoNoteFills.count,
-        noteBorderCount: scene.pianoNoteBordersAndSelection.count,
-        keyboardKeyCount: scene.pianoKeyboardKeys.count,
-        keyboardTextCount: scene.pianoKeyboardTextModel.count,
-        gridTimeSignature: gridTime.joined(separator: "|"),
-        noteFillSignature: fills.joined(separator: "|"))
+        contentRevision: probe.revision,
+        noteCount: probe.notes.count,
+        rowCount: probe.rows.count,
+        keyboardNameCount: probe.keyboardNames.count,
+        drawingContent: scene.drawingContent())
 }
 
 /// Pumps the main run loop so a main-actor task can run, exactly as the suite's
@@ -280,19 +264,19 @@ private func checkPresenterAgainstSession(_ report: CheckReport, session: Docume
     let page = SharedPlayheadStubPage()
     let presenter = SharedPlayheadPresenter()
 
-    let priorCamera = session.onCameraChange
+    let priorCamera = session.onCameraChangeDetailed
     let priorPlayback = session.onPlayback
     let priorChange = session.onChange
     defer {
-        session.onCameraChange = priorCamera
+        session.onCameraChangeDetailed = priorCamera
         session.onPlayback = priorPlayback
         session.onChange = priorChange
         presenter.detach()
     }
     // The production wiring reduced to its playback owner: a camera publication
     // refreshes the grid and reprojects the retained authoritative tick.
-    session.onCameraChange = { [weak grid, weak presenter] _ in
-        grid?.refreshCamera()
+    session.onCameraChangeDetailed = { [weak grid, weak presenter] _, change in
+        grid?.refreshCameraPresentation(change)
         presenter?.refreshProjection()
     }
 

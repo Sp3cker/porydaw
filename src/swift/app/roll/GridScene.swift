@@ -12,10 +12,6 @@ public final class SceneRect {
     public var fillColor: String
     public var primitiveName: String
 
-    /// Geometry packed as one map: a delegate binding `frame` pays a single
-    /// bridge read per model change instead of one read per numeric property.
-    /// @QtBridgeable only exports stored properties; rebuilds always construct
-    /// fresh rows, so populating once in init is correct.
     public var frame: [String: QVariantSettable]
 
     public init(
@@ -51,9 +47,6 @@ public final class SceneText {
     public var labelBackground: String
     public var labelHorizontalAlignment: Int
     public var labelVerticalAlignment: Int
-    /// Everything a text delegate needs besides text and font, packed into one
-    /// map so a model change costs a single bridge read instead of ~8. Stored
-    /// because @QtBridgeable only exports stored properties.
     public var labelSpec: [String: QVariantSettable]
 
     public init(
@@ -107,31 +100,24 @@ public final class GridScene {
     public var rulerGutterChrome: QListModel<SceneRect> = QListModel()
     public var rulerChrome: QListModel<SceneRect> = QListModel()
     public var rulerMarks: QListModel<SceneRect> = QListModel()
-    public var pianoGridRows: QListModel<SceneRect> = QListModel()
-    public var pianoGridTime: QListModel<SceneRect> = QListModel()
-    public var pianoNoteFills: QListModel<SceneRect> = QListModel()
-    public var pianoDrawPreviewFill: QListModel<SceneRect> = QListModel()
-    public var pianoNoteBordersAndSelection: QListModel<SceneRect> = QListModel()
-    public var pianoOverlay: QListModel<SceneRect> = QListModel()
-    public var pianoKeyboardKeys: QListModel<SceneRect> = QListModel()
-    public var pianoKeyboardHighlights: QListModel<SceneRect> = QListModel()
-    /// One-row scroll carrier: its frame.x/frame.y are the camera scroll so
-    /// QML translate bindings update inside the same synchronous dataChanged
-    /// sweep as every rect row — no queued property NOTIFY can lag a frame.
     public var cameraScroll: QListModel<SceneRect> = QListModel()
 
-    public var pianoNoteTextModel: QListModel<SceneText> = QListModel()
-    public var pianoKeyboardTextModel: QListModel<SceneText> = QListModel()
-    public var pianoLoadingTextModel: QListModel<SceneText> = QListModel()
     public var rulerTextModel: QListModel<SceneText> = QListModel()
 
-    var rulerTextSignatures: [String] = []
-    var keyboardTextSignatures: [String] = []
-    var noteTextSignatures: [String] = []
-    var loadingTextSignatures: [String] = []
-    @QtIgnored public var boxesProjected = 0
-    @QtIgnored public var fillWrites = 0
+    @QtTracked public var contentRevision = 0
 
+    var rulerTextSignatures: [String] = []
+    @QtIgnored var drawingContentData = Data()
+    @QtIgnored var drawingContentKey: RollDrawingContentKey?
+    @QtIgnored var noteRecordCount = 0
+    struct PaletteContentKey: Equatable {
+        let palette: ObjectIdentifier
+        let velocityColorMode: Bool
+        let lastVelocity: Int
+    }
+    @QtIgnored var paletteContentCache: (key: PaletteContentKey, data: Data)?
+
+    public func drawingContent() -> Data { drawingContentData }
 
     struct ContentWindow: Equatable {
         static let cullingChunkPixels = 1024.0
@@ -179,26 +165,15 @@ public final class GridScene {
         let program: Int
         let baseFontPx: Double
         let keyboardWidth: Double
-        let keyHeight: Double
-        let dpr: Double
     }
     @QtIgnored var keyboardWidthKey: KeyboardWidthKey?
-    @QtIgnored var keyboardLabelWidths: [Double]?
     @QtIgnored var keyboardChipWidths: [Double]?
 
     @QtIgnored
     func invalidateStatic() {
         staticKey = nil
+        paletteContentCache = nil
     }
-
-    @QtIgnored
-    var noteFillKey: NoteFillKey?
-    @QtIgnored
-    var cachedNoteFills: [SceneRect] = []
-    @QtIgnored
-    var cachedNoteGeometries: [CachedNoteGeometry] = []
-    @QtIgnored
-    var cachedNoteFaces: [NoteNameFace] = []
 
     public var hoverChipRect: [String: QVariantSettable] =
         ["x": 0.0, "y": 0.0, "width": 0.0, "height": 0.0]
@@ -211,60 +186,29 @@ public final class GridScene {
 
     public init(typography: Typography = Typography(baseFontPx: 13)) {
         hoverChipFont = typography.caption.map
-        // Mirrored layers (exposeRows in QML) need name and fillColor text;
-        // the rest ship geometry + color only.
         for model in rectModels() {
-            let mirrored = model === pianoNoteFills || model === pianoOverlay
-            model.enablePackedRows { SceneRectPacking.pack($0, includeStrings: mirrored) }
+            model.enablePackedRows { SceneRectPacking.pack($0) }
         }
     }
 
     @QtIgnored
     private func rectModels() -> [QListModel<SceneRect>] {
-        [rulerGutterChrome, rulerChrome, rulerMarks, pianoGridRows,
-         pianoGridTime, pianoNoteFills, pianoDrawPreviewFill,
-         pianoNoteBordersAndSelection, pianoOverlay, pianoKeyboardKeys,
-         pianoKeyboardHighlights, cameraScroll]
+        [rulerGutterChrome, rulerChrome, rulerMarks, cameraScroll]
     }
 
     @QtIgnored
     func rebuildHover(_ input: GridSceneInput) {
         let m = input.metrics
         let p = input.palette
-        let camera = input.camera
-        let snapshot = camera.snapshot
         hoverChipFont = input.fontSpec(.chip)
-        var highlights: [SceneRect] = []
         var chipVisible = false
-
         if input.hoverKey >= 0, input.typography != nil {
-            let key = input.hoverKey
-            let row = camera.projection.row(forPitch: key)
-            if row != PitchProjection.hiddenRow,
-               let top = camera.projection.contentRowTop(
-                    row, keyHeight: snapshot.keyHeight, dpr: m.dpr),
-               let bottom = camera.projection.contentRowBottom(
-                    row, keyHeight: snapshot.keyHeight, dpr: m.dpr) {
-                highlights.append(SceneRect(
-                    x: 0, y: top, width: m.keyboardWidth,
-                    height: bottom - top, fillColor: p.keyboardHover))
-                if !GridScene.isBlackKey(key) && (key % 12 == 0 || key % 12 == 5) {
-                    highlights.append(SceneRect(
-                        x: 0, y: bottom - m.pixel / 2,
-                        width: m.keyboardWidth, height: m.pixel,
-                        fillColor: p.keyboardSeparator))
-                }
-
+            let row = input.camera.projection.row(forPitch: input.hoverKey)
+            if row != PitchProjection.hiddenRow {
                 refreshHoverChip(input)
                 chipVisible = true
             }
         }
-
-        highlights.append(SceneRect(
-            x: -m.pixel / 2, y: 0, width: m.pixel,
-            height: camera.projection.totalHeight(keyHeight: snapshot.keyHeight),
-            fillColor: p.separator))
-        sync(pianoKeyboardHighlights, highlights)
         hoverChipVisible = chipVisible
         hoverChipFill = p.hoverChipFill
         hoverChipTextColor = p.hoverChipText
@@ -283,6 +227,17 @@ public final class GridScene {
               let bottom = camera.projection.rowBottom(
                 row, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY, dpr: m.dpr)
         else { return }
+        let widthKey = KeyboardWidthKey(
+            bank: input.keyboardBankIdentity,
+            program: input.keyboardProgram,
+            baseFontPx: m.baseFontPx,
+            keyboardWidth: m.keyboardWidth)
+        if keyboardWidthKey != widthKey {
+            keyboardWidthKey = widthKey
+            keyboardChipWidths = input.keyboardNames?.enumerated().map { key, name in
+                t.chipAdvance(name.isEmpty ? GridScene.keyName(key) : name)
+            }
+        }
         let name = input.keyboardNames?[input.hoverKey] ?? ""
         let text = name.isEmpty ? GridScene.keyName(input.hoverKey) : name
         hoverChipText = text

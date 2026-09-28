@@ -368,9 +368,7 @@ Item {
                                              root.timelineSplitX,
                                              root.baseFontPx,
                                              bodyFontMetrics.lineSpacing)
-        root.otherEventsPresenter.configureViewport(
-            Math.max(0, rollPlot.width), root.baseFontPx,
-            bodyFontMetrics.lineSpacing)
+        root.otherEventsPresenter.configureViewport(root.baseFontPx, bodyFontMetrics.lineSpacing)
     }
 
     function deliverWheel(event, overGutter) {

@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtTest
+import "RollNoteFaces.js" as RollNoteFaces
 
 ShellEventListSupport {
     function test_keyboardSelectionStaysOnMountedEventRows() {
@@ -27,11 +28,11 @@ ShellEventListSupport {
         verify(roll && roll.visible)
         const notes = JSON.parse(grid.fetchNoteSummary())
         let chosenNote = null
+        const renderer = findChild(surface, "timelineRendererPlot")
         for (const note of notes) {
-            const item = findChild(surface, "gridNote_" + note.id)
-            if (!item)
+            const center = RollNoteFaces.center(renderer, roll, note.id)
+            if (!center)
                 continue
-            const center = item.mapToItem(roll, item.width / 2, item.height / 2)
             if (center.x > 1 && center.y > 1 && center.x < roll.width - 1
                 && center.y < roll.height - 1) {
                 mouseClick(roll, center.x, center.y)

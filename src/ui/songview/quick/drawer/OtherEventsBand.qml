@@ -64,7 +64,7 @@ Rectangle {
 
         Rectangle {
             objectName: "timelineOtherEventsPreRoll"
-            width: band.presenter.preRollWidth
+            width: Math.min(parent.width, Math.max(0, -band.overlayRoot.scrollX))
             height: parent.height
             color: band.colors.rulerPreRollMask
         }
@@ -73,8 +73,6 @@ Rectangle {
             id: markerContent
             width: parent.width
             height: parent.height
-            // Stable rows translate once here from the surface scroll carrier,
-            // same-turn like the roll plot content.
             x: -band.overlayRoot.scrollX
             Repeater {
                 id: markerRepeater
@@ -82,8 +80,6 @@ Rectangle {
                 model: band.presenter.markers
                 delegate: Shape {
                     required property var model
-                    // One packed spec per marker: a single bridge read per model
-                    // change instead of a metaCall per property.
                     readonly property var s: model ? model.spec : ({})
                     objectName: "timelineOtherEventsMarker"
                     x: s.x - band.presenter.markerHalfWidth

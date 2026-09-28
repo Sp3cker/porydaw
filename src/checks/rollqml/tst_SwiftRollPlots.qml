@@ -8,6 +8,7 @@ import PorydawApp
 import RollQmlCheck 1.0
 import Porydaw.Ui
 import "../editorqml/NativeWait.js" as NativeWait
+import "../editorqml/RollNoteFaces.js" as RollNoteFaces
 
 TestCase {
     id: testCase
@@ -662,7 +663,7 @@ TestCase {
     function test_noteRectReachesPlotDelegate() {
         var s = surface()
         var grid = s.gridModel
-        var plot = findChild(s, "timelineQuickPianoNoteFills")
+        var plot = findChild(s, "timelineRendererPlot")
         verify(plot, "the production note-fill layer is mounted")
         var viewport = rollInput()
         tryVerify(function() { return grid.renderedNoteCount > 0 }, 5000,
@@ -672,10 +673,10 @@ TestCase {
         var observed = false
         for (var i = 0; i < notes.length; ++i) {
             var note = notes[i]
-            var item = findChild(plot, "gridNote_" + note.id)
+            var item = RollNoteFaces.rect(plot, viewport, note.id)
             if (!item)
                 continue
-            var position = item.mapToItem(viewport, 0, 0)
+            var position = item
             if (position.y + item.height <= 0 || position.y >= viewport.height
                     || position.x + item.width <= 0 || position.x >= viewport.width)
                 continue
@@ -691,7 +692,7 @@ TestCase {
             verify(item.height > 0 && position.y + item.height > 0
                    && position.y < viewport.height,
                    "the note's published row bounds meet the mounted plot")
-            verify(item.color.a === 1, "the note's published fill is opaque")
+            verify(Qt.color(item.fill).a === 1, "the note's published fill is opaque")
             observed = true
             break
         }
@@ -721,33 +722,41 @@ TestCase {
         var transport = session.transportBarPresenter()
         var plot = rollInput()
         var gutter = findChild(s, "timelineQuickRollGutter")
-        var fill = findChild(s, "timelineQuickPianoNoteFills")
+        var fill = findChild(s, "timelineRendererPlot")
         tryVerify(function() { return grid.renderedNoteCount > 0 }, 5000,
                   "the scale raster has occupied pitches")
         transport.setScaleFold(false)
         transport.setScaleRoot(0)
         transport.setScaleType(0)
         transport.setScaleHighlight(false)
+        wait(0)
         waitForRendering(plot)
         var notes = JSON.parse(grid.fetchNoteSummary())
         var reference = null
         var referenceID = -1
         var referencePitch = -1
         for (var i = 0; i < notes.length; ++i) {
-            var item = findChild(fill, "gridNote_" + notes[i].id)
-            var position = item ? item.mapToItem(plot, 0, 0) : null
+            var face = RollNoteFaces.rect(fill, plot, notes[i].id)
             if (notes[i].track === grid.trackIndex
                     && [0, 2, 4, 5, 7, 9, 11].indexOf(notes[i].pitch % 12) >= 0
-                    && item && position.y > 0 && position.y < plot.height - item.height) {
-                reference = item
+                    && face && face.y > 0 && face.y < plot.height - face.height) {
+                reference = face
                 referenceID = notes[i].id
                 referencePitch = notes[i].pitch
                 break
             }
         }
         verify(reference !== null, "a visible note anchors the note-face probe")
+        var referenceScrollY = grid.cameraScrollY
         var dpr = grid.devicePixelRatio
         var h = grid.rowHeight * dpr
+        var notePoint = plot.mapToItem(s, reference.x + reference.width / 2,
+                                       reference.y + reference.height / 2)
+        var noteSX = Math.round(notePoint.x * dpr)
+        var noteSY = Math.round(notePoint.y * dpr)
+        var noteImage = RollNoteFaces.grab(testCase, s)
+        var noteBefore = {r: noteImage.red(noteSX, noteSY), g: noteImage.green(noteSX, noteSY),
+                          b: noteImage.blue(noteSX, noteSY)}
         var occupied = {}
         for (var index = 0; index < notes.length; ++index)
             occupied[notes[index].pitch] = true
@@ -772,8 +781,7 @@ TestCase {
         var x = Math.round(position.x * dpr)
         var y = Math.round(position.y * dpr)
         var before = grabImage(s)
-        var gutterBefore = grabImage(gutter)
-        var noteBefore = grabImage(reference)
+        var gutterBefore = RollNoteFaces.grab(testCase, gutter)
         var natural = expectedTint(before, x, y)
         var second = expectedTint(before, x, Math.round(y - 2 * h))
         var accidental = expectedTint(before, x, Math.round(y - h))
@@ -789,7 +797,7 @@ TestCase {
                              g: before.green(x, Math.round(y - h)),
                              b: before.blue(x, Math.round(y - h))}),
                "Highlight leaves the non-scale row untouched")
-        var gutterAfter = grabImage(gutter)
+        var gutterAfter = RollNoteFaces.grab(testCase, gutter)
         var gutterX = Math.round(gutter.width * dpr / 2)
         verify(pixelMatches(gutterAfter, gutterX, localY,
                             {r: gutterBefore.red(gutterX, localY),
@@ -798,14 +806,12 @@ TestCase {
                "Highlight leaves the keyboard column untouched")
         verify(pixelMatches(highlighted, x, Math.round(y - 2 * h), second),
                "Highlight tints every scale degree identically")
-        var noteAfter = grabImage(reference)
-        var noteX = Math.round(reference.width * dpr / 2)
-        var noteY = Math.round(reference.height * dpr / 2)
-        verify(pixelMatches(noteAfter, noteX, noteY,
-                            {r: noteBefore.red(noteX, noteY),
-                             g: noteBefore.green(noteX, noteY),
-                             b: noteBefore.blue(noteX, noteY)}),
+        var probeScrollY = grid.cameraScrollY
+        grid.setCameraVScroll(referenceScrollY)
+        verify(pixelMatches(RollNoteFaces.grab(testCase, s), noteSX, noteSY, noteBefore),
                "Highlight leaves the painted note face unchanged")
+        grid.setCameraVScroll(probeScrollY)
+        waitForRendering(plot)
         transport.setScaleRoot(1)
         waitForRendering(plot)
         var rooted = grabImage(s)
@@ -828,7 +834,7 @@ TestCase {
         transport.setScaleHighlight(false)
         transport.setScaleFold(true)
         waitForRendering(plot)
-        var foldedNote = findChild(fill, "gridNote_" + referenceID)
+        var foldedNote = RollNoteFaces.face(fill, referenceID)
         verify(foldedNote !== null, "the reference note is still rendered in Fold")
         var foldedNotes = JSON.parse(grid.fetchNoteSummary())
         var foldedPitches = []
@@ -839,11 +845,10 @@ TestCase {
         }
         foldedPitches.sort(function(a, b) { return b - a })
         var cRow = foldedPitches.indexOf(referencePitch)
-        verify(cRow >= 0 && foldedNote.visible,
+        verify(cRow >= 0 && foldedNote !== null,
                "A025 the Fold tint probe retains its actually occupied selected-track pitch")
         grid.setCameraVScroll(Math.max(0, (cRow + 0.5) * grid.rowHeight
                                             - plot.height / 2))
-        waitForRendering(plot)
         var foldedY = Math.round((cRow + 0.5) * grid.rowHeight * dpr
                                  - grid.cameraScrollY * dpr)
         verify(foldedY >= h / 2 && foldedY < plot.height * dpr - h / 2,

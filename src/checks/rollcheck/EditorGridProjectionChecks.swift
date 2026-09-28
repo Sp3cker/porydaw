@@ -59,17 +59,33 @@ func checkProjection(
         _ = $0.setHScroll($0.snapshot.maxHScroll / 2)
     }
     let snapshotAtMarks = session.camera.snapshot
-    let window = grid.scene.contentWindow
-    let timeRects = (0..<grid.scene.pianoGridTime.count).map { grid.scene.pianoGridTime[$0] }
-    let markXs = timeRects.filter { $0.width <= 4 }.map(\.x)
+    let timeProbe = RollContentProbe(grid.scene)
+    let segments = timeProbe.segments
+    let tiled =
+        segments.first?.start == 0 && segments.last?.next == Int(TimeDefaults.noTick)
+        && zip(segments, segments.dropFirst()).allSatisfy { $0.start < $1.start && $0.next == $1.start }
+        && segments.allSatisfy { $0.beatTicks > 0 && $0.beatsPerBar > 0 }
+    let visibleBegin = Int(max(0, snapshotAtMarks.scrollX) / snapshotAtMarks.pixelsPerTick)
+    let visibleEnd = Int((snapshotAtMarks.scrollX + snapshotAtMarks.viewportWidth) / snapshotAtMarks.pixelsPerTick)
+    _ = session.mutateCamera {
+        _ = $0.setTimeZoom(70)
+        _ = $0.scrollByPx(snapshotAtMarks.viewportWidth)
+    }
+    grid.refreshCamera()
+    let movedTimeProbe = RollContentProbe(grid.scene)
     report.expect(
-        !markXs.isEmpty && window.map { window in
-            markXs.allSatisfy { $0 >= window.left - 2 && $0 <= window.right + 2 }
-        } == true,
-        cppID: projectionID, message: "generated time marks stay inside the one-viewport culling window")
+        tiled && movedTimeProbe.revision == timeProbe.revision && movedTimeProbe.segments == segments
+            && movedTimeProbe.ticksPerBeat == grid.ticksPerBeat,
+        cppID: projectionID,
+        message: "generated time marks are published once in content order independent of the camera")
+    let axis = grid.metrics.timeAxis
+    let governing = segments.filter { $0.start <= visibleEnd && $0.next > visibleBegin }
     report.expect(
-        (markXs.min() ?? .infinity) <= max(0, snapshotAtMarks.scrollX)
-            && (markXs.max() ?? -.infinity) >= snapshotAtMarks.scrollX + snapshotAtMarks.viewportWidth,
+        tiled && !governing.isEmpty
+            && governing.allSatisfy { segment in
+                let expected = axis.segmentAt(Tick(segment.start))
+                return Int(expected.beatTicks) == segment.beatTicks && Int(expected.beatsPerBar) == segment.beatsPerBar
+            },
         cppID: projectionID, message: "generated time marks cover the visible plot")
 
     let summaryBeforeCameraMove = grid.fetchNoteSummary()
@@ -82,50 +98,55 @@ func checkProjection(
     _ = session.mutateCamera { _ = $0.setTimeZoom(35) }
     let snapshot = session.camera.snapshot
     let notes = session.document.notes(in: grid.trackIndex)
-    var knownNote: Note?
-    var knownRect: SceneRect?
-    for index in 0..<grid.scene.pianoNoteFills.count {
-        let rect = grid.scene.pianoNoteFills[index]
-        let scrollX = (snapshot.scrollX * grid.devicePixelRatio).rounded() / grid.devicePixelRatio
-        let scrollY = (snapshot.scrollY * grid.devicePixelRatio).rounded() / grid.devicePixelRatio
-        guard rect.x + rect.width > scrollX, rect.x < scrollX + snapshot.viewportWidth,
-              rect.y + rect.height > scrollY, rect.y < scrollY + snapshot.rollHeight else { continue }
-        if let note = notes.first(where: { rect.primitiveName == "gridNote_\($0.id.rawValue)" }) {
-            knownNote = note
-            knownRect = rect
-            break
-        }
+    let pixel = 1 / grid.devicePixelRatio
+    let viewBox = { (note: Note) in
+        grid.projectedNoteBox(tick: Int(note.tick), end: Int(note.tick + note.duration), pitch: Int(note.pitch))
     }
+    let isVisible = { (box: (x: Double, y: Double, w: Double, h: Double)) in
+        box.x + box.w > 0 && box.x < snapshot.viewportWidth && box.y + box.h > 0 && box.y < snapshot.rollHeight
+    }
+    let contentProbe = RollContentProbe(grid.scene)
+    var knownNote: Note?
+    var knownBox: (x: Double, y: Double, w: Double, h: Double)?
+    for note in notes {
+        guard contentProbe.note(note.id) != nil, let box = viewBox(note), isVisible(box) else { continue }
+        knownNote = note
+        knownBox = box
+        break
+    }
+    let scrollX = (snapshot.scrollX * grid.devicePixelRatio).rounded() / grid.devicePixelRatio
+    let scrollY = (snapshot.scrollY * grid.devicePixelRatio).rounded() / grid.devicePixelRatio
     let projected = knownNote.flatMap { note -> Bool? in
-        guard let rect = knownRect else { return nil }
+            guard let box = knownBox else { return nil }
         let row = session.camera.projection.row(forPitch: Int(note.pitch))
         let expectedY = session.camera.projection.contentRowTop(
             row, keyHeight: snapshot.keyHeight, dpr: grid.devicePixelRatio) ?? .nan
-        return gridCameraNear(rect.x, session.camera.contentTickX(
-            tick: Double(note.tick), dpr: grid.devicePixelRatio))
-            && gridCameraNear(rect.y, expectedY + 1 / grid.devicePixelRatio)
+            return gridCameraNear(
+                box.x,
+                session.camera.contentTickX(
+                    tick: Double(note.tick), dpr: grid.devicePixelRatio) - scrollX, tolerance: pixel)
+                && gridCameraNear(box.y, expectedY - scrollY + pixel, tolerance: pixel)
     } ?? false
     report.expect(
         projected,
         cppID: projectionID, message: "known note rectangle equals the camera projection")
 
     let zeroX = session.camera.displayX(tick: 0, origin: 0, dpr: grid.devicePixelRatio)
-    let maskCount = (0..<grid.scene.pianoGridTime.count).reduce(into: 0) { count, index in
-        if grid.scene.pianoGridTime[index].fillColor == grid.palette.preRollMask { count += 1 }
-    }
+    let maskSlot = Int(RollPaletteSlot.preRollMask.rawValue)
+    let maskPublished =
+        contentProbe.palette.indices.contains(maskSlot)
+        && contentProbe.palette[maskSlot] == RollContentProbe.argb(grid.palette.preRollMask)
     report.expect(
-        maskCount == (zeroX > 0 ? 1 : 0),
+        maskPublished && (zeroX > 0) == (snapshot.scrollX < 0),
         cppID: projectionID, message: "pre-roll mask presence follows the projected tick-zero position")
 
-    guard let originalNote = knownNote, let originalRect = knownRect else {
+    guard let originalNote = knownNote, let originalBox = knownBox else {
         report.fail(projectionID, "fixture exposes no visible note for interaction checks")
         return
     }
     let originalRevision = session.document.revision
-    let scrollX = (snapshot.scrollX * grid.devicePixelRatio).rounded() / grid.devicePixelRatio
-    let scrollY = (snapshot.scrollY * grid.devicePixelRatio).rounded() / grid.devicePixelRatio
-    let pointerX = originalRect.x - scrollX + originalRect.width / 2
-    let pointerY = originalRect.y - scrollY + originalRect.height / 2
+    let pointerX = originalBox.x + originalBox.w / 2
+    let pointerY = originalBox.y + originalBox.h / 2
     grid.beginPointer(
         x: pointerX, y: pointerY, modifiers: 0)
     report.expect(
@@ -137,20 +158,25 @@ func checkProjection(
     let dragX = Double(snap) * session.camera.snapshot.pixelsPerTick
     grid.updatePointer(
         x: pointerX + dragX, y: pointerY + dragY)
-    let previewName = "gridNote_\(originalNote.id.rawValue)"
-    let previewRect = firstRect(named: previewName, in: grid.scene.pianoNoteFills)
+    let previewNote = RollContentProbe(grid.scene).note(originalNote.id)
     let expectedTick = Int(originalNote.tick) + snap
     let expectedPitch = Int(originalNote.pitch) + pitchDelta
     let previewRow = session.camera.projection.row(forPitch: expectedPitch)
     let expectedPreviewY = session.camera.projection.contentRowTop(
         previewRow, keyHeight: session.camera.snapshot.keyHeight,
         dpr: grid.devicePixelRatio) ?? .nan
+    let previewBox = previewNote.flatMap {
+        grid.projectedNoteBox(tick: $0.tick, end: $0.tick + $0.duration, pitch: $0.pitch)
+    }
     report.expect(
-        previewRect.map {
-            gridCameraNear($0.x, session.camera.contentTickX(
-                tick: Double(expectedTick), dpr: grid.devicePixelRatio))
-                && gridCameraNear($0.y, expectedPreviewY + 1 / grid.devicePixelRatio)
-        } ?? false,
+        previewNote.map { $0.tick == expectedTick && $0.pitch == expectedPitch } == true
+            && previewBox.map {
+                gridCameraNear(
+                    $0.x,
+                    session.camera.contentTickX(
+                        tick: Double(expectedTick), dpr: grid.devicePixelRatio) - scrollX, tolerance: pixel)
+                    && gridCameraNear($0.y, expectedPreviewY - scrollY + pixel, tolerance: pixel)
+            } == true,
         cppID: projectionID, message: "one-cell drag publishes the snapped tick and pitch preview")
     grid.endPointer(
         x: pointerX + dragX, y: pointerY + dragY)
@@ -175,10 +201,10 @@ func checkProjection(
             let tick = Int(session.camera.tickAtContentX(candidateX)) / snap * snap
             let x = session.camera.displayX(
                 tick: Double(tick), origin: 0, dpr: grid.devicePixelRatio)
-            let occupied = (0..<grid.scene.pianoNoteFills.count).contains { index in
-                let rect = grid.scene.pianoNoteFills[index]
-                return rect.x - scrollX < x + 20 && rect.x + rect.width - scrollX > x
-                    && rect.y - scrollY <= candidateY && rect.y + rect.height - scrollY >= candidateY
+            let occupied = session.document.notes(in: grid.trackIndex).contains { note in
+                guard let box = viewBox(note) else { return false }
+                return box.x < x + 20 && box.x + box.w > x
+                    && box.y <= candidateY && box.y + box.h >= candidateY
             }
             if !occupied {
                 drawX = x
@@ -205,13 +231,10 @@ func checkProjection(
         cppID: projectionID, message: "draw drag on an empty row adds one snapped note")
 
     session.clearSelectedNotes()
-    let visibleIDs = Set((0..<grid.scene.pianoNoteFills.count).compactMap { index -> NoteID? in
-        let rect = grid.scene.pianoNoteFills[index]
-        guard rect.x + rect.width > scrollX, rect.x < scrollX + snapshot.viewportWidth,
-              rect.y + rect.height > scrollY, rect.y < scrollY + snapshot.rollHeight else { return nil }
-        let name = rect.primitiveName
-        return session.document.notes(in: grid.trackIndex)
-            .first(where: { name == "gridNote_\($0.id.rawValue)" })?.id
+    let visibleIDs = Set(
+        session.document.notes(in: grid.trackIndex).compactMap { note -> NoteID? in
+            guard let box = viewBox(note), isVisible(box) else { return nil }
+            return note.id
     })
     grid.beginRightPointer(x: 0, y: 0)
     grid.updateRightPointer(x: 640, y: 320)

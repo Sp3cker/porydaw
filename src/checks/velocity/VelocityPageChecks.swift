@@ -188,6 +188,7 @@ internal func runVelocityPageChecks(_ report: CheckReport, session: DocumentSess
     drawerVelocityPromptTransaction(report, session: session, service: service)
     drawerVelocityKeysplitPerNoteMapping(report, session: session, service: service)
     drawerVelocityProjectionRefresh(report, session: session, service: service)
+    drawerVelocityContentBlobChecks(report, session: session, service: service)
     drawerVelocityVoiceContextInvalidation(report, session: session, service: service)
     drawerVelocityPlayheadDiagnostics(report, session: session, service: service)
     drawerVelocityCommandAvailability(report, session: session, service: service)

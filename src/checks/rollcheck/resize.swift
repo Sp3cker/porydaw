@@ -67,21 +67,6 @@ private func resizeFreeCell(_ grid: PianoGrid, session: DocumentSession,
 }
 
 @MainActor
-private func resizeHandle(_ id: NoteID, grid: PianoGrid) -> SceneRect? {
-    let name = "gridNote_\(id.rawValue)"
-    for index in 0..<grid.scene.pianoNoteFills.count
-    where grid.scene.pianoNoteFills[index].primitiveName == name {
-        let rect = grid.scene.pianoNoteFills[index]
-        let dpr = grid.devicePixelRatio
-        return SceneRect(x: rect.x - floor(grid.cameraScrollX * dpr + 0.5) / dpr,
-                         y: rect.y - floor(grid.cameraScrollY * dpr + 0.5) / dpr,
-                         width: rect.width, height: rect.height,
-                         fillColor: rect.fillColor, primitiveName: rect.primitiveName)
-    }
-    return nil
-}
-
-@MainActor
 private func resizeUndoTo(_ identity: DocumentIdentity, session: DocumentSession) -> Bool {
     let history = session.document.history
     while history.currentIdentity != identity && history.canUndo {
@@ -111,7 +96,7 @@ private func checkResizeOffGrid(_ report: CheckReport, session: DocumentSession)
     }
     let planted = document.history.currentIdentity
     grid.refreshFromSession()
-    guard let rect = resizeHandle(noteID, grid: grid) else {
+    guard let rect = selectionRect(noteID, grid: grid) else {
         report.fail(id, "off-grid note is not projected")
         return
     }
@@ -169,8 +154,9 @@ private func checkResizeSelection(_ report: CheckReport, session: DocumentSessio
     }
     let planted = document.history.currentIdentity
     grid.refreshFromSession()
-    guard let bRect = resizeHandle(bID, grid: grid),
-          let dRect = resizeHandle(dID, grid: grid) else {
+    guard let bRect = selectionRect(bID, grid: grid),
+        let dRect = selectionRect(dID, grid: grid)
+    else {
         report.fail(id, "selection resize notes are not projected")
         return
     }
@@ -232,7 +218,7 @@ private func checkResizeMinimum(_ report: CheckReport, session: DocumentSession)
     }
     let planted = document.history.currentIdentity
     grid.refreshFromSession()
-    guard let rect = resizeHandle(noteID, grid: grid) else {
+    guard let rect = selectionRect(noteID, grid: grid) else {
         report.fail(id, "minimum-resize fixture is not projected")
         return
     }
@@ -262,7 +248,7 @@ private func checkResizeMinimum(_ report: CheckReport, session: DocumentSession)
                                                dpr: grid.devicePixelRatio)
     report.expect(narrowRight - narrowLeft <= 3, cppID: id,
                   message: "minimum-duration note spans at most three pixels at narrow zoom")
-    guard let narrow = resizeHandle(noteID, grid: grid) else {
+    guard let narrow = selectionRect(noteID, grid: grid) else {
         report.fail(id, "narrow minimum-duration note is not projected")
         return
     }
@@ -299,7 +285,7 @@ private func checkResizeAbutting(_ report: CheckReport, session: DocumentSession
     }
     let planted = document.history.currentIdentity
     grid.refreshFromSession()
-    guard let rect = resizeHandle(ids[0], grid: grid) else {
+    guard let rect = selectionRect(ids[0], grid: grid) else {
         report.fail(id, "abutting note pair is not projected")
         return
     }
@@ -376,7 +362,7 @@ private func checkResizeHoverCursor(_ report: CheckReport, session: DocumentSess
         return
     }
     grid.refreshFromSession()
-    guard let rect = resizeHandle(noteID, grid: grid), rect.width >= 16 else {
+    guard let rect = selectionRect(noteID, grid: grid), rect.width >= 16 else {
         report.fail(id, "hover-cursor note is not projected wide enough")
         return
     }
@@ -430,7 +416,7 @@ private func checkEdgeResize(_ report: CheckReport, session: DocumentSession) {
     let grid = makeCameraGrid(session: session)
     let a = added[0], b = added[1]
     func rect(_ id: NoteID) -> SceneRect? {
-        resizeHandle(id, grid: grid)
+        selectionRect(id, grid: grid)
     }
     guard let aRect = rect(a) else {
         report.fail(id, "edge-resize fixture note is not projected")
@@ -519,7 +505,7 @@ private func checkEdgeResize(_ report: CheckReport, session: DocumentSession) {
     }
     let abuttingGrid = PianoGrid(session: session)
     abuttingGrid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
-    guard let leftRect = resizeHandle(cPair[0], grid: abuttingGrid)
+    guard let leftRect = selectionRect(cPair[0], grid: abuttingGrid)
     else {
         report.fail(id, "abutting fixture notes are not projected")
         return

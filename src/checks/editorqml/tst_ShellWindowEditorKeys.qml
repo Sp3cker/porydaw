@@ -4,6 +4,7 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
+import "RollNoteFaces.js" as RollNoteFaces
 
 ShellWindowSupport {
     function test_cForeignWindowKeepsSoloLocal() {
@@ -140,14 +141,12 @@ ShellWindowSupport {
         var initiallySelected = JSON.parse(grid.fetchNoteSummary()).find(function(note) {
             return note.selected && !note.ghost
         })
+        var renderer = findChild(surface, "timelineRendererPlot")
         var other = JSON.parse(grid.fetchNoteSummary()).find(function(note) {
-            var item = findChild(surface, "gridNote_" + note.id)
-            return !note.selected && !note.ghost && item && item.visible
-                   && item.width > 0 && item.height > 0
+            return !note.selected && !note.ghost && RollNoteFaces.face(renderer, note.id) !== null
         })
         verify(initiallySelected && other, "two visible notes can form an arrow selection")
-        var item = findChild(surface, "gridNote_" + other.id)
-        var point = item.mapToItem(roll, item.width / 2, item.height / 2)
+        var point = RollNoteFaces.center(renderer, roll, other.id)
         mouseClick(roll, point.x, point.y, Qt.LeftButton, Qt.ShiftModifier)
         var before = JSON.parse(grid.fetchNoteSummary())
         var selected = before.filter(function(note) { return note.selected }).map(function(note) {

@@ -52,7 +52,6 @@ func checkTimeSelectionHighlights(_ report: CheckReport, session: DocumentSessio
             report.fail(id, "time-scoped fixtures have no projected boxes")
             return
         }
-        let ring = 3.0 / grid.devicePixelRatio
         report.expect(session.document.note(seed.id).map {
             $0.track == seed.track && $0.tick == seed.tick && Int($0.pitch) == seed.pitch
         } == true, cppID: id, message: "the time-shortcut fixture seeds its covered note")
@@ -60,21 +59,20 @@ func checkTimeSelectionHighlights(_ report: CheckReport, session: DocumentSessio
             range: TimeRange(startTick: seed.tick, endTick: seed.tick + seed.duration),
             scope: .tracks([seed.track, other])))
         grid.refreshTimeSelectionHighlight()
-        report.expect(hasFrame(grid.scene.pianoNoteBordersAndSelection, box: plainBox, inset: 0,
-                               thickness: ring, color: grid.palette.selectionRing)
-                          && hasFrame(grid.scene.pianoNoteBordersAndSelection, box: ghostBox,
-                                      inset: 0, thickness: ring,
-                                      color: grid.palette.selectionRing),
+        let covered = RollContentProbe(grid.scene)
+        report.expect(
+            covered.note(seed.id)?.timeCovered == true
+                && covered.note(ghostID).map { $0.ghost && $0.timeCovered } == true,
                       cppID: id,
                       message: "A053/A029 covered notes ring, including the time-scoped ghost")
         report.expect(session.selectedNotes.isEmpty, cppID: id,
                       message: "A054 time-covered notes never leak into the note selection")
-        let overlay = grid.scene.pianoOverlay.asArray
-        report.expect(overlay.contains { rect in
-            rect.fillColor == grid.palette.selectionFill && renderingNear(rect.x, x0)
-                && renderingNear(rect.y, 0) && renderingNear(rect.width, x1 - x0)
-                && renderingNear(rect.height, projection.totalHeight(keyHeight: snapshot.keyHeight))
-        } && overlay.filter { $0.fillColor == grid.palette.selectionEdge }.count >= 2,
+        let overlay = covered.overlay
+        report.expect(
+            overlay.active && overlay.startTick == Int(seed.tick)
+                && overlay.endTick == Int(seed.tick + seed.duration) && overlay.selectedTrack == seed.track
+                && overlay.scopeTracks.indices.contains(other)
+                && overlay.scopeTracks[seed.track] && overlay.scopeTracks[other],
         cppID: id, message: "the covered selected track publishes its range band and edges")
         let bandEnd = seed.tick + seed.duration
         let automation = AutomationPage(baseFontPx: grid.baseFontPx)
@@ -93,19 +91,16 @@ func checkTimeSelectionHighlights(_ report: CheckReport, session: DocumentSessio
             range: TimeRange(startTick: seed.tick, endTick: seed.tick + seed.duration),
             scope: .lanes, tempo: true))
         grid.refreshTimeSelectionHighlight()
-        report.expect(!hasFrame(grid.scene.pianoNoteBordersAndSelection, box: plainBox, inset: 0,
-                                thickness: ring, color: grid.palette.selectionRing)
-                          && !hasFrame(grid.scene.pianoNoteBordersAndSelection, box: ghostBox,
-                                       inset: 0, thickness: ring,
-                                       color: grid.palette.selectionRing),
+        let laneScoped = RollContentProbe(grid.scene)
+        report.expect(
+            laneScoped.note(seed.id)?.timeCovered == false
+                && laneScoped.note(ghostID)?.timeCovered != true,
                       cppID: id, message: "lane-scoped ranges ring no roll notes")
         session.clearTimeSelection()
         grid.refreshTimeSelectionHighlight()
-        report.expect(!hasFrame(grid.scene.pianoNoteBordersAndSelection, box: plainBox, inset: 0,
-                                thickness: ring, color: grid.palette.selectionRing)
-                          && !grid.scene.pianoOverlay.asArray.contains {
-                              $0.fillColor == grid.palette.selectionFill
-                          },
+        let cleared = RollContentProbe(grid.scene)
+        report.expect(
+            cleared.note(seed.id)?.timeCovered == false && !cleared.overlay.active,
                       cppID: id, message: "clearing the range removes every highlight")
     }
 }

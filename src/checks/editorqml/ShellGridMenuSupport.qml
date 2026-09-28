@@ -4,6 +4,7 @@ import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
 import "NativeWait.js" as NativeWait
+import "RollNoteFaces.js" as RollNoteFaces
 
 TestCase {
     id: testCase
@@ -263,13 +264,14 @@ TestCase {
     function noteTargets() {
         var grid = surface().gridModel
         var roll = control("swiftRollInput")
+        var renderer = findChild(surface(), "timelineRendererPlot")
         return JSON.parse(grid.fetchNoteSummary()).filter(function(note) {
             return !note.ghost && note.track === grid.trackIndex
         }).map(function(note) {
-            var item = findChild(surface(), "gridNote_" + note.id)
-            if (!item || !item.visible || item.width < grid.drawThreshold * 2)
+            var item = RollNoteFaces.rect(renderer, roll, note.id)
+            if (!item || item.width < grid.drawThreshold * 2)
                 return null
-            var point = item.mapToItem(roll, item.width / 2, item.height / 2)
+            var point = Qt.point(item.x + item.width / 2, item.y + item.height / 2)
             return point.x > item.width && point.y > item.height
                 && point.x < roll.width - item.width
                 && point.y < roll.height - item.height
@@ -286,6 +288,7 @@ TestCase {
     function noteMenuMiss(menu) {
         var roll = control("swiftRollInput")
         var targets = JSON.parse(surface().gridModel.fetchNoteSummary())
+        var renderer = findChild(surface(), "timelineRendererPlot")
         for (var y = roll.height - surface().gridModel.rowHeight; y > 0;
              y -= surface().gridModel.rowHeight) {
             for (var x = roll.width - roll.height / 8; x > 0; x -= roll.width / 8) {
@@ -294,12 +297,11 @@ TestCase {
                     && point.y >= menu.y && point.y <= menu.y + menu.height)
                     continue
                 var occupied = targets.some(function(note) {
-                    var item = findChild(surface(), "gridNote_" + note.id)
-                    if (!item || !item.visible)
+                    var item = RollNoteFaces.rect(renderer, roll, note.id)
+                    if (!item)
                         return false
-                    var top = item.mapToItem(roll, 0, 0)
-                    return x >= top.x && x <= top.x + item.width
-                        && y >= top.y && y <= top.y + item.height
+                    return x >= item.x && x <= item.x + item.width
+                        && y >= item.y && y <= item.y + item.height
                 })
                 if (!occupied)
                     return roll.mapToItem(shell.contentItem, x, y)

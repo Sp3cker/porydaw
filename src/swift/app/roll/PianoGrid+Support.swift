@@ -88,16 +88,6 @@ enum GridCursorKind: Int {
         return (Int(cell.start), Int(cell.end - cell.start))
     }
 
-    @QtIgnored
-    public func projectedNoteBox(tick: Int, end: Int, pitch: Int)
-        -> (x: Double, y: Double, w: Double, h: Double)? {
-        guard session.camera.projection.row(forPitch: pitch) != PitchProjection.hiddenRow
-        else { return nil }
-        let x0 = session.camera.displayX(tick: Double(tick), origin: 0, dpr: metrics.dpr)
-        let x1 = session.camera.displayX(tick: Double(end), origin: 0, dpr: metrics.dpr)
-        return metrics.noteBox(camera: session.camera, x0: x0, x1: x1, pitch: pitch)
-    }
-
     /// Applies the session-owned edit cursor without rebuilding document content.
     @QtIgnored
     public func refreshCursorPresentation() {

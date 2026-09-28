@@ -194,38 +194,26 @@ func checkRenderedRulerMenuCommands(_ report: CheckReport, session: DocumentSess
     report.expect(writtenEnd == Tick(grid.snapTickDown(Double(end))), cppID: id,
                   message: "the clicked end row writes a second undoable marker")
     grid.refreshFromSession()
-    let loopOverlay = grid.scene.pianoOverlay.asArray
-    report.expect(loopOverlay.contains { $0.primitiveName == "loopGlowStart" },
-                  cppID: id, message: "loop start publishes a full-height start-edge glow")
-    report.expect(loopOverlay.contains { $0.primitiveName == "loopGlowEnd" },
-                  cppID: id, message: "loop end publishes a full-height end-edge glow")
-    report.expect(loopOverlay.contains { $0.primitiveName == "loopEdgeStart" },
-                  cppID: id, message: "loop start publishes its full-alpha edge line")
-    report.expect(loopOverlay.contains { $0.primitiveName == "loopEdgeEnd" },
-                  cppID: id, message: "loop end publishes its full-alpha edge line")
-    let startGlow = loopOverlay.filter { $0.primitiveName == "loopGlowStart" }
-    let endGlow = loopOverlay.filter { $0.primitiveName == "loopGlowEnd" }
-    let height = session.camera.projection.totalHeight(keyHeight: session.camera.snapshot.keyHeight)
-    let window = grid.scene.contentWindow
-    let left = window?.left ?? .infinity
-    let right = window?.right ?? -.infinity
-    report.expect(!startGlow.isEmpty && startGlow.allSatisfy {
-        $0.y == 0 && $0.height == height && $0.width > 0
-            && $0.x >= left && $0.x + $0.width <= right
-    }, cppID: id, message: "start glow is banded and clipped to the complete roll body")
-    report.expect(!endGlow.isEmpty && endGlow.allSatisfy {
-        $0.y == 0 && $0.height == height && $0.width > 0
-            && $0.x >= left && $0.x + $0.width <= right
-    }, cppID: id, message: "end glow is banded and clipped to the complete roll body")
-    report.expect((startGlow.first.map { PaletteMath.channels($0.fillColor).a } ?? 0)
-                      > (startGlow.last.map { PaletteMath.channels($0.fillColor).a } ?? 255)
-                      && (endGlow.first.map { PaletteMath.channels($0.fillColor).a } ?? 255)
-                      < (endGlow.last.map { PaletteMath.channels($0.fillColor).a } ?? 0),
-                  cppID: id, message: "start and end glow bands fade in opposite directions")
-    report.expect(loopOverlay.filter { $0.primitiveName.hasPrefix("loopEdge") }.allSatisfy {
-        $0.fillColor == palette.selectionRing && $0.y == 0 && $0.height == height
-            && $0.width <= 1 / grid.devicePixelRatio
-    }, cppID: id, message: "both loop edge lines use full-opacity selection ink and device-pixel width")
+    let loopProbe = RollContentProbe(grid.scene)
+    let noTick = Int(TimeDefaults.noTick)
+    report.expect(
+        loopProbe.loopStartTick == Int(writtenStart) && loopProbe.loopStartTick != noTick,
+        cppID: id, message: "the roll content publishes the written loop start tick")
+    report.expect(
+        loopProbe.loopEndTick == Int(writtenEnd) && loopProbe.loopEndTick != noTick,
+        cppID: id, message: "the roll content publishes the written loop end tick")
+    report.expect(
+        loopProbe.loopStartTick < loopProbe.loopEndTick, cppID: id,
+        message: "the published loop start tick precedes the published loop end tick")
+    let glowSlot = Int(RollPaletteSlot.loopGlow.rawValue)
+    let edgeSlot = Int(RollPaletteSlot.loopEdge.rawValue)
+    let ring = RollContentProbe.argb(palette.selectionRing)
+    report.expect(
+        loopProbe.palette.indices.contains(glowSlot) && loopProbe.palette[glowSlot] == ring,
+        cppID: id, message: "the roll content publishes the selection ring ink as the loop glow color")
+    report.expect(
+        loopProbe.palette.indices.contains(edgeSlot) && loopProbe.palette[edgeSlot] == ring,
+        cppID: id, message: "the roll content publishes the selection ring ink as the loop edge color")
 
     openRulerMenu(menu, at: atEnd)
     report.expect((0..<menu.rows.count).contains(where: { menu.rows[$0].actionId == 4 && menu.rows[$0].enabled }),
@@ -235,19 +223,19 @@ func checkRenderedRulerMenuCommands(_ report: CheckReport, session: DocumentSess
                   && session.timeline.loopEndTick == TimeDefaults.noTick, cppID: id,
                   message: "Remove Loop clears both marker events")
     grid.refreshFromSession()
-    report.expect(!grid.scene.pianoOverlay.asArray.contains {
-        $0.primitiveName.hasPrefix("loopGlow") || $0.primitiveName.hasPrefix("loopEdge")
-    }, cppID: id, message: "removing both loop markers removes their roll glows and edge lines")
+    let removedProbe = RollContentProbe(grid.scene)
+    report.expect(
+        removedProbe.loopStartTick == noTick && removedProbe.loopEndTick == noTick,
+        cppID: id, message: "removing both loop markers publishes no loop tick in the roll content")
     _ = session.document.history.undoDocument()
     report.expect(session.timeline.loopStartTick == TimeDefaults.noTick
                   && session.timeline.loopEndTick == writtenEnd, cppID: id,
                   message: "the first undo restores only the end marker")
     grid.refreshFromSession()
-    report.expect(grid.scene.pianoOverlay.asArray.contains {
-        $0.primitiveName == "loopGlowEnd"
-    } && !grid.scene.pianoOverlay.asArray.contains {
-        $0.primitiveName == "loopGlowStart"
-    }, cppID: id, message: "an open loop start keeps only the end glow")
+    let openProbe = RollContentProbe(grid.scene)
+    report.expect(
+        openProbe.loopEndTick == Int(writtenEnd) && openProbe.loopStartTick == noTick,
+        cppID: id, message: "an open loop start publishes only the loop end tick")
     _ = session.document.history.undoDocument()
     report.expect(session.timeline.loopStartTick == writtenStart
                   && session.timeline.loopEndTick == writtenEnd, cppID: id,

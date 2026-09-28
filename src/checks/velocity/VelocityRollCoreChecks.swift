@@ -14,15 +14,7 @@ let drawerVelocityRollCorePromptID = "swiftcore/VelocityRollCore::promptGestureI
 
 @MainActor
 private func drawerVelocityRollCoreNoteCenter(_ grid: PianoGrid, _ id: NoteID) -> (Double, Double)? {
-    for index in 0..<grid.scene.pianoNoteFills.count {
-        let rect = grid.scene.pianoNoteFills[index]
-        if rect.primitiveName == "gridNote_\(id.rawValue)" {
-            let dpr = grid.devicePixelRatio
-            return (rect.x - floor(grid.cameraScrollX * dpr + 0.5) / dpr + rect.width / 2,
-                    rect.y - floor(grid.cameraScrollY * dpr + 0.5) / dpr + rect.height / 2)
-        }
-    }
-    return nil
+    selectionRect(id, grid: grid).map { ($0.x + $0.width / 2, $0.y + $0.height / 2) }
 }
 
 @MainActor

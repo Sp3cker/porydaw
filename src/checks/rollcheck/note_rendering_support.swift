@@ -4,11 +4,35 @@ import PorydawCore
 import QtBridge
 
 @MainActor
-func firstNoteRect(named name: String, in model: QListModel<SceneRect>) -> SceneRect? {
-    for index in 0..<model.count where model[index].primitiveName == name {
-        return model[index]
-    }
-    return nil
+func probeFill(_ grid: PianoGrid, _ id: NoteID) -> UInt32? {
+    RollContentProbe(grid.scene).note(id)?.fillArgb
+}
+
+func argbOpaque(_ argb: UInt32) -> Bool {
+    argb >> 24 == 0xFF
+}
+
+@MainActor
+func noteNameLabeled(_ grid: PianoGrid, session: DocumentSession, id: NoteID) -> Bool {
+    let probe = RollContentProbe(grid.scene)
+    guard probe.noteNameMode, !probe.showVelocityValues,
+        let record = probe.note(id), !record.ghost, record.track == probe.selectedTrack,
+        let typography = grid.typography,
+        let content = contentNoteBox(
+            grid, session: session, tick: record.tick,
+            end: record.tick + record.duration, pitch: record.pitch)
+    else { return false }
+    let snapshot = session.camera.snapshot
+    let metrics = grid.metrics
+    let origin = viewportPoint(grid, x: content.x, y: content.y)
+    return origin.x < snapshot.viewportWidth && origin.x + content.w > 0
+        && origin.y < snapshot.rollHeight && origin.y + content.h > 0
+        && NoteNameLabels.faceFits(
+            keyHeight: snapshot.keyHeight, occupiedHeight: typography.noteNameOccupiedHeight,
+            pixel: metrics.pixel, spaceHalf: metrics.spaceHalf)
+        && NoteNameLabels.nameFits(
+            width: content.w, pitch: record.pitch, advance: typography.noteNameAdvance(pitch:),
+            spaceHalf: metrics.spaceHalf, spaceTwo: metrics.spaceTwo)
 }
 
 @MainActor
@@ -60,16 +84,26 @@ func renderingSeed(_ report: CheckReport, id: String,
 
 @MainActor
 func noteBox(_ grid: PianoGrid, session: DocumentSession, note: Note)
+    -> (x: Double, y: Double, w: Double, h: Double)?
+{
+    contentNoteBox(
+        grid, session: session, tick: Int(note.tick),
+        end: Int(note.tick) + Int(note.duration), pitch: Int(note.pitch))
+}
+
+@MainActor
+func contentNoteBox(
+    _ grid: PianoGrid, session: DocumentSession, tick: Int, end: Int, pitch: Int
+)
     -> (x: Double, y: Double, w: Double, h: Double)? {
     let camera = session.camera
-    guard camera.projection.row(forPitch: Int(note.pitch)) != PitchProjection.hiddenRow
+    guard camera.projection.row(forPitch: pitch) != PitchProjection.hiddenRow
     else { return nil }
     return grid.metrics.noteContentBox(
         camera: camera,
-        x0: camera.contentTickX(tick: Double(note.tick), dpr: grid.devicePixelRatio),
-        x1: camera.contentTickX(tick: Double(note.tick + note.duration),
-                                dpr: grid.devicePixelRatio),
-        pitch: Int(note.pitch))
+        x0: camera.contentTickX(tick: Double(tick), dpr: grid.devicePixelRatio),
+        x1: camera.contentTickX(tick: Double(end), dpr: grid.devicePixelRatio),
+        pitch: pitch)
 }
 
 @MainActor
@@ -84,27 +118,6 @@ func renderingNear(_ lhs: Double, _ rhs: Double) -> Bool {
 }
 func publishedOpaque(_ color: String) -> Bool {
     color.count == 7 && color.hasPrefix("#")
-}
-
-
-@MainActor
-func hasFrame(_ model: QListModel<SceneRect>,
-                      box: (x: Double, y: Double, w: Double, h: Double),
-                      inset: Double, thickness: Double, color: String) -> Bool {
-    let x = box.x + inset, y = box.y + inset
-    let w = box.w - 2 * inset, h = box.h - 2 * inset
-    guard w > 0, h > 2 * thickness else { return false }
-    let sides = [(x, y, w, thickness), (x, y + h - thickness, w, thickness),
-                 (x, y + thickness, thickness, h - 2 * thickness),
-                 (x + w - thickness, y + thickness, thickness, h - 2 * thickness)]
-    return sides.allSatisfy { side in
-        (0..<model.count).contains { index in
-            let rect = model[index]
-            return rect.fillColor == color && renderingNear(rect.x, side.0)
-                && renderingNear(rect.y, side.1) && renderingNear(rect.width, side.2)
-                && renderingNear(rect.height, side.3)
-        }
-    }
 }
 
 @MainActor

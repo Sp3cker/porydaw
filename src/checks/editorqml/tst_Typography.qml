@@ -5,6 +5,7 @@ import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
 import "NativeWait.js" as NativeWait
+import "RollNoteFaces.js" as RollNoteFaces
 
 TestCase {
     id: testCase
@@ -402,13 +403,12 @@ TestCase {
         var vertical = (127 - note.pitch + 0.5) * grid.rowHeight
         grid.setCameraHScroll(Math.max(0, horizontal - plot.width / 2))
         grid.setCameraVScroll(Math.max(0, vertical - plot.height / 2))
+        var renderer = findChild(surface, "timelineRendererPlot")
         tryVerify(function() {
-            var face = findChild(surface, "gridNote_" + note.id)
-            return face && face.visible && face.width > 0 && face.height > 0
+            return RollNoteFaces.face(renderer, note.id) !== null
         }, 5000, "the selected note face appears in the roll")
         waitForRendering(input)
-        var face = findChild(surface, "gridNote_" + note.id)
-        var point = face.mapToItem(input, face.width / 2, face.height / 2)
+        var point = RollNoteFaces.center(renderer, input, note.id)
         mouseClick(input, point.x, point.y, Qt.LeftButton)
         grid.performCommand(6)
         tryVerify(function() {

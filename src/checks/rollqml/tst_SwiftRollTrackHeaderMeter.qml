@@ -3,7 +3,6 @@ import QtTest
 
 SwiftRollTrackHeadersSupport {
     function meterPixels(row) {
-        waitForRendering(row)
         var image = grabImage(testCase)
         var origin = row.mapToItem(testCase, 0, 0)
         var h = surface().headersModel
@@ -61,7 +60,6 @@ SwiftRollTrackHeadersSupport {
         compare(undriven.pixels, silentNeighbor.pixels,
                 "an undriven neighbor row's meter stays unpainted")
         var activity = item("timelineHeaderActivity_0")
-        waitForRendering(activity)
         var before = grabImage(testCase)
         verify(before.width > 0, "the mounted activity meter captures a raster image")
         verify(before.height > 0, "the activity raster has physical rows")
@@ -109,7 +107,6 @@ SwiftRollTrackHeadersSupport {
                && stereo.pixels[(stereo.height - 1) * stereo.width + leftColumn] === bottomColor,
                "the stereo right channel paints its partial height")
         verify(bootstrap.presentHeaderActivity(0, 255, 128, true))
-        waitForRendering(activity)
         var after = grabImage(testCase)
         var stableX0 = Math.floor(origin.x * scale)
         var stableX1 = Math.ceil((origin.x + activity.width) * scale)

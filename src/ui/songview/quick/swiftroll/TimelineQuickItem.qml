@@ -5,8 +5,6 @@ import Porydaw.Ui
 Item {
     id: root
 
-    // Direct binding to one of GridScene's semantically named rect models
-    // (e.g. scene.rulerMarks, scene.pianoNoteFills).
     required property var rects
     property bool batched: false
     // Batch-paint rows and mirror each as a lightweight native child so

@@ -249,13 +249,18 @@ index c69ec15..47fa5ef 100644
          return variant
      }
  }
-@@ -183,6 +205,11 @@ public protocol QVariantSettable : QVariantGettable {
+@@ -183,6 +205,16 @@ public protocol QVariantSettable : QVariantGettable {
      static func value(from variant: QVariant) -> Self
  }
  
 +extension Optional: QVariantGettable where Wrapped: QObjectBuildable {
 +    public func toVariant() -> QVariant { QVariant(value: self) }
 +    public static func metaType() -> Int32 { Wrapped.metaType() }
++}
++
++extension Data: QVariantGettable {
++    public func toVariant() -> QVariant { QVariant(value: self) }
++    public static func metaType() -> Int32 { return 12 }
 +}
 +
  extension Bool: QVariantSettable {

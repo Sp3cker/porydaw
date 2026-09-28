@@ -4,6 +4,7 @@ import PorydawApp
 import RollQmlCheck 1.0
 import Porydaw.Ui
 import "../editorqml/NativeWait.js" as NativeWait
+import "../editorqml/RollNoteFaces.js" as RollNoteFaces
 
 TestCase {
     id: testCaseRoot
@@ -159,43 +160,67 @@ TestCase {
         return input
     }
 
-    function keyboardLabels() {
-        var labels = []
-        var stack = [surface()]
-        while (stack.length > 0) {
-            var item = stack.pop()
-            if (item.labelText !== undefined && item.labelBackgroundRect !== undefined) {
-                var position = item.mapToItem(gutterBox(), 0, 0)
-                labels.push({ text: item.labelText, x: position.x, y: position.y,
-                              width: item.width, height: item.height })
-            }
-            for (var c = 0; c < item.children.length; ++c)
-                stack.push(item.children[c])
-        }
-        return labels
+    function keyboardRenderer() {
+        var renderer = findChild(surface(), "timelineRendererKeyboard")
+        verify(renderer !== null, "the native keyboard renderer is mounted")
+        return renderer
     }
 
-    function sameLabels(a, b) {
-        if (a.length !== b.length)
-            return false
-        for (var i = 0; i < a.length; ++i) {
-            if (a[i].text !== b[i].text || a[i].x !== b[i].x || a[i].y !== b[i].y
-                || a[i].width !== b[i].width || a[i].height !== b[i].height)
-                return false
-        }
-        return true
+    function keyName(pitch) {
+        var names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+        return names[pitch % 12] + (Math.floor(pitch / 12) - 1)
     }
 
-    // A fully visible pitch row inside the gutter viewport.
+    function keyRow(pitch) {
+        var g = grid()
+        var top = rollInput().mapToItem(gutterBox(), 0,
+                                        (127 - pitch) * g.rowHeight - g.cameraScrollY).y
+        return { pitch: pitch, text: keyName(pitch), x: 0, y: top,
+                 width: g.keyboardWidth, height: g.rowHeight }
+    }
+
+    function rowVisible(row) {
+        return row.y >= 0 && row.y + row.height <= gutterBox().height
+    }
+
     function visiblePitch() {
-        var height = gutterBox().height
-        var labels = keyboardLabels()
-        for (var i = 0; i < labels.length; ++i) {
-            if (labels[i].y >= 0 && labels[i].y + labels[i].height <= height)
-                return labels[i]
+        for (var pitch = 0; pitch < 128; pitch += 12) {
+            var row = keyRow(pitch)
+            if (rowVisible(row))
+                return row
         }
         fail("no fully visible keyboard label")
         return null
+    }
+
+    function hoveredName(pitch) {
+        var g = grid()
+        var row = keyRow(pitch)
+        mouseMove(gutterInput(), gutterInput().width / 2, row.y + row.height / 2)
+        if (!waitForNative(function() {
+            return g.hoverKey === pitch && g.scene.hoverChipVisible
+        }, 2000))
+            return ""
+        return g.scene.hoverChipText
+    }
+
+    function rowInk(image, item, row, x0, x1) {
+        var dpr = image.width / item.width
+        var origin = gutterBox().mapToItem(item, 0, row.y + row.height / 2)
+        var y = Math.round(origin.y * dpr)
+        var dy = Math.max(0, Math.floor(row.height * dpr * 0.3))
+        var left = Math.round(gutterBox().mapToItem(item, x0, 0).x * dpr)
+        var right = Math.round(gutterBox().mapToItem(item, x1, 0).x * dpr)
+        var r = image.red(left, y), gr = image.green(left, y), b = image.blue(left, y)
+        var last = -1
+        for (var py = y - dy; py <= y + dy; ++py) {
+            for (var px = left; px < right; ++px) {
+                if (Math.abs(image.red(px, py) - r) > 2 || Math.abs(image.green(px, py) - gr) > 2
+                        || Math.abs(image.blue(px, py) - b) > 2)
+                    last = Math.max(last, px)
+            }
+        }
+        return last < 0 ? -1 : last / dpr
     }
 
     function selectedNoteCount(grid) {
@@ -206,6 +231,10 @@ TestCase {
                 ++count
         }
         return count
+    }
+
+    function grabItem(item) {
+        return RollNoteFaces.grab(testCaseRoot, item)
     }
 
     // Two grabs differ if any sampled pixel differs.

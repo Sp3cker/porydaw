@@ -57,6 +57,43 @@ func checkSelectionBandSweep(_ report: CheckReport, session: DocumentSession) {
     report.expect(session.document.revision == revision
         && session.document.history.currentIdentity == history, cppID: id,
         message: "selection sweep changes no document or undo command")
+    let bx0 = b.x + 1
+    let by0 = b.y + 1
+    let bx1 = b.x + b.width - 1
+    let by1 = b.y + b.height - 1
+    session.setSelectedNotes([added[0]])
+    roll.refreshNotes()
+    roll.beginRightPointer(x: bx0, y: by0)
+    roll.updateRightPointer(x: bx1, y: by1)
+    let held = RollContentProbe(roll.scene)
+    report.expect(
+        session.selectedNotes == Set([added[0]])
+            && roll.bandSelectionActive
+            && held.note(added[0])?.selected == false
+            && held.note(added[1])?.selected == false, cppID: id,
+        message: "plain band hides the old selection ring while its new selection is provisional")
+    roll.endRightPointer(x: bx1, y: by1)
+    let replaced = RollContentProbe(roll.scene)
+    report.expect(
+        session.selectedNotes == Set([added[1]])
+            && replaced.note(added[0])?.selected == false
+            && replaced.note(added[1])?.selected == true, cppID: id,
+        message: "plain band replaces the old selection and publishes only the new note ring")
+    session.setSelectedNotes([added[0]])
+    roll.refreshNotes()
+    roll.beginRightPointer(x: bx0, y: by0)
+    roll.updateRightPointer(x: bx1, y: by1, modifiers: 0x0400_0000)
+    let additiveHeld = RollContentProbe(roll.scene)
+    report.expect(
+        additiveHeld.note(added[0])?.selected == true, cppID: id,
+        message: "Ctrl-held band preserves the old note ring during preview")
+    roll.endRightPointer(x: bx1, y: by1, modifiers: 0x0400_0000)
+    let additive = RollContentProbe(roll.scene)
+    report.expect(
+        session.selectedNotes == Set(added)
+            && additive.note(added[0])?.selected == true
+            && additive.note(added[1])?.selected == true, cppID: id,
+        message: "Ctrl-release band adds the swept note without clearing the old selection")
     checkDeferredModifierSelection(report, session: session, grid: roll,
                                    a: a, b: b, ids: added)
 }

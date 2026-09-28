@@ -143,6 +143,8 @@ if(APPLE)
         rollcheck/scale_editing.swift
         rollcheck/note_rendering.swift
         rollcheck/note_rendering_support.swift
+        rollcheck/roll_content_probe.swift
+        rollcheck/note_name_labels.swift
         rollcheck/note_rendering_borders.swift
         rollcheck/note_rendering_velocity.swift
         rollcheck/note_rendering_names.swift
@@ -257,6 +259,7 @@ if(APPLE)
         nativegraphics/SharedPlayheadChecks.swift
         nativegraphics/SharedPlayheadPureChecks.swift
         velocity/VelocityPageChecks.swift
+        velocity/VelocityContentProbe.swift
         drawerpresentation/VoiceChangesPageChecks.swift
         automation/AutomationPageChecks.swift
         host/HostBehaviorChecks.swift
@@ -441,6 +444,7 @@ if(APPLE)
         editorqml/EditorDrawerAutomationGestureSupport.js
         editorqml/EditorDrawerAutomationMenuSupport.js
         editorqml/EditorDrawerVoiceSupport.js
+        editorqml/RollNoteFaces.js
         "${PROJECT_SOURCE_DIR}/resources/fonts.qrc"
     )
     set_target_properties(editor_qml_tests PROPERTIES

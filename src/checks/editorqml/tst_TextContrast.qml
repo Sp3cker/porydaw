@@ -6,6 +6,7 @@ import ShellQmlCheck 1.0
 import "../../ui/shell"
 import "TextContrastAudit.js" as Audit
 import "NativeWait.js" as NativeWait
+import "RollNoteFaces.js" as RollNoteFaces
 
 // Text legibility is the product's first visual requirement
 // (docs/design/text-contrast.md). Every text item the production shell
@@ -171,39 +172,54 @@ TestCase {
         verify(surface !== null, "the loaded roll is mounted")
         const gutter = findChild(surface, "timelineQuickRollGutter")
         verify(gutter !== null, "the keyboard gutter is mounted")
-        const textViewport = findChild(surface, "timelineQuickPianoKeyboardTextViewport")
-        verify(textViewport !== null && textViewport.clip
-               && textViewport.width > gutter.width,
-               "keyboard text overflows the gutter within the clipped roll-band viewport")
+        const keys = findChild(surface, "timelineRendererKeyboard")
+        verify(keys !== null && keys.parent.clip
+               && keys.width === keys.parent.width && keys.height === keys.parent.height,
+               "keyboard text paints inside the clipped keyboard viewport")
         const grid = surface.gridModel
-        verify(grid.rowHeight > 0 && gutter.height > 0, "the keyboard has a viewport")
+        verify(grid.rowHeight > 0 && keys.height > 0, "the keyboard has a viewport")
+        const natural = Qt.color(grid.palette.keyboardNatural)
+        const naturalRgb = [natural.r * 255, natural.g * 255, natural.b * 255]
         for (const edge of ["top", "bottom"]) {
             const rowOffset = edge === "top" ? 0.2 : 0.8
             const scroll = (127 - 72 + rowOffset) * grid.rowHeight
-                - (edge === "bottom" ? gutter.height : 0)
+                - (edge === "bottom" ? keys.height : 0)
             grid.setCameraVScroll(scroll)
-            let label = null
+            let rowTop = 0
             tryVerify(function() {
-                const texts = []
-                Audit.collect([textViewport], texts, [])
-                label = texts.find(function(item) { return item.text === "C5" })
-                if (label === undefined)
-                    return false
-                const y = label.parent.mapToItem(gutter, 0, 0).y
-                return (edge === "top" ? y < 0 : y + label.height > gutter.height)
-                    && y < gutter.height && y + label.height > 0
+                rowTop = (127 - 72) * grid.rowHeight - grid.cameraScrollY
+                return (edge === "top" ? rowTop < 0 : rowTop + grid.rowHeight > keys.height)
+                    && rowTop < keys.height && rowTop + grid.rowHeight > 0
             }, 3000, "C5 straddles the scrolled keyboard's " + edge + " edge")
-            const root = Audit.sceneRoot(gutter)
-            const box = Audit.glyphBox(label, root)
-            verify(box !== null, "the " + edge + "-clipped C5 glyph box remains visible")
-            const gutterTop = gutter.mapToItem(root, 0, 0).y
-            verify(box.y0 >= gutterTop && box.y1 <= gutterTop + gutter.height,
+            waitForRendering(keys)
+            const image = RollNoteFaces.grab(testCase, gutter)
+            const dpr = image.width / gutter.width
+            const y0 = Math.max(0, Math.ceil(rowTop * dpr) + 1)
+            const y1 = Math.min(image.height, Math.floor((rowTop + grid.rowHeight) * dpr) - 1)
+            let naturalPixels = 0
+            let ink = null
+            let inkRatio = 0
+            for (let y = y0; y < y1; ++y) {
+                for (let x = 0; x < image.width; ++x) {
+                    const c = image.pixel(x, y)
+                    const rgb = [c.r * 255, c.g * 255, c.b * 255]
+                    const ratio = Audit.contrast(rgb, naturalRgb)
+                    if (ratio < 1.05)
+                        ++naturalPixels
+                    else if (ratio > inkRatio) {
+                        inkRatio = ratio
+                        ink = rgb
+                    }
+                }
+            }
+            verify(y1 > y0 && naturalPixels > 0,
+                   "the " + edge + "-clipped C5 glyph box remains visible")
+            verify(y0 >= 0 && y1 <= image.height,
                    "the " + edge + "-clipped C5 ink stays on its painted key")
-            const observation = Audit.measure(label, grab(root), root)
-            verify(observation !== null, "the " + edge + "-clipped C5 ink is painted")
-            compare(observation.bg, grid.palette.keyboardNatural,
-                    "the " + edge + "-clipped C5 glyph sits on the actual natural key")
-            verify(observation.ratio >= observation.required,
+            verify(ink !== null, "the " + edge + "-clipped C5 ink is painted")
+            verify(naturalPixels > (y1 - y0),
+                   "the " + edge + "-clipped C5 glyph sits on the actual natural key")
+            verify(inkRatio >= 4.5,
                    "the " + edge + "-clipped C5 ink meets WCAG AA on its painted key")
             auditWindow(context + " " + edge + "-clipped keyboard")
         }

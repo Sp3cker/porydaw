@@ -1,5 +1,6 @@
 import QtQuick
 import QtTest
+import "RollNoteFaces.js" as RollNoteFaces
 
 ShellGridInputSupport {
     function test_focusedRouting() {
@@ -9,9 +10,9 @@ ShellGridInputSupport {
         var roll = rollInput(surface)
         var target = firstBandedNote(grid, surface, roll)
         verify(target !== null, "a fully visible note takes routing")
-        var item = findChild(surface, "gridNote_" + target.id)
-        verify(item !== null, "the routing note renders")
-        var center = item.mapToItem(roll, item.width / 2, item.height / 2)
+        var renderer = findChild(surface, "timelineRendererPlot")
+        var center = RollNoteFaces.center(renderer, roll, target.id)
+        verify(center !== null, "the routing note renders")
         mouseClick(roll, center.x, center.y, Qt.LeftButton)
         verify(waitForNative(function() {
             var current = noteById(grid, target.id)
@@ -34,9 +35,8 @@ ShellGridInputSupport {
         verify(pencilStayed, "auto-repeat B is consumed while eligible")
         compare(grid.pencilMode, true, "repeat never retoggles Pencil Mode")
 
-        var movedItem = findChild(surface, "gridNote_" + target.id)
-        verify(movedItem !== null, "the moved note renders")
-        var movedCenter = movedItem.mapToItem(roll, movedItem.width / 2, movedItem.height / 2)
+        var movedCenter = RollNoteFaces.center(renderer, roll, target.id)
+        verify(movedCenter !== null, "the moved note renders")
         var beforeGesture = grid.fetchNoteSummary()
         mouseMove(roll, movedCenter.x, movedCenter.y)
         mousePress(roll, movedCenter.x, movedCenter.y, Qt.LeftButton)
@@ -149,8 +149,8 @@ ShellGridInputSupport {
         verify(fold !== null, "the mounted transport has a Fold control")
         var target = firstBandedNote(grid, surface, roll)
         verify(target !== null, "a visible note is available for the fold keys")
-        var item = findChild(surface, "gridNote_" + target.id)
-        var center = item.mapToItem(roll, item.width / 2, item.height / 2)
+        var renderer = findChild(surface, "timelineRendererPlot")
+        var center = RollNoteFaces.center(renderer, roll, target.id)
         mouseClick(roll, center.x, center.y, Qt.LeftButton)
         tryVerify(function() { return noteById(grid, target.id).selected }, 3000)
         var startingPitch = target.pitch
@@ -193,9 +193,9 @@ ShellGridInputSupport {
             })
             return exception !== undefined
         }, 3000)
-        item = findChild(surface, "gridNote_" + exception.id)
-        verify(item !== null, "the off-scale exception note renders")
-        center = item.mapToItem(roll, item.width / 2, item.height / 2)
+        wait(0)
+        center = RollNoteFaces.center(renderer, roll, exception.id)
+        verify(center !== null, "the off-scale exception note renders")
         mouseClick(roll, center.x, center.y, Qt.LeftButton)
         tryVerify(function() { return noteById(grid, exception.id).selected }, 3000)
         mouseClick(fold, fold.width / 2, fold.height / 2)
@@ -262,9 +262,9 @@ ShellGridInputSupport {
         verify(inserted.length === 1 && inserted[0].pitch === lane.pitch
                && inserted[0].duration >= 2 * grid.snapTicks,
                "a re-pressed drag works before Delete deletes again")
-        var drawn = findChild(surface, "gridNote_" + inserted[0].id)
-        verify(drawn, "the re-pressed note renders for selection")
-        var center = drawn.mapToItem(roll, drawn.width / 2, drawn.height / 2)
+        var center = RollNoteFaces.center(findChild(surface, "timelineRendererPlot"), roll,
+                                           inserted[0].id)
+        verify(center, "the re-pressed note renders for selection")
         mouseClick(roll, center.x, center.y, Qt.LeftButton)
         tryVerify(function() { return noteById(grid, inserted[0].id).selected }, 3000)
         roll.forceActiveFocus(Qt.OtherFocusReason)
@@ -281,8 +281,7 @@ ShellGridInputSupport {
         var roll = rollInput(surface)
         var target = firstBandedNote(grid, surface, roll)
         verify(target && roll, "a fully visible note accepts a body drag")
-        var item = findChild(surface, "gridNote_" + target.id)
-        var center = item.mapToItem(roll, item.width / 2, item.height / 2)
+        var center = RollNoteFaces.center(findChild(surface, "timelineRendererPlot"), roll, target.id)
         mouseClick(roll, center.x, center.y, Qt.LeftButton)
         tryVerify(function() { return noteById(grid, target.id).selected }, 3000)
         var before = grid.fetchNoteSummary()
@@ -310,8 +309,7 @@ ShellGridInputSupport {
         var roll = rollInput(surface)
         var target = firstBandedNote(grid, surface, roll)
         verify(target && roll, "a visible roll note can be selected before thumb drag")
-        var item = findChild(surface, "gridNote_" + target.id)
-        var center = item.mapToItem(roll, item.width / 2, item.height / 2)
+        var center = RollNoteFaces.center(findChild(surface, "timelineRendererPlot"), roll, target.id)
         mouseClick(roll, center.x, center.y, Qt.LeftButton)
         tryVerify(function() { return noteById(grid, target.id).selected }, 3000)
         var before = grid.fetchNoteSummary()

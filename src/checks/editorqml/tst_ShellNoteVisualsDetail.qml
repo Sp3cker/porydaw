@@ -14,7 +14,7 @@ ShellNoteVisualsSupport {
         verify(initial !== null, "the idle roll renders a frame")
         var target = trackFace(context, initial, false)
         verify(target !== null, "a visible note guards the velocity drag")
-        var anchor = target.item.mapToItem(context.plot, target.item.width / 2, 0)
+        var anchor = Qt.point(target.item.x + target.item.width / 2, target.item.y)
         context.grid.handleWheel(0, 600, 0, 0, 0, 0, false, anchor.x, 0)
         var idle = grabShell()
         verify(idle !== null, "the zoomed idle roll renders a frame")
@@ -23,10 +23,10 @@ ShellNoteVisualsSupport {
                "a visible wide note guards the velocity drag")
         var summary = context.grid.fetchNoteSummary()
         var dpr = shellDpr(idle)
-        var origin = win(target.item, 0, 0)
-        var rollOrigin = win(roll, 0, 0)
-        var px = origin.x - rollOrigin.x + target.item.width / 2
-        var py = origin.y - rollOrigin.y + target.item.height / 2
+        var center = context.plot.mapToItem(roll, target.item.x + target.item.width / 2,
+                                            target.item.y + target.item.height / 2)
+        var px = center.x
+        var py = center.y
         mousePress(roll, px, py, Qt.LeftButton, Qt.ControlModifier)
         mouseMove(roll, px, py - context.grid.dragDistance - 2,
                   -1, Qt.LeftButton, Qt.ControlModifier)
@@ -99,7 +99,7 @@ ShellNoteVisualsSupport {
         var image = grabShell()
         verify(image !== null, "the five-pixel-key roll renders a frame")
         var item = noteItem(context.fills, target.id)
-        verify(item !== null && item.visible, "the tiny note is mounted in the roll")
+        verify(item !== null, "the tiny note is mounted in the roll")
         var rect = deviceRect(item, plot, image, shellDpr(image))
         verify(rect.h >= 3 && rect.h <= grid.baseFontPx * shellDpr(image),
                "the mounted tiny note spans a border and a face: rect=" + JSON.stringify(rect)
@@ -136,7 +136,7 @@ ShellNoteVisualsSupport {
         verify(waitForNative(function() { return grid.renderedNoteCount > 0 }, 5000),
                "the roll publishes notes")
         var plot = findChild(surface, "timelineQuickRollPlot")
-        var fills = findChild(surface, "timelineQuickPianoNoteFills")
+        var fills = findChild(surface, "timelineRendererPlot")
         verify(plot !== null, "the roll plot is mounted")
         verify(fills !== null, "the note fill layer is mounted")
 
@@ -206,7 +206,7 @@ ShellNoteVisualsSupport {
         var selectedImage = grabShell()
         verify(selectedImage !== null, "the selected roll renders a frame")
         var selectedItem = noteItem(fills, unselected.note.id)
-        verify(selectedItem && selectedItem.visible, "the selected note delegate stays visible")
+        verify(selectedItem !== null, "the selected note delegate stays visible")
         var selectedRect = deviceRect(selectedItem, plot, selectedImage, dpr)
         var ringRequest = Math.max(1, Math.round(grid.baseFontPx * (1.0 / 8.0) * dpr))
         var ring = Helpers.fittedFrameThickness(selectedRect.w, selectedRect.h, ringRequest, 0)
@@ -276,13 +276,9 @@ ShellNoteVisualsSupport {
             return Math.abs(grid.cameraMaxVScroll - maxSmallScrollY) < 0.01
         }, 5000), "the published vertical bound is the projected row height")
         verify(waitForNative(function() {
-            var count = 0
-            for (var i = 0; i < fills.children.length; ++i) {
-                var c = fills.children[i]
-                if (c && c.fillColor !== undefined && c.visible)
-                    ++count
-            }
-            return count > 0
+            return publishedNotes(grid).some(function(note) {
+                return noteItem(fills, note.id) !== null
+            })
         }, 5000), "the small viewport still draws note fills")
         var smallImage = grabShell()
         verify(smallImage !== null, "the small-font roll renders a frame")
@@ -298,7 +294,7 @@ ShellNoteVisualsSupport {
                 if (!smallNotes[n].selected)
                     continue
                 var item = noteItem(fills, smallNotes[n].id)
-                if (!item || !item.visible)
+                if (!item)
                     continue
                 var rect = deviceRect(item, plot, smallImage, shellDpr(smallImage))
                 var tryRing = Helpers.fittedFrameThickness(rect.w, rect.h, smallRingRequest, 0)

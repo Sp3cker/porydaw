@@ -5,6 +5,21 @@ import PorydawCore
 import QtBridge
 
 @MainActor
+extension PianoGrid {
+    func projectedNoteBox(
+        tick: Int, end: Int, pitch: Int
+    )
+        -> (x: Double, y: Double, w: Double, h: Double)?
+    {
+        guard session.camera.projection.row(forPitch: pitch) != PitchProjection.hiddenRow
+        else { return nil }
+        let x0 = session.camera.displayX(tick: Double(tick), origin: 0, dpr: metrics.dpr)
+        let x1 = session.camera.displayX(tick: Double(end), origin: 0, dpr: metrics.dpr)
+        return metrics.noteBox(camera: session.camera, x0: x0, x1: x1, pitch: pitch)
+    }
+}
+
+@MainActor
 func runSelectionChecks(_ report: CheckReport, session: DocumentSession, fixtureRoot: String) {
     checkSelectionBandSweep(report, session: session)
     checkSelectionNonScaleMove(report, session: session)
@@ -19,16 +34,21 @@ func runSelectionChecks(_ report: CheckReport, session: DocumentSession, fixture
 
 @MainActor
 func selectionRect(_ id: NoteID, grid: PianoGrid) -> SceneRect? {
-    let model = grid.scene.pianoNoteFills
-    for index in 0..<model.count where model[index].primitiveName == "gridNote_\(id.rawValue)" {
-        let rect = model[index]
-        let dpr = grid.devicePixelRatio
-        return SceneRect(x: rect.x - floor(grid.cameraScrollX * dpr + 0.5) / dpr,
-                         y: rect.y - floor(grid.cameraScrollY * dpr + 0.5) / dpr,
-                         width: rect.width, height: rect.height,
-                         fillColor: rect.fillColor, primitiveName: rect.primitiveName)
-    }
-    return nil
+    guard let note = grid.notes.first(where: { $0.noteId == id }) else { return nil }
+    return rollNoteRect(note, grid: grid)
+}
+
+@MainActor
+func rollNoteRects(_ grid: PianoGrid) -> [SceneRect] {
+    grid.notes.compactMap { rollNoteRect($0, grid: grid) }
+}
+
+@MainActor
+private func rollNoteRect(_ note: GridNote, grid: PianoGrid) -> SceneRect? {
+    let shown = grid.displayedNote(note)
+    guard let box = grid.projectedNoteBox(tick: shown.tick, end: shown.end, pitch: shown.pitch)
+    else { return nil }
+    return SceneRect(x: box.x, y: box.y, width: box.w, height: box.h, fillColor: "")
 }
 
 @MainActor

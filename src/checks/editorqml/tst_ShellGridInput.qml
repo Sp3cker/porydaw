@@ -2,6 +2,7 @@ import QtQuick
 import QtTest
 import ShellQmlCheck 1.0
 import "GatedVisualsHelpers.js" as Helpers
+import "RollNoteFaces.js" as RollNoteFaces
 
 ShellGridInputSupport {
     GatedVisualsProbe { id: dprProbe }
@@ -261,14 +262,15 @@ ShellGridInputSupport {
             return plot.mapToItem(captureItem, x, bottom)
         }
         var notes = gridNotes(grid)
+        var renderer = findChild(surface, "timelineRendererPlot")
         var secondary = null
         for (var i = 0; i < notes.length; ++i) {
             var candidate = notes[i]
-            var item = findChild(surface, "gridNote_" + candidate.id)
+            var item = RollNoteFaces.face(renderer, candidate.id)
             var left = candidate.tick * scale - grid.cameraScrollX
             var right = (candidate.tick + candidate.duration) * scale - grid.cameraScrollX
             var primaryOverlap = notes.some(function(other) {
-                var primaryItem = findChild(surface, "gridNote_" + other.id)
+                var primaryItem = RollNoteFaces.face(renderer, other.id)
                 return other.track === grid.trackIndex && !other.ghost
                     && other.tick >= candidate.tick
                     && other.tick < candidate.tick + candidate.duration

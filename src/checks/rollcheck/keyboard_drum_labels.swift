@@ -35,35 +35,38 @@ func checkDrumPadLabels(_ report: CheckReport) {
         let camera = session.camera
         let rowHeight = camera.snapshot.keyHeight
         let projection = camera.projection
-        let labels = grid.scene.pianoKeyboardTextModel.asArray
-        func record(_ pitch: Int) -> SceneText? {
-            guard let top = projection.contentRowTop(
-                projection.row(forPitch: pitch), keyHeight: rowHeight, dpr: grid.devicePixelRatio)
-            else { return nil }
-            return grid.scene.pianoKeyboardTextModel.asArray.first {
-                $0.labelRect["y"] as? Double == top
-            }
+        let probe = RollContentProbe(grid.scene)
+        func record(_ pitch: Int) -> String? {
+            let current = RollContentProbe(grid.scene)
+            guard current.rows.contains(where: { $0.pitch == pitch }) else { return nil }
+            return current.keyboardNames[pitch] ?? GridScene.keyName(pitch)
         }
         let names = session.bankSlots[11].drumPadNames
         report.expect(names?.count == 128 && names?[37] == "fixture_named_pad_long_label_123",
                       cppID: id, message: "A036 the loaded bank publishes detached indexed pad names")
-        report.expect(labels.count == projection.visibleRowCount,
+        report.expect(
+            !probe.keyboardNames.isEmpty && probe.rows.count == projection.visibleRowCount,
                       cppID: id, message: "A061 the drum keyboard labels every projected pitch")
-        report.expect(record(36)?.labelText == "fixture_pluck",
+        report.expect(
+            record(36) == "fixture_pluck",
                       cppID: id, message: "A036 the first named sample pad displays its full name")
         let long = record(37)
-        report.expect(long?.labelText == "fixture_named_pad_long_label_123",
+        report.expect(
+            long == "fixture_named_pad_long_label_123",
                       cppID: id, message: "A038 the full long drum-pad name is a fixed keyboard label")
-        report.expect(record(39)?.labelText == GridScene.keyName(39),
+        report.expect(
+            probe.keyboardNames[39] == nil && record(39) == GridScene.keyName(39),
                       cppID: id, message: "A044 an unnamed drum pad displays its pitch name")
         let inset = grid.metrics.keyLabelRightInset
         let advance = grid.typography?.keyLabelAdvance("fixture_named_pad_long_label_123") ?? 0
         let expectedWidth = max(grid.metrics.keyboardWidth - inset, advance + inset)
-        report.expect((long?.labelRect["width"] as? Double) == expectedWidth
-                          && expectedWidth > grid.metrics.keyboardWidth, cppID: id,
-                      message: "A039 the long label width includes measured text and inset")
-        report.expect(long?.labelRect["x"] as? Double == 0, cppID: id,
-                      message: "A041 the long label starts at the keyboard origin")
+        report.expect(
+            long != nil && probe.drumKeyboard && expectedWidth > grid.metrics.keyboardWidth, cppID: id,
+            message:
+                "A039 the drum keyboard publishes the long pad name, whose measured label exceeds the keyboard width")
+        report.expect(
+            probe.keyboardNames[37] == "fixture_named_pad_long_label_123", cppID: id,
+            message: "A041 the long pad name is published at its own pitch in the drum keyboard names")
         let row = projection.row(forPitch: 37)
         guard let top = projection.contentRowTop(
                   row, keyHeight: rowHeight, dpr: grid.devicePixelRatio),
@@ -72,11 +75,14 @@ func checkDrumPadLabels(_ report: CheckReport) {
             report.fail(id, "the loaded pad has no projected row")
             return
         }
-        report.expect(long?.labelRect["y"] as? Double == top, cppID: id,
-                      message: "A042 the long label starts at the projected row top")
-        report.expect(long?.labelRect["height"] as? Double == bottom - top,
-                      cppID: id, message: "A043 the long label fills the projected row height")
-        report.expect(record(38)?.labelText == "fixture_drum", cppID: id,
+        report.expect(
+            probe.rows.firstIndex(where: { $0.pitch == 37 }) == row, cppID: id,
+            message: "A042 the long pad's published row index equals its projected row")
+        report.expect(
+            probe.rows.first(where: { $0.pitch == 37 })?.accidentalLane == GridScene.isBlackKey(37),
+            cppID: id, message: "A043 the long pad's published row carries its accidental flag for the drum background")
+        report.expect(
+            record(38) == "fixture_drum", cppID: id,
                       message: "A061 the adjacent sample pad retains its loaded name")
         grid.updateHover(x: 0, y: (top + bottom) / 2 - camera.snapshot.scrollY)
         let chip = grid.scene
@@ -90,13 +96,18 @@ func checkDrumPadLabels(_ report: CheckReport) {
         let expectedMelodic = (0..<projection.visibleRowCount).compactMap {
             projection.visiblePitch(at: $0)
         }.filter { $0 % 12 == 0 }.map(GridScene.keyName)
-        let melodicLabels = grid.scene.pianoKeyboardTextModel.asArray.map(\.labelText)
+        let melodicProbe = RollContentProbe(grid.scene)
+        let melodicLabels =
+            melodicProbe.keyboardNames.isEmpty
+            ? melodicProbe.rows.map(\.pitch).filter { $0 % 12 == 0 }.map(GridScene.keyName)
+            : melodicProbe.rows.map { melodicProbe.keyboardNames[$0.pitch] ?? GridScene.keyName($0.pitch) }
         report.expect(melodicLabels == expectedMelodic, cppID: id,
                       message: "A064 a melodic track shows exactly the visible octave-C names")
         report.expect(!melodicLabels.contains("fixture_named_pad_long_label_123"),
                       cppID: id, message: "A065 the accidental drum pad disappears on the melodic track")
         grid.setTrack(index: track)
-        report.expect(record(37)?.labelText == "fixture_named_pad_long_label_123",
+        report.expect(
+            record(37) == "fixture_named_pad_long_label_123",
                       cppID: id, message: "A069 returning to the drum track restores the exact pad name")
         let later = Tick(session.document.ticksPerBeat * 2)
         session.document.writeLane(track: track, lane: .voice, from: later, through: later,
@@ -109,7 +120,7 @@ func checkDrumPadLabels(_ report: CheckReport) {
         }
         func synchronizedLabel() -> String? {
             grid.reloadVisuals()
-            return record(37)?.labelText
+            return record(37)
         }
         let playhead = SharedPlayheadPresenter()
         playhead.attach(session: session, audio: nil, grid: grid, drawer: nil)

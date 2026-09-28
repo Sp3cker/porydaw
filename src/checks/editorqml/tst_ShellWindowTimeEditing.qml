@@ -4,6 +4,7 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
+import "RollNoteFaces.js" as RollNoteFaces
 
 ShellWindowSupport {
     function test_jTimeSelectionInsertAndDeleteMutatesDocument() {
@@ -349,17 +350,20 @@ ShellWindowSupport {
         tryVerify(function() {
             return !JSON.parse(grid.fetchNoteSummary()).some(function(note) {
                 return note.id === firstInside.id
-            }) && findChild(surface, "gridNote_" + firstInside.id) === null
+            }) && RollNoteFaces.face(findChild(surface, "timelineRendererPlot"),
+                                     firstInside.id) === null
         }, 3000, "the whole-song Time menu removes the first designated painted note")
         tryVerify(function() {
             return !JSON.parse(grid.fetchNoteSummary()).some(function(note) {
                 return note.id === secondInside.id
-            }) && findChild(surface, "gridNote_" + secondInside.id) === null
+            }) && RollNoteFaces.face(findChild(surface, "timelineRendererPlot"),
+                                     secondInside.id) === null
         }, 3000, "the whole-song Time menu removes the second designated painted note")
         tryVerify(function() {
             return !JSON.parse(grid.fetchNoteSummary()).some(function(note) {
                 return note.id === otherInside.id
-            }) && findChild(surface, "gridNote_" + otherInside.id) === null
+            }) && RollNoteFaces.face(findChild(surface, "timelineRendererPlot"),
+                                     otherInside.id) === null
         }, 3000, "the whole-song Time menu removes the other track's inside painted note")
         tryVerify(function() {
             return JSON.parse(grid.fetchNoteSummary()).some(function(note) {

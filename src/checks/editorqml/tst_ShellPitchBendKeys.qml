@@ -3,6 +3,7 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
+import "RollNoteFaces.js" as RollNoteFaces
 
 ShellPitchBendSupport {
     function test_windowUndoReachesOpenPopup() {
@@ -41,7 +42,8 @@ ShellPitchBendSupport {
         })
         verify(target && target.selected && target.track === opened.grid.trackIndex,
                "the G opener targets the published, selected primary-track note")
-        verify(findChild(opened.view, "gridNote_" + target.id) !== null,
+        verify(RollNoteFaces.face(findChild(opened.view, "timelineRendererPlot"),
+                                  target.id) !== null,
                "the selected G target remains painted on the mounted roll")
         compare(JSON.parse(opened.grid.fetchNoteSummary()).filter(function(note) {
             return note.selected

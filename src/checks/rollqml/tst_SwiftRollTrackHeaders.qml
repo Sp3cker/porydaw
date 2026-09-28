@@ -54,7 +54,7 @@ SwiftRollTrackHeadersSupport {
             var feelControl = item("timelineRulerFeelControl")
             var divisionInput = divisionControl.children[divisionControl.children.length - 1]
             var feelInput = feelControl.children[feelControl.children.length - 1]
-            var rollGutterInput = rollGutter.children[1]
+            var rollGutterInput = rollGutter.children[0]
             verify(divisionInput && feelInput && rollGutterInput
                    && divisionInput.acceptedButtons !== undefined
                    && feelInput.acceptedButtons !== undefined

@@ -286,16 +286,20 @@ func checkThresholdDrawCell(_ report: CheckReport, session: DocumentSession) {
                   cppID: id, message: "crossing draw slop does not re-attack the sounding press key")
     report.expect(grid.statusText.contains("Drawing"), cppID: id,
                   message: "crossing the draw threshold enters the draw gesture")
-    guard let pendingFace = grid.scene.pianoDrawPreviewFill.asArray.first else {
+    let pendingFace = RollContentProbe(grid.scene).drawPreview
+    guard pendingFace.active else {
         report.fail(id, "pending draw has no rendered preview face")
         grid.endPointer(x: dragX, y: cell.y)
         return
     }
     grid.setNoteNameMode(enabled: true)
-    report.expect(grid.scene.pianoDrawPreviewFill.asArray.first.map {
-        $0.matches(pendingFace)
-    } == true, cppID: id,
-    message: "toggling note-name mode while drawing leaves the pending note face unchanged")
+    let namedFace = RollContentProbe(grid.scene).drawPreview
+    report.expect(
+        namedFace.active && namedFace.tick == pendingFace.tick
+            && namedFace.duration == pendingFace.duration
+            && namedFace.pitch == pendingFace.pitch,
+        cppID: id,
+        message: "toggling note-name mode while drawing leaves the pending note face unchanged")
     grid.endPointer(x: dragX, y: cell.y)
     let drawn = session.document.notes(in: grid.trackIndex).filter {
         Int($0.tick) == cell.tick && Int($0.pitch) == cell.pitch
@@ -383,7 +387,7 @@ func checkOrderedSelection(_ report: CheckReport, session: DocumentSession) {
                        what: "band cancellation restores selection order")
     grid.beginRightPointer(x: 0, y: 0)
     grid.updateRightPointer(x: 640, y: 320)
-    grid.endRightPointer(x: 640, y: 320)
+    grid.endRightPointer(x: 640, y: 320, modifiers: 0x0400_0000)
     report.expect(Array(session.selectedNoteOrder.prefix(2)) == [b, a]
         && session.selectedNotes.contains(c),
         cppID: id, message: "band keeps press order before newly covered notes")

@@ -89,8 +89,7 @@ public final class DocumentWorkspace {
         self.grid = grid
         let otherEventsBand = OtherEventsBandPresenter()
         otherEventsBand.configure(session: session, palette: grid.palette,
-                                  baseFontPx: Double(typography.baseFontPx), appFontLineSpacing: 0,
-                                  plotWidth: session.camera.snapshot.viewportWidth)
+            baseFontPx: Double(typography.baseFontPx), appFontLineSpacing: 0)
         self.otherEventsBand = otherEventsBand
         let pitchBend = PitchBendPresenter(
             session: session, grid: grid, palette: grid.palette, typography: typography)
@@ -357,19 +356,15 @@ public final class DocumentWorkspace {
     }
 
     private func cameraDidChange(_ change: EditorCamera.Change) {
-        grid.refreshCamera()
+        grid.refreshCameraPresentation(change)
         if isActive {
             playhead.refreshProjection()
             playheadGuides.refreshProjection()
         }
 
-        // Drawer pages project only through the horizontal camera. A vertical
-        // scroll or pitch-projection change therefore leaves them untouched;
-        // an x scroll uses their projection-only seams, while camera zoom still
-        // needs the existing full scene path.
         guard change.contains(.scrollX) || change.contains(.zoom) else { return }
-        otherEventsBand.refreshCamera()
         if change.contains(.zoom) {
+            otherEventsBand.refreshCamera()
             velocityPage.refreshCamera()
             voiceChangesPage.refreshCamera()
             automationPage.refreshCamera()

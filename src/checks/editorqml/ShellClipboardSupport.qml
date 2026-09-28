@@ -4,6 +4,7 @@ import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
 import "NativeWait.js" as NativeWait
+import "RollNoteFaces.js" as RollNoteFaces
 
 TestCase {
     id: testCase
@@ -111,10 +112,7 @@ TestCase {
     }
 
     function noteCenter(roll, surface, id) {
-        var item = findChild(surface, "gridNote_" + id)
-        if (!item)
-            return null
-        return item.mapToItem(roll, item.width / 2, item.height / 2)
+        return RollNoteFaces.center(findChild(surface, "timelineRendererPlot"), roll, id)
     }
 
     function pastedAt(grid, sourceId, tick, source) {

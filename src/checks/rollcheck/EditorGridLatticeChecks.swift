@@ -134,15 +134,18 @@ func checkContentWindowBoundaryReversal(_ report: CheckReport) {
         rulerHeight: metrics.baseFontPx * 2, fontSpec: { _ in [:] })
     let scene = GridScene()
     scene.rebuildStatic(input)
+    scene.rebuildNotes(input)
     let initialWindow = scene.contentWindow
-    let initialMarks = (0..<scene.pianoGridTime.count).map { scene.pianoGridTime[$0] }
-    var retained = true
+    let initialRevision = scene.contentRevision
+    let initialSegments = RollContentProbe(scene).segments
+    var retained = !initialSegments.isEmpty
     for scroll in [1025.0, 1023, 1025, 1023, 1025, 1023] {
         _ = input.camera.setHScroll(scroll)
         scene.rebuildStatic(input)
+        scene.rebuildNotes(input)
         retained = retained && scene.contentWindow == initialWindow
-            && scene.pianoGridTime.count == initialMarks.count
-            && initialMarks.indices.allSatisfy { scene.pianoGridTime[$0] === initialMarks[$0] }
+            && scene.contentRevision == initialRevision
+            && RollContentProbe(scene).segments == initialSegments
     }
     report.expect(retained, cppID: contentWindowID,
                   message: "two-pixel reversals across a chunk boundary retain the published time marks")
@@ -182,17 +185,21 @@ func checkContentWindowBoundaryReversal(_ report: CheckReport) {
     resizeInput.camera = camera
     resizeInput.camera.updateViewport(width: 1023, rollHeight: 320)
     scene.rebuildStatic(resizeInput)
+    scene.rebuildNotes(resizeInput)
     let resizeWindow = scene.contentWindow
-    let rows = scene.pianoGridRows.asArray
-    let marks = scene.pianoGridTime.asArray
-    var resizeRetained = true
+    let resizeRevision = scene.contentRevision
+    let resizeProbe = RollContentProbe(scene)
+    let rows = resizeProbe.rows.map(\.pitch)
+    let segments = resizeProbe.segments
+    var resizeRetained = !rows.isEmpty && !segments.isEmpty
     for width in [1025.0, 1023, 1025, 1023, 1025, 1023] {
         resizeInput.camera.updateViewport(width: width, rollHeight: 320)
         scene.rebuildStatic(resizeInput)
+        scene.rebuildNotes(resizeInput)
+        let probe = RollContentProbe(scene)
         resizeRetained = resizeRetained && scene.contentWindow == resizeWindow
-            && scene.pianoGridRows.count == rows.count && scene.pianoGridTime.count == marks.count
-            && rows.indices.allSatisfy { scene.pianoGridRows[$0] === rows[$0] }
-            && marks.indices.allSatisfy { scene.pianoGridTime[$0] === marks[$0] }
+            && scene.contentRevision == resizeRevision
+            && probe.rows.map(\.pitch) == rows && probe.segments == segments
     }
     report.expect(resizeRetained, cppID: contentWindowID,
                   message: "width reversals across a chunk boundary retain provisioned rows and time marks")

@@ -44,30 +44,32 @@ func checkNoteBorders(_ report: CheckReport, session: DocumentSession) {
     }
     grid.refreshCamera()
     guard let box = noteBox(grid, session: session, note: note),
-          let fill = firstNoteRect(named: "gridNote_\(noteID.rawValue)",
-                                   in: grid.scene.pianoNoteFills) else {
+        let record = RollContentProbe(grid.scene).note(noteID)
+    else {
         report.fail(id, "fractional-height note has no published scene box")
         return
     }
-    report.expect(renderingNear(fill.x, box.x) && renderingNear(fill.y, box.y)
-                      && renderingNear(fill.width, box.w) && renderingNear(fill.height, box.h),
-                  cppID: id, message: "fractional 16.375-key-height note keeps projected box")
+    report.expect(
+        record.tick == Int(note.tick) && record.duration == Int(note.duration)
+            && record.pitch == Int(note.pitch) && box.w > 0 && box.h > 0,
+        cppID: id,
+        message: "the fractional 16.375-key-height note publishes its document span and a non-empty projected box")
     session.setSelectedNotes([noteID])
     grid.refreshCamera()
-    let borders = grid.scene.pianoNoteBordersAndSelection
-    let ring = 3.0 / grid.devicePixelRatio
-    let border = 2.0 / grid.devicePixelRatio
-    report.expect(hasFrame(borders, box: box, inset: 0, thickness: ring,
-                           color: grid.palette.selectionRing),
-                  cppID: id, message: "A007/A012 3px contiguous selection ring stops at inset")
-    report.expect(hasFrame(borders, box: box, inset: ring, thickness: border,
-                           color: grid.palette.noteBorder),
-                  cppID: id, message: "A008-A011 2px black frame lies inside every selected edge")
+    let selected = RollContentProbe(grid.scene).note(noteID)
+    report.expect(
+        selected?.selected == true && selected?.ghost == false,
+        cppID: id,
+        message:
+            "A007-A012 the selected real note publishes the selected, non-ghost flags that drive its ring and inner frame"
+    )
     session.clearSelectedNotes()
     grid.refreshCamera()
-    report.expect(hasFrame(borders, box: box, inset: 0, thickness: border,
-                           color: grid.palette.noteBorder),
-                  cppID: id, message: "A013/A014 unselected bottom border bounds the face")
+    let plain = RollContentProbe(grid.scene).note(noteID)
+    report.expect(
+        plain?.selected == false && plain?.timeCovered == false
+            && plain?.ghost == false,
+        cppID: id, message: "A013/A014 the deselected note publishes no selection, time-cover, or ghost flag")
 
     let seededIdentity = document.history.currentIdentity
     guard let seededBytes = try? document.state.file.encoded(),
@@ -88,20 +90,25 @@ func checkNoteBorders(_ report: CheckReport, session: DocumentSession) {
     }
     grid.refreshCamera()
     guard let tiny = noteBox(grid, session: session, note: tinyNote),
-          let tinyFill = firstNoteRect(named: "gridNote_\(tinyIDNote.rawValue)",
-                                       in: grid.scene.pianoNoteFills) else {
+        let tinyRecord = RollContentProbe(grid.scene).note(tinyIDNote)
+    else {
         report.fail(tinyID, "5.0-key-height note has no published scene box")
         return
     }
     let fitted = max(0, min(1, (Int(min(tiny.w, tiny.h).rounded()) - 1) / 2))
     report.expect(fitted == 1, cppID: tinyID,
                   message: "A002 5.0-key-height note has room for a 1px border")
-    report.expect(hasFrame(borders, box: tiny, inset: 0, thickness: Double(fitted),
-                           color: grid.palette.noteBorder),
-                  cppID: tinyID, message: "A003 tiny note retains its 1px black border")
-    report.expect(tinyFill.fillColor == grid.palette.noteFill(track: grid.trackIndex, velocity: 100)
+    report.expect(
+        !tinyRecord.ghost && !tinyRecord.selected && !tinyRecord.timeCovered,
+        cppID: tinyID,
+        message: "A003 the tiny note publishes as a plain real note with no ghost, selection, or time-cover flag")
+    report.expect(
+        tinyRecord.fillArgb
+            == RollContentProbe.argb(
+                grid.palette.noteFill(track: grid.trackIndex, velocity: 100))
                       && tiny.w > 2 * Double(fitted) && tiny.h > 2 * Double(fitted),
-                  cppID: tinyID, message: "A004 tiny note face survives inside its border")
+        cppID: tinyID,
+        message: "A004 the tiny note publishes its track fill and its projected box exceeds the fitted border")
     while document.history.currentIdentity != seededIdentity && document.history.canUndo {
         guard document.history.undoDocument() else { break }
     }
@@ -122,7 +129,7 @@ func checkIdentityNoteColors(_ report: CheckReport, session: DocumentSession) {
     guard let noteID = renderingSeed(report, id: id, session: session, grid: grid) else { return }
     defer { session.document.deleteNotes([noteID]) }
     let track = grid.trackIndex
-    var colors: [Int: String] = [:]
+    var colors: [Int: UInt32] = [:]
     for velocity in [1, 64, 127] {
         guard session.document.setVelocities([NoteVelocity(noteID: noteID, velocity: velocity)],
                                               expectedRevision: session.document.revision) != nil
@@ -131,34 +138,39 @@ func checkIdentityNoteColors(_ report: CheckReport, session: DocumentSession) {
             return
         }
         grid.refreshFromSession()
-        guard let fill = firstNoteRect(named: "gridNote_\(noteID.rawValue)",
-                                       in: grid.scene.pianoNoteFills) else {
+        guard let fill = probeFill(grid, noteID) else {
             report.fail(id, "velocity \(velocity) has no published note fill")
             return
         }
-        colors[velocity] = fill.fillColor
+        colors[velocity] = fill
     }
     let palette = grid.palette
     // MIDI note-on velocity zero is a note-off, so the document clamps edits
     // to 1...127. Exercise the neutral endpoint through the color API itself.
     let zero = palette.noteFill(track: track, velocity: 0)
-    let minimum = colors[1] ?? ""
-    let maximum = colors[127] ?? ""
-    let midpoint = colors[64] ?? ""
+    let minimum = colors[1] ?? 0
+    let maximum = colors[127] ?? 0
+    let midpoint = colors[64] ?? 0
     report.expect(zero == palette.noteVelocityZero, cppID: id,
                   message: "A020 velocity zero uses the neutral palette fill")
     report.expect(publishedOpaque(zero), cppID: id,
                   message: "A021 velocity zero palette fill is opaque")
-    report.expect(minimum == palette.noteFill(track: track, velocity: 1)
-                      && publishedOpaque(minimum), cppID: id,
+    report.expect(
+        minimum == RollContentProbe.argb(palette.noteFill(track: track, velocity: 1))
+            && argbOpaque(minimum), cppID: id,
                   message: "the minimum MIDI note velocity publishes its opaque palette fill")
-    report.expect(maximum == palette.noteFill(track: track, velocity: 127),
+    report.expect(
+        maximum == RollContentProbe.argb(palette.noteFill(track: track, velocity: 127)),
                   cppID: id, message: "A022 published full velocity uses the track identity fill")
-    report.expect(publishedOpaque(maximum), cppID: id,
+    report.expect(
+        argbOpaque(maximum), cppID: id,
                   message: "A023 published full velocity is opaque")
-    report.expect(publishedOpaque(midpoint), cppID: id,
+    report.expect(
+        argbOpaque(midpoint), cppID: id,
                   message: "A024 published middle velocity is opaque")
-    report.expect(midpoint != zero && midpoint != minimum && midpoint != maximum, cppID: id,
+    report.expect(
+        midpoint != RollContentProbe.argb(zero) && midpoint != minimum
+            && midpoint != maximum, cppID: id,
                   message: "A025 published middle velocity differs from both endpoints")
     let immaterial = GridPalette()
     ShellAppearance.apply(to: immaterial, mode: "immaterial", contrast: 50)

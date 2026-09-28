@@ -228,6 +228,48 @@ enum VelocityScene {
         return rects
     }
 
+    static func modelBands(_ input: VelocitySceneInput, axis: VelocityAxisModel) -> [DrawerStaticRect] {
+        guard input.plotHeight > 0 else { return [] }
+        var rects: [DrawerStaticRect] = []
+        let source = input.source
+        var start: Tick = 0
+        var slot = source.firstProgram
+        for change in source.voiceChanges {
+            appendModelBands(
+                &rects, from: start, to: change.tick, slot: slot,
+                input: input, axis: axis)
+            start = change.tick
+            slot = change.value
+        }
+        appendModelBands(
+            &rects, from: start, to: TimeDefaults.maxTick, slot: slot,
+            input: input, axis: axis)
+        return rects
+    }
+
+    private static func appendModelBands(
+        _ rects: inout [DrawerStaticRect],
+        from start: Tick, to end: Tick, slot: Int,
+        input: VelocitySceneInput, axis: VelocityAxisModel
+    ) {
+        guard end > start else { return }
+        let context = VelocityContextPolicy.resolve(
+            slot: slot, endTick: end,
+            slots: input.source.slots)
+        guard context.status == .resolved, context.map.isPSG,
+            context.map.levelCount > 1
+        else { return }
+        let stroke = input.geometry.gridLineStroke
+        let argb = SceneRectPacking.argb(input.palette.separator)
+        for level in 0..<(context.map.levelCount - 1) {
+            rects.append(
+                DrawerStaticRect(
+                    tickStart: start, tickEnd: end,
+                    y: Float(axis.levelBoundaryToY(level, map: context.map) - stroke / 2),
+                    height: Float(stroke), argb: argb))
+        }
+    }
+
     /// PSG level bands: one horizontal boundary per level inside each voice
     /// context section whose map resolves exactly to a PSG voice. A section
     /// whose map is unknown draws no level line rather than a guessed layout.

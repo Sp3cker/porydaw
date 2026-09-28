@@ -127,7 +127,8 @@ ShellNoteVisualsSupport {
             secondItem = noteItem(context.fills, second.id)
             return secondItem !== null
         }, 3000)
-        var center = secondItem.mapToItem(roll, secondItem.width / 2, secondItem.height / 2)
+        var center = context.plot.mapToItem(roll, secondItem.x + secondItem.width / 2,
+                                            secondItem.y + secondItem.height / 2)
         var shift = (second.tick - first.tick - first.duration) / ticksPerPixel
         verify(shift > grid.drawThreshold, "the drawn notes leave a movable snapped gap")
         mousePress(roll, center.x, center.y, Qt.LeftButton)
@@ -139,6 +140,8 @@ ShellNoteVisualsSupport {
             return second !== undefined && second.tick === first.tick + first.duration
         }, 5000), "the next drawn note abuts the first on the same row")
         var image = grabShell()
+        firstItem = noteItem(context.fills, first.id)
+        secondItem = noteItem(context.fills, second.id)
         verify(image !== null, "the adjacent pencil notes render a frame")
         verify(secondItem !== null, "the second drawn note box is mounted")
         var dpr = shellDpr(image)
@@ -231,7 +234,7 @@ ShellNoteVisualsSupport {
             if (notes[i].track !== context.grid.trackIndex)
                 continue
             var item = noteItem(context.fills, notes[i].id)
-            if (!item || !item.visible)
+            if (!item)
                 continue
             var noteRect = deviceRect(item, context.plot, named, shellDpr(named))
             if (noteRect.w <= 20 || noteRect.h <= 12)
@@ -277,7 +280,7 @@ ShellNoteVisualsSupport {
         verify(surface !== null, "the dpr2 roll is mounted")
         var grid = surface.gridModel
         var plot = findChild(surface, "timelineQuickRollPlot")
-        var fills = findChild(surface, "timelineQuickPianoNoteFills")
+        var fills = findChild(surface, "timelineRendererPlot")
         verify(plot !== null && fills !== null, "the dpr2 plot and note fills are mounted")
         verify(waitForNative(function() { return grid.renderedNoteCount > 0 }, 5000),
                "the dpr2 roll publishes notes")
@@ -299,7 +302,7 @@ ShellNoteVisualsSupport {
         verify(surface !== null, "the dpr2 small-font roll is mounted")
         grid = surface.gridModel
         plot = findChild(surface, "timelineQuickRollPlot")
-        fills = findChild(surface, "timelineQuickPianoNoteFills")
+        fills = findChild(surface, "timelineRendererPlot")
         verify(plot !== null && fills !== null,
                "the dpr2 small-font plot and note fills are mounted")
         verify(waitForNative(function() { return grid.renderedNoteCount > 0 }, 5000),
@@ -337,9 +340,9 @@ ShellNoteVisualsSupport {
             if (!notes[n].selected)
                 continue
             var item = noteItem(fills, notes[n].id)
-            if (!item || !item.visible)
+            if (!item)
                 continue
-            var topLeft = item.mapToItem(plot, 0, 0)
+            var topLeft = Qt.point(item.x, item.y)
             if (topLeft.x < 1 || topLeft.y < 1
                     || topLeft.x + item.width > plot.width - 1
                     || topLeft.y + item.height > plot.height - 1)
@@ -366,7 +369,7 @@ ShellNoteVisualsSupport {
         verify(capture.saveToFile(bootstrap.projectRoot + "/notevisuals-dpr2-small-font.png"),
                "the dpr2 selected note frame is saved")
         var selectedItem = noteItem(fills, small.note.id)
-        var noteOrigin = selectedItem.mapToItem(plot, 0, 0)
+        var noteOrigin = Qt.point(selectedItem.x, selectedItem.y)
         var physical = { x: Math.floor(noteOrigin.x * dpr),
                          y: Math.floor(noteOrigin.y * dpr),
                          w: Math.ceil((noteOrigin.x + selectedItem.width) * dpr)

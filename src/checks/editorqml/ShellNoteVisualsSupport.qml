@@ -5,6 +5,7 @@ import ShellQmlCheck 1.0
 import Porydaw.Ui
 import "GatedVisualsHelpers.js" as Helpers
 import "NativeWait.js" as NativeWait
+import "RollNoteFaces.js" as RollNoteFaces
 
 TestCase {
     id: testCase
@@ -87,6 +88,7 @@ TestCase {
     }
 
     function grabShell() {
+        wait(0)
         waitForRendering(shell.contentItem)
         var image = grabImage(shell.contentItem)
         if (image.width <= 0 || image.height <= 0)
@@ -140,13 +142,17 @@ TestCase {
     }
 
     function noteItem(fills, id) {
-        return findChild(fills, "gridNote_" + id)
+        return RollNoteFaces.face(fills, id)
     }
 
     function deviceRect(item, plot, image, dpr, target) {
         var origin = target || shell.contentItem
-        var topLeft = item.mapToItem(origin, 0, 0)
-        var size = item.mapToItem(origin, item.width, item.height)
+        var face = item.mapToItem === undefined
+        var source = face ? plot : item
+        var left = face ? item.x : 0
+        var top = face ? item.y : 0
+        var topLeft = source.mapToItem(origin, left, top)
+        var size = source.mapToItem(origin, left + item.width, top + item.height)
         var r = { x: Math.round(topLeft.x * dpr), y: Math.round(topLeft.y * dpr),
                   w: Math.max(1, Math.round((size.x - topLeft.x) * dpr)),
                   h: Math.max(1, Math.round((size.y - topLeft.y) * dpr)) }
@@ -165,10 +171,10 @@ TestCase {
             if (selected !== undefined && note.selected !== selected)
                 continue
             var item = noteItem(fills, note.id)
-            if (!item || !item.visible)
+            if (!item)
                 continue
-            var topLeft = item.mapToItem(plot, 0, 0)
-            var bottomRight = item.mapToItem(plot, item.width, item.height)
+            var topLeft = Qt.point(item.x, item.y)
+            var bottomRight = Qt.point(item.x + item.width, item.y + item.height)
             if (topLeft.x < 1 || topLeft.y < 1
                     || bottomRight.x > plot.width - 1 || bottomRight.y > plot.height - 1)
                 continue
@@ -280,7 +286,7 @@ TestCase {
         verify(waitForNative(function() { return grid.renderedNoteCount > 0 }, 5000),
                "the roll publishes notes")
         var plot = findChild(surface, "timelineQuickRollPlot")
-        var fills = findChild(surface, "timelineQuickPianoNoteFills")
+        var fills = findChild(surface, "timelineRendererPlot")
         verify(plot !== null && fills !== null, "the roll plot and fill layer are mounted")
         return { surface: surface, grid: grid, plot: plot, fills: fills,
                  session: session }

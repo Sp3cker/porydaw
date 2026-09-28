@@ -170,12 +170,25 @@ EditorDrawerTestSupport {
         compare(tooltipLabel.text, "",
                 "cancelling input clears the painted Other Events tooltip")
         var oldScroll = grid.cameraScrollX
+        var revisionBeforeScroll = presenter.markerRevision
+        var stableX = marker.s.x
         mouseWheel(input, input.width / 2, input.height / 2,
                    0, -120, Qt.NoButton, Qt.ShiftModifier)
         tryVerify(function() { return grid.cameraScrollX > oldScroll },
                   1000, "the marker plot routes Shift-wheel into horizontal grid scrolling")
-        compare(markers.count, presenter.markerCount,
-                "camera scrolling refreshes only the visible event markers")
+        verify(presenter.markerRevision === revisionBeforeScroll && marker.s.x === stableX
+               && Math.abs(marker.s.x - marker.model.tick * grid.beatWidth / grid.ticksPerBeat) < 0.01,
+               "a scroll-only camera change keeps the published markers at scroll-stable tick-times-zoom x")
+        var beatBeforeZoom = grid.beatWidth
+        grid.handleWheel(0, 120, 0, 0, Qt.NoModifier, 0, false, input.width / 2, input.height / 2)
+        tryVerify(function() {
+            var zoomed = markers.itemAt(0)
+            return grid.beatWidth !== beatBeforeZoom
+                && presenter.markerRevision > revisionBeforeScroll
+                && zoomed && Math.abs(zoomed.s.x
+                    - zoomed.model.tick * grid.beatWidth / grid.ticksPerBeat) < 0.01
+        }, 1000, "a zoom republishes the event markers at the new tick-times-zoom x")
+        grid.handleWheel(0, -120, 0, 0, Qt.NoModifier, 0, false, input.width / 2, input.height / 2)
         grid.setCameraHScroll(0)
         mouseWheel(gutter, gutter.width / 2, gutter.height / 2,
                    0, -120, Qt.NoButton, Qt.ShiftModifier)

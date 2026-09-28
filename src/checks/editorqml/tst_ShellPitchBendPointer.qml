@@ -3,6 +3,7 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
+import "RollNoteFaces.js" as RollNoteFaces
 
 ShellPitchBendSupport {
     function test_navigationKeysLeaveCurveUntouched() {
@@ -208,9 +209,10 @@ ShellPitchBendSupport {
         verify(rect.x >= 0 && rect.y >= 0
                && rect.right <= host.width && rect.bottom <= host.height,
                "the anchored popup stays inside the window")
-        const face = findChild(opened.view, "gridNote_" + opened.note.id)
+        const face = RollNoteFaces.rect(findChild(opened.view, "timelineRendererPlot"),
+                                        host, opened.note.id)
         verify(face !== null, "the selected note remains painted under the popup")
-        const center = face.mapToItem(host, face.width / 2, 0).x
+        const center = face.x + face.width / 2
         verify(Math.abs(rect.x + popup.width / 2 - center)
                <= popup.width / 2 + opened.grid.baseFontPx,
                "the anchored popup is horizontally centered on the selected note")

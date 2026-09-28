@@ -184,6 +184,13 @@ qt_add_library(porydaw_app STATIC
     src/app/qml_engine_host.cpp
     src/app/item_cursor.h
     src/app/item_cursor.cpp
+    src/render/roll_content.h
+    src/render/roll_projection.h
+    src/render/roll_scene.h
+    src/render/roll_scene.cpp
+    src/render/timeline_renderer.h
+    src/render/timeline_renderer.cpp
+    src/render/timeline_renderer_nodes.cpp
     src/ui/songview/quick/swiftroll/native/font_metrics.cpp
     src/ui/songview/quick/swiftroll/native/font_metrics.h
     src/audio/audioengine.cpp
@@ -357,6 +364,7 @@ target_include_directories(porydaw_app PUBLIC
 )
 target_include_directories(porydaw_app PRIVATE
     src/app
+    src/render
 )
 target_include_directories(porydaw_app SYSTEM PUBLIC
     ${PORYAAAA_DIR}/third_party

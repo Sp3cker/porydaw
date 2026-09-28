@@ -139,7 +139,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
         polyphony = PolyphonyPanelPresenter()
         emptyOtherEventsBand.configure(session: nil, palette: palette,
                                       baseFontPx: GridCameraPolicy.seedBaseFontPx,
-                                      appFontLineSpacing: 0, plotWidth: 0)
+            appFontLineSpacing: 0)
         do {
             audio = try NativeAudio()
         } catch {

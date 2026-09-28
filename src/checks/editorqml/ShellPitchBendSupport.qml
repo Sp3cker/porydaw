@@ -4,6 +4,7 @@ import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
 import "NativeWait.js" as NativeWait
+import "RollNoteFaces.js" as RollNoteFaces
 
 TestCase {
     id: testCase
@@ -112,13 +113,16 @@ TestCase {
         const estimatedY = (127 - target.pitch + 0.5) * grid.rowHeight
         grid.setCameraHScroll(Math.max(0, estimatedX - plot.width * 0.35))
         grid.setCameraVScroll(Math.max(0, estimatedY - plot.height / 2))
+        const renderer = findChild(view, "timelineRendererPlot")
         let face = null
         waitForNative(function() {
-            face = findChild(view, "gridNote_" + target.id)
-            return face !== null && face.visible && face.width > 0 && face.height > 0
+            face = renderer.scrollX === grid.cameraScrollX
+                && renderer.scrollY === grid.cameraScrollY
+                ? RollNoteFaces.rect(renderer, roll, target.id) : null
+            return face !== null
         }, 5000)
         waitForRendering(roll)
-        const rect = face ? face.mapToItem(roll, 0, 0) : null
+        const rect = face
         const left = rect ? Math.max(2, rect.x) : 0
         const right = rect ? Math.min(plot.width - 2, rect.x + face.width) : 0
         const top = rect ? Math.max(2, rect.y) : 0
@@ -225,25 +229,26 @@ TestCase {
         }
         const note = visibleNote(view, grid, roll, plot)
         verify(note !== null, "the G route has a visible editable note: " + noteProbe)
+        const renderer = findChild(view, "timelineRendererPlot")
         if (pinNearTop) {
-            const startingFace = findChild(view, "gridNote_" + note.id)
-            const faceY = startingFace.mapToItem(roll, 0, 0).y
+            const startingFace = RollNoteFaces.rect(renderer, roll, note.id)
+            const faceY = startingFace.y
             grid.setCameraVScroll(grid.cameraScrollY + faceY - plot.height * 0.1)
             tryVerify(function() {
-                const face = findChild(view, "gridNote_" + note.id)
-                const y = face ? face.mapToItem(roll, 0, 0).y : -1
-                return face !== null && face.visible && y >= 0 && y < plot.height * 0.2
+                const face = renderer.scrollY === grid.cameraScrollY
+                    ? RollNoteFaces.rect(renderer, roll, note.id) : null
+                const y = face ? face.y : -1
+                return face !== null && y >= 0 && y < plot.height * 0.2
             }, 5000, "the selected anchor note sits near the top of the tall roll")
-            const face = findChild(view, "gridNote_" + note.id)
-            const at = face.mapToItem(roll, face.width / 2, face.height / 2)
+            const at = RollNoteFaces.center(renderer, roll, note.id)
             note.x = at.x
             note.y = at.y
         }
         let stray = null
         if (stageStrayNote) {
             const existing = JSON.parse(grid.fetchNoteSummary()).map(function(n) { return n.id })
-            const anchorFace = findChild(view, "gridNote_" + note.id)
-            const faceRight = anchorFace.mapToItem(roll, anchorFace.width, 0).x
+            const anchorFace = RollNoteFaces.rect(renderer, roll, note.id)
+            const faceRight = anchorFace.x + anchorFace.width
             const drawX = faceRight + grid.beatWidth
             const drawY = note.y - 3 * grid.rowHeight
             verify(drawY > grid.baseFontPx && drawX + grid.drawThreshold
@@ -260,28 +265,34 @@ TestCase {
             const added = JSON.parse(grid.fetchNoteSummary()).find(function(n) {
                 return existing.indexOf(n.id) === -1
             })
-            const face = findChild(view, "gridNote_" + added.id)
-            verify(face !== null, "the stray note renders in the real roll")
-            const center = face.mapToItem(roll, face.width / 2, face.height / 2)
+            const center = RollNoteFaces.center(renderer, roll, added.id)
+            verify(center !== null, "the stray note renders in the real roll")
             stray = { x: center.x, y: center.y, id: added.id }
         }
         mouseClick(roll, note.x, note.y, Qt.LeftButton)
         tryVerify(function() {
             return JSON.parse(grid.fetchNoteSummary()).some(function(n) { return n.selected })
         }, 5000, "the real roll click selects the anchor note")
-        const overlay = grid.scene.pianoOverlay
-        let paintedRange = false
-        for (let row = 0; row < overlay.rowCount() && !paintedRange; ++row) {
-            const rect = overlay.data(overlay.index(row, 0), 0)
-            paintedRange = String(rect.fillColor).toLowerCase()
-                === String(grid.palette.selectionFill).toLowerCase()
+        const edgeColor = Qt.color(String(grid.palette.selectionEdge))
+        waitForRendering(renderer)
+        const image = RollNoteFaces.grab(testCase, renderer)
+        const rows = [0.2, 0.5, 0.8].map(function(f) { return Math.floor(image.height * f) })
+        let edgeColumns = 0
+        for (let x = 0; x < image.width; ++x) {
+            if (rows.every(function(y) {
+                return Math.abs(image.red(x, y) - edgeColor.r * 255) <= 16
+                    && Math.abs(image.green(x, y) - edgeColor.g * 255) <= 16
+                    && Math.abs(image.blue(x, y) - edgeColor.b * 255) <= 16
+            }))
+                ++edgeColumns
         }
+        const paintedRange = edgeColumns > 0
         verify(!paintedRange,
                "the selected pitch opener has no painted time-selection range")
         if (hoverNoteEdge) {
-            const face = findChild(view, "gridNote_" + note.id)
-            const edge = face.mapToItem(roll, face.width - grid.baseFontPx / 6,
-                                        face.height / 2)
+            const face = RollNoteFaces.rect(renderer, roll, note.id)
+            const edge = Qt.point(face.x + face.width - grid.baseFontPx / 6,
+                                  face.y + face.height / 2)
             mouseMove(roll, edge.x, edge.y)
             tryCompare(grid, "cursorKind", 3, 5000,
                        "the hovered right note edge advertises its resize grip")

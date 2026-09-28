@@ -14,11 +14,3 @@ func makeCameraGrid(session: DocumentSession, zoom: Double = 35) -> PianoGrid {
     grid.refreshCamera()
     return grid
 }
-
-@MainActor
-func firstRect(named name: String, in model: QListModel<SceneRect>) -> SceneRect? {
-    for index in 0..<model.count where model[index].primitiveName == name {
-        return model[index]
-    }
-    return nil
-}

@@ -4,8 +4,11 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
+import "RollNoteFaces.js" as RollNoteFaces
 
 ShellTabsSupport {
+    id: tabsReloadCase
+
     SignalSpy {
         id: reloadReadiness
         signalName: "isReadyChanged"
@@ -530,11 +533,12 @@ ShellTabsSupport {
         for (var n = 0; n < notes.length; ++n) {
             if (notes[n].ghost || notes[n].selected)
                 continue
-            var face = findChild(surface, "gridNote_" + notes[n].id)
-            if (!face || face.width <= 0 || face.height <= 0)
+            var face = RollNoteFaces.rect(findChild(surface, "timelineRendererPlot"), input,
+                                          notes[n].id)
+            if (!face)
                 continue
-            var topLeft = face.mapToItem(input, 0, 0)
-            var bottomRight = face.mapToItem(input, face.width, face.height)
+            var topLeft = Qt.point(face.x, face.y)
+            var bottomRight = Qt.point(face.x + face.width, face.y + face.height)
             var sx = topLeft.x - 3
             var sy = topLeft.y - 3
             var ex = bottomRight.x + 3
@@ -542,8 +546,6 @@ ShellTabsSupport {
             if (sx < 1 || sy < 1 || ex > input.width - 1 || ey > input.height - 1)
                 continue
             var grid = gridOf(tabId)
-            var borders = grid.scene.pianoNoteBordersAndSelection
-            var bordersBefore = borders.rowCount()
             var targetId = notes[n].id
             mouseMove(input, sx, sy)
             mousePress(input, sx, sy, Qt.RightButton)
@@ -554,17 +556,18 @@ ShellTabsSupport {
                 })
                 return target && !target.selected
                     && grid.statusText.indexOf("Selecting") !== -1
-                    && grid.scene.pianoNoteBordersAndSelection.rowCount() > bordersBefore
+                    && findChild(surface, "timelineRendererPlot").bandSelectionActive
             }, 5000), "the held band leaves its enclosed note uncommitted while painting")
-            var ringColor = String(grid.palette.selectionRing).toLowerCase()
+            var ring = Qt.color(grid.palette.selectionRing)
+            var image = RollNoteFaces.grab(tabsReloadCase, input)
+            var dpr = image.width / input.width
+            var px = Math.floor((face.x + face.width / 2) * dpr)
             var targetRing = false
-            for (var row = 0; row < borders.rowCount() && !targetRing; ++row) {
-                var border = borders.data(borders.index(row, 0), 0)
-                targetRing = String(border.fillColor).toLowerCase() === ringColor
-                    && Math.abs(border.x - face.x) < 1
-                    && Math.abs(border.y - face.y) < 1
-                    && Math.abs(border.width - face.width) < 2
-                    && border.height > 0 && border.height < face.height / 2
+            for (var y = Math.floor(face.y * dpr);
+                 y < Math.floor((face.y + face.height / 2) * dpr) && !targetRing; ++y) {
+                var c = image.pixel(px, y)
+                targetRing = Math.abs(c.r - ring.r) < 0.04 && Math.abs(c.g - ring.g) < 0.04
+                    && Math.abs(c.b - ring.b) < 0.04
             }
             verify(targetRing, "the held band on tab " + tabId + " previews its selection")
             return input.mapToItem(shell.contentItem, ex, ey)

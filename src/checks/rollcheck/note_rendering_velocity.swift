@@ -92,15 +92,14 @@ func checkVelocityColorMode(_ report: CheckReport, session: DocumentSession) {
     }
     let track = grid.trackIndex
     let palette = grid.palette
-    func publishedFill() -> String? {
-        firstNoteRect(named: "gridNote_\(noteID.rawValue)",
-                      in: grid.scene.pianoNoteFills)?.fillColor
+    func publishedFill() -> UInt32? {
+        probeFill(grid, noteID)
     }
     let revisionBeforeFlip = session.document.revision
     let zeroInk = palette.noteVelocityZero
     grid.setVelocityColorMode(enabled: true)
     let modeOnRevisionUnchanged = session.document.revision == revisionBeforeFlip
-    var hues: [Int: String] = [:]
+    var hues: [Int: UInt32] = [:]
     for velocity in [1, 64, 127] {
         guard session.document.setVelocities([NoteVelocity(noteID: noteID, velocity: velocity)],
                                               expectedRevision: session.document.revision) != nil
@@ -129,30 +128,42 @@ func checkVelocityColorMode(_ report: CheckReport, session: DocumentSession) {
                   message: "every velocity fill from 2 to 127 is opaque")
     report.expect(hueOrdered, cppID: id,
                   message: "velocity hue falls monotonically from purple to red")
-    let minimum = hues[1] ?? ""
-    let midpoint = hues[64] ?? ""
-    let maximum = hues[127] ?? ""
-    report.expect(minimum == "#5F44E9", cppID: id,
+    let minimum = hues[1] ?? 0
+    let midpoint = hues[64] ?? 0
+    let maximum = hues[127] ?? 0
+    report.expect(
+        minimum == RollContentProbe.argb("#5F44E9"), cppID: id,
                   message: "velocity 1 publishes the purple endpoint in palette format")
-    report.expect(minimum == PaletteMath.velocityNoteColor(velocity: 1, zeroColor: zeroInk),
+    report.expect(
+        minimum
+            == RollContentProbe.argb(
+                PaletteMath.velocityNoteColor(velocity: 1, zeroColor: zeroInk)),
                   cppID: id, message: "velocity 1 matches the velocity color API")
-    report.expect(maximum == "#E90904", cppID: id,
+    report.expect(
+        maximum == RollContentProbe.argb("#E90904"), cppID: id,
                   message: "velocity 127 publishes the red endpoint in palette format")
-    report.expect(maximum == PaletteMath.velocityNoteColor(velocity: 127, zeroColor: zeroInk),
+    report.expect(
+        maximum
+            == RollContentProbe.argb(
+                PaletteMath.velocityNoteColor(velocity: 127, zeroColor: zeroInk)),
                   cppID: id, message: "velocity 127 matches the velocity color API")
-    report.expect(midpoint == expectedVelocityHue(64), cppID: id,
+    report.expect(
+        midpoint == RollContentProbe.argb(expectedVelocityHue(64)), cppID: id,
                   message: "velocity 64 publishes the independently interpolated HSV hue")
-    report.expect(midpoint == PaletteMath.velocityNoteColor(velocity: 64, zeroColor: zeroInk),
+    report.expect(
+        midpoint
+            == RollContentProbe.argb(
+                PaletteMath.velocityNoteColor(velocity: 64, zeroColor: zeroInk)),
                   cppID: id, message: "velocity 64 matches the velocity color API")
-    report.expect(publishedOpaque(minimum) && publishedOpaque(midpoint)
-                      && publishedOpaque(maximum), cppID: id,
-                  message: "velocity hue fills are opaque")
+    report.expect(
+        argbOpaque(minimum) && argbOpaque(midpoint) && argbOpaque(maximum),
+        cppID: id, message: "velocity hue fills are opaque")
     // MIDI note-on velocity zero is a note-off, so the document clamps edits
     // to 1...127. Exercise the neutral endpoint through the color API itself.
     report.expect(PaletteMath.velocityNoteColor(velocity: 0, zeroColor: zeroInk) == zeroInk,
                   cppID: id, message: "velocity zero uses the neutral palette fill")
     // Ghost path: PianoGrid only presents the selected track, so drive the
-    // scene directly with a synthetic ghost face in both modes.
+    // blob directly with a synthetic ghost face in both modes.
     let ghost = GridNote(noteId: noteID, tick: Int(note.tick),
                          duration: max(1, Int(note.duration)), pitch: Int(note.pitch),
                          track: track, velocity: 64, ghost: true)
@@ -167,23 +178,24 @@ func checkVelocityColorMode(_ report: CheckReport, session: DocumentSession) {
         track: track, accidentalRow: GridScene.isBlackKey(Int(note.pitch)),
         rollBackground: palette.rollBackground, accidentalLane: palette.accidentalLane)
     grid.scene.rebuildNotes(ghostInput(velocityMode: true))
-    let ghostOn = grid.scene.pianoNoteFills.asArray.filter {
-        $0.primitiveName == "gridNote_\(noteID.rawValue)"
-    }
+    let ghostOn = probeFill(grid, noteID)
     grid.scene.rebuildNotes(ghostInput(velocityMode: false))
-    let ghostOff = grid.scene.pianoNoteFills.asArray.filter {
-        $0.primitiveName == "gridNote_\(noteID.rawValue)"
-    }
-    report.expect(ghostOn.count == 1 && ghostOn[0].fillColor == expectedGhost, cppID: id,
+    let ghostOff = probeFill(grid, noteID)
+    report.expect(
+        ghostOn == RollContentProbe.argb(expectedGhost), cppID: id,
                   message: "velocity mode leaves the ghost fill on its identity mix")
-    report.expect(ghostOff.count == 1 && ghostOff[0].fillColor == expectedGhost, cppID: id,
+    report.expect(
+        ghostOff == RollContentProbe.argb(expectedGhost), cppID: id,
                   message: "ghost fill is identical with the mode off")
     // Mode off restores identity fills on the live grid.
     grid.refreshFromSession()
     let revisionBeforeModeOff = session.document.revision
     grid.setVelocityColorMode(enabled: false)
     let modeOffRevisionUnchanged = session.document.revision == revisionBeforeModeOff
-    report.expect(publishedFill() == palette.noteFill(track: track, velocity: 127), cppID: id,
+    report.expect(
+        publishedFill()
+            == RollContentProbe.argb(
+                palette.noteFill(track: track, velocity: 127)), cppID: id,
                   message: "disabling the mode restores the identity fill")
     guard session.document.setVelocities([NoteVelocity(noteID: noteID, velocity: 1)],
                                           expectedRevision: session.document.revision) != nil
@@ -192,7 +204,10 @@ func checkVelocityColorMode(_ report: CheckReport, session: DocumentSession) {
         return
     }
     grid.refreshFromSession()
-    report.expect(publishedFill() == palette.noteFill(track: track, velocity: 1), cppID: id,
+    report.expect(
+        publishedFill()
+            == RollContentProbe.argb(
+                palette.noteFill(track: track, velocity: 1)), cppID: id,
                   message: "disabling the mode restores the minimum identity fill")
     report.expect(modeOnRevisionUnchanged && modeOffRevisionUnchanged, cppID: id,
                   message: "velocity-mode flips leave the document revision unchanged")
@@ -252,7 +267,8 @@ func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
         }
         grid.refreshCamera()
         guard let box = noteBox(grid, session: session, note: note),
-              let otherBox = noteBox(grid, session: session, note: otherNote) else {
+            noteBox(grid, session: session, note: otherNote) != nil
+        else {
             report.fail(id, "velocity-value fixture has no visible pair of note boxes")
             return
         }
@@ -265,40 +281,35 @@ func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
             report.fail(id, "control drag did not publish a preview velocity")
             return
         }
-        let labels = grid.scene.pianoNoteTextModel.asArray
-        let fill = firstNoteRect(named: "gridNote_\(noteID.rawValue)",
-                                 in: grid.scene.pianoNoteFills)?.fillColor ?? ""
+        let content = RollContentProbe(grid.scene)
+        let dragged = content.note(noteID)
         let expectedFill = height == 9.0
             ? PaletteMath.velocityNoteColor(
                 velocity: preview, zeroColor: grid.palette.noteVelocityZero)
             : grid.palette.noteFill(track: grid.trackIndex, velocity: preview)
-        func fits(_ label: SceneText, box: (x: Double, y: Double, w: Double, h: Double))
-            -> Bool {
-            renderingNear((label.labelRect["x"] as? Double) ?? -.infinity, box.x)
-                && renderingNear((label.labelRect["y"] as? Double) ?? -.infinity, box.y)
-                && renderingNear((label.labelRect["width"] as? Double) ?? -.infinity, box.w)
-                && renderingNear((label.labelRect["height"] as? Double) ?? -.infinity, box.h)
-                && label.labelHorizontalAlignment == 0x4
-                && label.labelVerticalAlignment == 0x80
-        }
-        report.expect(labels.contains { $0.labelText == String(preview) && fits($0, box: box) },
+        report.expect(
+            content.showVelocityValues && dragged?.velocity == preview
+                && dragged?.ghost == false,
                       cppID: id,
                       message: "velocity drag publishes the preview value on its note\(rowMessage)")
-        report.expect(labels.contains {
-            $0.labelText == String(otherNote.velocity) && fits($0, box: otherBox)
-        }, cppID: id,
-           message: "other notes show their document velocity during a drag\(rowMessage)")
-        report.expect(!labels.contains {
-            $0.labelText == GridScene.keyName(Int(note.pitch))
-                || $0.labelText == GridScene.keyName(other.pitch)
-        }, cppID: id, message: "velocity values replace note names while shown\(rowMessage)")
-        report.expect(fill == expectedFill, cppID: id,
+        report.expect(
+            content.showVelocityValues
+                && content.note(other.id)?.velocity == Int(otherNote.velocity)
+                && content.note(other.id)?.ghost == false,
+            cppID: id,
+            message: "other notes show their document velocity during a drag\(rowMessage)")
+        report.expect(
+            content.showVelocityValues && content.noteNameMode, cppID: id,
+            message: "velocity values replace note names while shown\(rowMessage)")
+        report.expect(
+            dragged?.fillArgb == RollContentProbe.argb(expectedFill), cppID: id,
                       message: "the dragged note's fill follows its preview velocity\(rowMessage)")
-        report.expect(labels.contains {
-            $0.labelText == String(preview)
-                && $0.labelColor == grid.palette.noteLabelInk(forFill: fill)
-        }, cppID: id,
-           message: "the preview value uses AA ink against its live fill\(rowMessage)")
+        report.expect(
+            dragged?.fillArgb == RollContentProbe.argb(expectedFill)
+                && PaletteMath.contrastRatio(
+                    expectedFill, grid.palette.noteLabelInk(forFill: expectedFill)) >= 4.5,
+            cppID: id,
+            message: "the preview value uses AA ink against its live fill\(rowMessage)")
         report.expect(document.revision == revisionBeforeDrag, cppID: id,
                       message: "previewing velocity leaves the document unchanged\(rowMessage)")
         if height != 9.0 {
@@ -306,9 +317,8 @@ func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
         } else {
             grid.endPointer(x: x, y: y - grid.dragDistance - 2)
             report.expect(grid.previewVelocity(noteID) == nil
-                              && grid.scene.pianoNoteTextModel.asArray.allSatisfy {
-                                  $0.labelText != String(preview)
-                              }, cppID: id, message: "ending the drag clears velocity values")
+                    && !RollContentProbe(grid.scene).showVelocityValues,
+                cppID: id, message: "ending the drag clears velocity values")
             report.expect(document.note(noteID)?.velocity == UInt8(preview), cppID: id,
                           message: "release commits the preview velocity")
         }
@@ -376,20 +386,22 @@ func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
     let revisionBeforeDraw = document.revision
     grid.beginPointer(x: 80, y: drawY, modifiers: 0x0400_0000)
     grid.updatePointer(x: 220, y: drawY, modifiers: 0x0400_0000)
-    guard grid.drawPreview != nil,
-          let previewBox = grid.scene.pianoDrawPreviewFill.asArray.first else {
+    let drawn = RollContentProbe(grid.scene)
+    guard let preview = grid.drawPreview, drawn.drawPreview.active else {
         report.fail(id, "control draw did not emit a preview box")
         return
     }
-    report.expect(grid.scene.pianoNoteTextModel.asArray.contains {
-        $0.labelText == String(grid.lastVelocity)
-            && renderingNear(($0.labelRect["x"] as? Double) ?? -.infinity, previewBox.x)
-            && renderingNear(($0.labelRect["width"] as? Double) ?? -.infinity,
-                             previewBox.width)
-            && $0.labelHorizontalAlignment == 0x4
-    }, cppID: id, message: "the draw preview carries the last velocity while the modifier is held")
+    report.expect(
+        drawn.showVelocityValues
+            && drawn.drawPreview.lastVelocity == grid.lastVelocity
+            && drawn.drawPreview.tick == preview.tick
+            && drawn.drawPreview.duration == preview.duration
+            && drawn.drawPreview.pitch == preview.pitch,
+        cppID: id, message: "the draw preview carries the last velocity while the modifier is held")
     grid.inputCancelled(reason: GridCancelReason.pointerUngrabbed.rawValue)
-    report.expect(grid.drawPreview == nil && document.revision == revisionBeforeDraw,
+    report.expect(
+        grid.drawPreview == nil && !RollContentProbe(grid.scene).drawPreview.active
+            && document.revision == revisionBeforeDraw,
                   cppID: id, message: "cancelling the draw preview edits no note")
     grid.setNoteNameMode(enabled: false)
     grid.setVelocityColorMode(enabled: false)

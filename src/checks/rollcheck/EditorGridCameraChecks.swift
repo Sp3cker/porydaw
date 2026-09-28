@@ -18,20 +18,20 @@ final class GridCameraIntegrationCounters {
 
 @MainActor
 func runEditorGridCameraChecks(_ report: CheckReport, session: DocumentSession) {
-    let priorCamera = session.onCameraChange
+    let priorCamera = session.onCameraChangeDetailed
     let priorPlayback = session.onPlayback
     let priorChange = session.onChange
     defer {
-        session.onCameraChange = priorCamera
+        session.onCameraChangeDetailed = priorCamera
         session.onPlayback = priorPlayback
         session.onChange = priorChange
     }
 
     let grid = PianoGrid(session: session)
     let counters = GridCameraIntegrationCounters()
-    session.onCameraChange = { _ in
+    session.onCameraChangeDetailed = { _, change in
         counters.camera += 1
-        grid.refreshCamera()
+        grid.refreshCameraPresentation(change)
     }
     session.onPlayback = { _ in counters.playback += 1 }
     session.onChange = { change in
@@ -80,7 +80,7 @@ private func checkHoverChipResize(
     let key = grid.hoverKey
     let scroll = session.camera.snapshot.scrollY
     let chipHeight = grid.scene.hoverChipRect["height"] as? Double ?? .nan
-    let rows = grid.scene.pianoGridRows.asArray
+    let revision = grid.scene.contentRevision
     report.expect(key >= 0 && grid.scene.hoverChipVisible
         && gridCameraNear(grid.scene.hoverChipRect["y"] as? Double ?? .nan, 320 - chipHeight),
         cppID: id, message: "the stationary hover chip begins clamped to the viewport bottom")
@@ -92,8 +92,8 @@ private func checkHoverChipResize(
     report.expect(grid.hoverKey == key && session.camera.snapshot.scrollY == scroll
         && gridCameraNear(grid.scene.hoverChipRect["y"] as? Double ?? .nan, 320 - chipHeight),
         cppID: id, message: "height-only growth restores the stationary hover chip bottom clamp")
-    report.expect(grid.scene.pianoGridRows.count == rows.count
-        && rows.indices.allSatisfy { grid.scene.pianoGridRows[$0] === rows[$0] },
+    report.expect(
+        grid.scene.contentRevision == revision,
         cppID: id, message: "hover-chip height reclamping does not republish static rows")
 }
 

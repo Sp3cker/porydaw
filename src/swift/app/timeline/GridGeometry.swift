@@ -72,7 +72,7 @@ struct RollGrid {
         self.metrics = metrics
     }
 
-    private var clockTicks: Tick { max(1, clock) }
+    var clockTicks: Tick { max(1, clock) }
 
     private func musicalTicks(_ selection: GridSelection, feel: GridFeel) -> Tick {
         guard case .musical(let denominator) = selection,

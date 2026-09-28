@@ -95,44 +95,41 @@ extension PianoGrid {
     }
 
     @QtIgnored
-    func applyBandSelection() {
-        guard let band = selectionBand else { return }
-        var covered: [NoteID] = []
-        for note in notes where !note.ghost {
+    func bandCoveredNotes() -> [GridNote] {
+        guard let band = selectionBand else { return [] }
+        return notes.filter { note in
+            guard !note.ghost else { return false }
             let displayed = displayedNote(note)
             let rect = metrics.noteRect(
                 camera: session.camera,
                 x0: session.camera.displayX(tick: Double(displayed.tick), origin: 0, dpr: metrics.dpr),
                 x1: session.camera.displayX(tick: Double(displayed.end), origin: 0, dpr: metrics.dpr),
                 pitch: displayed.pitch)
-            if rect.x < band.x + band.w, rect.x + rect.w > band.x,
-               rect.y < band.y + band.h, rect.y + rect.h > band.y {
-                covered.append(note.noteId)
-            }
+            return rect.x < band.x + band.w && rect.x + rect.w > band.x
+                && rect.y < band.y + band.h && rect.y + rect.h > band.y
         }
-        session.setSelectedNotes(selectionAtRightPress + covered)
+    }
+
+    @QtIgnored
+    func applyBandSelection() {
+        guard selectionBand != nil else { return }
+        let previous =
+            rightPointerModifiers & QtFact.controlModifier != 0
+            ? selectionAtRightPress : []
+        session.setSelectedNotes(previous + bandCoveredNotes().map(\.noteId))
     }
 
     @QtIgnored
     func auditionBandEntrants() {
-        guard let band = selectionBand else { return }
+        guard selectionBand != nil else { return }
         var covered: [NoteID: (track: Int, pitch: Int)] = [:]
-        for note in notes where !note.ghost {
+        for note in bandCoveredNotes() {
             guard let source = session.document.note(note.noteId), source.duration > 0 else {
                 continue
             }
-            let rect = metrics.noteRect(
-                camera: session.camera,
-                x0: session.camera.displayX(tick: Double(note.tick), origin: 0, dpr: metrics.dpr),
-                x1: session.camera.displayX(
-                    tick: Double(note.tick + note.duration), origin: 0, dpr: metrics.dpr),
-                pitch: note.pitch)
-            if rect.x < band.x + band.w, rect.x + rect.w > band.x,
-               rect.y < band.y + band.h, rect.y + rect.h > band.y {
-                covered[note.noteId] = (note.track, note.pitch)
-                if bandAuditioned[note.noteId] == nil {
-                    onAudition?(note.track, note.pitch, note.velocity)
-                }
+            covered[note.noteId] = (note.track, note.pitch)
+            if bandAuditioned[note.noteId] == nil {
+                onAudition?(note.track, note.pitch, note.velocity)
             }
         }
         for (id, entry) in bandAuditioned where covered[id] == nil {
@@ -330,9 +327,10 @@ extension PianoGrid {
         refreshFromSession()
     }
 
-    func beginRightPointerImpl(x: Double, y: Double) {
+    func beginRightPointerImpl(x: Double, y: Double, modifiers: Int) {
         guard rightGesture == nil else { return }
         if case .pan = gesture { return }
+        rightPointerModifiers = modifiers
         selectionAtRightPress = session.selectedNoteOrder
         rightBandDemoted = false
         releaseBandAudition()
@@ -349,8 +347,9 @@ extension PianoGrid {
         publishOutputs()
     }
 
-    func updateRightPointerImpl(x: Double, y: Double) {
+    func updateRightPointerImpl(x: Double, y: Double, modifiers: Int) {
         guard let rightGesture else { return }
+        rightPointerModifiers = modifiers
         if !rightBandDemoted {
             let leftAllowsBand: Bool
             switch gesture {
@@ -368,8 +367,9 @@ extension PianoGrid {
         refreshNotes()
     }
 
-    func endRightPointerImpl(x: Double, y: Double) {
+    func endRightPointerImpl(x: Double, y: Double, modifiers: Int) {
         guard let rightGesture else { return }
+        rightPointerModifiers = modifiers
         if case .pendingDraw = gesture {
             // PendingDraw remains parked until its own release.
         } else if gesture != nil {

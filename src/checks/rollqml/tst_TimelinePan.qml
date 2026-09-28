@@ -19,7 +19,7 @@ TimelinePanSupport {
         verify(cameraUnchanged && summaryUnchanged,
                "an empty wheel leaves the camera and gutter summary unchanged")
 
-        var labelsBefore = keyboardLabels()
+        var labelsBefore = grabItem(gutterBox())
         for (var count = 0; count < 8; ++count) {
             var step = g.cameraScrollX
             mouseWheel(input, input.width / 2, input.height / 2, 0, -8, Qt.NoButton, Qt.ShiftModifier)
@@ -27,8 +27,28 @@ TimelinePanSupport {
                 return Math.abs(g.cameraScrollX - (step + 8.0)) <= 0.01
             }, 5000, "each wheel pan advances the camera by 8px")
         }
-        verify(sameLabels(keyboardLabels(), labelsBefore),
+        waitForRendering(gutterBox())
+        verify(!labelRowsDiffer(grabItem(gutterBox()), labelsBefore),
                "gutter labels survive eight pans unchanged")
+    }
+
+    function labelRowsDiffer(a, b) {
+        var dpr = a.width / gutterBox().width
+        for (var pitch = 0; pitch < 128; pitch += 12) {
+            var row = keyRow(pitch)
+            if (!rowVisible(row))
+                continue
+            var y = Math.round((row.y + row.height / 2) * dpr)
+            var dy = Math.max(0, Math.floor(row.height * dpr * 0.3))
+            for (var py = y - dy; py <= y + dy; ++py) {
+                for (var px = 0; px < a.width; ++px) {
+                    if (a.red(px, py) !== b.red(px, py) || a.green(px, py) !== b.green(px, py)
+                            || a.blue(px, py) !== b.blue(px, py))
+                        return true
+                }
+            }
+        }
+        return false
     }
 
     // timelinepan's middlePan: the real pointer path drives cursor, status and
@@ -102,8 +122,6 @@ TimelinePanSupport {
         var firstKey = g.hoverKey
         verify(chipText.contentWidth <= chip.width, "the chip covers its text")
 
-        // A neighboring pitch may not have a keyboard-label delegate when the
-        // mounted scrollbar reduces the viewport. Hover its row directly.
         var step = Math.max(g.rowHeight, pitch.height)
         var nextY = pitch.y + pitch.height / 2 + step
         if (nextY >= gutterBox().height)
@@ -137,28 +155,8 @@ TimelinePanSupport {
         verify(chipText.z > chip.z, "the chip text draws above the chip")
         verify(gutterBoxItem.clip, "the gutter box clips its contents")
 
-        var label = null
-        tryVerify(function() {
-            label = null
-            var stack = [surface()]
-            while (stack.length > 0) {
-                var item = stack.pop()
-                if (item.objectName === "timelineQuickPianoHoverChipText")
-                    continue
-                if (item.text !== undefined && item.text === pitch.text) {
-                    label = item
-                    break
-                }
-                for (var c = 0; c < item.children.length; ++c)
-                    stack.push(item.children[c])
-            }
-            return label !== null
-        }, 5000, "the keyboard label item is realized")
-        verify(label.visible, "the keyboard label is visible")
         compare(gutter.parent, gutterBoxItem)
 
-        // Chip geometry tracks the published rect and the text tracks the chip.
-        // Re-read the rect: the second hover republished it.
         chipRect = scene.hoverChipRect
         compare(chip.width, chipRect.width)
         compare(chip.x, chipRect.x)
@@ -175,16 +173,24 @@ TimelinePanSupport {
         verify(!chipText.clip)
         compare(chipText.horizontalAlignment, Text.AlignHCenter)
         compare(chipText.verticalAlignment, Text.AlignVCenter)
-
-        // The fixed label's realized text fits and is right-aligned.
-        verify(label.contentWidth > 0)
-        verify(label.contentHeight > 0)
-        verify(label.contentWidth <= label.width)
-        verify(!label.clip)
-        compare(label.horizontalAlignment, Text.AlignRight)
         g.clearKeyboardHover()
         tryCompare(g, "hoverKey", -1, 5000)
         tryCompare(scene, "hoverChipVisible", false, 5000)
+
+        var keyboard = keyboardRenderer()
+        verify(keyboard.visible && keyboard.band === 1,
+               "the native keyboard label renderer is realized")
+        waitForRendering(gutterBoxItem)
+        var keys = grabItem(gutterBoxItem)
+        var plain = keyRow(pitch.pitch + 2)
+        if (!rowVisible(plain))
+            plain = keyRow(pitch.pitch - 3)
+        var width = g.keyboardWidth
+        verify(rowInk(keys, gutterBoxItem, pitch, width / 2, width - 1) >= 0
+               && rowInk(keys, gutterBoxItem, plain, width / 2, width - 1) < 0,
+               "the keyboard label is visible")
+        verify(rowInk(keys, gutterBoxItem, pitch, 1, width / 4) < 0,
+               "the keyboard label is right-aligned")
     }
 
     // static camera's bound-scroll and lead-pad contract through the mounted

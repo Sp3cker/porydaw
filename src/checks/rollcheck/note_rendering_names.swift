@@ -38,49 +38,41 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
     }
     grid.refreshCamera()
     grid.setNoteNameMode(enabled: true)
-    func matchingRecords() -> [SceneText] {
-        grid.scene.pianoNoteTextModel.asArray.filter { $0.labelText == GridScene.keyName(pitch) }
+    func labeledNotes() -> [RollContentProbe.Note] {
+        RollContentProbe(grid.scene).notes.filter { record in
+            record.pitch == pitch
+                && noteNameLabeled(grid, session: session, id: NoteID(record.id))
+        }
     }
-    guard let box = noteBox(grid, session: session, note: note) else {
+    let content = RollContentProbe(grid.scene)
+    guard let record = content.note(noteID) else {
         report.fail(id, "wide note has no projected box")
         return
     }
-    let half = grid.metrics.spaceHalf
-    let expectedRect = (x: box.x + half, y: box.y + half,
-                        w: box.w - 2 * half, h: box.h - 2 * half)
-    func rectMatches(_ record: SceneText) -> Bool {
-        guard let x = record.labelRect["x"] as? Double,
-              let y = record.labelRect["y"] as? Double,
-              let width = record.labelRect["width"] as? Double,
-              let height = record.labelRect["height"] as? Double
-        else { return false }
-        return renderingNear(x, expectedRect.x) && renderingNear(y, expectedRect.y)
-            && renderingNear(width, expectedRect.w) && renderingNear(height, expectedRect.h)
-    }
-    let wide = matchingRecords()
-    report.expect(wide.count == 1, cppID: id,
+    let wide = labeledNotes()
+    report.expect(
+        content.noteNameMode && content.selectedTrack == record.track
+            && wide.count == 1 && wide.first?.id == noteID.rawValue, cppID: id,
                   message: "a wide selected-track note gets exactly one name label")
-    if let record = wide.first(where: rectMatches) {
-        let fill = firstNoteRect(named: "gridNote_\(noteID.rawValue)",
-                                 in: grid.scene.pianoNoteFills)?.fillColor ?? ""
-        let light = grid.palette.keyboardNatural
-        let dark = grid.palette.keyboardBlack
-        let expectedInk = PaletteMath.aaContrastInk(
-            fill: fill, light: light, dark: dark,
-            fallbackLight: grid.palette.noteLabelAaLight,
-            fallbackDark: grid.palette.noteLabelAaDark)
-        report.expect(record.labelColor == expectedInk
-                          && PaletteMath.contrastRatio(fill, record.labelColor) >= 4.5,
-                      cppID: id,
-                      message: "the name label uses the contrasting keyboard ink")
-        report.expect(record.labelHorizontalAlignment == 0x1
-                          && record.labelVerticalAlignment == 0x80, cppID: id,
-                      message: "the name label is left-aligned and vertically centred")
-        report.expect((record.labelFont["pixelSize"] as? Int) == 11, cppID: id,
-                      message: "the name label uses the fixed reduced caption face")
-    } else {
-        report.fail(id, "the wide note label rect misses the half-space inset box")
+    func slot(_ kind: RollPaletteSlot) -> UInt32? {
+        let index = Int(kind.rawValue)
+        return content.palette.indices.contains(index) ? content.palette[index] : nil
     }
+    let fill = grid.palette.noteFill(track: record.track, velocity: record.velocity)
+    let expectedInk = PaletteMath.aaContrastInk(
+        fill: fill, light: grid.palette.keyboardNatural, dark: grid.palette.keyboardBlack,
+        fallbackLight: grid.palette.noteLabelAaLight,
+        fallbackDark: grid.palette.noteLabelAaDark)
+    report.expect(
+        record.fillArgb == RollContentProbe.argb(fill)
+            && slot(.noteLabelLight) == RollContentProbe.argb(grid.palette.keyboardNatural)
+            && slot(.noteLabelDark) == RollContentProbe.argb(grid.palette.keyboardBlack)
+            && PaletteMath.contrastRatio(fill, expectedInk) >= 4.5,
+        cppID: id,
+        message: "the name label uses the contrasting keyboard ink")
+    report.expect(
+        grid.measurementFonts[.noteName]?.pixelSize == 11, cppID: id,
+        message: "the name label uses the fixed reduced caption face")
     // Too narrow: the same note at minimum time zoom earns no label.
     _ = session.mutateCamera { _ = $0.setTimeZoom(4) }
     grid.refreshCamera()
@@ -88,7 +80,8 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
         _ = camera.setHScroll(camera.snapshot.minHScroll)
     }
     grid.refreshCamera()
-    report.expect(matchingRecords().isEmpty, cppID: id,
+    report.expect(
+        labeledNotes().isEmpty, cppID: id,
                   message: "a too-narrow note gets no name label")
     // Below the key-height threshold: wide again, but rows too short.
     _ = session.mutateCamera { _ = $0.setTimeZoom(280) }
@@ -100,7 +93,8 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
         _ = camera.setVScroll(max(0, (127.5 - Double(pitch)) * 8 - 160))
     }
     grid.refreshCamera()
-    report.expect(matchingRecords().isEmpty, cppID: id,
+    report.expect(
+        labeledNotes().isEmpty, cppID: id,
                   message: "no name labels below the key-height threshold")
     // Ghost exclusion through the exact layout entry the scene calls:
     // PianoGrid only presents the selected track, so exercise the pure
@@ -122,10 +116,10 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
     report.expect(PaletteMath.contrastRatio(
         hardFill, NoteNameLabels.textColor(fillColor: hardFill, palette: grid.palette)) >= 4.5,
         cppID: id, message: "the low-contrast velocity hue gets AA-clearing label ink")
-    // Mode off empties the model unconditionally.
     grid.setNoteNameMode(enabled: false)
-    report.expect(grid.scene.pianoNoteTextModel.count == 0, cppID: id,
-                  message: "disabling the mode empties the name model")
+    report.expect(
+        !RollContentProbe(grid.scene).noteNameMode, cppID: id,
+        message: "disabling the mode publishes no name labels")
     let beforeState = session.document.state
     let beforeIdentity = session.document.history.currentIdentity
     session.mutateCamera { camera in
@@ -164,13 +158,7 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
     grid.refreshFromSession()
     grid.setNoteNameMode(enabled: true)
     func hasLabel(_ noteID: NoteID) -> Bool {
-        guard let note = session.document.note(noteID),
-              let box = noteBox(grid, session: session, note: note) else { return false }
-        return grid.scene.pianoNoteTextModel.asArray.contains {
-            $0.labelText == GridScene.keyName(Int(note.pitch))
-                && renderingNear(($0.labelRect["x"] as? Double) ?? -.infinity,
-                                 box.x + grid.metrics.spaceHalf)
-        }
+        noteNameLabeled(grid, session: session, id: noteID)
     }
     report.expect(!hasLabel(short.id), cppID: id,
                   message: "an abutting short same-pitch note carries no label (first)")

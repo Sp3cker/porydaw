@@ -4,6 +4,7 @@ import PorydawApp
 import EditorQmlCheck 1.0
 import Porydaw.Ui
 import "EditorDrawerVelocitySupport.js" as VelocitySupport
+import "RollNoteFaces.js" as RollNoteFaces
 
 EditorDrawerTestSupport {
     id: testCase
@@ -63,10 +64,9 @@ EditorDrawerTestSupport {
         tryVerify(function() { return VelocitySupport.selectedNoteId(testCase) === pair[1].id },
                   1000, "equal unselected velocity nodes retain later-model-order priority")
         waitForRendering(roll)
-        var selectedEarlier = findChild(testCase.surface, "gridNote_" + pair[0].id)
-        verify(selectedEarlier, "the staged earlier sibling has a rendered roll note")
-        var firstPoint = selectedEarlier.mapToItem(roll, selectedEarlier.width / 2,
-                                                  selectedEarlier.height / 2)
+        var firstPoint = RollNoteFaces.center(findChild(testCase.surface, "timelineRendererPlot"),
+                                              roll, pair[0].id)
+        verify(firstPoint, "the staged earlier sibling has a rendered roll note")
         mouseClick(roll, firstPoint.x, firstPoint.y, Qt.LeftButton)
         tryVerify(function() { return VelocitySupport.selectedNoteId(testCase) === pair[0].id },
                   1000, "the roll selects the earlier sibling before tie-break")

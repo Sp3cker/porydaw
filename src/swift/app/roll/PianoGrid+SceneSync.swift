@@ -34,32 +34,30 @@ extension PianoGrid {
         default:
             showVelocityValues = false
         }
-        let geometryStable: Bool
-        switch gesture {
-        case .move, .resize: geometryStable = false
-        default: geometryStable = true
-        }
         let initial = session.timeline.tracks.indices.contains(trackIndex)
             ? session.timeline.tracks[trackIndex].firstProgram : -1
         let program = max(0, initial)
         let drumNames = session.bankSlots.indices.contains(program)
             ? session.bankSlots[program].drumPadNames : nil
+        let selectedNotes: Set<NoteID> =
+            selectionBand != nil
+                && rightPointerModifiers & QtFact.controlModifier == 0
+            ? [] : session.selectedNotes
         return GridSceneInput(
             metrics: metrics, grid: session.grid, palette: palette, camera: session.camera,
             contentEndTick: contentEndTick, scale: session.scaleProjection,
             rulerHeight: rulerHeight,
-            typography: typography, fontSpec: { self.fontSpec($0) }, notes: visibleNotes,
+            typography: typography, fontSpec: { self.fontSpec($0) },
+            fonts: measurementFonts, notes: visibleNotes,
             displayedNote: { self.displayedNote($0) },
-            isSelected: { self.session.selectedNotes.contains($0) },
+            selectedNotes: selectedNotes,
             drawPreview: drawPreview, lastVelocity: lastVelocity,
-            hoverKey: hoverKey, selectionBand: selectionBand,
+            hoverKey: hoverKey,
             velocityColorMode: velocityColorMode, noteNameMode: noteNameMode,
             showVelocityValues: showVelocityValues,
-            noteNameAdvance: { self.typography?.noteNameAdvance(pitch: $0) ?? 0 },
-            noteNameOccupiedHeight: typography?.noteNameOccupiedHeight ?? 0,
             timeSelection: session.timeSelection,
             usedTrackCount: session.document.engineTracks.usedTrackCount,
-            selectedTrack: trackIndex, geometryStable: geometryStable,
+            selectedTrack: trackIndex,
             keyboardNames: drumNames, keyboardBankIdentity: ObjectIdentifier(session.bankLease),
             keyboardProgram: program)
     }
@@ -85,6 +83,31 @@ extension PianoGrid {
         }
         scene.rebuildStatic(input)
         scene.rebuildNotes(input)
+        if typographyChanged {
+            scene.rebuildHover(input)
+        } else if hoverKey >= 0 {
+            scene.refreshHoverChip(input)
+        }
+        publishOutputs()
+    }
+
+    @QtIgnored
+    public func refreshCameraPresentation(_ change: EditorCamera.Change) {
+        let fontsKept =
+            typographyKey.map {
+                $0.fontPx == metrics.baseFontPx && $0.dpr == metrics.dpr
+            } ?? false
+        guard fontsKept, !change.contains(.geometry) else {
+            refreshCamera()
+            return
+        }
+        let typographyChanged = updateTypography()
+        let input = sceneInput()
+        if typographyChanged || staticSceneDirty {
+            scene.invalidateStatic()
+            staticSceneDirty = false
+        }
+        scene.rebuildStatic(input)
         if typographyChanged {
             scene.rebuildHover(input)
         } else if hoverKey >= 0 {
@@ -143,6 +166,7 @@ extension PianoGrid {
     private func publishGeometry() {
         let snapshot = session.camera.snapshot
         if beatWidth != snapshot.pixelsPerBeat { beatWidth = snapshot.pixelsPerBeat }
+        if pixelsPerTick != snapshot.pixelsPerTick { pixelsPerTick = snapshot.pixelsPerTick }
         if rowHeight != snapshot.keyHeight { rowHeight = snapshot.keyHeight }
         if cameraScrollX != snapshot.scrollX { cameraScrollX = snapshot.scrollX }
         if scaleFold != session.scaleProjection.fold { scaleFold = session.scaleProjection.fold }
@@ -286,7 +310,19 @@ extension PianoGrid {
 
     @QtIgnored
     func publishOutputs() {
-        if renderedNoteCount != notes.count { renderedNoteCount = notes.count }
+        if renderedNoteCount != scene.noteRecordCount {
+            renderedNoteCount = scene.noteRecordCount
+        }
+        let band = selectionBand
+        if bandSelectionActive != (band != nil) { bandSelectionActive = band != nil }
+        let bandX = band?.x ?? 0
+        let bandY = band?.y ?? 0
+        let bandW = band?.w ?? 0
+        let bandH = band?.h ?? 0
+        if bandSelectionX != bandX { bandSelectionX = bandX }
+        if bandSelectionY != bandY { bandSelectionY = bandY }
+        if bandSelectionWidth != bandW { bandSelectionWidth = bandW }
+        if bandSelectionHeight != bandH { bandSelectionHeight = bandH }
         let status = currentStatusText()
         if statusText != status { statusText = status }
         let availability = EditCommand.allCases.map { commands.isAvailable($0) }
@@ -298,9 +334,6 @@ extension PianoGrid {
         publishGeometry()
     }
 
-    /// Check-facing note probe, pulled on demand. The pushed `noteSummary`
-    /// copy used to re-encode on the publish path; checks call this instead,
-    /// so scroll/zoom refreshes never serialize notes.
     @QtIgnored
     func fetchNoteSummaryImpl() -> String {
         let selectedNotes = session.selectedNotes
