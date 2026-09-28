@@ -15,6 +15,7 @@ ShellWindowSupport {
         var gutter = findChild(surface, "timelineQuickRollGutter")
         var headers = findChild(surface, "timelineTrackHeadersInput")
         var rows = findChild(surface, "timelineTrackHeaderRows")
+        verify(rows.count >= 1, "the mounted header model seeds at least one track row")
         verify(caption && plot && gutter && headers && rows && rows.count > 0)
         tryCompare(surface, "hintWindowActive", true)
         mouseMove(plot, plot.width / 2, plot.height / 2)
@@ -52,6 +53,7 @@ ShellWindowSupport {
         openTwoSongShell()
         var surface = selectedSurface()
         var hints = shell.shellPresenter.mouseHints
+        var headerModel = surface.headersModel
         var headers = findChild(surface, "timelineTrackHeadersInput")
         var rows = findChild(surface, "timelineTrackHeaderRows")
         var row = rows.itemAt(0)
@@ -60,9 +62,20 @@ ShellWindowSupport {
         tryCompare(surface, "hintWindowActive", true)
         mouseMove(headers, titleX, titleY)
         tryVerify(function() { return hints.text.length > 0 }, 3000)
-        mouseClick(headers, titleX, titleY, Qt.RightButton)
-        var headerModel = surface.headersModel
+        verify(rows.count > 1 && rows.itemAt(1) && !rows.itemAt(1).isAddTrack,
+               "the mounted header model seeds a second track row for the menu journey")
+        var nextRow = rows.itemAt(1)
+        var nextX = nextRow.titleRect.x + nextRow.titleRect.width / 2
+        var nextY = headerModel.rowHeight + nextRow.titleRect.y + nextRow.titleRect.height / 2
+        var firstTrack = row.track
+        mouseDoubleClickSequence(headers, titleX, titleY, Qt.LeftButton)
+        tryCompare(headerModel, "renamingTrack", firstTrack, 3000,
+                   "double-clicking the first row title starts renaming that track")
+        mouseClick(headers, nextX, nextY, Qt.RightButton)
         tryCompare(headerModel, "menuOpen", true)
+        tryCompare(hints, "text", "")
+        tryCompare(headerModel, "renamingTrack", -1, 3000,
+                   "opening the second-row menu ends the in-progress rename")
         var headerPanel = null
         tryVerify(function() {
             headerPanel = findChild(surface, "quickMenuPanelRoot")
@@ -73,35 +86,16 @@ ShellWindowSupport {
         compare(renameRow.itemData.actionId, 3)
         mouseClick(renameRow, renameRow.width / 2, renameRow.height / 2)
         tryCompare(headerModel, "menuOpen", false)
+        tryCompare(headerModel, "renamingTrack", nextRow.track, 3000,
+                   "choosing Rename targets the menu track")
         var rename = findChild(surface, "timelineTrackHeaderRename")
         tryVerify(function() { return rename && rename.visible }, 3000)
         mouseMove(rename, rename.width / 2, rename.height / 2)
         tryVerify(function() { return hints.text.length > 0 }, 3000)
         var renameHint = hints.text
-        verify(rows.count > 1 && rows.itemAt(1) && !rows.itemAt(1).isAddTrack)
-        var nextRow = rows.itemAt(1)
-        var nextX = nextRow.titleRect.x + nextRow.titleRect.width / 2
-        var nextY = headerModel.rowHeight + nextRow.titleRect.y + nextRow.titleRect.height / 2
-        mouseClick(headers, nextX, nextY, Qt.RightButton)
-        tryCompare(headerModel, "menuOpen", true)
-        tryCompare(hints, "text", "")
-        tryCompare(headerModel, "renamingTrack", -1)
-        headerPanel = null
-        tryVerify(function() {
-            headerPanel = findChild(surface, "quickMenuPanelRoot")
-            return headerPanel && headerPanel.rowObjectNamePrefix === "headerMenuRow_"
-                   && headerPanel.rowItem(2) !== null
-        }, 3000)
-        renameRow = headerPanel.rowItem(2)
-        compare(renameRow.itemData.actionId, 3)
-        mouseClick(renameRow, renameRow.width / 2, renameRow.height / 2)
-        tryCompare(headerModel, "menuOpen", false)
-        tryCompare(headerModel, "renamingTrack", nextRow.track)
-        tryCompare(rename, "visible", true)
-        mouseMove(rename, rename.width / 2, rename.height / 2)
-        tryVerify(function() { return hints.text === renameHint }, 3000)
         headerModel.finishRename(false, true)
-        tryCompare(headerModel, "renamingTrack", -1)
+        tryCompare(headerModel, "renamingTrack", -1, 3000,
+                   "finishRename ends the rename")
         mouseMove(headers, titleX, titleY)
         tryVerify(function() { return hints.text.length > 0 && hints.text !== renameHint },
                   3000, "an open menu keeps the rename hint and dismiss restores the editor hint")
@@ -146,7 +140,10 @@ ShellWindowSupport {
         mouseMove(plot, plot.width / 2, plot.height / 2)
         tryVerify(function() { return hints.text.length > 0 && caption.text === hints.text },
                   3000, "the footer caption mirrors the current hint text")
+        tryCompare(hints, "text", "⇧Right-drag: select time · ⌘Wheel: zoom key height · ⇧Wheel: scroll horizontally", 3000)
         var plotHint = hints.text
+        verify(caption.text === plotHint,
+               "the footer caption holds the full plot hint string")
         function hintCentered() {
             var center = caption.mapToItem(shell.footer, caption.width / 2, 0).x
             return caption.horizontalAlignment === Text.AlignHCenter
@@ -156,6 +153,8 @@ ShellWindowSupport {
         var originalStatus = shell.shellPresenter.statusText
         shell.shellPresenter.statusText = "Operational message"
         tryCompare(status, "text", "Operational message")
+        verify(caption.text === plotHint,
+               "the operational message leaves the full hint caption intact")
         var stable = caption.text === hints.text && hintCentered()
                      && shell.footer.height === height
         var meterPresenter = shell.shellPresenter.session.transportBarPresenter()
@@ -165,6 +164,17 @@ ShellWindowSupport {
                  && shell.footer.height === height
         meterPresenter.polyMeterVisible = true
         tryCompare(meter, "visible", true)
+        verify(hints.text === plotHint,
+               "showing the meter keeps the pre-meter hint profile")
+        var gutter = findChild(surface, "timelineQuickRollGutter")
+        mouseMove(gutter, gutter.width / 2, gutter.height / 2)
+        tryVerify(function() { return hints.text.length > 0 && hints.text !== plotHint }, 3000)
+        tryCompare(hints, "text", "⌘Wheel: zoom key height · ⇧Wheel: scroll horizontally", 3000)
+        var gutterHint = hints.text
+        tryVerify(function() { return caption.text === gutterHint }, 3000,
+                  "the footer caption holds the full hint after the profile changes")
+        verify(shell.footer.height === height,
+               "changing the hint profile keeps the metered footer height")
         stable = stable && caption.text === hints.text && hintCentered()
                  && shell.footer.height === height
         meterPresenter.polyMeterVisible = false
@@ -196,5 +206,46 @@ ShellWindowSupport {
         } finally {
             shell.width = originalWidth
         }
+    }
+
+    function test_sEnlargedFontClausesRetired() {
+        openTwoSongShell()
+        var surface = selectedSurface()
+        var hints = shell.shellPresenter.mouseHints
+        var caption = findChild(shell, "shellMouseHintText")
+        var meter = findChild(shell, "shellPolyMeter")
+        var plot = findChild(surface, "swiftRollInput")
+        var gutter = findChild(surface, "timelineQuickRollGutter")
+        verify(caption && meter && plot && gutter)
+        tryCompare(surface, "hintWindowActive", true)
+        function hintCentered() {
+            var center = caption.mapToItem(shell.footer, caption.width / 2, 0).x
+            return caption.horizontalAlignment === Text.AlignHCenter
+                   && Math.abs(center - shell.footer.width / 2) <= shell.chromeBaseFontPx / 2
+        }
+        mouseMove(plot, plot.width / 2, plot.height / 2)
+        tryVerify(function() { return hints.text.length > 0 }, 3000)
+        var plotHint = hints.text
+        verify(!("currentSource" in hints) && hints.text === plotHint,
+               "the plot hover publishes text only; the native hint-source token has no mounted channel")
+        tryVerify(function() { return caption.text === plotHint }, 3000,
+                  "the enlarged-font caption clause retires; the full-text identity executes at the production font")
+        var meterPresenter = shell.shellPresenter.session.transportBarPresenter()
+        meterPresenter.polyMeterVisible = true
+        tryCompare(meter, "visible", true)
+        var meteredHeight = shell.footer.height
+        var meterX = meter.x
+        mouseMove(gutter, gutter.width / 2, gutter.height / 2)
+        tryVerify(function() { return hints.text.length > 0 && hints.text !== plotHint }, 3000)
+        verify(shell.footer.height === meteredHeight,
+               "the enlarged-font bar-height clause retires; the metered height executes at the production font")
+        verify(meter.x === meterX,
+               "the enlarged-font meter-offset clause retires; the meter offset executes at the production font")
+        verify(hintCentered(),
+               "the enlarged-font centering clause retires; the metered center executes at the production font")
+        meterPresenter.polyMeterVisible = false
+        tryCompare(meter, "visible", false)
+        verify(hintCentered(),
+               "the enlarged-font hide-meter clause retires; the unmetered center executes at the production font")
     }
 }

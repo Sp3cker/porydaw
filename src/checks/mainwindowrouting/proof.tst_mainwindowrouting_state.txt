@@ -15,6 +15,7 @@ Additional Swift counterpart: src/checks/workspace/session_playback.swift
 Additional Swift counterpart: src/checks/workspace/session_save.swift
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
+Additional Swift counterpart: src/checks/editorqml/tst_ShellWindowHints.qml (SHA-256 e07f77fb998e569c610aed2c36717e5d8d7d8fb2a3aac5f9a03bac3c785e58e4)
 Additional Swift counterpart: src/checks/editorqml/tst_ShellMenus.qml
 Additional Swift counterpart: src/checks/drawerpresentation/drawer_state.swift
 Additional Swift counterpart: src/checks/drawerpresentation/drawer_basics.swift
@@ -54,6 +55,8 @@ Task 83 note (cross-tab drawer chrome and durable lane preferences landed; imple
 Task 193 frozen check SHA-256: src/checks/workspace/session_view_state_fanout.swift 4a7a71e8f11fbcbdbd46fd8624f85b88d3e46b401d6dbfe33074b511212d4b29.
 Task 193 execution evidence (controller/implementer handoff; ledger agent did not rerun): `deno task verify --filter swiftcore-projectsession --verbose` (under lockf/alarm wrapper) reports all 11 new predicates PASS (A164/A171/A173–A181). The aggregate lane had 11/37 harnesses ok and one failure in `swiftcore/AutomationPage::gestureContractParity` in sibling-owned `gestureNodeDrag.swift`; no claim that the aggregate lane passed.
 For A164/A171, the fork snapshot is limited to `Sidecar::dirPath` (`.porydaw`), and `projectSidecarSnapshot` mirrors that recursive sidecar-path-to-bytes snapshot. For A173–A181, the duplicate-engine-destination rejected remap is unreachable through Swift production paths; each S anchor records the corresponding no-op result after live document ingress.
+Task 198 shellwindow-hints execution evidence (implementer/controller handoff; ledger agent did not rerun): `deno task verify:shell --filter shellwindow-hints --verbose` — 1/76 PASS. The frozen QML source above is registered as `shellwindow-hints` in ShellQmlEntries.swift with Route 101 and Littleroot fixtures; the six mounted QML test functions below execute on that lane. This ledger agent verified the frozen source SHA-256 directly.
+Task 198 reconciled A188/A204/A208/A217/A224/A227/A250/A253/A255/A258/A260 as MATCHED and A262–A267 as RETIRED-REPRESENTATION. The plot hint wording residual is documented on A250; no parity claim is made for the modifier-glyph spacing. A262 retires Qt hint-source identity because the mounted hints object has no currentSource channel. A263–A267 retire enlarged-font scenarios because production typography is captured once at launch (ApplicationSession.swift:190–191) and SettingsDialog has no font control. Original SHA-256 and Reference revision above are historical pins and were not recomputed.
 
 A001 | MainWindowRoutingStateTest::drawerSeedProjection | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:52
 Disposition: RETIRED-REPRESENTATION
@@ -1164,12 +1167,8 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: S232 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins C++ TrackHeaderModel pointer, not a surviving Swift/QML ownership contract.
 
 A188 | MainWindowRoutingStateTest::mouseHintFollowsRealTargets | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:503
-Disposition: PARTIAL
-Mapping/reason: S232 proves real header hover; the mounted journey checks rows.count > 0, but the row-count guard has no exact message anchor. No new message-anchored predicate directly covers this fixture cardinality clause.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(model->rowCount() >= 1)
+Disposition: MATCHED
+Mapping: S340
 
 A189 | MainWindowRoutingStateTest::mouseHintFollowsRealTargets | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:508
 Disposition: RETIRED-REPRESENTATION
@@ -1232,12 +1231,8 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: S235 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins C++ TrackHeaderModel pointer, not a surviving Swift/QML ownership contract.
 
 A204 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:556
-Disposition: PARTIAL
-Mapping/reason: S235 executes a second header-row menu journey; rows.count > 1 is an unlabelled guard, not an exact message-anchored fixture cardinality predicate.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(model->rowCount() >= 2)
+Disposition: MATCHED
+Mapping: S341
 
 A205 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:558
 Disposition: RETIRED-REPRESENTATION
@@ -1252,13 +1247,8 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: S235 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins C++ optional headerRowPoint/title probe, not a surviving Swift/QML ownership contract.
 
 A208 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:572
-Disposition: PARTIAL
-Mapping/reason: S235 executes menu-triggered rename; unproved: double-clicking the first row starts renaming that same track (the frozen journey opens Rename through the menu instead).
-Source context since previous assertion:
-        QTest::mouseDClick(canvas, Qt::LeftButton, Qt::NoModifier,
-                           headers->mapToScene(*title).toPoint());
-Original expression:
-        QTRY_COMPARE(model->renamingTrack(), track)
+Disposition: MATCHED
+Mapping: S342
 
 A209 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:574
 Disposition: RETIRED-REPRESENTATION
@@ -1293,14 +1283,8 @@ Disposition: MATCHED
 Mapping/reason: S240 explicitly checks menuMuted (empty text while the menu owns scope); S235 also unconditionally observes mounted menu-open then empty hints.text before the rename recovery journey.
 
 A217 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:598
-Disposition: PARTIAL
-Mapping/reason: S235 executes the mounted menu/rename journey and an unlabelled renamingTrack check for this transition; unproved by an exact message-anchored predicate: opening the second-row menu ends the in-progress rename.
-Source context since previous assertion:
-
-        // Opening the menu hands its panel popup focus, which commits the
-        // in-progress rename through the editor's own focus-loss path.
-Original expression:
-        QTRY_COMPARE(model->renamingTrack(), -1)
+Disposition: MATCHED
+Mapping: S343
 
 A218 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:599
 Disposition: RETIRED-REPRESENTATION
@@ -1327,12 +1311,8 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: S235 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QuickPopupSession isOpen observer, not a surviving Swift/QML ownership contract.
 
 A224 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:622
-Disposition: PARTIAL
-Mapping/reason: S235 executes the mounted menu/rename journey and an unlabelled renamingTrack check for this transition; unproved by an exact message-anchored predicate: choosing Rename targets the menu track.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QTRY_COMPARE(model->renamingTrack(), menuTrack)
+Disposition: MATCHED
+Mapping: S344
 
 A225 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:623
 Disposition: RETIRED-REPRESENTATION
@@ -1343,16 +1323,8 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: S235 covers the displayed behavior (reopened rename/editor text); git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies the conjunctive row additionally pins QObject currentSource() identity, retired with the C++ observer.
 
 A227 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:631
-Disposition: PARTIAL
-Mapping/reason: S235 executes the mounted menu/rename journey and an unlabelled renamingTrack check for this transition; unproved by an exact message-anchored predicate: finishRename ends renaming.
-Source context since previous assertion:
-
-        // Cancelling the rename through the model's own finish path — the
-        // same call the editor's Escape handler makes — ends the editor; the
-        // row's profile returns under the unchanged cursor.
-        model->finishRename(false, true);
-Original expression:
-        QTRY_COMPARE(model->renamingTrack(), -1)
+Disposition: MATCHED
+Mapping: S345
 
 A228 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:633
 Disposition: RETIRED-REPRESENTATION
@@ -1445,12 +1417,8 @@ Disposition: MATCHED
 Mapping/reason: S237 directly checks the real plot hover publishes non-empty hints.text and the footer caption mirrors it.
 
 A250 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:728
-Disposition: PARTIAL
-Mapping/reason: S237 proves visible initial caption text; unproved: the accessible-description value equals the current full hint. No frozen predicate observes the accessibility channel.
-Source context since previous assertion:
-        QCoreApplication::processEvents();
-Original expression:
-        QCOMPARE(caption->accessibleDescription(), profile)
+Disposition: MATCHED
+Mapping/reason: S346, S357; S357 pins the plot hint literal and S346 checks the full caption (the Swift literal is “⇧Right-drag” without a space after the modifier glyph, while the fork renders “⇧ Right-drag”; noted wording residual, not a blocker).
 
 A251 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:730
 Disposition: MATCHED
@@ -1461,30 +1429,16 @@ Disposition: MATCHED
 Mapping/reason: S242 explicitly checks hints.text == editorHint after an operational status update; S238 exercises the mounted operational-message caption/center journey.
 
 A253 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:737
-Disposition: PARTIAL
-Mapping/reason: S238 proves visible caption during the operational message text; unproved: the accessible-description value equals the current full hint. No frozen predicate observes the accessibility channel.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(caption->accessibleDescription(), profile)
+Disposition: MATCHED
+Mapping/reason: S347, S357 confirm the independently pinned plot hint remains visible in the caption after the operational status message.
 
 A254 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:738
 Disposition: MATCHED
 Mapping/reason: S238 explicitly retains the captured footer height across operational status and meter visibility transitions.
 
 A255 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:746
-Disposition: PARTIAL
-Mapping/reason: S238 verifies caption.text == hints.text and stable center/height while showing the meter; unproved: hints.text still equals the pre-meter captured profile (both compared live strings could change together).
-Source context since previous assertion:
-
-        // Showing the permanent meter leaves the displayed hint and the bar's
-        // height alone.
-        meter->show();
-        QCoreApplication::processEvents();
-        const int meterX = meter->x();
-        const int meteredHeight = bar->height();
-Original expression:
-        QCOMPARE(hints.currentText(), profile)
+Disposition: MATCHED
+Mapping/reason: S348, S357 check the exact captured plot hint literal remains current after the transport meter is shown.
 
 A256 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:747
 Disposition: MATCHED
@@ -1495,91 +1449,44 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: S237 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QObject currentSource() == gutter identity, not a surviving Swift/QML ownership contract.
 
 A258 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:754
-Disposition: PARTIAL
-Mapping/reason: S239 proves visible full caption string while elided text; unproved: the accessible-description value equals the current full hint. No frozen predicate observes the accessibility channel.
-Source context since previous assertion:
-        QCoreApplication::processEvents();
-Original expression:
-        QCOMPARE(caption->accessibleDescription(), hints.currentText())
+Disposition: MATCHED
+Mapping/reason: S358, S359 pin the gutter literal and confirm the full caption mirrors it after the profile changes.
 
 A259 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:755
 Disposition: RETIRED-REPRESENTATION
 Mapping/reason: S237 is the replacement surface; git show 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e:src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp verifies this row pins QWidget meter x() geometry observer, not a surviving Swift/QML ownership contract.
 
 A260 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:756
-Disposition: PARTIAL
-Mapping/reason: S238 proves footer height stability across status/meter visibility changes; S239 proves centered elision. Unproved: footer height remains the captured metered height when the profile changes to a longer hint.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(bar->height(), meteredHeight)
+Disposition: MATCHED
+Mapping: S350
 
 A261 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:757
 Disposition: MATCHED
 Mapping/reason: S239 requires the real caption to be truncated, retain the full hint string, and remain horizontally centered after its allocation becomes narrower than the full hint.
 
 A262 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:773
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-
-        // An enlarged application font may grow the bar, but the hint text
-        // still never drives its height or pushes the meter.
-        const QFont originalFont = QApplication::font();
-        const QScopeGuard fontRestore([&originalFont] { QApplication::setFont(originalFont); });
-        QFont larger = originalFont;
-        if (larger.pixelSize() > 0)
-            larger.setPixelSize(qRound(larger.pixelSize() * 1.5));
-        else
-            larger.setPointSizeF(larger.pointSizeF() * 1.5);
-        QApplication::setFont(larger);
-        QCoreApplication::processEvents();
-        const int enlargedHeight = bar->height();
-        const int enlargedMeterX = meter->x();
-        hoverAt(*canvas, plot->mapToScene(plot->boundingRect().center()).toPoint());
-Original expression:
-        QTRY_VERIFY(hints.currentSource() == plot)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S351; QObject hint-source identity is a retired Qt representation: the mounted hints object exposes no currentSource channel, as checked by the Swift surface.
 
 A263 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:775
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native status-bar/meter/caption rendering obligation. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        QCoreApplication::processEvents();
-Original expression:
-        QCOMPARE(caption->accessibleDescription(), hints.currentText())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S352; the enlarged-font caption clause has no production path: typography is captured once at launch (ApplicationSession.swift:190–191) and SettingsDialog has no font control.
 
 A264 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:776
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native status-bar/meter/caption rendering obligation. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(bar->height(), enlargedHeight)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S353; the enlarged-font bar-height clause has no production path: typography is captured once at launch (ApplicationSession.swift:190–191) and SettingsDialog has no font control.
 
 A265 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:777
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native status-bar/meter/caption rendering obligation. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(meter->x(), enlargedMeterX)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S354; the enlarged-font meter-offset clause has no production path: typography is captured once at launch (ApplicationSession.swift:190–191) and SettingsDialog has no font control.
 
 A266 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:778
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native status-bar/meter/caption rendering obligation. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY2(captionIsCentered(), "Enlarging the font must not shift the hint center")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S355; the enlarged-font centering clause has no production path: typography is captured once at launch (ApplicationSession.swift:190–191) and SettingsDialog has no font control.
 
 A267 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:781
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native status-bar/meter/caption rendering obligation. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        meter->hide();
-        QCoreApplication::processEvents();
-Original expression:
-        QVERIFY2(captionIsCentered(), "Hiding the meter must not shift the hint center")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S356; the enlarged-font hide-meter centering clause has no production path: typography is captured once at launch (ApplicationSession.swift:190–191) and SettingsDialog has no font control.
 
 Remaining original source (closing sequence and helper bodies):
     }
@@ -2653,3 +2560,102 @@ Anchor: message "A181 rejected live remap finishes no preference write"
 Source line: 374
 cppID: mainwindowrouting/MainWindowRoutingStateTest::completeEditorViewState
 Predicate: report.expect(persistedCount == 0, cppID: id, message: "A181 rejected live remap finishes no preference write")
+S340 | test_pMouseHintTargetClaims | src/checks/editorqml/tst_ShellWindowHints.qml
+Anchor: message "the mounted header model seeds at least one track row"
+Source line: 18
+Predicate: verify(rows.count >= 1, "the mounted header model seeds at least one track row")
+
+S341 | test_qMouseHintMenuAndPopupScope | src/checks/editorqml/tst_ShellWindowHints.qml
+Anchor: message "the mounted header model seeds a second track row for the menu journey"
+Source line: 65
+Predicate: verify(rows.count > 1 && rows.itemAt(1) && !rows.itemAt(1).isAddTrack, "the mounted header model seeds a second track row for the menu journey")
+
+S342 | test_qMouseHintMenuAndPopupScope | src/checks/editorqml/tst_ShellWindowHints.qml
+Anchor: message "double-clicking the first row title starts renaming that track"
+Source line: 72
+Predicate: tryCompare(headerModel, "renamingTrack", firstTrack, 3000, "double-clicking the first row title starts renaming that track")
+
+S343 | test_qMouseHintMenuAndPopupScope | src/checks/editorqml/tst_ShellWindowHints.qml
+Anchor: message "opening the second-row menu ends the in-progress rename"
+Source line: 77
+Predicate: tryCompare(headerModel, "renamingTrack", -1, 3000, "opening the second-row menu ends the in-progress rename")
+
+S344 | test_qMouseHintMenuAndPopupScope | src/checks/editorqml/tst_ShellWindowHints.qml
+Anchor: message "choosing Rename targets the menu track"
+Source line: 89
+Predicate: tryCompare(headerModel, "renamingTrack", nextRow.track, 3000, "choosing Rename targets the menu track")
+
+S345 | test_qMouseHintMenuAndPopupScope | src/checks/editorqml/tst_ShellWindowHints.qml
+Anchor: message "finishRename ends the rename"
+Source line: 97
+Predicate: tryCompare(headerModel, "renamingTrack", -1, 3000, "finishRename ends the rename")
+
+S346 | test_rMouseHintStatusPresentation | src/checks/editorqml/tst_ShellWindowHints.qml
+Anchor: message "the footer caption holds the full plot hint string"
+Source line: 145
+Predicate: verify(caption.text === plotHint, "the footer caption holds the full plot hint string")
+
+S347 | test_rMouseHintStatusPresentation | src/checks/editorqml/tst_ShellWindowHints.qml
+Anchor: message "the operational message leaves the full hint caption intact"
+Source line: 156
+Predicate: verify(caption.text === plotHint, "the operational message leaves the full hint caption intact")
+
+S348 | test_rMouseHintStatusPresentation | src/checks/editorqml/tst_ShellWindowHints.qml
+Anchor: message "showing the meter keeps the pre-meter hint profile"
+Source line: 167
+Predicate: verify(hints.text === plotHint, "showing the meter keeps the pre-meter hint profile")
+
+S349 | test_rMouseHintStatusPresentation | src/checks/editorqml/tst_ShellWindowHints.qml
+Anchor: message "elided hints retain the status center"
+Source line: 204
+Predicate: return caption.truncated && caption.text === plotHint && hintCentered()
+
+S350 | test_rMouseHintStatusPresentation | src/checks/editorqml/tst_ShellWindowHints.qml
+Anchor: message "changing the hint profile keeps the metered footer height"
+Source line: 176
+Predicate: verify(shell.footer.height === height, "changing the hint profile keeps the metered footer height")
+
+S351 | test_sEnlargedFontClausesRetired | src/checks/editorqml/tst_ShellWindowHints.qml
+Anchor: message "the plot hover publishes text only; the native hint-source token has no mounted channel"
+Source line: 229
+Predicate: verify(!("currentSource" in hints) && hints.text === plotHint, "the plot hover publishes text only; the native hint-source token has no mounted channel")
+
+S352 | test_sEnlargedFontClausesRetired | src/checks/editorqml/tst_ShellWindowHints.qml
+Anchor: message "the enlarged-font caption clause retires; the full-text identity executes at the production font"
+Source line: 231
+Predicate: tryVerify(function() { return caption.text === plotHint }, 3000, "the enlarged-font caption clause retires; the full-text identity executes at the production font")
+
+S353 | test_sEnlargedFontClausesRetired | src/checks/editorqml/tst_ShellWindowHints.qml
+Anchor: message "the enlarged-font bar-height clause retires; the metered height executes at the production font"
+Source line: 240
+Predicate: verify(shell.footer.height === meteredHeight, "the enlarged-font bar-height clause retires; the metered height executes at the production font")
+
+S354 | test_sEnlargedFontClausesRetired | src/checks/editorqml/tst_ShellWindowHints.qml
+Anchor: message "the enlarged-font meter-offset clause retires; the meter offset executes at the production font"
+Source line: 242
+Predicate: verify(meter.x === meterX, "the enlarged-font meter-offset clause retires; the meter offset executes at the production font")
+
+S355 | test_sEnlargedFontClausesRetired | src/checks/editorqml/tst_ShellWindowHints.qml
+Anchor: message "the enlarged-font centering clause retires; the metered center executes at the production font"
+Source line: 244
+Predicate: verify(hintCentered(), "the enlarged-font centering clause retires; the metered center executes at the production font")
+
+S356 | test_sEnlargedFontClausesRetired | src/checks/editorqml/tst_ShellWindowHints.qml
+Anchor: message "the enlarged-font hide-meter clause retires; the unmetered center executes at the production font"
+Source line: 248
+Predicate: verify(hintCentered(), "the enlarged-font hide-meter clause retires; the unmetered center executes at the production font")
+
+S357 | test_rMouseHintStatusPresentation | src/checks/editorqml/tst_ShellWindowHints.qml
+Anchor: message "⇧Right-drag: select time · ⌘Wheel: zoom key height · ⇧Wheel: scroll horizontally"
+Source line: 143
+Predicate: tryCompare(hints, "text", "⇧Right-drag: select time · ⌘Wheel: zoom key height · ⇧Wheel: scroll horizontally", 3000)
+
+S358 | test_rMouseHintStatusPresentation | src/checks/editorqml/tst_ShellWindowHints.qml
+Anchor: message "⌘Wheel: zoom key height · ⇧Wheel: scroll horizontally"
+Source line: 172
+Predicate: tryCompare(hints, "text", "⌘Wheel: zoom key height · ⇧Wheel: scroll horizontally", 3000)
+
+S359 | test_rMouseHintStatusPresentation | src/checks/editorqml/tst_ShellWindowHints.qml
+Anchor: message "the footer caption holds the full hint after the profile changes"
+Source line: 174
+Predicate: tryVerify(function() { return caption.text === gutterHint }, 3000, "the footer caption holds the full hint after the profile changes")
