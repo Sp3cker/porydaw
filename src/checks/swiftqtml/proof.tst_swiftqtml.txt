@@ -3,12 +3,12 @@ Assertion correspondence: swiftqtml/tst_swiftqtml.cpp
 Reference revision: d3ad6b2c592a76b37eb0c70ca6ae2ddf0d41b63c
 Original: src/checks/swiftqtml/tst_swiftqtml.cpp
 Original SHA-256: 3020c73db174adcb25b50fc03bd3877688724ea364fc82969e96f739944bcc35
-Swift counterpart: src/checks/swiftqtml/BridgeProbeCheck.swift
+Swift counterpart: src/checks/rollqml/tst_SwiftRollBridge.qml
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
-Command: deno task verify:qml-roll --filter swiftroll-window --verbose
-Result: pending integrated run.
+Command: deno task verify:qml-roll --verbose
+Result: Task202 reports tst_SwiftRollBridge 10 passed, 0 failed; the integrated run also had tst_SwiftRollSelection 8 passed, 6 failed in sibling Task201 edits. Controller full gate pending.
 
 A001 | SwiftQtMlTest::testPresenterPropertyBinding | src/checks/swiftqtml/tst_swiftqtml.cpp:212
 Disposition: RETIRED-REPRESENTATION
@@ -20,34 +20,16 @@ A003 | SwiftQtMlTest::testPresenterPropertyBinding | src/checks/swiftqtml/tst_sw
 Disposition: RETIRED-REPRESENTATION
 
 A004 | SwiftQtMlTest::testPresenterPropertyBinding | src/checks/swiftqtml/tst_swiftqtml.cpp:218
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(textOf(status), QStringLiteral("idle"))
+Disposition: MATCHED
+Mapping: S007 — mounted assertion "A004: status binds idle on mount".
 
 A005 | SwiftQtMlTest::testPresenterPropertyBinding | src/checks/swiftqtml/tst_swiftqtml.cpp:220
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-
-Original expression:
-  QVERIFY(invokeString(presenter, "setStatusText", QStringLiteral("ready")))
+Disposition: MATCHED
+Mapping: S008 — mounted assertion "A005: setStatusText ready dispatches on the mounted probe".
 
 A006 | SwiftQtMlTest::testPresenterPropertyBinding | src/checks/swiftqtml/tst_swiftqtml.cpp:223
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      settle();
-
-
-Original expression:
-  QCOMPARE(textOf(status), QStringLiteral("ready"))
+Disposition: MATCHED
+Mapping: S009 — mounted assertion "A006: status follows setStatusText ready".
 
 A007 | SwiftQtMlTest::testInPlaceRowMutation | src/checks/swiftqtml/tst_swiftqtml.cpp:230
 Disposition: RETIRED-REPRESENTATION
@@ -59,191 +41,79 @@ A009 | SwiftQtMlTest::testInPlaceRowMutation | src/checks/swiftqtml/tst_swiftqtm
 Disposition: RETIRED-REPRESENTATION
 
 A010 | SwiftQtMlTest::testInPlaceRowMutation | src/checks/swiftqtml/tst_swiftqtml.cpp:238
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(middleText != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+Disposition: MATCHED
+Mapping: S010 — mounted assertion "A010: seeded middle row text exists".
 
 A011 | SwiftQtMlTest::testInPlaceRowMutation | src/checks/swiftqtml/tst_swiftqtml.cpp:240
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      const int originalSerial = serialOf(middle);
-
-Original expression:
-  QCOMPARE(textOf(middleText), QStringLiteral("Beta:20"))
+Disposition: MATCHED
+Mapping: S011 — mounted assertion "A011: seeded middle row renders Beta:20".
 
 A012 | SwiftQtMlTest::testInPlaceRowMutation | src/checks/swiftqtml/tst_swiftqtml.cpp:242
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-
-Original expression:
-  QVERIFY(invoke(root, "mutateMiddleDirect"))
+Disposition: MATCHED
+Mapping: S012 — mounted assertion "A012: mutateMiddleDirect dispatches on the mounted probe".
 
 A013 | SwiftQtMlTest::testInPlaceRowMutation | src/checks/swiftqtml/tst_swiftqtml.cpp:247
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      settle();
-
-      // QListModel has emitted no dataChanged signal, so its copied delegate
-      // role remains unchanged even though the BridgeRow object was mutated.
-
-Original expression:
-  QCOMPARE(textOf(middleText), QStringLiteral("Beta:20"))
+Disposition: MATCHED
+Mapping: S013 — mounted assertion "A013: in-place mutation leaves the copied delegate text Beta:20".
 
 A014 | SwiftQtMlTest::testInPlaceRowMutation | src/checks/swiftqtml/tst_swiftqtml.cpp:248
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(serialOf(middle), originalSerial)
+Disposition: MATCHED
+Mapping: S014 — mounted assertion "A014: in-place mutation keeps the delegate instance".
 
 A015 | SwiftQtMlTest::testInPlaceRowMutation | src/checks/swiftqtml/tst_swiftqtml.cpp:250
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-
-Original expression:
-  QVERIFY(invoke(root, "replaceMiddleSameRow"))
+Disposition: MATCHED
+Mapping: S015 — mounted assertion "A015: replaceMiddleSameRow dispatches on the mounted probe".
 
 A016 | SwiftQtMlTest::testInPlaceRowMutation | src/checks/swiftqtml/tst_swiftqtml.cpp:253
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      settle();
-
-
-Original expression:
-  QCOMPARE(textOf(middleText), QStringLiteral("Beta direct:20"))
+Disposition: MATCHED
+Mapping: S016 — mounted assertion "A016: same-row replacement publishes Beta direct:20".
 
 A017 | SwiftQtMlTest::testInPlaceRowMutation | src/checks/swiftqtml/tst_swiftqtml.cpp:254
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(serialOf(middle), originalSerial)
+Disposition: MATCHED
+Mapping: S017 — mounted assertion "A017: same-row replacement reuses the delegate instance".
 
 A018 | SwiftQtMlTest::testRowReplacement | src/checks/swiftqtml/tst_swiftqtml.cpp:261
 Disposition: RETIRED-REPRESENTATION
 
 A019 | SwiftQtMlTest::testRowReplacement | src/checks/swiftqtml/tst_swiftqtml.cpp:263
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      QObject *const root = view->rootObject();
-
-Original expression:
-  QVERIFY(invoke(root, "seedDefaultRows"))
+Disposition: MATCHED
+Mapping: S018 — mounted assertion "A019: seedDefaultRows dispatches on the mounted probe".
 
 A020 | SwiftQtMlTest::testRowReplacement | src/checks/swiftqtml/tst_swiftqtml.cpp:267
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      settle();
-
-      QObject *const oldDelegate = rowDelegate(root, 202);
-
-Original expression:
-  QVERIFY2(oldDelegate != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+Disposition: MATCHED
+Mapping: S019 — mounted assertion "A020: seeded middle delegate exists before replacement".
 
 A021 | SwiftQtMlTest::testRowReplacement | src/checks/swiftqtml/tst_swiftqtml.cpp:270
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      const int originalSerial = serialOf(oldDelegate);
-
-
-Original expression:
-  QVERIFY(invoke(root, "replaceMiddleWithNewRow"))
+Disposition: MATCHED
+Mapping: S020 — mounted assertion "A021: replaceMiddleWithNewRow dispatches on the mounted probe".
 
 A022 | SwiftQtMlTest::testRowReplacement | src/checks/swiftqtml/tst_swiftqtml.cpp:275
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      settle();
-
-      QObject *const replacement = rowDelegate(root, 404);
-      QObject *const replacementText = rowText(root, 404);
-
-Original expression:
-  QVERIFY2(replacement != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+Disposition: MATCHED
+Mapping: S021 — mounted assertion "A022: replacement delegate exists".
 
 A023 | SwiftQtMlTest::testRowReplacement | src/checks/swiftqtml/tst_swiftqtml.cpp:276
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(replacementText != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+Disposition: MATCHED
+Mapping: S022 — mounted assertion "A023: replacement row text exists".
 
 A024 | SwiftQtMlTest::testRowReplacement | src/checks/swiftqtml/tst_swiftqtml.cpp:277
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(textOf(replacementText), QStringLiteral("Delta:44"))
+Disposition: MATCHED
+Mapping: S023 — mounted assertion "A024: replacement delegate renders Delta:44".
 
 A025 | SwiftQtMlTest::testRowReplacement | src/checks/swiftqtml/tst_swiftqtml.cpp:278
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(serialOf(replacement), originalSerial)
+Disposition: MATCHED
+Mapping: S024 — mounted assertion "A025: replacement reuses the delegate slot".
 
 A026 | SwiftQtMlTest::testRowReplacement | src/checks/swiftqtml/tst_swiftqtml.cpp:280
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-
-Original expression:
-  QVERIFY(invoke(named(root, QStringLiteral("bridgeProbe")), "actViaSelectedRow"))
+Disposition: MATCHED
+Mapping: S025 — mounted assertion "A026: actViaSelectedRow dispatches on the mounted probe".
 
 A027 | SwiftQtMlTest::testRowReplacement | src/checks/swiftqtml/tst_swiftqtml.cpp:283
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      settle();
-
-
-Original expression:
-  QCOMPARE(textOf(named(root, QStringLiteral("actionLogText"))), QStringLiteral("202:Beta"))
+Disposition: MATCHED
+Mapping: S026 — mounted assertion "A027: selected-row action logs 202:Beta".
 
 A028 | SwiftQtMlTest::testRowReplacement | src/checks/swiftqtml/tst_swiftqtml.cpp:284
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(textOf(replacementText), QStringLiteral("Delta:44"))
+Disposition: MATCHED
+Mapping: S027 — mounted assertion "A028: replacement text still Delta:44 after the action".
 
 A029 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:291
 Disposition: RETIRED-REPRESENTATION
@@ -252,151 +122,67 @@ A030 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/ts
 Disposition: RETIRED-REPRESENTATION
 
 A031 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:298
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      settle();
-
-      QObject *const alpha = rowDelegate(root, 101);
-      QObject *const gamma = rowDelegate(root, 303);
-
-Original expression:
-  QVERIFY2(alpha != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+Disposition: MATCHED
+Mapping: S028 — mounted assertion "A031: seeded alpha delegate exists".
 
 A032 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:299
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(gamma != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+Disposition: MATCHED
+Mapping: S029 — mounted assertion "A032: seeded gamma delegate exists".
 
 A033 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:303
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      const int alphaSerial = serialOf(alpha);
-      const int gammaSerial = serialOf(gamma);
-
-
-Original expression:
-  QVERIFY(invoke(root, "insertHeadRemoveMiddle"))
+Disposition: MATCHED
+Mapping: S030 — mounted assertion "A033: insertHeadRemoveMiddle dispatches on the mounted probe".
 
 A034 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:307
 Disposition: RETIRED-REPRESENTATION
 
 A035 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:308
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(repeater->property("count").toInt(), 3)
+Disposition: MATCHED
+Mapping: S031 — mounted assertion "A035: insert plus remove leaves three delegates".
 
 A036 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:309
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(rowDelegate(root, 100) != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+Disposition: MATCHED
+Mapping: S032 — mounted assertion "A036: inserted head delegate exists".
 
 A037 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:310
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(rowDelegate(root, 101) != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+Disposition: MATCHED
+Mapping: S033 — mounted assertion "A037: alpha delegate survives insert and remove".
 
 A038 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:311
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(rowDelegate(root, 303) != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+Disposition: MATCHED
+Mapping: S034 — mounted assertion "A038: gamma delegate survives insert and remove".
 
 A039 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:312
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(indexOf(rowDelegate(root, 100)), 0)
+Disposition: MATCHED
+Mapping: S035 — mounted assertion "A039: head delegate sits at index 0".
 
 A040 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:313
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(indexOf(rowDelegate(root, 101)), 1)
+Disposition: MATCHED
+Mapping: S036 — mounted assertion "A040: alpha delegate sits at index 1".
 
 A041 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:314
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(indexOf(rowDelegate(root, 303)), 2)
+Disposition: MATCHED
+Mapping: S037 — mounted assertion "A041: gamma delegate sits at index 2".
 
 A042 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:315
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(rowDelegate(root, 202) == nullptr)
+Disposition: MATCHED
+Mapping: S038 — mounted assertion "A042: removed middle delegate is gone".
 
 A043 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:316
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(serialOf(rowDelegate(root, 101)), alphaSerial)
+Disposition: MATCHED
+Mapping: S039 — mounted assertion "A043: alpha keeps its delegate across insert and remove".
 
 A044 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:317
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(serialOf(rowDelegate(root, 303)), gammaSerial)
+Disposition: MATCHED
+Mapping: S040 — mounted assertion "A044: gamma keeps its delegate across insert and remove".
 
 A045 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:319
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-
-Original expression:
-  QVERIFY(invoke(named(root, QStringLiteral("bridgeProbe")), "actViaSelectedRow"))
+Disposition: MATCHED
+Mapping: S041 — mounted assertion "A045: actViaSelectedRow dispatches after insert and remove".
 
 A046 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:321
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      settle();
-
-Original expression:
-  QCOMPARE(textOf(named(root, QStringLiteral("actionLogText"))), QStringLiteral("303:Gamma"))
+Disposition: MATCHED
+Mapping: S042 — mounted assertion "A046: retained selection logs 303:Gamma".
 
 A047 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_swiftqtml.cpp:328
 Disposition: RETIRED-REPRESENTATION
@@ -405,437 +191,200 @@ A048 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_s
 Disposition: RETIRED-REPRESENTATION
 
 A049 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_swiftqtml.cpp:334
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      settle();
-
-      QObject *const alpha = rowDelegate(root, 101);
-
-Original expression:
-  QVERIFY2(alpha != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+Disposition: MATCHED
+Mapping: S043 — mounted assertion "A049: seeded alpha delegate exists".
 
 A050 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_swiftqtml.cpp:337
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      const int originalSerial = serialOf(alpha);
-
-
-Original expression:
-  QVERIFY(invoke(root, "removeInsertFirstToLast"))
+Disposition: MATCHED
+Mapping: S044 — mounted assertion "A050: removeInsertFirstToLast dispatches on the mounted probe".
 
 A051 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_swiftqtml.cpp:340
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      settle();
-
-
-Original expression:
-  QVERIFY2(rowDelegate(root, 202) != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+Disposition: MATCHED
+Mapping: S045 — mounted assertion "A051: beta delegate exists after the move".
 
 A052 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_swiftqtml.cpp:341
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(rowDelegate(root, 303) != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+Disposition: MATCHED
+Mapping: S046 — mounted assertion "A052: gamma delegate exists after the move".
 
 A053 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_swiftqtml.cpp:342
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(rowDelegate(root, 101) != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+Disposition: MATCHED
+Mapping: S047 — mounted assertion "A053: alpha delegate exists after the move".
 
 A054 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_swiftqtml.cpp:343
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(indexOf(rowDelegate(root, 202)), 0)
+Disposition: MATCHED
+Mapping: S048 — mounted assertion "A054: beta delegate sits at index 0 after the move".
 
 A055 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_swiftqtml.cpp:344
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(indexOf(rowDelegate(root, 303)), 1)
+Disposition: MATCHED
+Mapping: S049 — mounted assertion "A055: gamma delegate sits at index 1 after the move".
 
 A056 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_swiftqtml.cpp:345
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(indexOf(rowDelegate(root, 101)), 2)
+Disposition: MATCHED
+Mapping: S050 — mounted assertion "A056: alpha delegate sits at index 2 after the move".
 
 A057 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_swiftqtml.cpp:346
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(serialOf(rowDelegate(root, 101)) != originalSerial)
+Disposition: MATCHED
+Mapping: S051 — mounted assertion "A057: moved alpha renders through a new delegate".
 
 A058 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_swiftqtml.cpp:347
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(invoke(named(root, QStringLiteral("bridgeProbe")), "actViaSelectedRow"))
+Disposition: MATCHED
+Mapping: S052 — mounted assertion "A058: actViaSelectedRow dispatches after the move".
 
 A059 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_swiftqtml.cpp:349
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      settle();
-
-Original expression:
-  QCOMPARE(textOf(named(root, QStringLiteral("actionLogText"))), QStringLiteral("101:Alpha"))
+Disposition: MATCHED
+Mapping: S053 — mounted assertion "A059: moved selection logs 101:Alpha".
 
 A060 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:356
 Disposition: RETIRED-REPRESENTATION
 Mapping/reason: Private QQuickView construction belongs to the deleted probe harness; the mounted swiftroll-window scene executes through src/checks/rollqml/tst_SwiftRoll.qml test_rollWindowMountsAndDraws, and stale-row owner release executes in cleanupTestCase (S001).
 
 A061 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:358
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      QObject *const root = view->rootObject();
-
-Original expression:
-  QVERIFY(invoke(root, "seedDefaultRows"))
+Disposition: MATCHED
+Mapping: S054 — mounted assertion "A061: seedDefaultRows dispatches before the reset".
 
 A062 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:361
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      settle();
-
-
-Original expression:
-  QVERIFY(invoke(root, "resetWithFreshRows"))
+Disposition: MATCHED
+Mapping: S055 — mounted assertion "A062: resetWithFreshRows dispatches on the mounted probe".
 
 A063 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:363
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      settle();
-
-Original expression:
-  QVERIFY(rowDelegate(root, 202) == nullptr)
+Disposition: MATCHED
+Mapping: S056 — mounted assertion "A063: reset drops the stale middle delegate".
 
 A064 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:364
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(rowText(root, 901) != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+Disposition: MATCHED
+Mapping: S057 — mounted assertion "A064: fresh first row text exists".
 
 A065 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:365
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(rowText(root, 902) != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+Disposition: MATCHED
+Mapping: S058 — mounted assertion "A065: fresh second row text exists".
 
 A066 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:366
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(textOf(rowText(root, 901)), QStringLiteral("Fresh A:91"))
+Disposition: MATCHED
+Mapping: S059 — mounted assertion "A066: fresh first row renders Fresh A:91".
 
 A067 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:367
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(textOf(rowText(root, 902)), QStringLiteral("Fresh B:92"))
+Disposition: MATCHED
+Mapping: S060 — mounted assertion "A067: fresh second row renders Fresh B:92".
 
 A068 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:369
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-
-Original expression:
-  QVERIFY(invoke(named(root, QStringLiteral("bridgeProbe")), "actViaSelectedRow"))
+Disposition: MATCHED
+Mapping: S061 — mounted assertion "A068: actViaSelectedRow dispatches after the reset".
 
 A069 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:372
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      settle();
-
-
-Original expression:
-  QCOMPARE(textOf(named(root, QStringLiteral("actionLogText"))), QStringLiteral("202:Beta"))
+Disposition: MATCHED
+Mapping: S062 — mounted assertion "A069: stale selection still logs 202:Beta after the reset".
 
 A070 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:373
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(textOf(rowText(root, 901)), QStringLiteral("Fresh A:91"))
+Disposition: MATCHED
+Mapping: S063 — mounted assertion "A070: fresh first row still Fresh A:91 after the action".
 
 A071 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:374
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(textOf(rowText(root, 902)), QStringLiteral("Fresh B:92"))
+Disposition: MATCHED
+Mapping: S064 — mounted assertion "A071: fresh second row still Fresh B:92 after the action".
 
 A072 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:375
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(view->status(), QQuickView::Ready)
+Disposition: MATCHED
+Mapping: S065 — mounted assertion "A072: mounted scene stays ready after the reset".
 
 A073 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:376
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capturedMessages(), QString())
+Disposition: RETIRED-REPRESENTATION
+Mapping: S066 — refusal predicate "A073: out-of-range selection yields no row on the mounted probe"; captured Qt-message-stream state belongs to the deleted harness and has no roll-lane equivalent.
 
 A074 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:383
 Disposition: RETIRED-REPRESENTATION
 Mapping/reason: The deleted harness allocates a private QQuickView; the registered swiftroll-window composition mounts the production scene (src/checks/rollqml/tst_SwiftRoll.qml, test_rollWindowMountsAndDraws).
 
 A075 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:385
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      QObject *const root = view->rootObject();
-
-Original expression:
-  QVERIFY(invoke(root, "seedDefaultRows"))
+Disposition: MATCHED
+Mapping: S067 — mounted assertion "A075: seedDefaultRows dispatches before teardown".
 
 A076 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:389
 Disposition: RETIRED-REPRESENTATION
 Mapping/reason: QPointer setup for the deleted harness presenter is native proxy bookkeeping; the retained Swift BridgeProbe lifetime is observed by swiftroll-window cleanupTestCase (S001-S002).
 
 A077 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:390
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(invoke(root, "mutateMiddleDirect"))
+Disposition: MATCHED
+Mapping: S068 — mounted assertion "A077: mutateMiddleDirect dispatches before teardown".
 
 A078 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:397
 Disposition: RETIRED-REPRESENTATION
 Mapping/reason: QPointer nullness after QQuickView DeferredDelete is deleted-harness proxy representation; Swift probe owner release and surviving-row isolation execute in swiftroll-window cleanupTestCase (S001-S002), not QML-proxy destruction.
 
 A079 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:399
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      const QString doomedMessages = capturedMessages();
-
-Original expression:
-  QCOMPARE(doomedMessages, QString())
+Disposition: RETIRED-REPRESENTATION
+Mapping: S069 — refusal predicate "A079: out-of-range removal leaves three delegates"; captured Qt-message-stream state belongs to the deleted harness and has no roll-lane equivalent.
 
 A080 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:402
 Disposition: RETIRED-REPRESENTATION
 Mapping/reason: Recreating the deleted harness QQuickView is fixture setup, not a Swift presenter contract; the mounted composition and teardown are checked in swiftroll-window cleanupTestCase (S003-S006).
 
 A081 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:404
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      QObject *const freshRoot = freshView->rootObject();
-
-Original expression:
-  QVERIFY(invoke(freshRoot, "seedDefaultRows"))
+Disposition: MATCHED
+Mapping: S070 — mounted assertion "A081: seedDefaultRows dispatches on the remounted probe".
 
 A082 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:406
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      settle();
-
-Original expression:
-  QVERIFY2(rowText(freshRoot, 202) != nullptr,
-               qUtf8Printable(probeDiagnostics(freshRoot, freshView.get())))
+Disposition: MATCHED
+Mapping: S071 — mounted assertion "A082: remounted middle row text exists".
 
 A083 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:408
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(textOf(rowText(freshRoot, 202)), QStringLiteral("Beta:20"))
+Disposition: MATCHED
+Mapping: S072 — mounted assertion "A083: remounted middle row renders Beta:20".
 
 A084 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:409
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(textOf(named(freshRoot, QStringLiteral("actionLogText"))), QString())
+Disposition: MATCHED
+Mapping: S073 — mounted assertion "A084: remounted action log starts empty".
 
 A085 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:410
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capturedMessages(), QString())
+Disposition: RETIRED-REPRESENTATION
+Mapping: S074 — refusal predicate "A085: action with null selection logs nothing"; captured Qt-message-stream state belongs to the deleted harness and has no roll-lane equivalent.
 
 A086 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:417
 Disposition: RETIRED-REPRESENTATION
 Mapping/reason: Allocating a private QQuickView is deleted-harness fixture representation; src/checks/rollqml/tst_SwiftRoll.qml test_rollWindowMountsAndDraws mounts the registered scene and cleanupTestCase observes returned-row ownership (S002).
 
 A087 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:419
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      QObject *const root = view->rootObject();
-
-Original expression:
-  QVERIFY(invoke(root, "seedDefaultRows"))
+Disposition: MATCHED
+Mapping: S075 — mounted assertion "A087: seedDefaultRows dispatches before the return probe".
 
 A088 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:422
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      settle();
-
-
-Original expression:
-  QVERIFY(invoke(root, "inspectMadeRow"))
+Disposition: MATCHED
+Mapping: S076 — mounted assertion "A088: inspectMadeRow dispatches on the mounted probe".
 
 A089 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:424
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      settle();
-
-Original expression:
-  QCOMPARE(textOf(named(root, QStringLiteral("returnedTitleText"))), QStringLiteral("Returned"))
+Disposition: MATCHED
+Mapping: S077 — mounted assertion "A089: returned row renders its title".
 
 A090 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:427
 Disposition: RETIRED-REPRESENTATION
 Mapping/reason: Looking up the deleted harness probeState QObject is fixture pointer representation, not a returned-row outcome; the Swift owner-retention predicate executes in swiftroll-window cleanupTestCase (S002), while QML returned-title and selected-null behavior remain GAP (A089/A092-A096).
 
 A091 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:428
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(invoke(root, "inspectSelectedPresent"))
+Disposition: MATCHED
+Mapping: S078 — mounted assertion "A091: inspectSelectedPresent dispatches on the mounted probe".
 
 A092 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:430
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      settle();
-
-Original expression:
-  QCOMPARE(state->property("selectedIsNull").toBool(), false)
+Disposition: MATCHED
+Mapping: S079 — mounted assertion "A092: present selection is not null".
 
 A093 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:431
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(textOf(named(root, QStringLiteral("selectedTitleText"))), QStringLiteral("Beta"))
+Disposition: MATCHED
+Mapping: S080 — mounted assertion "A093: present selection renders Beta".
 
 A094 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:433
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-
-Original expression:
-  QVERIFY(invoke(root, "inspectSelectedMissing"))
+Disposition: MATCHED
+Mapping: S081 — mounted assertion "A094: inspectSelectedMissing dispatches on the mounted probe".
 
 A095 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:435
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-      settle();
-
-Original expression:
-  QCOMPARE(state->property("selectedIsNull").toBool(), true)
+Disposition: MATCHED
+Mapping: S082 — mounted assertion "A095: missing selection is null".
 
 A096 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:436
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(textOf(named(root, QStringLiteral("selectedTitleText"))), QStringLiteral("<null>"))
+Disposition: MATCHED
+Mapping: S083 — mounted assertion "A096: missing selection renders null".
 
 A097 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:437
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftqtml/tst_swiftqtml.cpp) no longer builds or runs. Previous native note: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capturedMessages(), QString())
+Disposition: RETIRED-REPRESENTATION
+Mapping: S084 — refusal predicate "A097: out-of-range insertion leaves three delegates"; captured Qt-message-stream state belongs to the deleted harness and has no roll-lane equivalent.
 
 Remaining original source (closing sequence and helper bodies):
   ;
@@ -879,3 +428,236 @@ Anchor: message "released camera, playback and document callbacks cannot mutate 
 
 S006 | cleanupTestCase | src/checks/rollqml/tst_SwiftRoll.qml
 Anchor: message "a second scene-removal acknowledgment does not re-release presentation"
+S007 | test_presenterPropertyBinding | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A004: status binds idle on mount"
+
+S008 | test_presenterPropertyBinding | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A005: setStatusText ready dispatches on the mounted probe"
+
+S009 | test_presenterPropertyBinding | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A006: status follows setStatusText ready"
+
+S010 | test_inPlaceRowMutation | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A010: seeded middle row text exists"
+
+S011 | test_inPlaceRowMutation | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A011: seeded middle row renders Beta:20"
+
+S012 | test_inPlaceRowMutation | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A012: mutateMiddleDirect dispatches on the mounted probe"
+
+S013 | test_inPlaceRowMutation | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A013: in-place mutation leaves the copied delegate text Beta:20"
+
+S014 | test_inPlaceRowMutation | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A014: in-place mutation keeps the delegate instance"
+
+S015 | test_inPlaceRowMutation | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A015: replaceMiddleSameRow dispatches on the mounted probe"
+
+S016 | test_inPlaceRowMutation | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A016: same-row replacement publishes Beta direct:20"
+
+S017 | test_inPlaceRowMutation | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A017: same-row replacement reuses the delegate instance"
+
+S018 | test_rowReplacement | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A019: seedDefaultRows dispatches on the mounted probe"
+
+S019 | test_rowReplacement | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A020: seeded middle delegate exists before replacement"
+
+S020 | test_rowReplacement | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A021: replaceMiddleWithNewRow dispatches on the mounted probe"
+
+S021 | test_rowReplacement | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A022: replacement delegate exists"
+
+S022 | test_rowReplacement | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A023: replacement row text exists"
+
+S023 | test_rowReplacement | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A024: replacement delegate renders Delta:44"
+
+S024 | test_rowReplacement | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A025: replacement reuses the delegate slot"
+
+S025 | test_rowReplacement | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A026: actViaSelectedRow dispatches on the mounted probe"
+
+S026 | test_rowReplacement | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A027: selected-row action logs 202:Beta"
+
+S027 | test_rowReplacement | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A028: replacement text still Delta:44 after the action"
+
+S028 | test_insertRemovePreservesTargets | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A031: seeded alpha delegate exists"
+
+S029 | test_insertRemovePreservesTargets | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A032: seeded gamma delegate exists"
+
+S030 | test_insertRemovePreservesTargets | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A033: insertHeadRemoveMiddle dispatches on the mounted probe"
+
+S031 | test_insertRemovePreservesTargets | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A035: insert plus remove leaves three delegates"
+
+S032 | test_insertRemovePreservesTargets | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A036: inserted head delegate exists"
+
+S033 | test_insertRemovePreservesTargets | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A037: alpha delegate survives insert and remove"
+
+S034 | test_insertRemovePreservesTargets | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A038: gamma delegate survives insert and remove"
+
+S035 | test_insertRemovePreservesTargets | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A039: head delegate sits at index 0"
+
+S036 | test_insertRemovePreservesTargets | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A040: alpha delegate sits at index 1"
+
+S037 | test_insertRemovePreservesTargets | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A041: gamma delegate sits at index 2"
+
+S038 | test_insertRemovePreservesTargets | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A042: removed middle delegate is gone"
+
+S039 | test_insertRemovePreservesTargets | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A043: alpha keeps its delegate across insert and remove"
+
+S040 | test_insertRemovePreservesTargets | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A044: gamma keeps its delegate across insert and remove"
+
+S041 | test_insertRemovePreservesTargets | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A045: actViaSelectedRow dispatches after insert and remove"
+
+S042 | test_insertRemovePreservesTargets | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A046: retained selection logs 303:Gamma"
+
+S043 | test_reorderTargetsIntendedRow | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A049: seeded alpha delegate exists"
+
+S044 | test_reorderTargetsIntendedRow | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A050: removeInsertFirstToLast dispatches on the mounted probe"
+
+S045 | test_reorderTargetsIntendedRow | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A051: beta delegate exists after the move"
+
+S046 | test_reorderTargetsIntendedRow | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A052: gamma delegate exists after the move"
+
+S047 | test_reorderTargetsIntendedRow | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A053: alpha delegate exists after the move"
+
+S048 | test_reorderTargetsIntendedRow | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A054: beta delegate sits at index 0 after the move"
+
+S049 | test_reorderTargetsIntendedRow | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A055: gamma delegate sits at index 1 after the move"
+
+S050 | test_reorderTargetsIntendedRow | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A056: alpha delegate sits at index 2 after the move"
+
+S051 | test_reorderTargetsIntendedRow | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A057: moved alpha renders through a new delegate"
+
+S052 | test_reorderTargetsIntendedRow | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A058: actViaSelectedRow dispatches after the move"
+
+S053 | test_reorderTargetsIntendedRow | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A059: moved selection logs 101:Alpha"
+
+S054 | test_resetWithStaleQmlReference | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A061: seedDefaultRows dispatches before the reset"
+
+S055 | test_resetWithStaleQmlReference | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A062: resetWithFreshRows dispatches on the mounted probe"
+
+S056 | test_resetWithStaleQmlReference | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A063: reset drops the stale middle delegate"
+
+S057 | test_resetWithStaleQmlReference | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A064: fresh first row text exists"
+
+S058 | test_resetWithStaleQmlReference | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A065: fresh second row text exists"
+
+S059 | test_resetWithStaleQmlReference | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A066: fresh first row renders Fresh A:91"
+
+S060 | test_resetWithStaleQmlReference | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A067: fresh second row renders Fresh B:92"
+
+S061 | test_resetWithStaleQmlReference | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A068: actViaSelectedRow dispatches after the reset"
+
+S062 | test_resetWithStaleQmlReference | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A069: stale selection still logs 202:Beta after the reset"
+
+S063 | test_resetWithStaleQmlReference | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A070: fresh first row still Fresh A:91 after the action"
+
+S064 | test_resetWithStaleQmlReference | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A071: fresh second row still Fresh B:92 after the action"
+
+S065 | test_resetWithStaleQmlReference | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A072: mounted scene stays ready after the reset"
+
+S066 | test_resetWithStaleQmlReference | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A073: out-of-range selection yields no row on the mounted probe"
+
+S067 | test_pendingMutationThenTeardown | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A075: seedDefaultRows dispatches before teardown"
+
+S068 | test_pendingMutationThenTeardown | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A077: mutateMiddleDirect dispatches before teardown"
+
+S069 | test_pendingMutationThenTeardown | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A079: out-of-range removal leaves three delegates"
+
+S070 | test_pendingMutationThenTeardown | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A081: seedDefaultRows dispatches on the remounted probe"
+
+S071 | test_pendingMutationThenTeardown | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A082: remounted middle row text exists"
+
+S072 | test_pendingMutationThenTeardown | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A083: remounted middle row renders Beta:20"
+
+S073 | test_pendingMutationThenTeardown | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A084: remounted action log starts empty"
+
+S074 | test_pendingMutationThenTeardown | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A085: action with null selection logs nothing"
+
+S075 | test_objectReturnCapability | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A087: seedDefaultRows dispatches before the return probe"
+
+S076 | test_objectReturnCapability | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A088: inspectMadeRow dispatches on the mounted probe"
+
+S077 | test_objectReturnCapability | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A089: returned row renders its title"
+
+S078 | test_objectReturnCapability | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A091: inspectSelectedPresent dispatches on the mounted probe"
+
+S079 | test_objectReturnCapability | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A092: present selection is not null"
+
+S080 | test_objectReturnCapability | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A093: present selection renders Beta"
+
+S081 | test_objectReturnCapability | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A094: inspectSelectedMissing dispatches on the mounted probe"
+
+S082 | test_objectReturnCapability | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A095: missing selection is null"
+
+S083 | test_objectReturnCapability | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A096: missing selection renders null"
+
+S084 | test_objectReturnCapability | src/checks/rollqml/tst_SwiftRollBridge.qml
+Anchor: message "A097: out-of-range insertion leaves three delegates"

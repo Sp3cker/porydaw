@@ -116,6 +116,7 @@ enum RollQmlLane {
         ApplicationSession.registerQmlElement()
         RollQmlBootstrap.registerQmlElement()
         PreferencesStore.registerQmlElement()
+        BridgeProbe.registerQmlElement()
         // ApplicationSession itself supplies the Swift ruler form bridge.
         let inputFile = URL(fileURLWithPath: inputDirectory, isDirectory: true)
             .appendingPathComponent(file).path
