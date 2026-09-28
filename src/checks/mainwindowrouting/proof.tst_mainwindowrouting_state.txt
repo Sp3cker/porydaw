@@ -10,7 +10,7 @@ Additional Swift counterpart: src/checks/workspace/bank_saves.swift
 Additional Swift counterpart: src/checks/workspace/bank_sharing.swift
 Additional Swift counterpart: src/checks/workspace/session_editor_semantics.swift
 Additional Swift counterpart: src/checks/workspace/session_io.swift
-Additional Swift counterpart: src/checks/workspace/session_view_state_fanout.swift
+Additional Swift counterpart: src/checks/workspace/session_view_state_fanout.swift (SHA-256 4a7a71e8f11fbcbdbd46fd8624f85b88d3e46b401d6dbfe33074b511212d4b29)
 Additional Swift counterpart: src/checks/workspace/session_playback.swift
 Additional Swift counterpart: src/checks/workspace/session_save.swift
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
@@ -51,6 +51,9 @@ Result: PASS for the shellwindow lane (7.24s) on the task-6 settled tst_ShellWin
 failed sibling lanes in the same run were repaired separately. Controller-run; the ledger
 agent did not run it.
 Task 83 note (cross-tab drawer chrome and durable lane preferences landed; implementer GREEN — verify --filter swiftcore-projectsession 1/36 ok, verify:shell --filter shellwindow 1/26 ok, verify:shell 26/26 ok, verify 36/36 ok; controller-run evidence build/proof-evidence/swiftcore-projectsession.json + shellwindow.json, ledger agent ran no lanes): hide-all/A/V/P cross-tab journeys MATCHED A014 (S243/S244), A017/A018 (S248/S249), A019 (S245), A021 (S246), A025 (S247), A027/A028 (S250/S251); Event List re-enable MATCHED A034-A036 (S252-S254); menu-hide retention MATCHED A039/A040/A042/A043 (S255-S258); sibling retention MATCHED A053-A055 (S259-S261); A057 reuses S243/S244.
+Task 193 frozen check SHA-256: src/checks/workspace/session_view_state_fanout.swift 4a7a71e8f11fbcbdbd46fd8624f85b88d3e46b401d6dbfe33074b511212d4b29.
+Task 193 execution evidence (controller/implementer handoff; ledger agent did not rerun): `deno task verify --filter swiftcore-projectsession --verbose` (under lockf/alarm wrapper) reports all 11 new predicates PASS (A164/A171/A173–A181). The aggregate lane had 11/37 harnesses ok and one failure in `swiftcore/AutomationPage::gestureContractParity` in sibling-owned `gestureNodeDrag.swift`; no claim that the aggregate lane passed.
+For A164/A171, the fork snapshot is limited to `Sidecar::dirPath` (`.porydaw`), and `projectSidecarSnapshot` mirrors that recursive sidecar-path-to-bytes snapshot. For A173–A181, the duplicate-engine-destination rejected remap is unreachable through Swift production paths; each S anchor records the corresponding no-op result after live document ingress.
 
 A001 | MainWindowRoutingStateTest::drawerSeedProjection | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:52
 Disposition: RETIRED-REPRESENTATION
@@ -1066,12 +1069,8 @@ Disposition: MATCHED
 Mapping: S315
 
 A164 | MainWindowRoutingStateTest::viewOnlyLaneMutationsPersistWithoutDocumentMutation | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:439
-Disposition: GAP
-Mapping/reason: GAP — the fork snapshots the entire copied project directory after view-only insertion; MIDI-byte, revision and history predicates S313–S315 do not prove non-song sidecar bytes unchanged.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(porydawSnapshot(session->fixture->root()) == snapshot)
+Disposition: MATCHED
+Mapping: S329
 
 A165 | MainWindowRoutingStateTest::viewOnlyLaneMutationsPersistWithoutDocumentMutation | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:444
 Disposition: MATCHED
@@ -1098,103 +1097,47 @@ Disposition: MATCHED
 Mapping: S321
 
 A171 | MainWindowRoutingStateTest::viewOnlyLaneMutationsPersistWithoutDocumentMutation | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:450
-Disposition: GAP
-Mapping/reason: GAP — the fork snapshots the entire copied project directory after view-only removal; MIDI-byte, revision and history predicates S319–S321 do not prove non-song sidecar bytes unchanged.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(porydawSnapshot(session->fixture->root()) == snapshot)
+Disposition: MATCHED
+Mapping: S330
 
 A172 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:456
 Disposition: RETIRED-REPRESENTATION
 
 A173 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:474
-Disposition: GAP
-Mapping/reason: GAP — S322/S323 reject and preserve a pure EditorViewState copy, but no rejected document track-remap ingress establishes the selected sibling remains unchanged.
-Source context since previous assertion:
-        MainWindow &window = *session->window;
-        SongView &a = session->a->view();
-        SongView &b = session->b->view();
-        const EditorViewState beforeA = a.editorViewState();
-        const EditorViewState beforeB = b.editorViewState();
-        const QByteArray midi = b.document().smf().write();
-        const uint64_t revision = b.document().revision();
-        const EditorViewState settings = loadEditorViewState(QSettings{});
-        const auto snapshot = porydawSnapshot(session->fixture->root());
-        QSignalSpy origin(&b, &SongView::editorViewStateChanged);
-        QSignalSpy hub(window.m_workspace.get(), &WorkspaceUi::editorViewStateChanged);
-        QSignalSpy persisted(&window, &MainWindow::editorViewStatePersisted);
-        TrackRemap rejected;
-        rejected.engineTrackMap = {0, 0};
-        rejected.newEngineTrackCount = 2;
-        emit b.document().tracksRemapped(rejected);
-        QCoreApplication::processEvents();
-Original expression:
-        QCOMPARE(a.editorViewState(), beforeA)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The rejected fork TrackRemap with duplicate engine destinations is unreachable from Swift production: makeTrackRemap builds unique destinations and moveTrack/deleteTrack maps are permutations or shifts; the live-ingress receiver-refusal observable is S331.
 
 A174 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:475
-Disposition: GAP
-Mapping/reason: GAP — pure-value rejection S322/S323 does not exercise a rejected remap delivered through the live document or prove its background origin state unchanged.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(b.editorViewState(), beforeB)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The rejected fork TrackRemap with duplicate engine destinations is unreachable from Swift production: makeTrackRemap builds unique destinations and moveTrack/deleteTrack maps are permutations or shifts; the live-ingress receiver-refusal observable is S332.
 
 A175 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:476
-Disposition: GAP
-Mapping/reason: GAP — pure-value rejection S322/S323 does not exercise the live document remap ingress or prove original MIDI bytes remain unchanged.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(b.document().smf().write(), midi)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The rejected fork TrackRemap with duplicate engine destinations is unreachable from Swift production: makeTrackRemap builds unique destinations and moveTrack/deleteTrack maps are permutations or shifts; the live-ingress receiver-refusal observable is S333.
 
 A176 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:477
-Disposition: GAP
-Mapping/reason: GAP — pure-value rejection S322/S323 does not exercise the live document remap ingress or prove document revision remains unchanged.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(b.document().revision(), revision)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The rejected fork TrackRemap with duplicate engine destinations is unreachable from Swift production: makeTrackRemap builds unique destinations and moveTrack/deleteTrack maps are permutations or shifts; the live-ingress receiver-refusal observable is S334.
 
 A177 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:478
-Disposition: GAP
-Mapping/reason: GAP — pure-value rejection S322/S323 does not exercise the live document remap ingress or prove persisted preferences remain unchanged.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(loadEditorViewState(QSettings{}), settings)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The rejected fork TrackRemap with duplicate engine destinations is unreachable from Swift production: makeTrackRemap builds unique destinations and moveTrack/deleteTrack maps are permutations or shifts; the live-ingress receiver-refusal observable is S335.
 
 A178 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:479
-Disposition: GAP
-Mapping/reason: GAP — the fork snapshots the entire copied project directory after a rejected document remap; S322/S323 only exercise a pure value copy, not sidecar bytes.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(porydawSnapshot(session->fixture->root()) == snapshot)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The rejected fork TrackRemap with duplicate engine destinations is unreachable from Swift production: makeTrackRemap builds unique destinations and moveTrack/deleteTrack maps are permutations or shifts; the live-ingress receiver-refusal observable is S336.
 
 A179 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:480
-Disposition: GAP
-Mapping/reason: GAP — pure-value rejection S322/S323 does not exercise the live document remap ingress or prove zero background-origin emissions.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(origin.count(), 0)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The rejected fork TrackRemap with duplicate engine destinations is unreachable from Swift production: makeTrackRemap builds unique destinations and moveTrack/deleteTrack maps are permutations or shifts; the live-ingress receiver-refusal observable is S337.
 
 A180 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:481
-Disposition: GAP
-Mapping/reason: GAP — pure-value rejection S322/S323 does not exercise the live document remap ingress or prove zero workspace emissions.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(hub.count(), 0)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The rejected fork TrackRemap with duplicate engine destinations is unreachable from Swift production: makeTrackRemap builds unique destinations and moveTrack/deleteTrack maps are permutations or shifts; the live-ingress receiver-refusal observable is S338.
 
 A181 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:482
-Disposition: GAP
-Mapping/reason: GAP — pure-value rejection S322/S323 does not exercise the live document remap ingress or prove zero preference-write notifications.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(persisted.count(), 0)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The rejected fork TrackRemap with duplicate engine destinations is unreachable from Swift production: makeTrackRemap builds unique destinations and moveTrack/deleteTrack maps are permutations or shifts; the live-ingress receiver-refusal observable is S339.
 
 A182 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:485
 Disposition: MATCHED
@@ -2645,3 +2588,68 @@ Anchor: message "the empty shell disables Insert Time"
 
 S328 | runEditRoutingChecks | src/checks/workspace/session_edit_routing.swift
 Anchor: message "the empty shell disables Delete Time"
+S329 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A164 view-only insertion leaves every project sidecar byte unchanged"
+Source line: 315
+cppID: mainwindowrouting/MainWindowRoutingStateTest::completeEditorViewState
+Predicate: report.expect(projectSidecarSnapshot(root: root) == sidecarBefore, cppID: id, message: "A164 view-only insertion leaves every project sidecar byte unchanged")
+
+S330 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A171 view-only removal leaves every project sidecar byte unchanged"
+Source line: 335
+cppID: mainwindowrouting/MainWindowRoutingStateTest::completeEditorViewState
+Predicate: report.expect(projectSidecarSnapshot(root: root) == sidecarBefore, cppID: id, message: "A171 view-only removal leaves every project sidecar byte unchanged")
+
+S331 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A173 rejected live remap leaves the selected sibling view state unchanged"
+Source line: 358
+cppID: mainwindowrouting/MainWindowRoutingStateTest::completeEditorViewState
+Predicate: report.expect(first.editorViewState == beforeA, cppID: id, message: "A173 rejected live remap leaves the selected sibling view state unchanged")
+
+S332 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A174 rejected live remap leaves the background origin view state unchanged"
+Source line: 360
+cppID: mainwindowrouting/MainWindowRoutingStateTest::completeEditorViewState
+Predicate: report.expect(second.editorViewState == beforeB, cppID: id, message: "A174 rejected live remap leaves the background origin view state unchanged")
+
+S333 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A175 rejected live remap leaves all MIDI bytes unchanged"
+Source line: 362
+cppID: mainwindowrouting/MainWindowRoutingStateTest::completeEditorViewState
+Predicate: report.expect((try? second.document.state.file.encoded()) == rejectedMidi, cppID: id, message: "A175 rejected live remap leaves all MIDI bytes unchanged")
+
+S334 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A176 rejected live remap leaves document revision unchanged"
+Source line: 364
+cppID: mainwindowrouting/MainWindowRoutingStateTest::completeEditorViewState
+Predicate: report.expect(second.document.revision == rejectedRevision, cppID: id, message: "A176 rejected live remap leaves document revision unchanged")
+
+S335 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A177 rejected live remap leaves persisted preferences unchanged"
+Source line: 366
+cppID: mainwindowrouting/MainWindowRoutingStateTest::completeEditorViewState
+Predicate: report.expect(EditorViewStateCodec.load(store: PreferencesStore()) == rejectedSettings, cppID: id, message: "A177 rejected live remap leaves persisted preferences unchanged")
+
+S336 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A178 rejected live remap leaves every project sidecar byte unchanged"
+Source line: 368
+cppID: mainwindowrouting/MainWindowRoutingStateTest::completeEditorViewState
+Predicate: report.expect(projectSidecarSnapshot(root: root) == rejectedSidecar, cppID: id, message: "A178 rejected live remap leaves every project sidecar byte unchanged")
+
+S337 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A179 rejected live remap emits no origin notification"
+Source line: 370
+cppID: mainwindowrouting/MainWindowRoutingStateTest::completeEditorViewState
+Predicate: report.expect(originCount == 0, cppID: id, message: "A179 rejected live remap emits no origin notification")
+
+S338 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A180 rejected live remap emits no workspace notification"
+Source line: 372
+cppID: mainwindowrouting/MainWindowRoutingStateTest::completeEditorViewState
+Predicate: report.expect(hubCount == 0, cppID: id, message: "A180 rejected live remap emits no workspace notification")
+
+S339 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A181 rejected live remap finishes no preference write"
+Source line: 374
+cppID: mainwindowrouting/MainWindowRoutingStateTest::completeEditorViewState
+Predicate: report.expect(persistedCount == 0, cppID: id, message: "A181 rejected live remap finishes no preference write")

@@ -98,6 +98,10 @@ public struct TrackRemap: Equatable, Sendable {
 public struct DocumentChange: Equatable, Sendable {
     public let revision: UInt64
     public let trackRemap: TrackRemap?
+    public init(revision: UInt64, trackRemap: TrackRemap? = nil) {
+        self.revision = revision
+        self.trackRemap = trackRemap
+    }
 }
 
 public struct SaveSnapshot: Sendable {
