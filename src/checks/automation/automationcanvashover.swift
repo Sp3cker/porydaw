@@ -367,3 +367,64 @@ func drawerAutomationHoverResidual(_ report: CheckReport, suite: DocumentSession
                        cppID: drawerAutomationHoverResidualID,
                        what: "one undo restores the pre-sweep lane")
 }
+let drawerAutomationFocusLossID = "swiftcore/AutomationPage::focusLossRetainsGesture"
+let drawerAutomationFocusPressID = "swiftcore/AutomationPage::focusLossKeepsPress"
+
+// Focus loss mid-drag freezes the full snapshot at the held point while the
+// focus publication flips under the live grab.
+@MainActor
+func drawerAutomationFocusLossRetainsGesture(_ report: CheckReport, suite: DocumentSession,
+                                             service: ProjectService) {
+    let staged = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                   pan: [(24, 64), (120, 40)])
+    staged.activate(staged.panLane)
+    staged.page.plotFocused = true
+    let prePress = DrawerAutomationStagedSnapshot(staged.document)
+    guard staged.page.pointerPress(x: staged.x(24), y: staged.y(staged.panLane, 64), surface: 1,
+                                   button: AutomationQtButton.left) else {
+        report.fail(drawerAutomationFocusLossID, "a press grabs the node before focus moves away")
+        return
+    }
+    let dragTravel = staged.page.geometry.nodeDragActivationDistance + 2
+    _ = staged.page.pointerMove(x: staged.x(24) + dragTravel, y: staged.y(staged.panLane, 64),
+                                buttons: AutomationQtButton.left)
+    guard staged.page.hasGesture else {
+        report.fail(drawerAutomationFocusLossID, "the node drag is live while focus moves away")
+        return
+    }
+    staged.page.plotFocused = false
+    guard staged.page.hasGesture && staged.page.interactionActive else {
+        report.fail(drawerAutomationFocusLossID, "focus loss while held retains the live node drag")
+        return
+    }
+    report.expectEqual(expected: prePress, actual: DrawerAutomationStagedSnapshot(staged.document),
+                       cppID: drawerAutomationFocusLossID,
+                       what: "focus loss while held freezes song bytes revision and undo")
+}
+
+// A stationary background press keeps its pointer grab across focus loss with
+// the document frozen at the held point.
+@MainActor
+func drawerAutomationFocusLossKeepsPress(_ report: CheckReport, suite: DocumentSession,
+                                         service: ProjectService) {
+    let held = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                 pan: [(24, 64), (120, 40)])
+    held.activate(held.panLane)
+    held.page.plotFocused = true
+    let frozen = DrawerAutomationStagedSnapshot(held.document)
+    let pressX = held.x(72)
+    let pressY = held.y(held.panLane, 64)
+    guard held.page.pointerPress(x: pressX, y: pressY, surface: 1,
+                                 button: AutomationQtButton.left) else {
+        report.fail(drawerAutomationFocusPressID, "a background press captures the pointer grab")
+        return
+    }
+    held.page.plotFocused = false
+    guard held.page.hasGesture else {
+        report.fail(drawerAutomationFocusPressID, "focus loss while held keeps the captured pointer grab")
+        return
+    }
+    report.expectEqual(expected: frozen, actual: DrawerAutomationStagedSnapshot(held.document),
+                       cppID: drawerAutomationFocusPressID,
+                       what: "focus loss while still held freezes song bytes revision and undo")
+}

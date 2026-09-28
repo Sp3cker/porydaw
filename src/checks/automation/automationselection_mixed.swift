@@ -369,3 +369,52 @@ func drawerAutomationMixedDragRebuildCancellation(_ report: CheckReport, suite: 
                   && (try? fixture.document.state.file.encoded()) == rebuildBytes, cppID: id,
                   message: "stale release keeps original mixed range and rebuilt bytes while idle")
 }
+let drawerAutomationCcOnlyIntervalID = "automation/AutomationEditingTest::ccOnlySelectionDragExactInterval"
+
+// The CC-only drag on the fork's exact [96,144) lands [144,192) with ordered
+// groups and no held edit notification. Held captures are pre-stimulus.
+@MainActor
+func drawerAutomationCcOnlyExactIntervalDrag(_ report: CheckReport, suite: DocumentSession,
+                                             service: ProjectService) {
+    let fixture = drawerAutomationMixedSelectionFixture(suite: suite, service: service)
+    fixture.activate(fixture.panLane)
+    fixture.page.selectRange(from: 96, to: 144, lanes: [fixture.panLane, fixture.lfoLane])
+    let held = DrawerAutomationStagedSnapshot(fixture.document)
+    var documentEdits = 0
+    var dirtyEdits = 0
+    let priorChange = fixture.session.onChange
+    fixture.session.onChange = { change in
+        if change.domains.contains(.document) { documentEdits += 1 }
+        if change.domains.contains(.dirty) { dirtyEdits += 1 }
+        priorChange?(change)
+    }
+    let sourceX = fixture.x(96)
+    let sourceY = fixture.y(fixture.panLane, 20)
+    let activationX = sourceX + fixture.page.geometry.nodeDragActivationDistance + 2
+    let endX = activationX + fixture.x(144) - sourceX
+    _ = fixture.page.pointerPress(x: sourceX, y: sourceY, surface: 1,
+                                  button: AutomationQtButton.left,
+                                  modifiers: AutomationQtModifier.shift)
+    _ = fixture.page.pointerMove(x: activationX, y: sourceY, buttons: AutomationQtButton.left,
+                                 modifiers: AutomationQtModifier.shift)
+    _ = fixture.page.pointerMove(x: endX, y: sourceY, buttons: AutomationQtButton.left,
+                                 modifiers: AutomationQtModifier.shift)
+    report.expect(DrawerAutomationStagedSnapshot(fixture.document) == held
+                  && documentEdits == 0 && dirtyEdits == 0,
+                  cppID: drawerAutomationCcOnlyIntervalID,
+                  message: "held CC-only preview freezes the song and emits no edit notification")
+    _ = fixture.page.pointerRelease(x: endX, y: sourceY, button: AutomationQtButton.left,
+                                    modifiers: AutomationQtModifier.shift)
+    report.expect(fixture.page.selection?.range == TimeRange(startTick: 144, endTick: 192)
+                  && fixture.page.selection?.scope == .lanes
+                  && fixture.page.selection?.tempo == false
+                  && fixture.page.selection?.lanes == Set([fixture.panLane, fixture.lfoLane]),
+                  cppID: drawerAutomationCcOnlyIntervalID,
+                  message: "CC-only drag translates its exact interval to 144 through 192 in Pan LFO scope")
+    report.expectEqual(expected: [10, 20], actual: fixture.playbackValues(fixture.panLane, at: 144),
+                       cppID: drawerAutomationCcOnlyIntervalID,
+                       what: "CC-only drag publishes ordered Pan collisions at tick 144")
+    report.expectEqual(expected: [96], actual: fixture.playbackValues(fixture.lfoLane, at: 144),
+                       cppID: drawerAutomationCcOnlyIntervalID,
+                       what: "CC-only drag publishes the LFO group at tick 144")
+}

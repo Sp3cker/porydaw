@@ -8,6 +8,22 @@ import PorydawCore
 
 
 
+// The staged-gesture snapshot triple: serialized song bytes, revision and
+// undo index/count captured before a gesture stage and compared mid-grab.
+@MainActor
+struct DrawerAutomationStagedSnapshot: Equatable {
+    let revision: UInt64
+    let bytes: [UInt8]
+    let undoIndex: Int
+    let undoCount: Int
+    init(_ document: SongDocument) {
+        revision = document.revision
+        // Check harness convention is try!: a throw must surface, never read as empty bytes.
+        bytes = try! document.captureSave().bytes
+        undoIndex = document.history.undoIndex
+        undoCount = document.history.undoCount
+    }
+}
 @MainActor
 func drawerAutomationCancellationAndNoOps(_ report: CheckReport, suite: DocumentSession,
                                   service: ProjectService) {

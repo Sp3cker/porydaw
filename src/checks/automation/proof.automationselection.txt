@@ -11,6 +11,8 @@ Additional Swift counterpart: src/checks/automation/automationcanvasediting.swif
 Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml
 Command: deno task verify --filter swiftcore-projectsession --verbose. Result: GREEN — implementer-reported locked lane (1/36 filtered harnesses PASS) on frozen automationselection.swift SHA-256 3b4363f9a06abdc4ed55f88700f34078061b857a87af4dddb864725da7585c9c. This proof-only writer did not rerun the lane.
 Converted-window command: deno task verify:qml --verbose. Result: GREEN — implementer-reported locked editorqml-drawer (1/1 PASS), frozen tst_EditorDrawer.qml SHA-256 0dfa48f745c7203db3aa184fbc8557595a39c9a5d32c16b801dbd9f89d83edcc. Full verify:shell 26/26 PASS; full verify 36/36 PASS; this proof-only writer did not rerun the suites.
+Task-184 frozen check SHA-256: src/checks/automation/automationselection.swift 36e8d03735e2b9501cce0099cce07e22f812e5e0cae117103e8a64bc4858ca31; src/checks/automation/automationselection_mixed.swift bef53219f349400158ded15c9c9a950afd287a31ab920e38227a084a3d41aaef; src/checks/automation/AutomationPageChecks.swift c9b77134ffc457fe444a274e1e80456734eff2f612bf4b634cfe5e7c797f4b71.
+Task-184 implementer-observed verification (controller-reported; proof writer did not rerun): `deno task verify --filter swiftcore-projectsession --verbose` PASS; `swiftcore` PASS.
 
 A001 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:189
 Disposition: RETIRED-REPRESENTATION
@@ -487,10 +489,8 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: S004, S008
 
 A124 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:528
-Disposition: PARTIAL
-Mapping/reason: S107, S108; the executed CC-only held drag freezes snapshot, revision, history and selected lanes and emits no document publication; the C++ frozen state also counted a separate edited notification which this predicate does not observe. Unproved: absence of an independent edit/dirty notification during the CC-only capture.
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == beforeDrag)
+Disposition: MATCHED
+Mapping: S110 (the held CC-only preview keeps bytes, revision, history and selected lanes frozen and emits neither document nor dirty-edit notification).
 
 A125 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:531
 Disposition: MATCHED
@@ -517,24 +517,16 @@ Disposition: MATCHED
 Mapping: S046
 
 A131 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:538
-Disposition: PARTIAL
-Mapping/reason: S101, S109; the executed CC-only Shift drag preserves exactly Pan/Modulation lane scope and excludes Tempo, but uses [0,96) → [48,144), not the original CC-only [96,144) → [144,192) fixture. Unproved: the exact original destination interval for this CC-only gesture.
-Original expression:
-  QVERIFY(selectionMatches(tab().view().selectionModel().timeSelection(), kDestinationTick,
-                               kDestinationTick + (kDestinationTick - kSelectionTick), false,
-                               {{kTrack, kPanController}, {kTrack, kLfoController}}))
+Disposition: MATCHED
+Mapping: S111 (the exact CC-only [96,144) drag publishes the [144,192) Pan/LFO-only selection without Tempo).
 
 A132 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:544
-Disposition: PARTIAL
-Mapping/reason: S085, S102; a mixed Tempo/Pan/LFO drag projects original ordered Pan [10,20] at tick144, and a CC-only drag projects moved Pan [60] at tick72. Unproved: original ordered Pan [10,20] at tick144 after the CC-only drag.
-Original expression:
-  QTRY_VERIFY(timelineValuesAt(tab(), kPanController, kDestinationTick) == movedPan)
+Disposition: MATCHED
+Mapping: S112 (the exact CC-only drag publishes ordered Pan occupants [10,20] at destination tick 144).
 
 A133 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:545
-Disposition: PARTIAL
-Mapping/reason: S086, S103; a mixed Tempo/Pan/LFO drag projects original LFO [96] at tick144, and a CC-only drag projects moved Modulation [70] at tick96. Unproved: original LFO [96] at tick144 after the CC-only drag.
-Original expression:
-  QTRY_VERIFY(timelineValuesAt(tab(), kLfoController, kDestinationTick) == movedLfo)
+Disposition: MATCHED
+Mapping: S113 (the exact CC-only drag publishes the original LFO group [96] at destination tick 144).
 
 A134 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:547
 Disposition: MATCHED
@@ -1016,3 +1008,14 @@ Anchor: message "held multi-CC preview emits no document publication"
 
 S109 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection_band.swift
 Anchor: message "shifted CC selection retains only Pan and Modulation scope"
+S110 | drawerAutomationCcOnlyExactIntervalDrag | src/checks/automation/automationselection_mixed.swift
+Anchor: message "held CC-only preview freezes the song and emits no edit notification"
+
+S111 | drawerAutomationCcOnlyExactIntervalDrag | src/checks/automation/automationselection_mixed.swift
+Anchor: message "CC-only drag translates its exact interval to 144 through 192 in Pan LFO scope"
+
+S112 | drawerAutomationCcOnlyExactIntervalDrag | src/checks/automation/automationselection_mixed.swift
+Anchor: message "CC-only drag publishes ordered Pan collisions at tick 144"
+
+S113 | drawerAutomationCcOnlyExactIntervalDrag | src/checks/automation/automationselection_mixed.swift
+Anchor: message "CC-only drag publishes the LFO group at tick 144"

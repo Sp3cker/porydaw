@@ -385,3 +385,107 @@ func drawerAutomationGestureContractParity(_ report: CheckReport, suite: Documen
                        what: "the recovered drag commits its move")
     drawerAutomationExactNodeContract(report, suite: suite, service: service)
 }
+let drawerAutomationStagedSnapshotsID = "swiftcore/AutomationPage::stagedGestureSnapshots"
+
+// Staged mid-gesture comparisons: arming, same-tick group commit, stale
+// release after a geometry rebuild, and the recovery edit.
+@MainActor
+func drawerAutomationStagedGestureSnapshots(_ report: CheckReport, suite: DocumentSession,
+                                            service: ProjectService) {
+    let armed = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                  pan: [(24, 64), (120, 40)])
+    armed.activate(armed.panLane)
+    let prePress = DrawerAutomationStagedSnapshot(armed.document)
+    guard armed.page.pointerPress(x: armed.x(24), y: armed.y(armed.panLane, 64), surface: 1,
+                                  button: AutomationQtButton.left) else {
+        report.fail(drawerAutomationStagedSnapshotsID, "a press grabs the node before the row rebuild")
+        return
+    }
+    // Arming travel past the production activation distance; the release of a
+    // dragged group overshoots by the same travel to land its mapped delta.
+    let armTravel = armed.page.geometry.nodeDragActivationDistance + 2
+    _ = armed.page.pointerMove(x: armed.x(24) + armTravel, y: armed.y(armed.panLane, 64),
+                               buttons: AutomationQtButton.left)
+    guard armed.page.hasGesture else {
+        report.fail(drawerAutomationStagedSnapshotsID, "the node drag is live past the slop before the row rebuild")
+        return
+    }
+    report.expectEqual(expected: prePress, actual: DrawerAutomationStagedSnapshot(armed.document),
+                       cppID: drawerAutomationStagedSnapshotsID,
+                       what: "arming a row-rebuild stale-handle gesture mutates no song bytes revision or undo")
+    armed.page.cancelSectionInteraction()
+    let grouped = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                    pan: [(96, 10), (96, 20), (288, 40)])
+    grouped.activate(grouped.panLane)
+    grouped.page.selectRange(from: 96, to: 144, lanes: [grouped.panLane])
+    let groupBefore = DrawerAutomationStagedSnapshot(grouped.document)
+    let groupX = grouped.x(96)
+    let groupY = grouped.y(grouped.panLane, 20)
+    // The release overshoots by the arming travel so the mapped delta lands the group on tick 144.
+    let groupTravel = grouped.page.geometry.nodeDragActivationDistance + 2
+    let groupEndX = grouped.x(144) + groupTravel
+    guard grouped.page.pointerPress(x: groupX, y: groupY, surface: 1,
+                                    button: AutomationQtButton.left) else {
+        report.fail(drawerAutomationStagedSnapshotsID, "a press grabs the same-tick group")
+        return
+    }
+    _ = grouped.page.pointerMove(x: groupX + groupTravel, y: groupY, buttons: AutomationQtButton.left)
+    _ = grouped.page.pointerMove(x: groupEndX, y: groupY, buttons: AutomationQtButton.left)
+    _ = grouped.page.pointerRelease(x: groupEndX, y: groupY, button: AutomationQtButton.left)
+    let groupAfter = DrawerAutomationStagedSnapshot(grouped.document)
+    report.expect(grouped.values(grouped.panLane) == ["144:10", "144:20", "288:40"]
+                  && grouped.playbackValues(grouped.panLane, at: 96).isEmpty
+                  && grouped.playbackValues(grouped.panLane, at: 144) == [10, 20]
+                  && groupAfter.revision == groupBefore.revision + 1
+                  && groupAfter.undoIndex == groupBefore.undoIndex + 1
+                  && groupAfter.undoCount == groupBefore.undoCount + 1
+                  && groupAfter.bytes != groupBefore.bytes,
+                  cppID: drawerAutomationStagedSnapshotsID,
+                  message: "a same-tick group drag lands ordered at its destination in one serialized history edit")
+    let stale = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                  pan: [(24, 64), (120, 40)])
+    stale.activate(stale.panLane)
+    let stalePrePress = DrawerAutomationStagedSnapshot(stale.document)
+    let staleX = stale.x(24)
+    let staleY = stale.y(stale.panLane, 64)
+    guard stale.page.pointerPress(x: staleX, y: staleY, surface: 1,
+                                  button: AutomationQtButton.left) else {
+        report.fail(drawerAutomationStagedSnapshotsID, "a press grabs the node before the geometry rebuild")
+        return
+    }
+    let staleTravel = stale.page.geometry.nodeDragActivationDistance + 2
+    _ = stale.page.pointerMove(x: staleX + staleTravel, y: staleY, buttons: AutomationQtButton.left)
+    // The mounted geometryChanged order: retire the live interaction first, then rebuild the body.
+    stale.page.cancelSectionInteraction()
+    stale.page.configureBody(width: 520, height: 120, gutter: 0, devicePixelRatio: 1,
+                             baseFontPx: 13, dragDistance: 10)
+    guard !stale.page.interactionActive else {
+        report.fail(drawerAutomationStagedSnapshotsID, "the geometry rebuild retires the staged node drag")
+        return
+    }
+    _ = stale.page.pointerRelease(x: staleX + staleTravel, y: staleY, button: AutomationQtButton.left)
+    report.expectEqual(expected: stalePrePress, actual: DrawerAutomationStagedSnapshot(stale.document),
+                       cppID: drawerAutomationStagedSnapshotsID,
+                       what: "a stale release after a geometry rebuild commits no song bytes revision or undo")
+    let recoverBefore = DrawerAutomationStagedSnapshot(stale.document)
+    _ = stale.page.pointerPress(x: stale.x(24), y: stale.y(stale.panLane, 64), surface: 1,
+                                button: AutomationQtButton.left)
+    _ = stale.page.pointerMove(x: stale.x(24) + staleTravel, y: stale.y(stale.panLane, 64),
+                               buttons: AutomationQtButton.left)
+    _ = stale.page.pointerMove(x: stale.x(24) + staleTravel, y: stale.y(stale.panLane, 90),
+                               buttons: AutomationQtButton.left)
+    _ = stale.page.pointerRelease(x: stale.x(24) + staleTravel, y: stale.y(stale.panLane, 90),
+                                  button: AutomationQtButton.left)
+    guard stale.values(stale.panLane) == ["24:90", "120:40"] else {
+        report.fail(drawerAutomationStagedSnapshotsID, "input recovers after a geometry rebuild cancellation")
+        return
+    }
+    let recoverAfter = DrawerAutomationStagedSnapshot(stale.document)
+    report.expect(recoverAfter.revision == recoverBefore.revision + 1
+                  && recoverAfter.undoIndex == recoverBefore.undoIndex + 1
+                  && recoverAfter.undoCount == recoverBefore.undoCount + 1
+                  && recoverAfter.bytes != recoverBefore.bytes
+                  && !stale.page.interactionActive,
+                  cppID: drawerAutomationStagedSnapshotsID,
+                  message: "recovery after a geometry rebuild commits one serialized history edit and idles")
+}

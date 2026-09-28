@@ -18,6 +18,8 @@ Additional Swift counterpart: src/checks/automation/presentation/painting.swift
 
 Task-115 frozen source SHA-256: automationcanvasediting.swift 01ab5120e862c56fed885e7134129d3e4c75df810029800798ca4a328049b9e0; gestureSweep.swift 30da459163ad89ff2a939be75c383cadb8dbe713e467c211218b8429647d4531; gestureNodeDrag.swift cfaaea075abbcc227ae3ccc58ea1ca5afb13c933fe358224e370bc11b5ef7a48; tst_ShellDrawerParity.qml b0c3a480064c7ad201d60ddf78361706a3b6c5e36cf435d09468260619122582; AutomationPage.qml 846b48d0559409db51aa3b922f6260465fb407da7469e4e1ee5e16ebc61aad40.
 Task-115 implementer-observed GREEN: swiftcore-projectsession 1/36, shell-drawer-parity 1/26, full verify 36/36. Proof writer did not rerun them; full shell suite was 25/26 due to sibling-owned shell-note-visuals DPR2.
+Task-184 frozen check SHA-256: src/checks/automation/automationcanvashover.swift 4f3a3c564720c9d3299f49fa60f3f16518565da2e4af14db706063833a3d002f; src/checks/automation/AutomationPageChecks.swift c9b77134ffc457fe444a274e1e80456734eff2f612bf4b634cfe5e7c797f4b71.
+Task-184 implementer-observed verification (controller-reported; proof writer did not rerun): `deno task verify --filter swiftcore-projectsession --verbose` PASS; `swiftcore` PASS.
 
 Task-96 GREEN: `deno task verify --filter swiftcore-projectsession --verbose`
 PASS (1/36 selected); `deno task verify:qml --verbose` PASS
@@ -102,10 +104,8 @@ Disposition: MATCHED
 Mapping: S143, S144, S145 (real focus transfer retains the staged edit, band and held pointer grab; retired native grabber-object identity comparison).
 
 A017 | automation_hover::canvas | src/checks/automation/hover/tst_automationhover.cpp:142
-Disposition: PARTIAL
-Mapping: S144, S145, S159 (focus retains the staged band and pointer grab, and the eventual right release leaves the song revision unchanged).
-Missing: The fork compares its frozen complete document state immediately after focus loss while still held; the mounted check does not compare serialized song bytes and undo history at that intermediate point.
-Original expression: `QVERIFY(automation_hover::documentState(*m_fixture) == frozen);`
+Disposition: MATCHED
+Mapping: S160 (focus loss while a background press remains held preserves full-song bytes, revision and undo state).
 
 A018 | AutomationHoverTest::deactivationClears | src/checks/automation/hover/tst_automationhover.cpp:149
 Disposition: RETIRED-REPRESENTATION
@@ -1177,3 +1177,5 @@ Anchor: message "the released middle node follows endpoint interpolation rather 
 
 S159 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
 Anchor: message "the focus-retained right release does not edit the song"
+S160 | drawerAutomationFocusLossKeepsPress | src/checks/automation/automationcanvashover.swift
+Anchor: message "focus loss while still held freezes song bytes revision and undo"

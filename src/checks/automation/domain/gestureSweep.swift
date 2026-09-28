@@ -235,3 +235,50 @@ func drawerAutomationSweepFinishRestoresTrailingHeldValue(_ report: CheckReport,
                   cppID: drawerAutomationSweepTailID,
                   message: "sweep undo restores full-song bytes and original history index")
 }
+let drawerAutomationShiftRampID = "swiftcore/AutomationPage::shiftRampEndpoints"
+
+// The mounted Shift-ramp commits both pointer-mapped endpoints in one edit.
+// Endpoint expectations are hard-coded literals for this coarse geometry.
+@MainActor
+func drawerAutomationShiftRampEndpoints(_ report: CheckReport, suite: DocumentSession,
+                                        service: ProjectService) {
+    // The anchor value 80 differs from the lane's held 20 so the commit keeps
+    // the start node instead of eliding it as redundant with the held value.
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                    pan: [(0, 20), (96, 100), (288, 64)])
+    fixture.activate(fixture.panLane)
+    let facts = fixture.facts(fixture.panLane)
+    let reverse = fixture.page.makeProjection(facts: facts, camera: fixture.session.camera)
+    let metadata = AutomationParameterMetadata(parameter: fixture.panLane)
+    let pressX = fixture.x(48)
+    let pressY = fixture.y(fixture.panLane, 80)
+    let releaseX = fixture.x(144)
+    let releaseY = fixture.y(fixture.panLane, 110)
+    guard reverse.tick(atX: pressX, fine: false) == 48
+          && reverse.value(atY: pressY, metadata: metadata) == 80
+          && reverse.tick(atX: releaseX, fine: false) == 144
+          && reverse.value(atY: releaseY, metadata: metadata) == 110 else {
+        report.fail(drawerAutomationShiftRampID, "the coarse geometry maps the ramp pixels to 48:80 and 144:110")
+        return
+    }
+    let rampModifiers = drawerAutomationQtModifiers(.init(shift: true))
+    let rampBefore = DrawerAutomationStagedSnapshot(fixture.document)
+    guard fixture.page.pointerPress(x: pressX, y: pressY, surface: 1,
+                                    button: AutomationQtButton.left, modifiers: rampModifiers) else {
+        report.fail(drawerAutomationShiftRampID, "a Shift press on the background arms the ramp")
+        return
+    }
+    _ = fixture.page.pointerMove(x: releaseX, y: releaseY, buttons: AutomationQtButton.left,
+                                 modifiers: rampModifiers)
+    _ = fixture.page.pointerRelease(x: releaseX, y: releaseY, button: AutomationQtButton.left,
+                                    modifiers: rampModifiers)
+    let rampAfter = DrawerAutomationStagedSnapshot(fixture.document)
+    report.expect(fixture.values(fixture.panLane).contains("48:80")
+                  && fixture.values(fixture.panLane).contains("144:110")
+                  && rampAfter.revision == rampBefore.revision + 1
+                  && rampAfter.undoIndex == rampBefore.undoIndex + 1
+                  && rampAfter.undoCount == rampBefore.undoCount + 1
+                  && rampAfter.bytes != rampBefore.bytes,
+                  cppID: drawerAutomationShiftRampID,
+                  message: "the Shift-ramp commits both mapped endpoints in one serialized history edit")
+}

@@ -288,3 +288,32 @@ func coreEventAutomationGestureCoreSeams(_ report: CheckReport) {
         cppID: "automation-domain/AutomationDomainTest::sweepFinishRestoresTrailingHeldValue",
         what: "core lane write retains the explicit post-sweep held-value seam")
 }
+let drawerAutomationEmptyPencilID = "swiftcore/AutomationPage::emptyLanePencilCommit"
+
+// The empty-lane pencil stroke commits its own one-edit byte/undo comparison.
+// Modulation opens on 0-16, so the stroke first selects the 127 display range.
+@MainActor
+func drawerAutomationEmptyLanePencilCommit(_ report: CheckReport, suite: DocumentSession,
+                                           service: ProjectService) {
+    let empty = drawerAutomationAutomationFixture(suite: suite, service: service, modulation: [])
+    empty.activate(empty.modulationLane)
+    _ = empty.page.openParameterMenu(
+        index: empty.page.catalogIndex(of: empty.modulationLane), x: 0, y: 0)
+    _ = empty.page.consumeMenuAction(actionId: AutomationMenuAction.range127.rawValue)
+    empty.page.isPencilMode = true
+    let before = DrawerAutomationStagedSnapshot(empty.document)
+    let strokeY = empty.y(empty.modulationLane, 60)
+    guard empty.page.pointerPress(x: empty.x(24), y: strokeY, surface: 1, button: 1) else {
+        report.fail(drawerAutomationEmptyPencilID, "the empty-lane pencil press starts a stroke")
+        return
+    }
+    _ = empty.page.pointerRelease(x: empty.x(24), y: strokeY, button: 1)
+    let after = DrawerAutomationStagedSnapshot(empty.document)
+    report.expect(empty.values(empty.modulationLane).contains { $0.hasSuffix(":60") }
+                  && after.revision == before.revision + 1
+                  && after.undoIndex == before.undoIndex + 1
+                  && after.undoCount == before.undoCount + 1
+                  && after.bytes != before.bytes,
+                  cppID: drawerAutomationEmptyPencilID,
+                  message: "the empty-lane pencil writes its value in one serialized history edit")
+}

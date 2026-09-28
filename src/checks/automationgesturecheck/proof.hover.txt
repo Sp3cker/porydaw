@@ -6,10 +6,12 @@ Original: src/checks/automationgesturecheck/hover.cpp
 Original SHA-256: c0bbc4a68e09aec50cdbfcbf6f3fec04750e3c34fcf6f7c7de7a6e5d495d3bed
 Swift counterpart: src/checks/automation/automationcanvasediting.swift
 
-Disposition tally: 30 sites: 23 MATCHED, 2 PARTIAL, 0 GAP, 5 RETIRED-REPRESENTATION.
+Disposition tally: 30 sites: 24 MATCHED, 1 PARTIAL, 0 GAP, 5 RETIRED-REPRESENTATION.
 
 Task-115 frozen source SHA-256: automationcanvasediting.swift 01ab5120e862c56fed885e7134129d3e4c75df810029800798ca4a328049b9e0; tst_ShellDrawerParity.qml b0c3a480064c7ad201d60ddf78361706a3b6c5e36cf435d09468260619122582; AutomationPage.qml 846b48d0559409db51aa3b922f6260465fb407da7469e4e1ee5e16ebc61aad40.
 Task-115 implementer-observed GREEN: swiftcore-projectsession 1/36, shell-drawer-parity 1/26, full verify 36/36; full shell suite 25/26 due to sibling-owned shell-note-visuals DPR2. Proof writer did not rerun them.
+Task-184 frozen check SHA-256: src/checks/automation/automationcanvashover.swift 4f3a3c564720c9d3299f49fa60f3f16518565da2e4af14db706063833a3d002f; src/checks/automation/AutomationPageChecks.swift c9b77134ffc457fe444a274e1e80456734eff2f612bf4b634cfe5e7c797f4b71.
+Task-184 implementer-observed verification (controller-reported; proof writer did not rerun): `deno task verify --filter swiftcore-projectsession --verbose` PASS; `swiftcore` PASS.
 
 Task-96 GREEN: `deno task verify --filter swiftcore-projectsession --verbose`
 PASS (1/36 selected); `deno task verify:qml --verbose` PASS
@@ -93,10 +95,8 @@ Disposition: MATCHED
 Mapping: S037
 
 A013 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:412
-Disposition: PARTIAL
-Mapping: S052, S056, S057 (real keyboard focus moves to the roll while the staged band, transaction and MouseArea grab remain live).
-Missing: The fork's `previewUnchanged("focus-lost cancellation")` compares full-song SMF bytes, revision and undo index immediately after focus loss while the grab is still held. The mounted check compares only the revision after the eventual focused-away right release, not the full document snapshot at the held point.
-Original expression: `previewUnchanged("focus-lost cancellation");` (lambda calls `isUnchanged(before, snapshot(rig.document()))`).
+Disposition: MATCHED
+Mapping: S058 (focus loss while the node drag is held preserves full-song bytes, revision and undo state).
 
 A014 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:420
 Disposition: MATCHED
@@ -408,3 +408,5 @@ Anchor: message "focus transfer retains the held plot transaction"
 
 S057 | test_aAutomationFocusAndWindowCancellation | src/checks/editorqml/tst_ShellDrawerParity.qml
 Anchor: message "focus transfer keeps the staged selected-lane band visible"
+S058 | drawerAutomationFocusLossRetainsGesture | src/checks/automation/automationcanvashover.swift
+Anchor: message "focus loss while held freezes song bytes revision and undo"

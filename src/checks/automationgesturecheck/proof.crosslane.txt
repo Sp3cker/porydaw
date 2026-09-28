@@ -10,10 +10,12 @@ Additional Swift counterpart: src/checks/automation/domain/gestureNodeDrag.swift
 Additional Swift counterpart: src/checks/automation/domain/gesturePointRange.swift
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
 
-Disposition tally: 31 sites: 27 MATCHED, 2 PARTIAL, 0 GAP, 2 RETIRED-REPRESENTATION.
+Disposition tally: 31 sites: 29 MATCHED, 0 PARTIAL, 0 GAP, 2 RETIRED-REPRESENTATION.
 
 Task-115 frozen source SHA-256: automationcanvasediting.swift 01ab5120e862c56fed885e7134129d3e4c75df810029800798ca4a328049b9e0; tst_ShellDrawerParity.qml b0c3a480064c7ad201d60ddf78361706a3b6c5e36cf435d09468260619122582.
 Task-115 implementer-observed GREEN: swiftcore-projectsession 1/36, shell-drawer-parity 1/26, full verify 36/36; full shell suite 25/26 due to sibling-owned shell-note-visuals DPR2. Proof writer did not rerun them.
+Task-184 frozen check SHA-256: src/checks/automation/automationselection.swift 36e8d03735e2b9501cce0099cce07e22f812e5e0cae117103e8a64bc4858ca31; src/checks/automation/AutomationPageChecks.swift c9b77134ffc457fe444a274e1e80456734eff2f612bf4b634cfe5e7c797f4b71.
+Task-184 implementer-observed verification (controller-reported; proof writer did not rerun): `deno task verify --filter swiftcore-projectsession --verbose` PASS; `swiftcore` PASS.
 
 Earlier converted-suite command (prior source snapshot): deno task verify --filter swiftcore -> run_checks PASS (1/14 ok, 13 skipped).
 Earlier converted-suite command (same prior snapshot): deno task verify:qml -> run_checks PASS (all harnesses).
@@ -40,159 +42,8 @@ Shared fixture: AutomationGestureCheckRig from rig.h (mixed-lane document, canva
 stack, mouse rig, document snapshots); cross-lane domain labelling comes from
 
 A001 | expectUnchanged | src/checks/automationgesturecheck/crosslane.cpp:147
-Disposition: PARTIAL
-Mapping/reason: S027, S028, S051, S061, S073, S074, S076, S077 and S084 prove staged mixed previews, stale releases and mounted Tempo without writing; unproved: the original shared mixed-selection hover snapshot comparing full-song bytes, revision and undo index after real hover.
-Source context since previous assertion:
-  #include "domains.h"
-  #include "support.h"
-
-  #include <array>
-  #include <cstdint>
-  #include <limits>
-  #include <utility>
-  #include <vector>
-
-  #include <QEvent>
-  #include <QPointF>
-  #include <QString>
-  #include <QUndoStack>
-
-  #include "core/songdocument.h"
-  #include "core/timedefaults.h"
-  #include "rig.h"
-  #include "ui/editordrawer/automationcanvas.h"
-  #include "ui/editordrawer/nodelane/nodelane.h"
-  #include "ui/songview.h"
-  #include "ui/songview/editorselectionmodel.h"
-
-  namespace {
-
-  struct Context {
-      AutomationGestureCheckRig &rig;
-      Check check;
-      const char *scenario = "";
-
-      Context(AutomationGestureCheckRig &rig, const AutomationGestureCheck &fn, const char *scenario)
-          : rig(rig)
-          , check(fn, QStringLiteral("cross-lane %1").arg(QLatin1String(scenario)))
-          , scenario(scenario)
-      {}
-  };
-
-  struct Scenario {
-      const char *name;
-      void (*run)(Context &);
-  };
-
-  constexpr uint32_t kPreservedTempoUs = 499999;
-  constexpr uint64_t kMovedTick = 144;
-  constexpr uint64_t kUnrelatedLate = 384;
-
-  std::vector<SongDocument::LanePointValue> laneValues(const std::vector<DocLanePoint> &points)
-  {
-      std::vector<SongDocument::LanePointValue> values;
-      values.reserve(points.size());
-      for (const auto &point : points)
-          values.push_back({point.tick, point.value});
-      return values;
-  }
-
-  std::vector<NodePoint> effectiveTempo(const SongDocument &document)
-  {
-      std::vector<NodePoint> out;
-      for (const auto &point : document.tempoPoints())
-          out.push_back({point.tick, tempoBpm(point.microsecondsPerQuarterNote)});
-      return out;
-  }
-
-  std::vector<NodePoint> effectiveLane(const SongDocument &document, int track, uint8_t controller)
-  {
-      std::vector<NodePoint> out;
-      for (const auto &point : document.lanePoints(track, controller)) {
-          if (!out.empty() && out.back().tick == point.tick)
-              out.back().value = point.value;
-          else
-              out.push_back({point.tick, point.value});
-      }
-      return out;
-  }
-
-  uint32_t tempoUsAt(const SongDocument &document, uint64_t tick)
-  {
-      for (const auto &point : document.tempoPoints()) {
-          if (point.tick == tick)
-              return point.microsecondsPerQuarterNote;
-      }
-      return 0;
-  }
-
-  void writeLane(SongDocument &document, const AutomationGestureCheckRig::Lane &lane,
-                 const std::vector<SongDocument::LanePointValue> &points)
-  {
-      document.writeLanePoints(lane.track, lane.controller, 0, std::numeric_limits<uint64_t>::max(),
-                               points);
-  }
-
-  void seedMixed(AutomationGestureCheckRig &rig, bool occupyMovedPan = false)
-  {
-      TempoEdit edit;
-      edit.remove = rig.document().tempoPoints();
-      edit.add = {{0, tempoUsForBpm(80)},
-                  {kFixtureTick, kPreservedTempoUs},
-                  {kUnrelatedLate, tempoUsForBpm(64)}};
-      if (rig.document().tempoPoints() != edit.add)
-          rig.document().applyTempoEdit(edit);
-      if (occupyMovedPan)
-          writeLane(rig.document(), rig.pan,
-                    {{0, 80},
-                     {kFixtureTick, 10},
-                     {kFixtureTick, 20},
-                     {kMovedTick, 70},
-                     {kMovedTick, 80},
-                     {kUnrelatedLate, 110}});
-      else
-          writeLane(rig.document(), rig.pan,
-                    {{0, 80}, {kFixtureTick, 10}, {kFixtureTick, 20}, {kUnrelatedLate, 110}});
-      writeLane(rig.document(), rig.lfo, {{0, 32}, {kFixtureTick, 96}, {kUnrelatedLate, 64}});
-      rig.documentChanged();
-  }
-
-  void publishMixedSelection(AutomationGestureCheckRig &rig, uint64_t first, uint64_t last,
-                             bool includeTempo = true)
-  {
-      songview::EditorSelectionModel::TimeSelection selection;
-      selection.startTick = first;
-      selection.endTick = last;
-      selection.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
-      selection.tempo = includeTempo;
-      selection.lanes = {{rig.pan.track, rig.pan.controller}, {rig.lfo.track, rig.lfo.controller}};
-      rig.view().selectionModel().setTimeSelection(std::move(selection));
-      rig.pump();
-  }
-
-  bool mixedSelection(const songview::EditorSelectionModel::TimeSelection &selection, uint64_t first,
-                      uint64_t last, const AutomationGestureCheckRig &rig, bool includeTempo = true)
-  {
-      const auto hasLane = [&selection](int track, uint8_t controller) {
-          for (const auto &lane : selection.lanes) {
-              if (lane.first == track && lane.second == controller)
-                  return true;
-          }
-          return false;
-      };
-      return selection.active() &&
-             selection.scope == songview::EditorSelectionModel::TimeSelection::Lanes &&
-             selection.tempo == includeTempo && selection.startTick == first &&
-             selection.endTick == last && hasLane(rig.pan.track, rig.pan.controller) &&
-             hasLane(rig.lfo.track, rig.lfo.controller);
-  }
-
-  void expectUnchanged(const Context &ctx, const DocSnapshot &before, const char *label)
-  {
-Original expression:
-      ctx.check.require(
-          isUnchanged(before, snapshot(ctx.rig.document())),
-          QStringLiteral("%1 mutated SMF, revision, or undo").arg(QLatin1String(label)));
+Disposition: MATCHED
+Mapping: S086 (the real mixed-selection hover compares full-song bytes, revision and undo index).
 
 A002 | requirePanLfo | src/checks/automationgesturecheck/crosslane.cpp:156
 Disposition: RETIRED-REPRESENTATION
@@ -230,45 +81,8 @@ Disposition: MATCHED
 Mapping: S052, S053 (mixed Pan drag empties source and retains ordered occupants while evicting collision).
 
 A011 | runTempoPanLfo | src/checks/automationgesturecheck/crosslane.cpp:301
-Disposition: PARTIAL
-Mapping/reason: S054 proves moved Tempo's exact 499999 microseconds at tick 144, and S056 proves the translated mixed scope; unproved: the original's complete effective Tempo row, including preserved values at ticks 0 and 384, after this mixed drag.
-Source context since previous assertion:
-  }
-
-  void restoreLfo(AutomationGestureCheckRig &rig, const std::vector<DocLanePoint> &initialLfo)
-  {
-      writeLane(rig.document(), rig.lfo, laneValues(initialLfo));
-      rig.documentChanged();
-  }
-
-  void runTempoPanLfo(Context &ctx)
-  {
-      auto &rig = ctx.rig;
-      if (!requirePanLfo(ctx))
-          return;
-      const auto initialLfo = rig.document().lanePoints(rig.lfo.track, rig.lfo.controller);
-      const auto volume =
-          laneValues(rig.document().lanePoints(rig.volume.track, rig.volume.controller));
-      seedMixed(rig, true);
-      publishMixedSelection(rig, kFixtureTick, kMovedTick);
-      const auto preservedBpm = tempoBpm(kPreservedTempoUs);
-      const auto hoverBefore = snapshot(rig.document());
-      rig.mouseMove(rig.pointAt(LaneHandle{0}, kFixtureTick, preservedBpm).position, Qt::NoButton);
-      rig.pump();
-      expectUnchanged(ctx, hoverBefore, "mixed-selection hover");
-      // Horizontal Shift-drag of the selected Tempo node; pan and LFO must follow in one edit.
-      // Selection is [96, 144) so the hidden pan occupant at 144 is not selected.
-      const auto dragBefore = snapshot(rig.document());
-      const auto end = shiftDragPreview(rig, LaneHandle{0}, kFixtureTick, kMovedTick, preservedBpm);
-      expectUnchanged(ctx, dragBefore, "mixed selection-drag preview");
-      rig.mouseRelease(end, Qt::ShiftModifier);
-      expectOneCommittedEdit(ctx, dragBefore, "selection-drag");
-Original expression:
-      ctx.check.require(
-          sameNodePoints(effectiveTempo(rig.document()),
-                         {{0, 80}, {kMovedTick, preservedBpm}, {kUnrelatedLate, 64}}) &&
-              tempoUsAt(rig.document(), kMovedTick) == kPreservedTempoUs,
-          QStringLiteral("Tempo did not keep the shared tick delta and exact microseconds"));
+Disposition: MATCHED
+Mapping: S085 (mixed drag retains the exact full Tempo row at ticks 0, 144 and 384, including raw 499999 microseconds).
 
 A012 | runTempoPanLfo | src/checks/automationgesturecheck/crosslane.cpp:307
 Disposition: MATCHED
@@ -627,3 +441,7 @@ Anchor: message "mounted mixed Delete removes the exact translated LFO occurrenc
 
 S084 | test_aAutomationShortcutHintAndMenuScope | src/checks/editorqml/tst_ShellDrawerParityAutomation.qml
 Anchor: message "shortcut hover and menu dismissal never edit the song"
+S085 | drawerAutomationMixedDragTempoRow | src/checks/automation/automationselection.swift
+Anchor: message "the mixed drag keeps the complete Tempo row with exact endpoints"
+S086 | drawerAutomationMixedSelectionHoverSnapshot | src/checks/automation/automationselection.swift
+Anchor: message "mixed-selection hover compares full-song bytes revision and undo index"

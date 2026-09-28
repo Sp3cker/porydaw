@@ -286,3 +286,45 @@ private func hostTempoRangeAndBandRows(_ report: CheckReport, suite: DocumentSes
     report.expect(page.rows == expectedRows && page.rows == before, cppID: voiceID,
                   message: "A182 the tick-24 voice presentation preserves every seeded automation canvas row")
 }
+let drawerAutomationMixedHoverID = "swiftcore/AutomationPage::mixedSelectionHoverSnapshot"
+let drawerAutomationMixedTempoRowID = "swiftcore/AutomationPage::mixedDragTempoRow"
+
+// A real hover over a staged mixed selection compares the full post-hover
+// snapshot. The hover capture below is an opaque pre-stimulus snapshot.
+@MainActor
+func drawerAutomationMixedSelectionHoverSnapshot(_ report: CheckReport, suite: DocumentSession,
+                                                 service: ProjectService) {
+    let fixture = drawerAutomationMixedSelectionFixture(suite: suite, service: service)
+    fixture.activate(.tempo)
+    fixture.page.selectRange(from: 96, to: 144,
+                             lanes: [fixture.panLane, fixture.lfoLane, .tempo])
+    let hoverBefore = DrawerAutomationStagedSnapshot(fixture.document)
+    _ = fixture.page.pointerMove(x: fixture.x(96), y: fixture.y(.tempo, 120), buttons: 0)
+    guard fixture.page.hoverVisible else {
+        report.fail(drawerAutomationMixedHoverID, "the mixed-selection hover publishes its hover")
+        return
+    }
+    report.expectEqual(expected: hoverBefore, actual: DrawerAutomationStagedSnapshot(fixture.document),
+                       cppID: drawerAutomationMixedHoverID,
+                       what: "mixed-selection hover compares full-song bytes revision and undo index")
+}
+
+// The mixed Tempo/Pan/LFO drag lands the complete effective Tempo row with
+// preserved endpoints.
+@MainActor
+func drawerAutomationMixedDragTempoRow(_ report: CheckReport, suite: DocumentSession,
+                                       service: ProjectService) {
+    let fixture = drawerAutomationMixedSelectionFixture(suite: suite, service: service)
+    fixture.activate(.tempo)
+    fixture.page.selectRange(from: 96, to: 144,
+                             lanes: [fixture.panLane, fixture.lfoLane, .tempo])
+    let endX = drawerAutomationArmHorizontalTempoDrag(fixture)
+    _ = fixture.page.pointerRelease(x: endX, y: fixture.y(.tempo, 120),
+                                    button: AutomationQtButton.left,
+                                    modifiers: AutomationQtModifier.shift)
+    report.expect(fixture.tempoValues == ["0:80", "144:120", "384:64"]
+                  && fixture.document.state.tempo.first(where: { $0.tick == 144 })?
+                      .microsecondsPerQuarterNote == 499_999,
+                  cppID: drawerAutomationMixedTempoRowID,
+                  message: "the mixed drag keeps the complete Tempo row with exact endpoints")
+}
