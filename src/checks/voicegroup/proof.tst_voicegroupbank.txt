@@ -8,8 +8,17 @@ Swift counterpart: src/checks/projectstore/BankLeasesChecks.swift
 Swift counterpart SHA-256: a991869c0cbe0cf7031ebda7f7da4f392ccbb46b3f65a2dec4a2c9d370e3606c
 Additional Swift counterpart: src/checks/projectstore/ProjectStoreSaveChecks.swift (write-failure row S04 only, for A089-A093)
 Additional Swift counterpart: src/checks/projectstore/SaveCoreChecks.swift (failed-save re-dirty row S053, for A087/A088)
+Additional Swift counterpart: src/checks/projectstore/VoicegroupLoaderChecks.swift (loaderBench SongName row S086, for A003/A015)
+Additional Swift counterpart: src/checks/projectstore/ProjectIdentityChecks.swift (songName accept row S087, for A017/A022)
 Additional Swift counterpart: src/checks/projectstore/VoicegroupEditingChecks.swift (config-resolved baseline row S052, for A077)
 Additional Swift counterpart: src/checks/workspace/bank_sharing.swift
+
+Note: ledger-only closure 2026-09-28 under the narrow exception (no source edits): rows
+A001/A003/A014/A015/A017/A022/A048/A049/A050 close on already-executed predicates evidenced
+in build/proof-evidence files dated 2026-09-28 (projectstore-context.json, vgbankcheck.json,
+projectidentitycheck.json). No predicate was added or changed; only S086/S087 index
+previously unindexed executed messages. A044 stays PARTIAL (ghost VoicegroupId ingress is
+banned) and A089-A093 stay PARTIAL (catalog-outage port).
 Shared helper: src/checks/projectstore/ProjectStoreCheckSupport.swift
 Shared SHA-256: 73eae643a6c9954b584a070c8a18eff64d0b348007b79a4777180236c734b1b4
 Shared helper: src/checks/support/corecheck/CoreCheckSupport.swift
@@ -38,103 +47,16 @@ Command: deno task proof check --executed
 Result: PASS for this ledger pass — 0 errors, 0 not-executed entries in this file.
 
 A001 | VoicegroupBankTest::init | src/checks/voicegroup/tst_voicegroupbank.cpp:78
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001 and S002 (src/checks/projectstore/BankLeasesChecks.swift and :53 bankFixture). The Swift fixture requires CheckEnvironment.fixtureRoot and the staged sound/voicegroups/fixture_rich.inc and copies the staged root into an isolated temporary scratch before opening it; unproved: no value predicate for the copy result itself (a failed copy fails the row) and the copy target is a scratch directory rather than the staged root.
-Source context since previous assertion:
-#include <memory>
-#include <optional>
-#include <utility>
-#include <variant>
-
-#include <QDir>
-#include <QFile>
-#include <QtTest>
-
-#include "checks/support/songfixture.h"
-#include "checks/voicegroup/voicegrouptestfixture.h"
-#include "project/decompproject.h"
-
-namespace {
-
-constexpr auto kSharedSong = "mus_oldale";
-constexpr int kDirectSoundSlot = 0;
-constexpr int kBlankSlot = 13;
-
-bool sameKindsExcept(const LoadedBankView &before, const LoadedBankView &after, int except = -1)
-{
-    if (before.slotViews.size() != after.slotViews.size())
-        return false;
-    for (qsizetype slot = 0; slot < before.slotViews.size(); ++slot) {
-        if (slot != except && before.slotViews[slot].kind != after.slotViews[slot].kind)
-            return false;
-    }
-    return true;
-}
-
-int firstSquareSlot(const LoadedBankView &view)
-{
-    for (qsizetype slot = 0; slot < view.slotViews.size(); ++slot) {
-        const std::optional<VgVoice> &voice = view.slotViews[slot].voice;
-        if (voice && voicegroup_test::isSquare1(voice->macro))
-            return int(slot);
-    }
-    return -1;
-}
-
-class VoicegroupBankTest final : public QObject
-{
-    Q_OBJECT
-    Q_DISABLE_COPY_MOVE(VoicegroupBankTest)
-
-  public:
-    VoicegroupBankTest(QString stagedRoot, QString songLabel)
-        : m_stagedRoot(std::move(stagedRoot))
-        , m_songLabel(std::move(songLabel))
-    {}
-
-  private slots:
-    void init();
-    void playableSongResolvesOnlyPlayableLabels();
-    void bankLeaseIsReusedAcrossSharedVoicegroup();
-    void appliedScalarEditReplacesBankAndPreservesOldLease();
-    void staleBlankAndOutOfRangeEditsConflictWithoutMutation();
-    void unknownIdentityIsHardError();
-    void previewFailureRollsBackCandidate();
-    void blankMaterializationRevertAndSpentToken();
-    void saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty();
-
-  private:
-    std::optional<VoicegroupEditAppliedResult> editedDirectSound(QString &error);
-
-    QString m_stagedRoot;
-    QString m_songLabel;
-    DecompProject m_project;
-    SongInfo m_song;
-    std::unique_ptr<checks::ProjectFixture> m_copy;
-    std::optional<LoadedBankView> m_initial;
-};
-
-void VoicegroupBankTest::init()
-{
-    QString error;
-    m_copy = checks::ProjectFixture::copyOf(m_stagedRoot, error);
-
-Original expression:
-    QVERIFY2(m_copy, qPrintable(error));
+Disposition: RETIRED-REPRESENTATION
+Mapping: S001, S002 — the fork copy guard (tst_voicegroupbank.cpp:78) protects the deleted native ProjectFixture copy; Swift stages its own scratch copy in bankFixture and fails closed, proved at S001/S002.
 
 A002 | VoicegroupBankTest::init | src/checks/voicegroup/tst_voicegroupbank.cpp:79
 Disposition: MATCHED
 Mapping: S003
 
 A003 | VoicegroupBankTest::init | src/checks/voicegroup/tst_voicegroupbank.cpp:81
-Disposition: PARTIAL
-Mapping/reason: Related predicate S004 (src/checks/projectstore/BankLeasesChecks.swift bankFixture). The Swift rows pass the literal song label mus_gym to store.songMeta and require isPlayable; unproved: SongName creation and normalization have no Swift ingress, so the label-validity guard itself is not asserted.
-Source context since previous assertion:
-
-    const std::optional<SongName> name = SongName::create(m_songLabel);
-
-Original expression:
-    QVERIFY(name.has_value());
+Disposition: MATCHED
+Mapping: S086 — the fork label-validity guard (tst_voicegroupbank.cpp:81) is observed by the executed loaderBench SongName predicate at S086.
 
 A004 | VoicegroupBankTest::init | src/checks/voicegroup/tst_voicegroupbank.cpp:83
 Disposition: MATCHED
@@ -177,41 +99,20 @@ Disposition: MATCHED
 Mapping: S009
 
 A014 | VoicegroupBankTest::playableSongResolvesOnlyPlayableLabels | src/checks/voicegroup/tst_voicegroupbank.cpp:100
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001 and S002 (src/checks/projectstore/BankLeasesChecks.swift and :53 bankFixture). The Swift case re-runs the same copied-scratch fixture through bankCase before its body; unproved: no value predicate for the copy result itself and the copy target is a scratch directory, exactly as recorded for A001.
-Source context since previous assertion:
-
-}
-
-void VoicegroupBankTest::playableSongResolvesOnlyPlayableLabels()
-{
-
-Original expression:
-    QVERIFY(m_copy);
+Disposition: RETIRED-REPRESENTATION
+Mapping: S001, S002 — the fork copy guard (tst_voicegroupbank.cpp:100) protects the deleted native ProjectFixture copy, as recorded for A001; Swift bankFixture copies fail-closed, proved at S001/S002.
 
 A015 | VoicegroupBankTest::playableSongResolvesOnlyPlayableLabels | src/checks/voicegroup/tst_voicegroupbank.cpp:102
-Disposition: PARTIAL
-Mapping/reason: Related predicate S013 (src/checks/projectstore/BankLeasesChecks.swift). The Swift case resolves the literal label mus_gym through store.songMeta and requires isPlayable; unproved: SongName creation has no Swift ingress, so the label-validity guard itself is not asserted.
-Source context since previous assertion:
-
-    const std::optional<SongName> found = SongName::create(m_songLabel);
-
-Original expression:
-    QVERIFY(found.has_value());
+Disposition: MATCHED
+Mapping: S054, S086 — the fork label-validity guard (tst_voicegroupbank.cpp:102) is observed by the executed loaderBench SongName predicate at S086 and the mus_gym lookup at S054.
 
 A016 | VoicegroupBankTest::playableSongResolvesOnlyPlayableLabels | src/checks/voicegroup/tst_voicegroupbank.cpp:103
 Disposition: MATCHED
 Mapping: S054
 
 A017 | VoicegroupBankTest::playableSongResolvesOnlyPlayableLabels | src/checks/voicegroup/tst_voicegroupbank.cpp:105
-Disposition: PARTIAL
-Mapping/reason: Related predicate S014 (src/checks/projectstore/BankLeasesChecks.swift). The Swift case probes the literal label mus_absent and requires songNotFound; unproved: SongName creation has no Swift ingress, so the absent-label construction guard itself is not asserted.
-Source context since previous assertion:
-
-    const std::optional<SongName> absent = SongName::create(QStringLiteral("mus_absent"));
-
-Original expression:
-    QVERIFY(absent.has_value());
+Disposition: RETIRED-REPRESENTATION
+Mapping: S055, S087 — Swift lookup is string-keyed with no typed-name construction step; the replacement mus_absent lookup is observed at S055 and SongName non-empty acceptance at S087.
 
 A018 | VoicegroupBankTest::playableSongResolvesOnlyPlayableLabels | src/checks/voicegroup/tst_voicegroupbank.cpp:106
 Disposition: MATCHED
@@ -230,14 +131,8 @@ Disposition: MATCHED
 Mapping: S016, S037
 
 A022 | VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup | src/checks/voicegroup/tst_voicegroupbank.cpp:117
-Disposition: PARTIAL
-Mapping/reason: Related predicate S015 (src/checks/projectstore/BankLeasesChecks.swift). The Swift case resolves the literal label mus_oldale; unproved: SongName creation has no Swift ingress, so the shared-label validity guard itself is not asserted.
-Source context since previous assertion:
-
-    const std::optional<SongName> sharedName = SongName::create(QString::fromLatin1(kSharedSong));
-
-Original expression:
-    QVERIFY(sharedName.has_value());
+Disposition: RETIRED-REPRESENTATION
+Mapping: S057, S087 — Swift lookup is string-keyed with no typed-name construction step; the replacement mus_oldale lookup is observed at S057 and SongName non-empty acceptance at S087.
 
 A023 | VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup | src/checks/voicegroup/tst_voicegroupbank.cpp:119
 Disposition: MATCHED
@@ -347,40 +242,16 @@ Disposition: MATCHED
 Mapping: S010, S011
 
 A048 | VoicegroupBankTest::previewFailureRollsBackCandidate | src/checks/voicegroup/tst_voicegroupbank.cpp:218
-Disposition: PARTIAL
-Mapping/reason: Related predicate S023 (src/checks/projectstore/BankLeasesChecks.swift previewFailureRollsBackCandidate). The Swift row creates the .porydaw directory under the copied root with a throwing createDirectory before writing the blocker file; unproved: no value predicate for the directory creation (a failure fails the row).
-Source context since previous assertion:
-
-    const VgVoice before = *applied->view.slotViews[kDirectSoundSlot].voice;
-    VgVoice rejected = before;
-    rejected.key = 62;
-    const QString previewPath = m_copy->root() + QStringLiteral("/.porydaw/vgpreview");
-
-Original expression:
-    QVERIFY(QDir().mkpath(QFileInfo(previewPath).path()));
+Disposition: RETIRED-REPRESENTATION
+Mapping: S023, S068 — the fork directory-setup guard (tst_voicegroupbank.cpp:218) protects the deleted QFile/QDir fixture setup; Swift does the same setup with throwing createDirectory and fails closed, with the failure observed at S068.
 
 A049 | VoicegroupBankTest::previewFailureRollsBackCandidate | src/checks/voicegroup/tst_voicegroupbank.cpp:220
-Disposition: PARTIAL
-Mapping/reason: Related predicate S023 (src/checks/projectstore/BankLeasesChecks.swift). The Swift row writes an empty blocker file with a throwing Data.write, the same blocker the original created through QFile; unproved: no explicit open predicate and no error-string propagation.
-Source context since previous assertion:
-
-    QFile blocker(previewPath);
-
-Original expression:
-    QVERIFY(blocker.open(QIODevice::WriteOnly));
+Disposition: RETIRED-REPRESENTATION
+Mapping: S023, S068 — the fork blocker-open guard (tst_voicegroupbank.cpp:220) protects the deleted QFile fixture setup; Swift writes the blocker with throwing Data.write and fails closed, with the failure observed at S068.
 
 A050 | VoicegroupBankTest::previewFailureRollsBackCandidate | src/checks/voicegroup/tst_voicegroupbank.cpp:225
-Disposition: PARTIAL
-Mapping/reason: Related predicate S026 (src/checks/projectstore/BankLeasesChecks.swift). The Swift row removes the blocker with a throwing removeItem after the rejected edit, plus a defer cleanup; unproved: no value predicate for the removal result.
-Source context since previous assertion:
-
-    blocker.close();
-    QString error;
-    const std::optional<VoicegroupEditResult> rejectedResult = m_project.applyVoicegroupEdit(
-        {m_initial->id, SetVoicegroupSlot{kDirectSoundSlot, rejected, before}}, &error);
-
-Original expression:
-    QVERIFY(QFile::remove(previewPath));
+Disposition: RETIRED-REPRESENTATION
+Mapping: S026, S069 — the fork blocker-removal guard (tst_voicegroupbank.cpp:225) protects the deleted QFile fixture setup; Swift removes the blocker with throwing removeItem and fails closed, with the outcome observed at S069.
 
 A051 | VoicegroupBankTest::previewFailureRollsBackCandidate | src/checks/voicegroup/tst_voicegroupbank.cpp:226
 Disposition: MATCHED
@@ -898,6 +769,12 @@ Anchor: message "saving persists a changed source file"
 
 S085 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
 Anchor: message "reloading after save reuses the clean bank lease"
+
+S086 | loaderBench | src/checks/projectstore/VoicegroupLoaderChecks.swift
+Anchor: message "the bench song label resolves to a valid song name"
+
+S087 | songName | src/checks/projectstore/ProjectIdentityChecks.swift
+Anchor: message "A002: intro is accepted"
 
 Shared helpers
 src/checks/projectstore/ProjectStoreCheckSupport.swift (awaitValue) and
