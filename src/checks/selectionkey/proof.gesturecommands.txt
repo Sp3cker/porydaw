@@ -11,8 +11,14 @@ Additional Swift counterpart: src/checks/rollcheck/note_commands.swift
 Additional Swift counterpart: src/checks/nativegraphics/PlayheadFeatureChecks.swift
 Additional Swift counterpart: src/checks/velocity/VelocityRollCoreChecks.swift
 Additional Swift counterpart: src/checks/keyboard/KeybindingRegistryChecks.swift
-Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
+Additional QML counterpart: src/checks/editorqml/tst_EditorDrawerAutomationFocus.qml (SHA-256 85ba76c8b04ef9ebfe67defc08faaef667ca7c0bb57b02947c05ba68d89db0ad)
+Additional QML counterpart: src/checks/editorqml/tst_EditorDrawerAutomationCamera.qml (SHA-256 afb3956545b95e48794d47db703447b2b6032dab49abf778b7ebd08f846011af)
 
+Task 180 verification command: deno task verify:qml --verbose --filter editorqml-drawer --qt <all 12 Camera+Focus selectors>
+Task 180 verification result: PASS 1/1 — Camera 9 passed, Focus 7 passed, 0 failed (both phases), as reported by the Task180 implementer handoff; this ledger writer did not rerun the lane. Frozen Focus source SHA-256: 85ba76c8b04ef9ebfe67defc08faaef667ca7c0bb57b02947c05ba68d89db0ad. S032-S033 index the Focus predicates.
+
+Task 180 verification command: deno task verify --filter swiftcore --verbose
+Task 180 verification result: PASS 12/37 ok, 25 skipped (Task180 implementer handoff; ledger writer did not rerun the lane).
 
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run.
@@ -286,32 +292,12 @@ Original expression:
   QTRY_VERIFY2(view().userGestureActive(), "automation pan did not become a live gesture")
 
 A016 | SelectionKeyGestureTest::automationPanGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:150
-Disposition: PARTIAL
-Mapping/reason: PARTIAL - the pan's invariance (S017 'panning mutates nothing', S018 'the released pan leaves document and history untouched'), the Escape cancel keeping the time selection (S027, S028) and the arbiter's live-gesture Delete consumption with a time selection staged (S026) all execute; unproved as stated: no predicate delivers Delete (nor a real Escape) against a live middle-button pan, so the pan's own Delete no-op and its post-cancel time-selection preservation are not asserted.
-Source context since previous assertion:
-  ;
-      selectionkey::deliverKey(window(), deleteKey->key(), deleteKey->keyboardModifiers());
-      QTest::keyClick(window(), Qt::Key_Escape);
-      mouseRelease(Qt::MiddleButton, automationPress);
-
-Original expression:
-  QVERIFY2(!view().userGestureActive() && document().smf().write() == automationBeforeGesture &&
-                   view().selectionModel().timeSelection().active() &&
-                   document().revision() == revisionBefore &&
-                   document().undoStack()->count() == undoDepthBefore,
-               "automation gesture did not block Delete and preserve its time selection on "
-               "Escape")
+Disposition: MATCHED
+Mapping: S032 (the mounted pan consumes real Delete without mutation and first Escape preserves its staged time selection; revision plus lane values and cursor preserve the fork's undo-depth no-op evidence, because every history push advances revision and no undo counter is exposed).
 
 A017 | SelectionKeyGestureTest::automationPanGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:157
-Disposition: PARTIAL
-Mapping/reason: PARTIAL - the idle Escape clearing an explicit time selection (S029) and the gesture-first Escape keeping it (S027, S028) both execute on the automation page in one function; unproved as stated: no predicate runs the second Escape immediately after a pan cancellation, so the cancel-then-clear sequence itself is not staged.
-Source context since previous assertion:
-  ;
-      QTest::keyClick(window(), Qt::Key_Escape);
-
-Original expression:
-  QVERIFY2(!view().selectionModel().timeSelection().active(),
-               "second Escape after automation cancellation did not clear time selection")
+Disposition: MATCHED
+Mapping: S033 (the second real Escape immediately follows first-Escape pan cancellation and clears the time selection).
 
 Remaining original source (closing sequence and helper bodies):
   ;
@@ -414,3 +400,9 @@ Anchor: message "delete"
 S031 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
 Anchor: message "backspace"
 
+
+S032 | test_productionAutomationPanGuardsSharedCommands | src/checks/editorqml/tst_EditorDrawerAutomationFocus.qml
+Anchor: message "automation gesture did not block Delete and preserve its time selection on Escape"
+
+S033 | test_productionAutomationPanGuardsSharedCommands | src/checks/editorqml/tst_EditorDrawerAutomationFocus.qml
+Anchor: message "second Escape after automation cancellation did not clear time selection"

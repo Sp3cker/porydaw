@@ -11,12 +11,20 @@ Additional QML counterpart: src/checks/editorqml/tst_ShellTabsClose.qml (SHA-256
 
 Additional Swift counterpart: src/checks/velocity/VelocityClickCancellationChecks.swift (SHA-256 a6c01dfed6222a92baf0a66cd197d2478c66308846d19e19f26a01cf00c713cb)
 Additional QML counterpart: src/checks/editorqml/tst_ShellWindowVelocity.qml (SHA-256 704d960146aa25775af130f7105e4c72834062b259476631c95e0d258ea45b93)
+Additional QML counterpart: src/checks/editorqml/tst_EditorDrawerAutomationCamera.qml (SHA-256 afb3956545b95e48794d47db703447b2b6032dab49abf778b7ebd08f846011af)
+
 
 
 NATIVE is no longer used: every site that observed a native-window, embedding, delivery, framebuffer, settings, popup, or harness obligation is RETIRED-REPRESENTATION, because the mechanism that carried it is gone (this C++ file was deleted at 31ea635f, appears in no CMake target, and checkcatalog.cpp registers no host entry; re-verified 2026-09-24). GAP sites are behavior assertions whose Swift owners exist but whose original predicates have no executed Swift equivalent; each mapping names the owner verified under src/swift/app. The Reference revision and Original SHA-256 below were re-verified against each other (git show <revision>:<path> | shasum -a 256) before any retirement claim.
 
-Command: deno task proof check
-Result: Task144 ledger writer ran `deno task proof check` once after settled edits: successful, zero errors reported; 68 proof files, 4864 indexed C++ sites, 4588 anchors resolved (28 historical). Warning: strict-mapping debt: 485 sites. This checks structure and tallies, not source freshness, execution, or semantic parity.
+Task 180 verification command: deno task verify:qml --verbose --filter editorqml-drawer --qt <all 12 Camera+Focus selectors>
+Task 180 verification result: PASS 1/1 — Camera 9 passed, Focus 7 passed, 0 failed (both phases), as reported by the Task180 implementer handoff; this ledger writer did not rerun the lane. Frozen Camera source SHA-256: afb3956545b95e48794d47db703447b2b6032dab49abf778b7ebd08f846011af. S058-S063 index the six Camera predicates.
+
+Task 180 verification command: deno task verify --filter swiftcore --verbose
+Task 180 verification result: PASS 12/37 ok, 25 skipped (Task180 implementer handoff; ledger writer did not rerun the lane).
+
+Task 144 proof-structure result (historical): `deno task proof check` succeeded with zero errors; 68 proof files, 4864 indexed C++ sites, 4588 anchors resolved (28 historical), strict-mapping debt warning 485 sites. This is Task144's historical result, not the Task180 check run recorded below.
+
 Command: deno task verify --filter swiftcore-projectsession
 Result: PASS 1/36 ok (task-67 locked run on the frozen tree, quoted from the implementer handoff; ledger writer ran no lane). Execution evidence: build/proof-evidence/swiftcore-projectsession.json lists every HostBehaviorChecks predicate message anchored as S001-S010 below.
 
@@ -599,44 +607,22 @@ A082 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:376
 Disposition: RETIRED-REPRESENTATION
 
 A083 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:377
-Disposition: GAP
-Mapping/reason: Swift AutomationPage/AutomationInteraction owns the focused timeline band after the focus request; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QTRY_VERIFY(view.focusedTimelineBand() == songview::TimelineBand::Automation)
+Disposition: MATCHED
+Mapping: S058
 
 A084 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:378
 Disposition: RETIRED-REPRESENTATION
 
 A085 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:391
-Disposition: GAP
-Mapping/reason: Swift AutomationPage/AutomationInteraction owns the quick-window mouse-grabber identity during the pan; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
-Source context since previous assertion:
-  ;
-          const QByteArray midi = document.smf().write();
-          const uint64_t revision = document.revision();
-          const int undo = document.undoStack()->count();
-          const QPointF point(input->width() / 2.0, input->height() / 2.0);
-          const QPoint windowPoint = input->mapToScene(point).toPoint();
-          QTest::mouseEvent(QTest::MouseMove, quickWindow, Qt::NoButton, Qt::NoModifier, windowPoint);
-          QTest::mousePress(quickWindow, Qt::MiddleButton, Qt::NoModifier, windowPoint);
-          bool buttonHeld = true;
-          const auto releaseButton = qScopeGuard([quickWindow, windowPoint, &buttonHeld] {
-              if (buttonHeld)
-                  QTest::mouseRelease(quickWindow, Qt::MiddleButton, Qt::NoModifier, windowPoint);
-          });
-
-Original expression:
-  QTRY_COMPARE(quickWindow->mouseGrabberItem(), static_cast<QQuickItem *>(input))
+Disposition: MATCHED
+Mapping: S059
 
 A086 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:392
 Disposition: RETIRED-REPRESENTATION
 
 A087 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:397
-Disposition: GAP
-Mapping/reason: Swift AutomationPage/AutomationInteraction owns the mouse grabber cleared after the pan release; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S060 proves the forced-ungrab and page-switch routes end the pan without document mutation; unproved: WindowDeactivate has no mounted ingress.
 Source context since previous assertion:
   ;
           if (route == QStringLiteral("page-switch")) {
@@ -651,20 +637,15 @@ A088 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:399
 Disposition: RETIRED-REPRESENTATION
 
 A089 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:400
-Disposition: GAP
-Mapping/reason: Swift VelocityPage owns the focused timeline band after the velocity focus request; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QTRY_VERIFY(view.focusedTimelineBand() == songview::TimelineBand::Velocity)
+Disposition: MATCHED
+Mapping: S061
 
 A090 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:401
 Disposition: RETIRED-REPRESENTATION
 
 A091 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:407
-Disposition: GAP
-Mapping/reason: Swift AutomationPage/AutomationInteraction owns the mouse-grabber identity on the second focus path; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S062 proves that the pan keeps its grab and motion after band focus moves; unproved: WindowDeactivate has no mounted ingress.
 Source context since previous assertion:
   ;
           } else {
@@ -713,13 +694,8 @@ Original expression:
   QCOMPARE(document.undoStack()->count(), undo)
 
 A098 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:418
-Disposition: GAP
-Mapping/reason: Swift AutomationPage/AutomationInteraction owns the mouse grabber cleared at the end of the pan slot; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!quickWindow->mouseGrabberItem())
+Disposition: MATCHED
+Mapping: S063
 
 A099 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:441
 Disposition: RETIRED-REPRESENTATION
@@ -1568,3 +1544,21 @@ Source line: 654
 cppID: swiftcore/HostBehaviorChecks::bandGeometry
 Predicate: report.expect(band.available == beforeAvailable && band.visible == beforeVisible && band.contentUrl == beforeUrl && [band.bodyX, band.bodyY, band.bodyWidth, band.bodyHeight, band.handleY, band.handleHeight, band.toggleX, band.toggleY, band.toggleSize, liveDrawer.plotOrigin, liveDrawer.plotWidth] == beforeValues, cppID: id, message: "A142: restoring a different appearance preserves every measured automation band geometry field")
 Anchor: message "A142: restoring a different appearance preserves every measured automation band geometry field"
+
+S058 | test_productionAutomationPanLifecycleFocusGrabAndInterruptions | src/checks/editorqml/tst_EditorDrawerAutomationCamera.qml
+Anchor: message "the focus request publishes the automation band as focused"
+
+S059 | test_productionAutomationPanLifecycleFocusGrabAndInterruptions | src/checks/editorqml/tst_EditorDrawerAutomationCamera.qml
+Anchor: message "moves outside the plot keep reaching the live pan"
+
+S060 | test_productionAutomationPanLifecycleFocusGrabAndInterruptions | src/checks/editorqml/tst_EditorDrawerAutomationCamera.qml
+Anchor: message "the forced ungrab and the page switch leave no grab and write nothing"
+
+S061 | test_productionAutomationPanLifecycleFocusGrabAndInterruptions | src/checks/editorqml/tst_EditorDrawerAutomationCamera.qml
+Anchor: message "the velocity band owns focus after the focus move"
+
+S062 | test_productionAutomationPanLifecycleFocusGrabAndInterruptions | src/checks/editorqml/tst_EditorDrawerAutomationCamera.qml
+Anchor: message "the pan keeps its grab and motion after the band focus moves"
+
+S063 | test_productionAutomationPanLifecycleFocusGrabAndInterruptions | src/checks/editorqml/tst_EditorDrawerAutomationCamera.qml
+Anchor: message "the released pan leaves no grab and writes nothing"

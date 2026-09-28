@@ -181,11 +181,11 @@ enum EditorQmlLane {
             ("AutomationTabs", "parameterLabelsFitGutterAtDerivedMinimum_data parameterLabelsFitGutterAtDerivedMinimum productionAutomationPageMountsAndRenders productionAutomationTabSwitchAndGhosts"),
             ("AutomationTransactions", "productionAutomationDomainRowsThroughInput productionAutomationPromptTransaction productionAutomationBandHalfOpenPhysicalBoundaryDpr1 productionAutomationBandHalfOpenPhysicalBoundaryDpr2"),
             ("AutomationPointMenu", "productionAutomationRangeSubmenu productionAutomationOutsideRightRetarget productionAutomationPointMenuDeleteAndDismiss productionAutomationSyntheticDefaultMenuRoute"),
-            ("AutomationFocus", "automationModalsRetireWithPage productionAutomationSetValuePromptFocusRoute productionAutomationTempoPromptFocusRoute productionAutomationSpacePriority"),
+            ("AutomationFocus", "automationModalsRetireWithPage productionAutomationSetValuePromptFocusRoute productionAutomationTempoPromptFocusRoute productionAutomationSpacePriority productionAutomationPanGuardsSharedCommands"),
             ("AutomationLaneMenu", "productionAutomationMenusAndLaneCommands productionAutomationClearRowClick productionAutomationRange64RowClick productionAutomationCopyRowClick productionAutomationPasteRowClick productionAutomationBandCopyPasteIsLaneScoped"),
             ("AutomationTempo", "productionAutomationTempoPromptPresentation productionAutomationCenteredPromptOffset productionAutomationTapTempoThroughInput"),
             ("PagePlayhead", "productionAutomationFollowAndCancellation productionAllPagesPlayheadPerformance productionVoiceChangesPlayheadPerformance"),
-            ("AutomationCamera", "productionAutomationBandGeometry productionAutomationSectionResizeKeepsTabsClickable productionAutomationMiddlePanAndTrackSwitch productionAutomationEmptySwitchPreservesGrid productionAutomationViewStateAcrossDrawerPages productionAutomationWheelZoomPreservesDrawerState"),
+            ("AutomationCamera", "productionAutomationBandGeometry productionAutomationSectionResizeKeepsTabsClickable productionAutomationMiddlePanAndTrackSwitch productionAutomationEmptySwitchPreservesGrid productionAutomationViewStateAcrossDrawerPages productionAutomationWheelZoomPreservesDrawerState productionAutomationPanLifecycleFocusGrabAndInterruptions"),
             ("AutomationPreview", "productionAutomationDragPreviews productionAutomationPanSelectedRingPixels productionAutomationPencilPreviewAndLabel"),
             ("ReferenceProfiles", "referenceProfileBeforeCapturePencilCursorScale referenceProfileCapture"),
         ]

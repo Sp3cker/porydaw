@@ -8,6 +8,7 @@ import "EditorDrawerPageSupport.js" as PageSupport
 import "EditorDrawerAutomationTabsSupport.js" as AutomationTabsSupport
 import "EditorDrawerAutomationGestureSupport.js" as AutomationGestureSupport
 import "EditorDrawerAutomationMenuSupport.js" as AutomationMenuSupport
+import "EditorDrawerVelocitySupport.js" as VelocitySupport
 
 EditorDrawerTestSupport {
     id: testCase
@@ -338,5 +339,120 @@ EditorDrawerTestSupport {
         fuzzyCompare(AutomationTabsSupport.automationPlot(testCase).mapToItem(testCase.surface, 0, 0).x,
                      testCase.surface.timelineSplitX, 0.01,
                      "the zoom preserves the drawer's page state")
+    }
+    function test_productionAutomationPanLifecycleFocusGrabAndInterruptions() {
+        if (testCase.containerPhase) skip("production composition only")
+        AutomationTabsSupport.mountProductionAutomation(testCase, "automation-pan-lifecycle",
+            { "automationVisible": true, "velocityVisible": true, "activePage": "automation" })
+        var model = AutomationTabsSupport.automationModel(testCase)
+        var page = AutomationTabsSupport.automationPageItem(testCase)
+        var plot = AutomationTabsSupport.automationPlot(testCase)
+        var input = AutomationTabsSupport.automationPlotInput(testCase)
+        var velocityPlot = VelocitySupport.velocityPlot(testCase)
+        var grid = testCase.surface.gridModel
+        verify(page && plot && input && velocityPlot,
+               "the mounted automation and velocity bands expose their plots and input")
+        // A real hide plus a real show: the returning focus request names the
+        // automation band.
+        LayoutSupport.clickToggle(testCase, testCase.automationKind)
+        tryVerify(function() { return !testCase.section(testCase.automationKind).visible },
+                  1000, "hiding the automation page clears its section")
+        var focusRevision = testCase.presenter().focusRequest
+        LayoutSupport.clickToggle(testCase, testCase.automationKind)
+        tryVerify(function() {
+            return testCase.presenter().focusTarget === testCase.automationKind
+                && testCase.presenter().focusRequest !== focusRevision
+                && page.activeFocus
+        }, 2000, "the focus request publishes the automation band as focused")
+        // Opaque pre-stimulus snapshots: every interruption below writes nothing.
+        var revision = bootstrap.automationDocumentRevision()
+        var values = bootstrap.automationLaneValues()
+        var cursor = grid.editCursorTick
+        var x0 = input.width / 2
+        var y0 = input.height / 2
+        var scrollStart = grid.cameraScrollX
+        mousePress(input, x0, y0, Qt.MiddleButton)
+        mouseMove(input, x0 - 24, y0, -1, Qt.MiddleButton)
+        // Outside the input rect but inside the window: only a held grab still
+        // delivers this travel to the pan.
+        var outsideX = -40
+        mouseMove(input, outsideX, y0, -1, Qt.MiddleButton)
+        tryVerify(function() {
+            return Math.abs(grid.cameraScrollX - (scrollStart + (x0 - outsideX))) < 1.0
+                && bootstrap.automationInteractionActive()
+                && input.cursorShape === Qt.ClosedHandCursor
+        }, 2000, "moves outside the plot keep reaching the live pan")
+        // Forced-ungrab route with the button held: hiding the band makes Qt
+        // release the grab, and the input's cancel ends the pan.
+        LayoutSupport.clickToggle(testCase, testCase.automationKind)
+        tryVerify(function() { return !bootstrap.automationInteractionActive() },
+                  2000, "hiding the band releases its grab and ends the live pan")
+        var ungrabEnded = !bootstrap.automationInteractionActive()
+        var ungrabScroll = grid.cameraScrollX
+        mouseMove(input, x0 - 30, y0)
+        wait(120)
+        var ungrabFrozen = grid.cameraScrollX === ungrabScroll
+        mouseRelease(input, x0 - 30, y0, Qt.MiddleButton)
+        // Page-switch route: re-show automation, press a fresh pan, then switch
+        // the active page with the button held; the drawer cancels the pan.
+        LayoutSupport.clickToggle(testCase, testCase.automationKind)
+        tryVerify(function() { return testCase.section(testCase.automationKind).visible },
+                  1000, "re-showing the automation page restores its section")
+        input = AutomationTabsSupport.automationPlotInput(testCase)
+        plot = AutomationTabsSupport.automationPlot(testCase)
+        tryVerify(function() { return input && input.width > 0 && input.height > 0 },
+                  1000, "the re-shown automation input has live geometry")
+        x0 = input.width / 2
+        y0 = input.height / 2
+        mousePress(input, x0, y0, Qt.MiddleButton)
+        tryVerify(function() { return bootstrap.automationInteractionActive() },
+                  1000, "the switched page's middle press starts a live pan")
+        LayoutSupport.clickToggle(testCase, testCase.velocityKind)
+        tryVerify(function() { return !bootstrap.automationInteractionActive() },
+                  2000, "switching the drawer page ends the live pan")
+        var switchEnded = !bootstrap.automationInteractionActive()
+        var releaseX = input.width / 2
+        mouseRelease(input, releaseX, input.height / 2, Qt.MiddleButton)
+        var settledScroll = grid.cameraScrollX
+        mouseMove(input, releaseX - 30, input.height / 2)
+        wait(120)
+        var switchFrozen = grid.cameraScrollX === settledScroll
+            && !bootstrap.automationInteractionActive()
+        verify(ungrabEnded && ungrabFrozen && switchEnded && switchFrozen
+                && bootstrap.automationDocumentRevision() === revision
+                && bootstrap.automationLaneValues() === values
+                && grid.editCursorTick === cursor,
+                "the forced ungrab and the page switch leave no grab and write nothing")
+        // Focus-loss route: re-show velocity, press a fresh pan, then move band
+        // focus while held; programmatic like the fork's own focus call.
+        LayoutSupport.clickToggle(testCase, testCase.velocityKind)
+        tryVerify(function() { return testCase.section(testCase.velocityKind).visible },
+                  1000, "re-showing the velocity page restores its section")
+        velocityPlot = VelocitySupport.velocityPlot(testCase)
+        x0 = input.width / 2
+        y0 = input.height / 2
+        scrollStart = grid.cameraScrollX
+        mousePress(input, x0, y0, Qt.MiddleButton)
+        tryVerify(function() { return bootstrap.automationInteractionActive() },
+                  1000, "the fresh middle press starts a live pan")
+        LayoutSupport.focusControl(testCase, velocityPlot)
+        tryVerify(function() {
+            return velocityPlot.activeFocus && !plot.activeFocus && !model.plotFocused
+        }, 2000, "the velocity band owns focus after the focus move")
+        mouseMove(input, x0 - 24, y0, -1, Qt.MiddleButton)
+        tryVerify(function() {
+            return Math.abs(grid.cameraScrollX - (scrollStart + 24)) < 1.0
+                && bootstrap.automationInteractionActive()
+        }, 2000, "the pan keeps its grab and motion after the band focus moves")
+        mouseRelease(input, x0 - 24, y0, Qt.MiddleButton)
+        var endScroll = grid.cameraScrollX
+        mouseMove(input, x0 - 54, y0)
+        wait(120)
+        verify(grid.cameraScrollX === endScroll
+                && !bootstrap.automationInteractionActive()
+                && bootstrap.automationDocumentRevision() === revision
+                && bootstrap.automationLaneValues() === values
+                && grid.editCursorTick === cursor,
+                "the released pan leaves no grab and writes nothing")
     }
 }

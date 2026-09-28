@@ -317,4 +317,42 @@ EditorDrawerTestSupport {
         compare(bootstrap.automationInteractionActive(), false,
                 "the cancelled page reports no interaction")
     }
+    function test_productionAutomationPanGuardsSharedCommands() {
+        if (testCase.containerPhase) skip("production composition only")
+        AutomationTabsSupport.mountProductionAutomation(testCase, "automation-pan-commands",
+            { "automationVisible": true, "velocityVisible": true, "activePage": "automation" })
+        var input = AutomationTabsSupport.automationPlotInput(testCase)
+        var grid = testCase.surface.gridModel
+        verify(input, "the mounted automation page exposes its plot input")
+        // Stage a lanes-scope time selection through the production range band:
+        // a right drag past the drag distance publishes it on release.
+        var y = input.height / 2
+        var x1 = input.width * 0.3
+        mousePress(input, x1, y, Qt.RightButton)
+        mouseMove(input, x1 + 80, y, -1, Qt.RightButton)
+        mouseRelease(input, x1 + 80, y, Qt.RightButton)
+        var range = bootstrap.automationSelectionRange()
+        verify(range.length > 0, "the right-drag band staged a time selection")
+        // Opaque pre-stimulus snapshots: the live pan swallows Delete and the
+        // first Escape cancels only the pan.
+        var revision = bootstrap.automationDocumentRevision()
+        var values = bootstrap.automationLaneValues()
+        var cursor = grid.editCursorTick
+        var x = input.width / 2
+        mousePress(input, x, y, Qt.MiddleButton)
+        tryVerify(function() { return bootstrap.automationInteractionActive() },
+                  1000, "the middle press starts a live pan")
+        keyClick(Qt.Key_Delete)
+        keyClick(Qt.Key_Escape)
+        mouseRelease(input, x, y, Qt.MiddleButton)
+        verify(!bootstrap.automationInteractionActive()
+                && bootstrap.automationDocumentRevision() === revision
+                && bootstrap.automationLaneValues() === values
+                && grid.editCursorTick === cursor
+                && bootstrap.automationSelectionRange() === range,
+                "automation gesture did not block Delete and preserve its time selection on Escape")
+        keyClick(Qt.Key_Escape)
+        tryVerify(function() { return bootstrap.automationSelectionRange() === "" },
+                  1000, "second Escape after automation cancellation did not clear time selection")
+    }
 }
