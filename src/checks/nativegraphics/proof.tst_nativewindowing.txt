@@ -5,16 +5,19 @@ Original: src/checks/nativegraphics/tst_nativewindowing.cpp
 Original SHA-256: 582680d75ae76272483d539b25d0716d043a765c5f324cbcc9821170036d5745
 Swift counterpart: src/checks/trackheaders/headerfixture.swift; src/checks/trackheaders/trackheadermenu.swift; src/checks/trackheaders/headerinputfixture.swift
 Additional QML counterpart: src/checks/rollqml/tst_SwiftRollWindowing.qml
+Additional QML counterpart: src/checks/editorqml/tst_ShellSettings.qml :: test_gridContrastPreviewApplyAndRevert (SHA-256 fdd677a8ff284ab31ccc3f8fe2e6755ef7c6999a128135f563d8b998f4bbb0b9)
 Counterpart SHA-256: 202e6e5257f5ad7fb131eefec85b2df74fc8d225938f13932291d1dec84aa7b9
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Disposition tally: 78 sites: 46 MATCHED, 28 GAP, 4 RETIRED-REPRESENTATION.
+Disposition tally: 78 sites: 47 MATCHED, 27 GAP, 4 RETIRED-REPRESENTATION.
 
 Command: deno task verify --filter swiftcore --verbose
 Result: passing — the suite ran green with these checks registered.
 Command: deno task verify:qml-roll
 Result: PASS — Task154 implementer-reported `swiftroll-window` (1/1); the header picker scenario and existing windowing cases ran green after correcting QtTest character delivery. The initial run failed on multi-character key delivery and was corrected before this pass. Frozen counterpart SHA-256: 202e6e5257f5ad7fb131eefec85b2df74fc8d225938f13932291d1dec84aa7b9.
 Execution evidence for A030–A036: the registered rollqml `test_headerSelectionAndVoiceRequest` executes these predicates in the same picker journey; this proof-only pass did not rerun the lane.
+Command: deno task verify:shell --filter shell-settings --verbose
+Result: PASS — Task169 implementer-reported `shell-settings` lane; this proof-only ledger pass did not rerun it. The lane executes A047 in `test_gridContrastPreviewApplyAndRevert`.
 Converted-window command: deno task verify:qml --verbose
 
 A001 | NativeWindowingTest::freshRig | src/checks/nativegraphics/tst_nativewindowing.cpp:115
@@ -344,13 +347,8 @@ A046 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraph
 Disposition: MATCHED
 
 A047 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:304
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: ThemeController::commit writes theme/grid-line-contrast through the C++ settings path; the Swift scene has no theme controller — the palette->repaint contract is covered by the rollqml check.
-Source context since previous assertion:
-  ;
-      apply->click();
-Original expression:
-  QCOMPARE(settings.value(QStringLiteral("theme/grid-line-contrast")).toInt(), 100)
+Disposition: MATCHED
+Mapping: S008 — after Apply, the mounted settings journey observes persisted theme.grid-line-contrast equal to 100.
 
 A048 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:306
 Disposition: MATCHED
@@ -660,3 +658,8 @@ S007 | test_headerSelectionAndVoiceRequest | src/checks/rollqml/tst_SwiftRollWin
 Source line: 348
 Predicate: tryCompare(loader, "item", null, 5000, "A036: Escape unmounts the header voice picker")
 Anchor: message "A036: Escape unmounts the header voice picker"
+
+S008 | test_gridContrastPreviewApplyAndRevert | src/checks/editorqml/tst_ShellSettings.qml
+Source line: 194
+Predicate: verify(waitForNative(function() { return nativeSettings.int("theme.grid-line-contrast", -1) === 100 }, 5000), "A047 Apply commits grid-line contrast 100 to preferences")
+Anchor: message "A047 Apply commits grid-line contrast 100 to preferences"

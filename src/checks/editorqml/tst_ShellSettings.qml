@@ -147,6 +147,77 @@ TestCase {
         tryCompare(model, "maxPcmChannels", savedChannels)
         tryCompare(reopenedField, "value", savedChannels)
     }
+    function test_gridContrastPreviewApplyAndRevert() {
+        nativeSettings.setString("theme.mode", "vanilla")
+        nativeSettings.setInt("theme.grid-line-contrast", 50)
+        const presenter = createShell()
+        const app = presenter.session
+        app.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        verify(waitForNative(function() { return app.songOpen || app.lastSaveError.length > 0 }, 30000),
+               "grid contrast fixture song loads: " + app.lastSaveError)
+        verify(app.songOpen, "grid contrast fixture opens a mounted song")
+        const page = findChild(shell.sceneLoader.item, "songTab_" + app.songTabs.selectedId)
+        const surface = page ? findChild(page, "swiftRollOverlay") : null
+        verify(surface && surface.gridModel, "the grid contrast journey has a mounted roll")
+        const palette = surface.gridModel.palette
+        function alpha(hex) {
+            return hex.length === 9 ? parseInt(hex.substring(1, 3), 16) : 255
+        }
+        compare(alpha(palette.gridLine), 63, "the mounted grid begins at the default opacity")
+
+        presenter.activate("edit.engine_settings")
+        tryCompare(dialog(), "visible", true)
+        const slider = findChild(dialog(), "gridLineContrastSlider")
+        verify(!!slider, "the engine settings page exposes the contrast control")
+        tryCompare(slider, "value", 50)
+        function dragContrast(targetX) {
+            mousePress(slider, slider.handle.x + slider.handle.width / 2, slider.height / 2)
+            mouseMove(slider, targetX, slider.height / 2)
+            mouseRelease(slider, targetX, slider.height / 2)
+        }
+        dragContrast(slider.handle.width / 2)
+        tryCompare(slider, "value", 0)
+        tryCompare(presenter, "gridLineContrast", 0)
+        compare(alpha(palette.gridLine), 0, "soft preview removes opacity from the mounted grid")
+        compare(nativeSettings.int("theme.grid-line-contrast", -1), 50,
+                "live preview does not commit the contrast preference")
+
+        dragContrast(slider.width - slider.handle.width / 2)
+        tryCompare(slider, "value", 100)
+        tryCompare(presenter, "gridLineContrast", 100)
+        compare(alpha(palette.gridLine), 255, "strong preview makes the mounted grid opaque")
+        const apply = findChild(dialog(), "settingsApply")
+        verify(!!apply, "the mounted settings dialog has an Apply button")
+        verify(apply.enabled && apply.width > 0 && apply.height > 0,
+               "Apply remains available after grid preview")
+        mouseClick(apply, apply.width / 2, apply.height / 2)
+        verify(waitForNative(function() {
+            return nativeSettings.int("theme.grid-line-contrast", -1) === 100
+        }, 5000), "A047 Apply commits grid-line contrast 100 to preferences")
+
+        dragContrast(slider.handle.width / 2)
+        tryCompare(presenter, "gridLineContrast", 0)
+        compare(alpha(palette.gridLine), 0, "moving away previews the soft grid again")
+        const cancel = findChild(dialog(), "settingsCancel")
+        verify(!!cancel, "the mounted settings dialog has a Cancel button")
+        mouseClick(cancel, cancel.width / 2, cancel.height / 2)
+        tryCompare(presenter, "gridLineContrast", 100)
+        compare(alpha(palette.gridLine), 255, "Cancel restores the committed strong grid")
+        presenter.activate("edit.engine_settings")
+        tryCompare(dialog(), "visible", true)
+        tryCompare(slider, "value", 100)
+        dragContrast(slider.handle.width / 2)
+        tryCompare(presenter, "gridLineContrast", 0)
+        dialog().close()
+        tryCompare(presenter, "gridLineContrast", 100)
+        compare(alpha(palette.gridLine), 255, "closing after another preview restores strong grid")
+        presenter.activate("edit.engine_settings")
+        tryCompare(dialog(), "visible", true)
+        tryCompare(slider, "value", 100)
+        compare(nativeSettings.int("theme.grid-line-contrast", -1), 100,
+                "reopening preserves the committed grid contrast")
+        nativeSettings.setInt("theme.grid-line-contrast", 50)
+    }
     function test_songFlagsAndReferenceGeometry() {
         const presenter = createShell()
         const app = presenter.session

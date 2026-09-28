@@ -6,6 +6,7 @@ ThemedWindow {
     id: dialog
     objectName: "settingsDialog"
     required property QtObject store
+    required property QtObject presenter
     required property QtObject applicationSession
     readonly property real unit: applicationSession.baseFontPx / 12
     property int selectedTab: 0
@@ -36,7 +37,9 @@ ThemedWindow {
         if (store.songAvailable)
             songPage.item.finishVoicegroupEdit()
         store.apply()
+        presenter.commitGridLineContrast()
     }
+    onClosing: presenter.discardGridLineContrast()
 
     Rectangle {
         id: body
@@ -131,6 +134,38 @@ ThemedWindow {
             typography: dialog.applicationSession.typographyFonts
         }
     }
+    Row {
+        id: contrastRow
+        parent: body
+        objectName: "gridContrastRow"
+        x: enginePage.x
+        y: enginePage.y + enginePage.height - height - dialog.unit * 2
+        width: enginePage.width
+        height: dialog.applicationSession.typographyFonts.body.pixelSize * 3
+        spacing: dialog.unit * 8
+        visible: dialog.selectedTab === 0
+        Text {
+            id: contrastLabel
+            width: enginePage.item ? enginePage.item.labelWidth : 0
+            height: parent.height
+            verticalAlignment: Text.AlignVCenter
+            text: qsTr("Grid contrast:")
+            color: dialog.colors.windowText
+            font: Qt.font(dialog.applicationSession.typographyFonts.body)
+        }
+        Slider {
+            id: contrastSlider
+            objectName: "gridLineContrastSlider"
+            width: contrastRow.width - contrastLabel.width - contrastRow.spacing
+            height: parent.height
+            from: 0
+            to: 100
+            stepSize: 1
+            value: dialog.presenter.gridLineContrast
+            font: Qt.font(dialog.applicationSession.typographyFonts.body)
+            onMoved: dialog.presenter.setGridLineContrast(Math.round(value))
+        }
+    }
     Item {
         objectName: "button-box"
         parent: body
@@ -139,8 +174,10 @@ ThemedWindow {
         width: 240 - 21 * (dialog.unit - 1)
         height: 18 + 12 * (dialog.unit - 1)
         Button {
+            id: applyButton
             objectName: "settingsApply"
-            x: 0; height: parent.height; text: qsTr("Apply")
+            x: 0; width: (parent.width - 2 * dialog.unit) / 3
+            height: parent.height; text: qsTr("Apply")
             font: Qt.font(dialog.applicationSession.typographyFonts.body)
             enabled: !dialog.store.isApplying
             onClicked: dialog.commit()
@@ -148,16 +185,16 @@ ThemedWindow {
         Button {
             id: cancelButton
             objectName: "settingsCancel"
-            x: parent.width - implicitWidth - okButton.implicitWidth - 9 * dialog.unit
-            height: parent.height; text: qsTr("Cancel")
+            x: applyButton.width + dialog.unit
+            width: applyButton.width; height: parent.height; text: qsTr("Cancel")
             font: Qt.font(dialog.applicationSession.typographyFonts.body)
             onClicked: dialog.close()
         }
         Button {
             id: okButton
             objectName: "settingsOK"
-            x: parent.width - implicitWidth
-            height: parent.height; text: qsTr("OK")
+            x: cancelButton.x + cancelButton.width + dialog.unit
+            width: applyButton.width; height: parent.height; text: qsTr("OK")
             font: Qt.font(dialog.applicationSession.typographyFonts.body)
             enabled: !dialog.store.isApplying
             onClicked: {

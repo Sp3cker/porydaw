@@ -245,6 +245,7 @@ ThemedWindow {
         objectName: "shellSettingsDialog"
         transientParent: root
         store: shell.settingsStore
+        presenter: shell
         colors: root.colors
         applicationSession: shell.session
     }

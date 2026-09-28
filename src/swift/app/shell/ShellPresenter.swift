@@ -573,12 +573,33 @@ public final class ShellPresenter: QmlInstantiableStatus {
         store.synchronize()
     }
 
+    private var committedGridLineContrast = 50
+
+    public func setGridLineContrast(value: Int) {
+        gridLineContrast = min(100, max(0, value))
+        ShellAppearance.apply(to: session.palette, mode: themeMode, contrast: gridLineContrast)
+        session.eventListPresenter().refreshAppearance()
+        if session.songOpen { session.gridPresenter().reloadVisuals() }
+    }
+
+    public func commitGridLineContrast() {
+        committedGridLineContrast = gridLineContrast
+        let store = PreferencesStore()
+        store.setInt(key: "theme.grid-line-contrast", value: gridLineContrast)
+        store.synchronize()
+    }
+
+    public func discardGridLineContrast() {
+        setGridLineContrast(value: committedGridLineContrast)
+    }
+
     public func restoreAppearance() {
         let store = PreferencesStore()
         ShellAppearance.removeLegacyCustomKeys(store: store)
         themeMode = ShellAppearance.mode(store.string(key: "theme.mode", fallback: ""))
         gridLineContrast = ShellAppearance.contrast(
             store.string(key: "theme.grid-line-contrast", fallback: ""))
+        committedGridLineContrast = gridLineContrast
         ShellAppearance.apply(to: session.palette, mode: themeMode, contrast: gridLineContrast)
         session.eventListPresenter().refreshAppearance()
         if session.songOpen { session.gridPresenter().reloadVisuals() }
