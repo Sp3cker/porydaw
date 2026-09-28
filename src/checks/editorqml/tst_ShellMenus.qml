@@ -71,8 +71,8 @@ ShellMenusSupport {
         var file = findChild(shell, "shellFileMenu")
         var edit = findChild(shell, "shellEditMenu")
         var view = findChild(shell, "shellViewMenu")
-        menuOrder(file, ["file.open_project", "file.save_song", "file.close_tab", "file.quit"])
-        compare(file.count, 4, "the File menu keeps only the mounted file rows")
+        menuOrder(file, ["file.open_project", "file.new_song", "file.save_song", "file.close_tab", "file.quit"])
+        compare(file.count, 5, "the File menu keeps only the mounted file rows")
         verify(findChild(file, "shellAction_songs.find") === null,
                "Find Song moves from File to the Edit clipboard group")
         var clipboard = ["roll.copy", "roll.cut", "roll.paste", "roll.delete",
