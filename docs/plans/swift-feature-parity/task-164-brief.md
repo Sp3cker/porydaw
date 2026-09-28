@@ -1,76 +1,70 @@
-# Task 164 brief — message-anchor the voicegroup bank and source-editing debt
+# Task 164 brief — activating a polyphony event row reveals its note in the roll
 
 # Context
 
-The largest verified strict-mapping clusters whose existing literal predicates already
-execute: **56 sites** across two voicegroup ledgers. Both checks emit bare distinctive
-literals that appear verbatim in their evidence artifacts (verified at planning):
-`src/checks/projectstore/BankLeasesChecks.swift` emits 36 clause literals whose rows
-appear in `build/proof-evidence/vgbankcheck.json`; `src/checks/projectstore/
-VoicegroupEditingChecks.swift` emits bare messages since 0b12f4e7 and its rows appear
-in `build/proof-evidence/projectstore-editing.json`. The debt is only that the cited
-S-sites carry `Anchor: function`.
+The mounted Event List selects a row but never reveals its note: `EventListTable.qml`'s
+row-header click calls `page.selectRow(...)` and requests focus only — the fork's
+`headerRevealNote` behavior (activating a raw polyphony event row selects and reveals
+the corresponding note in the roll) is missing user-visible behavior. Build it on the
+existing Event List surface and prove the fork's reveal/no-mutation contract.
 
-Selected debt sites (from the live `deno task proof check --strict-mappings`
-inventory; re-derive the exact list at freeze):
-
-| Ledger | Sites | A-ids |
-|---|---:|---|
-| `src/checks/voicegroup/proof.tst_voicegroupbank.txt` | 38 | A002–A013, A019, A021, A025, A027, A028, A034, A036–A040, A043, A047, A051, A053, A058–A062, A068, A069, A074–A076, A078, A084 (cited S-sites S003–S046 in `BankLeasesChecks.swift`) |
-| `src/checks/voicegroup/proof.voicegroupsourceediting.txt` | 18 | A015–A018, A031, A043–A052, A055, A056, A082 (cited S-sites among S001–S090 in `VoicegroupEditingChecks.swift`) |
-
-Conversion rule per site: the cited S-site's `Anchor: function` becomes
-`Anchor: message "<literal>"` quoting the exact executed literal emitted by that
-S-site's function; add `#n` occurrence indexes where the literal repeats inside the
-function. A019–A021's shared lease-reuse literal legitimately covers two clauses: both
-A-rows may cite the same message-anchored S; keep the existing shared-reason wording.
-Any site whose literal cannot be uniquely matched stays debt with an explicit reason —
-do not force it.
+Surface: raw-event row activation in the mounted Event List.
+Ledger spec: `src/checks/rollcheck/proof.presentation.txt` A018–A024 (7 PARTIAL), the
+ledger's only open rows — fork `PianoRollTest::headerRevealNote` at pinned revision
+`02752345`, `src/checks/rollcheck/presentation.cpp:153-181`: a polyphony row activation
+selects the track/note and scrolls the roll to it; misses preserve the documented
+selection semantics; activation creates no undo history and does not alter exported
+MIDI bytes.
+Verify lanes: `deno task verify:shell --filter shell-event-list --verbose` (and the
+roll-reveal observation through the same mounted window).
+Blocked rows left untouched: none in this ledger; the automation raster pixel rows and
+every other ledger stay out.
 
 # Exact write set
 
-- `src/checks/voicegroup/proof.tst_voicegroupbank.txt` — the 38 selected sites' S-anchors only (anchor ownership handed to the ledger writer under the standing protocol).
-- `src/checks/voicegroup/proof.voicegroupsourceediting.txt` — the 18 selected sites' S-anchors only.
-
-No check-source changes: the literals already exist and execute.
+- `src/ui/songview/quick/EventListTable.qml` — row activation reveals the note (selection + camera reveal) through the existing presenter seam.
+- `src/swift/app/eventlist/` (presenter/controller file that owns row actions) — the reveal command only, conditional repair.
+- `src/checks/editorqml/tst_ShellEventList.qml` — mounted reveal/miss/no-mutation journeys.
+- `src/checks/rollcheck/proof.presentation.txt` — A018–A024 only.
 
 # Prerequisites
 
-None. Disjoint from Task 158. Read sprint-3 §19 for shared constraints.
+None. Disjoint from Task 158 and every sibling brief. Read sprint-3 §19.
 
 # Interface contract
 
-Anchors must resolve against the live check sources (`deno task proof check` reports
-no `literal not found`/ambiguity) and match executed rows (`proof check --executed`).
-Dispositions stay MATCHED; only anchor kinds and occurrence indexes change. The
-before/after `(ledger, A-id)` strict inventory is recorded in the task report.
+Reuse `EventListPresenter`'s row model and the existing selection APIs; the reveal
+routes through the production note-selection and camera-reveal paths the roll already
+exposes (the same ones click-selection uses) — no ghost API, no direct grid mutation
+from QML. A hit selects exactly the note and moves the camera to its tick/lane; a miss
+(row without a resolvable note) leaves selection, revision, history and bytes
+untouched; activation never creates an undo entry. Independent literals for the
+expected selected note id/tick.
 
 # Implementation steps
 
-1. Capture the fresh strict inventory for both ledgers (before).
-2. For each selected site, identify the cited S-site's function, its emitted literal,
-   and the evidence row; upgrade the anchor with occurrence index where needed.
-3. Re-run both lanes for fresh evidence, then the strict inventory (after); the delta
-   must equal exactly the converted set.
+1. Add the reveal command on the row-activation path (click/Enter on the row header
+   area the fork used), routing through the presenter to note selection + reveal.
+2. Extend `tst_ShellEventList.qml` with hit, miss and no-mutation journeys driving
+   real input and observing the mounted roll's selection/camera state.
+3. Close A018–A024 in the same commit; the ledger's remaining rows are already
+   closed, so it is deleted with its already-absent C++ source cited at the pinned
+   revision. Compact form for closed rows: header + `Disposition` + one S-citing
+   mapping line; no pasted C++/Swift code.
 
 # Acceptance predicate
 
-Every converted site is `MATCHED` with a message anchor whose literal resolves and
-executes; the strict debt for these two ledgers falls from 56 to only the sites left
-with explicit reasons.
-
-Named checks under §19 ownership:
+A user activating a polyphony event row sees its note selected and revealed in the
+roll, with no document effects; the presentation ledger closes whole.
 
 ```sh
-/usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter vgbankcheck --verbose
-/usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter projectstore-editing --verbose
-deno task proof check
-deno task proof check --strict-mappings
+/usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify:shell --filter shell-event-list --verbose
 deno task proof check --executed
+deno task proof list
 ```
 
 # Task-specific constraints
 
-No disposition changes, no new predicates, no check-source edits, no compaction. This
-is the renewed bounded mapping exception: only sites whose existing executed literals
-prove the clause convert; everything else keeps its debt with a written reason.
+No new selection subsystem, no Event List menu relabeling, no roll-side edits beyond
+consuming its existing reveal API. `tst_ShellWindow*.qml`, `tst_EditorDrawer.qml` and
+every sibling ledger stay untouched.

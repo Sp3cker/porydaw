@@ -2668,78 +2668,59 @@ and the computed write-set intersections; no application suite was run.
   A009/A010/A013; physical audio output; ImageIO decoding; strict-mapping debt outside
   Task146's exception: all unchanged.
 
-## 19. Wave 163–170 — Review159 fix, renewed mapping exception and identity closure
+## 19. Wave 163–170 — Review159 fix and seven surface-first completions
 
 ### Selection and bounded briefs
 
 Planning baseline: `deno task proof list` reports **63 ledgers** with Task 158 in
-flight (its ledger and QML file stay out of every write set). Strict-mapping debt is
-**293 sites**; a programmatic join (debt A-id → cited S-ids → anchor kind → emitted
-literals → evidence rows) classified every site as one of three shapes:
-**func-only** (the cited S-site carries `Anchor: function` while its function emits a
-distinctive executed literal — a pure anchor upgrade), **dangling** (the Mapping cites
-S-ids that do not exist in the ledger's index), and **no-mapping** (MATCHED rows with
-no Mapping line at all — per-row re-derivation). `proof check --executed` is clean
-(0 not executed) after 0b12f4e7. The user renewed task-146's bounded mapping
-exception: convert only sites whose existing literal predicates already execute.
+flight; strict-mapping debt is **293 sites**. A first draft of this section proposed
+ledger-only mapping batches; it was rejected against
+`.omp/rules/proof-ledger-workflow.md` (no reconciliation waves; a brief naming only
+ledgers or disposition targets is invalid) and is superseded by this surface-first
+plan. Strict-mapping debt is now addressed only incidentally: a closed row's
+message anchor lands in the same commit as the code and checks that prove it, and no
+task targets disposition counts.
 
-| Task | Surface / brief | Sites | Group | Route / seat |
-|---|---|---:|---|---|
-| 163 | [Reload drops a stale primary track instead of installing it](task-163-brief.md) | 1 fix + regression | A | SDD-track / sdd-implementer — Review159 production defect on the mounted reload surface |
-| 164 | [Message-anchor the voicegroup bank and source-editing debt](task-164-brief.md) | 56 | A | SDD-track / sdd-implementer — anchor upgrades on verified executed literals |
-| 165 | [Message-anchor the import, gesture-contract, remap and presentation debt](task-165-brief.md) | 25 | A | SDD-track / sdd-implementer — anchor upgrades, 8 sites left with reasons |
-| 166 | [Repair windowtier_keyboard's dangling S citations](task-166-brief.md) | 20 | B | SDD-track / sdd-implementer — add the missing site entries the preamble credits |
-| 167 | [Re-audit project identity A001–A019 and close the ledger whole](task-167-brief.md) | 19 PARTIAL → MATCHED | A | SDD-track / sdd-implementer — executed predicates exist; whole-ledger deletion |
-| 168 | [Restore missing mappings in mainwindowrouting_native](task-168-brief.md) | 26 | B | SDD-track / sdd-implementer — per-row re-derivation pilot |
-| 169 | [Restore missing mappings in windowtier_lifetime](task-169-brief.md) | 22 | B | SDD-track / sdd-implementer — same shape as 168 |
-| 170 | [Restore missing mappings in nativewindowing](task-170-brief.md) | 39 | B | SDD-track / sdd-implementer — largest no-mapping cluster, track-header literals |
-| **Total** | | **182 debt + 19 rows + 1 fix** | | |
+Each brief below names a user-visible surface whose behavior is missing or divergent,
+verified against the fork (each ledger's pinned revision) and the current Swift/QML
+code at planning time:
 
-Expected strict-debt movement: 293 − (56 + 25 + 20 + 26 + 22 + 39) = 105 remaining
-when every selected site converts; uncovered sites stay debt with written reasons, so
-the honest floor is higher. Identity (167) is the wave's whole-ledger closure: its 19
-PARTIAL rows are the ledger's only open rows and their predicates already execute
-under `projectidentitycheck`.
+| Task | Surface / brief | Rows | Group |
+|---|---|---|---|
+| 163 | [Reload drops a stale primary track instead of installing it](task-163-brief.md) | 1 fix + regression | A |
+| 164 | [Activating a polyphony event row reveals its note in the roll](task-164-brief.md) | presentation A018–A024 (7 PARTIAL; ledger closes whole) | A |
+| 165 | [Deleting a track remaps SongView-owned state atomically](task-165-brief.md) | remap A044/A045/A048/A049/A056–A058 (7 PARTIAL; ledger closes whole) | B |
+| 166 | [Voicegroup switch/null terminates an active velocity gesture](task-166-brief.md) | hostintegration A114–A120; hostseams A017 (ledger closes whole) | A |
+| 167 | [Physical B-key mode switch retains a held stroke at its snapped cell](task-167-brief.md) | automationownership 15 PARTIAL | A |
+| 168 | [A stale time-signature form accepts typed edits and closes harmlessly](task-168-brief.md) | routing input A092 + A113–A115 | A |
+| 169 | [Grid contrast becomes a real setting in the mounted settings dialog](task-169-brief.md) | nativewindowing A047 | A |
+| 170 | [A reloaded song presents its resolved bank identity to the voicegroup dock](task-170-brief.md) | ioflow A051–A054 | A |
 
-### Unselected debt, with evidence
-
-- `swiftrollgated/clipboardchecks` (27): debt sites cite S054 (`pastedAt`, a QML
-  helper in `ShellClipboardSupport.qml`) whose function body emits no literals; the
-  proving predicates live in other functions, so conversion is S-site re-definition,
-  not a literal swap — outside this renewal's "existing literal per cited site" rule.
-- `midi/tst_midiexport` (23): `ExportChecks.swift` emits no `message:`/`what:`
-  literals; its evidence rows are QTest-style function names. No existing literals to
-  anchor.
-- `host/tst_hostadapter` (15): Task 158 is live-editing this ledger.
-- `samplecheck/analysis` (14): P4 sample studio exclusion.
-- Tails left with reasons inside selected ledgers: contract A028–A030, remap
-  A016/A029, themelayout_settings A035–A044 (QML-cited), selection A032/A060,
-  selftest_transport A014/A018, tabs_transport (7, no-mapping but small — rides a
-  future surface task).
-
-### Remaining GAP/PARTIAL census (rejection evidence unchanged)
-
-Scouts re-confirmed the wave-155 rejections: workspace A030–A083, ioflow A039–A065,
-iomutations A073–A097 are protocol deferrals with no event bus to assert against;
-retained duplicates executing session predicates; nativewindowing A055–A078 need
-rendered stimulus current inputs do not produce and A047 has no theme dialog;
-mainwindowrouting input GAPs are fixture guards, lifecycle close/reopen residues are
-project-store-snapshot blocked, and the foreign-window cluster has no proven Cocoa
-second-window lane; hostintegration A162 is fixture-setup proof and A174–A185 need a
-real window close/teardown contract; rollcheck presentation A018–A024 need a mounted
-polyphony-reveal consumer that does not exist (new feature scope, not proof closure);
-rollcheck remap PARTIALs are blocked by the single-selection-per-session fixture
-limit. Project identity was the one honest whole-ledger closure and is selected (167).
+Evidence for the missing behaviors: `EventListTable.qml` row clicks only select the
+table row (no roll reveal); `DocumentSession+Selection.swift:13,47` and
+`DocumentSession.swift:96-98` structurally forbid the note+time selection coexistence
+the remap clauses stage; the hostintegration ledger states voice-replace/null has "no
+voicegroup-switch cancel plumbing"; the ownership rows' landed predicates accept
+loose endpoints (ticks 166–168 vs the fork's exact `endCell.tickBegin`) and never
+deliver the physical B key; the stale-form mounted delivery clauses are named unproved
+in the routing input ledger; `ShellPresenter.gridLineContrast` has a restore path but
+no writing surface; and the ioflow ledger records that only the timeline callback —
+never the bank view identity — is observed.
 
 ### Conflict matrix and dispatch groups
 
-All eight complete write sets are pairwise disjoint, including conditional repairs:
-163 owns `ApplicationSession+Tabs.swift` + `tst_ShellTabsReload.qml`; 164–170 each own
-distinct proof ledgers (164/165 own disjoint ledger sets); 167 deletes
-`proof.identity.txt`. Lane sharing is read-only. Under the standing protocol, ledger
-files in a write set mean anchor ownership: implementers verify and hand the anchor
-inventory to the ledger writer, who applies it in the same commit as the task's
-evidence.
+All eight complete write sets are pairwise disjoint, including conditional repairs
+(163 `ApplicationSession+Tabs.swift`; 164 `EventListTable.qml` + eventlist presenter;
+165 `DocumentSession+Selection.swift` + the delete-track command seam; 166 the
+velocity cancellation seam + `VelocityClickCancellationChecks.swift` +
+`tst_ShellWindow.qml`; 167 `automationcanvasediting.swift` + `tst_EditorDrawer.qml`;
+168 `tst_ShellGridMenuRulerLifecycle.qml` + `session_time_routing.swift`; 169
+`SettingsDialog.qml` + `ShellPresenter.swift`; 170 `tst_ShellVoicegroup.qml` + the
+bank check file). Lane sharing is read-only. Task 158's write set
+(`tst_SwiftRollTrackHeaders.qml`, `proof.tst_hostadapter.txt`,
+`TrackHeadersGeometry.swift`) is excluded from everything; 165's production seam must
+not land in `TrackHeadersGeometry.swift` — if the delete-track command lives there,
+165 sequences after 158's checkpoint.
 
 | | 163 | 164 | 165 | 166 | 167 | 168 | 169 | 170 |
 |---|---|---|---|---|---|---|---|---|
@@ -2747,41 +2728,50 @@ evidence.
 
 | Group | Tasks | Note |
 |---|---|---|
-| A | 163, 164, 165, 167 | Direct work: production fix, verified-literal upgrades, executed-evidence closure. Dispatch immediately. |
-| B | 166, 168, 169, 170 | Re-derivation quartet (dangling citations and missing mappings); same methodology, one reviewer recommended. Also parallel-safe — grouping is for coherence, not sequencing. |
+| A | 163, 164, 166, 167, 168, 169, 170 | Independent writers; dispatch immediately after the landed-wave gate. |
+| B | 165 | Parallel-safe (no write conflicts) but grouped alone: the selection-coexistence edit is the wave's riskiest change and carries its own preservation list of landed clearing predicates that must stay green. |
 
 ### Shared constraints and verification ownership
 
-The §16–§18 contracts continue. The mapping exception is bounded exactly as renewed:
-only sites whose cited (or preamble-credited) predicates emit distinctive literals
-that resolve in live sources and appear in executed evidence convert; dispositions
-never change in 164–166/168–170; every task records an exact before/after
-`(ledger, A-id)` strict inventory; uncovered sites keep debt with written reasons.
-Task 167 upgrades dispositions only where executed evidence exists and deletes its
-ledger whole. 163 is a production behavior fix: fail-closed staging, real input, real
-prompt controls, independent expected literals.
+The §16–§18 contracts continue: fork clauses win; one predicate per clause;
+independent literal expectations; fail-closed staging; real production entry points
+and real input on mounted surfaces; expected identities compared only against
+pre-transaction captures; WCAG AA beats parity; DPR claims gate on the lane's
+declared DPR; queued QtBridge notifications keep same-GUI-pass clauses PARTIAL.
+
+Ledger instructions for every task: rows are edited only in the commit whose code and
+checks prove them; closed rows use the compact form — header + `Disposition` + one
+S-citing mapping line, no pasted C++/Swift code (cite the pinned revision for
+originals); whole-ledger deletion (164, 165, 166's hostseams) also records the
+already-absent C++ source. Under the standing protocol the separate ledger writer
+applies each task's accepted rows from the implementer's evidence.
 
 Writers run their brief's focused lanes under the lock/175-second alarm; no
 project-wide builds, tests, formatters or linters mid-flight; mounted lanes need the
 macOS Qt desktop. After accepted sources settle, the controller owns the project-wide
 gate once (§16's locked `verify --verbose`, `verify:shell --verbose`,
 `proof check --executed`) and reads `proof check --strict-mappings` as the exact debt
-inventory. Planning validation for this docs-only commit checked brief
-links/headings, the programmatic debt join, lane registrations
-(`vgbankcheck`, `projectstore-editing`, `swiftcore-midiimport`,
-`swiftcore-projectsession`, `shell-tabs-reload`, `shellwindow`, `shell-tabs`,
-`projectidentitycheck`), literal/evidence spot checks, and pairwise write-set
-disjointness; no application suite was run.
+inventory — incidental reductions from these surfaces are welcome, targeted
+reductions are not. Planning validation for this docs-only commit checked brief
+links/headings, fork citations at pinned revisions, lane registrations
+(`shell-tabs-reload`, `shell-event-list`, `shellwindow`, `editorqml-drawer`,
+`shell-grid-menu-ruler-lifecycle`, `shell-settings`, `shell-theme`,
+`shell-voicegroup`, `swiftcore-projectsession`, `swiftcore-bankhistory`), the cited
+missing-behavior evidence, and pairwise write-set disjointness; no application suite
+was run.
 
 ### Deferred and excluded
 
-- Review159's neighbors stay as designed: only the unfiltered primary at
-  `ApplicationSession+Tabs.swift:177` changes; no new API, no persisted-recipe
-  migration (a stale saved selection simply drops to nil on restore).
-- clipboardchecks, midiexport, hostadapter, samplecheck and the small tails above
-  stay debt with their evidence; tabs_transport rides a future surface task.
-- All standing exclusions remain: savecore A016–A026, P3 WAV export, P4 sample
-  studio, transport A009/A010/A013, physical audio output, ImageIO decoding, the
-  pending-reload input gate, and no new strict-mapping scope beyond the renewed
-  clusters named here.
-
+- Strict-mapping debt (293 sites) has no dedicated tasks in this wave: clipboard
+  checks' helper-anchored sites, midiexport's literal-less evidence, hostadapter's
+  in-flight ledger, samplecheck's P4 rows and the small tails keep their debt until
+  a surface task's commit touches their rows incidentally.
+- Remaining GAP clusters keep their standing rejection evidence: workspace/ioflow/
+  iomutations protocol deferrals, retained's duplicate consumers, nativewindowing
+  A055–A078 (rendered stimulus) and A002/A008 (Win32), routing fixture guards and
+  snapshot/foreign-window blocks, hostintegration A162/A174–A185, the import wizard,
+  ED11 clipboard text ownership.
+- Review159's neighboring restore fields stay as designed; only the unfiltered
+  primary changes. All standing exclusions (savecore A016–A026, P3 WAV, P4 sample
+  studio, transport A009/A010/A013, physical audio, ImageIO, pending-reload gate)
+  are unchanged.

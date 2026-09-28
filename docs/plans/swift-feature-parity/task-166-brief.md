@@ -1,73 +1,80 @@
-# Task 166 brief — repair windowtier_keyboard's dangling S citations
+# Task 166 brief — voicegroup switch/null terminates an active velocity gesture
 
 # Context
 
-`src/checks/selectionkey/proof.windowtier_keyboard.txt` carries **20 strict-debt sites
-whose `Mapping:` lines cite S-ids that do not exist in the ledger's own site index**
-(A-rows cite S018/S019/S023/S027–S049/S063/S094/S096/S111; the index begins at S120).
-The ledger preamble records that these predicates are real and executed: the shellwindow
-run "executes the shellwindow predicates S018-S036 plus the grip/chrome rows S037-S040
-and the parameter-tab/tap rows S041-S060 through the shellwindow entry of
-ShellQmlTests.swift". The citations dangle because those site entries were never
-written into the index — the debt is missing bookkeeping, not missing proof.
+Replacing or clearing the song's voicegroup while a velocity gesture is held must
+terminate the gesture cleanly — preview cleared, bytes/revision/history preserved,
+selection semantics intact. The Swift app has no voicegroup-switch cancel plumbing
+(the ledger says so explicitly: "voice-replace and voice-null executions have no Swift
+equivalent... no voicegroup-switch cancel plumbing"), while the sibling routes
+(page-switch, drawer-hide, focus-loss, tab-switch, last-tab-close, song-reload,
+escape, primary-track switch, bank edit) all cancel correctly.
 
-Selected sites (re-derive at freeze): A001, A005, A008, A009, A026, A028, A029, A032,
-A033, A037, A040, A043, A046, A058, A059, A087, A095, A098, A109, A112.
-
-The proving predicates live in the ledger's declared counterparts:
-`src/checks/selectionkey/localinputtier_text.swift`,
-`src/checks/selectionkey/localinputtier_window.swift`, and the shellwindow QML files
-(`tst_ShellWindow.qml` and siblings), all of which emit distinctive message literals
-and execute under the `shellwindow`/`swiftcore` lanes with evidence artifacts in
-`build/proof-evidence/shellwindow*.json` and `swiftcore.json`.
+Surface: changing or clearing the song's voicegroup (the voicegroup dock's commit
+path) during an active drawer velocity gesture.
+Ledger spec: `src/checks/host/proof.tst_hostintegration.txt` A114–A120 (PARTIAL), fork
+`lifecycleTermination` at pinned revision `c17d966f`,
+`src/checks/host/tst_hostintegration.cpp:515-525`: every termination execution
+(teardown, bytes/revision/history unchanged, preview cleared, selection cleared or
+preserved per route) includes the voice-replace and voice-null inputs. The shell-route
+residuals (undo depth and preview emptiness on tab-switch/last-tab-close/song-reload)
+ride in the same rows and are provable on the existing mounted termination journey.
+`src/checks/host/proof.tst_hostseams.txt` A017's residual Qt bank-pointer identity is
+pure representation and retires in this task's commit (the voice slot resolution it
+accompanies is re-proved here); that closes the hostseams ledger whole.
+Verify lanes: `deno task verify --filter swiftcore-projectsession --verbose` and
+`deno task verify:shell --filter shellwindow --verbose`.
+Blocked rows left untouched: hostintegration A162, A174–A185 (window close, teardown
+ordering); A079/A140 belong to Task 158's ledger and stay out.
 
 # Exact write set
 
-- `src/checks/selectionkey/proof.windowtier_keyboard.txt` — new S-site entries with message anchors for the dangling citations, and the affected A-row `Mapping:` lines only.
-
-No check-source changes.
+- `src/swift/app/drawer/velocity/` interaction file owning gesture cancellation — the voicegroup switch/null cancel seam, conditional production repair.
+- `src/swift/app/DocumentSession.swift` or the bank-adoption path — cancel-on-adopt hook only if the dock's commit path lacks one.
+- `src/checks/velocity/VelocityClickCancellationChecks.swift` — voicegroup switch/null termination journeys (beside `drawerVelocityLifecycleCancellation`).
+- `src/checks/editorqml/tst_ShellWindow.qml` — the shell-route undo-depth and preview-emptiness conjuncts on the existing termination journey.
+- `src/checks/host/proof.tst_hostintegration.txt` — A114–A120 only; `src/checks/host/proof.tst_hostseams.txt` — A017 only.
 
 # Prerequisites
 
-None. Disjoint from Tasks 158/164/165. Read sprint-3 §19 for shared constraints.
+Task 152's bank-adoption contracts are landed and consumed read-only. Disjoint from
+158 and siblings. Read sprint-3 §19.
 
 # Interface contract
 
-For each dangling citation: locate the predicate that actually proves the A-row's fork
-clause (the fork cite is in the A-row header; the clause text is in its `Original
-expression`), verify its distinctive literal resolves in the live source and its row
-appears in the executed evidence, then add an S-site entry
-(`S<next-id> | <function> | <path>` + `Anchor: message "<literal>"`, `#n` where the
-literal repeats) and point the A-row's `Mapping:` at it. Do not renumber existing
-S120+ entries. A row whose proving predicate cannot be identified with executed
-evidence keeps a written reason and stays debt. Dispositions stay MATCHED.
+The voicegroup dock's commit and clear paths (the production commands that adopt a new
+bank or remove the argument) cancel the active interaction exactly as the primary-track
+switch does (the `VelocityClickSelectionChecks` :301 pattern): gesture torn down,
+`frozenPreview` empty, document snapshot/revision/undoCount unchanged, note selection
+cleared or preserved per the fork's route table. The mounted termination journey adds
+undo-depth and preview-emptiness observations for its existing shell routes.
+Independent literals for snapshot/undoCount values.
 
 # Implementation steps
 
-1. Capture the fresh strict inventory (before).
-2. Resolve each dangling citation to its executing predicate; add the S entries and
-   re-point the mappings.
-3. Re-run the shellwindow and swiftcore lanes for fresh evidence; confirm the
-   after-inventory delta equals exactly the repaired set.
+1. Add the cancel hook on the voicegroup switch/null command path.
+2. Extend the cancellation checks with replace/null journeys observing the full
+   termination contract.
+3. Add the two missing conjuncts (undo depth, preview emptiness) to the mounted
+   termination journey's existing routes.
+4. Close A114–A120 MATCHED and retire hostseams A017's pointer-identity residue in
+   the same commit (its ledger closes whole; cite the pinned revision). Compact form
+   for closed rows: header + `Disposition` + one S-citing mapping line; no pasted code.
 
 # Acceptance predicate
 
-No windowtier_keyboard A-row cites a nonexistent S-id; every repaired citation is
-message-anchored with executed evidence; the ledger's strict debt falls from 20 to only
-unresolved rows with written reasons.
-
-Named checks under §19 ownership (macOS native Qt desktop required):
+Switching or clearing the voicegroup mid-gesture behaves like every other termination
+route, and the shell routes prove history depth and preview emptiness.
 
 ```sh
+/usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore-projectsession --verbose
 /usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify:shell --filter shellwindow --verbose
-/usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore --verbose
-deno task proof check
-deno task proof check --strict-mappings
 deno task proof check --executed
 ```
 
 # Task-specific constraints
 
-This is citation repair, not re-derivation from scratch: only predicates the preamble
-already credits (shellwindow/localinputtier families) are eligible. No disposition
-changes, no check-source edits, no S120+ renumbering.
+No new gesture state machine — reuse the existing cancellation seam. Bank history
+legitimately advances on applyBankEdit; the predicates cover song revision, MIDI bytes
+and note velocity only, as the landed rows do. `tst_ShellGridMenu*.qml`, the event-list
+and drawer QML files of siblings stay untouched.

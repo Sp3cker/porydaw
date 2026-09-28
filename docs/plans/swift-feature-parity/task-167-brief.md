@@ -1,75 +1,71 @@
-# Task 167 brief — re-audit project identity A001–A019 and close the ledger whole
+# Task 167 brief — physical B-key mode switch retains a held stroke at its snapped cell
 
 # Context
 
-`src/checks/project/proof.identity.txt` holds **19 PARTIAL rows (A001–A019)** that were
-never re-audited after the identity cutover: their mappings cite session-level behavior
-(`session_io.swift` S008) while the value-level owner and its checks already exist and
-execute. `src/checks/projectstore/ProjectIdentityChecks.swift` carries the clauses —
-`SongName` acceptance/rejection/round-trip/equality/hash (A001–A008, literals
-`"A001: empty label is rejected"` … `"A008: equal song identities have equal hashes"`)
-and `VoicegroupId` rejections, normalization and section hashing (A009–A019) — and
-`build/proof-evidence/projectidentitycheck.json` contains the executed rows (42
-passes, including A001–A005 sampled at planning). The production owner is
-`src/swift/project/ProjectIdentity.swift` (`SongName.init(_:)`,
-`VoicegroupId.init(sourceRelativePath:sectionLabel:)`), consumed unchanged.
+The mounted ownership journey proves that switching tool mode mid-stroke retains and
+commits the pencil/node-drag gesture, but only via a direct mode change with a loosely
+bounded endpoint: the landed predicates accept the committed value "at ticks 166–168"
+where the fork required the exact `endCell.tickBegin`, and none delivers the physical
+B key while the stroke is held — the fork's actual user path. Fifteen PARTIAL rows in
+`src/checks/automation/proof.automationownership.txt` (A045, A047–A049, A051, A052,
+A055, A057–A062, A103, A104) carry exactly these residues.
 
-Fork citations (pinned revision per the ledger header,
-`src/checks/project/identity.cpp`): `songName_acceptRejectRoundtripHash` A001–A008 at
-assertion starts 76, 81–90; `voicegroupId_rejections` A009 at 108 (seven data rows);
-`voicegroupId_normalizationAndSectionHash` A010–A019 from 118 onward.
-
-**Whole-ledger closure**: the ledger's remaining rows are already MATCHED/RETIRED;
-upgrading A001–A019 disposes every row, so the ledger is deleted in the same commit.
-Its C++ source is already absent (verified); record the pinned-revision citation.
+Surface: pressing B (pencil mode) on the mounted drawer while a pencil stroke or node
+drag is held — the stroke survives and commits at the snapped cell.
+Ledger spec: the rows above; fork `AutomationEditingTest::
+pencilModeChangeRetainsPencilGesture` at pinned revision `c17d966f`
+(`src/checks/automation/automationownership.cpp:186-202` and the sibling functions
+cited by the selected rows): the B-key mode switch retains the captured stroke, the
+committed endpoint sits at the original `endCell.tickBegin`, the pointer mapping is
+probed before release, and history/bytes invariants hold.
+Verify lanes: `deno task verify:qml --filter editorqml-drawer --verbose` plus the
+service family lane `deno task verify --filter swiftcore --verbose`.
+Blocked rows left untouched: automation hover's native pointer-token identity tails;
+raster pixel rows.
 
 # Exact write set
 
-- `src/checks/project/proof.identity.txt` — A001–A019 dispositions, mappings and message anchors; then deleted (whole-ledger closure).
-
-No production or check-source changes: the predicates and executed evidence already
-exist. If any clause's predicate is found missing or non-executing at freeze, stop and
-report instead of forcing the closure.
+- `src/checks/automation/automationcanvasediting.swift` — exact-cell endpoint requirements and pre-release pointer-mapping probes.
+- `src/checks/editorqml/tst_EditorDrawer.qml` — physical B-key delivery during held strokes/drags.
+- `src/checks/automation/proof.automationownership.txt` — the 15 selected rows only.
 
 # Prerequisites
 
-None. Disjoint from all sibling tasks. Read sprint-3 §19 for shared constraints.
+None. Disjoint from every sibling (162 landed in `painting_raster.swift`, untouched
+here). Read sprint-3 §19.
 
 # Interface contract
 
-Each A-row maps to the existing `ProjectIdentityChecks` predicate proving its clause,
-with `Anchor: message "<literal>"` quoting the exact emitted literal (the `A0xx: `
-prefix is part of the source literal and the evidence row). Dispositions become
-MATCHED only where the evidence row exists; setup/data-table guards (the fork's seven
-`voicegroupId_rejections` data rows ride A009) classify inside that row's mapping
-reason, not as new rows.
+Consume the drawer's existing key handling: deliver the real B key to the mounted
+surface while the gesture is held (the same input path a user's keypress takes).
+The committed endpoint must equal the independently computed snapped cell's
+`tickBegin` literal — if the production surface accepts a non-snapped endpoint, that
+is a divergence to repair on the interaction/presenter seam (conditional repair:
+`src/swift/app/drawer/automation/` interaction file), not a loosened predicate.
+Pre-release pointer-mapping probes observe the model's projected node before commit.
 
 # Implementation steps
 
-1. Run the identity lane for fresh evidence; confirm every A001–A019 row appears.
-2. Upgrade the 19 rows to MATCHED with their message anchors and one-line mapping
-   reasons naming the value-level owner.
-3. Verify no open row remains, then delete the ledger, citing the pinned revision and
-   the already-absent C++ source.
+1. Add the mounted B-key-during-held-stroke journeys (pencil stroke and node drag).
+2. Tighten the service predicates to the exact snapped-cell endpoints and add the
+   pre-release pointer-mapping probes.
+3. Repair the production snapping seam only if a journey exposes a real divergence.
+4. Close the 15 rows in the same commit. Compact form for closed rows: header +
+   `Disposition` + one S-citing mapping line; no pasted code.
 
 # Acceptance predicate
 
-The identity value contract is proved by executed, message-anchored predicates and the
-ledger closes whole.
-
-Named checks under §19 ownership:
+Pressing B mid-gesture retains and commits the stroke at the exact snapped cell
+through real key input, with the fork's history/bytes invariants.
 
 ```sh
-/usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter projectidentitycheck --verbose
+/usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify:qml --filter editorqml-drawer --verbose
+/usr/bin/lockf -t 1200 /tmp/porydaw-build.lock /usr/bin/perl -e 'alarm 175; exec @ARGV' deno task verify --filter swiftcore --verbose
 deno task proof check --executed
-deno task proof list
 ```
-
-`proof list` no longer reporting `src/checks/project/proof.identity.txt` is part of
-the acceptance.
 
 # Task-specific constraints
 
-Do not substitute `swiftcore-projectsession` for the exact `projectidentitycheck`
-lane. Ledger deletion authorizes no production C++ removal. Do not touch
-`ProjectIdentity.swift`, other identity-family ledgers, or any sibling write set.
+No synthesized shortcut forwarding — the B key goes through the surface's real key
+path. No raster/pixel obligations. Sibling files (`tst_ShellWindow.qml`,
+`tst_ShellEventList.qml`, `remap.swift`) stay untouched.
