@@ -160,6 +160,108 @@ ShellTabsSupport {
         verify(!session().canUndo && !session().canRedo,
                "reload clears the old document's undo and redo history")
     }
+    function test_qReloadDropsStalePrimaryTrack() {
+        var id = openShell(["mus_route101"])[0]
+        var original = tabs().selectedPage
+        var grid = gridOf(id)
+        var surface = surfaceOf(id)
+        var header = findChild(surface, "timelineTrackHeadersInput")
+        var rows = findChild(surface, "timelineTrackHeaderRows")
+        var model = surface.headersModel
+        var song = fileProbe.songPath(bootstrap.projectRoot, "mus_route101")
+        var savedBytes = fileProbe.fileFingerprint(song)
+        compare(rows.count, 3, "the saved song has two used tracks and an add-track row")
+        var source = rows.itemAt(1)
+        var x = source.titleRect.x + source.titleRect.width / 2
+        var y = model.rowHeight + source.titleRect.y + source.titleRect.height / 2 - model.scrollY
+        verify(y > 0, "the saved header title starts inside the input viewport")
+        verify(y < header.height, "the saved header title ends inside the input viewport")
+        mouseClick(header, x, y, Qt.RightButton)
+        tryCompare(model, "menuOpen", true, 3000,
+                   "right-clicking the saved header opens its real actions")
+        tryVerify(function() {
+            var mounted = findChild(surface, "quickMenuPanelRoot")
+            return mounted !== null && mounted.rowCount > 0
+        }, 3000, "the duplicate action is mounted in the header menu")
+        var menu = findChild(surface, "quickMenuPanelRoot")
+        var duplicate = null
+        for (var row = 0; row < menu.rowCount; ++row) {
+            var candidate = menu.rowItem(row)
+            if (candidate && candidate.itemData.actionId === 4)
+                duplicate = candidate
+        }
+        verify(duplicate !== null, "the mounted menu offers the duplicate-track action")
+        verify(duplicate.active, "the real duplicate-track action accepts pointer input")
+        verify(duplicate.itemData.enabled, "the real duplicate-track action is enabled")
+        mouseClick(duplicate, duplicate.width / 2, duplicate.height / 2)
+        tryCompare(rows, "count", 4, 3000,
+                   "duplicating the saved track creates one unsaved higher track")
+        tryVerify(function() { return findChild(surface, "quickMenuPanelRoot") === null },
+                  3000, "the duplicate action dismisses its mounted header menu")
+        var higher = rows.itemAt(2)
+        var higherX = higher.titleRect.x + higher.titleRect.width / 2
+        var higherY = model.rowHeight * 2 + higher.titleRect.y
+                      + higher.titleRect.height / 2 - model.scrollY
+        for (var scrollDown = 0; higherY >= header.height && scrollDown < 8;
+             ++scrollDown) {
+            mouseWheel(header, header.width / 2, header.height / 2, 0, -120)
+            higherY = model.rowHeight * 2 + higher.titleRect.y
+                      + higher.titleRect.height / 2 - model.scrollY
+        }
+        verify(higherY > 0, "the higher track title starts inside the scrolled header")
+        verify(higherY < header.height,
+               "the higher track title ends inside the scrolled header")
+        mouseClick(header, higherX, higherY)
+        tryCompare(grid, "trackIndex", 2, 3000,
+                   "clicking the new header selects the unsaved higher primary")
+        var drawn = drawNote(id)
+        compare(drawn.track, 2, "the real roll draw commits a note on the higher live track")
+        verify(session().documentDirty, "the higher-track note leaves unsaved document edits")
+        verify(fileProbe.fileFingerprint(song) === savedBytes,
+               "the higher-track edit has not changed the saved MIDI source")
+        var first = rows.itemAt(0)
+        var firstX = first.titleRect.x + first.titleRect.width / 2
+        var firstY = first.titleRect.y + first.titleRect.height / 2 - model.scrollY
+        for (var scrollUp = 0; firstY <= 0 && scrollUp < 8; ++scrollUp) {
+            mouseWheel(header, header.width / 2, header.height / 2, 0, 120)
+            firstY = first.titleRect.y + first.titleRect.height / 2 - model.scrollY
+        }
+        verify(firstY > 0, "the lower saved track title starts inside the scrolled header")
+        verify(firstY < header.height,
+               "the lower saved track title ends inside the scrolled header")
+        mouseClick(header, firstX, firstY, Qt.LeftButton, Qt.ShiftModifier)
+        compare(grid.trackIndex, 2, "range selection retains the higher primary")
+        verify(rows.itemAt(0).overlayColor.a > 0,
+               "the lower saved track joins the live multi-track scope")
+        verify(rows.itemAt(1).overlayColor.a > 0,
+               "the second saved track joins the live multi-track scope")
+        session().openSong("mus_route101")
+        compare(tabs().pendingCloseId, id, "reload raises the real unsaved-work gate")
+        verify(awaitGateButtons(), "the reload gate offers its mounted Discard control")
+        var discard = dialogButton("songTabDiscard")
+        mouseClick(discard, discard.width / 2, discard.height / 2)
+        verify(waitForNative(function() {
+            return tabs().selectedPage !== original && tabs().selectedPage.isReady
+                && tabs().selectedPage.gridPresenter() !== grid
+        }, 30000), "Discard installs the saved song in the original tab")
+        var landed = tabs().selectedPage.gridPresenter()
+        var landedRows = findChild(surfaceOf(id), "timelineTrackHeaderRows")
+        compare(tabs().selectedId, id, "the filtered reload preserves its tab identity")
+        compare(tabs().tabCount, 1, "the filtered reload retains a single tab")
+        compare(landedRows.count, 3, "the reloaded document contains only its two saved tracks")
+        compare(landed.trackIndex, 0, "the reloaded primary resolves to the first saved track")
+        verify(landed.trackIndex !== 2,
+               "the stale unsaved higher primary cannot be installed on reload")
+        verify(landed.trackIndex >= 0,
+               "the reloaded primary never resolves below the first saved track")
+        verify(landed.trackIndex < 2,
+               "the reloaded primary stays below the persisted used-track count")
+        verify(landedRows.itemAt(1).overlayColor.a === 0,
+               "the reloaded first-track primary resets the scoped overlay as in the fork")
+        compare(fileProbe.fileFingerprint(song), savedBytes,
+                "discarded higher-track edits never change the persisted MIDI bytes")
+    }
+
     function test_qAtomicReloadAndMissingSourceRecovery() {
         function semanticNotes(tabId) {
             return JSON.stringify(JSON.parse(summaryOf(tabId)).map(function(note) {

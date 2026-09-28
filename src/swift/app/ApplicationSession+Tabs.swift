@@ -174,7 +174,10 @@ extension ApplicationSession {
             let session = try await DocumentSession.open(
                 service: service, label: label, sampleRate: audio.sampleRate)
             if let tab {
-                session.selectedTrack = tab.selectedTrack
+                let usedTracks = 0..<session.document.engineTracks.usedTrackCount
+                session.selectedTrack = tab.selectedTrack.flatMap {
+                    usedTracks.contains($0) ? $0 : nil
+                }
                 session.editCursor = tab.editCursor
                 session.grid = tab.grid
                 session.grid.axis = session.projectionCache.timeAxis
@@ -183,7 +186,6 @@ extension ApplicationSession {
                 session.setScale(type: tab.scale.scale)
                 session.setScale(highlight: tab.scale.highlight)
                 session.setScale(fold: tab.scale.fold)
-                let usedTracks = 0..<session.document.engineTracks.usedTrackCount
                 session.selectedTracks = Set(tab.selectedTracks.filter { usedTracks.contains($0) })
                 session.mutedTracks = Set(tab.mutedTracks.filter { usedTracks.contains($0) })
                 session.soloedTracks = Set(tab.soloedTracks.filter { usedTracks.contains($0) })
