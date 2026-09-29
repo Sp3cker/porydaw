@@ -20,7 +20,7 @@ Spec sources: `spec.md` export contract; `inventory.md` WAV rows; `verification.
 |---|---|---|
 | P3-T1 | Export totals + RIFF writer as production owner: rates, loop/fade/tail math, zero cases, 4GB guard. Replaces check-local `wavHeader`/fixture totals. | — |
 | P3-T2 | Streamed offline renderer: chunked `AudioRenderEngine` render + linear fade + suppression pre-roll/flush + bounded buffers + monotonic progress/cancel. `ExportChecks.swift` rewritten to call it (no private renderer). | P3-T1 |
-| P3-T3 | Snapshot/lease capture + engine-settings contract: unsaved-document + effective-bank pin at accept (point-in-time; input blocked so no invalidation design), teardown safety, stop-playback-before-render. Depends only on VG05's effective-bank exposure, not its full policy. | P3-T2, VG05 exposure |
+| P3-T3 | Snapshot/lease capture + engine-settings contract: unsaved-document + effective-bank pin at accept (point-in-time; input blocked so no invalidation design), teardown safety, stop-playback-before-render. Capture guard per ruling below: the accessor `precondition`s `!bankPersistenceInFlight && !document.history.bankTransitionInFlight` — a stale-flush capture is a hard crash, not a silent stale bank; the user window is unreachable in practice. Depends only on VG05's effective-bank exposure, not its full policy. | P3-T2, VG05 exposure |
 | P3-T4 | Export dialog + File-menu mount + shell-export lane registration: rate/loop/fade-vs-tail controls, live m:ss duration, dir memory, suggested name, progress/cancel/error/empty/4GB feedback, File-menu enablement. Compare full registry set before mounting; never mount a dead action. | P3-T2, P3-T3 |
 | P3-T5 | Acceptance + ledger re-map: independent WAV decode/duration/samples audit; suppression on/off duration equality; cancel-no-partial; fail-write cleanup; re-map `proof.tst_midiexport.txt` (23 MATCHED rows are check-local overclaims until they cite the production owner). | P3-T4 |
 
@@ -30,9 +30,9 @@ Spec sources: `spec.md` export contract; `inventory.md` WAV rows; `verification.
 
 ## Open decisions for go-ahead
 
-- Effective-bank snapshot policy (VG05 freeze is the named prerequisite).
+- Effective-bank exposure (narrowed): T3 needs only a coherent read of the mounted lease at accept, not the full VG05 freeze. The invariance ruling removes snapshot-vs-switch policy; the precondition ruling below removes the stale-flush window.
 - RESOLVED 2026-09-29 — export invariance: the application blocks all user input during the render, so the captured snapshot cannot be invalidated by user action; there is no mid-export bank-switch case to design for. Cancel is the only exit.
 - RESOLVED 2026-09-29 — snapshot source: the export uses the application's live unsaved state (edit-buffer document + effective mounted bank + applied settings). No disk round-trip, no implicit save.
-- Effective-bank lease mechanics narrowed by the invariance ruling: because input is blocked for the render, T3 needs only a point-in-time pin of the effective bank at accept — no invalidation/copy-on-switch design. The remaining VG05 dependency is only *how the effective bank is exposed for capture* (read the mounted lease coherently), not snapshot-vs-switch policy.
+- RESOLVED 2026-09-29 — capture-time stale-lease race: bank edits mint via `try await service.bankApply` and `adoptBank`, so between accept of a bank edit and the async adopt, `session.bankLease` is still the old lease. Ruling: the export capture accessor `precondition`s `!bankPersistenceInFlight && !document.history.bankTransitionInFlight` — capturing while a flush is pending is a deliberate crash. The user cannot reach File→Export WAV faster than the actor hop completes, and the invariant is programmer-facing, not user-facing. Same guard shape as `save()`/`close()` at `DocumentSession.swift:313`/`:474`, but a hard precondition, not a graceful refuse.
 - `proof.tst_midiexport.txt`: all 23 MATCHED rows re-derive from the production owner or drop to PARTIAL — no row stays MATCHED on check-local predicates.
 - `wavexport.cpp` retirement belongs to P3-T5's commit once the replacement is proven.
