@@ -23,6 +23,8 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
         let presenter = SampleStudioPresenter(source: source, validateName: { _ in nil })
         let unavailable = SampleStudioAudition(presenter: presenter, output: nil, destinationAdsr: nil)
         let strip = report.scoped(cppID: "samplecheck/SampleProcessingTest::editorAuditionStrip")
+        strip.expect(source.sourcePath == "fix/hires_tone.wav" && source.sampleRate == 44_100,
+                     message: "A087 editor-strip high resolution source imports")
         strip.expect(!unavailable.available && unavailable.playToolTip == "Audio is unavailable.",
                      message: "A088 unavailable audio disables Play")
         let engineResult = Result { try AudioRenderEngine(sampleRate: 48_000, periodFrames: 512) }
