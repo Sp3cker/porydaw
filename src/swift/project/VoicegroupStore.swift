@@ -53,7 +53,7 @@ private struct TokenRegistry {
 /// the loader's own context worker performs native calls outside the cooperative pool.
 public final class VoicegroupStore {
     private let projectRoot: String
-    private let context: ProjectContext
+    private(set) var context: ProjectContext
     private var records: [VoicegroupId: BankRecord] = [:]
     private var memos: [String: BankMemo] = [:]
     private var tokens = TokenRegistry()
@@ -75,6 +75,32 @@ public final class VoicegroupStore {
     init(projectRoot: String, context: ProjectContext) {
         self.projectRoot = URL(filePath: projectRoot).standardizedFileURL.path
         self.context = context
+    }
+
+    /// Rebuilds loaded banks against refreshed sample maps without changing source edits or history.
+    /// - Parameter context: Fresh project loader context.
+    /// - Returns: Successfully refreshed bank publications.
+    func rebind(context: ProjectContext) -> [LoadedBankView] {
+        self.context = context
+        var views: [LoadedBankView] = []
+        views.reserveCapacity(records.count)
+        for (id, var record) in records {
+            let source = record.source
+            let bank: BankHandle?
+            if source.dirty {
+                bank = source.loadPreviewedSource(using: context)
+            } else {
+                bank = context.load(target: .init(filePath: source.filePath,
+                                                  sectionLabel: source.sectionLabel))
+                bank?.graftMintedSynths(source: source)
+            }
+            guard let bank else { continue }
+            record.current = bank
+            record.published = Self.publish(id: id, source: source, bank: bank)
+            records[id] = record
+            views.append(record.published)
+        }
+        return views
     }
 
     /// Resolves a song's voicegroup argument, reusing a canonical bank whose section is unchanged

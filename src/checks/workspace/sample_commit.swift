@@ -1,0 +1,159 @@
+import Foundation
+import PorydawApp
+import PorydawCore
+import PorydawSample
+import PorydawProject
+
+@MainActor
+internal func sampleCommitRefreshChecks(_ report: CheckReport, fixtureRoot: String) {
+    let check = report.scoped(cppID: "swiftcore/ProjectService::sampleCommitRefresh")
+    let root = stageTestProject(in: fixtureRoot, projectName: "swiftcore-sample-commit")
+    let sound = root + "/sound"
+    let inc = sound + "/direct_sound_data.inc"
+    let name = "commit_tone"
+    let symbol = "DirectSoundWaveData_" + name
+    let service = ProjectService()
+    do {
+        try Data().write(to: URL(filePath: inc))
+        try Data("include audio_rules.mk\n".utf8).write(to: URL(filePath: root + "/Makefile"))
+        try Data("$(SOUND_BIN_DIR)/%.bin: sound/%.wav\n\t$(WAV2AGB) -b $< $@\n".utf8)
+            .write(to: URL(filePath: root + "/audio_rules.mk"))
+        try FileManager.default.createDirectory(atPath: sound + "/direct_sound_samples", withIntermediateDirectories: true)
+        try runBlocking { try await service.open(root: root) }
+        let first = try runBlocking { try await DocumentSession.open(service: service, label: "mus_session_test") }
+        let peer = try runBlocking { try await DocumentSession.open(service: service, label: "mus_session_test2") }
+        var rendered = ProcessedSample()
+        rendered.s8 = (0..<64).map { Int8($0 - 32) }
+        rendered.size = 64
+        rendered.declaredRate = 22_050
+        rendered.freq = 15_000_000
+        let wav = SampleWavWriter.bytes(for: rendered)
+        var sidecar = SampleSidecar()
+        sidecar.sourcePath = "/source/commit_tone.wav"
+        sidecar.sourceSha256 = SampleSourceHash.sha256Hex(wav)
+        let request = SampleCommitRequest(name: name, wav: wav, sidecar: sidecar,
+                                          removeSidecar: false, update: false)
+        let receipt = try runBlocking { try await service.commitSample(request) }
+        check.expect(receipt.name == name && receipt.sidecarSaved && receipt.sidecarError.isEmpty,
+                     message: "sample commit reports successful provenance")
+        let persisted = try Data(contentsOf: URL(filePath: sound + "/direct_sound_samples/\(name).wav"))
+        check.expect(persisted == wav, message: "sample WAV persists exact rendered bytes")
+        let registration = try String(contentsOfFile: inc, encoding: .utf8)
+        check.expect(registration.contains(symbol + "::"), message: "new symbol registers in assembly")
+        let reopened = try runBlocking { try await service.readCommittedSample(name: name) }
+        check.expect(reopened.sidecar == sidecar, message: "committed provenance can be reopened")
+        let picked = try runBlocking { await service.pickerSound(symbol: symbol, kind: .sample) }
+        if case .sample(let bytes, _, _, _, _, _) = picked {
+            check.expect(bytes == rendered.s8, message: "picker reload resolves committed signed audio")
+        } else {
+            check.expect(false, message: "picker reload resolves committed signed audio")
+        }
+        guard let original = first.bankSlots[0].voice else {
+            check.expect(false, message: "fixture provides editable destination slot")
+            return
+        }
+        var assigned = original
+        assigned.macro = BankVoiceMacro.directSound
+        assigned.symbol = symbol
+        _ = try runBlocking { try await first.applyBankEdit(slot: 0, value: assigned, expected: original) }
+        check.expect(first.bankSlots[0].voice == assigned && peer.bankSlots[0].voice == assigned,
+                     message: "new sample assignment reaches both sessions")
+        let initialAudio = first.bankLease.withVoices { voices -> [Int8]? in
+            guard let wave = voices?[0].wav, let data = wave.pointee.data else { return nil }
+            return (0..<64).map { data[$0] }
+        }
+        let peerAudio = peer.bankLease.withVoices { voices -> [Int8]? in
+            guard let wave = voices?[0].wav, let data = wave.pointee.data else { return nil }
+            return (0..<64).map { data[$0] }
+        }
+        check.expect(initialAudio == rendered.s8 && peerAudio == rendered.s8,
+                     message: "new registered sample plays rendered bytes in both sessions")
+        let historyCount = first.document.history.undoCount
+        let peerHistoryCount = peer.document.history.undoCount
+        guard var unsaved = peer.bankSlots[1].voice else {
+            check.expect(false, message: "fixture provides adjacent editable slot")
+            return
+        }
+        let previous = unsaved
+        unsaved.release = unsaved.release == 255 ? 254 : unsaved.release + 1
+        _ = try runBlocking { try await peer.applyBankEdit(slot: 1, value: unsaved, expected: previous) }
+        let editCount = first.document.history.undoCount
+        let peerEditCount = peer.document.history.undoCount
+        let dirty = first.bankDirty
+        let peerDirty = peer.bankDirty
+        rendered.s8 = (0..<64).map { Int8(31 - $0) }
+        let updatedWav = SampleWavWriter.bytes(for: rendered)
+        let beforeInc = try Data(contentsOf: URL(filePath: inc))
+        let updatedReceipt = try runBlocking { try await service.commitSample(.init(
+            name: name, wav: updatedWav, sidecar: nil, removeSidecar: true, update: true)) }
+        check.expect(updatedReceipt.sidecarSaved && updatedReceipt.sidecarError.isEmpty,
+                     message: "sample update removes old provenance")
+        let afterInc = try Data(contentsOf: URL(filePath: inc))
+        check.expect(afterInc == beforeInc, message: "sample update preserves registration bytes")
+        check.expect(first.bankSlots[1].voice == unsaved && peer.bankSlots[1].voice == unsaved
+                     && first.bankDirty == dirty && peer.bankDirty == peerDirty,
+                     message: "rebind preserves unsaved edit and dirty state")
+        check.expect(first.document.history.undoCount == editCount && peer.document.history.undoCount == peerEditCount,
+                     message: "sample update adds no bank history command")
+        let refreshed = first.bankLease.withVoices { voices -> [Int8]? in
+            guard let wave = voices?[0].wav, let data = wave.pointee.data else { return nil }
+            return (0..<64).map { data[$0] }
+        }
+        let peerRefreshed = peer.bankLease.withVoices { voices -> [Int8]? in
+            guard let wave = voices?[0].wav, let data = wave.pointee.data else { return nil }
+            return (0..<64).map { data[$0] }
+        }
+        check.expect(refreshed == rendered.s8 && peerRefreshed == rendered.s8,
+                     message: "both live bank leases play updated bytes")
+        let beforeRefusal = first.bankLease.publicationRevision
+        let peerBeforeRefusal = peer.bankLease.publicationRevision
+        do {
+            _ = try runBlocking { try await service.commitSample(request) }
+            check.expect(false, message: "duplicate name refuses with registrar message")
+        } catch ProjectServiceError.operationFailed(let message) {
+            check.expect(message.contains("already") || message.contains("exists"),
+                         message: "duplicate name refuses with registrar message")
+        }
+        check.expect(first.bankLease.publicationRevision == beforeRefusal
+                     && peer.bankLease.publicationRevision == peerBeforeRefusal
+                     && first.document.history.undoCount == editCount
+                     && peer.document.history.undoCount == peerEditCount,
+                     message: "refused duplicate publishes no bank edit")
+        try runBlocking { _ = try await peer.undo() }
+        try runBlocking { _ = try await first.undo() }
+        check.expect(first.bankSlots[0].voice == original && peer.bankSlots[0].voice == original
+                     && first.document.history.undoCount >= historyCount
+                     && peer.document.history.undoCount >= peerHistoryCount,
+                     message: "undo assignment restores voices without undoing sample registration")
+        check.expect(FileManager.default.fileExists(atPath: sound + "/direct_sound_samples/\(name).wav")
+                     && afterInc.contains(Data(symbol.utf8)),
+                     message: "undo assignment retains committed WAV and assembly symbol")
+    } catch {
+        check.expect(false, message: "sample commit lifecycle failed: \(error)")
+    }
+    let blockedRoot = stageTestProject(in: fixtureRoot, projectName: "swiftcore-sample-sidecar-failure")
+    let blockedService = ProjectService()
+    do {
+        try Data().write(to: URL(filePath: blockedRoot + "/sound/direct_sound_data.inc"))
+        try Data("include audio_rules.mk\n".utf8).write(to: URL(filePath: blockedRoot + "/Makefile"))
+        try Data("$(SOUND_BIN_DIR)/%.bin: sound/%.wav\n\t$(WAV2AGB) -b $< $@\n".utf8)
+            .write(to: URL(filePath: blockedRoot + "/audio_rules.mk"))
+        try FileManager.default.createDirectory(atPath: blockedRoot + "/.porydaw", withIntermediateDirectories: true)
+        try Data("occupied".utf8).write(to: URL(filePath: blockedRoot + "/.porydaw/samples"))
+        try runBlocking { try await blockedService.open(root: blockedRoot) }
+        var sample = ProcessedSample()
+        sample.s8 = [Int8](repeating: 7, count: 64)
+        sample.size = 64
+        sample.declaredRate = 22_050
+        sample.freq = 15_000_000
+        let wav = SampleWavWriter.bytes(for: sample)
+        let receipt = try runBlocking { try await blockedService.commitSample(.init(
+            name: "sidecar_fail", wav: wav, sidecar: SampleSidecar(), removeSidecar: false, update: false)) }
+        check.expect(!receipt.sidecarSaved && receipt.sidecarError.contains("cannot write"),
+                     message: "sidecar failure reports error without rolling back sample")
+        let survived = try runBlocking { try await blockedService.readCommittedSample(name: "sidecar_fail") }
+        check.expect(survived.wav == wav, message: "committed WAV survives sidecar write refusal")
+    } catch {
+        check.expect(false, message: "sidecar failure fixture failed: \(error)")
+    }
+}

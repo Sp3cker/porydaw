@@ -28,6 +28,7 @@ add_library(PorydawProject STATIC
     ProjectStore+Edit.swift
     ProjectStore+Save.swift
     ProjectStore+Picker.swift
+    ProjectStore+Samples.swift
     ProjectStore+Synth.swift
     SampleRegistrar.swift
     SampleRegistrar+Provenance.swift

@@ -322,6 +322,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         workspace/bank_sharing.swift
         workspace/bank_sharing_history.swift
         workspace/bank_switching.swift
+        workspace/sample_commit.swift
         workspace/session_catalog.swift
     )
     set_target_properties(swift_core_check PROPERTIES

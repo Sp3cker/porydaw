@@ -118,6 +118,7 @@ internal func runBankHistorySuite(_ report: CheckReport) {
     bankMissingBasisAndApplied(report: report, fixtureRoot: fixtureRoot)
     sessionCatalogOutageRetainsLastValid(report: report, fixtureRoot: fixtureRoot)
 
+    sampleCommitRefreshChecks(report, fixtureRoot: fixtureRoot)
     let projectDir = stageTestProject(in: fixtureRoot, projectName: "swiftcore-bank-test")
     let service = ProjectService()
     do {
