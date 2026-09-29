@@ -551,6 +551,7 @@ if(APPLE)
         editorqml/WavFileProbe.swift
         editorqml/TabsDrawerProbe.swift
         keyboard/KeybindingRegistryChecks.swift
+        editorqml/ImportWizardProbe.swift
         "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"
     )
     set_target_properties(shell_qml_lane PROPERTIES

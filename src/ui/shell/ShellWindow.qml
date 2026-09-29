@@ -255,6 +255,12 @@ ThemedWindow {
         applicationSession: shell.session
         baseFontPx: shell.session.baseFontPx
     }
+    MidiImportHost {
+        controller: shell.session.songDockController().midiImportController()
+        hostWindow: root
+        colors: root.colors
+        applicationSession: shell.session
+    }
     WavExportSurface {
         presenter: shell.session.wavExportPresenter()
         colors: root.colors

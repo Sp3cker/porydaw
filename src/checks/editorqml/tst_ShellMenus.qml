@@ -90,12 +90,13 @@ ShellMenusSupport {
             fileRows.push(file.itemAt(fileIndex).objectName)
         compare(JSON.stringify(fileRows),
                 JSON.stringify(["shellAction_file.open_project", "shellAction_file.new_song",
+                                "shellAction_file.import_midi",
                                 "shellAction_file.save_song", "shellAction_file.register_song",
                                 "shellAction_file.close_tab", "shellFileExportSeparator",
                                 "shellAction_file.export_wav", "shellFileQuitSeparator",
                                 "shellAction_file.quit"]),
                 "the File menu keeps the fork rows and separators")
-        compare(file.count, 9, "the File menu keeps the fork rows and separators")
+        compare(file.count, 10, "the File menu keeps the fork rows and separators")
         verify(findChild(file, "shellAction_songs.find") === null,
                "Find Song moves from File to the Edit clipboard group")
         var clipboard = ["roll.copy", "roll.cut", "roll.paste", "roll.delete",

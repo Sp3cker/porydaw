@@ -18,6 +18,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
     private static let actions: [Action] = [
         Action("file.open_project"),
         Action("file.new_song"),
+        Action("file.import_midi"),
         Action("songs.find"),
         Action("file.save_song"),
         Action("file.register_song"),
@@ -122,6 +123,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
     ]
     private static let menuLabels = [
         "file.open_project": "Open Project...",
+        "file.import_midi": "Import MIDI...",
         "file.export_wav": "Export WAV...",
         "edit.preferences": "Preferences...",
         "edit.song_settings": "Song Settings...",
@@ -265,6 +267,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         switch id {
         case "songs.find": return session.projectOpen
         case "file.new_song": return session.projectOpen && session.songOpen
+        case "file.import_midi": return session.projectOpen
         case "file.save_song": return session.songOpen && !session.saveInProgress
         case "file.register_song": return session.songOpen
             && session.songDockController().selectedTabRegistrationPending()
@@ -338,6 +341,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         case "file.open_project": chooseProjectRequested()
         case "songs.find": session.songDockController().presenter.focusSearch()
         case "file.new_song": session.songDockController().requestNewSong()
+        case "file.import_midi": session.songDockController().midiImportController().requestImport()
         case "file.save_song": session.requestSave()
         case "file.register_song": session.songDockController().requestRegisterSelectedTab()
         case "file.close_tab":

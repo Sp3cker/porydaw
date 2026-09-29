@@ -19,10 +19,19 @@ enum ShellQmlRegistry {
             Entry(
                 name: "shell-text-contrast-\(state)-\(mode)",
                 inputFileName: "tst_TextContrast.qml",
-                fixtureFiles: songs("mus_route101"),
+                fixtureFiles: songs("mus_route101") + ["test_midis/external_import.mid"],
                 testFunctions: ["TextContrast::test_\(state)ShellText:\(mode)"])
         }
     }
+
+    private static let importFixture =
+        songs("mus_route101") + [
+            "include/constants/songs.h", "sound/music_player_table.inc",
+            "sound/voice_groups.inc", "sound/voicegroups/dummy.inc",
+            "sound/voicegroups/fixture_alt.inc", "ld_script.ld", "charmap.txt",
+            "src/debug.c", "test_midis/external_import.mid",
+            "test_midis/duplicate_setters.mid",
+        ]
 
     /// Project tables, samples and the original `_fixture_rich` voicegroups.
     private static let projectFixture = [
@@ -179,6 +188,20 @@ enum ShellQmlRegistry {
             Entry(
                 name: "shell-menus-commands", inputFileName: "tst_ShellMenusCommands.qml",
                 fixtureFiles: songs("mus_route101")),
+            Entry(
+                name: "shell-import-wizard", inputFileName: "tst_ShellImportWizard.qml",
+                fixtureFiles: importFixture,
+                testFunctions: [
+                    "ShellImportWizard::test_importRouteGateAndPicker",
+                    "ShellImportWizard::test_importReadFailureWarns",
+                    "ShellImportWizard::test_importWizardPageFlow",
+                    "ShellImportWizard::test_importAnalysisPage",
+                    "ShellImportWizard::test_importIdentityPage",
+                ]),
+            Entry(
+                name: "shell-import-wizard-finish", inputFileName: "tst_ShellImportWizard.qml",
+                fixtureFiles: importFixture,
+                testFunctions: ["ShellImportWizard::test_importFinishRegistersSong"]),
             Entry(
                 name: "shell-menus-loop", inputFileName: "tst_ShellMenusLoop.qml", fixtureFiles: songs("mus_route101")),
             Entry(

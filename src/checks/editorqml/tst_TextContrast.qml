@@ -189,6 +189,29 @@ TestCase {
         verify(waitForNative(function() { return !model.active }, 30000),
                "contrast audit export cancels")
     }
+    function auditImportWizard(context) {
+        const picker = findChild(shell, "shellImportMidiPicker")
+        const dialog = findChild(shell, "midiImportWizard")
+        verify(picker !== null && dialog !== null, "import wizard and picker are mounted")
+        picker.selectedFile = "file://" + bootstrap.projectRoot + "/test_midis/external_import.mid"
+        shell.shellPresenter.activate("file.import_midi")
+        verify(waitForNative(function() { return picker.visible }, 5000), "import picker opens")
+        picker.accept()
+        verify(waitForNative(function() { return dialog.visible }, 30000), "import wizard opens")
+        const toggle = findChild(dialog, "importControllerToggle")
+        if (toggle.visible)
+            mouseClick(toggle)
+        for (let page = 0; page < 3; ++page) {
+            const result = Audit.audit(dialog.contentItem, grab)
+            record(context + " import page " + page, result)
+            auditPopups(context + " import page " + page, result.popups)
+            if (page < 2)
+                mouseClick(findChild(dialog, "importWizardNext"))
+        }
+        mouseClick(findChild(dialog, "importWizardCancel"))
+        verify(waitForNative(function() { return !dialog.visible }, 5000), "import wizard closes")
+    }
+
     function auditClippedKeyboardLabel(context) {
         const tabs = shell.shellPresenter.session.songTabs
         const page = findChild(shell.sceneLoader.item, "songTab_" + tabs.selectedId)
@@ -312,6 +335,7 @@ TestCase {
 
         auditSettings(mode + " song")
         auditWavExport(mode + " song")
+        auditImportWizard(mode + " song")
         report(mode + " song shell")
     }
 }

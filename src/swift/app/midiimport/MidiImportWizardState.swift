@@ -41,6 +41,7 @@ public struct ImportFinishPlan: Equatable, Sendable {
 public struct MidiImportWizardState: Equatable, Sendable {
     public private(set) var page = 0
     public let windowTitle: String
+    public let sourceFileName: String
     public let analysisPlayerNames: [String]
     public let identityPlayerNames: [String]
     public private(set) var playerIndex = 0
@@ -78,6 +79,7 @@ public struct MidiImportWizardState: Equatable, Sendable {
         self.source = source
         self.project = project
         self.takenLabels = takenLabels
+        self.sourceFileName = sourceFileName
         windowTitle = "Import MIDI — \(sourceFileName)"
         analysisPlayerNames = project.players.map { MidiImport.playerRoleName($0.name, includeSymbol: false) }
         identityPlayerNames = project.players.map { MidiImport.playerRoleName($0.name, includeSymbol: true) }

@@ -5,10 +5,10 @@ Deleted in: S6 flip cutover (feature/swift-project-store, base 2d1c92d0)
 Retirement: historical deletion record only; the deleted C++ source above is recoverable from the Reference revision and Original SHA-256, never from HEAD. A079–A102 were reconciled against the frozen Swift counterpart hashes below and Task149's swiftcore-midiimport PASS report; semantic correspondence is per-row, and proof parsing alone is not parity evidence.
 Original: src/checks/onboardcheck/import.cpp
 Original SHA-256: b0831014eeca2f2069d1bbf87af241322c7c51b605133d45381b76c72800ac48
-Swift counterpart: src/checks/editcheck/MidiImportChecks.swift (importAnalysis/importTransforms/importProjectRoundtrip; SHA-256 421a94dfc81a38b2d074c669120b7ee6f27311b0dc5e6f0feade23f266084a36), invoked by EventChecks.swift::runMidiImportSuite (SHA-256 52b74cb3eaa149e6a002c1ee68d837568421f8c60ce001cf42fd2b6ce6844820).
+Swift counterpart: src/checks/editcheck/MidiImportChecks.swift (importAnalysis/importTransforms/importProjectRoundtrip; SHA-256 421a94dfc81a38b2d074c669120b7ee6f27311b0dc5e6f0feade23f266084a36), invoked by EventChecks.swift::runMidiImportSuite (SHA-256 52b74cb3eaa149e6a002c1ee68d837568421f8c60ce001cf42fd2b6ce6844820); src/checks/editorqml/tst_ShellImportWizard.qml (shell-import-wizard; SHA-256 8161a46c69bb29dc4c662730e6e4443c5b3457698bdc7f669667deb2038ccfaa).
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Site tally: 102 sites (57 MATCHED, 12 NATIVE-SETUP, 33 GAP).
+Site tally: 102 sites (70 MATCHED, 15 NATIVE-SETUP, 17 GAP).
 
 
 
@@ -294,90 +294,29 @@ Original expression:
           qPrintable(error));
 
 A053 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:217
-Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. fixture copy guarding importWizard; no Swift predicate observes it.
-Source context since previous assertion:
-
-  }
-
-  void OnboardingTest::importWizard()
-  {
-      QString error;
-      std::unique_ptr<checks::ProjectFixture> fixture = copyProject(error);
-
-Original expression:
-  QVERIFY2(fixture, qPrintable(error));
-
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP: staged fixture copy fails fast before the mounted wizard predicates.
 A054 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:219
-Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. DecompProject::open in importWizard; no Swift predicate opens the decomp project.
-Source context since previous assertion:
-
-      DecompProject project;
-
-Original expression:
-  QVERIFY2(project.open(fixture->root(), &error), qPrintable(error));
-
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP: fixture project open fails fast before the mounted wizard predicates.
 A055 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:221
-Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the fixture decode has an import-model predicate (S011), but nothing executes under the importWizard cppID.
-Source context since previous assertion:
-
-      SmfFile external;
-
-Original expression:
-  QVERIFY2(midiFixture(QStringLiteral("external_import.mid"), external, error),
-               qPrintable(error));
-
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP: staged source decode fails fast before the mounted wizard predicates.
 A056 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:224
-Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. SongRegistry::voicegroupArgs enumeration is not asserted in Swift.
-Source context since previous assertion:
-
-      const QStringList voicegroups = SongRegistry::voicegroupArgs(fixture->root());
-
-Original expression:
-  QVERIFY(!voicegroups.isEmpty());
-
+Disposition: MATCHED
+Mapping: S060
 A057 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:227
-Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the wizard rescale checkbox lookup is not asserted in Swift.
-Source context since previous assertion:
-
-      NewSongWizard wizard(&project, external, QStringLiteral("ext.mid"), voicegroups);
-      QCheckBox *rescale = wizard.page(0)->findChild<QCheckBox *>();
-
-Original expression:
-  QVERIFY(rescale);
-
+Disposition: MATCHED
+Mapping: S061
 A058 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:228
-Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the default-checked rescale checkbox for a dividing-400 SMF is not asserted in Swift.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(rescale->isChecked());
-
+Disposition: MATCHED
+Mapping: S062
 A059 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:230
-Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the wizard song emission is not asserted in Swift.
-Source context since previous assertion:
-
-      SmfFile rescaledSmf;
-
-Original expression:
-  QVERIFY2(wizard.songFile(&rescaledSmf, &error), qPrintable(error));
-
+Disposition: MATCHED
+Mapping: S063
 A060 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:231
-Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the wizard-rescaled division is not asserted in Swift.
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(rescaledSmf.division, 24);
-
+Disposition: MATCHED
+Mapping: S064
 A061 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:234
 Disposition: GAP
 Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the unrescaled wizard emission is not asserted in Swift.
@@ -399,40 +338,14 @@ Original expression:
   QCOMPARE(unrescaledSmf.division, 400);
 
 A063 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:240
-Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the wizard song-name line edit is not asserted in Swift.
-Source context since previous assertion:
-
-      QLineEdit *name = nullptr;
-      for (QLineEdit *edit : wizard.findChildren<QLineEdit *>())
-          if (edit->placeholderText() == QStringLiteral("mus_my_song"))
-              name = edit;
-
-Original expression:
-  QVERIFY(name);
-
+Disposition: MATCHED
+Mapping: S065
 A064 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:243
-Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. name sanitization (mixed case becomes lower case) is not asserted in Swift.
-Source context since previous assertion:
-
-      name->clear();
-      name->insert(QStringLiteral("MUS_Loud_3"));
-
-Original expression:
-  QCOMPARE(name->text(), QStringLiteral("mus_loud_3"));
-
+Disposition: MATCHED
+Mapping: S066
 A065 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:246
-Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the second sanitization case (invalid characters clear the field) is not asserted in Swift.
-Source context since previous assertion:
-
-      name->clear();
-      name->insert(QStringLiteral("mus 3!"));
-
-Original expression:
-  QVERIFY(name->text().isEmpty());
-
+Disposition: MATCHED
+Mapping: S067
 A066 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:247
 Disposition: GAP
 Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. SongCfg reverb defaults through the wizard are not asserted in Swift.
@@ -463,54 +376,17 @@ Original expression:
   QCOMPARE(settings.cfg().reverb, bare.reverb);
 
 A069 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:254
-Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the analysis and identity combo boxes are not asserted in Swift.
-Source context since previous assertion:
-
-      QComboBox *analysis = wizard.page(0)->findChild<QComboBox *>();
-      QComboBox *identity = wizard.page(1)->findChild<QComboBox *>();
-
-Original expression:
-  QVERIFY(analysis && identity);
-
+Disposition: MATCHED
+Mapping: S068
 A070 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:257
-Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. analysis and identity combo-box data pairing is not asserted in Swift.
-Source context since previous assertion:
-
-      for (int index = 0; index < analysis->count(); ++index) {
-          analysis->setCurrentIndex(index);
-
-Original expression:
-  QCOMPARE(identity->currentData(), analysis->currentData());
-
+Disposition: MATCHED
+Mapping: S069
 A071 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:267
-Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the mute-track warning label is not asserted in Swift.
-Source context since previous assertion:
-
-      }
-      const QVector<MusicPlayer> players = SongRegistry::musicPlayers(fixture->root());
-      for (const MusicPlayer &player : players) {
-          if (player.trackCount != 1)
-              continue;
-          analysis->setCurrentIndex(analysis->findData(player.name));
-          bool muteWarning = false;
-          for (const QLabel *notice : wizard.page(0)->findChildren<QLabel *>())
-              muteWarning = muteWarning || notice->text().contains(QStringLiteral("mute track 2"));
-
-Original expression:
-  QVERIFY(muteWarning);
-
+Disposition: MATCHED
+Mapping: S070
 A072 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:268
-Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the wizard player selection is not asserted in Swift.
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(wizard.player(), player.name);
-
+Disposition: MATCHED
+Mapping: S071
 A073 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:272
 Disposition: GAP
 Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the fixture decode has an import-model predicate (S048), but nothing executes under the importWizard cppID.
@@ -569,15 +445,8 @@ Original expression:
   QCOMPARE(programs, 2);
 
 A078 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:287
-Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. analysis and identity combo-box index synchronisation is not asserted in Swift.
-Source context since previous assertion:
-
-      identity->setCurrentIndex(0);
-
-Original expression:
-  QCOMPARE(analysis->currentIndex(), identity->currentIndex());
-
+Disposition: MATCHED
+Mapping: S072
 A079 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:294
 Disposition: NATIVE-SETUP
 Mapping/reason: NATIVE-SETUP: temporary-project copy is staging only; the Swift copy failure is a fail-fast setup guard, not an independent behavior predicate.
@@ -863,3 +732,42 @@ Anchor: message "A100 imported compiler input rescales to division 24"
 
 S059 | importProjectRoundtrip:482 blankResult == 1 && importedResult == 1 | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "A102 blank and rescaled imported songs both compile through real mid2agb"
+
+S060 | test_importFinishRegistersSong (shell-import-wizard lane) | src/checks/editorqml/tst_ShellImportWizard.qml
+Anchor: message "A056 catalog includes fixture_rich"
+
+S061 | test_importAnalysisPage (shell-import-wizard lane) | src/checks/editorqml/tst_ShellImportWizard.qml
+Anchor: message "A057 rescale control exists"
+
+S062 | test_importAnalysisPage (shell-import-wizard lane) | src/checks/editorqml/tst_ShellImportWizard.qml
+Anchor: message "A058 rescale defaults on"
+
+S063 | test_importFinishRegistersSong (shell-import-wizard lane) | src/checks/editorqml/tst_ShellImportWizard.qml
+Anchor: message "A059 import finishes writing registered song"
+
+S064 | test_importFinishRegistersSong (shell-import-wizard lane) | src/checks/editorqml/tst_ShellImportWizard.qml
+Anchor: message "A060 default timing adjustment persists"
+
+S065 | test_importIdentityPage (shell-import-wizard lane) | src/checks/editorqml/tst_ShellImportWizard.qml
+Anchor: message "A063 placeholder"
+
+S066 | test_importIdentityPage (shell-import-wizard lane) | src/checks/editorqml/tst_ShellImportWizard.qml
+Anchor: message "A064 constant follows name"
+
+S067 | test_importIdentityPage (shell-import-wizard lane) | src/checks/editorqml/tst_ShellImportWizard.qml
+Anchor: message "A065 invalid paste rejected whole"
+
+S068 | test_importAnalysisPage (shell-import-wizard lane) | src/checks/editorqml/tst_ShellImportWizard.qml
+Anchor: message "A069 both player selectors exist"
+
+S069 | test_importAnalysisPage (shell-import-wizard lane) | src/checks/editorqml/tst_ShellImportWizard.qml
+Anchor: message "A070 player selectors synchronize"
+
+S070 | test_importAnalysisPage (shell-import-wizard lane) | src/checks/editorqml/tst_ShellImportWizard.qml
+Anchor: message "A071 one-track warning describes muted track"
+
+S071 | test_importFinishRegistersSong (shell-import-wizard lane) | src/checks/editorqml/tst_ShellImportWizard.qml
+Anchor: message "A072 chosen player persists"
+
+S072 | test_importAnalysisPage (shell-import-wizard lane) | src/checks/editorqml/tst_ShellImportWizard.qml
+Anchor: message "A078 identity changes analysis selection"

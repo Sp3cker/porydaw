@@ -34,6 +34,7 @@ public final class MidiImportController {
     @QtTracked public var busy = false
     @QtTracked public var page = 0
     @QtTracked public var windowTitle = ""
+    @QtTracked public var sourceFileName = ""
     @QtTracked public var startFolder = ""
     public var analysisPlayers: [String] = []
     public var identityPlayers: [String] = []
@@ -64,10 +65,8 @@ public final class MidiImportController {
     @QtTracked public var extendedClocks = false
     @QtTracked public var noCompression = false
 
-    @QtTracked public var sourcePickerRequest = 0
-    @QtTracked public var warningRequest = 0
-    @QtTracked public var warningTitle = ""
-    @QtTracked public var warningMessage = ""
+    @QtSignal public func sourcePickerRequested()
+    @QtSignal public func warningRequested(title: String, message: String)
 
     private weak var dock: SongDockController?
     private weak var session: ApplicationSession?
@@ -111,7 +110,7 @@ public final class MidiImportController {
         guard canIntake else { return }
         let folder = PreferencesStore().string(key: "lastImportDir", fallback: NSHomeDirectory())
         startFolder = URL(fileURLWithPath: folder, isDirectory: true).absoluteString
-        sourcePickerRequest += 1
+        sourcePickerRequested()
     }
 
     public func chooseSource(fileUrl: String) {
@@ -223,9 +222,7 @@ public final class MidiImportController {
     }
 
     private func publishWarning(title: String, message: String) {
-        warningTitle = title
-        warningMessage = message
-        warningRequest += 1
+        warningRequested(title: title, message: message)
     }
 
     public func cancel() {
@@ -245,6 +242,7 @@ public final class MidiImportController {
         guard let state else {
             page = 0
             windowTitle = ""
+            sourceFileName = ""
             analysisPlayers = []
             identityPlayers = []
             playerIndex = 0
@@ -280,6 +278,7 @@ public final class MidiImportController {
         }
         page = state.page
         windowTitle = state.windowTitle
+        sourceFileName = state.sourceFileName
         analysisPlayers = state.analysisPlayerNames
         identityPlayers = state.identityPlayerNames
         playerIndex = state.playerIndex

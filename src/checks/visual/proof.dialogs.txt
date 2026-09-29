@@ -3,13 +3,13 @@ Assertion correspondence: visual/dialogs.cpp
 Reference revision: 4346c26abdcab317ccf97e178c959a82301081c9
 Original: src/checks/visual/dialogs.cpp
 Original SHA-256: 83b7c5889b8c614092920dd3054fe74bc478aa8fb3c4ddcce7dd515cc2c2428c
-Swift counterpart: none identified
+Swift counterpart: src/checks/editorqml/tst_ShellImportWizard.qml (import-page flow; SHA-256 8161a46c69bb29dc4c662730e6e4443c5b3457698bdc7f669667deb2038ccfaa).
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-This file: 27 assertion sites: 24 GAP, 3 RETIRED-REPRESENTATION. Dispositions tally: 24 GAP, 3 RETIRED-REPRESENTATION. The settings/theme/sample-editor/Sf2ZonePicker/wizard widget-chrome and pixel-baseline sites are GAP, features not yet ported whose frozen QWidget PNGs have no converted-window owner; only the QSettings isolate (A002) and the two sample-WAV fixture imports (A010/A013) stay RETIRED-REPRESENTATION. The five wizard currentId page-flow GAPs (A018/A020/A022/A024/A026) are unchanged.
+This file: 27 assertion sites: 18 GAP, 3 MATCHED, 6 RETIRED-REPRESENTATION. Dispositions tally: 18 GAP, 3 MATCHED, 6 RETIRED-REPRESENTATION. Import page flow is mapped to shell-import-wizard; its QWidget-only frozen-PNG region lookups are retired. Other dialog families and the shared PNG helper remain unresolved.
 
-Command: deno task verify --filter visual --verbose
-Result: pending integrated run.
+Command: deno task checks:shell --filter shell-import-wizard --verbose
+Result: controller-observed 2026-09-29 — shell-import-wizard + shell-import-wizard-finish 2/2 ok; proof check --executed: 0 dialogs sites not executed.
 
 A001 | compareShown (helper) | src/checks/visual/dialogs.cpp:248
 Disposition: GAP
@@ -538,96 +538,34 @@ Original expression:
   QVERIFY2(wizardRegions(wizard, regions), "wizard chrome not found");
 
 A022 | VisualDialogsTest::midiImportWizardPages | src/checks/visual/dialogs.cpp:645
-Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard; the wizard flow has no Swift/QML owner (ShellPresenter's action list at src/swift/app/shell/ShellPresenter.swift carries no new-song/import action, ShellWindow.qml holds only the project picker, song picker, and information/critical dialogs, and newsongwizard.cpp is uncompiled), and dead QWizard mechanics cannot retire absent behavior.
-Source context since previous assertion:
-
-      compareShown(QStringLiteral("wizard/new-sound-vanilla"), wizard, regions);
-  }
-
-  void VisualDialogsTest::midiImportWizardPages()
-  {
-      themes::apply(*app(), themes::vanilla());
-      NewSongWizard wizard(visualProjectData(), visualImportSmf(),
-                           QStringLiteral("fix/external_import.mid"));
-      // Pin the size Qt would choose pre-screen-fit: sizeHint expanded to
-      // the ctor's fontPx-derived minimum.
-      wizard.setFixedSize(wizard.sizeHint().expandedTo(wizard.minimumSize()));
-      showSettled(wizard);
-Original expression:
-  QCOMPARE(wizard.currentId(), 0);
-
+Disposition: MATCHED
+Mapping: S001
 A023 | VisualDialogsTest::midiImportWizardPages | src/checks/visual/dialogs.cpp:647
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: new-song/MIDI-import wizard. No-ingress fact retained: dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Import analysis chrome (real SMF table) must render.
-Source context since previous assertion:
-
-      QList<checks::visual::Region> regions;
-Original expression:
-  QVERIFY2(wizardRegions(wizard, regions), "wizard chrome not found");
-
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QWidget widget-tree region lookup feeds only the frozen QWidget PNG comparison (A001); page content is exercised by S001–S003 and the onboard wizard predicates.
 A024 | VisualDialogsTest::midiImportWizardPages | src/checks/visual/dialogs.cpp:654
-Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard; the wizard flow has no Swift/QML owner (ShellPresenter's action list at src/swift/app/shell/ShellPresenter.swift carries no new-song/import action, ShellWindow.qml holds only the project picker, song picker, and information/critical dialogs, and newsongwizard.cpp is uncompiled), and dead QWizard mechanics cannot retire absent behavior.
-Source context since previous assertion:
-
-      compareShown(QStringLiteral("wizard/import-analysis-vanilla"), wizard, regions);
-
-      wizard.next();
-      QApplication::processEvents();
-      parkFocus(wizard);
-      QApplication::processEvents();
-Original expression:
-  QCOMPARE(wizard.currentId(), 1);
+Disposition: MATCHED
+Mapping: S002
 
 A025 | VisualDialogsTest::midiImportWizardPages | src/checks/visual/dialogs.cpp:656
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: new-song/MIDI-import wizard. No-ingress fact retained: dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Import identity chrome must render.
-Source context since previous assertion:
-
-      regions.clear();
-Original expression:
-  QVERIFY2(wizardRegions(wizard, regions), "wizard chrome not found");
-
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QWidget widget-tree region lookup feeds only the frozen QWidget PNG comparison (A001); page content is exercised by S001–S003 and the onboard wizard predicates.
 A026 | VisualDialogsTest::midiImportWizardPages | src/checks/visual/dialogs.cpp:663
-Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard; the wizard flow has no Swift/QML owner (ShellPresenter's action list at src/swift/app/shell/ShellPresenter.swift carries no new-song/import action, ShellWindow.qml holds only the project picker, song picker, and information/critical dialogs, and newsongwizard.cpp is uncompiled), and dead QWizard mechanics cannot retire absent behavior.
-Source context since previous assertion:
-
-      compareShown(QStringLiteral("wizard/import-identity-vanilla"), wizard, regions);
-
-      wizard.next();
-      QApplication::processEvents();
-      parkFocus(wizard);
-      QApplication::processEvents();
-Original expression:
-  QCOMPARE(wizard.currentId(), 2);
-
+Disposition: MATCHED
+Mapping: S003
 A027 | VisualDialogsTest::midiImportWizardPages | src/checks/visual/dialogs.cpp:665
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: new-song/MIDI-import wizard. No-ingress fact retained: dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Import sound-page chrome must render.
-Source context since previous assertion:
-
-      regions.clear();
-Original expression:
-  QVERIFY2(wizardRegions(wizard, regions), "wizard chrome not found");
-
-Remaining original source (closing sequence and helper bodies):
-
-      compareShown(QStringLiteral("wizard/import-sound-vanilla"), wizard, regions);
-  }
-
-  int runVisualDialogsCheck(QApplication &application, const QStringList &qtArguments)
-  {
-      checks::visual::prepare(application); // canonical style, font, theme, app init
-      VisualDialogsTest test;
-      QStringList arguments{QStringLiteral("visual-dialogs")};
-      arguments.append(qtArguments);
-      return QTest::qExec(&test, arguments);
-  }
-
-  #include "dialogs.moc"
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QWidget widget-tree region lookup feeds only the frozen QWidget PNG comparison (A001); page content is exercised by S001–S003 and the onboard wizard predicates.
 
 Swift assertion predicates
 
-No Swift counterpart identified; no S-items.
+Swift import-page predicates: shell-import-wizard; other dialog families have no counterpart.
+
+S001 | test_importWizardPageFlow (shell-import-wizard lane) | src/checks/editorqml/tst_ShellImportWizard.qml
+Anchor: message "A022 analysis title"
+
+S002 | test_importWizardPageFlow (shell-import-wizard lane) | src/checks/editorqml/tst_ShellImportWizard.qml
+Anchor: message "A024 identity page"
+
+S003 | test_importWizardPageFlow (shell-import-wizard lane) | src/checks/editorqml/tst_ShellImportWizard.qml
+Anchor: message "A026 sound page"
