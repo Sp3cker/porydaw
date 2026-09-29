@@ -245,6 +245,11 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
         }
     case 34:
         runDisplayListChecks(report)
+    case 35:
+        let boxedSample = ReportBox(report)
+        MainActor.assumeIsolated {
+            runSampleChecks(boxedSample.report)
+        }
     default:
         report.fail("swiftcore/suite-selection", "unknown suite \(suite)")
     }

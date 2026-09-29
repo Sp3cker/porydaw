@@ -80,6 +80,9 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         themecolor/ThemeColorChecks.swift
         themecolor/ThemeColorPresets.swift
         displaylist/DisplayListChecks.swift
+        samplecheck/SampleChecks.swift
+        samplecheck/SampleFixtures.swift
+        samplecheck/DecoderChecks.swift
         editcheck/tst_songdocument_songraw.swift
         editcheck/tst_songdocument_runner.swift
         editcheck/tst_songdocument_songranges.swift
@@ -332,7 +335,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
     )
-    target_link_libraries(swift_core_check PRIVATE PorydawCore PorydawPlayback PorydawProject PorydawApp)
+    target_link_libraries(swift_core_check PRIVATE PorydawCore PorydawPlayback PorydawProject PorydawApp PorydawSample)
     target_link_libraries(porydaw_checks PRIVATE swift_core_check)
     target_sources(porydaw_checks PRIVATE
         support/corecheck/tst_swiftcore.cpp

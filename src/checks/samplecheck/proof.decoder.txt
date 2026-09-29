@@ -3,743 +3,237 @@ Assertion correspondence: samplecheck/decoder.cpp
 Reference revision: 5af4355e8fc1337f38da60c545da4af246160bcf
 Original: src/checks/samplecheck/decoder.cpp
 Original SHA-256: 567e1efd7c3739345c23cadd4fd8ebbc5b9c422c74e6fd252454472f5f1e0d03
-Swift counterpart: none identified
+Swift counterpart: src/checks/samplecheck/DecoderChecks.swift
+Swift counterpart SHA-256: b164c7eda4879391530c0acc787b61c9b6c407afa4799c68fb2367d6c47d199a
 
-Inventory: 93 sites across 7 test methods (compressedContainers, compressedRefusals, decodeAiff, decodeRefusalBoundaries, decodeStereoPolicy, decodeWidths, optionalCorpus). Tally: 93 GAP, 0 NATIVE, 0 MATCHED, 0 PARTIAL.
+Inventory: 93 sites across 7 test methods (compressedContainers, compressedRefusals, decodeAiff, decodeRefusalBoundaries, decodeStereoPolicy, decodeWidths, optionalCorpus). Tally: 55 MATCHED, 1 RETIRED-REPRESENTATION, 37 GAP.
 
-Command: deno task verify --filter samplecheck --verbose
-Result: pending integrated run.
+Command: deno task checks --filter samplecheck --verbose
+Result: controller-observed 2026-09-29 for this tree — checks: 1/38 ok, no failures; proof check --executed: 0 not executed.
 
 A001 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:39
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  #include "checks/samplecheck/fixtures.h"
-  #include "checks/samplecheck/samplecheck.h"
-
-  #include <QDir>
-  #include <QtTest>
-  #include <algorithm>
-  #include <cmath>
-  #include <cstring>
-  #include <span>
-  #include <vector>
-
-  #include "audio/sampledoc.h"
-  #include "audio/sampledsp.h"
-  #include "audio/sampleimport.h"
-  #include "checks/samplecheck_fixtures.h"
-
-  namespace {
-  constexpr double kPi = 3.14159265358979323846;
-  }
-
-  namespace samplecheck {
-
-  void SampleProcessingTest::decodeWidths_data()
-  {
-      QTest::addColumn<int>("width");
-      QTest::newRow("prepared-u8") << 8;
-      QTest::newRow("signed-16") << 16;
-      QTest::newRow("signed-24") << 24;
-      QTest::newRow("float-32") << 32;
-  }
-
-  void SampleProcessingTest::decodeWidths()
-  {
-      QFETCH(int, width);
-      QString error;
-      ImportedSample sample;
-
-      if (width == 8) {
-
-Original expression:
-  QVERIFY2(
-              importAudioBytes(preparedSampleWav(), QStringLiteral("fix/tone8.wav"), &sample, &error),
-              "u8 wav imports")
+Disposition: MATCHED
+Mapping: S001
 
 A002 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:42
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(sample.frameCount(), qint64(64))
+Disposition: MATCHED
+Mapping: S002
 
 A003 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:44
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-          for (int i = 0; i < 64; ++i)
-
-Original expression:
-  QCOMPARE(sample.buffer[size_t(i)], float((i * 2 - 128) / 128.0))
+Disposition: MATCHED
+Mapping: S003
 
 A004 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:45
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(sample.gbaReady && sample.sourceBits == 8 && sample.sourceChannels == 1,
-                   "u8 prepared shape detected")
+Disposition: MATCHED
+Mapping: S004
 
 A005 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:47
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(sample.baseKey == 58 && std::abs(sample.fracSemitone - 0.25) < 1e-12,
-                   "u8 smpl unity/fraction (standard semantics)")
+Disposition: MATCHED
+Mapping: S005
 
 A006 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:49
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(sample.hasLoop && sample.loopStart == 8 && sample.loopEndIncl == 63 &&
-                       sample.playLength == 64,
-                   "u8 loop end takes the agbl override")
+Disposition: MATCHED
+Mapping: S006
 
 A007 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:52
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(sample.exactPitch == 15000000 && std::abs(sample.sampleRate - 13240.0948) < 0.01,
-                   "u8 sample rate inverted from agbp")
+Disposition: MATCHED
+Mapping: S007
 
 A008 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:54
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(sample.suggestedName, QStringLiteral("tone8"))
+Disposition: MATCHED
+Mapping: S008
 
 A009 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:67
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-          return;
-      }
-
-      if (width == 16) {
-          FixtureSpec spec;
-          spec.bits = 16;
-          spec.rate = 44100;
-          spec.withSmpl = false;
-          const qint16 values[] = {0, 16384, -32768, 32767};
-          for (const qint16 value : values)
-              putU16(&spec.samples, quint16(value));
-
-
-Original expression:
-  QVERIFY2(importAudioBytes(fixtureWav(spec), QStringLiteral("f/s16.wav"), &sample, &error),
-                   "s16 wav imports")
+Disposition: MATCHED
+Mapping: S009
 
 A010 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:69
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(sample.frameCount(), qint64(4))
+Disposition: MATCHED
+Mapping: S010
 
 A011 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:70
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(sample.buffer[0], 0.0f)
+Disposition: MATCHED
+Mapping: S011
 
 A012 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:71
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(sample.buffer[1], 0.5f)
+Disposition: MATCHED
+Mapping: S012
 
 A013 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:72
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(sample.buffer[2], -1.0f)
+Disposition: MATCHED
+Mapping: S013
 
 A014 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:73
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(sample.buffer[3], float(32767.0 / 32768.0))
+Disposition: MATCHED
+Mapping: S014
 
 A015 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:74
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(!sample.gbaReady && sample.sampleRate == 44100.0 && !sample.hasLoop &&
-                       sample.baseKey == 60,
-                   "s16 hi-res defaults")
+Disposition: MATCHED
+Mapping: S015
 
 A016 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:92
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-          return;
-      }
-
-      if (width == 24) {
-          FixtureSpec spec;
-          spec.bits = 24;
-          spec.withSmpl = false;
-          const qint32 values[] = {0, 8388607, -8388608, -1};
-          for (const qint32 value : values) {
-              const quint32 bits = quint32(value);
-              spec.samples += char(bits & 0xFFu);
-              spec.samples += char((bits >> 8) & 0xFFu);
-              spec.samples += char((bits >> 16) & 0xFFu);
-          }
-
-
-Original expression:
-  QVERIFY2(importAudioBytes(fixtureWav(spec), QStringLiteral("f/s24.wav"), &sample, &error),
-                   "s24 wav imports")
+Disposition: MATCHED
+Mapping: S016
 
 A017 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:94
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(sample.frameCount(), qint64(4))
+Disposition: MATCHED
+Mapping: S017
 
 A018 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:95
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(sample.buffer[0], 0.0f)
+Disposition: MATCHED
+Mapping: S018
 
 A019 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:96
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(sample.buffer[1], float(8388607.0 / 8388608.0))
+Disposition: MATCHED
+Mapping: S019
 
 A020 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:97
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(sample.buffer[2], -1.0f)
+Disposition: MATCHED
+Mapping: S020
 
 A021 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:98
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(sample.buffer[3], float(-1.0 / 8388608.0))
+Disposition: MATCHED
+Mapping: S021
 
 A022 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:114
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-          return;
-      }
-
-      if (width == 32) {
-          FixtureSpec spec;
-          spec.formatTag = 3;
-          spec.bits = 32;
-          spec.withSmpl = false;
-          const float values[] = {0.5f, -0.25f, 1.5f, -2.0f};
-          for (const float value : values) {
-              quint32 bits;
-              std::memcpy(&bits, &value, sizeof(bits));
-              putU32(&spec.samples, bits);
-          }
-
-
-Original expression:
-  QVERIFY2(importAudioBytes(fixtureWav(spec), QStringLiteral("f/f32.wav"), &sample, &error),
-                   "f32 wav imports")
+Disposition: MATCHED
+Mapping: S022
 
 A023 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:116
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(sample.sourceFloat)
+Disposition: MATCHED
+Mapping: S023
 
 A024 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:117
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(sample.frameCount(), qint64(4))
+Disposition: MATCHED
+Mapping: S024
 
 A025 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:118
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(sample.buffer[0], 0.5f)
+Disposition: MATCHED
+Mapping: S025
 
 A026 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:119
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(sample.buffer[1], -0.25f)
+Disposition: MATCHED
+Mapping: S026
 
 A027 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:120
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(sample.buffer[2], 1.0f)
+Disposition: MATCHED
+Mapping: S027
 
 A028 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:121
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(sample.buffer[3], -1.0f)
+Disposition: MATCHED
+Mapping: S028
 
 A029 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:122
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(!sample.warnings.isEmpty(), "clamped floats warn")
+Disposition: MATCHED
+Mapping: S029
 
 A030 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:126
-Disposition: GAP
-Mapping/reason: Defensive default for an unsupported data-row branch, unreachable with the registered rows. No Swift counterpart establishes this guard; it remains an open obligation.
-Source context since previous assertion:
-  ;
-          return;
-      }
-
-
-Original expression:
-  QFAIL("unsupported PCM test width")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: harness data-row dispatch guard; Swift rows are explicit calls.
 
 A031 | SampleProcessingTest::decodeStereoPolicy | src/checks/samplecheck/decoder.cpp:144
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-  }
-
-  void SampleProcessingTest::decodeStereoPolicy()
-  {
-      FixtureSpec antiPhase;
-      antiPhase.bits = 16;
-      antiPhase.channels = 2;
-      antiPhase.withSmpl = false;
-      std::vector<qint16> left(200);
-      for (int i = 0; i < 200; ++i) {
-          left[size_t(i)] = qint16(std::lround(16000.0 * std::sin(2.0 * kPi * i / 50.0)));
-          putU16(&antiPhase.samples, quint16(left[size_t(i)]));
-          putU16(&antiPhase.samples, quint16(qint16(-left[size_t(i)])));
-      }
-
-      QString error;
-      ImportedSample downmixed;
-
-Original expression:
-  QVERIFY2(
-          importAudioBytes(fixtureWav(antiPhase), QStringLiteral("f/st.wav"), &downmixed, &error),
-          "anti-phase stereo imports")
+Disposition: MATCHED
+Mapping: S031
 
 A032 | SampleProcessingTest::decodeStereoPolicy | src/checks/samplecheck/decoder.cpp:147
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(downmixed.frameCount(), qint64(200))
+Disposition: MATCHED
+Mapping: S032
 
 A033 | SampleProcessingTest::decodeStereoPolicy | src/checks/samplecheck/decoder.cpp:149
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-      for (int i = 0; i < 200; ++i)
-
-Original expression:
-  QVERIFY(std::abs(downmixed.buffer[size_t(i)]) < 1e-6f)
+Disposition: MATCHED
+Mapping: S033
 
 A034 | SampleProcessingTest::decodeStereoPolicy | src/checks/samplecheck/decoder.cpp:150
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(downmixed.phaseCancelStereo && downmixed.sourceChannels == 2,
-               "anti-phase stereo cancels and is flagged")
+Disposition: MATCHED
+Mapping: S034
 
 A035 | SampleProcessingTest::decodeStereoPolicy | src/checks/samplecheck/decoder.cpp:154
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-      ImportedSample leftOnly;
-
-Original expression:
-  QVERIFY2(importAudioBytes(fixtureWav(antiPhase), QStringLiteral("f/st.wav"), &leftOnly, &error,
-                                true),
-               "left-only re-import works")
+Disposition: MATCHED
+Mapping: S035
 
 A036 | SampleProcessingTest::decodeStereoPolicy | src/checks/samplecheck/decoder.cpp:157
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(leftOnly.frameCount(), qint64(200))
+Disposition: MATCHED
+Mapping: S036
 
 A037 | SampleProcessingTest::decodeStereoPolicy | src/checks/samplecheck/decoder.cpp:159
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-      for (int i = 0; i < 200; ++i)
-
-Original expression:
-  QCOMPARE(leftOnly.buffer[size_t(i)], float(left[size_t(i)] / 32768.0))
+Disposition: MATCHED
+Mapping: S037
 
 A038 | SampleProcessingTest::decodeStereoPolicy | src/checks/samplecheck/decoder.cpp:160
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(!leftOnly.phaseCancelStereo, "left-only takes channel 0 verbatim")
+Disposition: MATCHED
+Mapping: S038
 
 A039 | SampleProcessingTest::decodeStereoPolicy | src/checks/samplecheck/decoder.cpp:169
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-      FixtureSpec inPhase = antiPhase;
-      inPhase.samples.clear();
-      for (int i = 0; i < 200; ++i) {
-          putU16(&inPhase.samples, quint16(left[size_t(i)]));
-          putU16(&inPhase.samples, quint16(qint16(left[size_t(i)] / 2)));
-      }
-      ImportedSample mean;
-
-Original expression:
-  QVERIFY2(importAudioBytes(fixtureWav(inPhase), QStringLiteral("f/stm.wav"), &mean, &error),
-               "in-phase stereo imports")
+Disposition: MATCHED
+Mapping: S039
 
 A040 | SampleProcessingTest::decodeStereoPolicy | src/checks/samplecheck/decoder.cpp:171
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!mean.phaseCancelStereo)
+Disposition: MATCHED
+Mapping: S040
 
 A041 | SampleProcessingTest::decodeStereoPolicy | src/checks/samplecheck/decoder.cpp:172
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(mean.buffer[12], float((double(left[12]) + double(left[12] / 2)) / 2.0 / 32768.0))
+Disposition: MATCHED
+Mapping: S041
 
 A042 | SampleProcessingTest::decodeStereoPolicy | src/checks/samplecheck/decoder.cpp:190
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-      // Keep sub-float source precision through the channel mean. The ignored
-      // right channel must still contribute to source clipping diagnostics.
-      FixtureSpec precise;
-      precise.formatTag = 3;
-      precise.bits = 64;
-      precise.channels = 2;
-      precise.withSmpl = false;
-      const double residual = std::ldexp(1.0, -30);
-      for (const double value : {0.5 + residual, -0.5 + residual, 0.125, 1.5}) {
-          quint64 bits;
-          std::memcpy(&bits, &value, sizeof(bits));
-          putU32(&precise.samples, quint32(bits));
-          putU32(&precise.samples, quint32(bits >> 32));
-      }
-      const QByteArray preciseBytes = fixtureWav(precise);
-      ImportedSample preciseMean;
-
-Original expression:
-  QVERIFY2(importAudioBytes(preciseBytes, QStringLiteral("f/precise.wav"), &preciseMean, &error),
-               qPrintable(error))
+Disposition: MATCHED
+Mapping: S042
 
 A043 | SampleProcessingTest::decodeStereoPolicy | src/checks/samplecheck/decoder.cpp:192
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(preciseMean.buffer, (std::vector<float>{float(residual), 0.5625f}))
+Disposition: MATCHED
+Mapping: S043
 
 A044 | SampleProcessingTest::decodeStereoPolicy | src/checks/samplecheck/decoder.cpp:195
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-      ImportedSample preciseLeft;
-
-Original expression:
-  QVERIFY2(
-          importAudioBytes(preciseBytes, QStringLiteral("f/precise.wav"), &preciseLeft, &error, true),
-          qPrintable(error))
+Disposition: MATCHED
+Mapping: S044
 
 A045 | SampleProcessingTest::decodeStereoPolicy | src/checks/samplecheck/decoder.cpp:198
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(preciseLeft.buffer, (std::vector<float>{0.5f, 0.125f}))
+Disposition: MATCHED
+Mapping: S045
 
 A046 | SampleProcessingTest::decodeStereoPolicy | src/checks/samplecheck/decoder.cpp:201
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-      // One source-clamping warning and one left-only warning; neither output
-      // contains full-scale samples that could add a post-mix clipping warning.
-
-Original expression:
-  QCOMPARE(preciseLeft.warnings.size(), 2)
+Disposition: MATCHED
+Mapping: S046
 
 A047 | SampleProcessingTest::decodeAiff | src/checks/samplecheck/decoder.cpp:222
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-  }
-
-  void SampleProcessingTest::decodeAiff()
-  {
-      AiffSpec spec;
-      spec.numFrames = 500;
-      spec.rate = 22050.0;
-      spec.baseNote = 57;
-      spec.detune = -25;
-      spec.loop = true;
-      spec.loopStartPos = 100;
-      spec.loopEndPos = 400;
-      std::vector<qint16> values(500);
-      for (int i = 0; i < 500; ++i) {
-          values[size_t(i)] = qint16((i * 37) % 30001 - 15000);
-          putBe16(&spec.ssnd, quint16(values[size_t(i)]));
-      }
-
-      QString error;
-      ImportedSample sample;
-
-Original expression:
-  QVERIFY2(importAudioBytes(fixtureAiff(spec), QStringLiteral("f/a.aif"), &sample, &error),
-               "aiff imports")
+Disposition: MATCHED
+Mapping: S047
 
 A048 | SampleProcessingTest::decodeAiff | src/checks/samplecheck/decoder.cpp:224
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(sample.frameCount(), qint64(500))
+Disposition: MATCHED
+Mapping: S048
 
 A049 | SampleProcessingTest::decodeAiff | src/checks/samplecheck/decoder.cpp:226
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-      for (int i = 0; i < 500; ++i)
-
-Original expression:
-  QCOMPARE(sample.buffer[size_t(i)], float(values[size_t(i)] / 32768.0))
+Disposition: MATCHED
+Mapping: S049
 
 A050 | SampleProcessingTest::decodeAiff | src/checks/samplecheck/decoder.cpp:227
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(sample.sampleRate == 22050.0 && sample.sourceKind == ImportedSample::Aif,
-               "aiff extended-80 rate")
+Disposition: MATCHED
+Mapping: S050
 
 A051 | SampleProcessingTest::decodeAiff | src/checks/samplecheck/decoder.cpp:229
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(sample.hasLoop && sample.loopStart == 100 && sample.loopEndIncl == 399,
-               "aiff MARK/INST loop (exclusive end converted)")
+Disposition: MATCHED
+Mapping: S051
 
 A052 | SampleProcessingTest::decodeAiff | src/checks/samplecheck/decoder.cpp:231
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(sample.baseKey == 56 && std::abs(sample.fracSemitone - 0.75) < 1e-12,
-               "aiff INST detune renormalized into unity/fraction")
+Disposition: MATCHED
+Mapping: S052
 
 A053 | SampleProcessingTest::decodeRefusalBoundaries | src/checks/samplecheck/decoder.cpp:277
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-  }
-
-  void SampleProcessingTest::decodeRefusalBoundaries_data()
-  {
-      QTest::addColumn<QByteArray>("bytes");
-      QTest::addColumn<QString>("path");
-      QTest::addColumn<bool>("accepted");
-      QTest::addColumn<qint64>("frames");
-      QTest::addColumn<float>("secondSample");
-
-      FixtureSpec lying;
-      lying.bits = 16;
-      lying.withSmpl = false;
-      for (int i = 0; i < 32; ++i)
-          putU16(&lying.samples, quint16(i));
-      QByteArray lyingWav = fixtureWav(lying);
-      const qsizetype dataSizeAt = 12 + 8 + 16 + 4;
-      lyingWav[dataSizeAt] = char(0xF0);
-      lyingWav[dataSizeAt + 1] = char(0xFF);
-      lyingWav[dataSizeAt + 2] = char(0xFF);
-      lyingWav[dataSizeAt + 3] = char(0x7F);
-      QTest::newRow("lying-data-size")
-          << lyingWav << QStringLiteral("f/lying.wav") << true << qint64(32) << float(1.0 / 32768.0);
-
-      QTest::newRow("garbage") << QByteArray("MThd not audio at all") << QStringLiteral("f/x.mid")
-                               << false << qint64(0) << 0.0f;
-
-      AiffSpec aiff;
-      QByteArray aifc = fixtureAiff(aiff);
-      aifc.replace(8, 4, "AIFC");
-      QTest::newRow("aifc") << aifc << QStringLiteral("f/x.aifc") << false << qint64(0) << 0.0f;
-  }
-
-  void SampleProcessingTest::decodeRefusalBoundaries()
-  {
-      QFETCH(QByteArray, bytes);
-      QFETCH(QString, path);
-      QFETCH(bool, accepted);
-      QFETCH(qint64, frames);
-      QFETCH(float, secondSample);
-
-      QString error;
-      ImportedSample sample;
-      const bool imported = importAudioBytes(bytes, path, &sample, &error);
-
-Original expression:
-  QCOMPARE(imported, accepted)
+Disposition: MATCHED
+Mapping: S053, S057, S058 (accepted WAV; refused garbage and AIFF-C data rows).
 
 A054 | SampleProcessingTest::decodeRefusalBoundaries | src/checks/samplecheck/decoder.cpp:279
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-      if (!accepted) {
-
-Original expression:
-  QVERIFY2(!error.isEmpty(), "rejected input reports a refusal")
+Disposition: MATCHED
+Mapping: S054, S059 (both rejected data rows report a refusal).
 
 A055 | SampleProcessingTest::decodeRefusalBoundaries | src/checks/samplecheck/decoder.cpp:283
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-          return;
-      }
-
-
-Original expression:
-  QCOMPARE(sample.frameCount(), frames)
+Disposition: MATCHED
+Mapping: S055
 
 A056 | SampleProcessingTest::decodeRefusalBoundaries | src/checks/samplecheck/decoder.cpp:284
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(sample.buffer[1], secondSample)
+Disposition: MATCHED
+Mapping: S056
 
 A057 | SampleProcessingTest::compressedContainers | src/checks/samplecheck/decoder.cpp:318
 Disposition: GAP
@@ -1230,12 +724,126 @@ Remaining original source (closing sequence and helper bodies):
 
 
 Swift assertion predicates
-No Swift counterpart file was identified for this suite, so no report.expect*/expectEqual
-predicates exist. The S-list is empty.
+S001 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "prepared u8 WAV imports"
+S002 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "u8 prepared frame count"
+S003 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "u8 samples preserve canonical s8/128 scaling"
+S004 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "u8 prepared shape detected"
+S005 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "u8 smpl unity and fraction"
+S006 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "u8 loop end takes agbl override"
+S007 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "u8 rate derives from agbp"
+S008 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "u8 basename sanitized"
+S009 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "s16 WAV imports"
+S010 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "s16 frame count"
+S011 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "s16 zero conversion"
+S012 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "s16 positive half-scale conversion"
+S013 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "s16 negative full-scale conversion"
+S014 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "s16 positive endpoint conversion"
+S015 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "s16 hi-res defaults"
+S016 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "s24 WAV imports"
+S017 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "s24 frame count"
+S018 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "s24 zero conversion"
+S019 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "s24 positive endpoint conversion"
+S020 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "s24 negative full-scale conversion"
+S021 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "s24 negative unit conversion"
+S022 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "f32 WAV imports"
+S023 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "f32 source identified as float"
+S024 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "f32 frame count"
+S025 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "f32 positive half-scale conversion"
+S026 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "f32 negative quarter-scale conversion"
+S027 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "f32 positive clamping"
+S028 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "f32 negative clamping"
+S029 | decoderWidths | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "f32 clipping reports count"
+S031 | decoderStereo | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "anti-phase stereo imports"
+S032 | decoderStereo | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "anti-phase stereo frame count"
+S033 | decoderStereo | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "anti-phase mean cancels"
+S034 | decoderStereo | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "negative stereo correlation flagged"
+S035 | decoderStereo | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "left-only re-import works"
+S036 | decoderStereo | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "left-only frame count"
+S037 | decoderStereo | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "left-only takes channel zero verbatim"
+S038 | decoderStereo | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "left-only warning and provenance"
+S039 | decoderStereo | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "in-phase stereo imports"
+S040 | decoderStereo | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "in-phase stereo does not cancel"
+S041 | decoderStereo | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "stereo mean retains double precision"
+S042 | decoderStereo | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "f64 stereo mean imports"
+S043 | decoderStereo | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "f64 mean preserves sub-float precision"
+S044 | decoderStereo | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "f64 left-only imports"
+S045 | decoderStereo | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "f64 left-only keeps channel zero"
+S046 | decoderStereo | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "ignored right channel still reports clipping"
+S047 | decoderAiff | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "AIFF source imports"
+S048 | decoderAiff | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "AIFF frame count"
+S049 | decoderAiff | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "AIFF signed BE PCM conversion"
+S050 | decoderAiff | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "AIFF extended-80 rate"
+S051 | decoderAiff | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "AIFF MARK INST exclusive-end loop"
+S052 | decoderAiff | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "AIFF detune renormalized"
+S053 | decoderRefusals | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "lying WAV chunk accepted"
+S054 | decoderRefusals | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "rejected garbage reports a refusal"
+S055 | decoderRefusals | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "lying WAV data size clamps to present frames"
+S056 | decoderRefusals | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "lying WAV second sample preserved"
+S057 | decoderRefusals | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "unsupported source has actionable refusal"
+S058 | decoderRefusals | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "AIFF-C refusal text"
+S059 | decoderRefusals | src/checks/samplecheck/DecoderChecks.swift
+Anchor: message "rejected AIFF-C reports a refusal"
 
 Shared helpers
 The shared C++ fixture sources src/checks/samplecheck/fixtures.h and
 src/checks/samplecheck/fixtures.cpp (SHA-256 543265f5d4274c58c8bf5131850cd55da1a625024ee91731f4aaf57ad96b641b) carry no assertion sites
 (verified: no QVERIFY, QCOMPARE, QFAIL, QSKIP, QTRY_*, or QEXPECT_FAIL sites); they only
-build byte fixtures, generators, and metrics used by the setups above. There are no Swift
-fixture files for this suite.
+build byte fixtures, generators, and metrics used by the setups above. The Swift check
+fixture writers and generators live in src/checks/samplecheck/SampleFixtures.swift.

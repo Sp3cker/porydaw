@@ -188,6 +188,11 @@ void SwiftCoreTest::displayList()
     pdc_suite_run(PDC_SUITE_DISPLAY_LIST, reportSwiftCheck, this);
 }
 
+void SwiftCoreTest::sampleCheck()
+{
+    pdc_suite_run(PDC_SUITE_SAMPLE, reportSwiftCheck, this);
+}
+
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments)
 {
     const QByteArray encodedRoot = QFile::encodeName(fixtureRoot);

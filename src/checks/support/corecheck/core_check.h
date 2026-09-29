@@ -40,6 +40,7 @@ enum PdcSuite {
     PDC_SUITE_EXPORT_CHECKS = 32,
     PDC_SUITE_THEME_COLOR = 33,
     PDC_SUITE_DISPLAY_LIST = 34,
+    PDC_SUITE_SAMPLE = 35,
 };
 
 typedef void (*PdcCheckReport)(void *context, int failed, const char *cppId, const char *message);
