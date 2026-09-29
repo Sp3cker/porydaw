@@ -4,8 +4,10 @@ static int pd_dl_aligned(const void *p) {
     return ((uintptr_t)p & 7u) == 0;
 }
 
-static size_t pd_dl_align8(size_t n) {
-    return (n + 7u) & ~(size_t)7u;
+static bool pd_dl_align8(size_t n, size_t *out) {
+    if (n > SIZE_MAX - 7) return false;
+    *out = (n + 7u) & ~(size_t)7u;
+    return true;
 }
 
 /* Offsets are computed, never stored: every section follows the previous one
@@ -20,19 +22,26 @@ bool pd_dl_decode(const void *bytes, size_t length, PdDlView *out) {
         return false;
     }
 
-    const size_t fontsOff = pd_dl_align8(sizeof(PdDlHeader));
+    size_t fontsOff, rectOff, labelOff, textOff;
+    if (!pd_dl_align8(sizeof(PdDlHeader), &fontsOff)) return false;
     if ((size_t)header->fontCount > (SIZE_MAX - fontsOff) / sizeof(PdDlFont)) {
         return false;
     }
-    const size_t rectOff = pd_dl_align8(fontsOff + (size_t)header->fontCount * sizeof(PdDlFont));
+    if (!pd_dl_align8(fontsOff + (size_t)header->fontCount * sizeof(PdDlFont), &rectOff)) {
+        return false;
+    }
     if ((size_t)header->rectCount > (SIZE_MAX - rectOff) / sizeof(PdDlRect)) {
         return false;
     }
-    const size_t labelOff = pd_dl_align8(rectOff + (size_t)header->rectCount * sizeof(PdDlRect));
+    if (!pd_dl_align8(rectOff + (size_t)header->rectCount * sizeof(PdDlRect), &labelOff)) {
+        return false;
+    }
     if ((size_t)header->labelCount > (SIZE_MAX - labelOff) / sizeof(PdDlLabel)) {
         return false;
     }
-    const size_t textOff = pd_dl_align8(labelOff + (size_t)header->labelCount * sizeof(PdDlLabel));
+    if (!pd_dl_align8(labelOff + (size_t)header->labelCount * sizeof(PdDlLabel), &textOff)) {
+        return false;
+    }
     if (textOff > length || (size_t)header->textBytes > length - textOff) {
         return false;
     }

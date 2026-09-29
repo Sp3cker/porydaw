@@ -8,8 +8,8 @@ extension GridScene {
     /// key, then builds the frame.
     @QtIgnored
     func rebuildNotes(_ input: GridSceneInput) {
-        let (palette, colors) = resolvePalette(input)
-        let key = RollDrawingContent.key(input, palette: palette)
+        let colors = resolvePalette(input)
+        let key = RollDrawingContent.key(input, palette: colors)
         if noteRecordsKey != key.notesSection {
             noteRecordsMaxDuration = RollDrawingContent.resolveNotes(input, into: &noteRecords)
             noteRecordsKey = key.notesSection
@@ -31,7 +31,7 @@ extension GridScene {
             rebuildNotes(input)
             return
         }
-        let (_, colors) = resolvePalette(input)
+        let colors = resolvePalette(input)
         rebuildRollLists(input, colors: colors)
     }
 
@@ -66,9 +66,8 @@ extension GridScene {
             maxDuration: noteRecordsMaxDuration,
             width: snapshot.viewportWidth, height: snapshot.rollHeight)
         displayLists[0] = built.data
-        // The keyboard item fills the full-width band beside the headers, so
-        // the list clips to the band width: overflowing drum labels paint
-        // past the keyboard edge exactly as the band-1 item did.
+        // The keyboard list fills the full-width band beside the headers and
+        // clips to it, so overflowing drum labels paint past the edge.
         displayLists[1] = keyboardBuilder.build(
             input, palette: colors,
             width: input.metrics.keyboardWidth + snapshot.viewportWidth,
@@ -86,15 +85,14 @@ extension GridScene {
     /// Palette colors resolved once per palette identity + velocity; the
     /// display lists index the same colors in slot order.
     @QtIgnored
-    private func resolvePalette(_ input: GridSceneInput) -> (data: Data, colors: [UInt32]) {
+    private func resolvePalette(_ input: GridSceneInput) -> [UInt32] {
         let key = PaletteContentKey(
             palette: ObjectIdentifier(input.palette),
             lastVelocity: input.lastVelocity)
-        if let cached = paletteContentCache, cached.key == key { return (cached.data, plotPalette) }
+        if let cached = paletteContentCache, cached.key == key { return cached.colors }
         let colors = RollDrawingContent.paletteColors(input)
-        let data = RollDrawingContent.paletteSection(colors: colors)
-        paletteContentCache = (key, data)
+        paletteContentCache = (key, colors)
         plotPalette = colors
-        return (data, colors)
+        return colors
     }
 }

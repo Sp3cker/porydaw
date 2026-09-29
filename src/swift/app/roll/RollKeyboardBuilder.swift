@@ -3,18 +3,21 @@ import NativeDisplayList
 import PorydawCore
 import QtBridge
 
-// Band-1 keyboard display list: mirrors RollScene::appendKeys and
-// TimelineRenderer::appendKeyLabels. The C++ under/over split flattens to
-// all-under: hover and edge records emit as ordinary under-rects below the
-// key labels (Contract §1). Rects viewport-clipped; labels keep the C++
-// layout rect with an intersect gate.
+// Band-1 keyboard display list: hover and edge records emit as ordinary
+// under-rects below the key labels; rects viewport-clipped, labels gated.
 @MainActor
 struct RollKeyboardBuilder {
     private var writer = DisplayListWriter()
+    private struct ExtentsKey: Equatable {
+        var family: String
+        var pixelSize: Int
+        var weight: Int
+        var letterSpacing: Double
+    }
     // Fitted key-label extents, retained across builds; rebuilt only when
     // the fitted face moves.
     private var extentsMetrics: NativeFontMetrics?
-    private var extentsKey = ""
+    private var extentsKey: ExtentsKey?
 
     // Wire flags/ids from display_list.h; font id 5 keeps the C++ key-label slot.
     private static let alignRight = UInt32(PD_DL_LABEL_ALIGN_RIGHT)
@@ -94,9 +97,8 @@ struct RollKeyboardBuilder {
         // Right-edge separator.
         emitClipped(-pixel / 2, -soY, pixel, gridH, ink(.separator))
 
-        // Key labels: fitted-size gate, visible-row cull, white-keys/octave-C-F
-        // filter (skipped in drum mode), drum-width rule, right alignment,
-        // drum-mode label backgrounds as rects.
+        // Key labels: fitted-size gate, visible-row cull, drum-width rule,
+        // right alignment, drum-mode label backgrounds as rects.
         var usedKeyFont = false
         if let typography = input.typography,
             let fit = input.fontSpec(.keyLabel)["pixelSize"] as? Int, fit > 0
@@ -156,7 +158,9 @@ struct RollKeyboardBuilder {
     // auto-clip's layout-height compare. Retained across builds.
     private mutating func keyLabelHeight(_ input: GridSceneInput, fit: Int) -> Double {
         guard let spec = input.fonts[.keyLabel] else { return 0 }
-        let key = "\(spec.family)#\(fit)#\(spec.weight)#\(spec.letterSpacing)"
+        let key = ExtentsKey(
+            family: spec.family, pixelSize: fit,
+            weight: spec.weight, letterSpacing: spec.letterSpacing)
         if key != extentsKey {
             extentsKey = key
             extentsMetrics = NativeFontMetrics(

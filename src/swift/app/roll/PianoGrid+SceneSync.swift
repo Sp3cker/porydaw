@@ -197,7 +197,6 @@ extension PianoGrid {
     private func publishGeometry() {
         let snapshot = session.camera.snapshot
         if beatWidth != snapshot.pixelsPerBeat { beatWidth = snapshot.pixelsPerBeat }
-        if pixelsPerTick != snapshot.pixelsPerTick { pixelsPerTick = snapshot.pixelsPerTick }
         if rowHeight != snapshot.keyHeight { rowHeight = snapshot.keyHeight }
         if cameraScrollX != snapshot.scrollX { cameraScrollX = snapshot.scrollX }
         if scaleFold != session.scaleProjection.fold { scaleFold = session.scaleProjection.fold }

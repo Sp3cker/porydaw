@@ -41,9 +41,7 @@ C/C++ exists only at: `src/app/`, `src/audio/`, `src/project/`,
 display-list boundary in `src/render/`: a C wire format + decoder
 (`display_list.{h,c}`, imported by Swift) and one Qt scene-graph uploader
 (`display_list_item.{h,cpp}`). Native code never projects, culls, lays out or
-decides visibility; Swift emits results into the display list. Until
-`docs/plans/native-display-list/plan.md` completes, `src/render/` also holds
-the `TimelineRenderer` scene code it replaces — do not extend that code.
+decides visibility; Swift emits results into the display list.
 
 Bridge timing facts: QtBridge NOTIFYs coalesce into one queued flush per
 event-loop turn; `QListModel` row updates are synchronous. Anything that must

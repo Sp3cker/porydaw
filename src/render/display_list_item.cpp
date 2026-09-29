@@ -245,7 +245,7 @@ class LayoutCache
         CachedLayout &entry = it->second;
         if (inserted)
             layOut(entry, text, fontKey, alignment, label.w);
-        m_fonts.find(fontKey)->second.frame = m_frame;
+        fontFor(fontKey).frame = m_frame;
         entry.frame = m_frame;
         return entry;
     }
@@ -257,8 +257,7 @@ class LayoutCache
     }
 
   private:
-    void layOut(CachedLayout &entry, const QString &text, const FontKey &key,
-                int alignment, double width)
+    CachedFont &fontFor(const FontKey &key)
     {
         auto [fontIt, inserted] = m_fonts.try_emplace(key);
         if (inserted) {
@@ -270,11 +269,18 @@ class LayoutCache
             font.setHintingPreference(QFont::PreferNoHinting);
             font.setFeature(QFont::Tag("tnum"), 1);
         }
+        return fontIt->second;
+    }
+
+    void layOut(CachedLayout &entry, const QString &text, const FontKey &key,
+                int alignment, double width)
+    {
+        CachedFont &cached = fontFor(key);
         QTextOption option;
         option.setAlignment(Qt::Alignment(alignment));
         option.setWrapMode(QTextOption::NoWrap);
         option.setUseDesignMetrics(false);
-        entry.layout = std::make_unique<QTextLayout>(text, fontIt->second.font);
+        entry.layout = std::make_unique<QTextLayout>(text, cached.font);
         entry.layout->setCacheEnabled(true);
         entry.layout->setTextOption(option);
         entry.layout->beginLayout();

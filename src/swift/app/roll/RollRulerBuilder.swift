@@ -9,8 +9,7 @@ import QtBridge
 struct RollRulerBuilder {
     private var writer = DisplayListWriter()
 
-    // Wire flags/ids from display_list.h; font ids 0-3 keep the C++ ruler
-    // slots (fontRuler/fontBeat/fontBold/fontSig in roll_content.h).
+    // Wire flags/ids from display_list.h; font ids 0-3 are the ruler slots.
     private static let idNone = UInt64(PD_DL_ID_NONE)
     private static let idLoopStart = UInt64(PD_DL_ID_LOOP_START)
     private static let idLoopEnd = UInt64(PD_DL_ID_LOOP_END)

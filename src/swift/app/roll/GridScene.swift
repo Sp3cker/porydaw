@@ -96,7 +96,7 @@ public final class GridScene {
         let palette: ObjectIdentifier
         let lastVelocity: Int
     }
-    @QtIgnored var paletteContentCache: (key: PaletteContentKey, data: Data)?
+    @QtIgnored var paletteContentCache: (key: PaletteContentKey, colors: [UInt32])?
     // Content-tier note records, tick-sorted; the frame tier culls/projects
     // these per frame — O(visible), never O(notes). Replaces packed bytes.
     @QtIgnored var noteRecords: [RollNote] = []
@@ -219,8 +219,11 @@ public final class GridScene {
         [1, 3, 6, 8, 10].contains(key % 12)
     }
 
+    private static let pitchClasses = [
+        "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
+    ]
+
     static func keyName(_ key: Int) -> String {
-        let names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
-        return "\(names[key % 12])\(key / 12 - 1)"
+        "\(pitchClasses[key % 12])\(key / 12 - 1)"
     }
 }

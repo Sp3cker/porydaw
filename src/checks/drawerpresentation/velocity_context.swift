@@ -99,7 +99,7 @@ func drawerVelocityProjectionRefresh(_ report: CheckReport, session: DocumentSes
     let stableX = fixture.session.camera.contentTickX(tick: Double(note.tick), dpr: page.devicePixelRatio)
     let viewX = fixture.session.camera.viewX(tick: Double(note.tick), dpr: page.devicePixelRatio)
     // The shared camera scroll, snapped exactly like the plot content the
-    // handle container translates by: the independent origin the roll uses.
+    // handle container translates by.
     let snappedScroll = (fixture.session.camera.snapshot.scrollX * page.devicePixelRatio).rounded()
         / page.devicePixelRatio
     report.expect(moved.x == stableX && moved.x != oldX && moved.x - snappedScroll == viewX

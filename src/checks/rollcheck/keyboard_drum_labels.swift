@@ -89,7 +89,7 @@ func checkDrumPadLabels(_ report: CheckReport) {
         report.expect(chip.hoverChipText == "fixture_named_pad_long_label_123",
                       cppID: id, message: "A038 the hover chip shows the same full pad name")
         report.expect(RollContentProbe(grid).keyboardHighlightRects().count == 1,
-                      cppID: id, message: "A038 the hovered pad paints one keyboard highlight record")
+                      cppID: id, message: "A040 the hovered pad paints one keyboard highlight record")
         report.expect(chip.hoverChipRect["width"] as? Double
                           == (grid.typography?.chipAdvance("fixture_named_pad_long_label_123") ?? 0)
                               + grid.metrics.chipHPadding,

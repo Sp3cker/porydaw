@@ -1,3 +1,6 @@
+> Superseded by `docs/plans/native-display-list/plan.md` (executed): every roll/drawer surface now
+> paints from Swift-emitted display lists and the `TimelineRenderer` scene code is deleted.
+
 # Native C++ timeline renderer — implementation plan
 
 Worktree: `.worktrees/swift-qml-grid` (Swift 6 + QML via QtBridge, Qt 6.11 Homebrew, macOS arm64).

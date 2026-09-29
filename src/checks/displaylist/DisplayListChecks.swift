@@ -3,9 +3,8 @@ import NativeDisplayList
 
 @testable import PorydawApp
 
-// Round-trips DisplayListWriter output through the C decoder and rejects
-// malformed buffers. The wire format is in-process C ABI (display_list.h), so
-// both sides of the contract are exercised field by field.
+// Round-trips DisplayListWriter output through the C decoder and rejects malformed buffers,
+// exercising both sides of the in-process C ABI contract field by field.
 
 private let displayListRoundTripID = "displaylist/DisplayListCheck::roundTrip"
 private let displayListRejectsID = "displaylist/DisplayListCheck::rejects"
@@ -210,14 +209,14 @@ private func displayListRejects(_ report: CheckReport) {
         MemoryLayout<PdDlHeader>.stride
         + 2 * MemoryLayout<PdDlFont>.stride
         + 3 * MemoryLayout<PdDlRect>.stride
-        + 44
+        + MemoryLayout<PdDlLabel>.offset(of: \.textLength)!
     pastText.replaceSubrange(
         textLengthOffset..<textLengthOffset + 4,
         with: [0xFF, 0xFF, 0xFF, 0xFF])
     check.expect(!displayListDecodes(pastText), message: "label text range past text block")
 
     var pastFamily = valid
-    let familyLengthOffset = MemoryLayout<PdDlHeader>.stride + 20
+    let familyLengthOffset = MemoryLayout<PdDlHeader>.stride + MemoryLayout<PdDlFont>.offset(of: \.familyLength)!
     pastFamily.replaceSubrange(
         familyLengthOffset..<familyLengthOffset + 4,
         with: [0xFF, 0xFF, 0xFF, 0xFF])

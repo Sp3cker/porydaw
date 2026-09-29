@@ -138,8 +138,8 @@ public struct AutomationProjection {
 
     public func contentX(_ tick: Tick) -> Double { camera.contentX(tick: Double(tick)) }
 
-    /// The display x of a tick: the camera's projection, snapped to the physical
-    /// pixel grid exactly as the roll and every other page snap theirs.
+    /// The display x of a tick, delegated to `viewX` so the lane snaps to the
+    /// physical pixel grid exactly as the roll does.
     public func x(_ tick: Tick) -> Double {
         camera.viewX(tick: Double(tick), dpr: bounds.devicePixelRatio)
     }

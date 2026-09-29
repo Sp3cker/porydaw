@@ -184,22 +184,10 @@ qt_add_library(porydaw_app STATIC
     src/app/qml_engine_host.cpp
     src/app/item_cursor.h
     src/app/item_cursor.cpp
+    src/render/display_list.h
     src/render/display_list.c
     src/render/display_list_item.h
     src/render/display_list_item.cpp
-    src/render/roll_content.h
-    src/render/roll_projection.h
-    src/render/roll_scene.h
-    src/render/roll_scene.cpp
-    src/render/drawer_content.h
-    src/render/drawer_scene.h
-    src/render/drawer_scene.cpp
-    src/render/roll_labels.h
-    src/render/ruler_scene.h
-    src/render/ruler_scene.cpp
-    src/render/timeline_renderer.h
-    src/render/timeline_renderer.cpp
-    src/render/timeline_renderer_nodes.cpp
     src/ui/songview/quick/swiftroll/native/font_metrics.cpp
     src/ui/songview/quick/swiftroll/native/font_metrics.h
     src/audio/audioengine.cpp

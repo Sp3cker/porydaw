@@ -46,7 +46,6 @@ class SwiftCoreTest final : public QObject
     void exportChecks();
     void themeColor();
     void displayList();
-    void drawerStaticsParity();
 };
 
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments);

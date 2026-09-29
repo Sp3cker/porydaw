@@ -102,7 +102,6 @@ public final class PianoGrid {
     @QtTracked public var baseFontPx = 13.0
     @QtTracked public var devicePixelRatio = 1.0
     @QtTracked public var beatWidth = 35.0
-    @QtTracked public var pixelsPerTick = 35.0 / 24.0
     @QtTracked public var rowHeight = 13.0
     @QtTracked public var cameraScrollX = 0.0
     @QtTracked public var cameraScrollY = 0.0

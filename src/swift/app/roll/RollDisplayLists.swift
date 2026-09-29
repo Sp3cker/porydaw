@@ -71,7 +71,7 @@ struct RollDrawingContentKey: Equatable {
     var feel: GridFeel
     var selection: GridSelection
     var clockTicks: Tick
-    var palette: Data
+    var palette: [UInt32]
 
     var keyboardNames: [String]?
     var typographyAvailable: Bool
@@ -106,7 +106,7 @@ enum RollDrawingContent {
         var letterSpacing: Double
     }
 
-    static func key(_ input: GridSceneInput, palette: Data) -> RollDrawingContentKey {
+    static func key(_ input: GridSceneInput, palette: [UInt32]) -> RollDrawingContentKey {
         RollDrawingContentKey(
             notesSection: RollNotesSectionKey(
                 notes: input.notes,
@@ -184,14 +184,6 @@ enum RollDrawingContent {
             SceneRectPacking.argb(p.implicitSignature),
             SceneRectPacking.argb(p.noteVelocityZero),
         ]
-    }
-
-    static func paletteSection(colors: [UInt32]) -> Data {
-        var data = Data()
-        data.reserveCapacity(2 + colors.count * 4)
-        DrawingContentBinary.append(&data, UInt16(colors.count))
-        for color in colors { DrawingContentBinary.append(&data, color) }
-        return data
     }
 
     static func resolveNotes(_ input: GridSceneInput, into records: inout [RollNote]) -> Int {

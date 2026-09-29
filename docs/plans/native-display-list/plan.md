@@ -4,7 +4,7 @@ Worktree: `.worktrees/swift-qml-grid` (Swift 6.4 `swift-6.4-RELEASE`, arm64; Qt 
 QtBridge). Supersedes the ownership split in `docs/plans/native-timeline-renderer/plan.md` (executed,
 `b774dd32`). All file:line citations verified against source on 2026-09-28.
 
-## Status: planned; Task 0 measured (go)
+## Status: executed (checkpoints b61dad0d 2aa7ab24 c3fdf05a 0efc7643 f594f8c2 625a76c9 91cfda15 f3d126c9 f05dda2f bc0a97b8)
 
 Task 0 (2026-09-28, `swiftc -O`, arm64): a writer shaped like Contract §3 packing the per-frame
 worst case — 3 000 visible notes × (fill + 4 border rects) + 400 grid lines + 500 labels = 15 400

@@ -3,8 +3,8 @@ import NativeDisplayList
 import PorydawCore
 import QtBridge
 
-// Band-0 plot display list: mirrors TimelineRenderer::buildPlot + RollScene::append*.
-// Rects clipped, labels unclipped origin with intersect gate; over-flags per C++.
+// Band-0 plot display list: rects clipped, labels unclipped origin with
+// intersect gate; over-flags mark above-label records.
 @MainActor
 struct RollPlotBuilder {
     private var writer = DisplayListWriter()

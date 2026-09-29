@@ -69,7 +69,6 @@ add_library(PorydawApp STATIC
     timeline/PlayheadGuides.swift
     timeline/SharedPlayhead.swift
     timeline/TimeAxis.swift
-    timeline/DrawingContentBinary.swift
     timeline/DisplayListWriter.swift
     timeline/GridGeometry.swift
     timeline/GridPalette.swift
