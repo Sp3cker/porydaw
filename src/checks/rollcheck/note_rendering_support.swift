@@ -5,34 +5,36 @@ import QtBridge
 
 @MainActor
 func probeFill(_ grid: PianoGrid, _ id: NoteID) -> UInt32? {
-    RollContentProbe(grid.scene).note(id)?.fillArgb
+    RollContentProbe(grid).fillRect(id)?.argb
+}
+
+/// Viewport-space face of a plotted note: the decoded fill rect. Nil when
+/// the note is culled (off-screen) or absent.
+@MainActor
+func decodedNoteBox(_ grid: PianoGrid, _ id: NoteID)
+    -> (x: Double, y: Double, w: Double, h: Double)?
+{
+    guard let face = RollContentProbe(grid).fillRect(id) else { return nil }
+    return (face.x, face.y, face.w, face.h)
 }
 
 func argbOpaque(_ argb: UInt32) -> Bool {
     argb >> 24 == 0xFF
 }
 
+/// Whether the plotted list carries a pitch-name label for the note: the
+/// production builder emits name labels only for non-ghost selected-track
+/// notes that pass its fit gates, so decoded presence is the assertion.
 @MainActor
 func noteNameLabeled(_ grid: PianoGrid, session: DocumentSession, id: NoteID) -> Bool {
-    let probe = RollContentProbe(grid.scene)
-    guard probe.noteNameMode, !probe.showVelocityValues,
-        let record = probe.note(id), !record.ghost, record.track == probe.selectedTrack,
-        let typography = grid.typography,
-        let content = contentNoteBox(
-            grid, session: session, tick: record.tick,
-            end: record.tick + record.duration, pitch: record.pitch)
-    else { return false }
-    let snapshot = session.camera.snapshot
-    let metrics = grid.metrics
-    let origin = viewportPoint(grid, x: content.x, y: content.y)
-    return origin.x < snapshot.viewportWidth && origin.x + content.w > 0
-        && origin.y < snapshot.rollHeight && origin.y + content.h > 0
-        && NoteNameLabels.faceFits(
-            keyHeight: snapshot.keyHeight, occupiedHeight: typography.noteNameOccupiedHeight,
-            pixel: metrics.pixel, spaceHalf: metrics.spaceHalf)
-        && NoteNameLabels.nameFits(
-            width: content.w, pitch: record.pitch, advance: typography.noteNameAdvance(pitch:),
-            spaceHalf: metrics.spaceHalf, spaceTwo: metrics.spaceTwo)
+    RollContentProbe(grid).nameLabel(id) != nil
+}
+
+/// Whether the plotted list carries a velocity-value label for the note.
+@MainActor
+func noteValueLabeled(_ grid: PianoGrid, id: NoteID) -> (text: String, boxW: Double)? {
+    guard let label = RollContentProbe(grid).valueLabel(id) else { return nil }
+    return (label.text, label.w)
 }
 
 @MainActor
@@ -82,45 +84,6 @@ func renderingSeed(_ report: CheckReport, id: String,
     return nil
 }
 
-@MainActor
-func noteBox(_ grid: PianoGrid, session: DocumentSession, note: Note)
-    -> (x: Double, y: Double, w: Double, h: Double)?
-{
-    contentNoteBox(
-        grid, session: session, tick: Int(note.tick),
-        end: Int(note.tick) + Int(note.duration), pitch: Int(note.pitch))
-}
-
-@MainActor
-/// Content-space note box (scroll-free): consumers map it through `viewportPoint`.
-func contentNoteBox(
-    _ grid: PianoGrid, session: DocumentSession, tick: Int, end: Int, pitch: Int
-)
-    -> (x: Double, y: Double, w: Double, h: Double)? {
-    let camera = session.camera
-    let metrics = grid.metrics
-    guard camera.projection.row(forPitch: pitch) != PitchProjection.hiddenRow
-    else { return nil }
-    let row = camera.projection.row(forPitch: min(127, max(0, pitch)))
-    let x0 = camera.contentTickX(tick: Double(tick), dpr: grid.devicePixelRatio)
-    let x1 = camera.contentTickX(tick: Double(end), dpr: grid.devicePixelRatio)
-    guard row != PitchProjection.hiddenRow,
-          let top = camera.projection.contentRowTop(
-              row, keyHeight: camera.snapshot.keyHeight, dpr: metrics.dpr),
-          let bottom = camera.projection.contentRowBottom(
-              row, keyHeight: camera.snapshot.keyHeight, dpr: metrics.dpr)
-    else { return (x0, 0, 0, -metrics.pixel) }
-    return (x0, top + metrics.pixel, max(metrics.noteMinWidth, x1 - x0),
-            max(metrics.noteMinHeight * metrics.pixel, bottom - top - metrics.pixel)
-                - metrics.pixel)
-}
-
-@MainActor
-func viewportPoint(_ grid: PianoGrid, x: Double, y: Double) -> (x: Double, y: Double) {
-    let dpr = grid.devicePixelRatio
-    return (x - (grid.cameraScrollX * dpr).rounded() / dpr,
-            y - (grid.cameraScrollY * dpr).rounded() / dpr)
-}
 
 func renderingNear(_ lhs: Double, _ rhs: Double) -> Bool {
     abs(lhs - rhs) < 1e-6

@@ -233,10 +233,12 @@ ShellWindowSupport {
                     && note.pitch === later.pitch
             })
         }, 3000, "the playing window shortcut shifts the drawn seam note without repitching")
-        var afterNotePoint = mountedNotePoint(surface, roll, later.id)
-        verify(afterNotePoint !== null
-               && Math.abs(afterNotePoint.x - beforeNotePoint.x - span * scale) < 2,
-               "the mounted seam note fill moves right by the selected interval")
+        var afterNotePoint = null
+        tryVerify(function() {
+            afterNotePoint = mountedNotePoint(surface, roll, later.id)
+            return afterNotePoint !== null
+                && Math.abs(afterNotePoint.x - beforeNotePoint.x - span * scale) < 2
+        }, 5000, "the mounted seam note fill moves right by the selected interval")
         selection = paintedTimeRange(surface, roll)
         verify(selection !== null, "the roll retains its painted active range after insertion")
         verify(Math.abs(selection.start - (start * scale - grid.cameraScrollX)) < 2,
@@ -272,10 +274,12 @@ ShellWindowSupport {
                 return note.id === later.id && note.tick === later.tick - span
             })
         }, 3000, "the real Time menu ripples the later drawn note left by the selected width")
-        afterNotePoint = mountedNotePoint(surface, roll, later.id)
-        verify(afterNotePoint !== null
-               && Math.abs(afterNotePoint.x - beforeNotePoint.x + span * scale) < 2,
-               "the mounted later note fill moves left by the scoped deletion width")
+        afterNotePoint = null
+        tryVerify(function() {
+            afterNotePoint = mountedNotePoint(surface, roll, later.id)
+            return afterNotePoint !== null
+                && Math.abs(afterNotePoint.x - beforeNotePoint.x + span * scale) < 2
+        }, 5000, "the mounted later note fill moves left by the scoped deletion width")
         compare(menu.insertTimePromptOpen, false,
                 "the scoped Time menu deletion never opens Insert Time")
         compare(grid.editCursorTick, start,
@@ -370,10 +374,12 @@ ShellWindowSupport {
                 return note.id === otherLater.id && note.tick === otherLater.tick - endTick
             })
         }, 3000, "the whole-song Time menu ripples the other track's later note exactly left")
-        var otherAfterPoint = mountedNotePoint(surface, roll, otherLater.id)
-        verify(otherAfterPoint !== null
-               && Math.abs(otherAfterPoint.x - otherLaterPoint.x + endTick * scale) < 2,
-               "the mounted other-track later fill moves left by the whole selection")
+        var otherAfterPoint = null
+        tryVerify(function() {
+            otherAfterPoint = mountedNotePoint(surface, roll, otherLater.id)
+            return otherAfterPoint !== null
+                && Math.abs(otherAfterPoint.x - otherLaterPoint.x + endTick * scale) < 2
+        }, 5000, "the mounted other-track later fill moves left by the whole selection")
         compare(grid.editCursorTick, 0, "the whole-song Time menu leaves the cursor at zero")
         compare(surface.rulerMenu.insertTimePromptOpen, false,
                 "the whole-song deletion bypasses the insertion prompt")

@@ -11,5 +11,6 @@ func runNoteRenderingChecks(_ report: CheckReport, session: DocumentSession) {
     checkVelocityValues(report, session: session)
     checkGhostNotes(report, session: session)
     checkProjectionEconomy(report, session: session)
+    checkRollPlotCullBound(report, session: session)
     checkRulerSweepSingleTrackScope(report, session: session)
 }

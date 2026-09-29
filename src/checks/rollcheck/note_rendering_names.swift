@@ -39,12 +39,12 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
     grid.refreshCamera()
     grid.setNoteNameMode(enabled: true)
     func labeledNotes() -> [RollContentProbe.Note] {
-        RollContentProbe(grid.scene).notes.filter { record in
+        RollContentProbe(grid).notes.filter { record in
             record.pitch == pitch
                 && noteNameLabeled(grid, session: session, id: NoteID(record.id))
         }
     }
-    let content = RollContentProbe(grid.scene)
+    let content = RollContentProbe(grid)
     guard let record = content.note(noteID) else {
         report.fail(id, "wide note has no projected box")
         return
@@ -55,8 +55,7 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
             && wide.count == 1 && wide.first?.id == noteID.rawValue, cppID: id,
                   message: "a wide selected-track note gets exactly one name label")
     func slot(_ kind: RollPaletteSlot) -> UInt32? {
-        let index = Int(kind.rawValue)
-        return content.palette.indices.contains(index) ? content.palette[index] : nil
+        content.slot(kind)
     }
     let fill = grid.palette.noteFill(track: record.track, velocity: record.velocity)
     let expectedInk = PaletteMath.aaContrastInk(
@@ -96,24 +95,69 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
     report.expect(
         labeledNotes().isEmpty, cppID: id,
                   message: "no name labels below the key-height threshold")
-    // Ghost exclusion through the exact layout entry the scene calls:
-    // PianoGrid only presents the selected track, so exercise the pure
-    // function with a synthetic ghost face.
-    let faces = [
-        NoteNameFace(pitch: pitch, box: (0, 0, 200, 24), velocity: 100,
-                     fillColor: grid.palette.noteVelocityZero, ghost: true),
-        NoteNameFace(pitch: pitch, box: (0, 0, 200, 24), velocity: 100,
-                     fillColor: grid.palette.noteVelocityZero, ghost: false),
-    ]
-    let ghostLabels = NoteNameLabels.labels(
-        faces: faces, keyHeight: 32, occupiedHeight: 0, pixel: 1,
-        spaceHalf: 2, spaceTwo: 7, advance: { _ in 10 },
-        font: [:], palette: grid.palette)
-    report.expect(ghostLabels.count == 1 && ghostLabels[0].labelText == GridScene.keyName(pitch),
-                  cppID: id, message: "ghost notes are never labeled")
+    // Ghost exclusion from the real plotted list: an adjacent-row
+    // other-track note decodes no name label while the mode is on.
+    session.mutateCamera { camera in
+        _ = camera.setKeyHeight(32)
+        _ = camera.setVScroll(max(0, (127.5 - Double(pitch)) * 32 - 160))
+        _ = camera.setTimeZoom(280)
+    }
+    grid.refreshCamera()
+    let ghostIdentity = session.document.history.currentIdentity
+    let neighborPitches = [pitch - 1, pitch + 1, pitch - 2, pitch + 2, pitch - 3, pitch + 3,
+                           pitch - 4, pitch + 4, pitch - 5, pitch + 5, pitch - 6, pitch + 6]
+    func pitchFree(_ candidate: Int) -> Bool {
+        candidate != pitch && (24...115).contains(candidate)
+            && session.camera.projection.row(forPitch: candidate) != PitchProjection.hiddenRow
+            && !session.document.notes(in: grid.trackIndex).contains { existing in
+                Int(existing.pitch) == candidate
+                    && Int(existing.tick) < Int(note.tick) + Int(note.duration)
+                    && Int(existing.tick) + Int(existing.duration) > Int(note.tick)
+            }
+    }
+    let ghostPitch = neighborPitches.first(where: pitchFree)
+    if session.document.canAddTrack, let ghostPitch,
+       let other = session.document.addTrack(voice: 0), other != grid.trackIndex,
+       let ghostID = try? session.document.addNotes([NewNote(
+           track: other, tick: note.tick, pitch: UInt8(ghostPitch),
+           duration: note.duration, velocity: 100)]).first {
+        // Center between the seed and ghost rows so both faces decode.
+        let snapshot = session.camera.snapshot
+        let seedRow = session.camera.projection.row(forPitch: pitch)
+        let ghostRow = session.camera.projection.row(forPitch: ghostPitch)
+        if let seedTop = session.camera.projection.contentRowTop(
+               seedRow, keyHeight: snapshot.keyHeight, dpr: grid.devicePixelRatio),
+           let ghostTop = session.camera.projection.contentRowTop(
+               ghostRow, keyHeight: snapshot.keyHeight, dpr: grid.devicePixelRatio) {
+            session.mutateCamera { camera in
+                _ = camera.setVScroll(max(
+                    0, min(seedTop, ghostTop) + snapshot.keyHeight / 2 - snapshot.rollHeight / 2))
+            }
+        }
+        grid.refreshFromSession()
+        let seedFace = decodedNoteBox(grid, noteID)
+        let ghostFace = decodedNoteBox(grid, ghostID)
+        report.expect(
+            seedFace != nil && noteNameLabeled(grid, session: session, id: noteID),
+            cppID: id, message: "the wide selected-track note keeps its label beside the ghost")
+        report.expect(
+            ghostFace.map { $0.w == seedFace?.w } == true
+                && RollContentProbe(grid).note(ghostID)?.ghost == true
+                && !noteNameLabeled(grid, session: session, id: ghostID),
+            cppID: id, message: "ghost notes are never labeled")
+    } else {
+        report.fail(id, "ghost label fixture could not seed a same-span other-track note")
+    }
+    // Undo the fixture track and note: later suites provision their own
+    // second track from a single-track song.
+    while session.document.history.currentIdentity != ghostIdentity
+              && session.document.history.canUndo {
+        guard session.document.history.undoDocument() else { break }
+    }
+    grid.refreshFromSession()
     grid.setNoteNameMode(enabled: false)
     report.expect(
-        !RollContentProbe(grid.scene).noteNameMode, cppID: id,
+        !RollContentProbe(grid).noteNameMode, cppID: id,
         message: "disabling the mode publishes no name labels")
     let beforeState = session.document.state
     let beforeIdentity = session.document.history.currentIdentity

@@ -60,8 +60,8 @@ func checkGhostNotes(_ report: CheckReport, session: DocumentSession) {
     }
     report.expect(projected(plain.id)?.ghost == false && projected(ghost.id)?.ghost == true,
                   cppID: id, message: "A016 both fixture notes project, other-track note as ghost")
-    guard let ghostNote = document.note(ghost.id),
-        let ghostBox = noteBox(grid, session: session, note: ghostNote)
+    guard document.note(ghost.id) != nil,
+        let ghostBox = decodedNoteBox(grid, ghost.id)
     else {
         report.fail(id, "ghost fixture has no projected scene box")
         return
@@ -92,22 +92,31 @@ func checkGhostNotes(_ report: CheckReport, session: DocumentSession) {
     grid.refreshFromSession()
     session.setSelectedNotes([plain.id])
     grid.refreshCamera()
-    let ringed = RollContentProbe(grid.scene)
-    let plainRecord = ringed.note(plain.id)
-    let ghostRecord = ringed.note(ghost.id)
+    let ringed = RollContentProbe(grid)
+    func gridGhost(_ id: NoteID) -> Bool? {
+        grid.notes.first(where: { $0.noteId == id })?.ghost
+    }
     report.expect(
-        plainRecord?.selected == true && plainRecord?.ghost == false
-            && ghostRecord?.ghost == true && ghostRecord?.selected == false,
+        session.selectedNotes.contains(plain.id) && gridGhost(plain.id) == false
+            && gridGhost(ghost.id) == true && !session.selectedNotes.contains(ghost.id),
                   cppID: id, message: "the plain note rings while the ghost face stays flat")
     report.expect(
-        ghostRecord?.ghost == true && ghostRecord?.timeCovered == false,
+        !ringed.ringRects(plain.id).isEmpty
+            && ringed.ringRects(ghost.id).isEmpty
+            && ringed.borderRects(ghost.id).isEmpty,
+        cppID: id, message: "the plain note plots its ring while the ghost face stays flat")
+    report.expect(
+        gridGhost(ghost.id) == true,
                   cppID: id, message: "A017 ghost face edge matches its interior: no border or ring")
     session.setSelectedNotes([ghost.id])
     grid.refreshCamera()
-    let selectedGhost = RollContentProbe(grid.scene).note(ghost.id)
+    let selectedGhostProbe = RollContentProbe(grid)
     report.expect(
-        selectedGhost?.ghost == true && selectedGhost?.timeCovered == false,
+        gridGhost(ghost.id) == true,
                   cppID: id, message: "selecting a ghost publishes no selection ring")
+    report.expect(
+        selectedGhostProbe.ringRects(ghost.id).isEmpty,
+        cppID: id, message: "selecting a ghost plots no selection ring")
     session.clearSelectedNotes()
     grid.refreshCamera()
     grid.setTrack(index: other)
@@ -127,9 +136,8 @@ func checkGhostNotes(_ report: CheckReport, session: DocumentSession) {
     report.expect(
         ghostFill(ghost.id) == RollContentProbe.argb(expectedGhost),
         cppID: id, message: "ghost fill stays on its identity mix")
-    let ghostOrigin = viewportPoint(grid, x: ghostBox.x, y: ghostBox.y)
-    let pressX = ghostOrigin.x + ghostBox.w / 2
-    let pressY = ghostOrigin.y + ghostBox.h / 2
+    let pressX = ghostBox.x + ghostBox.w / 2
+    let pressY = ghostBox.y + ghostBox.h / 2
     let revision = session.document.revision
     grid.beginPointer(x: pressX, y: pressY, modifiers: 0)
     report.expect(!session.selectedNotes.contains(ghost.id)
@@ -139,11 +147,11 @@ func checkGhostNotes(_ report: CheckReport, session: DocumentSession) {
     report.expect(!session.selectedNotes.contains(ghost.id) && !grid.interactionActive
                       && session.document.revision == revision,
                   cppID: id, message: "cancelling a ghost press leaves no gesture or edit")
-    grid.beginRightPointer(x: ghostOrigin.x - 4, y: ghostOrigin.y - 4)
-    grid.updateRightPointer(x: ghostOrigin.x + ghostBox.w + 4,
-                            y: ghostOrigin.y + ghostBox.h + 4)
-    grid.endRightPointer(x: ghostOrigin.x + ghostBox.w + 4,
-                         y: ghostOrigin.y + ghostBox.h + 4)
+    grid.beginRightPointer(x: ghostBox.x - 4, y: ghostBox.y - 4)
+    grid.updateRightPointer(x: ghostBox.x + ghostBox.w + 4,
+                            y: ghostBox.y + ghostBox.h + 4)
+    grid.endRightPointer(x: ghostBox.x + ghostBox.w + 4,
+                         y: ghostBox.y + ghostBox.h + 4)
     report.expect(!session.selectedNotes.contains(ghost.id),
                   cppID: id, message: "a band over a ghost never selects it")
     session.clearSelectedNotes()
@@ -169,7 +177,7 @@ func checkGhostNotes(_ report: CheckReport, session: DocumentSession) {
         noteNameLabeled(grid, session: session, id: plain.id),
                   cppID: id, message: "the wide selected-track note keeps its name label")
     report.expect(
-        RollContentProbe(grid.scene).note(ghost.id)?.ghost == true
+        RollContentProbe(grid).note(ghost.id)?.ghost == true
             && !noteNameLabeled(grid, session: session, id: ghost.id),
                   cppID: id, message: "A036 ghost notes are never labeled")
     grid.setNoteNameMode(enabled: false)

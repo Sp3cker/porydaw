@@ -20,6 +20,7 @@ struct GridSceneInput {
     var displacesNotes = false
     var selectedNotes: Set<NoteID> = []
     var drawPreview: (tick: Int, duration: Int, pitch: Int)?
+    var bandSelection: (x: Double, y: Double, w: Double, h: Double)?
     var lastVelocity: Int = 100
     var hoverKey: Int = -1
     var noteNameMode = false
@@ -31,6 +32,39 @@ struct GridSceneInput {
     var keyboardBankIdentity: ObjectIdentifier?
     var keyboardProgram = 0
 }
+
+/// Frame-tier key: content generation plus everything the per-frame plot
+/// build reads. Equality skips the rebuild.
+struct RollDisplayFrameKey: Equatable {
+    // Content-tier generation: bumped when records or the legacy bytes
+    // resolve. Compared by integer so camera seams never scan notes.
+    var generation: Int
+    var camera: EditorCamera.Snapshot
+    var dpr: Double
+    var band: RollBandSignature?
+}
+
+struct RollBandSignature: Equatable {
+    var x: Double
+    var y: Double
+    var w: Double
+    var h: Double
+}
+
+@MainActor
+extension GridScene {
+    /// Valid empty list (header, zero records) for lists 1-2 and the
+    /// out-of-range fallback. Built once and retained.
+    @QtIgnored
+    func retainedEmptyDisplayList() -> Data {
+        if let cached = cachedEmptyDisplayList { return cached }
+        var writer = DisplayListWriter()
+        let empty = writer.finish()
+        cachedEmptyDisplayList = empty
+        return empty
+    }
+}
+
 @MainActor
 extension GridScene {
 

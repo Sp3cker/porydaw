@@ -213,18 +213,14 @@ func checkKeyboardAuditionTrackSwitch(_ report: CheckReport, session: DocumentSe
         report.fail(id, "no second track available for keyboard audition")
         return
     }
-    guard let pitch = (24...115).first(where: {
-        guard let box = grid.projectedNoteBox(tick: 96, end: 108, pitch: $0) else {
-            return false
-        }
-        return box.y >= 0 && box.y + box.h <= 320
-    }), let box = grid.projectedNoteBox(tick: 96, end: 108, pitch: pitch) else {
+    guard let found = visibleRow(grid) else {
         report.fail(id, "no visible keyboard row available for audition")
         return
     }
+    let pitch = found.pitch
     var auditions: [(track: Int, pitch: Int, velocity: Int)] = []
     grid.onAudition = { auditions.append(($0, $1, $2)) }
-    grid.beginKeyboardPointer(y: box.y + box.h / 2)
+    grid.beginKeyboardPointer(y: found.y)
     session.selectedTrack = otherTrack
     grid.refreshFromSession()
     grid.endKeyboardPointer()

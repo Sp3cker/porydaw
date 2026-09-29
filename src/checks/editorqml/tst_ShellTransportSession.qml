@@ -496,7 +496,11 @@ ShellTransportSupport {
         }, 3000), "a real roll draw commits a new note while the selected song plays")
         compare(session.documentDirty, true, "the mounted live note edit dirties its selected tab")
         compare(bar.presenter.state, 3, "mounted roll draw cannot stop playback")
-        var item = RollNoteFaces.rect(findChild(surface, "timelineRendererPlot"), roll, added.id)
+        var item = null
+        waitForNative(function() {
+            item = RollNoteFaces.rect(findChild(surface, "timelineRendererPlot"), roll, added.id)
+            return item !== null
+        }, 5000)
         verify(item !== null, "the newly drawn note paints a movable face")
         var pxPerTick = grid.beatWidth / grid.ticksPerBeat
         var centerX = item.x + item.width / 2

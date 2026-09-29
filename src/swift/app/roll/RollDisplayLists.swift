@@ -2,6 +2,18 @@ import Foundation
 import PorydawCore
 import QtBridge
 
+struct RollNote {
+    var id: UInt64
+    var tick: Int
+    var end: Int
+    var pitch: Int
+    var velocity: Int
+    var flags: UInt8
+    var fill: UInt32
+    var ink: UInt32
+    var order: Int
+}
+
 public enum RollPaletteSlot: UInt16 {
     case rollBackground
     case accidentalLane
@@ -99,11 +111,9 @@ enum RollDrawingContent {
         case fonts = 2
         case palette = 3
         case rows = 4
-        case notes = 5
         case keyboardNames = 6
         case timeAxis = 7
         case overlay = 8
-        case drawPreview = 9
         case modes = 10
     }
 
@@ -147,17 +157,15 @@ enum RollDrawingContent {
             selectedTrack: input.selectedTrack)
     }
 
-    static func pack(_ input: GridSceneInput, palette: Data, notes: Data) -> Data {
+    static func pack(_ input: GridSceneInput, palette: Data) -> Data {
         let sections: [(Kind, Data)] = [
             (.metrics, metricsSection(input)),
             (.fonts, fontsSection(input)),
             (.palette, palette),
             (.rows, rowsSection(input)),
-            (.notes, notes),
             (.keyboardNames, keyboardNamesSection(input)),
             (.timeAxis, timeAxisSection(input)),
             (.overlay, overlaySection(input)),
-            (.drawPreview, drawPreviewSection(input)),
             (.modes, modesSection(input)),
         ]
 
@@ -189,7 +197,7 @@ enum RollDrawingContent {
     private static func fontsSection(_ input: GridSceneInput) -> Data {
         let order: [(UInt8, GridFontKind)] = [
             (0, .ruler), (1, .beat), (2, .bold), (3, .sig), (4, .chip),
-            (5, .keyLabel), (6, .noteName), (7, .noteValue),
+            (5, .keyLabel),
         ]
         let fonts = input.fonts
         var d = Data()
@@ -210,46 +218,52 @@ enum RollDrawingContent {
         return d
     }
 
-    static func paletteSection(_ input: GridSceneInput) -> Data {
+    static func paletteColors(_ input: GridSceneInput) -> [UInt32] {
         let p = input.palette
-        var d = Data()
-        d.reserveCapacity(2 + 34 * 4)
-        DrawingContentBinary.append(&d, UInt16(34))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.rollBackground))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.accidentalLane))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.scaleHighlight))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.gridLineBar))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.gridLineBeat))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.gridLineSub1))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.gridLineSub2))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.gridLineSub3))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.noteBorder))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.selectionRing))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.selectionFill))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.selectionEdge))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.selectionFill))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.selectionRing))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.selectionRing))
-        DrawingContentBinary.append(&d, p.noteFillArgb(track: 0, velocity: input.lastVelocity))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.keyboardNatural))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.keyboardBlack))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.keyboardSeparator))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.keyboardHover))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.keyboardLabel))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.keyboardNatural))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.keyboardBlack))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.primaryText))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.rowLine))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.gridLineBeatFine))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.preRollMask))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.rulerPreRollMask))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.gridLine))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.chromeBackground))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.separator))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.rulerDetailText))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.implicitSignature))
-        DrawingContentBinary.append(&d, SceneRectPacking.argb(p.noteVelocityZero))
-        return d
+        return [
+            SceneRectPacking.argb(p.rollBackground),
+            SceneRectPacking.argb(p.accidentalLane),
+            SceneRectPacking.argb(p.scaleHighlight),
+            SceneRectPacking.argb(p.gridLineBar),
+            SceneRectPacking.argb(p.gridLineBeat),
+            SceneRectPacking.argb(p.gridLineSub1),
+            SceneRectPacking.argb(p.gridLineSub2),
+            SceneRectPacking.argb(p.gridLineSub3),
+            SceneRectPacking.argb(p.noteBorder),
+            SceneRectPacking.argb(p.selectionRing),
+            SceneRectPacking.argb(p.selectionFill),
+            SceneRectPacking.argb(p.selectionEdge),
+            SceneRectPacking.argb(p.selectionFill),
+            SceneRectPacking.argb(p.selectionRing),
+            SceneRectPacking.argb(p.selectionRing),
+            p.noteFillArgb(track: 0, velocity: input.lastVelocity),
+            SceneRectPacking.argb(p.keyboardNatural),
+            SceneRectPacking.argb(p.keyboardBlack),
+            SceneRectPacking.argb(p.keyboardSeparator),
+            SceneRectPacking.argb(p.keyboardHover),
+            SceneRectPacking.argb(p.keyboardLabel),
+            SceneRectPacking.argb(p.keyboardNatural),
+            SceneRectPacking.argb(p.keyboardBlack),
+            SceneRectPacking.argb(p.primaryText),
+            SceneRectPacking.argb(p.rowLine),
+            SceneRectPacking.argb(p.gridLineBeatFine),
+            SceneRectPacking.argb(p.preRollMask),
+            SceneRectPacking.argb(p.rulerPreRollMask),
+            SceneRectPacking.argb(p.gridLine),
+            SceneRectPacking.argb(p.chromeBackground),
+            SceneRectPacking.argb(p.separator),
+            SceneRectPacking.argb(p.rulerDetailText),
+            SceneRectPacking.argb(p.implicitSignature),
+            SceneRectPacking.argb(p.noteVelocityZero),
+        ]
+    }
+
+    static func paletteSection(colors: [UInt32]) -> Data {
+        var data = Data()
+        data.reserveCapacity(2 + colors.count * 4)
+        DrawingContentBinary.append(&data, UInt16(colors.count))
+        for color in colors { DrawingContentBinary.append(&data, color) }
+        return data
     }
 
     private static func rowsSection(_ input: GridSceneInput) -> Data {
@@ -275,18 +289,19 @@ enum RollDrawingContent {
         return d
     }
 
-    static func notesSection(_ input: GridSceneInput) -> (Data, Int) {
+    static func resolveNotes(_ input: GridSceneInput, into records: inout [RollNote]) -> Int {
         let projection = input.camera.projection
         let noteTable = ThemeColorTables.noteFillTable(input.palette.theme)
         let ghostTable = ThemeColorTables.ghostFillTable(input.palette.theme)
+        let light = SceneRectPacking.argb(input.palette.keyboardNatural)
+        let dark = SceneRectPacking.argb(input.palette.keyboardBlack)
         let notes = input.notes
         let selected = input.selectedNotes
         let displayed = input.displayedNote
-        var d = Data()
-        d.reserveCapacity(4 + notes.count * 24)
-        DrawingContentBinary.append(&d, UInt32(0))  // count placeholder, patched below
-        var count = 0
-        // Ghost records first, preserving the old two-pass order without the array.
+        records.removeAll(keepingCapacity: true)
+        records.reserveCapacity(notes.count)
+        var maxDuration = 0
+        // Ghost records precede plain notes in paint order, independently of tick order.
         for pass in 0..<2 {
             let ghostPass = pass == 0
             for note in notes where note.ghost == ghostPass {
@@ -308,20 +323,39 @@ enum RollDrawingContent {
                 } else {
                     fill = noteTable[trackIndex * 128 + min(127, max(0, note.velocity))]
                 }
-                DrawingContentBinary.append(&d, note.noteId.rawValue)
-                DrawingContentBinary.append(&d, UInt32(clamping: max(0, tick)))
-                DrawingContentBinary.append(&d, UInt32(clamping: max(0, end - tick)))
-                DrawingContentBinary.append(&d, UInt8(clamping: min(127, max(0, pitch))))
-                DrawingContentBinary.append(&d, UInt8(clamping: note.track))
-                DrawingContentBinary.append(&d, UInt8(clamping: note.velocity))
-                DrawingContentBinary.append(&d, flags)
-                DrawingContentBinary.append(&d, fill)
-                count += 1
+                let start = max(0, tick)
+                let duration = max(0, end - tick)
+                let boundedPitch = min(127, max(0, pitch))
+                let velocity = min(127, max(0, note.velocity))
+                records.append(RollNote(
+                    id: note.noteId.rawValue, tick: start, end: start + duration,
+                    pitch: boundedPitch, velocity: velocity, flags: flags, fill: fill,
+                    ink: labelInk(fill: fill, light: light, dark: dark),
+                    order: records.count))
+                maxDuration = max(maxDuration, duration)
             }
         }
-        let patched: UInt32 = UInt32(count).littleEndian
-        d.withUnsafeMutableBytes { $0.storeBytes(of: patched, toByteOffset: 0, as: UInt32.self) }
-        return (d, count)
+        records.sort { $0.tick == $1.tick ? $0.order < $1.order : $0.tick < $1.tick }
+        return maxDuration
+    }
+
+    static func labelInk(fill: UInt32, light: UInt32, dark: UInt32) -> UInt32 {
+        func luminance(_ color: UInt32) -> Double {
+            func linear(_ channel: UInt32) -> Double {
+                let value = Double(channel & 255) / 255
+                return value <= 0.04045 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4)
+            }
+            return 0.2126 * linear(color >> 16) + 0.7152 * linear(color >> 8)
+                + 0.0722 * linear(color)
+        }
+        let background = luminance(fill)
+        func contrast(_ ink: UInt32) -> Double {
+            let value = luminance(ink)
+            return (max(background, value) + 0.05) / (min(background, value) + 0.05)
+        }
+        let preferred = contrast(light) >= contrast(dark) ? light : dark
+        if contrast(preferred) >= 4.5 { return preferred }
+        return contrast(0xFFFFFFFF) >= contrast(0xFF000000) ? 0xFFFFFFFF : 0xFF000000
     }
 
     private static func keyboardNamesSection(_ input: GridSceneInput) -> Data {
@@ -368,28 +402,9 @@ enum RollDrawingContent {
         return d
     }
 
-    private static func drawPreviewSection(_ input: GridSceneInput) -> Data {
-        var d = Data()
-        guard let preview = input.drawPreview else {
-            DrawingContentBinary.append(&d, UInt8(0))
-            DrawingContentBinary.append(&d, UInt32(0))
-            DrawingContentBinary.append(&d, UInt32(0))
-            DrawingContentBinary.append(&d, UInt8(0))
-            DrawingContentBinary.append(&d, UInt8(0))
-            return d
-        }
-        DrawingContentBinary.append(&d, UInt8(1))
-        DrawingContentBinary.append(&d, UInt32(clamping: max(0, preview.tick)))
-        DrawingContentBinary.append(&d, UInt32(clamping: max(0, preview.duration)))
-        DrawingContentBinary.append(&d, UInt8(clamping: min(127, max(0, preview.pitch))))
-        DrawingContentBinary.append(&d, UInt8(clamping: input.lastVelocity))
-        return d
-    }
 
     private static func modesSection(_ input: GridSceneInput) -> Data {
         var flags: UInt8 = 0
-        if input.noteNameMode { flags |= 2 }
-        if input.showVelocityValues { flags |= 4 }
         if input.typography != nil { flags |= 8 }
         if input.keyboardNames != nil { flags |= 16 }
         var d = Data()

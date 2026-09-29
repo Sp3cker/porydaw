@@ -56,8 +56,8 @@ extension PianoGrid {
             displayedNote: { self.displayedNote($0) },
             displacesNotes: displacesNotes,
             selectedNotes: selectedNotes,
-            drawPreview: drawPreview, lastVelocity: lastVelocity,
-            hoverKey: hoverKey,
+            drawPreview: drawPreview, bandSelection: selectionBand,
+            lastVelocity: lastVelocity, hoverKey: hoverKey,
             noteNameMode: noteNameMode,
             showVelocityValues: showVelocityValues,
             timeSelection: session.timeSelection,
@@ -71,9 +71,9 @@ extension PianoGrid {
     func rebuildScene() {
         let input = sceneInput()
         scene.invalidateStatic()
-        scene.rebuildStatic(input)
         staticSceneDirty = false
         scene.rebuildNotes(input)
+        scene.rebuildStatic(input)
     }
 
     @QtIgnored
@@ -86,8 +86,8 @@ extension PianoGrid {
             scene.invalidateStatic()
             staticSceneDirty = false
         }
-        scene.rebuildStatic(input)
         scene.rebuildNotes(input)
+        scene.rebuildStatic(input)
         if typographyChanged {
             scene.rebuildHover(input)
         } else if hoverKey >= 0 {
@@ -103,7 +103,7 @@ extension PianoGrid {
                 $0.fontPx == metrics.baseFontPx && $0.dpr == metrics.dpr
             } ?? false
         guard fontsKept, !change.contains(.geometry) else {
-            refreshCamera()
+            refreshCameraPresentationGeometry()
             return
         }
         let typographyChanged = updateTypography()
@@ -112,10 +112,36 @@ extension PianoGrid {
             scene.invalidateStatic()
             staticSceneDirty = false
         }
+        scene.rebuildDisplayLists(input)
         scene.rebuildStatic(input)
         if typographyChanged {
             scene.rebuildHover(input)
         } else if hoverKey >= 0 {
+            scene.refreshHoverChip(input)
+        }
+        publishOutputs()
+    }
+
+    /// Geometry seam: refreshes axis/fonts, reuses cached records unless
+    /// the projection changed; fonts/projection/cold take the content path.
+    @QtIgnored
+    private func refreshCameraPresentationGeometry() {
+        updateTimeAxis()
+        let typographyChanged = updateTypography()
+        let input = sceneInput()
+        if typographyChanged || staticSceneDirty {
+            scene.invalidateStatic()
+            staticSceneDirty = false
+        }
+        guard !typographyChanged,
+            scene.projectionCovers(input.camera.projection)
+        else {
+            refreshNotes()
+            return
+        }
+        scene.rebuildDisplayLists(input)
+        scene.rebuildStatic(input)
+        if hoverKey >= 0 {
             scene.refreshHoverChip(input)
         }
         publishOutputs()

@@ -330,10 +330,7 @@ private func checkFoldPointerAndLifecycle(
     grid.refreshFromSession()
     grid.configureViewport(width: 800, height: 400, fontPx: 13, dpr: 1)
     guard let exceptionNote = document.note(exception),
-          let box = grid.projectedNoteBox(
-            tick: Int(exceptionNote.tick),
-            end: Int(exceptionNote.tick + exceptionNote.duration),
-            pitch: Int(exceptionNote.pitch)),
+          let box = decodedNoteBox(grid, exception),
           let rowTop = session.camera.projection.rowTop(
             session.camera.projection.row(forPitch: Int(exceptionNote.pitch)),
             keyHeight: session.camera.snapshot.keyHeight,
@@ -422,9 +419,7 @@ private func checkFoldPointerAndLifecycle(
         grid.refreshFromSession()
     }
     guard let dragSource = document.note(exception),
-        let dragBox = grid.projectedNoteBox(
-            tick: Int(dragSource.tick), end: Int(dragSource.tick + dragSource.duration),
-            pitch: Int(dragSource.pitch)),
+        let dragBox = decodedNoteBox(grid, exception),
         session.camera.projection.row(forPitch: dragDstPitch) != PitchProjection.hiddenRow,
         let dragDstTop = session.camera.projection.rowTop(
             session.camera.projection.row(forPitch: dragDstPitch),

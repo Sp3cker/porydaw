@@ -59,7 +59,7 @@ func checkProjection(
         _ = $0.setHScroll($0.snapshot.maxHScroll / 2)
     }
     let snapshotAtMarks = session.camera.snapshot
-    let timeProbe = RollContentProbe(grid.scene)
+    let timeProbe = RollContentProbe(grid)
     let segments = timeProbe.segments
     let tiled =
         segments.first?.start == 0 && segments.last?.next == Int(TimeDefaults.noTick)
@@ -72,7 +72,7 @@ func checkProjection(
         _ = $0.scrollByPx(snapshotAtMarks.viewportWidth)
     }
     grid.refreshCamera()
-    let movedTimeProbe = RollContentProbe(grid.scene)
+    let movedTimeProbe = RollContentProbe(grid)
     report.expect(
         tiled && movedTimeProbe.revision == timeProbe.revision && movedTimeProbe.segments == segments
             && movedTimeProbe.ticksPerBeat == grid.ticksPerBeat,
@@ -100,12 +100,12 @@ func checkProjection(
     let notes = session.document.notes(in: grid.trackIndex)
     let pixel = 1 / grid.devicePixelRatio
     let viewBox = { (note: Note) in
-        grid.projectedNoteBox(tick: Int(note.tick), end: Int(note.tick + note.duration), pitch: Int(note.pitch))
+        decodedNoteBox(grid, note.id)
     }
     let isVisible = { (box: (x: Double, y: Double, w: Double, h: Double)) in
         box.x + box.w > 0 && box.x < snapshot.viewportWidth && box.y + box.h > 0 && box.y < snapshot.rollHeight
     }
-    let contentProbe = RollContentProbe(grid.scene)
+    let contentProbe = RollContentProbe(grid)
     var knownNote: Note?
     var knownBox: (x: Double, y: Double, w: Double, h: Double)?
     for note in notes {
@@ -158,16 +158,14 @@ func checkProjection(
     let dragX = Double(snap) * session.camera.snapshot.pixelsPerTick
     grid.updatePointer(
         x: pointerX + dragX, y: pointerY + dragY)
-    let previewNote = RollContentProbe(grid.scene).note(originalNote.id)
+    let previewNote = RollContentProbe(grid).note(originalNote.id)
     let expectedTick = Int(originalNote.tick) + snap
     let expectedPitch = Int(originalNote.pitch) + pitchDelta
     let previewRow = session.camera.projection.row(forPitch: expectedPitch)
     let expectedPreviewY = session.camera.projection.contentRowTop(
         previewRow, keyHeight: session.camera.snapshot.keyHeight,
         dpr: grid.devicePixelRatio) ?? .nan
-    let previewBox = previewNote.flatMap {
-        grid.projectedNoteBox(tick: $0.tick, end: $0.tick + $0.duration, pitch: $0.pitch)
-    }
+    let previewBox = previewNote.flatMap { _ in decodedNoteBox(grid, originalNote.id) }
     report.expect(
         previewNote.map { $0.tick == expectedTick && $0.pitch == expectedPitch } == true
             && previewBox.map {

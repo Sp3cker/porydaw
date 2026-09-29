@@ -89,6 +89,7 @@ public final class GridScene {
     public var cameraScroll: QListModel<SceneRect> = QListModel()
 
     @QtTracked public var contentRevision = 0
+    @QtTracked public var displayRevision = 0
 
     @QtIgnored var drawingContentData = Data()
     @QtIgnored var drawingContentKey: RollDrawingContentKey?
@@ -98,7 +99,30 @@ public final class GridScene {
         let lastVelocity: Int
     }
     @QtIgnored var paletteContentCache: (key: PaletteContentKey, data: Data)?
-    @QtIgnored var notesSectionCache: (key: RollNotesSectionKey, data: Data, count: Int)?
+    // Content-tier note records, tick-sorted; the frame tier culls/projects
+    // these per frame — O(visible), never O(notes). Replaces packed bytes.
+    @QtIgnored var noteRecords: [RollNote] = []
+    @QtIgnored var noteRecordsMaxDuration = 0
+    @QtIgnored var noteRecordsKey: RollNotesSectionKey?
+    @QtIgnored var plotPalette: [UInt32] = []
+    /// Projection the cached records were resolved against. Camera seams
+    /// compare this (fixed-size) instead of rebuilding the content key.
+    @QtIgnored var builtProjection: PitchProjection?
+    // Retained display-list buffers; lists 1-2 stay valid-but-empty until Tasks 4b/5.
+    @QtIgnored var displayLists: [Data] = []
+    @QtIgnored var displayFrameKey: RollDisplayFrameKey?
+    @QtIgnored var plotBuilder = RollPlotBuilder()
+    @QtIgnored var cachedEmptyDisplayList: Data?
+    /// Content-tier generation backing the frame key; bumped on record or
+    /// legacy resolve so camera seams skip by integer compare.
+    @QtIgnored var contentGeneration = 0
+
+    /// Retained per-list display buffer. Lists 1 (keyboard) and 2 (ruler)
+    /// return a valid empty list until Tasks 4b/5 port them.
+    public func displayList(list: Int) -> Data {
+        guard displayLists.indices.contains(list) else { return retainedEmptyDisplayList() }
+        return displayLists[list]
+    }
 
     public func drawingContent() -> Data { drawingContentData }
 

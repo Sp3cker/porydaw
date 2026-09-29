@@ -143,7 +143,6 @@ if(APPLE)
         rollcheck/note_rendering.swift
         rollcheck/note_rendering_support.swift
         rollcheck/roll_content_probe.swift
-        rollcheck/note_name_labels.swift
         rollcheck/note_rendering_borders.swift
         rollcheck/note_rendering_velocity.swift
         rollcheck/note_rendering_names.swift

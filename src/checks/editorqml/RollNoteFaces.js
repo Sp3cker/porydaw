@@ -3,7 +3,7 @@
 function face(renderer, id) {
     if (!renderer)
         return null
-    var f = renderer.noteFace("gridNote_" + id)
+    var f = renderer.face(id)
     if (!f || f.width === undefined || !(f.width > 0) || !(f.height > 0))
         return null
     return f

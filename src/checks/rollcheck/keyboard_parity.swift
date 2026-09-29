@@ -116,14 +116,11 @@ private func checkBandKeyAutoRepeat(_ report: CheckReport, session: DocumentSess
 private func checkBandKeyCancelReasons(_ report: CheckReport, session: DocumentSession) {
     let id = "swiftcore/PianoRoll::bandKeyCancelReasons"
     withBandKeyFixture(report, session: session, id: id) { grid, _ in
-        guard let y = (24...115).lazy.compactMap({ pitch -> Double? in
-            guard let box = grid.projectedNoteBox(tick: 96, end: 108, pitch: pitch),
-                  box.y >= 0, box.y + box.h <= 320 else { return nil }
-            return box.y + box.h / 2
-        }).first else {
+        guard let found = visibleRow(grid) else {
             report.fail(id, "no visible grid row available for cancellation")
             return
         }
+        let y = found.y
         let originalState = session.document.state
         let originalRevision = session.document.revision
         for reason in [GridCancelReason.focusLost, .pointerUngrabbed, .hidden,

@@ -8,23 +8,14 @@ Item {
     required property Item plotSide
     required property QtObject gridModel
 
-    TimelineRenderer {
+    DisplayList {
         parent: root.plotSide
         objectName: "timelineRendererPlot"
         anchors.fill: parent
-        band: 0
-        contentSource: root.gridModel.scene
-        contentRevision: root.gridModel.scene.contentRevision
-        pixelsPerTick: root.gridModel.pixelsPerTick
-        keyHeight: root.gridModel.rowHeight
-        scrollX: root.gridModel.cameraScrollX
-        scrollY: root.gridModel.cameraScrollY
-        devicePixelRatio: root.gridModel.devicePixelRatio
-        bandSelectionActive: root.gridModel.bandSelectionActive
-        bandSelectionX: root.gridModel.bandSelectionX
-        bandSelectionY: root.gridModel.bandSelectionY
-        bandSelectionWidth: root.gridModel.bandSelectionWidth
-        bandSelectionHeight: root.gridModel.bandSelectionHeight
+        clip: true
+        source: root.gridModel.scene
+        list: 0
+        revision: root.gridModel.scene.displayRevision
         z: 0
     }
 

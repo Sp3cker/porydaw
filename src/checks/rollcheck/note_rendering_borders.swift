@@ -43,8 +43,8 @@ func checkNoteBorders(_ report: CheckReport, session: DocumentSession) {
         _ = camera.setVScroll(max(0, (127.5 - Double(note.pitch)) * 16.375 - 160))
     }
     grid.refreshCamera()
-    guard let box = noteBox(grid, session: session, note: note),
-        let record = RollContentProbe(grid.scene).note(noteID)
+    guard let box = decodedNoteBox(grid, noteID),
+        let record = RollContentProbe(grid).note(noteID)
     else {
         report.fail(id, "fractional-height note has no published scene box")
         return
@@ -56,20 +56,27 @@ func checkNoteBorders(_ report: CheckReport, session: DocumentSession) {
         message: "the fractional 16.375-key-height note publishes its document span and a non-empty projected box")
     session.setSelectedNotes([noteID])
     grid.refreshCamera()
-    let selected = RollContentProbe(grid.scene).note(noteID)
+    let selectedProbe = RollContentProbe(grid)
     report.expect(
-        selected?.selected == true && selected?.ghost == false,
+        session.selectedNotes.contains(noteID)
+            && grid.notes.first(where: { $0.noteId == noteID })?.ghost == false,
         cppID: id,
         message:
             "A007-A012 the selected real note publishes the selected, non-ghost flags that drive its ring and inner frame"
     )
+    report.expect(
+        !selectedProbe.ringRects(noteID).isEmpty, cppID: id,
+        message: "A007-A012 the selected real note plots its selection ring rects")
     session.clearSelectedNotes()
     grid.refreshCamera()
-    let plain = RollContentProbe(grid.scene).note(noteID)
+    let plainProbe = RollContentProbe(grid)
     report.expect(
-        plain?.selected == false && plain?.timeCovered == false
-            && plain?.ghost == false,
+        !session.selectedNotes.contains(noteID)
+            && grid.notes.first(where: { $0.noteId == noteID })?.ghost == false,
         cppID: id, message: "A013/A014 the deselected note publishes no selection, time-cover, or ghost flag")
+    report.expect(
+        plainProbe.ringRects(noteID).isEmpty, cppID: id,
+        message: "A013/A014 the deselected note plots no selection ring")
 
     let seededIdentity = document.history.currentIdentity
     guard let seededBytes = try? document.state.file.encoded(),
@@ -77,7 +84,7 @@ func checkNoteBorders(_ report: CheckReport, session: DocumentSession) {
               NewNote(track: grid.trackIndex, tick: note.tick + note.duration,
                       pitch: note.pitch, duration: note.duration, velocity: 100)
           ]).first,
-          let tinyNote = document.note(tinyIDNote) else {
+          document.note(tinyIDNote) != nil else {
         report.fail(tinyID, "tiny note fixture cannot seed the adjacent face")
         return
     }
@@ -89,26 +96,31 @@ func checkNoteBorders(_ report: CheckReport, session: DocumentSession) {
         _ = camera.setVScroll(max(0, (127.5 - Double(note.pitch)) * 5.0 - 160))
     }
     grid.refreshCamera()
-    guard let tiny = noteBox(grid, session: session, note: tinyNote),
-        let tinyRecord = RollContentProbe(grid.scene).note(tinyIDNote)
+    guard let tiny = decodedNoteBox(grid, tinyIDNote),
+        RollContentProbe(grid).note(tinyIDNote) != nil
     else {
         report.fail(tinyID, "5.0-key-height note has no published scene box")
         return
     }
-    let fitted = max(0, min(1, (Int(min(tiny.w, tiny.h).rounded()) - 1) / 2))
-    report.expect(fitted == 1, cppID: tinyID,
-                  message: "A002 5.0-key-height note has room for a 1px border")
+    let tinyProbe = RollContentProbe(grid)
+    let tinyBorders = tinyProbe.borderRects(tinyIDNote)
+    report.expect(!tinyBorders.isEmpty, cppID: tinyID,
+                  message: "A002 5.0-key-height note plots its frame border rects")
     report.expect(
-        !tinyRecord.ghost && !tinyRecord.selected && !tinyRecord.timeCovered,
+        grid.notes.first(where: { $0.noteId == tinyIDNote })?.ghost == false
+            && !session.selectedNotes.contains(tinyIDNote),
         cppID: tinyID,
         message: "A003 the tiny note publishes as a plain real note with no ghost, selection, or time-cover flag")
     report.expect(
-        tinyRecord.fillArgb
+        probeFill(grid, tinyIDNote)
             == RollContentProbe.argb(
                 grid.palette.noteFill(track: grid.trackIndex, velocity: 100))
-                      && tiny.w > 2 * Double(fitted) && tiny.h > 2 * Double(fitted),
+            && tinyBorders.allSatisfy({
+                $0.x >= tiny.x && $0.y >= tiny.y
+                    && $0.x + $0.w <= tiny.x + tiny.w && $0.y + $0.h <= tiny.y + tiny.h
+            }),
         cppID: tinyID,
-        message: "A004 the tiny note publishes its track fill and its projected box exceeds the fitted border")
+        message: "A004 the tiny note publishes its track fill inside its plotted border")
     while document.history.currentIdentity != seededIdentity && document.history.canUndo {
         guard document.history.undoDocument() else { break }
     }

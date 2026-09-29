@@ -576,10 +576,34 @@ private func runTabReadinessChecks(report: CheckReport, store: PreferencesStore,
         report.fail(recoveryID, "changed fixture cannot be preserved for failure recovery")
         return
     }
+    let scopedGrid = scopedPage.gridPresenter()
+    let scopedCamera = scopedDocument.camera
+    if let firstNote = (0..<scopedDocument.document.engineTracks.usedTrackCount).flatMap({
+        scopedDocument.document.notes(in: $0)
+    }).filter({
+        scopedCamera.projection.row(forPitch: Int($0.pitch)) != PitchProjection.hiddenRow
+    }).min(by: { $0.tick < $1.tick }) {
+        let snap = scopedCamera.snapshot
+        // Center the first note with a lead pad: MIDI middle, px offset.
+        let middlePitch = 127.5
+        let leadPad = 100.0
+        scopedDocument.mutateCamera { camera in
+            _ = camera.setHScroll(max(
+                camera.snapshot.minHScroll,
+                camera.contentX(tick: Double(firstNote.tick)) - leadPad))
+            _ = camera.setVScroll(max(
+                0, (middlePitch - Double(firstNote.pitch)) * snap.keyHeight - snap.rollHeight / 2))
+        }
+        scopedGrid.refreshCamera()
+    }
+    let completeRenderCount = scopedGrid.renderedNoteCount
+    report.expect(completeRenderCount > 0, cppID: recoveryID,
+                  message: "the complete source renders its notes before removal")
     do {
         try FileManager.default.removeItem(at: midiURL)
         app.openSong(label: "mus_session_test")
-        report.expect(!scopedPage.isReady && scopedPage.gridPresenter().renderedNoteCount > 0
+        report.expect(!scopedPage.isReady
+                      && scopedPage.gridPresenter().renderedNoteCount == completeRenderCount
                       && scopedDocument.timeline.events.count == original.count + 2,
                       cppID: recoveryID,
                       message: "missing source leaves its old complete render while pending")

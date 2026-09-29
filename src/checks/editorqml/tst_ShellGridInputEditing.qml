@@ -66,7 +66,7 @@ ShellGridInputSupport {
                 && trimmed.duration === 3 * snap
         }, 5000), "body drag moves one note and trims its neighbor")
 
-        var actual = RollNoteFaces.center(findChild(surface, "timelineRendererPlot"), roll, movingId)
+        var actual = awaitNoteCenter(surface, grid, roll, movingId)
         verify(actual !== null, "the moved note keeps its rendered face")
         var expected = pointFor(grid, tick + 3 * snap, pitch)
         verify(Math.abs(actual.x - (expected.x + snap)) < grid.beatWidth,
@@ -111,9 +111,11 @@ ShellGridInputSupport {
         }, 5000), "leading note is drawn")
 
         var renderer = findChild(surface, "timelineRendererPlot")
-        var trailingCenter = RollNoteFaces.center(renderer, roll, trailingId)
+        var trailingCenter = awaitNoteCenter(surface, grid, roll, trailingId)
+        verify(trailingCenter !== null, "the trailing note renders for resize")
         mouseClick(roll, trailingCenter.x, trailingCenter.y, Qt.LeftButton)
-        var leadingFace = RollNoteFaces.rect(renderer, roll, leadingId)
+        var leadingFace = awaitNoteRect(surface, grid, roll, leadingId)
+        verify(leadingFace !== null, "the leading note renders for resize")
         var leadingEdge = Qt.point(leadingFace.x + leadingFace.width - 1,
                                    leadingFace.y + leadingFace.height / 2)
         mousePress(roll, leadingEdge.x, leadingEdge.y, Qt.LeftButton, Qt.ControlModifier)
@@ -160,8 +162,9 @@ ShellGridInputSupport {
         var surface = selectedSurface()
         var grid = surface.gridModel
         var roll = rollInput(surface)
-        var baseline = grid.renderedNoteCount
-        verify(baseline > 0, "the staged song publishes notes")
+        var plottedBaseline = grid.renderedNoteCount
+        var docBaseline = gridNotes(grid).length
+        verify(plottedBaseline > 0 && docBaseline > 0, "the staged song publishes notes")
         var lane = freeLane(grid, surface, 4)
         verify(lane !== null, "a free lane spans 4 snaps")
         var snap = grid.snapTicks
@@ -174,7 +177,7 @@ ShellGridInputSupport {
         var addedDuration = 0
         verify(waitForNative(function() {
             var list = gridNotes(grid)
-            if (list.length !== baseline + 1)
+            if (list.length !== docBaseline + 1)
                 return false
             for (var i = 0; i < list.length; ++i) {
                 if (list[i].tick === lane.tick && list[i].duration === 2 * snap
@@ -187,13 +190,13 @@ ShellGridInputSupport {
             return addedId !== 0
         }, 5000), "left drag adds one document note")
         var renderer = findChild(surface, "timelineRendererPlot")
-        verify(RollNoteFaces.face(renderer, addedId) !== null, "the added note renders")
+        verify(awaitNoteFace(surface, grid, addedId) !== null, "the added note renders")
 
         roll.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(roll, "activeFocus", true, 3000)
         keySequence(StandardKey.Undo)
         verify(waitForNative(function() {
-            return grid.renderedNoteCount === baseline
+            return grid.renderedNoteCount === plottedBaseline
                 && RollNoteFaces.face(renderer, addedId) === null
         }, 5000), "Undo removes the added note and its face")
         keySequence(StandardKey.Redo)
@@ -246,7 +249,7 @@ ShellGridInputSupport {
                 && note.duration === 4 * snap
         })
         verify(target !== undefined && target.selected, "the band target is a selected document note")
-        var face = RollNoteFaces.rect(findChild(surface, "timelineRendererPlot"), plot, target.id)
+        var face = awaitNoteRect(surface, grid, plot, target.id)
         verify(face !== null, "the band target renders a note face")
         var margin = grid.baseFontPx
         var noteLeft = face.x

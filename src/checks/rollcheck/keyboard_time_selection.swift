@@ -59,10 +59,11 @@ func checkTimeSelectionHighlights(_ report: CheckReport, session: DocumentSessio
             range: TimeRange(startTick: seed.tick, endTick: seed.tick + seed.duration),
             scope: .tracks([seed.track, other])))
         grid.refreshTimeSelectionHighlight()
-        let covered = RollContentProbe(grid.scene)
+        let covered = RollContentProbe(grid)
         report.expect(
-            covered.note(seed.id)?.timeCovered == true
-                && covered.note(ghostID).map { $0.ghost && $0.timeCovered } == true,
+            !covered.ringRects(seed.id).isEmpty
+                && covered.note(ghostID)?.ghost == true
+                && !covered.ringRects(ghostID).isEmpty,
                       cppID: id,
                       message: "A053/A029 covered notes ring, including the time-scoped ghost")
         report.expect(session.selectedNotes.isEmpty, cppID: id,
@@ -91,16 +92,16 @@ func checkTimeSelectionHighlights(_ report: CheckReport, session: DocumentSessio
             range: TimeRange(startTick: seed.tick, endTick: seed.tick + seed.duration),
             scope: .lanes, tempo: true))
         grid.refreshTimeSelectionHighlight()
-        let laneScoped = RollContentProbe(grid.scene)
+        let laneScoped = RollContentProbe(grid)
         report.expect(
-            laneScoped.note(seed.id)?.timeCovered == false
-                && laneScoped.note(ghostID)?.timeCovered != true,
+            laneScoped.ringRects(seed.id).isEmpty
+                && laneScoped.ringRects(ghostID).isEmpty,
                       cppID: id, message: "lane-scoped ranges ring no roll notes")
         session.clearTimeSelection()
         grid.refreshTimeSelectionHighlight()
-        let cleared = RollContentProbe(grid.scene)
+        let cleared = RollContentProbe(grid)
         report.expect(
-            cleared.note(seed.id)?.timeCovered == false && !cleared.overlay.active,
+            cleared.ringRects(seed.id).isEmpty && !cleared.overlay.active,
                       cppID: id, message: "clearing the range removes every highlight")
     }
 }

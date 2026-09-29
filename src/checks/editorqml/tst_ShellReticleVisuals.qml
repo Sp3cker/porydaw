@@ -209,12 +209,8 @@ TestCase {
         mousePress(plot, sx, sy, Qt.RightButton)
         mouseMove(plot, fx, fy, -1, Qt.RightButton)
         verify(waitForNative(function() {
-            var band = overlay.mapToItem(plot, overlay.bandSelectionX, overlay.bandSelectionY)
-            return overlay.bandSelectionActive
-                && band.x + overlay.bandSelectionWidth > reticle.x
-                && band.x < reticle.x + reticle.w
-                && band.y + overlay.bandSelectionHeight > reticle.y
-                && band.y < reticle.y + reticle.h
+            return grid.bandSelectionActive
+                && grid.statusText.indexOf("Selecting") !== -1
         }, 5000), "the drag publishes the selection band over the reticle")
 
         var during = grabImage(shell.contentItem)

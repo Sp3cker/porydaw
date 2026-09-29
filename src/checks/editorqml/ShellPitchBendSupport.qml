@@ -115,9 +115,9 @@ TestCase {
         grid.setCameraVScroll(Math.max(0, estimatedY - plot.height / 2))
         const renderer = findChild(view, "timelineRendererPlot")
         let face = null
+        waitForRendering(roll)
         waitForNative(function() {
-            face = renderer.scrollX === grid.cameraScrollX
-                && renderer.scrollY === grid.cameraScrollY
+            face = renderer.fetchedRevision === grid.scene.displayRevision
                 ? RollNoteFaces.rect(renderer, roll, target.id) : null
             return face !== null
         }, 5000)
@@ -234,8 +234,9 @@ TestCase {
             const startingFace = RollNoteFaces.rect(renderer, roll, note.id)
             const faceY = startingFace.y
             grid.setCameraVScroll(grid.cameraScrollY + faceY - plot.height * 0.1)
+            waitForRendering(roll)
             tryVerify(function() {
-                const face = renderer.scrollY === grid.cameraScrollY
+                const face = renderer.fetchedRevision === grid.scene.displayRevision
                     ? RollNoteFaces.rect(renderer, roll, note.id) : null
                 const y = face ? face.y : -1
                 return face !== null && y >= 0 && y < plot.height * 0.2
@@ -265,9 +266,12 @@ TestCase {
             const added = JSON.parse(grid.fetchNoteSummary()).find(function(n) {
                 return existing.indexOf(n.id) === -1
             })
-            const center = RollNoteFaces.center(renderer, roll, added.id)
-            verify(center !== null, "the stray note renders in the real roll")
-            stray = { x: center.x, y: center.y, id: added.id }
+            var center = null
+            tryVerify(function() {
+                center = RollNoteFaces.center(renderer, roll, added.id)
+                return center !== null
+            }, 5000, "the stray note renders in the real roll")
+            stray = center ? { x: center.x, y: center.y, id: added.id } : null
         }
         mouseClick(roll, note.x, note.y, Qt.LeftButton)
         tryVerify(function() {

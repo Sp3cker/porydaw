@@ -63,13 +63,13 @@ ShellGridInputSupport {
         var top = Math.round(plotOrigin.y * dpr)
         var right = Math.round((plotOrigin.x + plot.width) * dpr)
         var bottom = Math.round((plotOrigin.y + plot.height) * dpr)
-        var revisionBeforeDraw = grid.scene.contentRevision
+        var revisionBeforeDraw = grid.scene.displayRevision
         mousePress(roll, cell.x, cell.y, Qt.LeftButton)
         mouseMove(roll, cell.x + grid.drawThreshold, cell.y, -1, Qt.LeftButton)
         verify(waitForNative(function() {
             return grid.statusText.indexOf("Drawing") !== -1
         }, 5000), "horizontal travel at the font-derived slop enters the draw gesture")
-        verify(grid.scene.contentRevision > revisionBeforeDraw,
+        verify(grid.scene.displayRevision > revisionBeforeDraw,
                "the mounted pending draw publishes its note face while held")
         waitForRendering(shell.contentItem)
         var plain = shellFrame(captureItem)
@@ -157,7 +157,8 @@ ShellGridInputSupport {
                 && candidate.duration === 4 * snap
         })
         verify(note !== undefined && note.selected, "the draw publishes its selected velocity note")
-        var center = RollNoteFaces.center(findChild(surface, "timelineRendererPlot"), roll, note.id)
+        var center = awaitNoteCenter(surface, grid, roll, note.id)
+        verify(center !== null, "the drawn note renders its face")
         var travel = Math.ceil(grid.dragDistance) + 6
         var velocity = note.velocity
         mousePress(roll, center.x, center.y, Qt.LeftButton, Qt.ControlModifier)
@@ -197,7 +198,7 @@ ShellGridInputSupport {
         })
         verify(note !== undefined && note.selected, "the cancelled drag has a selected note")
         var renderer = findChild(surface, "timelineRendererPlot")
-        var face = RollNoteFaces.rect(renderer, roll, note.id)
+        var face = awaitNoteRect(surface, grid, roll, note.id)
         verify(face !== null, "the cancelled drag targets a rendered note")
         var center = pointFor(grid, note.tick + 2 * snap, note.pitch)
         verify(center.x > face.x && center.x < face.x + face.width,
@@ -281,7 +282,7 @@ ShellGridInputSupport {
         var drawn = gridNotes(grid).find(function(note) {
             return note.tick === targetTick && note.pitch === lane.pitch
         })
-        var center = RollNoteFaces.center(findChild(surface, "timelineRendererPlot"), roll, drawn.id)
+        var center = awaitNoteCenter(surface, grid, roll, drawn.id)
         verify(center !== null, "the double-clicked note renders")
         var parked = grid.editCursorTick
         mouseClick(roll, center.x, center.y, Qt.LeftButton)

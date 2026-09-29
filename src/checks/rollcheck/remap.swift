@@ -618,9 +618,13 @@ func checkTrackOwnerRemap(_ report: CheckReport, session: DocumentSession) {
     let switchedTotal = (0..<session.document.engineTracks.usedTrackCount).reduce(0) {
         $0 + session.document.notes(in: $1).count
     }
+    let plottedFills = Set(RollContentProbe(switchGrid).plotRects.compactMap {
+        $0.id != 0 && $0.id < RollContentProbe.loopStartId ? $0.id : nil
+    })
     report.expect(
         switchGrid.trackIndex == added
-            && switchGrid.renderedNoteCount == switchedTotal
+            && switchGrid.renderedNoteCount == plottedFills.count
+            && switchGrid.notes.count == switchedTotal
             && switchGrid.notes.allSatisfy { $0.ghost == ($0.track != added) },
         cppID: id, message: "track switch republishes every track with ghost roles following the new track")
     switchGrid.setTrack(index: 0)

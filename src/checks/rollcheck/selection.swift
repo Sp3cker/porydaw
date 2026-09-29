@@ -4,20 +4,6 @@ import Foundation
 import PorydawCore
 import QtBridge
 
-@MainActor
-extension PianoGrid {
-    func projectedNoteBox(
-        tick: Int, end: Int, pitch: Int
-    )
-        -> (x: Double, y: Double, w: Double, h: Double)?
-    {
-        guard session.camera.projection.row(forPitch: pitch) != PitchProjection.hiddenRow
-        else { return nil }
-        let x0 = session.camera.viewX(tick: Double(tick), dpr: metrics.dpr)
-        let x1 = session.camera.viewX(tick: Double(end), dpr: metrics.dpr)
-        return metrics.noteBox(camera: session.camera, x0: x0, x1: x1, pitch: pitch)
-    }
-}
 
 @MainActor
 func runSelectionChecks(_ report: CheckReport, session: DocumentSession, fixtureRoot: String) {
@@ -45,10 +31,30 @@ func rollNoteRects(_ grid: PianoGrid) -> [SceneRect] {
 
 @MainActor
 private func rollNoteRect(_ note: GridNote, grid: PianoGrid) -> SceneRect? {
-    let shown = grid.displayedNote(note)
-    guard let box = grid.projectedNoteBox(tick: shown.tick, end: shown.end, pitch: shown.pitch)
-    else { return nil }
+    guard let box = decodedNoteBox(grid, note.noteId) else { return nil }
     return SceneRect(x: box.x, y: box.y, width: box.w, height: box.h, fillColor: "")
+}
+
+@MainActor
+/// First fully visible row and its viewport y-center, projected by the
+/// production camera (keyboard-adjacent journeys need a row without a note).
+func visibleRow(_ grid: PianoGrid, height: Double = 320) -> (pitch: Int, y: Double)? {
+    let camera = grid.session.camera
+    let snapshot = camera.snapshot
+    for pitch in 24...115 {
+        let row = camera.projection.row(forPitch: pitch)
+        guard row != PitchProjection.hiddenRow,
+              let top = camera.projection.rowTop(
+                row, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY,
+                dpr: grid.devicePixelRatio),
+              let bottom = camera.projection.rowBottom(
+                row, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY,
+                dpr: grid.devicePixelRatio),
+              top >= 0 && bottom <= height
+        else { continue }
+        return (pitch, (top + bottom) / 2)
+    }
+    return nil
 }
 
 @MainActor
@@ -56,6 +62,11 @@ func velocityPairSeed(session: DocumentSession, grid: PianoGrid)
     -> (ids: [NoteID], rects: [SceneRect])?
 {
     let tick = 240
+    session.mutateCamera { camera in
+        _ = camera.setHScroll(max(
+            camera.snapshot.minHScroll, camera.contentX(tick: Double(tick)) - 100))
+    }
+    grid.refreshCamera()
     let duration = 4 * grid.snapTicks
     var pitches: [Int] = []
     for y in [160.0, 200.0, 120.0, 240.0, 80.0] {

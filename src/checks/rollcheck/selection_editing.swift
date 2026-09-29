@@ -286,14 +286,14 @@ func checkThresholdDrawCell(_ report: CheckReport, session: DocumentSession) {
                   cppID: id, message: "crossing draw slop does not re-attack the sounding press key")
     report.expect(grid.statusText.contains("Drawing"), cppID: id,
                   message: "crossing the draw threshold enters the draw gesture")
-    let pendingFace = RollContentProbe(grid.scene).drawPreview
+    let pendingFace = RollContentProbe(grid).drawPreview
     guard pendingFace.active else {
         report.fail(id, "pending draw has no rendered preview face")
         grid.endPointer(x: dragX, y: cell.y)
         return
     }
     grid.setNoteNameMode(enabled: true)
-    let namedFace = RollContentProbe(grid.scene).drawPreview
+    let namedFace = RollContentProbe(grid).drawPreview
     report.expect(
         namedFace.active && namedFace.tick == pendingFace.tick
             && namedFace.duration == pendingFace.duration

@@ -88,6 +88,44 @@ TestCase {
                 return list[i]
         return null
     }
+    function syncedPlot(surface, grid) {
+        var plot = findChild(surface, "timelineRendererPlot")
+        waitForNative(function() {
+            return plot && plot.fetchedRevision === grid.scene.displayRevision
+        }, 8000)
+        return plot
+    }
+
+    function awaitNoteFace(surface, grid, id) {
+        var plot = syncedPlot(surface, grid)
+        var face = null
+        waitForNative(function() {
+            face = plot ? RollNoteFaces.face(plot, id) : null
+            return face !== null
+        }, 8000)
+        return face
+    }
+
+    function awaitNoteRect(surface, grid, roll, id) {
+        var plot = syncedPlot(surface, grid)
+        var rect = null
+        waitForNative(function() {
+            rect = plot ? RollNoteFaces.rect(plot, roll, id) : null
+            return rect !== null
+        }, 8000)
+        return rect
+    }
+
+    function awaitNoteCenter(surface, grid, roll, id) {
+        var plot = syncedPlot(surface, grid)
+        var center = null
+        waitForNative(function() {
+            center = plot ? RollNoteFaces.center(plot, roll, id) : null
+            return center !== null
+        }, 8000)
+        return center
+    }
+
 
     function selectedNotes(grid) {
         return gridNotes(grid).filter(function(n) { return n.selected })
@@ -132,6 +170,7 @@ TestCase {
     }
 
     function noteBand(roll, surface, noteId) {
+        syncedPlot(surface, surface.gridModel)
         var note = RollNoteFaces.rect(findChild(surface, "timelineRendererPlot"), roll, noteId)
         if (!note)
             return null
@@ -145,6 +184,7 @@ TestCase {
     }
 
     function firstBandedNote(grid, surface, roll) {
+        syncedPlot(surface, grid)
         var list = gridNotes(grid)
         for (var i = 0; i < list.length; ++i) {
             if (noteBand(roll, surface, list[i].id) !== null)

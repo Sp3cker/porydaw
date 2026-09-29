@@ -52,7 +52,8 @@ add_library(PorydawApp STATIC
     roll/GridScene+Primitives.swift
     roll/NoteCommands.swift
     roll/SceneRectPacking.swift
-    roll/RollDrawingContent.swift
+    roll/RollDisplayLists.swift
+    roll/RollPlotBuilder.swift
     drawer/DrawerStaticsContent.swift
     pitchbend/PitchBendGeometry.swift
     pitchbend/PitchBendKernel.swift

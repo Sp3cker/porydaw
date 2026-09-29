@@ -193,8 +193,7 @@ ShellGridInputSupport {
             })
             return exception !== undefined
         }, 3000)
-        wait(0)
-        center = RollNoteFaces.center(renderer, roll, exception.id)
+        center = awaitNoteCenter(surface, grid, roll, exception.id)
         verify(center !== null, "the off-scale exception note renders")
         mouseClick(roll, center.x, center.y, Qt.LeftButton)
         tryVerify(function() { return noteById(grid, exception.id).selected }, 3000)
@@ -262,8 +261,7 @@ ShellGridInputSupport {
         verify(inserted.length === 1 && inserted[0].pitch === lane.pitch
                && inserted[0].duration >= 2 * grid.snapTicks,
                "a re-pressed drag works before Delete deletes again")
-        var center = RollNoteFaces.center(findChild(surface, "timelineRendererPlot"), roll,
-                                           inserted[0].id)
+        var center = awaitNoteCenter(surface, grid, roll, inserted[0].id)
         verify(center, "the re-pressed note renders for selection")
         mouseClick(roll, center.x, center.y, Qt.LeftButton)
         tryVerify(function() { return noteById(grid, inserted[0].id).selected }, 3000)

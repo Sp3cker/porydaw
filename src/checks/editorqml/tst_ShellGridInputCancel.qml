@@ -139,7 +139,14 @@ ShellGridInputSupport {
             if (grid.trackIndex !== 1)
                 return false
             var list = gridNotes(grid)
-            if (list.length === 0 || grid.renderedNoteCount !== list.length)
+            if (list.length === 0)
+                return false
+            var plot = findChild(surface, "timelineRendererPlot")
+            var faced = 0
+            for (var i = 0; i < list.length; ++i)
+                if (RollNoteFaces.face(plot, list[i].id) !== null)
+                    ++faced
+            if (grid.renderedNoteCount !== faced)
                 return false
             var primary = 0, ghosts = 0
             for (var i = 0; i < list.length; ++i) {

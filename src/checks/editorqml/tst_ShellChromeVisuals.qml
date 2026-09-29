@@ -121,7 +121,7 @@ TestCase {
         var chip = findChild(surface, "timelineQuickPianoHoverChip")
         verify(plot !== null, "the roll plot is mounted")
         verify(gutter !== null, "the roll gutter is mounted")
-        verify(plotRenderer !== null && plotRenderer.band === 0, "the note fill layer is mounted")
+        verify(plotRenderer !== null && plotRenderer.list === 0, "the note fill layer is mounted")
         verify(piano !== null, "the piano grid surface is mounted")
         verify(plotRenderer !== null && plotRenderer.visible, "the row layer is mounted")
         verify(plotRenderer !== null && plotRenderer.width > 0, "the time layer is mounted")

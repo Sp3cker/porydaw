@@ -179,7 +179,23 @@ TestCase {
         return { sx: sx, sy: sy, ex: ex, ey: ey }
     }
 
+    function awaitPlotFace(surf, g) {
+        var plot = findChild(surf, "timelineRendererPlot")
+        if (plot)
+            waitForRendering(plot)
+        waitForNative(function() {
+            if (!plot || plot.fetchedRevision <= 0)
+                return false
+            var notes = gridNotes(g)
+            for (var n = 0; n < notes.length; ++n)
+                if (RollNoteFaces.face(plot, notes[n].id) !== null)
+                    return true
+            return false
+        }, 5000)
+    }
+
     function firstBandedNote(g, surf, roll, unselectedOnly) {
+        awaitPlotFace(surf, g)
         var list = gridNotes(g)
         for (var i = 0; i < list.length; ++i) {
             if (unselectedOnly && list[i].selected)
@@ -189,7 +205,6 @@ TestCase {
         }
         return null
     }
-
     function pointCovered(roll, surf, g, x, y) {
         var list = gridNotes(g)
         for (var i = 0; i < list.length; ++i) {
@@ -348,8 +363,7 @@ TestCase {
                 continue
             var edge = Qt.point(item.x + item.width - 1, item.y + item.height / 2)
             mouseMove(roll, edge.x, edge.y)
-            wait(0)
-            if (g.cursorKind !== 3)
+            if (!waitForNative(function() { return g.cursorKind === 3 }, 3000))
                 continue
             var cursor = findChild(surf, "swiftRollCursor")
             verify(cursor !== null, "the roll input carries its production cursor binding")

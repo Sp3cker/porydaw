@@ -394,11 +394,11 @@ private func checkPointerDrawCancellation(_ report: CheckReport, session: Docume
         let revision = session.document.revision
         grid.beginPointer(x: cell.x, y: cell.y, modifiers: 0)
         grid.updatePointer(x: cell.x + 20, y: cell.y)
-        let preview = RollContentProbe(grid.scene).drawPreview.active
+        let preview = RollContentProbe(grid).drawPreview.active
         grid.inputCancelled(reason: reason.rawValue)
         grid.endPointer(x: cell.x + 20, y: cell.y)
         report.expect(
-            preview && !RollContentProbe(grid.scene).drawPreview.active
+            preview && !RollContentProbe(grid).drawPreview.active
                           && !grid.interactionActive && grid.lastCancelReason == reason.rawValue
                           && session.document.revision == revision,
                       cppID: id,

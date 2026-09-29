@@ -225,12 +225,16 @@ ShellTabsSupport {
         }, 3000, "the duplicate action is mounted in the header menu")
         var menu = findChild(surface, "quickMenuPanelRoot")
         var duplicate = null
-        for (var row = 0; row < menu.rowCount; ++row) {
-            var candidate = menu.rowItem(row)
-            if (candidate && candidate.itemData.actionId === 4)
-                duplicate = candidate
-        }
-        verify(duplicate !== null, "the mounted menu offers the duplicate-track action")
+        tryVerify(function() {
+            menu = findChild(surface, "quickMenuPanelRoot")
+            duplicate = null
+            for (var row = 0; menu && row < menu.rowCount; ++row) {
+                var candidate = menu.rowItem(row)
+                if (candidate && candidate.itemData.actionId === 4)
+                    duplicate = candidate
+            }
+            return duplicate !== null
+        }, 3000, "the mounted menu offers the duplicate-track action")
         verify(duplicate.active, "the real duplicate-track action accepts pointer input")
         verify(duplicate.itemData.enabled, "the real duplicate-track action is enabled")
         mouseClick(duplicate, duplicate.width / 2, duplicate.height / 2)
@@ -593,8 +597,10 @@ ShellTabsSupport {
                 })
                 return target && !target.selected
                     && grid.statusText.indexOf("Selecting") !== -1
-                    && findChild(surface, "timelineRendererPlot").bandSelectionActive
-            }, 5000), "the held band leaves its enclosed note uncommitted while painting")
+            }, 5000), "the held band leaves its enclosed note uncommitted while selecting")
+            var plot = findChild(surface, "timelineRendererPlot")
+            verify(plot && plot.fetchedRevision > 0,
+                "the plot list publishes frames while the band is held")
             var ring = Qt.color(grid.palette.selectionRing)
             var image = RollNoteFaces.grab(tabsReloadCase, input)
             var dpr = image.width / input.width
