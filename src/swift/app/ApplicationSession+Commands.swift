@@ -92,21 +92,12 @@ extension ApplicationSession {
         Task { [weak self] in
             do {
                 try await session.save()
-                if let self, let service = self.catalogService,
-                   self.selectedDocument === session {
-                    let catalog = try await service.voicegroupCatalog()
-                    if self.catalogService === service {
-                        self.voiceList.synthChoices = catalog.synths
-                        self.voiceList.synthDefinitions.merge(catalog.synthDefinitions) {
-                            _, saved in saved
-                        }
-                        self.voiceList.synthSymbols.formUnion(catalog.synths)
-                        self.voiceList.catalogRevision += 1
-                    }
-                }
             } catch {
                 self?.lastSaveError = String(describing: error)
+                self?.saveInProgress = false
+                return
             }
+            await self?.refreshVoicegroupCatalog()
             self?.saveInProgress = false
         }
     }

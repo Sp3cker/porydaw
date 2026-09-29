@@ -19,10 +19,18 @@ extension ProjectService {
         }
     }
 
-    /// Reads the editor's symbol catalogs from the root supplying the bank.
+    /// Reads the editor's symbol catalogs; refuses a missing project sound directory.
     public func voicegroupCatalog() async throws -> VoicegroupCatalog {
         let store = try requireStore()
         let root = projectRoot
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: root, isDirectory: &isDirectory),
+            isDirectory.boolValue,
+            FileManager.default.fileExists(atPath: root + "/sound", isDirectory: &isDirectory),
+            isDirectory.boolValue
+        else {
+            throw ProjectServiceError.operationFailed("Project sound directory is unavailable.")
+        }
         let catalog = await store.voicegroupCatalog()
         let groups = catalog.groups
         let direct = catalog.direct

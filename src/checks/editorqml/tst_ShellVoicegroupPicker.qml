@@ -227,4 +227,52 @@ ShellVoicegroupSupport {
         tryCompare(selector, "editText", "fixture_rich", 5000,
                    "selector undo displays the home voicegroup again")
     }
+    function test_zzCatalogOutageRetainsLastValid() {
+        fullShell = fullShellComponent.createObject(null)
+        const shell = fullShell
+        shell.requestActivate()
+        tryCompare(shell, "active", true)
+        const session = shell.shellPresenter.session
+        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        verify(waitForNative(function() {
+            return session.songOpen || session.lastSaveError.length > 0
+        }, 30000), "mounted catalog outage fixture opens: " + session.lastSaveError)
+        compare(session.lastSaveError, "")
+        const voice = session.voiceListController()
+        tryCompare(voice, "isBound", true, 5000)
+        voice.selectSlot(0)
+        const selector = findChild(shell, "vgArgCombo")
+        const editor = findChild(shell, "voicegroupEditorSurface")
+        const scroll = findChild(shell, "voiceEditorScrollView")
+        verify(selector !== null && editor !== null && scroll !== null,
+               "mounted catalog outage controls are present")
+        tryVerify(function() { return !!findChild(editor, "vgReleaseSpin") }, 5000,
+                  "mounted catalog outage release field loads")
+        const release = findChild(editor, "vgReleaseSpin")
+        scroll.contentY = Math.max(0, scroll.contentHeight - scroll.height)
+        waitForRendering(release)
+        verify(fileProbe.moveSoundAside(bootstrap.projectRoot),
+               "mounted outage hides the staged sound directory")
+        try {
+            fileProbe.children.push(shell.shellPresenter)
+            verify(fileProbe.requestShellCatalogRefresh(),
+                   "mounted outage starts the shell catalog refresh")
+            verify(waitForNative(function() {
+                const status = findChild(shell, "shellStatusText")
+                return status !== null && status.visible
+                       && status.text.indexOf("sound directory is unavailable") >= 0
+            }, 15000), "catalog outage reaches the mounted shell status bar")
+            verify(selector.enabled,
+                   "catalog outage leaves the mounted voicegroup selector enabled")
+            verify(release.enabled,
+                   "catalog outage leaves the mounted release spin enabled")
+        } finally {
+            try {
+                fileProbe.children.length = 0
+            } finally {
+                verify(fileProbe.restoreSound(bootstrap.projectRoot),
+                       "mounted outage restores the staged sound directory")
+            }
+        }
+    }
 }

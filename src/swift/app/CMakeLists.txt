@@ -20,6 +20,7 @@ add_library(PorydawApp STATIC
     ApplicationSession+Ruler.swift
     ApplicationSession+Audio.swift
     ApplicationSession+Commands.swift
+    ApplicationSession+Catalog.swift
     EditorCommandRouter.swift
     typography/Typography.swift
     transport/TransportBarPresenter.swift

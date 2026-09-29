@@ -16,7 +16,6 @@ extension ApplicationSession {
         let service: ProjectService
         let labels: [String]
         let songs: [SongListing]
-        let voicegroupCatalog: VoicegroupCatalog
     }
 
     @QtIgnored
@@ -41,16 +40,13 @@ extension ApplicationSession {
     private struct ProjectRead: Sendable {
         let service: ProjectService
         let songs: [SongListing]
-        let voicegroupCatalog: VoicegroupCatalog
 
         static func load(path: String) async throws -> ProjectRead {
             let service = ProjectService()
             do {
                 try await service.open(root: path)
                 let songs = try await service.songs()
-                let voicegroupCatalog = try await service.voicegroupCatalog()
-                return ProjectRead(service: service, songs: songs,
-                                   voicegroupCatalog: voicegroupCatalog)
+                return ProjectRead(service: service, songs: songs)
             } catch {
                 await service.close()
                 throw error
@@ -84,8 +80,7 @@ extension ApplicationSession {
             self.lastSaveError = ""
             let candidate = ProjectSwitchCandidate(
                 path: path, label: label, restore: restore, service: loaded.service,
-                labels: loaded.songs.map(\.label), songs: loaded.songs,
-                voicegroupCatalog: loaded.voicegroupCatalog)
+                labels: loaded.songs.map(\.label), songs: loaded.songs)
             self.pendingProjectSwitch = candidate
             self.songTabs.startProjectSwitchCloseAll()
         }
@@ -112,20 +107,9 @@ extension ApplicationSession {
         projectRootChanged()
         labels = candidate.labels
         songDock.install(service: candidate.service, songs: candidate.songs)
-        let catalog = candidate.voicegroupCatalog
-        settingsVoicegroups = catalog.groupArgs
-        voiceList.setVoicegroupChoices(catalog.groupArgs)
         voiceList.projectService = candidate.service
-        voiceList.sampleChoices = catalog.samples
-        voiceList.waveSymbols = catalog.waves
-        voiceList.drumkitSymbols = catalog.drumkits
-        voiceList.keysplitTables = catalog.keysplits
-        voiceList.synthSymbols = Set(catalog.synths)
-        voiceList.synthChoices = catalog.synths
-        voiceList.synthDefinitions = catalog.synthDefinitions
-        voiceList.canMintSynths = catalog.canMintSynths
-        voiceList.adsrDefaults = catalog.defaults
-        voiceList.catalogRevision += 1
+        resetVoicegroupCatalog()
+        await refreshVoicegroupCatalog()
         projectOpen = true
         if let recipe = candidate.restore {
             let restored = recipe.normalized(available: candidate.labels)

@@ -90,4 +90,39 @@ public final class TabsDrawerProbe: QmlInstantiableStatus {
             return false
         }
     }
+    public func moveSoundAside(projectRoot: String) -> Bool {
+        guard !projectRoot.isEmpty, projectRoot == ShellQmlBootstrap().projectRoot else { return false }
+        let sound = URL(fileURLWithPath: projectRoot).appendingPathComponent("sound")
+        let aside = URL(fileURLWithPath: projectRoot).appendingPathComponent("sound.catalog-outage")
+        guard !FileManager.default.fileExists(atPath: aside.path) else { return false }
+        do {
+            try FileManager.default.moveItem(at: sound, to: aside)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    public func restoreSound(projectRoot: String) -> Bool {
+        guard !projectRoot.isEmpty, projectRoot == ShellQmlBootstrap().projectRoot else { return false }
+        let sound = URL(fileURLWithPath: projectRoot).appendingPathComponent("sound")
+        let aside = URL(fileURLWithPath: projectRoot).appendingPathComponent("sound.catalog-outage")
+        guard !FileManager.default.fileExists(atPath: sound.path) else { return false }
+        do {
+            try FileManager.default.moveItem(at: aside, to: sound)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    public func requestShellCatalogRefresh() -> Bool {
+        let sessions = qmlChildren.compactMap { $0 as? ShellPresenter }
+            .map(\.session).filter(\.projectOpen)
+        guard sessions.count == 1,
+            sessions[0].projectRoot == ShellQmlBootstrap().projectRoot
+        else { return false }
+        Task { await sessions[0].refreshVoicegroupCatalog() }
+        return true
+    }
 }

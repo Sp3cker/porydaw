@@ -51,6 +51,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
     var settingsVoicegroups: [String] = []
     @QtIgnored
     var catalogService: ProjectService?
+    @QtIgnored var catalogRefreshIssued: UInt64 = 0
+    @QtIgnored var catalogRefreshApplied: UInt64 = 0
     @QtIgnored
     var audio: NativeAudio?
     /// The empty presenter the surface binds while no document is presented.
