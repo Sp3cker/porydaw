@@ -203,6 +203,9 @@ enum ShellQmlRegistry {
                 fixtureFiles: importFixture,
                 testFunctions: ["ShellImportWizard::test_importFinishRegistersSong"]),
             Entry(
+                name: "shell-import-commit", inputFileName: "tst_ShellImportCommit.qml",
+                fixtureFiles: importFixture),
+            Entry(
                 name: "shell-menus-loop", inputFileName: "tst_ShellMenusLoop.qml", fixtureFiles: songs("mus_route101")),
             Entry(
                 name: "shell-note-visuals-detail", inputFileName: "tst_ShellNoteVisualsDetail.qml",

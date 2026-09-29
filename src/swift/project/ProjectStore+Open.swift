@@ -47,14 +47,31 @@ extension ProjectStore {
     /// - Returns: A detached value snapshot of the opened project.
     /// - Throws: An open error if the root or loader is invalid, or a catalog error if the song table is invalid.
     public func open() async throws -> ProjectSnapshot {
+        let snapshot = try loadSongSnapshot()
+        guard let context = ProjectContext.open(projectRoot: projectRoot) else {
+            throw ProjectStoreOpenError.cannotInitializeVoicegroupLoader
+        }
+        pickerSamples = nil
+        projectContext = context
+        voicegroupStore = VoicegroupStore(projectRoot: projectRoot, context: context)
+        openedSnapshot = snapshot
+        return snapshot
+    }
+
+    /// Rescans songs after an on-disk partial write without replacing the live bank loader.
+    public func refreshSongCatalog() throws -> ProjectSnapshot {
+        guard openedSnapshot?.isOpen == true else { throw ProjectStoreReadError.notOpen }
+        let snapshot = try loadSongSnapshot()
+        openedSnapshot = snapshot
+        return snapshot
+    }
+
+    private func loadSongSnapshot() throws -> ProjectSnapshot {
         let root = URL(fileURLWithPath: projectRoot, isDirectory: true)
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: projectRoot, isDirectory: &isDirectory),
               isDirectory.boolValue else {
             throw ProjectStoreOpenError.directoryDoesNotExist(projectRoot)
-        }
-        guard let context = ProjectContext.open(projectRoot: projectRoot) else {
-            throw ProjectStoreOpenError.cannotInitializeVoicegroupLoader
         }
 
         // SongCatalog reads the table, constants, and unregistered MIDI files.
@@ -84,12 +101,7 @@ extension ProjectStore {
             budgets[player.name] = player.trackCount >= 0 ? player.trackCount : 16
         }
 
-        let snapshot = ProjectSnapshot(root: projectRoot, songs: catalog.songs,
-                                       players: catalog.players, trackBudgets: budgets)
-        pickerSamples = nil
-        projectContext = context
-        voicegroupStore = VoicegroupStore(projectRoot: projectRoot, context: context)
-        openedSnapshot = snapshot
-        return snapshot
+        return ProjectSnapshot(root: projectRoot, songs: catalog.songs,
+                               players: catalog.players, trackBudgets: budgets)
     }
 }

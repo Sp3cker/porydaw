@@ -329,6 +329,19 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
             return true
         } catch { return false }
     }
+    public func prepareImportCommitFixture(label: String) -> Bool {
+        let source = URL(fileURLWithPath: Self.stagedProjectRoot, isDirectory: true)
+        let target = source.deletingLastPathComponent()
+            .appendingPathComponent(source.lastPathComponent + "-import-" + label, isDirectory: true)
+        do {
+            if FileManager.default.fileExists(atPath: target.path) {
+                try FileManager.default.removeItem(at: target)
+            }
+            try FileManager.default.copyItem(at: source, to: target)
+            projectRoot = target.path
+            return true
+        } catch { return false }
+    }
 
     public func actionMidiExists() -> Bool {
         FileManager.default.fileExists(atPath:

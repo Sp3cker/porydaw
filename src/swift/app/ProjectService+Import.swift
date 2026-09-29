@@ -69,6 +69,7 @@ extension ProjectService {
         let midiDir = URL(filePath: projectRoot, directoryHint: .isDirectory)
             .appending(path: "sound/songs/midi", directoryHint: .isDirectory)
         let destination = midiDir.appendingPathComponent(label + ".mid")
+        var wroteMidi = false
         do {
             do {
                 _ = try FileManager.default.attributesOfItem(atPath: destination.path)
@@ -86,6 +87,7 @@ extension ProjectService {
                 try await createVoicegroup(name: label, copyFromFile: "", copySectionLabel: "")
             }
             try ProjectFileStore.write(destination.path, data: Data(try request.midi.encoded()))
+            wroteMidi = true
             try MidiCfg.writeSongFlags(
                 midiDir: midiDir, label: label,
                 flags: SongFlags.merge(request.config))
@@ -95,6 +97,19 @@ extension ProjectService {
                 player: request.player)
             snapshot = try await currentStore.snapshot()
             return id
-        } catch { throw projectFailure(error) }
+        } catch {
+            let importFailure = projectFailure(error)
+            if wroteMidi {
+                do {
+                    // Registration may fail after writing the MIDI. Refresh only
+                    // the song catalog; reopening would replace live bank leases.
+                    snapshot = try await requireStore().refreshSongCatalog()
+                } catch {
+                    throw ProjectServiceError.operationFailed(
+                        "\(importFailure); song catalog refresh failed: \(projectFailure(error))")
+                }
+            }
+            throw importFailure
+        }
     }
 }

@@ -32,6 +32,8 @@ func importAnalysis(_ report: CheckReport) {
     }
     do {
         let external = try MidiFile.decode(Array(Data(contentsOf: URL(fileURLWithPath: path))))
+        report.expectEqual(expected: UInt16(400), actual: external.division, cppID: importID,
+                           what: "A001 decoded external fixture has source division 400")
         for budget in [16, 1, -1] {
             let row = "budget \(budget)"
             let result = MidiImport.analyze(external, trackBudget: budget,
@@ -185,6 +187,8 @@ func importTransforms(_ report: CheckReport) {
         do {
             var imported = try MidiFile.decode(Array(Data(contentsOf: URL(fileURLWithPath: path))))
             try MidiImport.rescaleDivision(&imported, to: 24)
+            report.expectEqual(expected: 3, actual: imported.chunks.count, cppID: rescaleID,
+                               what: "A013 decoded imported fixture has three chunks")
             report.expectEqual(expected: UInt16(24), actual: imported.division, cppID: rescaleID,
                                what: "external import division after rescale")
             guard imported.chunks.count > 2, imported.chunks[1].events.count > 11,
@@ -195,16 +199,16 @@ func importTransforms(_ report: CheckReport) {
             report.expectEqual(expected: Tick(28), actual: imported.chunks[1].events[4].tick,
                                cppID: rescaleID, what: "external import event 4 tick")
             report.expectEqual(expected: Tick(57), actual: imported.chunks[1].events[11].tick,
-                               cppID: rescaleID, what: "external import event 11 tick")
+                               cppID: rescaleID, what: "A017 external import event 11 tick")
             report.expectEqual(expected: Tick(230), actual: imported.chunks[1].endTick,
-                               cppID: rescaleID, what: "external import second chunk end")
+                               cppID: rescaleID, what: "A018 external import second chunk end")
             report.expectEqual(expected: Tick(0), actual: imported.chunks[2].events[0].tick,
                                cppID: rescaleID, what: "external import third chunk first tick")
             for (chunkIndex, chunk) in imported.chunks.enumerated() {
                 var previous: Tick = 0
                 for (eventIndex, event) in chunk.events.enumerated() {
                     report.expect(event.tick >= previous, cppID: rescaleID,
-                                  message: "chunk \(chunkIndex) event \(eventIndex) remains monotonic")
+                                  message: "A020 chunk \(chunkIndex) event \(eventIndex) remains monotonic")
                     previous = event.tick
                 }
             }
@@ -232,6 +236,8 @@ func importTransforms(_ report: CheckReport) {
     if let path = CheckEnvironment.fixturePath("test_midis/duplicate_setters.mid") {
         do {
             var duplicate = try MidiFile.decode(Array(Data(contentsOf: URL(fileURLWithPath: path))))
+            report.expectEqual(expected: 2, actual: duplicate.chunks.count, cppID: dedupID,
+                               what: "A021 decoded duplicate fixture has two chunks")
             report.expectEqual(expected: 8, actual: MidiImport.removeRedundantSetters(&duplicate),
                                cppID: dedupID, what: "duplicate fixture removes eight setters")
             report.expectEqual(expected: 0, actual: MidiImport.removeRedundantSetters(&duplicate),
@@ -314,7 +320,7 @@ func importTransforms(_ report: CheckReport) {
         report.fail(overflowID, "boundary rescale unexpectedly succeeded")
     } catch {
         report.expectEqual(expected: UInt16(24), actual: boundary.division, cppID: overflowID,
-                           what: "overflow keeps original division")
+                           what: "A042 overflow keeps original division")
         report.expectEqual(expected: TimeDefaults.maxTick, actual: boundary.chunks[0].events[0].tick,
                            cppID: overflowID, what: "overflow keeps boundary event tick")
         report.expectEqual(expected: "Tick rescale to division 48 exceeds 32-bit tick range",
@@ -356,6 +362,10 @@ func importProjectRoundtrip(_ report: CheckReport) {
                 report.fail(roundtripID, "roundtrip MIDI source could not be decoded or rescaled: \(error)")
                 return
             }
+            report.expect(imported.division == 24, cppID: roundtripID,
+                          message: "A080 rescaled imported MIDI uses division 24")
+            report.expect(imported.chunks.count == 3, cppID: roundtripID,
+                          message: "A081 decoded imported fixture retains three chunks")
 
             let label = "mus_onboardcheck_import"
             let midi = midiDir.appendingPathComponent(label + ".mid")
@@ -381,11 +391,14 @@ func importProjectRoundtrip(_ report: CheckReport) {
             }
             // The complete opaque SMF stream must survive disk decode and re-encode unchanged.
             report.expect(repeatedBytes == serialized, cppID: roundtripID,
-                          message: "persisted imported MIDI re-encodes to identical complete file bytes")
+                          message: "A090 persisted imported MIDI re-encodes to identical complete file bytes")
             report.expect(reread.division == 24, cppID: roundtripID,
-                          message: "persisted imported MIDI retains division 24")
+                          message: "A091 persisted imported MIDI retains division 24")
             report.expect(reread.chunks.count == 3, cppID: roundtripID,
-                          message: "persisted imported MIDI retains all three fixture chunks")
+                          message: "A086 persisted imported MIDI retains all three fixture chunks")
+            report.expect(FileManager.default.fileExists(
+                atPath: midiDir.appendingPathComponent(label + "_repeat.mid").path),
+                cppID: roundtripID, message: "A088 repeat MIDI file was written")
 
             let store = ProjectStore(projectRoot: root)
             guard case .success(let opened) = awaitValue({ try await store.open() }) else {
