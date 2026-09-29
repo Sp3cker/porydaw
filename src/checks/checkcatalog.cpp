@@ -172,7 +172,7 @@ const std::vector<CheckDefinition> &catalog()
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = project + rich,
-             .platforms = Platform::MacOS});
+             .platforms = swiftPlatforms});
         result.push_back(
             {.name = "projectstore-values",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "voicegroupValues"}),

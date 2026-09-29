@@ -167,7 +167,7 @@ private enum CatalogLines {
 
     static func voicegroupFiles(_ root: String) -> [String] {
         let indices = ["\(root)/sound/voice_groups.inc", "\(root)/sound/voicegroups.inc"]
-        return indices.filter(ProjectFileStore.exists) + files("\(root)/sound/voicegroups", recursive: true)
+        return indices.filter(ProjectFileStore.exists) + files("\(root)/sound/voicegroups", recursive: true).sorted()
     }
 
     static func synthDescriptor(_ content: String) -> VgSynthDesc? {
