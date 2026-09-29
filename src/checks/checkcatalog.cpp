@@ -125,7 +125,6 @@ const std::vector<CheckDefinition> &catalog()
         swiftSuite("swiftcore-midiimport", "midiImport");
         swiftSuite("swiftcore-timeedits", "timeEdits");
         swiftSuite("swiftcore-projectsession", "projectSession");
-        result.back().platforms = Platform::MacOS;
         swiftSuite("swiftcore-bankhistory", "bankHistory");
         swiftSuite("swiftcore-themecolor", "themeColor");
         swiftSuite("swiftcore-displaylist", "displayList");
@@ -187,7 +186,7 @@ const std::vector<CheckDefinition> &catalog()
                           .scratchKind = ScratchKind::ExistingDirectory,
                           .fixtureRootKind = FixtureRootKind::DecompProject,
                           .fixtureFiles = project + editor,
-                          .platforms = Platform::MacOS});
+                          .platforms = swiftPlatforms});
         result.push_back(
             {.name = "projectstore-editing",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "voicegroupEditing"}),
@@ -214,7 +213,7 @@ const std::vector<CheckDefinition> &catalog()
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = project + editor,
-             .platforms = Platform::MacOS});
+             .platforms = swiftPlatforms});
         result.push_back(
             {.name = "projectstore-context",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "voicegroupContext"}),
@@ -282,7 +281,7 @@ const std::vector<CheckDefinition> &catalog()
                  project + editor +
                  strings({"include/constants/songs.h", "sound/music_player_table.inc"}) +
                  fixtures::decompMidiFiles(),
-             .platforms = Platform::MacOS});
+             .platforms = swiftPlatforms});
         result.push_back({.name = "bankleases",
                           .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "bankLeases"}),
                           .handler = swiftCore,

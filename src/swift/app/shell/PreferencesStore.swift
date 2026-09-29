@@ -5,9 +5,8 @@ import QtBridge
 @MainActor
 @QtBridgeable
 public final class PreferencesStore: QmlInstantiableStatus {
-    private static var applicationID: CFString = cfString("com.sp3cker.porydaw")
+    private static var applicationID = "com.sp3cker.porydaw"
     private static var isStaged = false
-    private static var stagedPlistPath: String?
 
     public required init() {}
     public func componentComplete() {}
@@ -22,18 +21,24 @@ public final class PreferencesStore: QmlInstantiableStatus {
                 preconditionFailure("Could not clear staged preferences at \(path): \(error)")
             }
         }
-        applicationID = cfString(path)
-        stagedPlistPath = path
+        applicationID = path
         isStaged = true
+        let defaults = userDefaults(for: path)
+        defaults.removePersistentDomain(forName: path)
+        _ = defaults.synchronize()
     }
 
     public static func configureShared(applicationName: String) {
         guard !isStaged else { return }
-        applicationID = cfString("com.sp3cker." + applicationName)
+        applicationID = "com.sp3cker." + applicationName
     }
 
     private func value(_ key: String) -> Any? {
-        let value = CFPreferencesCopyAppValue(Self.cfString(key), Self.applicationID)
+        let defaults = Self.userDefaults(for: Self.applicationID)
+        guard defaults.persistentDomain(forName: Self.applicationID)?.keys.contains(key) == true else {
+            return nil
+        }
+        let value = defaults.object(forKey: key)
         if let text = value as? String, text == "@Invalid()" { return nil }
         return value
     }
@@ -89,50 +94,32 @@ public final class PreferencesStore: QmlInstantiableStatus {
     public func hasValue(key: String) -> Bool { value(key) != nil }
 
     public func setString(key: String, value: String) {
-        set(key, value as CFPropertyList)
+        set(key, value)
     }
 
     public func setInt(key: String, value: Int) {
-        set(key, value as CFPropertyList)
+        set(key, value)
     }
 
     public func setDouble(key: String, value: Double) {
-        set(key, value as CFPropertyList)
+        set(key, value)
     }
 
     public func setBool(key: String, value: Bool) {
-        set(key, value ? kCFBooleanTrue : kCFBooleanFalse)
+        set(key, value)
     }
 
     public func remove(key: String) { set(key, nil) }
 
     public func resetPreferences() -> Bool {
-        guard CFPreferencesAppSynchronize(Self.applicationID) else { return false }
-        let keys: [String]
-        if let path = Self.stagedPlistPath {
-            if FileManager.default.fileExists(atPath: path) {
-                guard let data = FileManager.default.contents(atPath: path),
-                    // ReadOptions is Int on macOS (C++ interop) and an OptionSet on Linux.
-                    let entries = try? PropertyListSerialization.propertyList(
-                        from: data, options: .init(), format: nil) as? [String: Any]
-                else {
-                    return false
-                }
-                keys = Array(entries.keys)
-            } else {
-                keys = []
-            }
-        } else {
-            keys =
-                CFPreferencesCopyKeyList(
-                    Self.applicationID, kCFPreferencesCurrentUser,
-                    kCFPreferencesAnyHost) as? [String] ?? []
-        }
-        for key in keys { remove(key: key) }
-        return CFPreferencesAppSynchronize(Self.applicationID)
+        let defaults = Self.userDefaults(for: Self.applicationID)
+        defaults.removePersistentDomain(forName: Self.applicationID)
+        return defaults.synchronize()
     }
 
-    public func synchronize() { _ = CFPreferencesAppSynchronize(Self.applicationID) }
+    public func synchronize() {
+        _ = Self.userDefaults(for: Self.applicationID).synchronize()
+    }
 
     func strings(_ key: String) -> [String]? { value(key) as? [String] }
 
@@ -141,30 +128,28 @@ public final class PreferencesStore: QmlInstantiableStatus {
             remove(key: key)
             return
         }
-        set(key, strings as CFPropertyList)
+        set(key, strings)
     }
 
     func data(_ key: String) -> Data? { value(key) as? Data }
 
     func setData(_ key: String, _ bytes: Data) {
-        let data = bytes.withUnsafeBytes { buffer in
-            CFDataCreate(
-                kCFAllocatorDefault, buffer.bindMemory(to: UInt8.self).baseAddress,
-                bytes.count)
+        set(key, bytes)
+    }
+
+    private func set(_ key: String, _ value: Any?) {
+        let defaults = Self.userDefaults(for: Self.applicationID)
+        if let value {
+            defaults.set(value, forKey: key)
+        } else {
+            defaults.removeObject(forKey: key)
         }
-        set(key, data)
     }
 
-    private func set(_ key: String, _ value: CFPropertyList?) {
-        CFPreferencesSetAppValue(Self.cfString(key), value, Self.applicationID)
-    }
-
-    private static func cfString(_ text: String) -> CFString {
-        guard
-            let result = text.withCString({
-                CFStringCreateWithCString(kCFAllocatorDefault, $0, CFStringBuiltInEncodings.UTF8.rawValue)
-            })
-        else { preconditionFailure("Preferences identifier could not be encoded") }
-        return result
+    private static func userDefaults(for applicationID: String) -> UserDefaults {
+        guard let defaults = UserDefaults(suiteName: applicationID) else {
+            preconditionFailure("Could not create preferences domain \(applicationID)")
+        }
+        return defaults
     }
 }

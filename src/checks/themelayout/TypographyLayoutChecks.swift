@@ -49,6 +49,11 @@ private func typographyLayoutCheckRoles(_ report: CheckReport) {
     }
     for (base, body) in [(13, 15), (26, 29)] {
         let typography = Typography(baseFontPx: base)
+        #if os(macOS)
+            let noteNameWeight = 400
+        #else
+            let noteNameWeight = 600
+        #endif
         report.expectEqual(expected: base, actual: typography.baseFontPx,
                            cppID: typographyLayoutFaceID,
                            what: "the captured typography base at \(base)")
@@ -62,7 +67,7 @@ private func typographyLayoutCheckRoles(_ report: CheckReport) {
             ("tableMono", typography.tableMono, gridMonoFamily, body, 400, Double(base) * (-1.0 / 26.0)),
             ("caption", typography.caption, gridBodyFamily, base, 400, 0.0),
             ("captionBold", typography.captionBold, gridBodyFamily, base, 600, 0.0),
-            ("noteName", typography.noteName, gridBodyFamily, base, 400, 0.0),
+            ("noteName", typography.noteName, gridBodyFamily, base, noteNameWeight, 0.0),
         ] {
             report.expect(spec.family == family && spec.pixelSize == px
                           && spec.weight == weight && abs(spec.letterSpacing - spacing) < 1e-9,

@@ -353,11 +353,11 @@ private func saveCoreFailedSaveRedirty(_ report: CheckReport) {
                 return
             }
             let sourcePath = edited.sourcePath
-            try FileManager.default.setAttributes([.immutable: true], ofItemAtPath: sourcePath)
-            defer { try? FileManager.default.setAttributes([.immutable: false], ofItemAtPath: sourcePath) }
+            let restoreWrites = try WriteFailureFixture.blockAtomicWrites(to: sourcePath)
+            defer { restoreWrites() }
             guard case .failure? = awaitValue({ try await store.saveVoicegroup(lease: edited) }),
                   let previous = edited.slotViews[0].voice else {
-                report.fail(cppID, "immutable source did not reject the save")
+                report.fail(cppID, "write restriction did not reject the save")
                 return
             }
             var next = previous

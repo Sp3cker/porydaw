@@ -1,5 +1,4 @@
 import Foundation
-import CoreFoundation
 import PorydawApp
 import PorydawCoreCheckNative
 
@@ -68,8 +67,12 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
     EditorViewStateCodec.saveLanes(decoded, store: store)
     report.expectEqual(expected: decoded, actual: EditorViewStateCodec.loadLanes(store: store),
                        cppID: codec, what: "application preferences retain one lane blob")
-    report.expect(FileManager.default.fileExists(atPath: CheckEnvironment.fixturePath("settings.plist") ?? ""),
-                  cppID: codec, message: "preferences land in the staged scratch plist")
+    let stagedDomain = CheckEnvironment.fixturePath("settings.plist").flatMap { path in
+        UserDefaults(suiteName: path)?.persistentDomain(forName: path)
+    }
+    report.expect(
+        stagedDomain?.keys.contains("editorDrawer.automationLanes") == true, cppID: codec,
+        message: "preferences remain in the staged scratch domain")
 
     let chrome = "workspace/EditorViewStateCodec::chrome"
     var seededChrome = EditorDrawerChromeState()
@@ -167,13 +170,7 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
         case bytes(Data)
         case text(String)
     }
-    let domain = plistPath.withCString {
-        CFStringCreateWithCString(kCFAllocatorDefault, $0, CFStringBuiltInEncodings.UTF8.rawValue)
-    }
-    let key = laneKey.withCString {
-        CFStringCreateWithCString(kCFAllocatorDefault, $0, CFStringBuiltInEncodings.UTF8.rawValue)
-    }
-    guard let domain, let key else {
+    guard let stagedPreferences = UserDefaults(suiteName: plistPath) else {
         report.fail(stored, "could not address staged preferences domain")
         return
     }
@@ -194,12 +191,12 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
         EditorViewStateCodec.saveLanes(full, store: store)
         switch poison {
         case let .bytes(value):
-            CFPreferencesSetAppValue(key, value as CFPropertyList, domain)
+            stagedPreferences.set(value, forKey: laneKey)
         case let .text(value):
-            CFPreferencesSetAppValue(key, value as CFPropertyList, domain)
+            stagedPreferences.set(value, forKey: laneKey)
         }
         store.synchronize()
-        let persisted = CFPreferencesCopyAppValue(key, domain)
+        let persisted = stagedPreferences.object(forKey: laneKey)
         let staged: Bool
         switch poison {
         case let .bytes(value): staged = (persisted as? Data) == value
@@ -215,7 +212,7 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
         report.expectEqual(expected: expected, actual: loaded,
                            cppID: stored, what: "stored \(name) defaults or clamps only lane members")
         fresh.synchronize()
-        let after = CFPreferencesCopyAppValue(key, domain)
+        let after = stagedPreferences.object(forKey: laneKey)
         let unchanged: Bool
         switch poison {
         case let .bytes(value): unchanged = (after as? Data) == value

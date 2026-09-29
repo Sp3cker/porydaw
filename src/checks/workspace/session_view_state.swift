@@ -4,6 +4,19 @@ import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
 
+private func sameSessionPreference(_ lhs: Any?, _ rhs: Any?) -> Bool {
+    guard let lhs, let rhs else { return lhs == nil && rhs == nil }
+    if let lhs = lhs as? NSNumber, let rhs = rhs as? NSNumber {
+        let lhsIsBool = CFGetTypeID(lhs) == CFBooleanGetTypeID()
+        let rhsIsBool = CFGetTypeID(rhs) == CFBooleanGetTypeID()
+        return lhsIsBool == rhsIsBool && lhs.compare(rhs) == .orderedSame
+    }
+    if let lhs = lhs as? String, let rhs = rhs as? String { return lhs == rhs }
+    if let lhs = lhs as? Data, let rhs = rhs as? Data { return lhs == rhs }
+    if let lhs = lhs as? [String], let rhs = rhs as? [String] { return lhs == rhs }
+    return (lhs as? NSObject)?.isEqual(rhs) ?? false
+}
+
 @MainActor
 func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
                                fixtureRoot: String) {
@@ -13,10 +26,7 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
     let recipeID = "workspace/WorkspaceSessionTest::restoreProjectOnly"
     let plistPath = URL(fileURLWithPath: fixtureRoot, isDirectory: true)
         .appendingPathComponent("settings.plist").path
-    let domain = plistPath.withCString {
-        CFStringCreateWithCString(kCFAllocatorDefault, $0, CFStringBuiltInEncodings.UTF8.rawValue)
-    }
-    guard let domain else {
+    guard let stagedPreferences = UserDefaults(suiteName: plistPath) else {
         report.fail(recipeID, "could not address staged preferences domain")
         return
     }
@@ -45,10 +55,9 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
                        "windowGeometry", "windowState"]
     func storedSessionKeys() -> [String: Any] {
         var values: [String: Any] = [:]
+        let domain = stagedPreferences.persistentDomain(forName: plistPath) ?? [:]
         for key in sessionKeys {
-            guard let name = key.withCString({
-                CFStringCreateWithCString(kCFAllocatorDefault, $0, CFStringBuiltInEncodings.UTF8.rawValue)
-            }), let value = CFPreferencesCopyAppValue(name, domain) else { continue }
+            guard domain.keys.contains(key), let value = stagedPreferences.object(forKey: key) else { continue }
             values[key] = value
         }
         return values
@@ -60,7 +69,7 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
                   && beforeRestore.keys.contains("songFilterSort")
                   && beforeRestore.keys.contains("editorDrawer.activePage")
                   && beforeRestore.keys.contains("editorDrawer.automationLanes"),
-                  cppID: recipeID, message: "the staged plist contains the recipe, filter and editor keys")
+        cppID: recipeID, message: "the staged preferences contain the recipe, filter and editor keys")
     let restoredShell = ShellPresenter()
     restoredShell.configureSettings(applicationName: "porydaw")
     restoredShell.openStartup()
@@ -75,8 +84,13 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
                        actual: restoredShell.session.songTabs.selectedPage?.title,
                        cppID: recipeID, what: "startup selects the restored legacy song")
     store.synchronize()
-    report.expect(NSDictionary(dictionary: beforeRestore).isEqual(to: storedSessionKeys()),
-                  cppID: recipeID, message: "successful live-project restore leaves every session and editor preference key unchanged")
+    let afterRestore = storedSessionKeys()
+    let changedKeys = Set(beforeRestore.keys).union(afterRestore.keys).filter {
+        !sameSessionPreference(beforeRestore[$0], afterRestore[$0])
+    }.sorted()
+    report.expect(
+        changedKeys.isEmpty, cppID: recipeID,
+        message: "successful live-project restore leaves preferences unchanged; changed: \(changedKeys)")
     restoredShell.session.requestCloseAll()
     let closeDeadline = Date().addingTimeInterval(25)
     while restoredShell.session.songTabs.tabCount > 0 && Date() < closeDeadline {
@@ -106,13 +120,7 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
                        cppID: recipeID, what: "normalization omits missing and duplicate songs")
     report.expectEqual(expected: "mus_session_test", actual: available.selectedSong,
                        cppID: recipeID, what: "a missing selected song falls back to the first live tab")
-    let orderedKey = "lastOpenSongs".withCString {
-        CFStringCreateWithCString(kCFAllocatorDefault, $0, CFStringBuiltInEncodings.UTF8.rawValue)
-    }
-    guard let orderedKey else {
-        preconditionFailure("Staged preferences require UTF-8 key and domain strings")
-    }
-    CFPreferencesSetAppValue(orderedKey, [] as [String] as CFPropertyList, domain)
+    stagedPreferences.set([String](), forKey: "lastOpenSongs")
     store.setString(key: "lastSongLabel", value: "mus_session_test")
     report.expect(store.hasValue(key: "lastOpenSongs"), cppID: recipeID,
                   message: "the explicitly empty ordered-song key is present before load")
@@ -239,27 +247,23 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
     let originalLanes = EditorViewStateCodec.loadLanes(store: PreferencesStore())
     report.expectEqual(expected: lanes, actual: originalLanes, cppID: idStored,
                        what: "the live session retains every seeded lane preference after drawer changes")
-    let laneKey = "editorDrawer.automationLanes".withCString {
-        CFStringCreateWithCString(kCFAllocatorDefault, $0, CFStringBuiltInEncodings.UTF8.rawValue)
-    }
-    guard let laneKey else {
-        report.fail(idStored, "could not address stored lane key")
-        return
-    }
+    let laneKey = "editorDrawer.automationLanes"
     let malformed = Data("{ not json".utf8)
-    CFPreferencesSetAppValue(laneKey, malformed as CFPropertyList, domain)
+    stagedPreferences.set(malformed, forKey: laneKey)
     store.synchronize()
-    report.expect((CFPreferencesCopyAppValue(laneKey, domain) as? Data) == malformed,
+    report.expect(
+        (stagedPreferences.object(forKey: laneKey) as? Data) == malformed,
                   cppID: idStored, message: "live editor poison enters the persisted preference domain")
     let poisoned = PreferencesStore()
     report.expect(EditorViewStateCodec.loadChrome(store: poisoned) == backgroundChange
                   && EditorViewStateCodec.loadLanes(store: poisoned) == EditorLaneState(),
                   cppID: idStored, message: "poisoned live editor reload defaults only lane members")
-    report.expect((CFPreferencesCopyAppValue(laneKey, domain) as? Data) == malformed,
+    report.expect(
+        (stagedPreferences.object(forKey: laneKey) as? Data) == malformed,
                   cppID: idStored, message: "reading live poisoned lanes leaves the preference unchanged")
     second.drawerPresenter().setSectionBodyHeight(kind: DrawerSectionKind.velocity.rawValue, height: 181)
     let healed = PreferencesStore()
-    let canonical = CFPreferencesCopyAppValue(laneKey, domain) as? Data
+    let canonical = stagedPreferences.object(forKey: laneKey) as? Data
     let compact = canonical.map { $0.first == 123 && !$0.contains(10) } ?? false
     report.expect(compact
                   && EditorViewStateCodec.loadChrome(store: healed) == second.drawerPresenter().chromeState

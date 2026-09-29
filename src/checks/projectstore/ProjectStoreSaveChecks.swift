@@ -141,14 +141,10 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
                 saveExpect("S04", false, report, "cannot edit writable fixture: \(String(describing: edit))")
                 return
             }
-            // Deterministic for any uid (permission bits do not stop root): the
-            // immutable flag blocks even root writes while leaving reads intact, so
-            // the pre-save memo check still hits the dirty record. Apple-gated
-            // suite; the flag is unsupported off-Apple.
-            try FileManager.default.setAttributes([.immutable: true], ofItemAtPath: first.sourcePath)
+            let restoreWrites = try WriteFailureFixture.blockAtomicWrites(to: first.sourcePath)
             let failed = awaitValue { try await store.saveVoicegroup(lease: edited) }
             let stillLoaded = awaitValue { try await store.loadBank(voicegroupArg: "_fixture_rich") }
-            try FileManager.default.setAttributes([.immutable: false], ofItemAtPath: first.sourcePath)
+            restoreWrites()
             let retry = awaitValue { try await store.saveVoicegroup(lease: edited) }
             if case .failure(let error as VoicegroupStoreError) = failed,
                case .operationFailed(let message) = error,

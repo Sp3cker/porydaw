@@ -273,6 +273,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         projectstore/SongCatalogChecks.swift
         projectstore/SynthCatalogChecks.swift
         projectstore/VoicegroupValueChecks.swift
+        projectstore/WriteFailureFixture.swift
         projectstore/SaveCoreChecks.swift
         projectstore/VoicegroupEditingChecks.swift
         projectstore/VoicegroupLoaderChecks.swift
