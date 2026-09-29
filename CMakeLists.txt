@@ -200,8 +200,6 @@ qt_add_library(porydaw_app STATIC
     src/audio/swift_playback.h
     src/audio/timeline_handoff.h
     src/audio/trackactivitylevel.h
-    src/audio/wavexport.cpp
-    src/audio/wavexport.h
     src/audio/miniaudio_impl.c
     src/project/banklease.cpp
     src/project/banklease.h
