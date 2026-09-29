@@ -47,7 +47,8 @@ qt_add_executable(porydaw_checks
     ${PROJECT_SOURCE_DIR}/resources/fonts.qrc
 )
 set_target_properties(porydaw_checks PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
+    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
+    LINKER_LANGUAGE CXX)
 target_include_directories(porydaw_checks PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 porydaw_enable_project_warnings(porydaw_checks)
 
@@ -356,6 +357,8 @@ target_link_libraries(porydaw_checks PRIVATE
     Qt6::Test
     QtBridgeCpp
 )
+porydaw_link_linux_swift_runtime(porydaw_checks
+    PorydawApp QtBridge PorydawProject PorydawPlayback PorydawCore)
 target_precompile_headers(porydaw_checks PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${PROJECT_SOURCE_DIR}/src/porydaw_pch.hpp>")
 target_compile_definitions(porydaw_checks PRIVATE
