@@ -10,7 +10,7 @@ Additional Swift counterpart: src/checks/workspace/session_view_state_fanout.swi
 Additional QML counterpart: src/checks/editorqml/tst_ShellTabsClose.qml (SHA-256 39d1426b8b0ab46b1c6d02dd52c936fbfc5c09e19d758b13f3f9e4fc2d4c301a)
 
 Additional Swift counterpart: src/checks/velocity/VelocityClickCancellationChecks.swift (SHA-256 35e2781445d126ca180843e5a513245d4b9d1312b9d3c885aede3c2b0ea48b8c)
-Additional QML counterpart: src/checks/editorqml/tst_ShellWindowVelocity.qml (SHA-256 857442f15569025b8f2aa9e5b3042c91eaf8c1eea007c548fc947d94609710ca)
+Additional QML counterpart: src/checks/editorqml/tst_ShellWindowVelocity.qml (SHA-256 074ce7a99b76b775e2c40ae062aa69e1289da921a9a3bfcaa7094567ec1d16bf)
 Additional QML counterpart: src/checks/editorqml/tst_EditorDrawerAutomationCamera.qml (SHA-256 afb3956545b95e48794d47db703447b2b6032dab49abf778b7ebd08f846011af)
 Task 181 verification command: deno task verify:shell --filter shellwindow-velocity --verbose
 Task 181 verification result: PASS (implementer handoff at agent://Task181; ledger writer did not rerun). S064 is anchored to the executed cursor predicate in test_kVelocityGestureTermination on the mounted velocity surface (page-switch, drawer-hide, focus-loss, tab-switch, and Escape data rows).
@@ -1527,7 +1527,7 @@ S063 | test_productionAutomationPanLifecycleFocusGrabAndInterruptions | src/chec
 Anchor: message "the released pan leaves no grab and writes nothing"
 
 S064 | test_kVelocityGestureTermination | src/checks/editorqml/tst_ShellWindowVelocity.qml
-Source line: 376
+Source line: 378
 Predicate: verify(rollInput.cursorShape !== Qt.ClosedHandCursor, "A122 gesture termination leaves no closed-hand pan cursor")
 Anchor: message "A122 gesture termination leaves no closed-hand pan cursor"
 

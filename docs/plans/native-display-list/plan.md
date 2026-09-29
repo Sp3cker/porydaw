@@ -350,7 +350,7 @@ upload. The delta is the copy and decode, tens of µs at the worst-case list siz
 | 2 | `DisplayList` QQuickItem + same-frame check | SDD | qt-cpp-reviewer (Qt ownership/threading) | `src/render/display_list_item.{h,cpp}`, root `CMakeLists.txt`, `src/checks/editorqml/{DisplayListProbe.swift,tst_DisplayListSameFrame.qml}`, `src/checks/CMakeLists.txt` |
 | 3a | Projection rename (no behavior change) | SDD | sdd-implementer | `src/swift/app/timeline/EditorCamera.swift`, `src/swift/app/timeline/GridGeometry.swift`, callers named in `inventory.md` §3, every check file calling `displayX`/`noteContentRect`/`noteContentBox` (rename only; assertions unchanged), affected `proof.*.txt` rows (path/line anchors only) |
 | 3b | One projection formula (the plan's only behavior change) | SDD | sdd-implementer | `EditorCamera.swift` (`viewX`, `PitchProjection.snappedEdge` bodies), `src/checks/rollcheck/static/camera.swift`, its `proof.*.txt` rows via `proof:edit` |
-| 4a | Roll plot (list 0) on display lists; plot check migration | SDD | sdd-implementer `:high` | `src/swift/app/roll/{RollDisplayLists,GridScene,GridScene+Notes,GridScene+Rebuild,PianoGrid,PianoGrid+SceneSync}.swift`, `src/ui/songview/quick/PianoRollCanvas.qml` (plot item only), `src/checks/editorqml/RollNoteFaces.js` + roll consumers, `src/checks/rollcheck/note_rendering_*.swift`, `note_name_labels.swift`, `proof.*` rows |
+| 4a | Roll plot (list 0) on display lists; plot check migration | SDD | sdd-implementer `:high` | `src/swift/app/roll/{RollDisplayLists,GridScene,GridScene+Notes,GridScene+Rebuild,PianoGrid,PianoGrid+SceneSync}.swift`, `src/ui/songview/quick/PianoRollCanvas.qml` (plot item only), `src/checks/editorqml/RollNoteFaces.js` + roll consumers, `src/checks/rollcheck/note_rendering_*.swift` (incl. the cull-bound predicate in `note_rendering_economy.swift`, no new file), `note_name_labels.swift`, `proof.*` rows |
 | 4b | Roll keyboard (list 1) on display lists; keyboard check migration | SDD | sdd-implementer | `RollDisplayLists.swift`, `GridScene.swift`, `PianoRollCanvas.qml` (keyboard item), keyboard checks in `src/checks/rollcheck/` and `src/checks/rollqml/`, `proof.*` rows |
 | 5 | Ruler on display lists | SDD | sdd-implementer | `RollDisplayLists.swift`, `src/ui/songview/quick/swiftroll/EditorRulerBand.qml`, ruler check helpers (`ShellGridMenuSupport.qml`, `tst_EditorDrawerChrome.qml`, `tst_ShellChromeVisuals.qml`, `tst_ShellMenusLoop.qml`) |
 | 6a | `DrawerStaticsContent` builder API + parity check against the legacy packer | SDD | sdd-implementer `:high` | `src/swift/app/drawer/DrawerStaticsContent.swift` (additive: builders beside the legacy packer, which Task 9 deletes), `src/checks/drawerpresentation/DrawerStaticsParityChecks.swift`, `src/checks/checkcatalog.cpp`, swiftcore suite dispatch |
@@ -401,7 +401,7 @@ the full Verification list green, `deno task checks:bridge` clean.
 
 - `deno task build:checks` — compiles C, C++, Swift, QML.
 - `deno task checks --filter displaylist --verbose` — Task 1 round-trip contract (new suite).
-- `deno task checks --filter swiftcore --verbose` — camera/projection, economy, roll semantics.
+- `deno task checks --filter swiftcore --verbose` — camera/projection, economy, roll semantics, 4a roll-plot cull bound.
 - `deno task checks:qml-roll --verbose` — roll QML + raster identity (plot, keyboard, ruler).
 - `deno task checks:shell --verbose` — shell journeys via `face()`, chrome/ruler rasters.
 - `deno task checks:qml --verbose` — drawer pages (Tasks 6a–8).
@@ -422,7 +422,8 @@ the full Verification list green, `deno task checks:bridge` clean.
 3. Hit-test behavior change (Contract §4) is deliberate and ≤ 1 physical pixel; any shell check that
    clicked a computed point inside that pixel will surface it — fix the check's point, not the formula.
 4. Per-frame Swift cost on pathological songs is bounded by culling, not by note count; the cull itself
-   walks `notesByTick`-ordered records (today's C++ does the same, `roll_scene.cpp:181-224`).
+   walks `notesByTick`-ordered records (today's C++ does the same, `roll_scene.cpp:210-254`), guarded
+   for the roll plot by Task 4a's `checkRollPlotCullBound` cull-bound check (drawers remain ungated).
 5. ~~AGENTS.md boundary text needs human permission~~ landed with the user's AGENTS.md review.
 
 ## Orchestrator brief (for whoever runs this plan)
@@ -436,7 +437,7 @@ orchestrator never implements Tasks 1–8 inline and never edits a proof ledger.
 |---|---|---|---|
 | A | 1 | `sdd-implementer` | `deno task checks --filter displaylist --verbose` green; `checks:bridge` clean; `lsp:swift` re-run |
 | B | 2 ∥ 3a → 3b | 2: `qt-cpp-reviewer`; 3a/3b: `sdd-implementer` | Task 2: same-frame check green (Contract §2 invariant), 1-arg `invokeMethod` exercised. 3a: every lane green, no raster or hit-point change (checkpoint 1a). 3b lands **alone**, every lane green, rasters byte-identical, `camera.swift` re-pin via `proof:edit` in the same commit (checkpoint 1b). Task 4a is not dispatched before Task 2 and 1b |
-| C | 4a → 4b → 5 | `sdd-implementer` (4a at `:high`, then default) | after each: `checks:qml-roll`, `checks:shell`, `checks --filter swiftcore`, rasters byte-identical to 1b; after 5: `GridScene` has no `drawingContent`. Checkpoints 2, 2b, 3 |
+| C | 4a → 4b → 5 | `sdd-implementer` (4a at `:high`, then default) | after each: `checks:qml-roll`, `checks:shell`, `checks --filter swiftcore` (4a incl. the cull-bound predicate), rasters byte-identical to 1b; after 5: `GridScene` has no `drawingContent`. Checkpoints 2, 2b, 3 |
 | D | 6a → 6b ∥ 7 ∥ 8 | `sdd-implementer` (6a at `:high`, then default ×3) | 6a: `checks --filter drawerstatics-parity` green (builders reproduce the legacy packer's geometry for the same inputs) — checkpoint 3b; then 6b, 7, 8 in parallel, disjoint write sets, none touching `DrawerStaticsContent.swift`. `checks:qml`, `checks:shell`. Checkpoint 4 |
 | E | 9 | orchestrator, Direct | full Verification list; `grep TimelineRenderer src/ui src/checks` empty; AGENTS.md: remove the transitional sentence only |
 

@@ -52,8 +52,12 @@ Checks:
   "gridNote_" + id)` → `renderer.face(id)`; `rect`/`center`/`point`/
   `grab` unchanged) plus its consumers (no signature change; they keep
   calling `rect`/`center`/`point`/`face`).
-- `src/checks/rollcheck/note_rendering_economy.swift`,
-  `note_rendering_support.swift`, `note_rendering_borders.swift`,
+- `src/checks/rollcheck/note_rendering_economy.swift` (also gains
+  `checkRollPlotCullBound`, wired into `runNoteRenderingChecks`
+  (`note_rendering.swift:7-15`); no new suite file and no
+  `src/checks/CMakeLists.txt` touch — the file is already listed at
+  `:150` in `swift_core_check`), `note_rendering_support.swift`,
+  `note_rendering_borders.swift`,
   `note_rendering_ghosts.swift`, `note_rendering_names.swift`,
   `note_rendering_velocity.swift`, `note_name_labels.swift` (delete
   `faceFits`/`nameFits`, `:34-52`; re-express `labels`/`valueLabels`
@@ -181,11 +185,24 @@ Checks:
 8. Grep `TimelineRenderer` under `src/ui`/`src/checks` and
    `DrawingContentBinary` under `src/swift` to confirm band 0 is fully off
    the old path (band 1 keyboard and band 2 ruler references must remain).
+9. Add `checkRollPlotCullBound` in `note_rendering_economy.swift` per the
+   Acceptance bullet; wire it into `runNoteRenderingChecks`.
 
 ## Acceptance predicate
 
 - `deno task checks --filter swiftcore --verbose` — covers projection,
   economy (re-expressed), roll semantics, and migrated label assertions.
+- Same command — covers the roll-plot cull bound
+  (`checkRollPlotCullBound`): fixture song with a known visible note set
+  plus thousands of notes far outside the viewport (off-screen notes via
+  `document.addNotes`, `note_rendering_economy.swift:181-183`; visible
+  set via a `renderingSeed`-style free-cell insert,
+  `note_rendering_support.swift:39-83`); decode
+  `grid.scene.displayList(0)` with the Task 1 reader and assert the
+  note-fill rect count equals the count projected from only the visible
+  notes (`EditorCamera.viewX`, `EditorCamera.swift:233-236`;
+  `GridMetrics.noteBox`, `GridGeometry.swift:413-416`) plus grid lines,
+  and that doubling the off-screen notes leaves the count unchanged.
 - `deno task checks:qml-roll --verbose` — covers roll raster identity at
   dpr 1 and 2; the gate is byte-identity against current
   `TimelineRenderer` output.
