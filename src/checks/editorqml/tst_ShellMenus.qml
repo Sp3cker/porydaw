@@ -85,8 +85,17 @@ ShellMenusSupport {
         var file = findChild(shell, "shellFileMenu")
         var edit = findChild(shell, "shellEditMenu")
         var view = findChild(shell, "shellViewMenu")
-        menuOrder(file, ["file.open_project", "file.new_song", "file.save_song", "file.register_song", "file.close_tab", "file.quit"])
-        compare(file.count, 6, "the File menu keeps only the mounted file rows")
+        var fileRows = []
+        for (var fileIndex = 0; fileIndex < file.count; ++fileIndex)
+            fileRows.push(file.itemAt(fileIndex).objectName)
+        compare(JSON.stringify(fileRows),
+                JSON.stringify(["shellAction_file.open_project", "shellAction_file.new_song",
+                                "shellAction_file.save_song", "shellAction_file.register_song",
+                                "shellAction_file.close_tab", "shellFileExportSeparator",
+                                "shellAction_file.export_wav", "shellFileQuitSeparator",
+                                "shellAction_file.quit"]),
+                "the File menu keeps the fork rows and separators")
+        compare(file.count, 9, "the File menu keeps the fork rows and separators")
         verify(findChild(file, "shellAction_songs.find") === null,
                "Find Song moves from File to the Edit clipboard group")
         var clipboard = ["roll.copy", "roll.cut", "roll.paste", "roll.delete",

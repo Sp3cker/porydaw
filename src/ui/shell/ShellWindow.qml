@@ -255,6 +255,12 @@ ThemedWindow {
         applicationSession: shell.session
         baseFontPx: shell.session.baseFontPx
     }
+    WavExportSurface {
+        presenter: shell.session.wavExportPresenter()
+        colors: root.colors
+        windowRoot: root
+        typography: root.chromeTypography
+    }
 
     SplitView {
         id: shellBody

@@ -165,6 +165,30 @@ TestCase {
         tryCompare(dialog, "visible", false, 3000)
     }
 
+    function auditWavExport(context) {
+        const presenter = shell.shellPresenter
+        const model = presenter.session.wavExportPresenter()
+        const dialog = findChild(shell, "shellWavExportDialog")
+        verify(dialog !== null, "WAV export options window exists")
+        presenter.activate("file.export_wav")
+        tryCompare(dialog, "visible", true, 3000)
+        record(context + " WAV options", Audit.audit(dialog.contentItem, grab))
+        model.rejectOptions()
+        presenter.activate("file.export_wav")
+        model.setLoopCount(99)
+        const picker = findChild(shell, "shellWavExportFileDialog")
+        picker.selectedFile = "file://" + bootstrap.projectRoot + "/sound/contrast.wav"
+        model.acceptOptions()
+        verify(waitForNative(function() { return picker.visible }, 5000),
+               "contrast audit save picker opens with its destination")
+        picker.accept()
+        const progress = findChild(shell, "shellWavExportProgress")
+        tryCompare(progress, "visible", true, 3000)
+        record(context + " WAV progress", Audit.audit(progress.contentItem, grab))
+        model.cancelRender()
+        verify(waitForNative(function() { return !model.active }, 30000),
+               "contrast audit export cancels")
+    }
     function auditClippedKeyboardLabel(context) {
         const tabs = shell.shellPresenter.session.songTabs
         const page = findChild(shell.sceneLoader.item, "songTab_" + tabs.selectedId)
@@ -287,6 +311,7 @@ TestCase {
         tryCompare(session.songTabs, "selectedTabShowsEvents", false, 3000)
 
         auditSettings(mode + " song")
+        auditWavExport(mode + " song")
         report(mode + " song shell")
     }
 }

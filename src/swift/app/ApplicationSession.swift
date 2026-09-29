@@ -73,6 +73,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     let eventList: EventListPresenter
     @QtIgnored
     let transportBar: TransportBarPresenter
+    @QtIgnored let wavExport = WavExportPresenter()
     @QtIgnored
     let voiceList = VoiceListController()
     @QtIgnored
@@ -157,6 +158,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
         connectVoiceAudition()
         songTabs.attach(app: self)
         transportBar.attach(session: self)
+        wavExport.attach(session: self)
         transportBar.onAvailabilityChanged = { [weak self] in
             self?.transportAvailabilityChanged()
         }
@@ -347,6 +349,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// deactivated.
     public func playheadPresenter() -> SharedPlayheadPresenter { playhead }
     public func transportBarPresenter() -> TransportBarPresenter { transportBar }
+    public func wavExportPresenter() -> WavExportPresenter { wavExport }
 
     public func playheadGuidesPresenter() -> PlayheadGuidesPresenter { playheadGuides }
 

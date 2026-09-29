@@ -22,6 +22,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         Action("file.save_song"),
         Action("file.register_song"),
         Action("file.close_tab"),
+        Action("file.export_wav"),
         Action("file.quit"),
         Action("edit.undo"),
         Action("edit.redo"),
@@ -81,7 +82,11 @@ public final class ShellPresenter: QmlInstantiableStatus {
     ]
     private static let byId = Dictionary(uniqueKeysWithValues: actions.map { ($0.id, $0) })
     private static let allActionIds = actions.map(\.id)
-    private static let fileIds = allActionIds.filter { $0.hasPrefix("file.") }
+    private static let fileIds = allActionIds.filter {
+        $0.hasPrefix("file.") && $0 != "file.export_wav" && $0 != "file.quit"
+    }
+    private static let fileExportIds = ["file.export_wav"]
+    private static let fileQuitIds = ["file.quit"]
     private static let editTopIds = ["edit.undo", "edit.redo"]
     private static let editClipboardIds = [
         "roll.copy", "roll.cut", "roll.paste", "roll.delete", "roll.select_all", "songs.find",
@@ -117,6 +122,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
     ]
     private static let menuLabels = [
         "file.open_project": "Open Project...",
+        "file.export_wav": "Export WAV...",
         "edit.preferences": "Preferences...",
         "edit.song_settings": "Song Settings...",
         "edit.engine_settings": "Engine Settings...",
@@ -141,6 +147,8 @@ public final class ShellPresenter: QmlInstantiableStatus {
     @QtTracked public var mouseHints: MouseHints
     public var actionIds: [String]
     public var fileActionIds: [String]
+    public var fileExportActionIds: [String]
+    public var fileQuitActionIds: [String]
     public var editTopActionIds: [String]
     public var editClipboardActionIds: [String]
     public var notesActionIds: [String]
@@ -182,6 +190,8 @@ public final class ShellPresenter: QmlInstantiableStatus {
         settingsStore.attach(session: session)
         actionIds = Self.allActionIds
         fileActionIds = Self.fileIds
+        fileExportActionIds = Self.fileExportIds
+        fileQuitActionIds = Self.fileQuitIds
         editTopActionIds = Self.editTopIds
         editClipboardActionIds = Self.editClipboardIds
         notesActionIds = Self.notesIds
@@ -228,6 +238,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
 
     public func actionEnabled(id: String) -> Bool {
         guard let action = Self.byId[id] else { return false }
+        if session.wavExportPresenter().active { return false }
         if id == "view.polyphony_debugger" || id == "edit.preferences"
             || id == "edit.engine_settings" { return true }
         guard sceneActive else { return false }
@@ -254,6 +265,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         case "file.register_song": return session.songOpen
             && session.songDockController().selectedTabRegistrationPending()
         case "file.close_tab": return session.songTabs.selectedPage != nil
+        case "file.export_wav": return session.wavExportPresenter().exportAvailable
         case "edit.undo": return session.songOpen && session.canUndo
         case "edit.redo": return session.songOpen && session.canRedo
         case "edit.song_settings": return session.songOpen
@@ -326,6 +338,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         case "file.register_song": session.songDockController().requestRegisterSelectedTab()
         case "file.close_tab":
             session.songTabs.requestClose(tabId: session.songTabs.selectedId)
+        case "file.export_wav": session.wavExportPresenter().open()
         case "file.quit": quitRequested()
         case "edit.undo": session.requestUndo()
         case "edit.redo": session.requestRedo()
@@ -411,6 +424,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
     /// answer their gate; no close bypasses hostClosing -> scene removal ->
     /// detach ack.
     public func beginClose() -> Bool {
+        if session.wavExportPresenter().active { return false }
         if closeReady { return true }
         if closing || closePending { return false }
         closePending = true

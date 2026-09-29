@@ -544,6 +544,7 @@ if(APPLE)
         editorqml/GridInputClipProbe.swift
         editorqml/GatedVisualsProbe.swift
         editorqml/PolyphonyShellProbe.swift
+        editorqml/WavFileProbe.swift
         editorqml/TabsDrawerProbe.swift
         keyboard/KeybindingRegistryChecks.swift
         "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"

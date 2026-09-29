@@ -14,6 +14,7 @@ add_library(PorydawApp STATIC
     DocumentWorkspace.swift
     NativeAudio.swift
     export/WavExportJob.swift
+    export/WavExportPresenter.swift
     audio/PolyphonyPanelPresenter.swift
     ApplicationSession.swift
     ApplicationSession+Tabs.swift

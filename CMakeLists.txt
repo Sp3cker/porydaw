@@ -269,6 +269,7 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/drawer/VoicePicker.qml
         src/ui/shell/ShellWindow.qml
         src/ui/shell/ShellMenuBar.qml
+        src/ui/shell/WavExportSurface.qml
         src/ui/shell/ShellStatusBar.qml
         src/ui/shell/ShellGridContextMenu.qml
         src/ui/shell/ThemedWindow.qml

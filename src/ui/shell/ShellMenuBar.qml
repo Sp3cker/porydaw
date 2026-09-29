@@ -34,6 +34,60 @@ MenuBar {
                 onObjectAdded: (index, object) => fileMenu.insertItem(index, object)
                 onObjectRemoved: (index, object) => fileMenu.removeItem(object)
             }
+            MenuSeparator {
+                id: fileExportSeparator
+                objectName: "shellFileExportSeparator"
+            }
+            Instantiator {
+                model: shell.fileExportActionIds
+                delegate: MenuItem {
+                    arrow: null
+                    indicator: null
+                    required property string modelData
+                    objectName: "shellAction_" + modelData
+                    text: root.nativeMenuText(modelData)
+                    enabled: {
+                        root.actionRevision
+                        return shell.actionEnabled(modelData)
+                    }
+                    onTriggered: shell.activate(modelData)
+                }
+                onObjectAdded: (index, object) => {
+                    let anchor = 0
+                    while (anchor < fileMenu.count
+                           && fileMenu.itemAt(anchor) !== fileExportSeparator)
+                        ++anchor
+                    fileMenu.insertItem(anchor + 1 + index, object)
+                }
+                onObjectRemoved: (index, object) => fileMenu.removeItem(object)
+            }
+            MenuSeparator {
+                id: fileQuitSeparator
+                objectName: "shellFileQuitSeparator"
+            }
+            Instantiator {
+                model: shell.fileQuitActionIds
+                delegate: MenuItem {
+                    arrow: null
+                    indicator: null
+                    required property string modelData
+                    objectName: "shellAction_" + modelData
+                    text: root.nativeMenuText(modelData)
+                    enabled: {
+                        root.actionRevision
+                        return shell.actionEnabled(modelData)
+                    }
+                    onTriggered: shell.activate(modelData)
+                }
+                onObjectAdded: (index, object) => {
+                    let anchor = 0
+                    while (anchor < fileMenu.count
+                           && fileMenu.itemAt(anchor) !== fileQuitSeparator)
+                        ++anchor
+                    fileMenu.insertItem(anchor + 1 + index, object)
+                }
+                onObjectRemoved: (index, object) => fileMenu.removeItem(object)
+            }
         }
         Menu {
             id: editMenu

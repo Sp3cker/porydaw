@@ -275,6 +275,23 @@ enum ShellQmlRegistry {
                     "sound/voicegroups/fixture_alt.inc",
                 ]),
             Entry(
+                name: "shell-export-options", inputFileName: "tst_ShellExport.qml",
+                fixtureFiles: songs("mus_route101", "mus_route102"),
+                testFunctions: [
+                    "ShellExport::test_menuRow",
+                    "ShellExport::test_loopOptions",
+                    "ShellExport::test_tailOptions",
+                    "ShellExport::test_fileDialogMemory",
+                ]),
+            Entry(
+                name: "shell-export-render", inputFileName: "tst_ShellExport.qml",
+                fixtureFiles: songs("mus_route101", "mus_route102"),
+                testFunctions: [
+                    "ShellExport::test_exportRendersLiveSessionAndStopsPlayback",
+                    "ShellExport::test_modalRenderBlocksInputAndCancels",
+                    "ShellExport::test_writeFailureReportsAndLeavesNoFile",
+                ]),
+            Entry(
                 name: "shell-settings", inputFileName: "tst_ShellSettings.qml",
                 fixtureFiles: songs("mus_route101"),
                 testFunctions: [
