@@ -241,3 +241,29 @@ func parityParams(_ profile: ParityProfile, sourceRate: Double, params initial: 
     }
     return params
 }
+
+func writeWav2AgbProject(root: String) throws {
+    try ProjectFixtureFiles.write(root + "/Makefile", "include audio_rules.mk\n")
+    try ProjectFixtureFiles.write(root + "/audio_rules.mk",
+        "SOUND_BIN_DIR := $(OBJ_DIR)/sound\n\n$(SOUND_BIN_DIR)/%.bin: sound/%.wav \n\t$(WAV2AGB) -b $< $@\n")
+    try ProjectFixtureFiles.write(root + "/sound/direct_sound_data.inc",
+        "\t.align 2\nDirectSoundWaveData_existing::\n\t.incbin \"sound/direct_sound_samples/existing.bin\"\n")
+    try ProjectFixtureFiles.write(root + "/sound/direct_sound_samples/existing.wav", "placeholder")
+    try ProjectFixtureFiles.write(root + "/sound/direct_sound_samples/existing.bin", "placeholder")
+    try ProjectFixtureFiles.write(root + "/sound/direct_sound_samples/orphan.wav", "placeholder")
+}
+
+func writeAif2PcmProject(root: String) throws {
+    try ProjectFixtureFiles.write(root + "/audio_rules.mk",
+        "$(SOUND_BIN_DIR)/%.bin: $(SAMPLE_SUBDIR)/%.aif\n\t$(AIF2PCM) $< $@\n")
+    try ProjectFixtureFiles.write(root + "/sound/direct_sound_data.inc",
+        "\t.align 2\nDirectSoundWaveData_existing::\n\t.incbin \"sound/direct_sound_samples/existing.bin\"\n")
+}
+
+private enum ProjectFixtureFiles {
+    static func write(_ path: String, _ text: String) throws {
+        try FileManager.default.createDirectory(
+            at: URL(filePath: path).deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data(text.utf8).write(to: URL(filePath: path))
+    }
+}

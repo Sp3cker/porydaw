@@ -3,16 +3,17 @@ Assertion correspondence: samplecheck/integration.cpp
 Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/samplecheck/integration.cpp
 Original SHA-256: 6c9de17973a3ede8a7dd643d494f606a9c1fb0b0fab1742a2b6f7d84abc2bf49
-Swift counterpart: none identified
+Swift counterpart: src/checks/samplecheck/RegistrationChecks.swift
+Swift counterpart SHA-256: af16948c6e6dbb279b41abf56056cfbbf1efe7539b13b2755c041ce172c3d062
 
-Inventory: 71 sites across 9 test methods (engineLoop, sampleUpdate, sampleUpdateRefusals, sidecarEditDialog, sidecarFallback, sidecarRemove, sidecarRerender, sidecarRoundtrip, sidecarTouchedSource). Tally: 68 GAP, 3 NATIVE, 0 MATCHED, 0 PARTIAL.
+Inventory: 71 sites across 9 test methods (engineLoop, sampleUpdate, sampleUpdateRefusals, sidecarEditDialog, sidecarFallback, sidecarRemove, sidecarRerender, sidecarRoundtrip, sidecarTouchedSource). Tally: 56 GAP, 3 NATIVE, 3 RETIRED-REPRESENTATION, 9 MATCHED, 0 PARTIAL.
 
-Command: deno task verify --filter samplecheck --verbose
-Result: pending integrated run.
+Command: deno task checks --filter samplecheck --verbose
+Result: controller-observed 2026-09-29 for this tree — checks: 1/38 ok, no failures; proof check --executed: 0 not executed (engineLoop A001–A012 closed by 246).
 
 A001 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:46
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness scratch-directory scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   #include "checks/samplecheck/fixtures.h"
   #include "checks/samplecheck/samplecheck.h"
@@ -64,8 +65,8 @@ Original expression:
   QVERIFY2(scratch.isValid(), "engine-loop scratch directory is available")
 
 A002 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:48
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness project-fixture scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
       const QString root = scratch.filePath(QStringLiteral("wavproj"));
@@ -74,8 +75,8 @@ Original expression:
   QVERIFY2(createWav2AgbProject(root), "engine-loop synthetic project is created")
 
 A003 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:51
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S001
 Source context since previous assertion:
   ;
       ImportedSample hiRes;
@@ -87,8 +88,8 @@ Original expression:
                qPrintable(importError))
 
 A004 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:60
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S002
 Source context since previous assertion:
   ;
 
@@ -102,8 +103,8 @@ Original expression:
   QVERIFY2(out.looped && out.size > out.loopStart + 100, "engine-loop fixture renders looped")
 
 A005 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:62
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S003
 Source context since previous assertion:
   ;
       QString error;
@@ -114,8 +115,8 @@ Original expression:
                "engine-loop sample registers")
 
 A006 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:65
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness voicegroup-fixture scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
 
@@ -126,8 +127,8 @@ Original expression:
                         "DirectSoundWaveData_engineloop_tone, 255, 0, 255, 0\n"))
 
 A007 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:72
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S004
 Source context since previous assertion:
   ;
       const QByteArray rootUtf8 = root.toLocal8Bit();
@@ -138,8 +139,8 @@ Original expression:
   QVERIFY2(voicegroup, "engine-loop voicegroup resolves")
 
 A008 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:77
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S005
 Source context since previous assertion:
   ;
 
@@ -151,8 +152,8 @@ Original expression:
   QVERIFY2(session.initialized, "engine-loop initializes at an integral host rate")
 
 A009 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:87
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S006
 Source context since previous assertion:
   ;
       m4a_engine_set_pcm_mix_rate(engine, 0.0f);
@@ -169,8 +170,8 @@ Original expression:
   QVERIFY2(channel, "engine-loop note keys a channel")
 
 A010 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:92
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S007
 Source context since previous assertion:
   ;
       const quint64 loopLength = quint64(out.size) - out.loopStart;
@@ -182,8 +183,8 @@ Original expression:
   QVERIFY2(renderFrames <= kMaxRenderFrames, "engine-loop fixture fits render window")
 
 A011 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:107
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S008
 Source context since previous assertion:
   ;
       float left = 0.0f;
@@ -205,8 +206,8 @@ Original expression:
   QVERIFY2((channel->status & CHN_ON) && peak > 0.0, "at least four full loop wraps render")
 
 A012 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:119
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S009
 Source context since previous assertion:
   ;
 
@@ -957,12 +958,28 @@ Remaining original source (closing sequence and helper bodies):
 
 
 Swift assertion predicates
-No Swift counterpart file was identified for this suite, so no report.expect*/expectEqual
-predicates exist. The S-list is empty.
+S001 | registrationEngineLoop | src/checks/samplecheck/RegistrationChecks.swift
+Anchor: message "A003 engine-loop high-resolution source imports"
+S002 | registrationEngineLoop | src/checks/samplecheck/RegistrationChecks.swift
+Anchor: message "A004 engine-loop fixture renders looped"
+S003 | registrationEngineLoop | src/checks/samplecheck/RegistrationChecks.swift
+Anchor: message "A005 engine-loop sample registers"
+S004 | registrationEngineLoop | src/checks/samplecheck/RegistrationChecks.swift
+Anchor: message "A007 engine-loop voicegroup resolves"
+S005 | registrationEngineLoop | src/checks/samplecheck/RegistrationChecks.swift
+Anchor: message "A008 engine-loop initializes at integral host rate"
+S006 | registrationEngineLoop | src/checks/samplecheck/RegistrationChecks.swift
+Anchor: message "A009 engine-loop note keys audible channel"
+S007 | registrationEngineLoop | src/checks/samplecheck/RegistrationChecks.swift
+Anchor: message "A010 engine-loop fixture fits render window"
+S008 | registrationEngineLoop | src/checks/samplecheck/RegistrationChecks.swift
+Anchor: message "A011 at least four full loop wraps render"
+S009 | registrationEngineLoop | src/checks/samplecheck/RegistrationChecks.swift
+Anchor: message "A012 loop-wrap steps stay within source steps plus two LSB"
 
 Shared helpers
 The shared C++ fixture sources src/checks/samplecheck/fixtures.h and
 src/checks/samplecheck/fixtures.cpp (SHA-256 543265f5d4274c58c8bf5131850cd55da1a625024ee91731f4aaf57ad96b641b) carry no assertion sites
 (verified: no QVERIFY, QCOMPARE, QFAIL, QSKIP, QTRY_*, or QEXPECT_FAIL sites); they only
-build byte fixtures, generators, and metrics used by the setups above. There are no Swift
-fixture files for this suite.
+build byte fixtures, generators, and metrics used by the setups above. Swift
+registration fixtures are synthesized in src/checks/samplecheck/SampleFixtures.swift.

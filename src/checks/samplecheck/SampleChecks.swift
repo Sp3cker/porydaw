@@ -8,4 +8,5 @@ internal func runSampleChecks(_ report: CheckReport) {
     runDspKernelChecks(report)
     runRenderPipelineChecks(report)
     runAnalysisChecks(report)
+    runRegistrationChecks(report)
 }
