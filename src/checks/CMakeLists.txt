@@ -87,6 +87,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         samplecheck/SoundFontChecks.swift
         samplecheck/DspKernelChecks.swift
         samplecheck/RenderPipelineChecks.swift
+        samplecheck/AnalysisChecks.swift
         editcheck/tst_songdocument_songraw.swift
         editcheck/tst_songdocument_runner.swift
         editcheck/tst_songdocument_songranges.swift
@@ -567,7 +568,7 @@ if(APPLE)
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
     )
-    target_link_libraries(shell_qml_lane PRIVATE QtBridge PorydawApp)
+    target_link_libraries(shell_qml_lane PRIVATE QtBridge PorydawApp PorydawCore)
 
     add_executable(shell_qml_tests
         editorqml/EditorQmlPaths.swift.in

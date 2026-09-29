@@ -7,4 +7,5 @@ internal func runSampleChecks(_ report: CheckReport) {
     runSoundFontChecks(report)
     runDspKernelChecks(report)
     runRenderPipelineChecks(report)
+    runAnalysisChecks(report)
 }

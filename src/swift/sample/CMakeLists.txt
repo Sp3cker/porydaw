@@ -13,6 +13,7 @@ add_library(PorydawSample STATIC
     SampleDocument.swift
     SampleRender.swift
     SampleWavWriter.swift
+    SampleAnalysis.swift
 )
 set_target_properties(PorydawSample PROPERTIES
     Swift_MODULE_NAME PorydawSample

@@ -3,17 +3,18 @@ Assertion correspondence: samplecheck/analysis.cpp
 Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/samplecheck/analysis.cpp
 Original SHA-256: da34a411ca0833f4ad3ed01404c49b8e8eee735abc4a5b49b321088e08fbb582
-Swift counterpart: src/checks/audio/AudioAuditionChecks.swift; src/checks/samplecheck/RenderPipelineChecks.swift
+Swift counterpart: src/checks/audio/AudioAuditionChecks.swift; src/checks/samplecheck/AnalysisChecks.swift; src/checks/samplecheck/RenderPipelineChecks.swift
 Swift counterpart SHA-256 (RenderPipelineChecks.swift): d31016f1c816fed7c784c536b8114a4002a68fc8ea76d45b0272b06699f6ee79
+Swift counterpart SHA-256 (AnalysisChecks.swift): 944f32e0da892900d487d0630a800da63996091dca937e1a40b18103c4aaca36
 
-Inventory: 35 sites across 4 test methods (auditionSlotLifecycle, loopAndCrossfade, pitchMatrix, pitchNegativeCases). Tally: 15 GAP, 0 NATIVE, 20 MATCHED, 0 PARTIAL.
+Inventory: 35 sites across 4 test methods (auditionSlotLifecycle, loopAndCrossfade, pitchMatrix, pitchNegativeCases). Tally: 0 GAP, 0 NATIVE, 35 MATCHED, 0 PARTIAL.
 
 Command: deno task checks --filter samplecheck --verbose
-Result: controller-observed 2026-09-29 for this tree — checks: 1/38 ok, no failures; proof check --executed: 0 analysis sites not executed (pitch/loop rows remain GAP for 245).
+Result: controller-observed 2026-09-29 for this tree — checks: 1/38 ok, no failures; proof check --executed: 0 analysis sites not executed. A001–A015 MATCHED by 245; A022–A035 anchor debt owned by 252.
 
 A001 | SampleProcessingTest::pitchMatrix | src/checks/samplecheck/analysis.cpp:69
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S021
 Source context since previous assertion:
   #include "checks/samplecheck/fixtures.h"
   #include "checks/samplecheck/samplecheck.h"
@@ -89,8 +90,8 @@ Original expression:
                "sine pitch is within five cents")
 
 A002 | SampleProcessingTest::pitchMatrix | src/checks/samplecheck/analysis.cpp:74
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S022
 Source context since previous assertion:
   ;
 
@@ -102,8 +103,8 @@ Original expression:
                "saw pitch is within five cents")
 
 A003 | SampleProcessingTest::pitchNegativeCases | src/checks/samplecheck/analysis.cpp:86
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S023
 Source context since previous assertion:
   ;
   }
@@ -121,8 +122,8 @@ Original expression:
   QVERIFY2(!SampleDsp::detectPitchYin(noise, 13379.0).pitched, "white noise reports unpitched")
 
 A004 | SampleProcessingTest::pitchNegativeCases | src/checks/samplecheck/analysis.cpp:90
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S024
 Source context since previous assertion:
   ;
 
@@ -134,8 +135,8 @@ Original expression:
                "fewer than three frames reports unpitched")
 
 A005 | SampleProcessingTest::loopAndCrossfade | src/checks/samplecheck/analysis.cpp:109
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S025
 Source context since previous assertion:
   ;
   }
@@ -161,8 +162,8 @@ Original expression:
                "vibrato tone detects near 440 Hz")
 
 A006 | SampleProcessingTest::loopAndCrossfade | src/checks/samplecheck/analysis.cpp:114
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S026
 Source context since previous assertion:
   ;
       const double period = rate / (pitch.pitched ? pitch.f0 : 440.0);
@@ -173,8 +174,8 @@ Original expression:
   QVERIFY2(!cands.empty(), "vibrato tone yields loop candidates")
 
 A007 | SampleProcessingTest::loopAndCrossfade | src/checks/samplecheck/analysis.cpp:116
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S027
 Source context since previous assertion:
   ;
       const SampleDsp::LoopCandidate &top = cands[0];
@@ -183,8 +184,8 @@ Original expression:
   QVERIFY2(top.passedGates, "top candidate passes the gates")
 
 A008 | SampleProcessingTest::loopAndCrossfade | src/checks/samplecheck/analysis.cpp:117
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S028
 Source context since previous assertion:
   ;
 
@@ -192,8 +193,8 @@ Original expression:
   QVERIFY2(top.ncc >= 0.95, "top candidate NCC >= 0.95")
 
 A009 | SampleProcessingTest::loopAndCrossfade | src/checks/samplecheck/analysis.cpp:123
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S029
 Source context since previous assertion:
   ;
       const QByteArray candidateS8 = SampleDsp::quantizeBuffer(tone, false);
@@ -207,8 +208,8 @@ Original expression:
                "top candidate post-quantize seam within click bounds")
 
 A010 | SampleProcessingTest::loopAndCrossfade | src/checks/samplecheck/analysis.cpp:127
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S030
 Source context since previous assertion:
   ;
       const qint64 L = top.loopEnd + 1 - top.loopStart;
@@ -219,8 +220,8 @@ Original expression:
                "loop length within 1% of an integer period multiple")
 
 A011 | SampleProcessingTest::loopAndCrossfade | src/checks/samplecheck/analysis.cpp:139
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S031
 Source context since previous assertion:
   ;
 
@@ -238,8 +239,8 @@ Original expression:
   QVERIFY2(!ncands.empty() && ncands[0].ncc < 0.5, "white noise yields no clean loop")
 
 A012 | SampleProcessingTest::loopAndCrossfade | src/checks/samplecheck/analysis.cpp:152
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S032
 Source context since previous assertion:
   ;
 
@@ -260,8 +261,8 @@ Original expression:
                "amplitude-step tone still finds a clean same-level loop")
 
 A013 | SampleProcessingTest::loopAndCrossfade | src/checks/samplecheck/analysis.cpp:159
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S033
 Source context since previous assertion:
   ;
       bool gatesHonest = true;
@@ -274,8 +275,8 @@ Original expression:
   QVERIFY2(gatesHonest, "no gate-passing candidate spans the amplitude step")
 
 A014 | SampleProcessingTest::loopAndCrossfade | src/checks/samplecheck/analysis.cpp:177
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S034
 Source context since previous assertion:
   ;
 
@@ -300,8 +301,8 @@ Original expression:
   QVERIFY2(refined.ncc >= nccBefore - 1e-9, "refine never worsens the seam correlation")
 
 A015 | SampleProcessingTest::loopAndCrossfade | src/checks/samplecheck/analysis.cpp:183
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S035
 Source context since previous assertion:
   ;
 
@@ -519,6 +520,37 @@ S019 | renderCrossfade | src/checks/samplecheck/RenderPipelineChecks.swift
 Anchor: message "crossfade changes only the final fade window"
 S020 | renderCrossfade | src/checks/samplecheck/RenderPipelineChecks.swift
 Anchor: message "impossible crossfade refuses with a warning"
+
+S021 | runAnalysisChecks | src/checks/samplecheck/AnalysisChecks.swift
+Anchor: message "sine pitch is within five cents"
+S022 | runAnalysisChecks | src/checks/samplecheck/AnalysisChecks.swift
+Anchor: message "saw pitch is within five cents"
+S023 | runAnalysisChecks | src/checks/samplecheck/AnalysisChecks.swift
+Anchor: message "white noise reports unpitched"
+S024 | runAnalysisChecks | src/checks/samplecheck/AnalysisChecks.swift
+Anchor: message "fewer than three frames reports unpitched"
+S025 | runAnalysisChecks | src/checks/samplecheck/AnalysisChecks.swift
+Anchor: message "vibrato tone detects near 440 Hz"
+S026 | runAnalysisChecks | src/checks/samplecheck/AnalysisChecks.swift
+Anchor: message "vibrato tone yields loop candidates"
+S027 | runAnalysisChecks | src/checks/samplecheck/AnalysisChecks.swift
+Anchor: message "top candidate passes the gates"
+S028 | runAnalysisChecks | src/checks/samplecheck/AnalysisChecks.swift
+Anchor: message "top candidate NCC >= 0.95"
+S029 | runAnalysisChecks | src/checks/samplecheck/AnalysisChecks.swift
+Anchor: message "top candidate post-quantize seam within click bounds"
+S030 | runAnalysisChecks | src/checks/samplecheck/AnalysisChecks.swift
+Anchor: message "loop length within 1% of an integer period multiple"
+S031 | runAnalysisChecks | src/checks/samplecheck/AnalysisChecks.swift
+Anchor: message "white noise yields no clean loop"
+S032 | runAnalysisChecks | src/checks/samplecheck/AnalysisChecks.swift
+Anchor: message "amplitude-step tone still finds a clean same-level loop"
+S033 | runAnalysisChecks | src/checks/samplecheck/AnalysisChecks.swift
+Anchor: message "no gate-passing candidate spans the amplitude step"
+S034 | runAnalysisChecks | src/checks/samplecheck/AnalysisChecks.swift
+Anchor: message "refine never worsens the seam correlation"
+S035 | runAnalysisChecks | src/checks/samplecheck/AnalysisChecks.swift
+Anchor: message "window-starved pitched buffer returns no candidates"
 
 Shared helpers
 The shared C++ fixture sources src/checks/samplecheck/fixtures.h and
