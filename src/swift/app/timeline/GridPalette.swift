@@ -239,6 +239,10 @@ public final class GridPalette {
     public var inputBackground: String = "#F3F0ED"
     /// Alternating list-row surface.
     public var alternateBackground: String = "#D1CBC5"
+    public var sampleWaveformInk: String = "#005B63"
+    public var sampleCropHandle: String = "#92681F"
+    public var sampleLoopHandle: String = "#2A7292"
+    public var sampleSeamEndInk: String = "#C54444"
     /// Placeholder ink in empty fields; legible text, never the disabled ink.
     public var placeholderText: String = "#4D4742"
     /// Severity inks for warning and error text on window, chrome, item,

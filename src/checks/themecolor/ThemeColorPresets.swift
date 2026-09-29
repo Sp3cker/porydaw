@@ -205,5 +205,15 @@ func themePresetValueChecks(_ report: CheckReport) {
         let selectedText = row.mode == "vanilla" ? palette.windowText : palette.buttonPressedText
         report.expect(themeRefContrast(selectedText, palette.tabPressedBackground) >= 3.0,
                       cppID: themeLegibilityID, message: "\(tag): selected-tab floor")
+        report.expect(themeRefContrast(palette.sampleWaveformInk, palette.menuBackground) >= 3.0,
+                      cppID: themeLegibilityID, message: "\(tag): sample waveform ink floor")
+        report.expect(themeRefContrast(palette.sampleCropHandle, palette.menuBackground) >= 3.0,
+                      cppID: themeLegibilityID, message: "\(tag): sample crop grip floor")
+        report.expect(themeRefContrast(palette.sampleLoopHandle, palette.menuBackground) >= 3.0,
+                      cppID: themeLegibilityID, message: "\(tag): sample loop grip floor")
+        report.expect(themeRefContrast(palette.sampleLoopHandle, palette.alternateBackground) >= 3.0,
+                      cppID: themeLegibilityID, message: "\(tag): sample seam start floor")
+        report.expect(themeRefContrast(palette.sampleSeamEndInk, palette.alternateBackground) >= 3.0,
+                      cppID: themeLegibilityID, message: "\(tag): sample seam end floor")
     }
 }

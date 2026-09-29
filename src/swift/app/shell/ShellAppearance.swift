@@ -30,6 +30,10 @@ public enum ShellAppearance {
         let automationNodeInk: String
         let automationTabBackground: String
         let automationTabOutline: String
+        let sampleWaveformInk: String
+        let sampleCropHandle: String
+        let sampleLoopHandle: String
+        let sampleSeamEndInk: String
     }
 
     // Secondary ink is the preset's own secondary walked toward black until it
@@ -47,7 +51,9 @@ public enum ShellAppearance {
         grid: "#3F040000", roll: "#D4CCC7", accidental: "#B4ACA6",
         keyboardSeparator: "#BCB4AF", keyboardLabel: "#1A1A1A",
         automationNodeInk: "#EA3C3C", automationTabBackground: "#E7E1DB",
-        automationTabOutline: "#8C857F")
+        automationTabOutline: "#8C857F",
+        sampleWaveformInk: "#005B63", sampleCropHandle: "#92681F",
+        sampleLoopHandle: "#2A7292", sampleSeamEndInk: "#C54444")
 
     private static let darkNeutralHigh = Colors(
         window: "#373737", text: "#D8D8D8", disabledText: "#A0A0A0",
@@ -59,7 +65,9 @@ public enum ShellAppearance {
         grid: "#54030303", roll: "#454545", accidental: "#303030",
         keyboardSeparator: "#9A9A9A", keyboardLabel: "#1A1A1A",
         automationNodeInk: "#FF4D47", automationTabBackground: "#51555E",
-        automationTabOutline: "#62666F")
+        automationTabOutline: "#62666F",
+        sampleWaveformInk: "#9FCDD7", sampleCropHandle: "#E0A030",
+        sampleLoopHandle: "#4AB4E2", sampleSeamEndInk: "#F08D8D")
 
     private static let immaterial = Colors(
         window: "#2E3138", text: "#CBCBCD", disabledText: "#979AA3",
@@ -71,7 +79,9 @@ public enum ShellAppearance {
         grid: "#54030606", roll: "#3C3F46", accidental: "#282B32",
         keyboardSeparator: "#9A9A9A", keyboardLabel: "#1A1A1A",
         automationNodeInk: "#FF91C3", automationTabBackground: "#4A4E59",
-        automationTabOutline: "#616571")
+        automationTabOutline: "#616571",
+        sampleWaveformInk: "#ABCAD2", sampleCropHandle: "#E0A030",
+        sampleLoopHandle: "#40B0E0", sampleSeamEndInk: "#EF8585")
 
     public static func mode(_ stored: String) -> String {
         switch stored {
@@ -139,6 +149,10 @@ public enum ShellAppearance {
         palette.automationNodeInk = colors.automationNodeInk
         palette.automationTabBackground = colors.automationTabBackground
         palette.automationTabOutline = colors.automationTabOutline
+        palette.sampleWaveformInk = colors.sampleWaveformInk
+        palette.sampleCropHandle = colors.sampleCropHandle
+        palette.sampleLoopHandle = colors.sampleLoopHandle
+        palette.sampleSeamEndInk = colors.sampleSeamEndInk
         palette.scrollbarHandle = colors.scrollbar
         // Qt control-palette surfaces: editable fields and tooltips use the
         // preset's input swatch, where text and placeholder ink keep 4.5:1.

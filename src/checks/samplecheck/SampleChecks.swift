@@ -14,4 +14,5 @@ internal func runSampleChecks(_ report: CheckReport) {
     runEditorPresenterChecks(report)
     runLoopToolsChecks(report)
     runAuditionStripChecks(report)
+    runWaveformChecks(report)
 }

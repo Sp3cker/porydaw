@@ -5,6 +5,8 @@ Original: src/checks/themelayout/tst_themelayout_color.cpp
 Original SHA-256: a594fe67298004f6cbb8bc76f8dce1a2173b91b408a0b5b9b3414c78ec72fbaf
 Swift counterpart: src/checks/themecolor/ThemeColorChecks.swift
 Additional Swift counterpart: src/checks/editorqml/tst_Theme.qml
+Swift counterpart: src/checks/themecolor/ThemeColorPresets.swift
+Swift counterpart SHA-256 (ThemeColorPresets.swift): 210c02dc1d08d8da7050e5bb28560c329be7646871e9f54f1d149cfff8fdcfc0
 
 Task 36 note (Swift-owned settings): the cited predicates now seed and read back
 through the shared PreferencesStore staged in the lane's scratch directory
@@ -219,52 +221,8 @@ Mapping: S021
 Mapping/reason: S021 (ThemeColorChecks.swift themeGridContrastChecks) executes for every shipped preset and requires the default grid luminance at or below the roll surface, so the fork else branch (default above the roll surface) is unreachable on real theme data; retired by positive observation, not by property absence.
 
 A039 | ThemeLayoutTest::laneAndWaveformLegibility | src/checks/themelayout/tst_themelayout_color.cpp:245
-Disposition: PARTIAL
-Mapping/reason: S003 asserts the same 3.0 floor for the three live-editor pairs per theme row (ThemeColorChecks.swift: edit-preview/roll, add-lane/roll, selected-tab/active-automation). feature not yet ported: sample editor (sample_waveform_ink, sample_crop_handle, sample_loop_handle x2, sample_seam_end_ink); the five sample-editor pairs have no Swift owner -- no sample-editor surface exists in the Swift app.
-Source context since previous assertion:
-  ;
-      }
-  }
-
-  void ThemeLayoutTest::laneAndWaveformLegibility_data()
-  {
-      QTest::addColumn<QString>("themeName");
-      QTest::addColumn<int>("role");
-      QTest::addColumn<int>("surface");
-      const std::array names{QStringLiteral("vanilla"), QStringLiteral("dark-neutral-high"),
-                             QStringLiteral("immaterial")};
-      const std::array checks{
-          std::pair{themes::Role::song_view_edit_preview_outline,
-                    themes::Role::song_view_piano_roll_background},
-          std::pair{themes::Role::song_view_add_automation_lane_action,
-                    themes::Role::song_view_piano_roll_background},
-          std::pair{themes::Role::tab_selected_text,
-                    themes::Role::song_view_automation_tab_active_background},
-          std::pair{themes::Role::sample_waveform_ink, themes::Role::item_background},
-          std::pair{themes::Role::sample_crop_handle, themes::Role::item_background},
-          std::pair{themes::Role::sample_loop_handle, themes::Role::item_background},
-          std::pair{themes::Role::sample_loop_handle, themes::Role::item_alternate_background},
-          std::pair{themes::Role::sample_seam_end_ink, themes::Role::item_alternate_background},
-      };
-      for (const QString &name : names) {
-          for (const auto &[role, surface] : checks) {
-              const auto row = name + QStringLiteral("-") + QString::number(static_cast<int>(role)) +
-                               QStringLiteral("-") + QString::number(static_cast<int>(surface));
-              QTest::newRow(row.toLatin1().constData())
-                  << name << static_cast<int>(role) << static_cast<int>(surface);
-          }
-      }
-  }
-
-  void ThemeLayoutTest::laneAndWaveformLegibility()
-  {
-      QFETCH(QString, themeName);
-      QFETCH(int, role);
-      QFETCH(int, surface);
-      const themes::Theme theme = themeForName(themeName);
-Original expression:
-  QVERIFY(themes::contrastRatio(theme.color(static_cast<themes::Role>(role)),
-                                theme.color(static_cast<themes::Role>(surface))) >= 3.0);
+Disposition: MATCHED
+Mapping: S022, S023, S024, S025, S026, S027, S028, S029
 
 A040 | ThemeLayoutTest::settingsRepair | src/checks/themelayout/tst_themelayout_color.cpp:252
 Disposition: RETIRED-REPRESENTATION
@@ -386,3 +344,20 @@ Anchor: function
 
 S021 | themeGridContrastChecks | src/checks/themecolor/ThemeColorChecks.swift
 Anchor: message "\(tag): default grid luminance sits at or below the roll surface"
+
+S022 | themePresetValueChecks | src/checks/themecolor/ThemeColorPresets.swift
+Anchor: message "\(tag): edit-preview outline floor"
+S023 | themePresetValueChecks | src/checks/themecolor/ThemeColorPresets.swift
+Anchor: message "\(tag): add-lane action floor"
+S024 | themePresetValueChecks | src/checks/themecolor/ThemeColorPresets.swift
+Anchor: message "\(tag): selected-tab floor"
+S025 | themePresetValueChecks | src/checks/themecolor/ThemeColorPresets.swift
+Anchor: message "\(tag): sample waveform ink floor"
+S026 | themePresetValueChecks | src/checks/themecolor/ThemeColorPresets.swift
+Anchor: message "\(tag): sample crop grip floor"
+S027 | themePresetValueChecks | src/checks/themecolor/ThemeColorPresets.swift
+Anchor: message "\(tag): sample loop grip floor"
+S028 | themePresetValueChecks | src/checks/themecolor/ThemeColorPresets.swift
+Anchor: message "\(tag): sample seam start floor"
+S029 | themePresetValueChecks | src/checks/themecolor/ThemeColorPresets.swift
+Anchor: message "\(tag): sample seam end floor"

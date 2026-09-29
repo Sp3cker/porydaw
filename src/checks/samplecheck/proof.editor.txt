@@ -7,8 +7,10 @@ Swift counterpart: src/checks/samplecheck/EditorPresenterChecks.swift
 Swift counterpart SHA-256 (EditorPresenterChecks.swift): c56f86d7a9a5b7f4452baa2645cffce975ad95a6af005742e15b07515ce062ba
 Swift counterpart: src/checks/samplecheck/LoopToolsChecks.swift
 Swift counterpart SHA-256 (LoopToolsChecks.swift): 3293620e8f08a16f345be6570c6f98ab34360e83d729e9c2051acbda2125a86e
+Swift counterpart: src/checks/samplecheck/WaveformChecks.swift
+Swift counterpart SHA-256 (WaveformChecks.swift): 6f66fa3cf756b5a4b2b35325b32a9d59bda9aa4adbb55843af0e665477490979
 
-Inventory: 130 sites across 17 test methods (editorAuditionStrip, editorCommit, editorCrossfade, editorDrag, editorLoopPopulate, editorLoopRefine, editorPitchAdoption, editorScroll, editorSplitter, editorUndo, pipelineCropNormalize, pipelineKeyOverride, pipelineLoopToggle, pipelinePrefillCollision, pipelinePreparedDefaults, pipelineRateCommit, spaceAudition). Tally: 16 GAP, 30 NATIVE, 59 MATCHED, 25 RETIRED-REPRESENTATION, 0 PARTIAL.
+Inventory: 130 sites across 17 test methods (editorAuditionStrip, editorCommit, editorCrossfade, editorDrag, editorLoopPopulate, editorLoopRefine, editorPitchAdoption, editorScroll, editorSplitter, editorUndo, pipelineCropNormalize, pipelineKeyOverride, pipelineLoopToggle, pipelinePrefillCollision, pipelinePreparedDefaults, pipelineRateCommit, spaceAudition). Tally: 11 GAP, 28 NATIVE, 63 MATCHED, 28 RETIRED-REPRESENTATION, 0 PARTIAL.
 
 Command: deno task checks --filter samplecheck --verbose
 Result: controller-observed 2026-09-29 — samplecheck 1/38 ok; proof check --executed: 0 not executed (presenter rows by 249; remaining GAP rows owned by 250–253).
@@ -856,84 +858,32 @@ Disposition: MATCHED
 Mapping: S059
 
 A078 | SampleProcessingTest::editorCrossfade | src/checks/samplecheck/editor.cpp:417
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-  }
-
-  void SampleProcessingTest::editorCrossfade()
-  {
-      QTemporaryDir scratch;
-
-Original expression:
-  QVERIFY2(scratch.isValid(), "editor-crossfade scratch directory is available")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness scratch-directory scaffolding; the Swift predicate stages its own fixture.
 
 A079 | SampleProcessingTest::editorCrossfade | src/checks/samplecheck/editor.cpp:419
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-      const QString root = scratch.filePath(QStringLiteral("wavproj"));
-
-Original expression:
-  QVERIFY2(createWav2AgbProject(root), "editor-crossfade synthetic project is created")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness project fixture scaffolding; the Swift predicate stages its own source.
 
 A080 | SampleProcessingTest::editorCrossfade | src/checks/samplecheck/editor.cpp:422
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-      ImportedSample hiRes;
-      QString importError;
-
-Original expression:
-  QVERIFY2(importAudioBytes(hiResSampleWav(), QStringLiteral("fix/hires_tone.wav"), &hiRes,
-                                &importError),
-               qPrintable(importError))
+Disposition: MATCHED
+Mapping: S060
 
 A081 | SampleProcessingTest::editorCrossfade | src/checks/samplecheck/editor.cpp:438
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-      const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
-      SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
-          return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
-      });
-      dialog.resize(900, 640);
-      dialog.show();
-      QApplication::processEvents();
-      WaveformView *wave = dialog.waveform();
-      SampleDocument *document = dialog.document();
-      QUndoStack *undo = dialog.undoStack();
-      auto *loopStart = dialog.findChild<QSpinBox *>(QStringLiteral("sampleLoopStart"));
-      auto *loopEnd = dialog.findChild<QSpinBox *>(QStringLiteral("sampleLoopEnd"));
-      auto *crossfade = dialog.findChild<QCheckBox *>(QStringLiteral("sampleCrossfade"));
-
-Original expression:
-  QVERIFY2(wave && document && undo && loopStart && loopEnd && crossfade,
-               "crossfade controls found")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QWidget object lookup; QML binds presenter state.
 
 A082 | SampleProcessingTest::editorCrossfade | src/checks/samplecheck/editor.cpp:444
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-      loopStart->setValue(2000);
-      loopEnd->setValue(2137);
-      const std::vector<float> endBefore = wave->seamEndWindow();
-      const std::vector<float> startBefore = wave->seamStartWindow();
-
-Original expression:
-  QVERIFY2(!endBefore.empty() && endBefore.size() == startBefore.size(),
-               "looped render feeds the seam overlay")
+Disposition: MATCHED
+Mapping: S061
 
 A083 | SampleProcessingTest::editorCrossfade | src/checks/samplecheck/editor.cpp:448
-Disposition: NATIVE
+Disposition: MATCHED
+Mapping: S062
 
 A084 | SampleProcessingTest::editorCrossfade | src/checks/samplecheck/editor.cpp:450
-Disposition: NATIVE
+Disposition: MATCHED
+Mapping: S063
 
 A085 | SampleProcessingTest::editorAuditionStrip | src/checks/samplecheck/editor.cpp:458
 Disposition: GAP
@@ -1448,6 +1398,14 @@ S058 | runLoopToolsChecks | src/checks/samplecheck/LoopToolsChecks.swift
 Anchor: message "A076 refine keeps the seam at least as clean"
 S059 | runLoopToolsChecks | src/checks/samplecheck/LoopToolsChecks.swift
 Anchor: message "A077 refinement adds no more than one undo entry"
+S060 | runWaveformChecks | src/checks/samplecheck/WaveformChecks.swift
+Anchor: message "A080 crossfade source imports"
+S061 | runWaveformChecks | src/checks/samplecheck/WaveformChecks.swift
+Anchor: message "A082 looped render feeds the seam overlay"
+S062 | runWaveformChecks | src/checks/samplecheck/WaveformChecks.swift
+Anchor: message "A083 crossfade toggle creates an undo entry"
+S063 | runWaveformChecks | src/checks/samplecheck/WaveformChecks.swift
+Anchor: message "A084 crossfade bake reshapes the seam overlay"
 
 
 Shared helpers

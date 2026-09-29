@@ -17,6 +17,7 @@ add_library(PorydawSample STATIC
     SampleSourceHash.swift
     SampleSidecar.swift
     SampleReopen.swift
+    SamplePeakPyramid.swift
 )
 set_target_properties(PorydawSample PROPERTIES
     Swift_MODULE_NAME PorydawSample
