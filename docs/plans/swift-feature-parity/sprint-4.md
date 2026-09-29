@@ -1,7 +1,7 @@
 # Sprint-4 plan: ruled residues, P3 WAV export, P2 MIDI import, P4 sample studio
 
-Status: **in execution** (controller: main session, 2026-09-29). Base `a77b8d01`.
-Landed: 214 + 216 (`67032b6e`).
+Status: **complete** (controller: main session, 2026-09-29). Base `a77b8d01`, final gates green at `0aa5b5de`+ (checks 38/38, checks:shell 87/87, checks:qml 2/2, checks:qml-roll 1/1, bridge 0, proof --executed 0 not executed).
+Landed: 214–218, 220–223 (P3), 230–235 (P2), 240–255 (P4), whole-branch review fixes (`3ecc2334`), async-catalog check readiness (`8f44537c`, `6d69e80b`, `a13d0667`). Decoder A081–A093 stay GAP (no external corpus); strict-mapping debt outside sprint scope: 137 sites.
 
 Scope: every item the user released on 2026-09-28/29 (sprint-3.md status header rulings (1)–(10);
 P3 rulings in `repairs/p3-wav-export-draft.md`). Standing exclusions from sprint-3 §29 are unchanged.
