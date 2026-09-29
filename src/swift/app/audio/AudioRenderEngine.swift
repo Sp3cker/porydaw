@@ -3,7 +3,7 @@ import PorydawCore
 import PorydawPlayback
 import PorydawPlaybackNative
 
-public struct AudioSettings {
+public struct AudioSettings: Sendable {
     public var pcmMixer: M4APcmMixerMode = M4A_PCM_MIXER_IPATIX
     public var songVolume: UInt8 = 127
     public var reverb: UInt8 = 0
@@ -120,7 +120,7 @@ public final class AudioRenderEngine {
         m4a_engine_destroy(main)
         _ = m4a_engine_init(main, Float(sampleRate))
         m4a_engine_set_voicegroup(main, voicegroup)
-        applySettings(main)
+        Self.applySettings(settings, to: main)
         m4a_engine_set_pcm_mix_rate(main, settings.pcmMixRate)
         Sequencer.chase(engine: main, timeline: timeline, position: 0)
         Sequencer.primeVoices(engine: main, timeline: timeline, position: 0)
@@ -152,7 +152,7 @@ public final class AudioRenderEngine {
         transportState.resetCut()
         let changedRate = self.settings.pcmMixRate != settings.pcmMixRate
         self.settings = settings
-        applySettings(main)
+        Self.applySettings(settings, to: main)
         if changedRate { m4a_engine_set_pcm_mix_rate(main, settings.pcmMixRate) }
         resetPreview()
     }
@@ -172,7 +172,7 @@ public final class AudioRenderEngine {
                                             voicegroup: UnsafeMutablePointer<ToneData>?) {
         m4a_engine_set_voicegroup(engine, voicegroup)
     }
-    private func applySettings(_ engine: UnsafeMutablePointer<M4AEngine>) {
+    public static func applySettings(_ settings: AudioSettings, to engine: UnsafeMutablePointer<M4AEngine>) {
         m4a_engine_set_song_volume(engine, settings.songVolume)
         m4a_engine_set_reverb_amount(engine, settings.reverb)
         m4a_engine_set_max_pcm_channels(engine, settings.maxPcmChannels)
@@ -183,7 +183,7 @@ public final class AudioRenderEngine {
         m4a_engine_destroy(preview)
         _ = m4a_engine_init(preview, Float(sampleRate))
         m4a_engine_set_voicegroup(preview, voicegroup)
-        applySettings(preview)
+        Self.applySettings(settings, to: preview)
         m4a_engine_set_pcm_mix_rate(preview, settings.pcmMixRate)
         audition.resetPreview()
     }

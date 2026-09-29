@@ -55,6 +55,42 @@ public enum MidiImportError: Error, Equatable, CustomStringConvertible {
 }
 
 public enum MidiImport {
+    public static func prepareImportedSong(
+        _ source: MidiFile, rescale: Bool,
+        extendedClocks: Bool
+    ) throws -> MidiFile {
+        var song = source
+        removeRedundantSetters(&song)
+        if rescale { try rescaleDivision(&song, to: extendedClocks ? 48 : 24) }
+        return song
+    }
+
+    public static func suggestedSongLabel(sourceFileName: String) -> String {
+        let name = String(sourceFileName.split(separator: "/", omittingEmptySubsequences: false).last ?? "")
+        let base = name.lastIndex(of: ".").map { name[..<$0] } ?? name[...]
+        var label = ""
+        for character in base.lowercased().unicodeScalars {
+            if character.value >= 97 && character.value <= 122 || character.value >= 48 && character.value <= 57 {
+                label.unicodeScalars.append(character)
+            } else if !label.isEmpty && !label.hasSuffix("_") {
+                label.append("_")
+            }
+        }
+        while label.hasSuffix("_") { label.removeLast() }
+        return label.hasPrefix("mus_") || label.hasPrefix("se_") ? label : "mus_\(label)"
+    }
+
+    public static func trackLimit(playerTrackCount: Int) -> Int {
+        playerTrackCount < 0 ? TrackLimits.hardwareCapacity : min(playerTrackCount, TrackLimits.hardwareCapacity)
+    }
+
+    public static func concurrencyNoticeText(peakNotes: Int, sampleNoteLimit: Int) -> String {
+        "\(peakNotes) notes play at the same time in one part of the song. The Game Boy Advance can mix \(sampleNoteLimit) sample notes at the same time. Square, wave, and noise sounds do not use this limit. The game can stop some sample notes."
+    }
+
+    public static let instrumentFallbackNoticeText =
+        "Some notes start before the MIDI data selects an instrument. These notes use instrument 0."
+
     public static func analyze(_ file: MidiFile, trackBudget: Int = TrackLimits.hardwareCapacity,
                                playerName: String = "") -> ImportAnalysis {
         let map = file.engineTracks()
@@ -194,9 +230,11 @@ public enum MidiImport {
         if file.division % 24 != 0 {
             warnings.append("Porydaw will adjust the note timing. The source timing value is \(file.division).")
         }
-        if peak > 5 { warnings.append(concurrencyNotice(peakNotes: peak, sampleNoteLimit: 5)) }
+        if peak > 5 {
+            warnings.append(concurrencyNoticeText(peakNotes: peak, sampleNoteLimit: 5))
+        }
         if tracks.contains(where: { $0.noteCount > 0 && $0.notesBeforeProgram }) {
-            warnings.append(instrumentFallbackNotice)
+            warnings.append(instrumentFallbackNoticeText)
         }
         return ImportAnalysis(division: file.division, chunkCount: file.chunks.count,
             mappedTracks: map.usedTrackCount, droppedTracks: map.droppedTracks,
@@ -276,11 +314,6 @@ private func importPlayerRoleName(_ symbol: String, includeSymbol: Bool) -> Stri
 private func importTrackCountPhrase(_ count: Int) -> String {
     count == 1 ? "1 track" : "\(count) tracks"
 }
-private func concurrencyNotice(peakNotes: Int, sampleNoteLimit: Int) -> String {
-    "\(peakNotes) notes play at the same time in one part of the song. The Game Boy Advance can mix \(sampleNoteLimit) sample notes at the same time. Square, wave, and noise sounds do not use this limit. The game can stop some sample notes."
-}
-private let instrumentFallbackNotice =
-    "Some notes start before the MIDI data selects an instrument. These notes use instrument 0."
 
 private func setterSlot(_ event: MidiEvent) -> Int? {
     if case let .meta(type, _) = event.payload {

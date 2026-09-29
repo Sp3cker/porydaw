@@ -21,6 +21,7 @@ add_library(PorydawApp STATIC
     ApplicationSession+Audio.swift
     ApplicationSession+Commands.swift
     ApplicationSession+Catalog.swift
+    midiimport/ImportAnalysisSummary.swift
     EditorCommandRouter.swift
     typography/Typography.swift
     transport/TransportBarPresenter.swift
@@ -240,6 +241,7 @@ add_library(PorydawAppAudio STATIC
     audio/AudioAudition.swift
     audio/AudioSampleAudition.swift
     audio/ResonanceSuppression.swift
+    audio/WavExport.swift
 )
 set_target_properties(PorydawAppAudio PROPERTIES
     Swift_MODULE_NAME PorydawAppAudio

@@ -11,12 +11,12 @@ Shared helper: src/checks/support/corecheck/CoreCheckSupport.swift
 Shared SHA-256: 5047f1f06c61f42b946459a73e1482e09151d8ff95e6743d6790388e7e240eef
 
 
-Command: deno task verify --filter exportcheck-loop --verbose
-Result: controller-observed 2026-09-24 for this tree — verify: 1/49 ok, no failures.
-Command: deno task verify --filter exportcheck-tail --verbose
-Result: controller-observed 2026-09-24 for this tree — verify: 1/49 ok, no failures.
-Command: deno task verify --verbose
-Result: controller-observed 2026-09-24 for this tree — verify: 49/49 ok (full unfiltered gate).
+Command: deno task checks --filter exportcheck-loop --verbose
+Result: controller-observed 2026-09-29 for this tree — checks: 1/37 ok, no failures.
+Command: deno task checks --filter exportcheck-tail --verbose
+Result: controller-observed 2026-09-29 for this tree — checks: 1/37 ok, no failures.
+Command: deno task proof check --executed
+Result: controller-observed 2026-09-29 — every midiexport S entry executed; --strict-mappings lists no midiexport site.
 
 A001 | MidiExportTest::initTestCase | src/checks/midi/tst_midiexport.cpp:194
 Disposition: PARTIAL
@@ -232,50 +232,20 @@ Original expression:
   QVERIFY2(!m_songLabel.isEmpty(), "exportcheck requires a song label")
 
 A003 | MidiExportTest::durationCalculationMatchesRenderParity | src/checks/midi/tst_midiexport.cpp:205
-Disposition: PARTIAL
-Mapping/reason: Related predicates S003 and S004 (src/checks/projectstore/ExportChecks.swift and :206). The Swift case builds its fixture by copying the staged root into a scratch tree, opening it through ProjectService, opening the song, decoding the MIDI bytes and building PlaybackTimeline, throwing into report.fail on any failure; unproved: no QTest guard semantics, no error-string propagation (qPrintable(error)), and the opened root is the copied scratch rather than the staged root.
-Source context since previous assertion:
-  ;
-  }
-
-  void MidiExportTest::durationCalculationMatchesRenderParity()
-  {
-      auto error = QString{};
-      const auto fixture = loadExportFixture(m_projectRoot, m_songLabel, error);
-
-Original expression:
-  QVERIFY2(fixture, qPrintable(error))
+Disposition: MATCHED
+Mapping: S003
 
 A004 | MidiExportTest::durationCalculationMatchesRenderParity | src/checks/midi/tst_midiexport.cpp:208
 Disposition: MATCHED
-Mapping: S004, S006
+Mapping: S004
 
 A005 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:216
-Disposition: PARTIAL
-Mapping/reason: Related predicates S003 and S007 (src/checks/projectstore/ExportChecks.swift and :216). The Swift offline case builds the same copied-scratch fixture through ProjectService and throws into report.fail when it cannot; unproved: no QTest guard semantics, no error-string propagation, and the opened root is the copied scratch rather than the staged root.
-Source context since previous assertion:
-  ;
-  }
-
-  void MidiExportTest::offlineExportProducesValidRiffPcm()
-  {
-      auto error = QString{};
-      const auto fixture = loadExportFixture(m_projectRoot, m_songLabel, error);
-
-Original expression:
-  QVERIFY2(fixture, qPrintable(error))
+Disposition: MATCHED
+Mapping: S003
 
 A006 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:220
-Disposition: PARTIAL
-Mapping/reason: Related predicate S003 (src/checks/projectstore/ExportChecks.swift withExportFixture). The Swift scratch is a unique temporary exportcheck directory created by copying the fixture root, and a broken scratch surfaces as a copy or render failure; unproved: no QTemporaryDir validity predicate and no explicit scratch-creation assertion.
-Source context since previous assertion:
-  ;
-      const WavExportTotals totals = wavExportTotals(*fixture->timeline, fixture->options);
-
-      auto scratch = QTemporaryDir{};
-
-Original expression:
-  QVERIFY2(scratch.isValid(), "could not create WAV export scratch directory")
+Disposition: MATCHED
+Mapping: S006
 
 A007 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:224
 Disposition: MATCHED
@@ -286,15 +256,8 @@ Disposition: MATCHED
 Mapping: S008
 
 A009 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:238
-Disposition: PARTIAL
-Mapping/reason: Related predicate S005 (src/checks/projectstore/ExportChecks.swift). The Swift row reads the rendered file with a throwing Data(contentsOf:) whose bytes feed the following predicates, so an unreadable export fails the row; unproved: no explicit read predicate and no error-string propagation (qPrintable(error)).
-Source context since previous assertion:
-  ;
-
-      auto wav = QByteArray{};
-
-Original expression:
-  QVERIFY2(readFile(path, wav, error), qPrintable(error))
+Disposition: MATCHED
+Mapping: S005
 
 A010 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:240
 Disposition: MATCHED
@@ -353,59 +316,28 @@ Disposition: MATCHED
 Mapping: S014
 
 A024 | MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames | src/checks/midi/tst_midiexport.cpp:273
-Disposition: PARTIAL
-Mapping/reason: Related predicates S003 and S015 (src/checks/projectstore/ExportChecks.swift and :258). The Swift resonance case builds the same copied-scratch fixture through ProjectService before rendering; unproved: no QTest guard semantics, no error-string propagation, and the opened root is the copied scratch rather than the staged root.
-Source context since previous assertion:
-  ;
-      }
-  }
-
-  void MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames()
-  {
-      auto error = QString{};
-      const auto fixture = loadExportFixture(m_projectRoot, m_songLabel, error);
-
-Original expression:
-  QVERIFY2(fixture, qPrintable(error))
+Disposition: MATCHED
+Mapping: S003
 
 A025 | MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames | src/checks/midi/tst_midiexport.cpp:276
-Disposition: PARTIAL
-Mapping/reason: Related predicate S003 (src/checks/projectstore/ExportChecks.swift withExportFixture). The Swift resonance case uses the same unique temporary scratch created by copying the fixture root; unproved: no QTemporaryDir validity predicate and no explicit scratch-creation assertion.
-Source context since previous assertion:
-  ;
-
-      auto scratch = QTemporaryDir{};
-
-Original expression:
-  QVERIFY2(scratch.isValid(), "could not create resonance-export scratch directory")
+Disposition: MATCHED
+Mapping: S006
 
 A026 | MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames | src/checks/midi/tst_midiexport.cpp:279
 Disposition: MATCHED
 Mapping: S015
 
 A027 | MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames | src/checks/midi/tst_midiexport.cpp:283
-Disposition: PARTIAL
-Mapping/reason: Related predicate S017 (src/checks/projectstore/ExportChecks.swift). The Swift row reads the baseline file with a throwing Data(contentsOf:) whose bytes feed the following comparison, so an unreadable baseline fails the row; unproved: no explicit read predicate and no error-string propagation (qPrintable(error)).
-Source context since previous assertion:
-  ;
-      auto baseline = QByteArray{};
-
-Original expression:
-  QVERIFY2(readFile(baselinePath, baseline, error), qPrintable(error))
+Disposition: MATCHED
+Mapping: S017
 
 A028 | MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames | src/checks/midi/tst_midiexport.cpp:286
 Disposition: MATCHED
 Mapping: S016
 
 A029 | MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames | src/checks/midi/tst_midiexport.cpp:291
-Disposition: PARTIAL
-Mapping/reason: Related predicate S018 (src/checks/projectstore/ExportChecks.swift). The Swift row reads the suppressed file with a throwing Data(contentsOf:) whose bytes feed the following comparison, so an unreadable suppressed render fails the row; unproved: no explicit read predicate and no error-string propagation (qPrintable(error)).
-Source context since previous assertion:
-  ;
-      auto suppressed = QByteArray{};
-
-Original expression:
-  QVERIFY2(readFile(suppressedPath, suppressed, error), qPrintable(error))
+Disposition: MATCHED
+Mapping: S018
 
 A030 | MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames | src/checks/midi/tst_midiexport.cpp:292
 Disposition: MATCHED
@@ -416,43 +348,20 @@ Disposition: MATCHED
 Mapping: S020, S019
 
 A032 | MidiExportTest::cancelledExportRemovesPartialFile | src/checks/midi/tst_midiexport.cpp:300
-Disposition: PARTIAL
-Mapping/reason: Related predicates S003 and S021 (src/checks/projectstore/ExportChecks.swift and :271). The Swift cancellation case builds the same copied-scratch fixture through ProjectService before rendering; unproved: no QTest guard semantics, no error-string propagation, and the opened root is the copied scratch rather than the staged root.
-Source context since previous assertion:
-  ;
-  }
-
-  void MidiExportTest::cancelledExportRemovesPartialFile()
-  {
-      auto error = QString{};
-      const auto fixture = loadExportFixture(m_projectRoot, m_songLabel, error);
-
-Original expression:
-  QVERIFY2(fixture, qPrintable(error))
+Disposition: MATCHED
+Mapping: S003
 
 A033 | MidiExportTest::cancelledExportRemovesPartialFile | src/checks/midi/tst_midiexport.cpp:303
-Disposition: PARTIAL
-Mapping/reason: Related predicate S003 (src/checks/projectstore/ExportChecks.swift withExportFixture). The Swift cancellation case uses the same unique temporary scratch created by copying the fixture root; unproved: no QTemporaryDir validity predicate and no explicit scratch-creation assertion.
-Source context since previous assertion:
-  ;
-
-      auto scratch = QTemporaryDir{};
-
-Original expression:
-  QVERIFY2(scratch.isValid(), "could not create cancellation-export scratch directory")
+Disposition: MATCHED
+Mapping: S006
 
 A034 | MidiExportTest::cancelledExportRemovesPartialFile | src/checks/midi/tst_midiexport.cpp:306
 Disposition: MATCHED
 Mapping: S021
 
 A035 | MidiExportTest::cancelledExportRemovesPartialFile | src/checks/midi/tst_midiexport.cpp:309
-Disposition: PARTIAL
-Mapping/reason: Related predicate S021 (src/checks/projectstore/ExportChecks.swift). renderExport returns false only for a cancelled progress callback and throws for every other failure, so a cancellation that raised an error would fail the row; unproved: no explicit empty-error predicate and no error-string propagation (qPrintable(error)).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(error.isEmpty(), qPrintable(error))
+Disposition: MATCHED
+Mapping: S009
 
 A036 | MidiExportTest::cancelledExportRemovesPartialFile | src/checks/midi/tst_midiexport.cpp:310
 Disposition: MATCHED
@@ -480,64 +389,64 @@ S002 | withExportFixture | src/checks/projectstore/ExportChecks.swift
 Anchor: function
 
 S003 | withExportFixture | src/checks/projectstore/ExportChecks.swift
-Anchor: function
+Anchor: message "S003: staged song opens and builds its export timeline"
 
 S004 | runExportChecks | src/checks/projectstore/ExportChecks.swift
-Anchor: function
+Anchor: message "S004: production totals equal independent expected frame count"
 
 S005 | runExportChecks | src/checks/projectstore/ExportChecks.swift
-Anchor: function
+Anchor: message "S005: exported WAV reads back with a complete header"
 
-S006 | runExportChecks | src/checks/projectstore/ExportChecks.swift
-Anchor: function
+S006 | withExportFixture | src/checks/projectstore/ExportChecks.swift
+Anchor: message "S006: per-case WAV export scratch directory is created"
 
 S007 | runExportChecks | src/checks/projectstore/ExportChecks.swift
-Anchor: function
+Anchor: message "S007: WAV export completes"
 
 S008 | runExportChecks | src/checks/projectstore/ExportChecks.swift
-Anchor: function
+Anchor: message "S008: progress strictly increases and ends at one"
 
 S009 | runExportChecks | src/checks/projectstore/ExportChecks.swift
-Anchor: function
+Anchor: message "S009: cancellation reports no error"
 
 S010 | runExportChecks | src/checks/projectstore/ExportChecks.swift
-Anchor: function
+Anchor: message "S010: WAV byte count equals header plus stereo frames"
 
 S011 | runExportChecks | src/checks/projectstore/ExportChecks.swift
-Anchor: function
+Anchor: message "S011: RIFF stereo PCM header fields match expected values"
 
 S012 | runExportChecks | src/checks/projectstore/ExportChecks.swift
-Anchor: function
+Anchor: message "S012: exported PCM has an audible peak"
 
 S013 | runExportChecks | src/checks/projectstore/ExportChecks.swift
-Anchor: function
+Anchor: message "S013: loop has at least sixteen fade frames"
 
 S014 | runExportChecks | src/checks/projectstore/ExportChecks.swift
-Anchor: function
+Anchor: message "S014: final sixteen loop frames fade beneath peak"
 
 S015 | runExportChecks | src/checks/projectstore/ExportChecks.swift
-Anchor: function
+Anchor: message "S015: baseline export completes"
 
 S016 | runExportChecks | src/checks/projectstore/ExportChecks.swift
-Anchor: function
+Anchor: message "S016: suppressed export completes"
 
 S017 | runExportChecks | src/checks/projectstore/ExportChecks.swift
-Anchor: function
+Anchor: message "S017: baseline WAV reads back with a complete header"
 
 S018 | runExportChecks | src/checks/projectstore/ExportChecks.swift
-Anchor: function
+Anchor: message "S018: suppressed WAV reads back with a complete header"
 
 S019 | runExportChecks | src/checks/projectstore/ExportChecks.swift
-Anchor: function
+Anchor: message "S019: suppression retains the frame count"
 
 S020 | runExportChecks | src/checks/projectstore/ExportChecks.swift
-Anchor: function
+Anchor: message "S020: suppressed PCM differs from baseline"
 
 S021 | runExportChecks | src/checks/projectstore/ExportChecks.swift
-Anchor: function
+Anchor: message "S021: progress-zero cancellation returns cancelled"
 
 S022 | runExportChecks | src/checks/projectstore/ExportChecks.swift
-Anchor: function
+Anchor: message "S022: cancelled export removes its partial file"
 
 Shared helpers
 src/checks/projectstore/ProjectStoreCheckSupport.swift (retained for the projectstore suites; the export
