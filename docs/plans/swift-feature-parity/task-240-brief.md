@@ -157,3 +157,5 @@ executed; the decoder ledger stays open (241/244 rows). Gap: none for this row s
 `Sendable` values; `Data`-based APIs never copy the whole source twice. Do not port
 `dr_wav`. Do not add `SampleEditParams`/`ProcessedSample` here (244 owns them). Refusal
 strings are copied from the fork, not reworded.
+
+Parsing uses `BinaryParsing` (task 235's `cmake/BinaryParsing.cmake` target; link it into `PorydawSample` in this task's CMake edit) over `RawSpan`/`ParserSpan` input, with PCM conversion written through `OutputSpan`/`MutableSpan` rather than per-sample `Array` appends. Prerequisite: 235 landed.

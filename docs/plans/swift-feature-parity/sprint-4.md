@@ -17,13 +17,16 @@ Execution rules for this sprint (controller-owned):
 - The user's `e9e78068` PreferencesStore rewrite left 127 `swiftcore-projectsession` failures and two
   broken anchors (session S236/S237); repaired as a prerequisite fix, not a parity task.
 - Every new window (export options/progress, Import MIDI wizard, Sample Studio, SF2 zone picker) uses
-  `DialogWindow`, the Settings base (user direction, 2026-09-29; landed with this plan commit).
+  `DialogWindow`, the Settings base (user direction, 2026-09-29).
+- Modern Swift (user direction, 2026-09-29): spans, `InlineArray`, `OutputSpan` where they fit (plan.md
+  Global constraints). Task 235 moves the SMF decoder onto `swift-binary-parsing`; P4's binary
+  parsers (240 WAV/AIFF, 242 SF2) use the same `BinaryParsing` target.
 
 Order (dependency waves):
 1. 215 ∥ 218 → checkpoint → 217 (shares `TabsDrawerProbe.swift` with 215).
 2. P3: 220 → 221 → 222 → 223 (serial; hot shell files).
-3. P2: 230 ∥ 231 → 232 → 233 (after 222) → 234.
-4. P4: 240 → {241, 242, 243} → 244 → {245, 246} → 247 → 248 → 249 → {250, 251, 252} → 253 → 254; 255 after 253.
+3. P2: 235 ∥ 230 ∥ 231 → 232 → 233 (after 222) → 234.
+4. P4: 240 (after 235) → {241, 242, 243} → 244 → {245, 246} → 247 → 248 → 249 → {250, 251, 252} → 253 → 254; 255 after 253.
 
 Deferred decisions (defaults applied; ask the user before changing):
 - Status-bar temporary-message expiry (fork `showMessage(…, 8000/10000)`): not ported in 215; shell-wide.

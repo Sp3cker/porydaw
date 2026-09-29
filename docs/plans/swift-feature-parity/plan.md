@@ -169,6 +169,7 @@ If these disagree, record the concrete behavior difference and resolve it before
 - Preserve the Linux Swift-main-actor/Qt GUI event-loop integration from `c47b55f4` and `ProjectContext`'s dedicated native-loader worker. The user reports that a Linux Qt timer/thread-affinity issue was fixed today; actor cleanup must not undo either ownership boundary.
 - Authorized bank-safety policy: extend existing project/window Save–Discard–Cancel handling to every dirty bank, including unbound banks. Ordinary Save stays current-song/current-bank-only; changing `-G` does not autosave or prompt. This explicitly repairs the inherited orphan-bank close gap without authorizing new unrelated UI.
 - Every new secondary window uses `DialogWindow` (`src/ui/shell/DialogWindow.qml`), the base the Settings window uses (user direction, 2026-09-29): a native `Qt.Dialog` top-level with the platform open animation and focus return to its `transientParent`. No in-scene `Popup`/`Dialog` stand-ins and no bare `ThemedWindow` for dialogs.
+- Use modern Swift where it fits (user direction, 2026-09-29): `Span`/`RawSpan`/`MutableSpan`/`OutputSpan` instead of `[UInt8]` copies and index arithmetic in parsers, writers and per-frame builders; `InlineArray` for fixed-size storage; noncopyable types where ownership is unique. Binary parsers may use Apple's `swift-binary-parsing` (`BinaryParsing`, fetched by `cmake/BinaryParsing.cmake`, task 235); the SMF decoder uses it.
 
 ## Dependency-ordered work packages
 

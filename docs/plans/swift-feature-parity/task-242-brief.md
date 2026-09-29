@@ -117,3 +117,5 @@ Gap: A034 and the dialog rendering are proven by 254's mounted journey.
 # Task-specific constraints
 
 The model holds no QtBridge state; 254 bridges it. No render/DSP dependency in this task.
+
+SF2 RIFF/LIST/pdta parsing uses `BinaryParsing` (task 235's target, linked into `PorydawSample` by 240) over spans; fixed-size pdta records decode into value types, `InlineArray` where a record has a fixed element count.
