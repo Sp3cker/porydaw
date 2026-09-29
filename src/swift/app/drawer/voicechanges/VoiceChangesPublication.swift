@@ -1,4 +1,3 @@
-import CoreGraphics
 import Foundation
 import PorydawCore
 import QtBridge
@@ -42,8 +41,9 @@ extension VoiceChangesPage {
     @QtIgnored
     func xForTick(_ tick: Tick) -> Double {
         guard let session else { return 0 }
-        return VoiceChangesScene.xForTick(tick, camera: session.camera,
-                                          devicePixelRatio: devicePixelRatio)
+        return VoiceChangesScene.xForTick(
+            tick, camera: session.camera,
+            devicePixelRatio: devicePixelRatio)
     }
 
     @QtIgnored
@@ -65,15 +65,17 @@ extension VoiceChangesPage {
     @QtIgnored
     func effectiveContextTick() -> Tick {
         guard let session else { return 0 }
-        return VoiceChangesScene.effectiveContextTick(playing: playing,
-                                                     presentedTick: contextTick,
-                                                     editCursor: session.editCursor)
+        return VoiceChangesScene.effectiveContextTick(
+            playing: playing,
+            presentedTick: contextTick,
+            editCursor: session.editCursor)
     }
 
     @QtIgnored
     func contextKey(at tick: Tick) -> VoiceContextKey {
-        VoiceChangesScene.contextKey(tick: tick, firstProgram: firstProgram(),
-                                     points: lanePoints(), playing: playing)
+        VoiceChangesScene.contextKey(
+            tick: tick, firstProgram: firstProgram(),
+            points: lanePoints(), playing: playing)
     }
 
     // MARK: Content rebuild
@@ -157,8 +159,10 @@ extension VoiceChangesPage {
     /// The page's own facts for one scene build: the lane, the bank, the track,
     /// the body geometry and the live interaction, over the marker entries the
     /// caller already projected.
-    private func sceneInput(_ session: DocumentSession,
-                            entries: [VoiceProjectionEntry]) -> VoiceChangesSceneInput {
+    private func sceneInput(
+        _ session: DocumentSession,
+        entries: [VoiceProjectionEntry]
+    ) -> VoiceChangesSceneInput {
         let track = currentTrack(session)
         let pad = fontPx(baseFontPx, VoiceChangesPagePolicy.spaceOneFactor)
         return VoiceChangesSceneInput(
@@ -184,8 +188,9 @@ extension VoiceChangesPage {
     /// The live interaction one rebuild reads: the frozen drag, the hovered
     /// occurrence and the pressed selection.
     private func interactionSnapshot() -> VoiceInteractionSnapshot {
-        VoiceInteractionSnapshot(drag: drag, hoverIdentity: hoverIdentity,
-                                 selectedIdentity: selectedIdentity)
+        VoiceInteractionSnapshot(
+            drag: drag, hoverIdentity: hoverIdentity,
+            selectedIdentity: selectedIdentity)
     }
 
     @QtIgnored
@@ -207,7 +212,6 @@ extension VoiceChangesPage {
         VoiceChangesProjection.syncTexts(gutterTexts, values)
     }
 
-
     /// The marker projection: the scene computes one marker rule and one label
     /// box per entry from the page's own geometry, and the page publishes them
     /// through its model seam while keeping the geometry lookup a repaint reuses.
@@ -218,9 +222,10 @@ extension VoiceChangesPage {
             publishMarkers([])
             return
         }
-        publishMarkers(VoiceChangesScene.markers(
-            sceneInput(session, entries: entries), palette: palette, caption: caption,
-            reusing: markerLookup))
+        publishMarkers(
+            VoiceChangesScene.markers(
+                sceneInput(session, entries: entries), palette: palette, caption: caption,
+                reusing: markerLookup))
     }
 
     /// Hover changes only marker roles, not their projected geometry.
@@ -262,14 +267,15 @@ extension VoiceChangesPage {
     /// applies it without a rebuild.
     @QtIgnored
     func publishReadout() {
-        publishReadout(VoiceChangesScene.readout(
-            firstProgram: firstProgram(),
-            tick: effectiveContextTick(),
-            points: lanePoints(),
-            slots: slotViews(),
-            pad: fontPx(baseFontPx, VoiceChangesPagePolicy.spaceOneFactor),
-            plotWidth: plotWidth,
-            plotHeight: plotHeight))
+        publishReadout(
+            VoiceChangesScene.readout(
+                firstProgram: firstProgram(),
+                tick: effectiveContextTick(),
+                points: lanePoints(),
+                slots: slotViews(),
+                pad: fontPx(baseFontPx, VoiceChangesPagePolicy.spaceOneFactor),
+                plotWidth: plotWidth,
+                plotHeight: plotHeight))
     }
     /// Re-publishes a retained context without resolving the voice lane again.
     @QtIgnored
@@ -277,18 +283,19 @@ extension VoiceChangesPage {
         let pad = fontPx(baseFontPx, VoiceChangesPagePolicy.spaceOneFactor)
         let slots = slotViews()
         let view = slots.indices.contains(slot) ? slots[slot] : nil
-        publishReadout(VoiceReadoutValues(
-            slot: slot,
-            blank: view?.voice == nil && view?.tone == nil,
-            symbol: view?.voice?.symbol ?? "",
-            text: {
-                let label = VoiceChangesScene.sceneContextLabel(slot: slot, slots: slots)
-                return label.isEmpty ? "No voice" : label
-            }(),
-            x: pad,
-            y: 0,
-            width: max(0, plotWidth - 2 * pad),
-            height: plotHeight))
+        publishReadout(
+            VoiceReadoutValues(
+                slot: slot,
+                blank: view?.voice == nil && view?.tone == nil,
+                symbol: view?.voice?.symbol ?? "",
+                text: {
+                    let label = VoiceChangesScene.sceneContextLabel(slot: slot, slots: slots)
+                    return label.isEmpty ? "No voice" : label
+                }(),
+                x: pad,
+                y: 0,
+                width: max(0, plotWidth - 2 * pad),
+                height: plotHeight))
     }
 
     /// Applies the scene's readout values: the effective context's label,
@@ -300,8 +307,9 @@ extension VoiceChangesPage {
         setPublished(&contextSymbol, values.symbol)
         setPublished(&readoutText, values.text)
         setPublished(&readoutVisible, trackAvailable)
-        setPublishedRect(&readoutRect,
-                         VoiceMarkerHandle.rect(values.x, values.y, values.width, values.height))
+        setPublishedRect(
+            &readoutRect,
+            VoiceMarkerHandle.rect(values.x, values.y, values.width, values.height))
     }
 
     // MARK: Internals: picker publication
@@ -335,7 +343,6 @@ extension VoiceChangesPage {
         setPublished(&pickerTitle, live.title)
         publishPicker()
     }
-
 
     @QtIgnored
     func selectPickerProgram(_ program: Int) {
@@ -371,14 +378,11 @@ extension VoiceChangesPage {
             cachedEntries, interaction: interactionSnapshot())
     }
 
-
     @QtIgnored
     func syncPickerRows(_ values: [VoicePickerRowHandle]) {
         VoiceChangesProjection.publishPickerRows(
             pickerRows, snapshots: &pickerRowSnapshots, values: values)
     }
-
-
 
     /// Writes one published primitive only when it really changed, so a repeated
     /// equal publication emits nothing.
@@ -391,13 +395,17 @@ extension VoiceChangesPage {
     /// `[String: QVariantSettable]` is not `Equatable`, and an equal record must
     /// leave its storage untouched.
     @QtIgnored
-    func setPublishedRect(_ storage: inout [String: QVariantSettable],
-                          _ value: [String: QVariantSettable]) {
+    func setPublishedRect(
+        _ storage: inout [String: QVariantSettable],
+        _ value: [String: QVariantSettable]
+    ) {
         if !VoiceMarkerHandle.rectMatches(storage, value) { storage = value }
     }
 
-    private func setPublishedFont(_ storage: inout [String: QVariantSettable],
-                                  _ value: [String: QVariantSettable]) {
+    private func setPublishedFont(
+        _ storage: inout [String: QVariantSettable],
+        _ value: [String: QVariantSettable]
+    ) {
         if !VoiceChangesProjection.fontMatches(storage, value) { storage = value }
     }
 

@@ -1,4 +1,3 @@
-import CoreGraphics
 import Foundation
 import PorydawCore
 import QtBridge
@@ -31,10 +30,12 @@ extension VelocityPage {
     @QtIgnored func rebuildContent() {
         guard session != nil, plotHeight > 0 || plotWidth > 0 else { return }
         contentBuildCount &+= 1
-        geometry = VelocityNodeGeometry(baseFontPx: baseFontPx,
-                                        devicePixelRatio: devicePixelRatio)
-        let presented = VelocityScene.presentation(session, playing: playing,
-                                                   contextTick: contextTick)
+        geometry = VelocityNodeGeometry(
+            baseFontPx: baseFontPx,
+            devicePixelRatio: devicePixelRatio)
+        let presented = VelocityScene.presentation(
+            session, playing: playing,
+            contextTick: contextTick)
         resolvedContextValue = presented
         lastContextKey = VelocityContextKey(context: presented, playing: playing)
         contextUnsupported = !presented.editable
@@ -52,7 +53,8 @@ extension VelocityPage {
     /// rebuild hands its own build in, the hover-only paths derive the scoped
     /// axis, handle and ruler values those interactions actually change.
     @QtIgnored func refreshAxisAndHandles(_ snapshot: VelocitySceneSnapshot? = nil) {
-        let built = snapshot.map { VelocityAxisAndHandles($0) }
+        let built =
+            snapshot.map { VelocityAxisAndHandles($0) }
             ?? VelocitySceneSnapshot.buildAxisAndHandles(
                 sceneInput(reuseGeometry: handleReuseGeometry()),
                 previousHandles: handlesByID)
@@ -77,15 +79,17 @@ extension VelocityPage {
     /// own state. The cached label typography and the published handle lookup are
     /// the page's `@MainActor` objects, so they travel as build parameters.
     func buildScene() -> VelocitySceneSnapshot {
-        VelocitySceneSnapshot.build(sceneInput(reuseGeometry: handleReuseGeometry()),
-                                    previousHandles: handlesByID)
+        VelocitySceneSnapshot.build(
+            sceneInput(reuseGeometry: handleReuseGeometry()),
+            previousHandles: handlesByID)
     }
 
     /// The primary track's note rows, projected against the published axis: the
     /// scoped build a live gesture uses, so motion never rebuilds static content.
     @QtIgnored func projectHandles() -> [VelocityHandle] {
-        VelocitySceneSnapshot.buildHandleRows(sceneInput(reuseGeometry: handleReuseGeometry()),
-                                              axis: axis, previousHandles: handlesByID)
+        VelocitySceneSnapshot.buildHandleRows(
+            sceneInput(reuseGeometry: handleReuseGeometry()),
+            axis: axis, previousHandles: handlesByID)
     }
 
     /// Camera-only publication: handle rows are tick-space and stay put while
@@ -108,8 +112,9 @@ extension VelocityPage {
     /// The handle-reuse decision: geometry, track, DPR and axis mode form one
     /// key, and an unchanged key reuses the previous handle objects in place.
     private func handleReuseGeometry() -> Bool {
-        let key = HandleGeometryKey(geometry: geometry, track: session?.selectedTrack ?? 0,
-                                    dpr: devicePixelRatio, intrinsic: axis.mode == .intrinsic)
+        let key = HandleGeometryKey(
+            geometry: geometry, track: session?.selectedTrack ?? 0,
+            dpr: devicePixelRatio, intrinsic: axis.mode == .intrinsic)
         let reuse = handleGeometryKey == key
         handleGeometryKey = key
         return reuse
@@ -170,8 +175,9 @@ extension VelocityPage {
     /// The page's own projection for hit tests and gesture maths: the shared
     /// camera at the page's DPR against the published value axis.
     @QtIgnored var projection: VelocityProjection {
-        VelocityProjection(camera: session?.camera, geometry: geometry,
-                           devicePixelRatio: devicePixelRatio, axis: axis)
+        VelocityProjection(
+            camera: session?.camera, geometry: geometry,
+            devicePixelRatio: devicePixelRatio, axis: axis)
     }
 
     // MARK: Publication
@@ -204,18 +210,22 @@ extension VelocityPage {
             && Self.fontMatches(lhs.labelFont, rhs.labelFont)
     }
 
-    private static func rectMatches(_ lhs: [String: QVariantSettable],
-                                    _ rhs: [String: QVariantSettable]) -> Bool {
+    private static func rectMatches(
+        _ lhs: [String: QVariantSettable],
+        _ rhs: [String: QVariantSettable]
+    ) -> Bool {
         for key in ["x", "y", "width", "height"] {
             guard let left = lhs[key] as? Double, let right = rhs[key] as? Double,
-                  left == right
+                left == right
             else { return false }
         }
         return true
     }
 
-    private static func fontMatches(_ lhs: [String: QVariantSettable],
-                                    _ rhs: [String: QVariantSettable]) -> Bool {
+    private static func fontMatches(
+        _ lhs: [String: QVariantSettable],
+        _ rhs: [String: QVariantSettable]
+    ) -> Bool {
         guard lhs.count == rhs.count else { return false }
         for (key, value) in lhs {
             guard let other = rhs[key], String(describing: value) == String(describing: other)
@@ -234,13 +244,15 @@ extension VelocityPage {
     }
 
     private func gridMetrics(_ session: DocumentSession) -> GridMetrics {
-        let key = MetricsKey(revision: session.document.revision, font: baseFontPx,
-                             dpr: devicePixelRatio, width: plotWidth, height: plotHeight)
+        let key = MetricsKey(
+            revision: session.document.revision, font: baseFontPx,
+            dpr: devicePixelRatio, width: plotWidth, height: plotHeight)
         if let metricsCache, metricsCache.key == key { return metricsCache.value }
-        let value = VelocityScene.gridMetrics(baseFontPx: baseFontPx,
-                                              devicePixelRatio: devicePixelRatio,
-                                              width: plotWidth, height: plotHeight,
-                                              timeAxis: VelocityScene.timeAxis(session))
+        let value = VelocityScene.gridMetrics(
+            baseFontPx: baseFontPx,
+            devicePixelRatio: devicePixelRatio,
+            width: plotWidth, height: plotHeight,
+            timeAxis: VelocityScene.timeAxis(session))
         metricsCache = (key, value)
         return value
     }
@@ -249,7 +261,7 @@ extension VelocityPage {
         guard session != nil else { return }
         let input = sceneInput(reuseGeometry: true)
         guard let metrics = input.metrics, let grid = input.grid,
-              let camera = input.camera
+            let camera = input.camera
         else { return }
         if rebuildBands { drawingBands = VelocityScene.modelBands(input, axis: axis) }
         let viewport = CGSize(width: plotWidth, height: plotHeight)

@@ -73,17 +73,18 @@ public final class PreferencesStore: QmlInstantiableStatus {
     }
     func storedBool(key: String) -> Bool? {
         guard let raw = value(key), CFGetTypeID(raw as CFTypeRef) == CFBooleanGetTypeID(),
-              let number = raw as? NSNumber else { return nil }
+            let number = raw as? NSNumber
+        else { return nil }
         return number.boolValue
     }
 
     func storedPositiveInt(key: String) -> Int? {
         guard let raw = value(key), CFGetTypeID(raw as CFTypeRef) == CFNumberGetTypeID(),
-              let number = raw as? NSNumber, number.intValue > 0,
-              number.doubleValue == Double(number.intValue) else { return nil }
+            let number = raw as? NSNumber, number.intValue > 0,
+            number.doubleValue == Double(number.intValue)
+        else { return nil }
         return number.intValue
     }
-
 
     public func hasValue(key: String) -> Bool { value(key) != nil }
 
@@ -111,8 +112,9 @@ public final class PreferencesStore: QmlInstantiableStatus {
         if let path = Self.stagedPlistPath {
             if FileManager.default.fileExists(atPath: path) {
                 guard let data = FileManager.default.contents(atPath: path),
-                      let entries = try? PropertyListSerialization.propertyList(
-                          from: data, options: 0, format: nil) as? [String: Any] else {
+                    let entries = try? PropertyListSerialization.propertyList(
+                        from: data, options: [], format: nil) as? [String: Any]
+                else {
                     return false
                 }
                 keys = Array(entries.keys)
@@ -120,8 +122,10 @@ public final class PreferencesStore: QmlInstantiableStatus {
                 keys = []
             }
         } else {
-            keys = CFPreferencesCopyKeyList(Self.applicationID, kCFPreferencesCurrentUser,
-                                            kCFPreferencesAnyHost) as? [String] ?? []
+            keys =
+                CFPreferencesCopyKeyList(
+                    Self.applicationID, kCFPreferencesCurrentUser,
+                    kCFPreferencesAnyHost) as? [String] ?? []
         }
         for key in keys { remove(key: key) }
         return CFPreferencesAppSynchronize(Self.applicationID)
@@ -132,7 +136,10 @@ public final class PreferencesStore: QmlInstantiableStatus {
     func strings(_ key: String) -> [String]? { value(key) as? [String] }
 
     func setStrings(_ key: String, _ strings: [String]?) {
-        guard let strings else { remove(key: key); return }
+        guard let strings else {
+            remove(key: key)
+            return
+        }
         set(key, strings as CFPropertyList)
     }
 
@@ -140,8 +147,9 @@ public final class PreferencesStore: QmlInstantiableStatus {
 
     func setData(_ key: String, _ bytes: Data) {
         let data = bytes.withUnsafeBytes { buffer in
-            CFDataCreate(kCFAllocatorDefault, buffer.bindMemory(to: UInt8.self).baseAddress,
-                         bytes.count)
+            CFDataCreate(
+                kCFAllocatorDefault, buffer.bindMemory(to: UInt8.self).baseAddress,
+                bytes.count)
         }
         set(key, data)
     }
@@ -151,9 +159,11 @@ public final class PreferencesStore: QmlInstantiableStatus {
     }
 
     private static func cfString(_ text: String) -> CFString {
-        guard let result = text.withCString({
-            CFStringCreateWithCString(kCFAllocatorDefault, $0, CFStringBuiltInEncodings.UTF8.rawValue)
-        }) else { preconditionFailure("Preferences identifier could not be encoded") }
+        guard
+            let result = text.withCString({
+                CFStringCreateWithCString(kCFAllocatorDefault, $0, CFStringBuiltInEncodings.UTF8.rawValue)
+            })
+        else { preconditionFailure("Preferences identifier could not be encoded") }
         return result
     }
 }

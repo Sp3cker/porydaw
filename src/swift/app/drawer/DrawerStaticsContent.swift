@@ -1,4 +1,3 @@
-import CoreGraphics
 import Foundation
 import NativeDisplayList
 import PorydawCore
@@ -188,9 +187,10 @@ extension DrawerStaticsContent {
         let x1 = min(width, right)
         let y1 = min(height, y + h)
         guard x1 > x0, y1 > y0, argb >> 24 != 0 else { return }
-        out.rect(PdDlRect(
-            x: x0, y: y0, w: x1 - x0, h: y1 - y0,
-            id: UInt64(PD_DL_ID_NONE), argb: argb, flags: 0))
+        out.rect(
+            PdDlRect(
+                x: x0, y: y0, w: x1 - x0, h: y1 - y0,
+                id: UInt64(PD_DL_ID_NONE), argb: argb, flags: 0))
     }
 
     // A missing/empty palette slot packs as UInt32(0): fully transparent, so the
