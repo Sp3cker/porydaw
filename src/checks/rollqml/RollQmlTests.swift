@@ -149,7 +149,7 @@ enum RollQmlLane {
         var failures = 0
         for suite in suites {
             print("\(entryName): suite \(suite)")
-            fflush(stdout)
+            try? FileHandle.standardOutput.synchronize()
             var environment = ProcessInfo.processInfo.environment
             environment[suiteEnvironmentKey] = suite
             let child = Process()
@@ -171,7 +171,7 @@ enum RollQmlLane {
             child.waitUntilExit()
             let output = String(decoding: data, as: UTF8.self)
             FileHandle.standardOutput.write(Data(output.utf8))
-            fflush(stdout)
+            try? FileHandle.standardOutput.synchronize()
             if child.terminationReason == .uncaughtSignal {
                 FileHandle.standardError.write(Data(
                     "\(entryName): \(suite): child died on signal \(child.terminationStatus)\n".utf8))

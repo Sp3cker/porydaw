@@ -85,7 +85,7 @@ extension EditorQmlLane {
         let output = String(decoding: data, as: UTF8.self)
         childOutputLock.withLock { _ in
             print("editorqml-drawer: \(phase) suite \(suite)")
-            fflush(stdout)
+            try? FileHandle.standardOutput.synchronize()
             FileHandle.standardOutput.write(Data(output.utf8))
         }
         guard child.terminationReason != .uncaughtSignal, child.terminationStatus == 0 else {
@@ -118,10 +118,10 @@ extension EditorQmlLane {
         var failures: [String] = []
         print("editorqml-drawer: ordinary suite passed; capturing "
             + "\(referenceProfiles.count) reference profiles")
-        fflush(stdout)
+        try? FileHandle.standardOutput.synchronize()
         for profile in referenceProfiles {
             print("editorqml-drawer: profile child \(profile.name)")
-            fflush(stdout)
+            try? FileHandle.standardOutput.synchronize()
             var environment = ProcessInfo.processInfo.environment
             environment[childEnvironmentKey] = profile.name
             environment["PORYDAW_EDITOR_QML_SUITE"] = "tst_EditorDrawerReferenceProfiles.qml"
@@ -142,7 +142,7 @@ extension EditorQmlLane {
             child.waitUntilExit()
             let output = String(decoding: data, as: UTF8.self)
             FileHandle.standardOutput.write(Data(output.utf8))
-            fflush(stdout)
+            try? FileHandle.standardOutput.synchronize()
             if child.terminationReason == .uncaughtSignal {
                 failures.append("\(profile.name): child died on signal "
                     + "\(child.terminationStatus)")
@@ -184,7 +184,7 @@ extension EditorQmlLane {
                 "\(profile.name)@dpr\(Int(profile.dpr))-font\(profile.fontPx)"
                     + "[\(profile.panes.joined(separator: ","))]"
             }.joined(separator: " "))
-        fflush(stdout)
+        try? FileHandle.standardOutput.synchronize()
         return 0
     }
 }
