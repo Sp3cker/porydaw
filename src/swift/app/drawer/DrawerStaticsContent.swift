@@ -136,8 +136,7 @@ extension DrawerStaticsContent {
     // plain rect with a one-device-pixel stroke.
     static func buildDashedFrame(
         into writer: inout DisplayListWriter, box: CGRect, argb: UInt32,
-        dashDevicePx: Double, gapDevicePx: Double, camera _: EditorCamera,
-        dpr: Double, viewport: CGSize
+        dashDevicePx: Double, gapDevicePx: Double, dpr: Double, viewport: CGSize
     ) {
         guard dpr.isFinite, dpr > 0 else { return }
         let width = viewport.width
@@ -194,8 +193,8 @@ extension DrawerStaticsContent {
             id: UInt64(PD_DL_ID_NONE), argb: argb, flags: 0))
     }
 
-    // The legacy pack writes UInt32(0) for a missing/empty slot; match that so
-    // the shared alpha gate culls it identically.
+    // A missing/empty palette slot packs as UInt32(0): fully transparent, so the
+    // shared alpha gate culls it.
     private static func drawerSlotARGB(_ slot: Int, from paletteColors: [Int: String]) -> UInt32 {
         guard let fill = paletteColors[slot], !fill.isEmpty else { return 0 }
         return SceneRectPacking.argb(fill)

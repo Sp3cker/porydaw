@@ -75,8 +75,6 @@ extension GridScene {
         displayLists[2] = rulerBuilder.build(
             input, palette: colors,
             width: snapshot.viewportWidth, height: input.rulerHeight)
-        // The names the keyboard list consumed, for list-1 readers.
-        keyboardNamesForDisplay = input.keyboardNames
         displayFrameKey = frame
         noteRecordCount = built.count
         displayRevision += 1

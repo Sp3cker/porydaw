@@ -155,13 +155,41 @@ public enum PaletteMath {
     public static func contrastingTextColor(fill: String, light: String, dark: String) -> String {
         contrastRatio(fill, light) >= contrastRatio(fill, dark) ? light : dark
     }
+    /// AA ink for text on `fill`: the keyboard ink with the higher contrast when
+    /// it clears 4.5:1, else whichever fallback contrasts more. ARGB in, ARGB out.
+    public static func aaContrastInk(
+        fill: UInt32, light: UInt32, dark: UInt32,
+        fallbackLight: UInt32, fallbackDark: UInt32
+    ) -> UInt32 {
+        let background = relativeLuminance(argb: fill)
+        func contrast(_ ink: UInt32) -> Double {
+            let value = relativeLuminance(argb: ink)
+            return (max(background, value) + 0.05) / (min(background, value) + 0.05)
+        }
+        let preferred = contrast(light) >= contrast(dark) ? light : dark
+        if contrast(preferred) >= 4.5 { return preferred }
+        return contrast(fallbackLight) >= contrast(fallbackDark) ? fallbackLight : fallbackDark
+    }
+
     public static func aaContrastInk(
         fill: String, light: String, dark: String,
         fallbackLight: String, fallbackDark: String
     ) -> String {
-        let preferred = contrastingTextColor(fill: fill, light: light, dark: dark)
-        if contrastRatio(fill, preferred) >= 4.5 { return preferred }
-        return contrastingTextColor(fill: fill, light: fallbackLight, dark: fallbackDark)
+        return hex(
+            argb: aaContrastInk(
+                fill: argb(fill), light: argb(light), dark: argb(dark),
+                fallbackLight: argb(fallbackLight), fallbackDark: argb(fallbackDark)))
+    }
+
+    public static func relativeLuminance(argb: UInt32) -> Double {
+        relativeLuminance(
+            r: Int((argb >> 16) & 255), g: Int((argb >> 8) & 255),
+            b: Int(argb & 255))
+    }
+
+    public static func argb(_ hex: String) -> UInt32 {
+        let c = channels(hex)
+        return UInt32(c.a) << 24 | UInt32(c.r) << 16 | UInt32(c.g) << 8 | UInt32(c.b)
     }
 
     public static func trackIdentityIndex(_ track: Int) -> Int {

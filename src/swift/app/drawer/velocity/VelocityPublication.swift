@@ -280,8 +280,7 @@ extension VelocityPage {
                 width: x1 - x0, height: Double(transient.frame.height))
             DrawerStaticsContent.buildDashedFrame(
                 into: &writer, box: box, argb: transient.frame.argb,
-                dashDevicePx: 4, gapDevicePx: 2,
-                camera: camera, dpr: dpr, viewport: viewport)
+                dashDevicePx: 4, gapDevicePx: 2, dpr: dpr, viewport: viewport)
         }
         let list1 = writer.finish()
         listWriter = writer

@@ -189,25 +189,22 @@ import PorydawCore
             self.drawPreview = DrawPreview(
                 active: false, tick: 0, duration: 0, pitch: 0, lastVelocity: 0)
         }
-        // Key labels decode from displayList(1); the published names carry
-        // the builder input with empty pads omitted.
+        // Key labels decode from displayList(1); drum names come from the same
+        // scene input the builder consumed, with empty pads omitted.
         let keyboardDecoded = Self.decodePlot(scene.displayList(list: 1))
         self.keyboardRects = keyboardDecoded.rects
         self.keyboardLabels = keyboardDecoded.labels
-        if let published = scene.keyboardNamesForDisplay {
-            self.keyboardNames = Dictionary(
-                uniqueKeysWithValues: published.enumerated().compactMap {
-                    $0.element.isEmpty ? nil : ($0.offset, $0.element)
-                })
-        } else {
-            self.keyboardNames = [:]
-        }
+        let drumNames = grid.sceneInput().keyboardNames
+        self.keyboardNames = Dictionary(
+            uniqueKeysWithValues: (drumNames ?? []).enumerated().compactMap {
+                $0.element.isEmpty ? nil : ($0.offset, $0.element)
+            })
         self.palette = scene.plotPalette
         self.loopStartTick = Int(axis.loopStartTick)
         self.loopEndTick = Int(axis.loopEndTick)
         self.noteNameMode = noteNameMode
         self.showVelocityValues = showVelocityValues
-        self.drumKeyboard = scene.keyboardNamesForDisplay != nil
+        self.drumKeyboard = drumNames != nil
         self.selectedTrack = selectedTrack
     }
 

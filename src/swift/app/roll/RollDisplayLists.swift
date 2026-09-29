@@ -49,6 +49,8 @@ public enum RollPaletteSlot: UInt16 {
     case rulerDetailText
     case implicitSignature
     case noteVelocityZero
+    case noteLabelAaLight
+    case noteLabelAaDark
 }
 
 // Everything the notes section reads; draw-preview motion leaves it equal.
@@ -183,6 +185,8 @@ enum RollDrawingContent {
             SceneRectPacking.argb(p.rulerDetailText),
             SceneRectPacking.argb(p.implicitSignature),
             SceneRectPacking.argb(p.noteVelocityZero),
+            SceneRectPacking.argb(p.noteLabelAaLight),
+            SceneRectPacking.argb(p.noteLabelAaDark),
         ]
     }
 
@@ -192,6 +196,8 @@ enum RollDrawingContent {
         let ghostTable = ThemeColorTables.ghostFillTable(input.palette.theme)
         let light = SceneRectPacking.argb(input.palette.keyboardNatural)
         let dark = SceneRectPacking.argb(input.palette.keyboardBlack)
+        let fallbackLight = SceneRectPacking.argb(input.palette.noteLabelAaLight)
+        let fallbackDark = SceneRectPacking.argb(input.palette.noteLabelAaDark)
         let notes = input.notes
         let selected = input.selectedNotes
         let displayed = input.displayedNote
@@ -224,35 +230,18 @@ enum RollDrawingContent {
                 let duration = max(0, end - tick)
                 let boundedPitch = min(127, max(0, pitch))
                 let velocity = min(127, max(0, note.velocity))
-                records.append(RollNote(
-                    id: note.noteId.rawValue, tick: start, end: start + duration,
-                    pitch: boundedPitch, velocity: velocity, flags: flags, fill: fill,
-                    ink: labelInk(fill: fill, light: light, dark: dark),
-                    order: records.count))
+                records.append(
+                    RollNote(
+                        id: note.noteId.rawValue, tick: start, end: start + duration,
+                        pitch: boundedPitch, velocity: velocity, flags: flags, fill: fill,
+                        ink: PaletteMath.aaContrastInk(
+                            fill: fill, light: light, dark: dark,
+                            fallbackLight: fallbackLight, fallbackDark: fallbackDark),
+                        order: records.count))
                 maxDuration = max(maxDuration, duration)
             }
         }
         records.sort { $0.tick == $1.tick ? $0.order < $1.order : $0.tick < $1.tick }
         return maxDuration
     }
-
-    static func labelInk(fill: UInt32, light: UInt32, dark: UInt32) -> UInt32 {
-        func luminance(_ color: UInt32) -> Double {
-            func linear(_ channel: UInt32) -> Double {
-                let value = Double(channel & 255) / 255
-                return value <= 0.04045 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4)
-            }
-            return 0.2126 * linear(color >> 16) + 0.7152 * linear(color >> 8)
-                + 0.0722 * linear(color)
-        }
-        let background = luminance(fill)
-        func contrast(_ ink: UInt32) -> Double {
-            let value = luminance(ink)
-            return (max(background, value) + 0.05) / (min(background, value) + 0.05)
-        }
-        let preferred = contrast(light) >= contrast(dark) ? light : dark
-        if contrast(preferred) >= 4.5 { return preferred }
-        return contrast(0xFFFFFFFF) >= contrast(0xFF000000) ? 0xFFFFFFFF : 0xFF000000
-    }
-
 }

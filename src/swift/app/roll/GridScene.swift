@@ -113,9 +113,6 @@ public final class GridScene {
     @QtIgnored var keyboardBuilder = RollKeyboardBuilder()
     @QtIgnored var rulerBuilder = RollRulerBuilder()
     @QtIgnored var cachedEmptyDisplayList: Data?
-    // The keyboard names the list-1 build consumed; list-1 label readers
-    // consult this instead of the removed legacy keyboard section.
-    @QtIgnored var keyboardNamesForDisplay: [String]?
     /// Content-tier generation backing the frame key; bumped on record or
     /// content-key resolve so camera seams skip by integer compare.
     @QtIgnored var contentGeneration = 0

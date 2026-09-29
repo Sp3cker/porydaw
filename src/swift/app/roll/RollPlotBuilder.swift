@@ -189,8 +189,9 @@ struct RollPlotBuilder {
             previewInkFill = fill
             previewInkLight = light
             previewInkDark = dark
-            previewInk = RollDrawingContent.labelInk(
-                fill: fill, light: light, dark: dark)
+            previewInk = PaletteMath.aaContrastInk(
+                fill: fill, light: light, dark: dark,
+                fallbackLight: ink(.noteLabelAaLight), fallbackDark: ink(.noteLabelAaDark))
             previewInkValid = true
             return previewInk
         }
