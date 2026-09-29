@@ -270,6 +270,7 @@ qt_add_qml_module(porydaw_app
         src/ui/shell/ShellStatusBar.qml
         src/ui/shell/ShellGridContextMenu.qml
         src/ui/shell/ThemedWindow.qml
+        src/ui/shell/DialogWindow.qml
         src/ui/shell/AboutDialog.qml
         src/ui/shell/TransportBar.qml
         src/ui/shell/TransportButton.qml

@@ -155,7 +155,7 @@ TestCase {
         tryCompare(settings, "active", true)
         const body = findChild(settings, "settingsBody")
         verify(body, "settings dialog body receives key events")
-        keyClick(body, Qt.Key_Escape)
+        keyClick(Qt.Key_Escape)
         tryCompare(settings, "visible", false)
         tryCompare(shell, "active", true)
     }

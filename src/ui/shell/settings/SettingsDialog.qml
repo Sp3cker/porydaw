@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import Porydaw.Ui
 
-ThemedWindow {
+DialogWindow {
     id: dialog
     objectName: "settingsDialog"
     required property QtObject store
@@ -17,9 +17,6 @@ ThemedWindow {
     maximumWidth: width
     maximumHeight: height
     title: qsTr("Settings")
-    flags: Qt.Dialog
-    modality: Qt.WindowModal
-    color: colors.windowBackground
     font: Qt.font(applicationSession.typographyFonts.body)
 
     function showSettings(songFirst) {
@@ -29,9 +26,7 @@ ThemedWindow {
         if (songPage.item)
             songPage.item.reset()
         selectedTab = songFirst && store.songAvailable ? 1 : 0
-        show()
-        raise()
-        requestActivate()
+        present()
     }
     function commit() {
         if (store.songAvailable)
@@ -40,24 +35,6 @@ ThemedWindow {
         presenter.commitGridLineContrast()
     }
     onClosing: presenter.discardGridLineContrast()
-    onVisibleChanged: {
-        if (visible || !transientParent)
-            return
-        const owner = transientParent
-        Qt.callLater(() => {
-            if (!dialog.visible && owner.visible) {
-                owner.raise()
-                owner.requestActivate()
-            }
-        })
-    }
-
-    Shortcut {
-        objectName: "settingsEscapeShortcut"
-        sequence: "Esc"
-        context: Qt.WindowShortcut
-        onActivated: dialog.close()
-    }
 
     Rectangle {
         id: body
