@@ -36,22 +36,22 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
     func frame() -> (display: Int, bytes: Data) {
         (scene.displayRevision, scene.displayList(list: 0))
     }
-    func untouched(since revision: Int, content: Data) -> Bool {
-        scene.contentRevision == revision && scene.drawingContent() == content
+    func untouched(since key: RollDrawingContentKey?) -> Bool {
+        scene.listContentKey == key
     }
     session.clearSelectedNotes()
     grid.refreshCamera()
     let fillsBefore = fills()
-    let revisionBefore = scene.contentRevision
+    let keyBefore = scene.listContentKey
     let frameBefore = frame()
     let summaryBefore = grid.fetchNoteSummary()
     session.setSelectedNotes([noteID])
     grid.refreshCamera()
     report.expect(
-        fills() == fillsBefore && scene.contentRevision == revisionBefore + 1
+        fills() == fillsBefore && scene.listContentKey != keyBefore
             && frame().display == frameBefore.display + 1,
                   cppID: id,
-        message: "a selection-only refresh repacks the content once with unchanged fills and one new plot frame")
+        message: "a selection-only refresh resolves the content once with unchanged fills and one new plot frame")
     report.expect(
         session.selectedNotes.contains(noteID)
             && !RollContentProbe(grid).ringRects(noteID).isEmpty,
@@ -60,18 +60,17 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
     report.expect(grid.fetchNoteSummary() != summaryBefore,
                   cppID: id,
                   message: "a selection-content change is visible in the pulled note summary")
-    let revisionSelected = scene.contentRevision
-    let contentSelected = scene.drawingContent()
+    let keySelected = scene.listContentKey
     let frameSelected = frame()
     let keyboardBefore = scene.displayList(list: 1)
     let summarySelected = grid.fetchNoteSummary()
     grid.updateHover(x: 4, y: box.y + box.h / 2)
     grid.refreshCamera()
     report.expect(
-        untouched(since: revisionSelected, content: contentSelected)
+        untouched(since: keySelected)
             && frame().bytes == frameSelected.bytes,
                   cppID: id,
-        message: "a hover-only refresh republishes no content boxes or fills and leaves the plot frame byte-identical")
+        message: "a hover-only refresh resolves no new content and leaves the plot frame byte-identical")
     report.expect(
         frame().display == frameSelected.display + 1
             && scene.displayList(list: 1) != keyboardBefore,
@@ -84,7 +83,7 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
     session.clearSelectedNotes()
     grid.refreshCamera()
     let fillsPlain = fills()
-    let revisionPlain = scene.contentRevision
+    let keyPlain = scene.listContentKey
     let framePlain = frame()
     let summaryPlain = grid.fetchNoteSummary()
     let startTick = Tick(max(0, Int(note.tick) - 2))
@@ -94,10 +93,10 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
         scope: .tracks([grid.trackIndex])))
     grid.refreshCamera()
     report.expect(
-        fills() == fillsPlain && scene.contentRevision == revisionPlain + 1
+        fills() == fillsPlain && scene.listContentKey != keyPlain
             && frame().display == framePlain.display + 1,
                   cppID: id,
-        message: "a highlight-only refresh repacks the content once with unchanged fills and one new plot frame")
+        message: "a highlight-only refresh resolves the content once with unchanged fills and one new plot frame")
     report.expect(grid.fetchNoteSummary() == summaryPlain,
                   cppID: id,
                   message: "a highlight-only refresh leaves the pulled note summary byte-identical")
@@ -107,8 +106,7 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
                   message: "a highlight-only refresh still rings the time-covered note")
     session.clearTimeSelection()
     grid.refreshCamera()
-    let revisionBeforeScroll = scene.contentRevision
-    let contentBeforeScroll = scene.drawingContent()
+    let keyBeforeScroll = scene.listContentKey
     let frameBeforeScroll = frame()
     let fillsBeforeScroll = fills()
     let summaryBeforeScroll = grid.fetchNoteSummary()
@@ -142,10 +140,10 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
         } == true, cppID: id,
         message: "the camera-translated note position matches the projected viewport position")
     report.expect(
-        untouched(since: revisionBeforeScroll, content: contentBeforeScroll)
+        untouched(since: keyBeforeScroll)
             && fills() == fillsBeforeScroll,
         cppID: id,
-        message: "an in-window camera scroll republishes no content boxes or fills")
+        message: "an in-window camera scroll resolves no new content")
     report.expect(
         frame().display != frameBeforeScroll.display
             && frame().bytes != frameBeforeScroll.bytes,
@@ -157,17 +155,17 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
     _ = session.mutateCamera { _ = $0.setTimeZoom(70) }
     grid.refreshCamera()
     report.expect(
-        untouched(since: revisionBeforeScroll, content: contentBeforeScroll)
+        untouched(since: keyBeforeScroll)
             && frame().display != frameBeforeScroll.display,
         cppID: id,
-        message: "a camera zoom leaves the content revision and blob untouched while the plot frame moves")
+        message: "a camera zoom leaves the content key untouched while the plot frame moves")
     session.mutateCamera { _ = $0.setKeyHeight(20) }
     grid.refreshCamera()
     report.expect(
-        untouched(since: revisionBeforeScroll, content: contentBeforeScroll)
+        untouched(since: keyBeforeScroll)
             && frame().display != frameBeforeScroll.display,
         cppID: id,
-        message: "a key-height change leaves the content revision and blob untouched while the plot frame moves")
+        message: "a key-height change leaves the content key untouched while the plot frame moves")
 }
 
 /// The plot frame culls off-screen notes in O(visible): thousands of far

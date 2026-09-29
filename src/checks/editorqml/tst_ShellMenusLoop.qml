@@ -21,8 +21,12 @@ ShellMenusSupport {
         verify(loopItem !== null && undoItem !== null, "the Edit menu owns loop and undo")
         var renderer = findChild(page, "timelineQuickRulerMarks")
         verify(renderer !== null)
+        function markerFace(name) {
+            return name === "loopStartMarker" ? renderer.face(renderer.loopStartId)
+                : renderer.face(renderer.loopEndId)
+        }
         function markerX(name) {
-            var marker = renderer.noteFace(name)
+            var marker = markerFace(name)
             return marker.width === undefined ? null : renderer.mapToItem(ruler, marker.x, marker.y).x
         }
         var originalStart = markerX("loopStartMarker")
@@ -88,11 +92,11 @@ ShellMenusSupport {
         var ruler = findChild(page, "timelineRulerInput")
         verify(renderer !== null && ruler !== null)
         var markerStart = function() {
-            var marker = renderer.noteFace("loopStartMarker")
+            var marker = renderer.face(renderer.loopStartId)
             return marker.width === undefined ? null : renderer.mapToItem(ruler, marker.x, marker.y)
         }
         var markerEnd = function() {
-            var marker = renderer.noteFace("loopEndMarker")
+            var marker = renderer.face(renderer.loopEndId)
             return marker.width === undefined ? null : renderer.mapToItem(ruler, marker.x, marker.y)
         }
         var xAt = function(tick) {

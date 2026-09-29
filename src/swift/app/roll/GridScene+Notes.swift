@@ -5,7 +5,7 @@ import QtBridge
 @MainActor
 extension GridScene {
     /// Content seam: resolves palette/colors and records once per content
-    /// key, repacks legacy bytes on content-key moves, then builds the frame.
+    /// key, then builds the frame.
     @QtIgnored
     func rebuildNotes(_ input: GridSceneInput) {
         let (palette, colors) = resolvePalette(input)
@@ -16,10 +16,8 @@ extension GridScene {
             builtProjection = input.camera.projection
             contentGeneration += 1
         }
-        if key != drawingContentKey {
-            drawingContentData = RollDrawingContent.pack(input, palette: palette)
-            drawingContentKey = key
-            contentRevision += 1
+        if key != listContentKey {
+            listContentKey = key
             contentGeneration += 1
         }
         rebuildRollLists(input, colors: colors)
@@ -52,7 +50,8 @@ extension GridScene {
         }
         let frame = RollDisplayFrameKey(
             generation: contentGeneration, camera: snapshot,
-            dpr: input.metrics.dpr, band: band, hoverKey: input.hoverKey)
+            dpr: input.metrics.dpr, band: band, hoverKey: input.hoverKey,
+            rulerHeight: input.rulerHeight)
         if frame == displayFrameKey { return }
         if displayLists.count != 3 {
             displayLists = [Data(), retainedEmptyDisplayList(), retainedEmptyDisplayList()]
@@ -61,6 +60,7 @@ extension GridScene {
         // their own: otherwise finish()'s shared output copies on write.
         displayLists[0] = Data()
         displayLists[1] = Data()
+        displayLists[2] = Data()
         let built = plotBuilder.build(
             input, records: noteRecords, palette: colors,
             maxDuration: noteRecordsMaxDuration,
@@ -73,6 +73,9 @@ extension GridScene {
             input, palette: colors,
             width: input.metrics.keyboardWidth + snapshot.viewportWidth,
             height: snapshot.rollHeight)
+        displayLists[2] = rulerBuilder.build(
+            input, palette: colors,
+            width: snapshot.viewportWidth, height: input.rulerHeight)
         // The names the keyboard list consumed, for list-1 readers.
         keyboardNamesForDisplay = input.keyboardNames
         displayFrameKey = frame
@@ -80,9 +83,8 @@ extension GridScene {
         displayRevision += 1
     }
 
-
     /// Palette colors resolved once per palette identity + velocity; the
-    /// legacy packed bytes derive from the same colors in slot order.
+    /// display lists index the same colors in slot order.
     @QtIgnored
     private func resolvePalette(_ input: GridSceneInput) -> (data: Data, colors: [UInt32]) {
         let key = PaletteContentKey(

@@ -74,7 +74,7 @@ func checkProjection(
     grid.refreshCamera()
     let movedTimeProbe = RollContentProbe(grid)
     report.expect(
-        tiled && movedTimeProbe.revision == timeProbe.revision && movedTimeProbe.segments == segments
+        tiled && movedTimeProbe.contentKey == timeProbe.contentKey && movedTimeProbe.segments == segments
             && movedTimeProbe.ticksPerBeat == grid.ticksPerBeat,
         cppID: projectionID,
         message: "generated time marks are published once in content order independent of the camera")

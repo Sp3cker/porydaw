@@ -87,7 +87,7 @@ ShellEventListSupport {
         const rollInput = findChild(surface, "swiftRollInput")
         const rollContent = findChild(surface, "rollContentBand")
         const vertical = findChild(surface, "timelineRollScrollBar")
-        verify(band && drawer && ruler && rulerMarks && rulerMarks.band === 2
+        verify(band && drawer && ruler && rulerMarks && rulerMarks.list === 2
                && controls && headers && horizontal && status
                && rollGutter && rollPlot && rollInput && rollContent && vertical,
                "editor bands remain addressable when the list replaces the roll")

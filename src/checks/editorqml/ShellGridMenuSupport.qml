@@ -231,9 +231,15 @@ TestCase {
         return menu
     }
 
+    function loopMarkerFace(name) {
+        var renderer = control("timelineQuickRulerMarks")
+        return name === "loopStartMarker" ? renderer.face(renderer.loopStartId)
+            : renderer.face(renderer.loopEndId)
+    }
+
     function loopMarkerAt(name, tick) {
         var renderer = control("timelineQuickRulerMarks")
-        var marker = renderer.noteFace(name)
+        var marker = loopMarkerFace(name)
         if (!marker || marker.width === undefined)
             return false
         var point = renderer.mapToItem(control("timelineRulerInput"), marker.x, marker.y)
@@ -241,7 +247,7 @@ TestCase {
     }
 
     function loopMarkerAbsent(name) {
-        return control("timelineQuickRulerMarks").noteFace(name).width === undefined
+        return loopMarkerFace(name).width === undefined
     }
 
     function rulerSignatureAt(tick) {

@@ -88,11 +88,9 @@ public final class GridScene {
 
     public var cameraScroll: QListModel<SceneRect> = QListModel()
 
-    @QtTracked public var contentRevision = 0
     @QtTracked public var displayRevision = 0
 
-    @QtIgnored var drawingContentData = Data()
-    @QtIgnored var drawingContentKey: RollDrawingContentKey?
+    @QtIgnored var listContentKey: RollDrawingContentKey?
     @QtIgnored var noteRecordCount = 0
     struct PaletteContentKey: Equatable {
         let palette: ObjectIdentifier
@@ -108,27 +106,25 @@ public final class GridScene {
     /// Projection the cached records were resolved against. Camera seams
     /// compare this (fixed-size) instead of rebuilding the content key.
     @QtIgnored var builtProjection: PitchProjection?
-    // Retained display-list buffers; list 2 stays valid-but-empty until Task 5.
+    // Retained display-list buffers: 0 plot, 1 keyboard, 2 ruler.
     @QtIgnored var displayLists: [Data] = []
     @QtIgnored var displayFrameKey: RollDisplayFrameKey?
     @QtIgnored var plotBuilder = RollPlotBuilder()
     @QtIgnored var keyboardBuilder = RollKeyboardBuilder()
+    @QtIgnored var rulerBuilder = RollRulerBuilder()
     @QtIgnored var cachedEmptyDisplayList: Data?
     // The keyboard names the list-1 build consumed; list-1 label readers
     // consult this instead of the removed legacy keyboard section.
     @QtIgnored var keyboardNamesForDisplay: [String]?
     /// Content-tier generation backing the frame key; bumped on record or
-    /// legacy resolve so camera seams skip by integer compare.
+    /// content-key resolve so camera seams skip by integer compare.
     @QtIgnored var contentGeneration = 0
 
-    /// Retained per-list display buffer. List 2 (ruler) returns a valid
-    /// empty list until Task 5 ports it.
+    /// Retained per-list display buffer: 0 plot, 1 keyboard, 2 ruler.
     public func displayList(list: Int) -> Data {
         guard displayLists.indices.contains(list) else { return retainedEmptyDisplayList() }
         return displayLists[list]
     }
-
-    public func drawingContent() -> Data { drawingContentData }
 
     struct KeyboardWidthKey: Equatable {
         let bank: ObjectIdentifier?

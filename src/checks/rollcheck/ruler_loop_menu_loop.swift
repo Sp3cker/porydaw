@@ -194,7 +194,7 @@ func checkRenderedRulerMenuCommands(_ report: CheckReport, session: DocumentSess
     report.expect(writtenEnd == Tick(grid.snapTickDown(Double(end))), cppID: id,
                   message: "the clicked end row writes a second undoable marker")
     grid.refreshFromSession()
-    let loopProbe = RollContentProbe(grid.scene)
+    let loopProbe = RollContentProbe(grid)
     let noTick = Int(TimeDefaults.noTick)
     report.expect(
         loopProbe.loopStartTick == Int(writtenStart) && loopProbe.loopStartTick != noTick,
@@ -223,7 +223,7 @@ func checkRenderedRulerMenuCommands(_ report: CheckReport, session: DocumentSess
                   && session.timeline.loopEndTick == TimeDefaults.noTick, cppID: id,
                   message: "Remove Loop clears both marker events")
     grid.refreshFromSession()
-    let removedProbe = RollContentProbe(grid.scene)
+    let removedProbe = RollContentProbe(grid)
     report.expect(
         removedProbe.loopStartTick == noTick && removedProbe.loopEndTick == noTick,
         cppID: id, message: "removing both loop markers publishes no loop tick in the roll content")
@@ -232,7 +232,7 @@ func checkRenderedRulerMenuCommands(_ report: CheckReport, session: DocumentSess
                   && session.timeline.loopEndTick == writtenEnd, cppID: id,
                   message: "the first undo restores only the end marker")
     grid.refreshFromSession()
-    let openProbe = RollContentProbe(grid.scene)
+    let openProbe = RollContentProbe(grid)
     report.expect(
         openProbe.loopEndTick == Int(writtenEnd) && openProbe.loopStartTick == noTick,
         cppID: id, message: "an open loop start publishes only the loop end tick")

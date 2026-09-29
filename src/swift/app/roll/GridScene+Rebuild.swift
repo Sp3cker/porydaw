@@ -31,12 +31,15 @@ struct GridSceneInput {
     var keyboardNames: [String]?
     var keyboardBankIdentity: ObjectIdentifier?
     var keyboardProgram = 0
+    // Band-2 list height: marker row + fitted ruler text + separator, as
+    // published on PianoGrid. Part of the frame key like the camera box.
+    var rulerHeight: Double = 0
 }
 
 /// Frame-tier key: content generation plus everything the per-frame plot
 /// build reads. Equality skips the rebuild.
 struct RollDisplayFrameKey: Equatable {
-    // Content-tier generation: bumped when records or the legacy bytes
+    // Content-tier generation: bumped when records or the content key
     // resolve. Compared by integer so camera seams never scan notes.
     var generation: Int
     var camera: EditorCamera.Snapshot
@@ -45,6 +48,8 @@ struct RollDisplayFrameKey: Equatable {
     // The keyboard highlight is emitted list content: hover-only moves
     // rebuild the lists and bump displayRevision once.
     var hoverKey: Int
+    // Band-2 list height: typography moves rebuild the ruler list.
+    var rulerHeight: Double
 }
 
 struct RollBandSignature: Equatable {
@@ -56,8 +61,8 @@ struct RollBandSignature: Equatable {
 
 @MainActor
 extension GridScene {
-    /// Valid empty list (header, zero records) for lists 1-2 and the
-    /// out-of-range fallback. Built once and retained.
+    /// Valid empty list (header, zero records) for the out-of-range
+    /// fallback. Built once and retained.
     @QtIgnored
     func retainedEmptyDisplayList() -> Data {
         if let cached = cachedEmptyDisplayList { return cached }

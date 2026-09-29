@@ -333,13 +333,20 @@ EditorDrawerTestSupport {
         grid.setCameraHScroll(0)
         tryVerify(function() { return grid.cameraScrollX === 0 }, 3000,
                   "the camera parks at the origin before the loop update")
+        // The parked camera rebuilt list 2: let one frame decode it before
+        // the baseline capture reads face().
+        waitForRendering(rulerMarks)
         tryCompare(presenter, "labelCount", 3)
         // Opaque pre-stimulus snapshot: band geometry before the timeline update.
         var before = Qt.rect(band.x, band.y, band.width, band.height)
         var countBefore = presenter.labelCount
+        function markerFace(name) {
+            return name === "loopStartMarker" ? rulerMarks.face(rulerMarks.loopStartId)
+                : rulerMarks.face(rulerMarks.loopEndId)
+        }
         function markerX(name) {
             wait(0)
-            var face = rulerMarks.noteFace(name)
+            var face = markerFace(name)
             return face.x === undefined ? null : rulerMarks.mapToItem(ruler, face.x, face.y).x
         }
         function rulerX(tick) {

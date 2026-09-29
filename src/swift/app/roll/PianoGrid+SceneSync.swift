@@ -64,7 +64,7 @@ extension PianoGrid {
             usedTrackCount: session.document.engineTracks.usedTrackCount,
             selectedTrack: trackIndex,
             keyboardNames: drumNames, keyboardBankIdentity: ObjectIdentifier(session.bankLease),
-            keyboardProgram: program)
+            keyboardProgram: program, rulerHeight: rulerHeight)
     }
 
     @QtIgnored

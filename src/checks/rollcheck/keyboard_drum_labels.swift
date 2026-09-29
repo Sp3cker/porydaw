@@ -35,9 +35,9 @@ func checkDrumPadLabels(_ report: CheckReport) {
         let camera = session.camera
         let rowHeight = camera.snapshot.keyHeight
         let projection = camera.projection
-        let probe = RollContentProbe(grid.scene)
+        let probe = RollContentProbe(grid)
         func record(_ pitch: Int) -> String? {
-            let current = RollContentProbe(grid.scene)
+            let current = RollContentProbe(grid)
             guard current.rows.contains(where: { $0.pitch == pitch }) else { return nil }
             return current.keyboardNames[pitch] ?? GridScene.keyName(pitch)
         }
@@ -98,7 +98,7 @@ func checkDrumPadLabels(_ report: CheckReport) {
         let expectedMelodic = (0..<projection.visibleRowCount).compactMap {
             projection.visiblePitch(at: $0)
         }.filter { $0 % 12 == 0 }.map(GridScene.keyName)
-        let melodicProbe = RollContentProbe(grid.scene)
+        let melodicProbe = RollContentProbe(grid)
         let melodicLabels =
             melodicProbe.keyboardNames.isEmpty
             ? melodicProbe.rows.map(\.pitch).filter { $0 % 12 == 0 }.map(GridScene.keyName)

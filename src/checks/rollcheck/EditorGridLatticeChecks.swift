@@ -134,21 +134,21 @@ func checkContentWindowBoundaryReversal(_ report: CheckReport) {
     let scene = GridScene()
     scene.rebuildStatic(input)
     scene.rebuildNotes(input)
-    let initialRevision = scene.contentRevision
-    let initialContent = scene.drawingContent()
-    let initialSegments = RollContentProbe(scene).segments
-    var retained = !initialSegments.isEmpty
+    let initialKey = scene.listContentKey
+    let initialDisplay = scene.displayRevision
+    let initialSegments = latticeSegments(input.metrics.timeAxis)
+    var retained = initialKey != nil && !initialSegments.isEmpty
     for scroll in [1025.0, 1023, 1025, 1023, 1025, 1023] {
         _ = input.camera.setHScroll(scroll)
         scene.rebuildStatic(input)
         scene.rebuildNotes(input)
         retained =
-            retained && scene.contentRevision == initialRevision
-            && scene.drawingContent() == initialContent
-            && RollContentProbe(scene).segments == initialSegments
+            retained && scene.listContentKey == initialKey
+            && scene.displayRevision != initialDisplay
+            && latticeSegments(input.metrics.timeAxis) == initialSegments
     }
     report.expect(retained, cppID: contentWindowID,
-        message: "two-pixel camera reversals leave content revision and blob unchanged")
+        message: "two-pixel camera reversals leave the content key untouched while display frames rebuild")
 
     var monotonicRetained = true
     var reversalRetained = true
@@ -158,42 +158,64 @@ func checkContentWindowBoundaryReversal(_ report: CheckReport) {
         scene.rebuildNotes(input)
         monotonicRetained =
             monotonicRetained
-            && scene.contentRevision == initialRevision
-            && scene.drawingContent() == initialContent
+            && scene.listContentKey == initialKey
+            && scene.displayRevision != initialDisplay
         _ = input.camera.setHScroll(scroll - 2)
         scene.rebuildStatic(input)
         scene.rebuildNotes(input)
         reversalRetained =
             reversalRetained
-            && scene.contentRevision == initialRevision
-            && scene.drawingContent() == initialContent
+            && scene.listContentKey == initialKey
+            && scene.displayRevision != initialDisplay
     }
     report.expect(
         monotonicRetained, cppID: contentWindowID,
-        message: "monotonic camera scroll leaves content revision and blob unchanged")
+        message: "monotonic camera scroll leaves the content key untouched while display frames rebuild")
     report.expect(reversalRetained, cppID: contentWindowID,
-        message: "a reverse camera step leaves content revision and blob unchanged")
+        message: "a reverse camera step leaves the content key untouched while display frames rebuild")
     var resizeInput = input
     resizeInput.camera = camera
     resizeInput.camera.updateViewport(width: 1023, rollHeight: 320)
     scene.rebuildStatic(resizeInput)
     scene.rebuildNotes(resizeInput)
-    let resizeRevision = scene.contentRevision
-    let resizeContent = scene.drawingContent()
-    let resizeProbe = RollContentProbe(scene)
-    let rows = resizeProbe.rows.map(\.pitch)
-    let segments = resizeProbe.segments
-    var resizeRetained = !rows.isEmpty && !segments.isEmpty
+    let resizeKey = scene.listContentKey
+    let resizeDisplay = scene.displayRevision
+    let rows = latticeRows(resizeInput)
+    let segments = latticeSegments(resizeInput.metrics.timeAxis)
+    var resizeRetained = resizeKey != nil && !rows.isEmpty && !segments.isEmpty
     for width in [1025.0, 1023, 1025, 1023, 1025, 1023] {
         resizeInput.camera.updateViewport(width: width, rollHeight: 320)
         scene.rebuildStatic(resizeInput)
         scene.rebuildNotes(resizeInput)
-        let probe = RollContentProbe(scene)
         resizeRetained =
-            resizeRetained && scene.contentRevision == resizeRevision
-            && scene.drawingContent() == resizeContent
-            && probe.rows.map(\.pitch) == rows && probe.segments == segments
+            resizeRetained && scene.listContentKey == resizeKey
+            && scene.displayRevision != resizeDisplay
+            && latticeRows(resizeInput) == rows
+            && latticeSegments(resizeInput.metrics.timeAxis) == segments
     }
     report.expect(resizeRetained, cppID: contentWindowID,
-        message: "width reversals leave content revision and blob unchanged")
+        message: "width reversals leave the content key untouched while display frames rebuild")
+}
+
+// Axis segments without a scene: the implicit opening segment plus one
+// start per explicit signature, same-tick duplicates merged.
+@MainActor
+private func latticeSegments(_ axis: TimeAxis) -> [RollContentProbe.Segment] {
+    return axis.signatureStarts.map { start in
+        let segment = axis.segmentAt(start)
+        let signature = axis.signatureAt(start)
+        return RollContentProbe.Segment(
+            start: Int(start), next: Int(segment.next),
+            beatTicks: Int(segment.beatTicks),
+            beatsPerBar: Int(segment.beatsPerBar),
+            numerator: signature.numerator, denomPow2: signature.denomPow2,
+            implicit: signature.implicit)
+    }
+}
+
+// Projected row pitches without a scene: scroll-neutral content.
+@MainActor
+private func latticeRows(_ input: GridSceneInput) -> [Int] {
+    let projection = input.camera.projection
+    return (0..<projection.visibleRowCount).compactMap { projection.visiblePitch(at: $0) }
 }

@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 
 // Direct coverage for the shared playhead. The pure policy layer is checked with
@@ -107,34 +107,33 @@ private func sharedPlayheadReplacementSession(_ session: DocumentSession,
                            dirty: false, loadName: session.bankLoadName, sampleRate: 48_000)
 }
 
-/// What the grid publishes as content: the drawing blob, its revision and the
-/// probe-decoded counts, so a rebuild that changed anything would show here.
+/// What the grid publishes as content: the content key, display revision and
+/// the probe-decoded counts, so a rebuild that changed anything shows here.
 private struct GridContentSnapshot: Equatable {
     var renderedNoteCount: Int
     var noteSummary: String
     var appliedRevisionText: String
     var editCursorTick: Int
-    var contentRevision: Int
+    var contentKey: RollDrawingContentKey?
+    var displayRevision: Int
     var noteCount: Int
     var rowCount: Int
     var keyboardNameCount: Int
-    var drawingContent: Data
 }
 
 @MainActor
 private func gridContentSnapshot(_ grid: PianoGrid) -> GridContentSnapshot {
-    let scene = grid.scene
-    let probe = RollContentProbe(scene)
+    let probe = RollContentProbe(grid)
     return GridContentSnapshot(
         renderedNoteCount: grid.renderedNoteCount,
         noteSummary: grid.fetchNoteSummary(),
         appliedRevisionText: grid.appliedRevisionText,
         editCursorTick: grid.editCursorTick,
-        contentRevision: probe.revision,
+        contentKey: probe.contentKey,
+        displayRevision: probe.displayRevision,
         noteCount: probe.notes.count,
         rowCount: probe.rows.count,
-        keyboardNameCount: probe.keyboardNames.count,
-        drawingContent: scene.drawingContent())
+        keyboardNameCount: probe.keyboardNames.count)
 }
 
 /// Pumps the main run loop so a main-actor task can run, exactly as the suite's

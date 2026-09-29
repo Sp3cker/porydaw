@@ -345,9 +345,10 @@ TestCase {
         if (physical) {
             dpr = Screen.devicePixelRatio
             var marks = findChild(ruler, "timelineQuickRulerMarks")
-            verify(marks && marks.band === 2, "the physical ruler has a mounted scrolling content")
-            tryCompare(marks, "scrollX", expectedScroll, 3000,
-                       "the physical ruler applies the requested camera scroll before capture")
+            verify(marks && marks.list === 2, "the physical ruler has a mounted scrolling content")
+            tryVerify(function() {
+                return marks.fetchedRevision === context.grid.scene.displayRevision
+            }, 3000, "the physical ruler applies the requested camera scroll before capture")
             waitForRendering(ruler, 3000)
             var capture = null
             verify(ruler.grabToImage(function(result) { capture = result }),

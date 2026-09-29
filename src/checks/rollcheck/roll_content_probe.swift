@@ -72,7 +72,7 @@ import PorydawCore
     static let loopStartId = UInt64(PD_DL_ID_LOOP_START)
     static let loopEndId = UInt64(PD_DL_ID_LOOP_END)
 
-    let revision: Int
+    let contentKey: RollDrawingContentKey?
     let displayRevision: Int
     let notes: [Note]
     let rows: [Row]
@@ -94,27 +94,6 @@ import PorydawCore
     let keyboardRects: [PlotRect]
     let keyboardLabels: [PlotLabel]
 
-    private struct Reader {
-        let bytes: [UInt8]
-        var offset: Int
-
-        mutating func u8() -> UInt8 {
-            guard offset < bytes.count else { return 0 }
-            defer { offset += 1 }
-            return bytes[offset]
-        }
-
-        mutating func unsigned(_ width: Int) -> UInt64 {
-            var value: UInt64 = 0
-            for shift in 0..<width { value |= UInt64(u8()) << (8 * UInt64(shift)) }
-            return value
-        }
-
-        mutating func u16() -> Int { Int(unsigned(2)) }
-        mutating func u32() -> UInt32 { UInt32(unsigned(4)) }
-        mutating func u64() -> Int { Int(clamping: unsigned(8)) }
-    }
-
     init(_ grid: PianoGrid) {
         let showVelocity: Bool
         switch grid.gesture {
@@ -132,124 +111,76 @@ import PorydawCore
             selectedTrack: grid.trackIndex)
     }
 
-    init(_ scene: GridScene) {
-        self.init(
-            scene, grid: nil, preview: nil, lastVelocity: 100,
-            noteNameMode: nil, showVelocityValues: nil, selectedTrack: nil)
-    }
-
     private init(
-        _ scene: GridScene, grid: PianoGrid?,
+        _ scene: GridScene, grid: PianoGrid,
         preview: (tick: Int, duration: Int, pitch: Int)?, lastVelocity: Int,
-        noteNameMode: Bool?, showVelocityValues: Bool?, selectedTrack: Int?
+        noteNameMode: Bool, showVelocityValues: Bool, selectedTrack: Int
     ) {
-        revision = scene.contentRevision
+        contentKey = scene.listContentKey
         displayRevision = scene.displayRevision
         let bytes = scene.displayList(list: 0)
         plotBytes = bytes
         let decoded = Self.decodePlot(bytes)
         plotRects = decoded.rects
         plotLabels = decoded.labels
-        if let grid {
-            let byID = Dictionary(
-                grid.notes.map { ($0.noteId.rawValue, $0) },
-                uniquingKeysWith: { first, _ in first })
-            var seen = Set<UInt64>()
-            var built: [Note] = []
-            for rect in decoded.rects
-                where rect.id != 0 && rect.id < UInt64(PD_DL_ID_LOOP_START)
-            {
-                guard seen.insert(rect.id).inserted, let note = byID[rect.id] else { continue }
-                let shown = grid.displayedNote(note)
-                let velocity = grid.previewVelocity(note.noteId) ?? note.velocity
-                built.append(Note(
-                    id: rect.id, tick: shown.tick,
-                    duration: max(0, shown.end - shown.tick),
-                    pitch: shown.pitch, track: note.track, velocity: velocity,
-                    ghost: note.ghost, fillArgb: rect.argb))
-            }
-            notes = built
-        } else {
-            notes = []
+        let byID = Dictionary(
+            grid.notes.map { ($0.noteId.rawValue, $0) },
+            uniquingKeysWith: { first, _ in first })
+        var seen = Set<UInt64>()
+        var built: [Note] = []
+        for rect in decoded.rects
+            where rect.id != 0 && rect.id < UInt64(PD_DL_ID_LOOP_START)
+        {
+            guard seen.insert(rect.id).inserted, let note = byID[rect.id] else { continue }
+            let shown = grid.displayedNote(note)
+            let velocity = grid.previewVelocity(note.noteId) ?? note.velocity
+            built.append(Note(
+                id: rect.id, tick: shown.tick,
+                duration: max(0, shown.end - shown.tick),
+                pitch: shown.pitch, track: note.track, velocity: velocity,
+                ghost: note.ghost, fillArgb: rect.argb))
         }
-        var reader = Reader(bytes: [UInt8](scene.drawingContent()), offset: 0)
+        notes = built
+        // Rows resolve from the live projection and scale, as the removed
+        // rows section did at pack time.
+        let projection = grid.session.camera.projection
+        let scale = grid.session.scaleProjection
+        let highlight = scale.highlight
         var rows: [Row] = []
-        var segments: [Segment] = []
-        var ticksPerBeat = 0
-        var overlay = Overlay(
-            active: false, startTick: 0, endTick: 0, selectedTrack: 0, usedTrackCount: 0,
-            scopeTracks: Array(repeating: false, count: 32))
-        var palette: [UInt32] = []
-        var loopStart = 0
-        var loopEnd = 0
-        var blobModes = false
-        var blobVelocity = false
-        var drumKeyboard = false
-        var blobTrack = 0
-
-        let magic = reader.u32()
-        _ = reader.u16()
-        let sectionCount = magic == 0x5054_4452 ? reader.u16() : 0
-        for _ in 0..<sectionCount {
-            let kind = reader.u16()
-            let length = Int(reader.u32())
-            let end = reader.offset + length
-            var r = Reader(bytes: reader.bytes, offset: reader.offset)
-            switch kind {
-            case 3:
-                palette = (0..<r.u16()).map { _ in r.u32() }
-            case 4:
-                rows = (0..<r.u16()).map { _ in
-                    let pitch = Int(r.u8())
-                    let flags = r.u8()
-                    return Row(pitch: pitch, accidentalLane: flags & 1 != 0, scaleHighlight: flags & 2 != 0)
-                }
-            case 7:
-                _ = r.u8()
-                _ = r.u32()
-                _ = r.u8()
-                _ = r.u32()
-                loopStart = r.u64()
-                loopEnd = r.u64()
-                segments = (0..<r.u16()).map { _ in
-                    let start = r.u64()
-                    let next = r.u64()
-                    let beatTicks = Int(r.u32())
-                    let beatsPerBar = Int(r.u32())
-                    let numerator = Int(r.u32())
-                    let denomPow2 = Int(r.u8())
-                    let implicit = r.u8() != 0
-                    return Segment(
-                        start: start, next: next, beatTicks: beatTicks, beatsPerBar: beatsPerBar,
-                        numerator: numerator, denomPow2: denomPow2, implicit: implicit)
-                }
-                ticksPerBeat = Int(r.u32())
-            case 8:
-                let active = r.u8() != 0
-                let start = r.u64()
-                let stop = r.u64()
-                let track = Int(r.u32())
-                let used = Int(r.u32())
-                let scope = (0..<32).map { _ in r.u8() != 0 }
-                overlay = Overlay(
-                    active: active, startTick: start, endTick: stop, selectedTrack: track,
-                    usedTrackCount: used, scopeTracks: scope)
-            case 10:
-                let flags = r.u8()
-                blobModes = flags & 2 != 0
-                blobVelocity = flags & 4 != 0
-                drumKeyboard = flags & 16 != 0
-                blobTrack = Int(r.u8())
-            default:
-                break
-            }
-            reader.offset = end
+        rows.reserveCapacity(projection.visibleRowCount)
+        for row in 0..<projection.visibleRowCount {
+            guard let pitch = projection.visiblePitch(at: row) else { continue }
+            rows.append(Row(
+                pitch: pitch, accidentalLane: GridScene.isBlackKey(pitch),
+                scaleHighlight: highlight && scale.contains(pitch)))
         }
-
         self.rows = rows
-        self.segments = segments
-        self.ticksPerBeat = ticksPerBeat
-        self.overlay = overlay
+        // Segments resolve from the live axis: the implicit opening segment
+        // plus one start per explicit signature, same-tick duplicates merged.
+        let axis = grid.metrics.timeAxis
+        self.segments = axis.signatureStarts.map { start in
+            let segment = axis.segmentAt(start)
+            let signature = axis.signatureAt(start)
+            return Segment(
+                start: Int(start), next: Int(segment.next),
+                beatTicks: Int(segment.beatTicks),
+                beatsPerBar: Int(segment.beatsPerBar),
+                numerator: signature.numerator, denomPow2: signature.denomPow2,
+                implicit: signature.implicit)
+        }
+        self.ticksPerBeat = Int(axis.ticksPerBeat)
+        let selection = grid.session.timeSelection
+        var scopeTracks = Array(repeating: false, count: 32)
+        if let selection, case .tracks(let scoped) = selection.scope {
+            for track in scoped where (0..<32).contains(track) { scopeTracks[track] = true }
+        }
+        self.overlay = Overlay(
+            active: selection?.isActive == true,
+            startTick: Int(selection?.range.startTick ?? 0),
+            endTick: Int(selection?.range.endTick ?? 0),
+            selectedTrack: grid.trackIndex,
+            usedTrackCount: grid.session.document.engineTracks.usedTrackCount,
+            scopeTracks: scopeTracks)
         if let preview {
             self.drawPreview = DrawPreview(
                 active: true, tick: preview.tick, duration: preview.duration,
@@ -259,7 +190,7 @@ import PorydawCore
                 active: false, tick: 0, duration: 0, pitch: 0, lastVelocity: 0)
         }
         // Key labels decode from displayList(1); the published names carry
-        // the builder input with empty pads omitted, as the legacy section did.
+        // the builder input with empty pads omitted.
         let keyboardDecoded = Self.decodePlot(scene.displayList(list: 1))
         self.keyboardRects = keyboardDecoded.rects
         self.keyboardLabels = keyboardDecoded.labels
@@ -271,13 +202,13 @@ import PorydawCore
         } else {
             self.keyboardNames = [:]
         }
-        self.palette = palette
-        self.loopStartTick = loopStart
-        self.loopEndTick = loopEnd
-        self.noteNameMode = noteNameMode ?? blobModes
-        self.showVelocityValues = showVelocityValues ?? blobVelocity
-        self.drumKeyboard = drumKeyboard
-        self.selectedTrack = selectedTrack ?? blobTrack
+        self.palette = scene.plotPalette
+        self.loopStartTick = Int(axis.loopStartTick)
+        self.loopEndTick = Int(axis.loopEndTick)
+        self.noteNameMode = noteNameMode
+        self.showVelocityValues = showVelocityValues
+        self.drumKeyboard = scene.keyboardNamesForDisplay != nil
+        self.selectedTrack = selectedTrack
     }
 
     // The C decoder borrows the Data bytes: every record is copied out

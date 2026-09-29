@@ -83,6 +83,16 @@ public struct TimeAxis: Equatable, Sendable {
         return map.timeSigs.isEmpty || map.timeSigs[0].tick != 0
     }
 
+    /// Segment starts: the implicit opening at 0 plus one per explicit
+    /// signature, same-tick duplicates merged.
+    var signatureStarts: [Tick] {
+        var starts = [Tick(0)]
+        for point in explicitTimeSignatures where point.tick != starts.last {
+            starts.append(point.tick)
+        }
+        return starts
+    }
+
     func signatureAt(_ tick: Tick) -> ResolvedTimeSignature {
         var resolved = ResolvedTimeSignature()              // implicit opening 4/4 at tick 0
         for ts in map.timeSigs {                            // tick-sorted

@@ -218,9 +218,9 @@ TestCase {
                "the theme keeps beat lines distinguishable from both row roles")
         var winLeft = win(plot, 0, 0).x
         var rulerMarks = findChild(surface, "timelineQuickRulerMarks")
-        verify(rulerMarks && rulerMarks.band === 2, "the native ruler marks are mounted")
-        var startMarker = rulerMarks.noteFace("loopStartMarker")
-        var endMarker = rulerMarks.noteFace("loopEndMarker")
+        verify(rulerMarks && rulerMarks.list === 2, "the native ruler marks are mounted")
+        var startMarker = rulerMarks.face(rulerMarks.loopStartId)
+        var endMarker = rulerMarks.face(rulerMarks.loopEndId)
         var hasStart = startMarker && startMarker.x !== undefined
         var hasEnd = endMarker && endMarker.x !== undefined
         var excluded = []

@@ -35,17 +35,13 @@ Item {
                     height: parent.height
                     clip: true
 
-                    TimelineRenderer {
+                    DisplayList {
                         anchors.fill: parent
                         objectName: "timelineQuickRulerMarks"
-                        band: 2
-                        contentSource: root.gridModel.scene
-                        contentRevision: root.gridModel.scene.contentRevision
-                        pixelsPerTick: root.gridModel.pixelsPerTick
-                        keyHeight: root.gridModel.rowHeight
-                        scrollX: root.gridModel.cameraScrollX
-                        scrollY: root.gridModel.cameraScrollY
-                        devicePixelRatio: root.gridModel.devicePixelRatio
+                        clip: true
+                        source: root.gridModel.scene
+                        list: 2
+                        revision: root.gridModel.scene.displayRevision
                     }
                     MouseArea {
                         id: rulerInput
