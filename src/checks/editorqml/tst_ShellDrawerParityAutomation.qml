@@ -57,12 +57,12 @@ ShellDrawerParitySupport {
         tryVerify(function() { return previewAt(from.x + arm, from.y) }, 3000,
                   "a real node drag stages a point preview before geometry changes")
         compare(revision(), before, "the held node preview has not edited the song")
-        var stagedRevision = model.contentRevision
+        var stagedRevision = model.displayRevision
         shell.width *= 1.08
         tryCompare(model, "interactionActive", false, 3000,
                    "resizing the mounted plot cancels its held node drag")
         tryVerify(function() {
-            return model.contentRevision > stagedRevision
+            return model.displayRevision > stagedRevision
                 && !previewAt(from.x + arm, from.y)
         }, 3000, "the geometry rebuild retires the provisional node preview")
         mouseRelease(input, from.x + 2 * arm, from.y, Qt.LeftButton)

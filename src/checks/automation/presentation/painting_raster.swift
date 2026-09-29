@@ -70,13 +70,13 @@ func drawerAutomationRasterScrolledPhantom(_ report: CheckReport, suite: Documen
         _ = page.pointerMove(x: 0, y: targetY, buttons: AutomationQtButton.left)
         let dragAnchor = 2 * targetY - sourceY
         _ = page.pointerMove(x: 0, y: dragAnchor, buttons: AutomationQtButton.left)
-        let preview = AutomationDrawerProbe(page.drawingContent())
+        let preview = AutomationDisplayProbe(page)
+        let edge = SceneRectPacking.argb(page.palette.selectionEdge)
         report.expect(page.previewPoints.contains { $0.tick == 144 && $0.value == cursorValue }
                 && preview.valid
-                && preview.previewNodes.contains {
-                    $0.tick == 144
-                        && $0.color == SceneRectPacking.argb(page.palette.selectionEdge)
-                        && abs(Double($0.y + $0.height / 2) - targetY) <= 1
+                && preview.preview.contains {
+                    $0.argb == edge && $0.h > 2
+                        && abs($0.y + $0.h / 2 - targetY) <= 1
                       }, cppID: id,
                       message: "the held phantom paints the exact tick-144 cursor-value preview")
         report.expectEqual(expected: original, actual: fixture.snapshot, cppID: id,
@@ -85,10 +85,10 @@ func drawerAutomationRasterScrolledPhantom(_ report: CheckReport, suite: Documen
                       && originalBytes == (try? fixture.document.captureSave().bytes),
                       cppID: id, message: "the held scrolled phantom retains exact document bytes")
         fixture.activate(isTempo ? fixture.panLane : .tempo)
-        let cancelledPreview = AutomationDrawerProbe(page.drawingContent())
+        let cancelledPreview = AutomationDisplayProbe(page)
         report.expect(
             !page.hasGesture && cancelledPreview.valid
-                && cancelledPreview.previewNodes.isEmpty && cancelledPreview.previewRuns.isEmpty
+                && cancelledPreview.preview.isEmpty
                 && !page.hoverVisible,
                       cppID: id, message: "switching lanes clears the phantom ring and transient draft")
         report.expectEqual(expected: original, actual: fixture.snapshot, cppID: id,
@@ -164,15 +164,21 @@ func drawerAutomationRasterHalfOpenGeometry(_ report: CheckReport, suite: Docume
             $0.ringRadius > $0.radius
                 && $0.ringColor == page.palette.selectionRing
         }, cppID: id, message: "each selected fork Pan group publishes an outer selection annulus")
-        let selection = AutomationDrawerProbe(page.drawingContent())
+        let selection = AutomationDisplayProbe(page)
+        let fillColor = SceneRectPacking.argb(page.palette.selectionFill)
+        let reticleEdge = SceneRectPacking.argb(page.palette.selectionEdge)
+        let endX = min(page.plotWidth, page.xForTick(endTick))
         report.expect(
-            selection.valid && selection.selectionRects.count == 1
-                && selection.selectionEdges.count == 2
-                && selection.selectionRects.first?.start == 48
-                && selection.selectionRects.first?.end == endTick
-                && selection.selectionEdges.last?.tick == endTick
-                && selection.selectionEdges.last?.dx == -1
-                && selection.selectionEdges.last?.width == 1
+            selection.valid
+                && selection.statics.filter({ $0.argb == fillColor }).count == 1
+                && selection.statics.filter({ $0.argb == reticleEdge }).count == 2
+                && selection.statics.contains {
+                    $0.argb == fillColor && abs($0.x - page.xForTick(48)) <= 1
+                        && abs($0.x + $0.w - endX) <= 1.5
+                }
+                && selection.statics.contains {
+                    $0.argb == reticleEdge && $0.w == 1 && abs($0.x + $0.w - endX) <= 1.5
+                }
                       && page.publishedNodes.count == normal.count,
                       cppID: id,
                       message: "the selection reticle's drawn edge follows the fork half-open endpoint without dropping nodes")

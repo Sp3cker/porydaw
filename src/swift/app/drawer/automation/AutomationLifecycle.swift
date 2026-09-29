@@ -246,8 +246,6 @@ extension AutomationPage {
 
     func refreshCameraImpl() {
         guard session != nil else { return }
-        drawingCameraOnly = true
-        defer { drawingCameraOnly = false }
         rebuildContent()
     }
 

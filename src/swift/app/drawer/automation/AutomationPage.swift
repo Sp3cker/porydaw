@@ -113,8 +113,13 @@ public final class AutomationPage: EditorDrawerPage {
     /// published count beside the model for the same reason as the tabs.
     public var nodes: QListModel<AutomationNodeHandle> = QListModel()
     public var nodeCount: Int = 0
-    @QtTracked public var contentRevision = 0
-    public func drawingContent() -> Data { drawingContentData }
+    @QtTracked public var displayRevision = 0
+    /// Viewport-space display list `list`: 0 axis, 1 statics, 2 preview.
+    public func displayList(list: Int) -> Data {
+        guard displayLists.indices.contains(list) else { return retainedEmptyDisplayList() }
+        let data = displayLists[list]
+        return data.isEmpty ? retainedEmptyDisplayList() : data
+    }
     /// The value axis labels, at the plot's left edge and curve-true height.
     public var valueLabels: QListModel<SceneText> = QListModel()
     /// Labels for pinned curves, measured and placed at their own curve heights.
@@ -241,8 +246,11 @@ public final class AutomationPage: EditorDrawerPage {
     @QtIgnored var tabSnapshots: [AutomationTabHandle] = []
     @QtIgnored var nodeSnapshots: [AutomationNodeHandle] = []
     @QtIgnored var curveRunSnapshots: [SceneRect] = []
-    @QtIgnored var drawingContentData = Data()
-    @QtIgnored var drawingCameraOnly = false
+    @QtIgnored var displayLists: [Data] = []
+    @QtIgnored var axisListWriter = DisplayListWriter()
+    @QtIgnored var staticsListWriter = DisplayListWriter()
+    @QtIgnored var previewListWriter = DisplayListWriter()
+    @QtIgnored var cachedEmptyDisplayList: Data?
     @QtIgnored var menuRowSnapshots: [AutomationMenuRowHandle] = []
     @QtIgnored let projectionFacts: AutomationProjectionCache = AutomationProjectionCache()
 
