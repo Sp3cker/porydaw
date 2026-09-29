@@ -34,6 +34,12 @@ public struct MusicPlayer: Sendable, Equatable {
     public var number: Int
     /// -1 means the table supplies no known track limit.
     public var trackCount: Int
+
+    public init(name: String, number: Int, trackCount: Int) {
+        self.name = name
+        self.number = number
+        self.trackCount = trackCount
+    }
 }
 
 public struct SongCatalog: Sendable {
