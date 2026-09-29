@@ -1,60 +1,21 @@
+import BinaryParsing
 import Foundation
 
-internal struct MidiByteReader {
-    let bytes: [UInt8]
-    var position = 0
-
-    init(_ bytes: [UInt8]) { self.bytes = bytes }
-
-    func canRead(_ count: Int, through end: Int? = nil) -> Bool {
-        guard count >= 0, position <= bytes.count, count <= bytes.count - position else {
-            return false
-        }
-        return end.map { position + count <= $0 } ?? true
+private func readVariableLength(
+    _ input: inout ParserSpan, truncated: MidiCodecError,
+    overflow: MidiCodecError
+) throws -> UInt32 {
+    var value: UInt32 = 0
+    for _ in 0..<4 {
+        let byte: UInt8
+        do { byte = try UInt8(parsing: &input) } catch { throw truncated }
+        value = value << 7 | UInt32(byte & 0x7F)
+        if byte & 0x80 == 0 { return value }
     }
-
-    mutating func readByte(through end: Int? = nil) throws -> UInt8 {
-        guard canRead(1, through: end) else { throw ReaderFailure.truncated }
-        defer { position += 1 }
-        return bytes[position]
-    }
-
-    mutating func read(count: Int, through end: Int? = nil) throws -> [UInt8] {
-        guard canRead(count, through: end) else { throw ReaderFailure.truncated }
-        defer { position += count }
-        return Array(bytes[position..<(position + count)])
-    }
-
-    mutating func readUInt16(or error: MidiCodecError) throws -> UInt16 {
-        guard canRead(2) else { throw error }
-        defer { position += 2 }
-        return UInt16(bytes[position]) << 8 | UInt16(bytes[position + 1])
-    }
-
-    mutating func readUInt32(or error: MidiCodecError) throws -> UInt32 {
-        guard canRead(4) else { throw error }
-        defer { position += 4 }
-        return UInt32(bytes[position]) << 24 | UInt32(bytes[position + 1]) << 16 |
-               UInt32(bytes[position + 2]) << 8 | UInt32(bytes[position + 3])
-    }
-
-    mutating func readVariableLength(through end: Int) throws -> UInt32 {
-        var value: UInt32 = 0
-        for _ in 0..<4 {
-            let byte = try readByte(through: end)
-            value = value << 7 | UInt32(byte & 0x7F)
-            if byte & 0x80 == 0 { return value }
-        }
-        throw ReaderFailure.invalidVariableLength
-    }
+    throw overflow
 }
 
-private enum ReaderFailure: Error {
-    case truncated
-    case invalidVariableLength
-}
-
-internal func parseTrack(reader: inout MidiByteReader, end: Int, index: Int) throws -> MidiChunk {
+internal func parseTrack(_ input: inout ParserSpan, index: Int) throws -> MidiChunk {
     var tick: UInt64 = 0
     var runningStatus: UInt8?
     var events: [MidiEvent] = []
@@ -64,73 +25,55 @@ internal func parseTrack(reader: inout MidiByteReader, end: Int, index: Int) thr
         MidiCodecError.malformedTrack(index: index, reason: reason)
     }
 
-    while reader.position < end {
-        let delta: UInt32
-        do {
-            delta = try reader.readVariableLength(through: end)
-        } catch ReaderFailure.invalidVariableLength {
-            throw malformed("delta time VLQ exceeds 4 bytes")
-        } catch {
-            throw malformed("truncated delta time")
-        }
+    while !input.isEmpty {
+        let delta = try readVariableLength(
+            &input, truncated: malformed("truncated delta time"),
+            overflow: malformed("delta time VLQ exceeds 4 bytes"))
         tick += UInt64(delta)
         guard tick < UInt64(TimeDefaults.noTick) else {
             throw malformed("tick position exceeds 32-bit tick range")
         }
         let eventTick = Tick(tick)
         let first: UInt8
-        do { first = try reader.readByte(through: end) }
+        do { first = try UInt8(parsing: &input) }
         catch { throw malformed("truncated event") }
 
         if first == 0xFF {
             runningStatus = nil
             let type: UInt8
-            let length: UInt32
-            do {
-                type = try reader.readByte(through: end)
-            } catch {
-                throw malformed("truncated meta event")
-            }
-            do {
-                length = try reader.readVariableLength(through: end)
-            } catch ReaderFailure.invalidVariableLength {
-                throw malformed("meta length VLQ exceeds 4 bytes")
-            } catch {
-                throw malformed("truncated meta event")
-            }
-            guard reader.canRead(Int(length), through: end) else {
+            do { type = try UInt8(parsing: &input) } catch { throw malformed("truncated meta event") }
+            let length = try readVariableLength(
+                &input, truncated: malformed("truncated meta event"),
+                overflow: malformed("meta length VLQ exceeds 4 bytes"))
+            guard input.count >= Int(length) else {
                 throw malformed(type == 0x2F ? "truncated end-of-track" : "truncated meta payload")
             }
             if type == 0x2F {
-                reader.position += Int(length)
                 endTick = eventTick
                 break
             }
-            let data = try reader.read(count: Int(length), through: end)
+            let data: [UInt8]
+            do { data = try Array(parsing: &input, byteCount: Int(length)) } catch {
+                throw malformed("truncated meta payload")
+            }
             events.append(.meta(tick: eventTick, type: type, data: data))
         } else if first == 0xF0 || first == 0xF7 {
             runningStatus = nil
-            let length: UInt32
-            do {
-                length = try reader.readVariableLength(through: end)
-            } catch ReaderFailure.invalidVariableLength {
-                throw malformed("SysEx length VLQ exceeds 4 bytes")
-            } catch {
+            let length = try readVariableLength(
+                &input, truncated: malformed("truncated SysEx event"),
+                overflow: malformed("SysEx length VLQ exceeds 4 bytes"))
+            let data: [UInt8]
+            do { data = try Array(parsing: &input, byteCount: Int(length)) } catch {
                 throw malformed("truncated SysEx event")
             }
-            do {
-                let data = try reader.read(count: Int(length), through: end)
-                events.append(.systemExclusive(tick: eventTick, status: first, data: data))
-            } catch {
-                throw malformed("truncated SysEx event")
-            }
+            events.append(.systemExclusive(tick: eventTick, status: first, data: data))
         } else {
             let status: UInt8
             let data0: UInt8
             if first & 0x80 != 0 {
                 status = first
                 runningStatus = first
-                do { data0 = try reader.readByte(through: end) }
+                do { data0 = try UInt8(parsing: &input) }
                 catch { throw malformed("truncated event data") }
             } else {
                 guard let current = runningStatus else {
@@ -145,7 +88,7 @@ internal func parseTrack(reader: inout MidiByteReader, end: Int, index: Int) thr
             var data1: UInt8 = 0
             let type = status >> 4
             if type != 0xC && type != 0xD {
-                do { data1 = try reader.readByte(through: end) }
+                do { data1 = try UInt8(parsing: &input) }
                 catch { throw malformed("truncated event data") }
             }
             events.append(.channel(tick: eventTick, status: status, data0: data0, data1: data1))

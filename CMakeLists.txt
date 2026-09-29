@@ -171,6 +171,7 @@ endif()
 add_subdirectory(src/swift/core)
 add_subdirectory(src/swift/playback)
 add_subdirectory(src/swift/project)
+include(cmake/BinaryParsing.cmake)
 include(cmake/QtBridge.cmake)
 add_subdirectory(src/swift/app)
 

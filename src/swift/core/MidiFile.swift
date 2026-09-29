@@ -1,3 +1,4 @@
+import BinaryParsing
 import Foundation
 
 private let midiHeaderMagic: [UInt8] = [0x4D, 0x54, 0x68, 0x64]
@@ -304,39 +305,58 @@ public struct MidiFile: Equatable, Sendable {
     }
 
     public static func decode(_ bytes: [UInt8]) throws -> MidiFile {
-        var reader = MidiByteReader(bytes)
-        guard bytes.count >= 14, try reader.read(count: 4) == midiHeaderMagic else {
-            throw MidiCodecError.notStandardMIDIFile
-        }
-        let headerLength = try reader.readUInt32(or: .invalidHeader)
-        let format = try reader.readUInt16(or: .invalidHeader)
-        let trackCount = try reader.readUInt16(or: .invalidHeader)
-        let division = try reader.readUInt16(or: .invalidHeader)
-        guard headerLength >= 6 else { throw MidiCodecError.invalidHeaderLength }
-        guard reader.canRead(Int(headerLength - 6)) else { throw MidiCodecError.invalidHeader }
-        reader.position += Int(headerLength - 6)
-        guard format <= 1 else { throw MidiCodecError.unsupportedFormat(format) }
-        guard division & 0x8000 == 0 else { throw MidiCodecError.unsupportedSMPTETimeDivision }
-        guard division != 0 else { throw MidiCodecError.invalidTimeDivision }
-
-        var chunks: [MidiChunk] = []
-        chunks.reserveCapacity(Int(trackCount))
-        for trackIndex in 0..<Int(trackCount) {
-            guard reader.canRead(8), try reader.read(count: 4) == midiTrackMagic else {
-                throw MidiCodecError.missingTrack(index: trackIndex, count: Int(trackCount))
+        try bytes.withParserSpan { input in
+            guard input.count >= 14 else { throw MidiCodecError.notStandardMIDIFile }
+            let magic: UInt32
+            do { magic = try UInt32(parsingBigEndian: &input) } catch { throw MidiCodecError.notStandardMIDIFile }
+            guard magic == 0x4D54_6864 else { throw MidiCodecError.notStandardMIDIFile }
+            let headerLength: UInt32
+            let format: UInt16
+            let trackCount: UInt16
+            let division: UInt16
+            do {
+                headerLength = try UInt32(parsingBigEndian: &input)
+                format = try UInt16(parsingBigEndian: &input)
+                trackCount = try UInt16(parsingBigEndian: &input)
+                division = try UInt16(parsingBigEndian: &input)
+            } catch {
+                throw MidiCodecError.invalidHeader
             }
-            let length = try reader.readUInt32(or: .truncatedTrack(index: trackIndex))
-            guard reader.canRead(Int(length)) else {
-                throw MidiCodecError.truncatedTrack(index: trackIndex)
-            }
-            let trackEnd = reader.position + Int(length)
-            chunks.append(try parseTrack(reader: &reader, end: trackEnd, index: trackIndex))
-            reader.position = trackEnd
-        }
+            guard headerLength >= 6 else { throw MidiCodecError.invalidHeaderLength }
+            do { _ = try input.sliceSpan(byteCount: headerLength - 6) } catch { throw MidiCodecError.invalidHeader }
+            guard format <= 1 else { throw MidiCodecError.unsupportedFormat(format) }
+            guard division & 0x8000 == 0 else { throw MidiCodecError.unsupportedSMPTETimeDivision }
+            guard division != 0 else { throw MidiCodecError.invalidTimeDivision }
 
-        var result = MidiFile(division: division, chunks: chunks)
-        if format == 0 { result.convertFormat0ToFormat1() }
-        return result
+            var chunks: [MidiChunk] = []
+            chunks.reserveCapacity(Int(trackCount))
+            for trackIndex in 0..<Int(trackCount) {
+                guard input.count >= 8 else {
+                    throw MidiCodecError.missingTrack(index: trackIndex, count: Int(trackCount))
+                }
+                let magic: UInt32
+                do { magic = try UInt32(parsingBigEndian: &input) } catch {
+                    throw MidiCodecError.missingTrack(index: trackIndex, count: Int(trackCount))
+                }
+                guard magic == 0x4D54_726B else {
+                    throw MidiCodecError.missingTrack(index: trackIndex, count: Int(trackCount))
+                }
+                let length: UInt32
+                do { length = try UInt32(parsingBigEndian: &input) } catch {
+                    throw MidiCodecError.truncatedTrack(index: trackIndex)
+                }
+                let track: ParserSpan
+                do { track = try input.sliceSpan(byteCount: length) } catch {
+                    throw MidiCodecError.truncatedTrack(index: trackIndex)
+                }
+                var trackInput = track
+                chunks.append(try parseTrack(&trackInput, index: trackIndex))
+            }
+
+            var result = MidiFile(division: division, chunks: chunks)
+            if format == 0 { result.convertFormat0ToFormat1() }
+            return result
+        }
     }
 
     public func encoded() throws -> [UInt8] {

@@ -32,3 +32,5 @@ porydaw_enable_swift_batch_mode(PorydawCore)
 target_include_directories(PorydawCore INTERFACE
     "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:PorydawCore,Swift_MODULE_DIRECTORY>>"
 )
+
+target_link_libraries(PorydawCore PUBLIC BinaryParsing)
