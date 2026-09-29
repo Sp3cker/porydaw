@@ -40,6 +40,7 @@ struct Options {
     var midiNotes = 1
     var midiTracks = 1
     var runs = 6
+    var regen = false
 }
 
 func parseOptions(_ args: [String]) -> Options {
@@ -60,6 +61,7 @@ func parseOptions(_ args: [String]) -> Options {
         case "--midi-notes": opt.midiNotes = max(1, Int(take()) ?? opt.midiNotes)
         case "--midi-tracks": opt.midiTracks = max(1, min(16, Int(take()) ?? opt.midiTracks))
         case "--runs": opt.runs = max(2, Int(take()) ?? opt.runs)
+        case "--regen": opt.regen = true
         default: break
         }
         i = args.index(after: i)
@@ -411,15 +413,36 @@ struct Bench {
         if !opt.project.isEmpty {
             root = opt.project
         } else {
+            // Stable fixture dir: generated once, then only read, so the
+            // benchmark measures reads without rewrite I/O or a
+            // just-written page cache. Pass --regen to rebuild it.
+            // True cold-disk numbers need a cache drop between runs
+            // (e.g. `sudo purge`) — run 0 here is best reported as-is.
             let dir = FileManager.default.temporaryDirectory
-                .appendingPathComponent("projio-bench-\(ProcessInfo.processInfo.processIdentifier)").path
-            try? FileManager.default.removeItem(atPath: dir)
-            try Fixture.make(
-                root: dir, songs: opt.songs, voicegroupFiles: opt.voicegroupFiles, midiNotes: opt.midiNotes,
-                midiTracks: opt.midiTracks)
+                .appendingPathComponent("projio-bench-fixture").path
+            var isDirectory: ObjCBool = false
+            let exists =
+                FileManager.default.fileExists(atPath: dir, isDirectory: &isDirectory)
+                && isDirectory.boolValue
+            let scale =
+                "\(opt.songs)-\(opt.voicegroupFiles)-\(opt.midiNotes)-\(opt.midiTracks)"
+            let manifestPath = dir + "/.projio-scale"
+            let manifest = try? String(contentsOfFile: manifestPath, encoding: .utf8)
+            if opt.regen || !exists || manifest != scale {
+                // Best-effort removal of a previous run's fixture; absence is fine.
+                try? FileManager.default.removeItem(atPath: dir)
+                try Fixture.make(
+                    root: dir, songs: opt.songs, voicegroupFiles: opt.voicegroupFiles,
+                    midiNotes: opt.midiNotes,
+                    midiTracks: opt.midiTracks)
+                try? scale.write(toFile: manifestPath, atomically: true, encoding: .utf8)
+                print("fixture generated: \(dir)")
+            } else {
+                print("fixture reused: \(dir)")
+            }
             root = dir
             print(
-                "fixture: \(root) songs=\(opt.songs) voicegroupFiles=\(opt.voicegroupFiles) midiNotes=\(opt.midiNotes) midiTracks=\(opt.midiTracks)"
+                "fixture: songs=\(opt.songs) voicegroupFiles=\(opt.voicegroupFiles) midiNotes=\(opt.midiNotes) midiTracks=\(opt.midiTracks)"
             )
         }
         let rootURL = URL(fileURLWithPath: root, isDirectory: true)

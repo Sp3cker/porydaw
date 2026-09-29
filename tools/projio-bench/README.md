@@ -29,12 +29,15 @@ up to 4 private file-read threads (`ProjectContext.swift:88`,
 UI presenters / QML / audio: no file IO.
 
 ## Run
-
 ```sh
 tools/projio-bench/build.sh
 tools/projio-bench/.build/projio-bench [--songs 450] [--voicegroup-files 64]
-  [--project /path/to/real/decomp] [--song mus_label] [--runs 6]
+  [--project /path/to/real/decomp] [--song mus_label] [--runs 6] [--regen]
 ```
+
+The synthetic fixture lives in a stable tmp dir and is generated once, then
+only read (regenerated on `--regen` or scale change), so runs measure reads
+without rewrite I/O. True cold-disk numbers need a cache drop between runs.
 
 `--project` measures a real decomp checkout (best fidelity); otherwise a
 synthetic project is generated in tmp. `NativeStub.swift` backs one
