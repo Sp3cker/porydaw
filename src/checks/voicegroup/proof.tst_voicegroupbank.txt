@@ -6,7 +6,7 @@ Original: src/checks/voicegroup/tst_voicegroupbank.cpp
 Original SHA-256: 478ab4b4f1233477838cc8a2367023c388d10032cd324d960677fa91593a75e4
 Swift counterpart: src/checks/projectstore/BankLeasesChecks.swift
 Swift counterpart SHA-256: a991869c0cbe0cf7031ebda7f7da4f392ccbb46b3f65a2dec4a2c9d370e3606c
-Additional Swift counterpart: src/checks/projectstore/ProjectStoreSaveChecks.swift (write-failure row S04 only, for A089-A093)
+Additional Swift counterpart: src/checks/projectstore/ProjectStoreSaveChecks.swift (synth-definition failure rows S088-S092, for A089-A093)
 Additional Swift counterpart: src/checks/projectstore/SaveCoreChecks.swift (failed-save re-dirty row S053, for A087/A088)
 Additional Swift counterpart: src/checks/projectstore/VoicegroupLoaderChecks.swift (loaderBench SongName row S086, for A003/A015)
 Additional Swift counterpart: src/checks/projectstore/ProjectIdentityChecks.swift (songName accept row S087, for A017/A022)
@@ -18,7 +18,7 @@ A001/A003/A014/A015/A017/A022/A048/A049/A050 close on already-executed predicate
 in build/proof-evidence files dated 2026-09-28 (projectstore-context.json, vgbankcheck.json,
 projectidentitycheck.json). No predicate was added or changed; only S086/S087 index
 previously unindexed executed messages. A044 stays PARTIAL (ghost VoicegroupId ingress is
-banned) and A089-A093 stay PARTIAL (catalog-outage port).
+banned) and A089-A093 closed by task 218 on the synth-definition refusal.
 Shared helper: src/checks/projectstore/ProjectStoreCheckSupport.swift
 Shared SHA-256: 73eae643a6c9954b584a070c8a18eff64d0b348007b79a4777180236c734b1b4
 Shared helper: src/checks/support/corecheck/CoreCheckSupport.swift
@@ -446,54 +446,24 @@ Original expression:
     QVERIFY(dirtyView);
 
 A089 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:310
-Disposition: PARTIAL
-Mapping/reason: Related predicate S046 (src/checks/projectstore/ProjectStoreSaveChecks.swift, row projectstore-savebank/S04). The Swift write-failure row requires the save to fail with operationFailed, so a failed save yields no refreshed bank; unproved: the original fails the save through an unknown synth definition, verified dead across the seam, while the Swift row blocks the write with the immutable flag.
-Source context since previous assertion:
-
-    const std::optional<LoadedBankView> failed = m_project.saveVoicegroup(
-        {m_initial->id, {{QStringLiteral("DirectSoundSynth_check_missing"), VgSynthDesc{}}}},
-        &error);
-
-Original expression:
-    QVERIFY(!failed.has_value());
+Disposition: MATCHED
+Mapping: S088
 
 A090 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:311
-Disposition: PARTIAL
-Mapping/reason: Related predicate S046 (src/checks/projectstore/ProjectStoreSaveChecks.swift). The Swift row requires the failure message to start with Cannot write, the same non-empty-error observation under a different failure stimulus.
-Source context since previous assertion:
-
-
-Original expression:
-    QVERIFY(!error.isEmpty());
+Disposition: MATCHED
+Mapping: S089
 
 A091 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:314
-Disposition: PARTIAL
-Mapping/reason: Related predicate S046 (src/checks/projectstore/ProjectStoreSaveChecks.swift). The Swift row reloads the bank after the failed save and requires a success carrying the dirty record, the same non-null plus empty-error reload guard under a different failure stimulus.
-Source context since previous assertion:
-
-    error.clear();
-    const std::optional<LoadedBankView> current = m_project.loadBank(m_song, &error);
-
-Original expression:
-    QVERIFY2(current && error.isEmpty(), qPrintable(error));
+Disposition: MATCHED
+Mapping: S090
 
 A092 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:315
-Disposition: PARTIAL
-Mapping/reason: Related predicate S046 (src/checks/projectstore/ProjectStoreSaveChecks.swift). The Swift row requires the dirty record bank token to equal the edited bank token after the failed save, the same unchanged-bank identity the original asserted under a different failure stimulus.
-Source context since previous assertion:
-
-
-Original expression:
-    QCOMPARE(current->bank.get(), dirtyView->view.bank.get());
+Disposition: MATCHED
+Mapping: S091
 
 A093 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:316
-Disposition: PARTIAL
-Mapping/reason: Related predicate S046 (src/checks/projectstore/ProjectStoreSaveChecks.swift). The Swift row requires the dirty record to stay dirty after the failed save, the same still-dirty observation under a different failure stimulus.
-Source context since previous assertion:
-
-
-Original expression:
-    QVERIFY(current->dirty);
+Disposition: MATCHED
+Mapping: S092
 
 Remaining original source (closing sequence and helper bodies):
 
@@ -775,6 +745,21 @@ Anchor: message "the bench song label resolves to a valid song name"
 
 S087 | songName | src/checks/projectstore/ProjectIdentityChecks.swift
 Anchor: message "A002: intro is accepted"
+
+S088 | saveSynthDefinitionFailureKeepsDirtyRecord | src/checks/projectstore/ProjectStoreSaveChecks.swift
+Anchor: message "a save whose synth macros vanished fails without a refreshed bank"
+
+S089 | saveSynthDefinitionFailureKeepsDirtyRecord | src/checks/projectstore/ProjectStoreSaveChecks.swift
+Anchor: message "the failed synth save names the missing set_synth macros"
+
+S090 | saveSynthDefinitionFailureKeepsDirtyRecord | src/checks/projectstore/ProjectStoreSaveChecks.swift
+Anchor: message "the bank reloads after the failed synth save"
+
+S091 | saveSynthDefinitionFailureKeepsDirtyRecord | src/checks/projectstore/ProjectStoreSaveChecks.swift
+Anchor: message "the reloaded bank keeps the edited bank token"
+
+S092 | saveSynthDefinitionFailureKeepsDirtyRecord | src/checks/projectstore/ProjectStoreSaveChecks.swift
+Anchor: message "the reloaded bank stays dirty after the failed synth save"
 
 Shared helpers
 src/checks/projectstore/ProjectStoreCheckSupport.swift (awaitValue) and

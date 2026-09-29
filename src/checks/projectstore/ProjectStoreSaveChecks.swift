@@ -348,4 +348,91 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
     } catch {
         saveFail(["S07", "S08", "S09"], report, "synth fixture setup failed: \(error)")
     }
+    saveSynthDefinitionFailureKeepsDirtyRecord(report)
+}
+
+private func saveSynthDefinitionFailureKeepsDirtyRecord(_ report: CheckReport) {
+    let cppID = "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty"
+    do {
+        try withTempProjectCopy(prefix: "projectstore-savebank") { root in
+            let macros = root.appendingPathComponent("asm/macros/music_voice.inc")
+            try FileManager.default.createDirectory(
+                at: macros.deletingLastPathComponent(),
+                withIntermediateDirectories: true)
+            try Data(
+                """
+                .macro set_synth_pulse a,b,c,d
+                .endm
+                .macro set_synth_saw
+                .endm
+                .macro set_synth_triangle
+                .endm
+                """.utf8
+            ).write(to: macros)
+            let store = ProjectStore(projectRoot: root)
+            let opened = awaitValue { try await store.open() }
+            let loaded = awaitValue { try await store.loadBank(voicegroupArg: "_fixture_rich") }
+            guard case .success = opened, case .success(let lease) = loaded,
+                let original = lease.slotViews.first?.voice
+            else {
+                report.fail(cppID, "synth refusal fixture failed to open or load")
+                return
+            }
+            let descriptor = VgSynthDesc(
+                baseDuty: 0x55, dutyStep: 0x20,
+                modDepth: 0x40, phase: 0x10)
+            let mintedResult = awaitValue { try await store.mintSynth(descriptor) }
+            guard case .success(let minted) = mintedResult else {
+                report.fail(cppID, "synth refusal fixture failed to mint: \(String(describing: mintedResult))")
+                return
+            }
+            var changed = original
+            changed.symbol = minted
+            let selectedVoice = changed
+            let edit = awaitValue {
+                try await store.applyVoicegroupEdit(
+                    lease: lease, operation: .set(.init(slot: 0, value: selectedVoice, expected: original)))
+            }
+            guard case .success(.applied(let edited, _, _)) = edit, edited.dirty else {
+                report.fail(cppID, "synth refusal fixture failed to create a dirty bank")
+                return
+            }
+            try Data("; synth macros removed\n".utf8).write(to: macros)
+            guard VoicegroupSource.directSoundCatalog(root.path).synths.macroWords.isEmpty else {
+                report.fail(cppID, "synth refusal fixture still defines synth macros")
+                return
+            }
+            let saved = awaitValue { try await store.saveVoicegroup(lease: edited) }
+            let reloaded = awaitValue { try await store.loadBank(voicegroupArg: "_fixture_rich") }
+            let failed: Bool
+            if case .failure = saved { failed = true } else { failed = false }
+            report.expect(
+                failed, cppID: cppID,
+                message: "a save whose synth macros vanished fails without a refreshed bank")
+            let namesMissingMacros: Bool
+            if case .failure(let error as VoicegroupStoreError) = saved,
+                case .operationFailed(let message) = error
+            {
+                namesMissingMacros = message == "This project does not define the set_synth_* macros for \(minted)."
+            } else {
+                namesMissingMacros = false
+            }
+            report.expect(
+                namesMissingMacros, cppID: cppID,
+                message: "the failed synth save names the missing set_synth macros")
+            let current: ProjectBankLease?
+            if case .success(let bank) = reloaded { current = bank } else { current = nil }
+            report.expect(
+                current != nil, cppID: cppID,
+                message: "the bank reloads after the failed synth save")
+            report.expect(
+                current?.bankToken == edited.bankToken, cppID: cppID,
+                message: "the reloaded bank keeps the edited bank token")
+            report.expect(
+                current?.dirty == true, cppID: cppID,
+                message: "the reloaded bank stays dirty after the failed synth save")
+        }
+    } catch {
+        report.fail(cppID, "synth refusal fixture failed: \(error)")
+    }
 }
