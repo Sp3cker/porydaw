@@ -439,6 +439,7 @@ if(APPLE)
         # needed. Listed here so the build tracks the helper every suite imports.
         editorqml/NativeWait.js
         editorqml/tst_DisplayListSameFrame.qml
+        editorqml/tst_EditorDrawerVelocitySameFrame.qml
         editorqml/EditorDrawerTestSupport.qml
         editorqml/EditorDrawerLayoutSupport.js
         editorqml/EditorDrawerPixelSupport.js

@@ -1,8 +1,8 @@
 import Foundation
+import NativeDisplayList
 import PorydawCore
 
 @testable import PorydawApp
-
 @MainActor
 struct VelocityContentProbe {
     struct Rect {
@@ -166,6 +166,35 @@ struct VelocityContentProbe {
         self.loopEndTick = loopEndTick
     }
 }
+// Display-list decode for the velocity page's two lists: the C decoder
+// borrows the Data bytes and every record is copied out inside
+// withUnsafeBytes, so no view pointer outlives the closure. The legacy blob
+// init above stays for the voice page until Task 7 cuts it over.
+@MainActor
+struct VelocityDisplayRect {
+    let x: Double
+    let y: Double
+    let w: Double
+    let h: Double
+    let argb: UInt32
+}
+
+@MainActor
+func velocityDisplayRects(_ data: Data) -> [VelocityDisplayRect]? {
+    data.withUnsafeBytes { raw -> [VelocityDisplayRect]? in
+        var view = PdDlView()
+        guard pd_dl_decode(raw.baseAddress, raw.count, &view),
+              let header = view.header, let rectBase = view.rects
+        else { return nil }
+        let count = Int(header.pointee.rectCount)
+        return (0..<count).map { index in
+            let rect = rectBase[index]
+            return VelocityDisplayRect(
+                x: rect.x, y: rect.y, w: rect.w, h: rect.h, argb: rect.argb)
+        }
+    }
+}
+
 
 @MainActor
 func drawerVelocityContentBlobChecks(
@@ -174,112 +203,103 @@ func drawerVelocityContentBlobChecks(
 ) {
     let fixture = drawerVelocityVelocityFixture(session: session, service: service)
     let page = fixture.page
-    let initial = page.drawingContent()
-    let revision = page.contentRevision
-    let decoded = VelocityContentProbe(initial)
     let palette = GridPalette()
-    let timeAxis = VelocityScene.timeAxis(fixture.session)
-    let firstSegment = timeAxis.segmentAt(0)
-    let signature = timeAxis.signatureAt(0)
-    let base = page.baseFontPx
-    let selectionMode: UInt8
-    let musicalDenominator: UInt32
-    switch fixture.session.grid.selection {
-    case .auto:
-        selectionMode = 0
-        musicalDenominator = 0
-    case .musical(let denominator):
-        selectionMode = 1
-        musicalDenominator = UInt32(clamping: denominator)
-    case .clock:
-        selectionMode = 2
-        musicalDenominator = 0
+    let barArgb = SceneRectPacking.argb(palette.gridLineBar)
+    let initial0 = page.displayList(list: 0)
+    let initial1 = page.displayList(list: 1)
+    let revision = page.displayRevision
+    guard let grid = velocityDisplayRects(initial0),
+          let transient = velocityDisplayRects(initial1)
+    else {
+        report.fail(
+            drawerVelocityProjectionID,
+            "the velocity lists decode to grid and transient rects")
+        page.detach()
+        return
     }
     report.expect(
-        decoded.valid && decoded.segments.count > 0
-            && decoded.palette.count > 25
-            && decoded.palette[3] == SceneRectPacking.argb(palette.gridLineBar),
+        !grid.isEmpty && grid.contains { $0.argb == barArgb } && transient.isEmpty,
         cppID: drawerVelocityProjectionID,
-        message: "velocity content frames a time axis and the fixture's bar color")
-    report.expect(
-        decoded.metrics?.baseFontPx == base
-            && decoded.metrics?.detailMinPxPerBeat == fontPx(base, 5.0 / 6.0)
-            && decoded.metrics?.autoGridMinCell == fontPx(base, 4.0 / 3.0)
-            && (decoded.metrics?.detailMinPxPerBeat ?? 0) > 0
-            && (decoded.metrics?.autoGridMinCell ?? 0) > 0
-            && decoded.metrics?.strokeBase == fontPx(base, 1.0 / 6.0)
-            && decoded.metrics?.spaceHalf == fontPx(base, 0.125)
-            && decoded.metrics?.spaceTwo == fontPx(base, 0.5)
-            && decoded.metrics?.dashLength == fontPx(base, 0.25)
-            && decoded.dashPattern?.dashDevicePx == 4
-            && decoded.dashPattern?.gapDevicePx == 2,
-        cppID: drawerVelocityProjectionID,
-        message: "velocity metrics carry roll grid values and device-pixel dash pattern")
-    report.expect(
-        decoded.segments.first?.start == 0
-            && decoded.segments.first?.next == UInt64(firstSegment.next)
-            && decoded.segments.first?.beatTicks == firstSegment.beatTicks
-            && decoded.segments.first?.beatsPerBar == firstSegment.beatsPerBar
-            && decoded.segments.first?.numerator == UInt32(signature.numerator)
-            && decoded.segments.first?.denomPow2 == UInt8(signature.denomPow2)
-            && decoded.segments.first?.flags == (signature.implicit ? 1 : 0)
-            && decoded.segments.last?.next == UInt64(TimeDefaults.noTick)
-            && decoded.feel == (fixture.session.grid.feel == .triplet ? 1 : 0)
-            && decoded.selectionMode == selectionMode
-            && decoded.musicalDenominator == musicalDenominator
-            && decoded.ticksPerBeat == fixture.session.grid.axis.ticksPerBeat
-            && decoded.clockTicks == fixture.session.grid.clockTicks
-            && decoded.loopStartTick == UInt64(timeAxis.loopStartTick)
-            && decoded.loopEndTick == UInt64(timeAxis.loopEndTick),
-        cppID: drawerVelocityProjectionID,
-        message: "velocity time axis decodes segment bounds, signature and trailing ticks per beat")
+        message: "velocity list 0 decodes viewport grid rects with the fixture's bar color")
     fixture.session.mutateCamera { camera in
         _ = camera.setHScroll(17)
     }
     page.refreshCamera()
     report.expect(
         page.projection.scrollOffsetX > 0
-            && page.contentRevision == revision && page.drawingContent() == initial,
+            && page.displayRevision == revision + 1
+            && page.displayList(list: 0) != initial0,
         cppID: drawerVelocityProjectionID,
-        message: "nonzero scroll-only movement preserves velocity blob bytes and revision")
+        message: "nonzero scroll-only movement rebuilds the velocity grid list with one revision")
+    let scrolledRevision = page.displayRevision
+    let scrolledBytes = page.displayList(list: 0)
     fixture.session.mutateCamera { camera in
         camera.setTimeZoom(camera.snapshot.pixelsPerBeat * 2)
     }
     page.refreshCamera()
     report.expect(
-        page.contentRevision == revision && page.drawingContent() == initial,
+        page.displayRevision == scrolledRevision + 1
+            && page.displayList(list: 0) != scrolledBytes,
         cppID: drawerVelocityProjectionID,
-        message: "zoom-only camera movement preserves velocity blob bytes and revision")
+        message: "zoom-only camera movement rebuilds the velocity grid list with one revision")
+    let settledRevision = page.displayRevision
+    let settledBytes = page.displayList(list: 0)
     page.refreshCamera()
     report.expect(
-        page.contentRevision == revision && page.drawingContent() == initial,
+        page.displayRevision == settledRevision
+            && page.displayList(list: 0) == settledBytes,
         cppID: drawerVelocityProjectionID,
-        message: "horizontal camera refresh preserves velocity blob bytes and revision")
+        message: "a settled camera refresh republishes identical list bytes with no new revision")
+    fixture.session.setSelectedNotes([fixture.notes[0].id])
+    page.refreshFromDocument()
+    report.expect(
+        page.displayRevision == settledRevision
+            && page.displayList(list: 0) == settledBytes,
+        cppID: drawerVelocityProjectionID,
+        message: "a selection-only refresh keeps the delegate-owned lists untouched")
+    let velocityBefore = fixture.document.note(fixture.notes[0].id)?.velocity
+    fixture.drag(fixture.notes[0], dy: -24)
+    let velocityAfter = fixture.document.note(fixture.notes[0].id)?.velocity
+    report.expect(
+        velocityAfter != velocityBefore
+            && page.displayRevision == settledRevision
+            && page.displayList(list: 0) == settledBytes,
+        cppID: drawerVelocityProjectionID,
+        message: "a committed note edit moves the handle delegate without rebuilding the lists")
     let stableOrigin = page.projection.scrollOffsetX
     let stableEnd = stableOrigin + 48
     let pressed = page.pointerPress(x: stableOrigin, y: 0, surface: 1, button: 2, modifiers: 0)
     _ = page.pointerMove(x: stableEnd, y: 40, buttons: 2)
-    let band = VelocityContentProbe(page.drawingContent())
-    let pixelsPerTick = fixture.session.camera.snapshot.pixelsPerTick
-    let leftTick = TimeDefaults.tick(from: (stableOrigin / pixelsPerTick).rounded())
-    let rightTick = TimeDefaults.tick(from: (stableEnd / pixelsPerTick).rounded())
+    guard let band = velocityDisplayRects(page.displayList(list: 1)) else {
+        report.fail(
+            drawerVelocityProjectionID,
+            "the band gesture's transient list decodes to fill and frame rects")
+        page.detach()
+        return
+    }
+    let edgeArgb = SceneRectPacking.argb(palette.selectionEdge)
     report.expect(
-        pressed && page.contentRevision > revision
-            && band.records.suffix(2).first?.argb == SceneRectPacking.argb(palette.selectionFill)
-            && band.records.last?.argb == SceneRectPacking.argb(palette.selectionEdge)
-            && band.records.last?.flags == 4
-            && band.records.last?.tickStart == leftTick
-            && band.records.last?.tickEnd == rightTick,
+        pressed && page.displayRevision > settledRevision
+            && band.contains { $0.argb == SceneRectPacking.argb(palette.selectionFill) }
+            && band.filter({ $0.argb == edgeArgb }).count > 1,
         cppID: drawerVelocityProjectionID,
-        message: "band gesture in scroll-stable px publishes tick spans, fill and dashed frame")
+        message: "band gesture in scroll-stable px publishes the transient fill and dashed frame")
     _ = page.pointerRelease(x: stableEnd, y: 40, button: 2)
-    let cleared = page.contentRevision
+    let cleared = page.displayRevision
     page.palette.gridLineBar = "#FF214365"
     page.refreshFromDocument()
-    let recolored = VelocityContentProbe(page.drawingContent())
+    guard let recolored = velocityDisplayRects(page.displayList(list: 0)) else {
+        report.fail(
+            drawerVelocityProjectionID,
+            "the recolored grid list decodes to viewport grid rects")
+        page.detach()
+        return
+    }
     report.expect(
-        page.contentRevision == cleared + 1 && recolored.palette.count > 3
-            && recolored.palette[3] == SceneRectPacking.argb("#FF214365"),
+        page.displayRevision == cleared + 1
+            && recolored.contains {
+                $0.argb == SceneRectPacking.argb("#FF214365")
+            },
         cppID: drawerVelocityProjectionID,
         message: "palette content change publishes one revision and a decoded bar color")
     page.detach()

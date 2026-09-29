@@ -173,6 +173,7 @@ enum EditorQmlLane {
             ("VelocityHitTargets", "productionVelocityCoincidentNodePriority productionVelocityStemGestureCancellation productionVelocityOverlapTargetsVisibleNode"),
             ("VelocityEditing", "velocityHintsResumeAfterOutsideRelease productionVelocityPointerEdit productionVelocityNumericInput productionVelocityCancellation productionVelocityPlayheadPerformance productionVelocityContextIsExact"),
             ("VelocityPrompt", "productionVelocityPromptTransaction productionVelocityPromptButtonsAndFocus productionVelocityPromptValidationAndDismissal productionVelocityPromptBoundedKeys"),
+            ("VelocitySameFrame", "velocityHandlesTrackFreshGridEveryFrame"),
             ("VoiceTransactions", "productionVoiceChangesPageMountsAndRenders productionVoiceChangesPointerAndMenuTransactions productionVoiceChangesInsertAndChangeRowPicks productionVoiceChangesMenuHoldAcrossCameraScroll productionVoiceChangesDismissalAndEscape"),
             ("VoicePicker", "productionVoiceChangesPickerKeyboardAndCancellation productionVoicePickerPointerAudition productionVoiceChangesModalLayerComposition productionVoiceChangesSpacePriority"),
             ("VoiceInputIsolation", "productionVoiceInputPressIsolatesAutomationAndCursor productionVoiceDragCursorDraftAndBandIsolation productionVoiceJitterAndEscapeKeepArrowAndClearBand productionVoiceCollisionAndAltCursorIsolation productionVoiceChangesCameraTransactions"),

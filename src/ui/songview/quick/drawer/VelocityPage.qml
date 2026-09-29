@@ -359,16 +359,13 @@ FocusScope {
             color: page.gridPalette.rollBackground
         }
 
-        TimelineRenderer {
+        DisplayList {
             objectName: "velocityGridLines"
             anchors.fill: parent
-            band: 3
-            drawerLayer: 0
-            contentSource: page.pageModel
-            contentRevision: page.pageModel ? page.pageModel.contentRevision : 0
-            pixelsPerTick: page.gridModel ? page.gridModel.beatWidth / page.gridModel.ticksPerBeat : 1
-            scrollX: page.gridModel ? page.gridModel.cameraScrollX : 0
-            devicePixelRatio: page.Screen.devicePixelRatio
+            clip: true
+            source: page.pageModel
+            list: 0
+            revision: page.pageModel ? page.pageModel.displayRevision : 0
         }
 
         // Note stems and nodes. One delegate per handle; a selected handle draws
@@ -455,16 +452,13 @@ FocusScope {
 
         // The gesture transient: the band reticle's fill and dashed edges, plus
         // the ramp line the press-to-pointer span draws.
-        TimelineRenderer {
+        DisplayList {
             objectName: "velocityTransient"
             anchors.fill: parent
-            band: 3
-            drawerLayer: 1
-            contentSource: page.pageModel
-            contentRevision: page.pageModel ? page.pageModel.contentRevision : 0
-            pixelsPerTick: page.gridModel ? page.gridModel.beatWidth / page.gridModel.ticksPerBeat : 1
-            scrollX: page.gridModel ? page.gridModel.cameraScrollX : 0
-            devicePixelRatio: page.Screen.devicePixelRatio
+            clip: true
+            source: page.pageModel
+            list: 1
+            revision: page.pageModel ? page.pageModel.displayRevision : 0
         }
 
         Rectangle {
