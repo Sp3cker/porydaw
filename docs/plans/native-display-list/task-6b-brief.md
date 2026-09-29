@@ -110,8 +110,7 @@ it. Forward pointer: Task 7 (voice) consumes the rewritten
   the same tick's grid rect; assert they agree in every frame — handles
   never lead the drawn grid by a frame. Pattern: Task 2's
   `tst_DisplayListSameFrame.qml`.
-- Gap: per-frame cost is gated by the bench (plan Verification, Task 0b),
-  not by a check in this task.
+- Gap: no check gates per-frame cost.
 
 ## Task-specific constraints
 

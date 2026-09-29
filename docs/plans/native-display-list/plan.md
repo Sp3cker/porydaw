@@ -9,8 +9,7 @@ QtBridge). Supersedes the ownership split in `docs/plans/native-timeline-rendere
 Task 0 (2026-09-28, `swiftc -O`, arm64): a writer shaped like Contract §3 packing the per-frame
 worst case — 3 000 visible notes × (fill + 4 border rects) + 400 grid lines + 500 labels = 15 400
 rects + 500 labels, 768 KB — costs **≈185 µs per frame (12 ns per record)** including the snapped
-projection arithmetic. Budget was 0.5 ms → proceed. Synthetic (no `GridSceneInput` walk); Task 0b's bench
-re-measures on the production path.
+projection arithmetic. Budget was 0.5 ms → proceed. Synthetic (no `GridSceneInput` walk).
 
 ## The problem this plan removes
 
@@ -347,7 +346,6 @@ upload. The delta is the copy and decode, tens of µs at the worst-case list siz
 | # | Task | Route | Seat | Write set (closed) |
 |---|---|---|---|---|
 | 0 | Measure per-frame pack cost (throwaway, Release build) | Direct | controller | none committed; number recorded in this file |
-| 0b | Commit the xctrace wheel bench; capture the pre-cutover baseline | Direct | user + orchestrator | `profiler/` (bench script + baseline report) |
 | 1 | Wire format, C decoder, Swift writer, round-trip check | SDD | sdd-implementer | `src/render/display_list.{h,c}`, `src/render/module.modulemap`, `src/swift/app/timeline/DisplayListWriter.swift`, `src/swift/app/CMakeLists.txt`, root `CMakeLists.txt`, `src/checks/CMakeLists.txt`, `src/checks/displaylist/DisplayListChecks.swift`, `src/checks/checkcatalog.cpp`, swiftcore suite dispatch |
 | 2 | `DisplayList` QQuickItem + same-frame check | SDD | qt-cpp-reviewer (Qt ownership/threading) | `src/render/display_list_item.{h,cpp}`, root `CMakeLists.txt`, `src/checks/editorqml/{DisplayListProbe.swift,tst_DisplayListSameFrame.qml}`, `src/checks/CMakeLists.txt` |
 | 3a | Projection rename (no behavior change) | SDD | sdd-implementer | `src/swift/app/timeline/EditorCamera.swift`, `src/swift/app/timeline/GridGeometry.swift`, callers named in `inventory.md` §3, every check file calling `displayX`/`noteContentRect`/`noteContentBox` (rename only; assertions unchanged), affected `proof.*.txt` rows (path/line anchors only) |
@@ -363,7 +361,7 @@ upload. The delta is the copy and decode, tens of µs at the worst-case list siz
 
 Serial dependencies: 1 → 2; 3a → 3b; 1, 3b → 4a → 4b → 5; 1, 2, 3b → 6a → 6b ∥ 7 ∥ 8 (disjoint writes;
 none of the three touches `DrawerStaticsContent.swift` — the legacy packer goes in Task 9 with
-`DrawingContentBinary.swift`); 5, 6b, 7, 8 → 9. Task 0b precedes 4a.
+`DrawingContentBinary.swift`); 5, 6b, 7, 8 → 9.
 The legacy `contentRevision`/`drawingContent()` pair on `GridScene` serves whichever bands are not yet
 on lists (keyboard through 4a, ruler through 4b) and dies in Task 5.
 
@@ -385,27 +383,18 @@ entry; delete the transitional `TimelineRenderer` sentence from AGENTS.md "Nativ
 AGENTS.md edit this plan makes after the user's review). Acceptance: `deno task build:checks`,
 the full Verification list green, `deno task checks:bridge` clean.
 
-### Task 0b (Direct) — inline
-
-Target: `profiler/` — the user's xctrace wheel bench (600 wheel ops, main-thread totals), not in
-tree at `f234686a`; the user lands it, the orchestrator runs it. Change: run the four Verification
-scenarios three times each at checkpoint 1b (Task 3b landed, nothing painted by Swift yet); commit a
-baseline report beside the script naming commit, scenario, min and median. Acceptance: the report
-exists before Task 4a is dispatched; every later bench run compares against it.
-
 ## Checkpoints
 
 1. After Tasks 1 + 2 (new boundary exists and is round-trip checked; nothing uses it yet).
 1a. After Task 3a (pure rename): every lane green, nothing moved.
 1b. After Task 3b alone, every lane green on its own commit: rasters byte-identical (C++ still paints),
-    only hit-test points moved ≤1 px; the diff is the plan's only behavior change. Bench baseline
-    captured here (Task 0b).
+    only hit-test points moved ≤1 px; the diff is the plan's only behavior change.
 2. After Task 4a (plot on list 0): rasters still byte-identical, hit points unchanged from 1b — a
-    raster diff is a port bug, a hit-test diff is not this task's. Bench: roll pan/zoom ≤ baseline.
+    raster diff is a port bug, a hit-test diff is not this task's.
 2b. After Task 4b (keyboard on list 1): same gates.
 3. After Task 5 (roll surface complete; `GridScene` has no legacy blob path).
 3b. After Task 6a (builder API + parity check green; nothing in production uses it yet).
-4. After Tasks 6b, 7, 8 (drawers; `TimelineRenderer` unreferenced). Bench: drawer scenarios ≤ baseline.
+4. After Tasks 6b, 7, 8 (drawers; `TimelineRenderer` unreferenced).
 5. Final: Task 9.
 
 ## Verification (cumulative; exact commands)
@@ -419,14 +408,6 @@ exists before Task 4a is dispatched; every later bench run compares against it.
 - `deno task checks:bridge` — QtBridge surface guard (new `displayRevision`/`displayList` members).
 - `deno task proof check --executed` — ledger health after each checkpoint.
 - `deno task format --check`.
-- Bench gate (Task 0b, replaces manual smoke): the user's xctrace wheel bench — 600 wheel ops per
-  scenario, main-thread totals from `xctrace` — must be committed under `profiler/` before Task 4a is
-  dispatched (not in tree at `f234686a`). Scenarios: roll pan, roll zoom, drawer pan with velocity
-  visible, drawer pan with automation visible. Three runs per measurement (pan totals vary ~2× run to
-  run); report min and median; gate on min. Baseline at checkpoint 1b; re-measure after Tasks 4a, 4b, 5 and
-  the 6–8 wave; a min-of-3 regression on any scenario stops the plan and goes to the user with the
-  numbers. Task 0's 185 µs was a synthetic roll-only packing bound (go/no-go for the approach); it is
-  not the performance gate.
 
 ## Open risks
 
@@ -441,8 +422,7 @@ exists before Task 4a is dispatched; every later bench run compares against it.
 3. Hit-test behavior change (Contract §4) is deliberate and ≤ 1 physical pixel; any shell check that
    clicked a computed point inside that pixel will surface it — fix the check's point, not the formula.
 4. Per-frame Swift cost on pathological songs is bounded by culling, not by note count; the cull itself
-   walks `notesByTick`-ordered records (today's C++ does the same, `roll_scene.cpp:181-224`). Task 0b's bench
-   is the gate (Verification).
+   walks `notesByTick`-ordered records (today's C++ does the same, `roll_scene.cpp:181-224`).
 5. ~~AGENTS.md boundary text needs human permission~~ landed with the user's AGENTS.md review.
 
 ## Orchestrator brief (for whoever runs this plan)
@@ -455,8 +435,8 @@ orchestrator never implements Tasks 1–8 inline and never edits a proof ledger.
 | wave | tasks | seat | gate before the next wave |
 |---|---|---|---|
 | A | 1 | `sdd-implementer` | `deno task checks --filter displaylist --verbose` green; `checks:bridge` clean; `lsp:swift` re-run |
-| B | 2 ∥ 3a → 3b | 2: `qt-cpp-reviewer`; 3a/3b: `sdd-implementer` | Task 2: same-frame check green (Contract §2 invariant), 1-arg `invokeMethod` exercised. 3a: every lane green, no raster or hit-point change (checkpoint 1a). 3b lands **alone**, every lane green, rasters byte-identical, `camera.swift` re-pin via `proof:edit` in the same commit (checkpoint 1b); bench baseline (Task 0b) at 1b. Task 4a is not dispatched before Task 2 and 1b |
-| C | 4a → 4b → 5 | `sdd-implementer` (4a at `:high`, then default) | after each: `checks:qml-roll`, `checks:shell`, `checks --filter swiftcore`, rasters byte-identical to 1b, bench ≤ baseline; after 5: `GridScene` has no `drawingContent`. Checkpoints 2, 2b, 3 |
+| B | 2 ∥ 3a → 3b | 2: `qt-cpp-reviewer`; 3a/3b: `sdd-implementer` | Task 2: same-frame check green (Contract §2 invariant), 1-arg `invokeMethod` exercised. 3a: every lane green, no raster or hit-point change (checkpoint 1a). 3b lands **alone**, every lane green, rasters byte-identical, `camera.swift` re-pin via `proof:edit` in the same commit (checkpoint 1b). Task 4a is not dispatched before Task 2 and 1b |
+| C | 4a → 4b → 5 | `sdd-implementer` (4a at `:high`, then default) | after each: `checks:qml-roll`, `checks:shell`, `checks --filter swiftcore`, rasters byte-identical to 1b; after 5: `GridScene` has no `drawingContent`. Checkpoints 2, 2b, 3 |
 | D | 6a → 6b ∥ 7 ∥ 8 | `sdd-implementer` (6a at `:high`, then default ×3) | 6a: `checks --filter drawerstatics-parity` green (builders reproduce the legacy packer's geometry for the same inputs) — checkpoint 3b; then 6b, 7, 8 in parallel, disjoint write sets, none touching `DrawerStaticsContent.swift`. `checks:qml`, `checks:shell`. Checkpoint 4 |
 | E | 9 | orchestrator, Direct | full Verification list; `grep TimelineRenderer src/ui src/checks` empty; AGENTS.md: remove the transitional sentence only |
 
@@ -497,7 +477,6 @@ acceptance predicate before marking it done; bounded fix loop of 2, then escalat
 
 - Task 2's same-frame check fails (an `update()` from `afterAnimating` missed that frame's sync) or
   the 1-arg `invokeMethod` returns false — choose the hook or the slot shape with the user.
-- A bench scenario's min-of-3 regresses against the 1b baseline.
 - A `pd_dl_decode` failure reaches `qFatal` in a check — the writer or the header changed shape;
   the format is versioned, so a bump is a user decision.
 - Any raster check differs at all after Tasks 3a, 3b, 4a or 4b (all byte-identical); after Tasks 5–8

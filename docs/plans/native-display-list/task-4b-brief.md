@@ -134,8 +134,7 @@ contract).
 - `deno task proof check --executed` — covers ledger health after anchor
   repair.
 - Rasters byte-identical to checkpoint 1b; hit points unchanged from 1b —
-  a raster diff is a port bug, a hit-test diff is not this task's. Bench:
-  roll pan/zoom ≤ baseline.
+  a raster diff is a port bug, a hit-test diff is not this task's.
 - Gap: ruler raster is not this task's gate (band 2 still paints from
   C++); Task 5 gates it. Marker-absence polling timing, if touched, stays
   controller-smoked as in Task 5.

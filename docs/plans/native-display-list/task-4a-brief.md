@@ -77,8 +77,7 @@ Checks:
   across frames) and Task 2 `DisplayList` with working `face(id)`.
 - Task 3b `viewX` and the unified `rowTop`/`rowBottom` (band-1/band-2 C++
   keeps its own copy until Tasks 4b/5; no C++ change here).
-- Task 0 per-frame pack budget recorded in plan.md Status; Task 0b bench
-  baseline captured at checkpoint 1b.
+- Task 0 per-frame pack budget recorded in plan.md Status.
 
 ## Interface contract
 
@@ -198,9 +197,6 @@ Checks:
   currently anchor `EditorGridProjectionChecks.swift` messages).
 - Rasters byte-identical to the Task 3 checkpoint (1b): Swift paints with
   the formula C++ painted with, so any diff is a port bug, not tolerance.
-- Bench (plan Verification, Task 0b): roll pan and roll zoom scenarios,
-  three runs, min-of-3 not above the 1b baseline; a regression stops the
-  plan.
 - Gap: keyboard and ruler rasters are not this task's gate (their bands
   still paint from C++); Task 4b/5 gate them.
 

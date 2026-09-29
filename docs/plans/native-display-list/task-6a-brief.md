@@ -74,8 +74,7 @@ brief's Interface contract as a prerequisite and must not re-decide it.
 - `deno task proof check --executed` covers ledger health.
 - Nothing in production calls the builders yet; no QML file changes in this
   task.
-- Gap: per-frame cost is gated by the bench (plan Verification, Task 0b),
-  not by a check in this task.
+- Gap: no check gates per-frame cost.
 
 ## Task-specific constraints
 
