@@ -147,6 +147,15 @@ private func displayListRoundTrip(_ report: CheckReport) {
         (view.rects[0].flags & UInt32(PD_DL_RECT_OVER)) == 0,
         message: "rect[0] painted under labels")
 
+    // Reserved ids reach QML as double: they must stay double-exact.
+    check.expect(
+        Double(PD_DL_ID_LOOP_START) != Double(PD_DL_ID_LOOP_END),
+        message: "loopStartId and loopEndId distinct as double")
+    check.expectEqual(
+        expected: UInt64(PD_DL_ID_LOOP_END),
+        actual: UInt64(Double(PD_DL_ID_LOOP_END)),
+        what: "loopEndId double round-trip")
+
     // Independent path over the wire bytes: record 1 must sit at its computed
     // offset with the same id and flags the decoder reported.
     let rectStart =

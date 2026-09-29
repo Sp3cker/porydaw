@@ -7,20 +7,15 @@ import PorydawCore
 import QtBridge
 import QtBridgeCpp
 
-/// The drawer container's QML lane: a standalone Swift executable that hosts
-/// the production composition through the real page seam. It owns exactly one
-/// `tools/run_checks.ts` manifest entry, refuses to have its `-input` taken
-/// over, and hands Qt Quick Test the staged scratch directory. The suite
-/// declares the production `ApplicationSession` as a direct child of
-/// `EditorQmlBootstrap`; that class documents why the object arrives that way
-/// and not as a slot argument.
+/// Hosts the production drawer lane and the isolated display-list frame check
+/// with separate manifest entries and the same Qt Quick Test executable.
 @main
 enum EditorQmlLane {
     /// The manifest entry `tools/run_checks.ts --filter editorqml-drawer`
     /// selects.
     static let entryName = "editorqml-drawer"
 
-    /// The one suite the entry runs, inside `EditorQmlPaths.testDirectory`.
+    /// The drawer entry's primary suite inside `EditorQmlPaths.testDirectory`.
     static let inputFileName = "tst_EditorDrawer.qml"
     private static let suiteEnvironmentKey = "PORYDAW_EDITOR_QML_SUITE"
 
@@ -36,12 +31,14 @@ enum EditorQmlLane {
             print(manifestLine)
             return 0
         }
-        guard let scratch = arguments.first, !scratch.isEmpty else {
+        let isDisplayListCheck = arguments.first == "DisplayListSameFrame"
+        let laneArguments = isDisplayListCheck ? Array(arguments.dropFirst()) : arguments
+        guard let scratch = laneArguments.first, !scratch.isEmpty else {
             return fail("usage: \(entryName) <scratch> [--qt <qt quick test arguments>…]")
         }
         // The same terminal separator `porydaw_checks` uses: everything after
         // `--qt` is the Qt Quick Test payload the Deno runner forwarded.
-        var payload = Array(arguments.dropFirst())
+        var payload = Array(laneArguments.dropFirst())
         if let separator = payload.firstIndex(of: "--qt") {
             payload = Array(payload[(separator + 1)...])
         }
@@ -60,6 +57,9 @@ enum EditorQmlLane {
         PreferencesStore.stageShared(plistPath: URL(fileURLWithPath: scratch, isDirectory: true)
             .appendingPathComponent("settings.plist").path)
         EditorQmlBootstrap.stageSongLabel("mus_route101")
+        if isDisplayListCheck {
+            return runSuite(file: "tst_DisplayListSameFrame.qml", payload: payload)
+        }
 
         let environment = ProcessInfo.processInfo.environment
         if let profileName = environment[childEnvironmentKey] {
@@ -144,6 +144,7 @@ enum EditorQmlLane {
         ApplicationSession.registerQmlElement()
         EditorQmlBootstrap.registerQmlElement()
         PreferencesStore.registerQmlElement()
+        DisplayListProbe.registerQmlElement()
 
         let inputFile = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
             .appendingPathComponent(file).path
@@ -196,14 +197,13 @@ enum EditorQmlLane {
     }()
 
 
-    /// The lane's single entry: the route101 fixture set from
-    /// `src/checks/checkcatalog.cpp` (`fixtures::decompProjectFiles()` +
-    /// `sound/songs/midi/mus_route101.mid` + `fixtures::richVoicegroupFiles()`),
-    /// exactly the shape `run_checks.ts` reads from `porydaw_checks --manifest`.
+    /// Entries use the route101 fixture set from `src/checks/checkcatalog.cpp`
+    /// and the same `run_checks.ts` manifest shape as the native checks.
     private static var manifestLine: String {
         let files = fixtureFiles.map { "\"" + $0 + "\"" }.joined(separator: ",")
         let entry = #"{"name":"\#(entryName)","argv":["{scratch}"],"binary":"checks","windowing":"offscreen","framework":"qt-test","optIn":false,"scratchKind":"existing-directory","fixtureRootKind":"decomp-project","fixtureFiles":[\#(files)]}"#
-        return #"{"checks":[\#(entry)]}"#
+        let displayList = #"{"name":"DisplayListSameFrame","argv":["DisplayListSameFrame","{scratch}"],"binary":"checks","windowing":"offscreen","framework":"qt-test","optIn":false,"scratchKind":"existing-directory","fixtureRootKind":"decomp-project","fixtureFiles":[\#(files)]}"#
+        return #"{"checks":[\#(entry),\#(displayList)]}"#
     }
 
     private static let fixtureFiles = [

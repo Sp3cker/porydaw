@@ -38,7 +38,7 @@ map onto the three lists; nodes, bands, hover guides and labels stay QML.
 
 - `AutomationPage` (in its `@QtBridgeable` class body):
   `@QtTracked public var displayRevision = 0` and
-  `public func displayList(_ list: Int) -> Data` with lists 0 (axis),
+  `public func displayList(list: Int) -> Data` with lists 0 (axis),
   1 (statics), 2 (preview), per plan Contract §3. All three rebuild together
   and bump `displayRevision` once. `drawingContent()` / `contentRevision`
   (`AutomationPage.swift:116-117`) / `drawingContentData` (`:244`) are
@@ -76,7 +76,7 @@ map onto the three lists; nodes, bands, hover guides and labels stay QML.
    `DisplayListWriter` + Task 6a builders, preserving the assembly order in
    the `layers` array (`AutomationDrawingContent.swift:113-118`) as list
    assignment (axis → 0, ghost/curve/selection → 1, preview → 2).
-2. Add `displayRevision` / `displayList(_:)`; remove `contentRevision`,
+2. Add `displayRevision` / `displayList(list:)`; remove `contentRevision`,
    `drawingContent()`, `drawingContentData`, `drawingCameraOnly`.
 3. Flip `AutomationPlot.qml`: replace the three `TimelineRenderer` items
    (`automationAxis` at `:46-56`, `automationStatics` at `:85-95`,
@@ -87,7 +87,7 @@ map onto the three lists; nodes, bands, hover guides and labels stay QML.
    items. Do not touch node repeaters, range band, hover guide/labels, value
    or ghost labels.
 4. Migrate the checks in the write set from `drawingContent()` /
-   `contentRevision` to `displayList(_:)` / `displayRevision`:
+   `contentRevision` to `displayList(list:)` / `displayRevision`:
    `AutomationDrawingContentChecks.swift:190-230` (scroll/zoom stability,
    palette republish, selection), `presentation/painting.swift:334-379,433-437`
    and `painting_raster.swift:72-91,166-170`, `automationcanvasediting.swift:44-63,353-357`,

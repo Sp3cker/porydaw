@@ -405,6 +405,7 @@ if(APPLE)
         editorqml/EditorQmlProfileEvidence.swift
         editorqml/EditorQmlBootstrap.swift
         editorqml/EditorQmlBootstrapSupport.swift
+        editorqml/DisplayListProbe.swift
         editorqml/DrawerTestPage.swift
         "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"
     )
@@ -437,6 +438,7 @@ if(APPLE)
         # importing file's directory at runtime — no fixture staging or qrc
         # needed. Listed here so the build tracks the helper every suite imports.
         editorqml/NativeWait.js
+        editorqml/tst_DisplayListSameFrame.qml
         editorqml/EditorDrawerTestSupport.qml
         editorqml/EditorDrawerLayoutSupport.js
         editorqml/EditorDrawerPixelSupport.js

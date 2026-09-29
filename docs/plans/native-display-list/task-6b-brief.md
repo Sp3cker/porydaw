@@ -39,7 +39,7 @@ it. Forward pointer: Task 7 (voice) consumes the rewritten
 
 - `VelocityPage` (in its `@QtBridgeable` class body):
   `@QtTracked public var displayRevision = 0` and
-  `public func displayList(_ list: Int) -> Data` with lists 0 (grid) and 1
+  `public func displayList(list: Int) -> Data` with lists 0 (grid) and 1
   (transient), per plan Contract §3. Both lists rebuild together and bump
   `displayRevision` once. `drawingContent()` / `contentRevision` /
   `drawingContentData` are removed; no shim remains.
@@ -56,7 +56,7 @@ it. Forward pointer: Task 7 (voice) consumes the rewritten
 
 ## Implementation steps
 
-1. Add `displayRevision` / `displayList(_:)` to `VelocityPage`
+1. Add `displayRevision` / `displayList(list:)` to `VelocityPage`
    (`VelocityPage.swift:211-212` today); remove `contentRevision`,
    `drawingContent()`, `drawingContentData`. Rebuild trigger: existing
    content path (`publishDrawingContent` at
@@ -80,7 +80,7 @@ it. Forward pointer: Task 7 (voice) consumes the rewritten
    `devicePixelRatio` / `contentRevision` bindings on those items. Do not
    touch handle delegates, scroll carrier, or ramp.
 4. Migrate the checks in the write set from `drawingContent()` /
-   `contentRevision` to `displayList(_:)` / `displayRevision`:
+   `contentRevision` to `displayList(list:)` / `displayRevision`:
    `VelocityContentProbe.swift:171-286` (decode the new wire format instead of
    the §11/§14 blob; invert the camera-stability assertions per the Contract
    §3 economy re-expression — camera moves MUST change `displayRevision` and

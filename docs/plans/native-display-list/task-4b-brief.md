@@ -23,7 +23,7 @@ contract).
 - `src/swift/app/roll/GridScene.swift` — remove the legacy packer's
   keyboard section once unreferenced; keep `contentRevision`/
   `drawingContent()` as the band-2 ruler feed; keep
-  `displayRevision`/`displayList(_:)`.
+  `displayRevision`/`displayList(list:)`.
 - `src/ui/songview/quick/PianoRollCanvas.qml` — keyboard item only
   (`:38-50`): `TimelineRenderer` → `DisplayList` (`list: 1`,
   `objectName: "timelineRendererKeyboard"` preserved); camera bindings

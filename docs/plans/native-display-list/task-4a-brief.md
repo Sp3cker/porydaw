@@ -11,7 +11,7 @@ legacy `contentRevision`/`drawingContent()` pair until Task 4b; the ruler
 (list 2) stays on band 2 until Task 5. Consumes the Task 1 writer
 (`DisplayListWriter`), the Task 2 item (`DisplayList` + `face(id)`), and
 Task 3 projection. Produces the plot builder, the `GridScene`
-`displayRevision`/`displayList(_:)` surface, and the `face()` migration
+`displayRevision`/`displayList(list:)` surface, and the `face()` migration
 that Task 4b's keyboard cutover rides on. Rebuild triggers and the
 economy-check inversion are stated once in plan Contract §3
 (`plan.md:207-216`, per-page camera seams named there); this brief cites
@@ -29,7 +29,7 @@ Swift:
   lists 1 and 2 return empty lists). Do not create a second file beside
   the old one.
 - `src/swift/app/roll/GridScene.swift` — gains `displayRevision`/
-  `displayList(_:)`; keeps `contentRevision`/`drawingContent()` (`:91-103`)
+  `displayList(list:)`; keeps `contentRevision`/`drawingContent()` (`:91-103`)
   as the band-1/band-2 feed while the keyboard and ruler need them.
 - `src/swift/app/roll/GridScene+Notes.swift`,
   `src/swift/app/roll/GridScene+Rebuild.swift`,
@@ -87,7 +87,7 @@ Checks:
 
 - `GridScene` (in its `@QtBridgeable` class body):
   `@QtTracked public var displayRevision = 0`;
-  `public func displayList(_ list: Int) -> Data` returning a retained
+  `public func displayList(list: Int) -> Data` returning a retained
   buffer. All three lists rebuild together and bump `displayRevision` once
   per rebuild. `displayList(1)` and `displayList(2)` return empty lists
   (valid header, zero records) until Tasks 4b/5 port them.
@@ -179,7 +179,7 @@ Checks:
 7. Rewrite each plot-side roll check reader: `projectedNoteBox`/
    `contentNoteBox`/`noteBox` helpers → `face()` lookups or raster probes;
    `contentRevision`/`drawingContent` assertions → `displayRevision`/
-   `displayList(_:)` byte comparisons; economy check per Contract §3
+   `displayList(list:)` byte comparisons; economy check per Contract §3
    (`plan.md:211-214`); delete check-only `faceFits`/`nameFits` and
    re-express those assertions against `face()` geometry or raster.
 8. Grep `TimelineRenderer` under `src/ui`/`src/checks` and

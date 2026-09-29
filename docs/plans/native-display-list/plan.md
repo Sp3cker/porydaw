@@ -120,8 +120,8 @@ enum { PD_DL_RECT_OVER = 1u };
 enum { PD_DL_LABEL_CLIP = 1u, PD_DL_LABEL_ALIGN_LEFT = 0u, PD_DL_LABEL_ALIGN_RIGHT = 2u,
        PD_DL_LABEL_ALIGN_CENTER = 4u, PD_DL_LABEL_ALIGN_MASK = 6u };
 
-enum { PD_DL_ID_NONE = 0, PD_DL_ID_LOOP_START = 0xFFFFFFFF00000001ull,
-       PD_DL_ID_LOOP_END = 0xFFFFFFFF00000002ull };
+enum { PD_DL_ID_NONE = 0, PD_DL_ID_LOOP_START = 0x0010000000000001ull,   /* 2^52+1: double-exact, */
+       PD_DL_ID_LOOP_END = 0x0010000000000002ull };                     /* face(double) is lossless */
 
 typedef struct {
     const PdDlHeader *header; const PdDlFont *fonts; const PdDlRect *rects;
@@ -204,10 +204,12 @@ Every source that owns a `DisplayList` item exposes, in its `@QtBridgeable` clas
 
 ```swift
 @QtTracked public var displayRevision = 0
-public func displayList(_ list: Int) -> Data
+public func displayList(list: Int) -> Data
 ```
 
 `displayList` returns a buffer the source retains; the item copies it into a `QByteArray` at fetch.
+The label is `list:`, not `_`: QtBridge's macro expands an unlabeled parameter to `self.displayList(_: _)`
+(Task 2 finding); the Qt meta-method is still `displayList(int)`, which is what the item invokes.
 All lists of one source rebuild together and bump `displayRevision` once. Sources and their lists:
 
 | source | lists | replaces |

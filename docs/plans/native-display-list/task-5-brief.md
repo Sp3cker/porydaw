@@ -8,7 +8,7 @@ ruler (list 2) stayed on `TimelineRenderer` band 2 via
 `EditorRulerBand.qml:38-49`). This task ports `ruler_scene.cpp` into
 `RollDisplayLists.swift`, points the ruler band at list 2, and removes the
 last `GridScene` blob path and the legacy roll packer. After this task
-`GridScene` exposes only `displayRevision`/`displayList(_:)` (Checkpoint 3:
+`GridScene` exposes only `displayRevision`/`displayList(list:)` (Checkpoint 3:
 no legacy blob path). Consumes Task 4 `RollDisplayLists.swift`, the Task 1
 writer, and Task 2 `face(id)` with the reserved loop-marker ids
 (Contract §1: `PD_DL_ID_LOOP_START/LOOP_END`, exposed as item `loopStartId`/
@@ -20,7 +20,7 @@ writer, and Task 2 `face(id)` with the reserved loop-marker ids
   of `src/render/ruler_scene.cpp`).
 - `src/swift/app/roll/GridScene.swift` — remove `contentRevision`/
   `drawingContent()`/`drawingContentData`/`drawingContentKey` once
-  unreferenced; keep `displayRevision`/`displayList(_:)`.
+  unreferenced; keep `displayRevision`/`displayList(list:)`.
 - `src/ui/songview/quick/swiftroll/EditorRulerBand.qml:38-49` —
   `TimelineRenderer` → `DisplayList` (`list: 2`, `objectName:
   timelineQuickRulerMarks` preserved; camera bindings
@@ -68,7 +68,7 @@ writer, and Task 2 `face(id)` with the reserved loop-marker ids
   `objectName: "timelineQuickRulerMarks"`; no `band`, `contentSource`,
   `contentRevision`, or camera bindings.
 - `GridScene` after: no `contentRevision`, no `drawingContent()`; the only
-  QtBridge-visible surface is `displayRevision` + `displayList(_:)` (+ the
+  QtBridge-visible surface is `displayRevision` + `displayList(list:)` (+ the
   existing hover-chip state).
 
 ## Implementation steps

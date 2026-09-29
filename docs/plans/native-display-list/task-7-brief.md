@@ -35,7 +35,7 @@ into one Swift-built list; markers stay QML delegates.
 
 - `VoiceChangesPage` (in its `@QtBridgeable` class body):
   `@QtTracked public var displayRevision = 0` and
-  `public func displayList(_ list: Int) -> Data` with list 0 only, per plan
+  `public func displayList(list: Int) -> Data` with list 0 only, per plan
   Contract §3. Rebuilds bump `displayRevision` once. `drawingContent()` /
   `contentRevision` (`VoiceChangesPage.swift:174-175`) / `drawingContentData`
   (`:250`) are removed; no shim remains.
@@ -64,7 +64,7 @@ into one Swift-built list; markers stay QML delegates.
    through `DisplayListWriter` + Task 6a builders instead of
    `DrawerStaticsContent.pack` (`VoiceChangesPublication.swift:130-135`);
    keep the held-span assembly (`:97-120`) and palette/metrics inputs.
-2. Add `displayRevision` / `displayList(_:)`; remove `contentRevision`,
+2. Add `displayRevision` / `displayList(list:)`; remove `contentRevision`,
    `drawingContent()`, `drawingContentData`. Rebuild trigger: existing
    `rebuildContent` and its camera path (`VoiceChangesPage.refreshCamera` at
    `VoiceChangesPage.swift:377-381` → `rebuildContent` at

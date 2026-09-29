@@ -95,7 +95,7 @@ in Contract §1).
    software/hardware branch flipped.
 4b. `DisplayListProbe` (`@QtBridgeable`, `QmlInstantiableStatus`, precedent
    `GridInputClipProbe.swift`): `@QtTracked displayRevision`,
-   `displayList(_:)` returning one rect at `x = step·10` via
+   `displayList(list:)` returning one rect at `x = step·10` via
    `DisplayListWriter`, a one-row `QListModel` carrier (`SceneRect`-shaped,
    `x = step·10`) and `advance()` that rebuilds the list, bumps the revision
    and syncs the row in one call. `tst_DisplayListSameFrame.qml`: a
