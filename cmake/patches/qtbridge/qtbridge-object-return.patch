@@ -333,19 +333,6 @@ index d55dd45..ad0b7aa 100644
  
      using DeleterFn = void(*)(void *swiftObj);
      QObjectProxyImpl(void *swiftObj, DeleterFn deleter)
-diff --git a/Sources/QtBridgeCpp/include/qtestappcpp.h b/Sources/QtBridgeCpp/include/qtestappcpp.h
-index 8efd93c..3eb3144 100644
---- a/Sources/QtBridgeCpp/include/qtestappcpp.h
-+++ b/Sources/QtBridgeCpp/include/qtestappcpp.h
-@@ -12,7 +12,7 @@
- class QTestAppCpp
- {
- public:
--    QTestAppCpp() = default;
-+    QTestAppCpp();
-     ~QTestAppCpp() = default;
- 
-     void setImportPath(const char *path);
 diff --git a/Sources/QtBridgeCpp/qappcpp.cpp b/Sources/QtBridgeCpp/qappcpp.cpp
 index 7e91abd..1922e24 100644
 --- a/Sources/QtBridgeCpp/qappcpp.cpp
