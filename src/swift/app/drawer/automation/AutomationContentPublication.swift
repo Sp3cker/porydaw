@@ -147,8 +147,6 @@ extension AutomationPage {
                     into: &runs)
         curveRunSnapshots = runs
         syncNodes(nodeHandles(lane, projection: cameraProjection))
-        drawingCameraOnly = true
-        defer { drawingCameraOnly = false }
         publishOverlays()
     }
 

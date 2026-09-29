@@ -43,16 +43,13 @@ Item {
         color: plot.gridPalette.rollBackground
     }
 
-    TimelineRenderer {
+    DisplayList {
         objectName: "automationAxis"
         anchors.fill: parent
-        band: 3
-        drawerLayer: 0
-        contentSource: plot.pageModel
-        contentRevision: plot.pageModel ? plot.pageModel.contentRevision : 0
-        pixelsPerTick: plot.gridModel.pixelsPerTick
-        scrollX: plot.gridModel.cameraScrollX
-        devicePixelRatio: plot.devicePixelRatio
+        clip: true
+        source: plot.pageModel
+        list: 0
+        revision: plot.pageModel ? plot.pageModel.displayRevision : 0
     }
 
     Repeater {
@@ -82,16 +79,13 @@ Item {
     }
 
 
-    TimelineRenderer {
+    DisplayList {
         objectName: "automationStatics"
         anchors.fill: parent
-        band: 3
-        drawerLayer: 1
-        contentSource: plot.pageModel
-        contentRevision: plot.pageModel ? plot.pageModel.contentRevision : 0
-        pixelsPerTick: plot.gridModel.pixelsPerTick
-        scrollX: plot.gridModel.cameraScrollX
-        devicePixelRatio: plot.devicePixelRatio
+        clip: true
+        source: plot.pageModel
+        list: 1
+        revision: plot.pageModel ? plot.pageModel.displayRevision : 0
     }
 
     Repeater {
@@ -231,16 +225,13 @@ Item {
     }
 
     // The frozen gesture's draft markers.
-    TimelineRenderer {
+    DisplayList {
         objectName: "automationPreviewRects"
         anchors.fill: parent
-        band: 3
-        drawerLayer: 2
-        contentSource: plot.pageModel
-        contentRevision: plot.pageModel ? plot.pageModel.contentRevision : 0
-        pixelsPerTick: plot.gridModel.pixelsPerTick
-        scrollX: plot.gridModel.cameraScrollX
-        devicePixelRatio: plot.devicePixelRatio
+        clip: true
+        source: plot.pageModel
+        list: 2
+        revision: plot.pageModel ? plot.pageModel.displayRevision : 0
     }
 
     // The hover value label and the live gesture's own readout.

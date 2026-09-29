@@ -307,11 +307,6 @@ extension AutomationPage {
     // MARK: Internals: shared metrics
 
 
-    func gridMetrics(_ session: DocumentSession) -> GridMetrics {
-        GridMetrics(baseFontPx: baseFontPx, dpr: devicePixelRatio, width: plotWidth,
-                    height: plotHeight, timeAxis: timeAxis(session))
-    }
-
     /// The roll's own time axis, built from the same document facts the grid
     /// uses, so the automation grid is the roll's grid.
     func timeAxis(_ session: DocumentSession) -> TimeAxis {

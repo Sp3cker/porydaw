@@ -1,10 +1,20 @@
+import CoreGraphics
 import Foundation
 import PorydawCore
 
 @MainActor
 extension AutomationPage {
+    /// Rebuilds the three viewport-space display lists together: axis grid
+    /// plus sticky chrome, ghost/curve/selection statics, preview draft.
     func publishDrawingContent() {
-        guard let session, !drawingCameraOnly else { return }
+        guard let session else {
+            let empty = retainedEmptyDisplayList()
+            let fresh = [empty, empty, empty]
+            guard fresh != displayLists else { return }
+            displayLists = fresh
+            displayRevision &+= 1
+            return
+        }
         let grid = session.grid
         let axis = timeAxis(session)
         let gridPalette: [Int: String] = [
@@ -110,18 +120,57 @@ extension AutomationPage {
                         height: 2, argb: ink))
             }
         }
-        let layers: [DrawerLayer] = [
-            .statics(axisRects), .layerBreak, .statics(ghostRuns), .anchored(ghostEdges),
-            .statics(runs), .anchored(curveEdges), .statics(selectionFill),
-            .anchored(selectionEdges), .layerBreak, .anchored(previewNodes),
-            .statics(previewRuns),
-        ]
-        let data = DrawerStaticsContent.pack(
-            axis: axis, grid: grid, metrics: gridMetrics(session),
-            paletteColors: gridPalette, layers: layers)
-        guard data != drawingContentData else { return }
-        drawingContentData = data
-        contentRevision &+= 1
+        // Viewport-space lists through the Task 6a builders; record order is
+        // the paint order inside each list, matching the legacy layer order.
+        let viewport = CGSize(width: plotWidth, height: plotHeight)
+        let camera = session.camera
+        let dpr = devicePixelRatio
+        DrawerStaticsContent.buildGrid(
+            into: &axisListWriter, axis: axis, grid: grid, camera: camera,
+            viewport: viewport, paletteColors: gridPalette)
+        DrawerStaticsContent.buildTickRects(
+            into: &axisListWriter, rects: axisRects, camera: camera, dpr: dpr,
+            viewport: viewport)
+        let axisData = axisListWriter.finish()
+        DrawerStaticsContent.buildTickRects(
+            into: &staticsListWriter, rects: ghostRuns, camera: camera, dpr: dpr,
+            viewport: viewport)
+        DrawerStaticsContent.buildAnchored(
+            into: &staticsListWriter, rects: ghostEdges, camera: camera, dpr: dpr,
+            viewport: viewport)
+        DrawerStaticsContent.buildTickRects(
+            into: &staticsListWriter, rects: runs, camera: camera, dpr: dpr,
+            viewport: viewport)
+        DrawerStaticsContent.buildAnchored(
+            into: &staticsListWriter, rects: curveEdges, camera: camera, dpr: dpr,
+            viewport: viewport)
+        DrawerStaticsContent.buildTickRects(
+            into: &staticsListWriter, rects: selectionFill, camera: camera, dpr: dpr,
+            viewport: viewport)
+        DrawerStaticsContent.buildAnchored(
+            into: &staticsListWriter, rects: selectionEdges, camera: camera, dpr: dpr,
+            viewport: viewport)
+        let staticsData = staticsListWriter.finish()
+        DrawerStaticsContent.buildAnchored(
+            into: &previewListWriter, rects: previewNodes, camera: camera, dpr: dpr,
+            viewport: viewport)
+        DrawerStaticsContent.buildTickRects(
+            into: &previewListWriter, rects: previewRuns, camera: camera, dpr: dpr,
+            viewport: viewport)
+        let previewData = previewListWriter.finish()
+        let fresh = [axisData, staticsData, previewData]
+        guard fresh != displayLists else { return }
+        displayLists = fresh
+        displayRevision &+= 1
+    }
+
+    /// Valid empty list for unbuilt bands and out-of-range fetches.
+    func retainedEmptyDisplayList() -> Data {
+        if let cached = cachedEmptyDisplayList { return cached }
+        var writer = DisplayListWriter()
+        let empty = writer.finish()
+        cachedEmptyDisplayList = empty
+        return empty
     }
 
     private func appendDrawingCurve(
