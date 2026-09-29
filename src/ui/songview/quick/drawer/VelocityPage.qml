@@ -122,9 +122,11 @@ FocusScope {
                                        ? (page.gridModel.trackHeaderWidth || 0)
                                          + page.gridModel.keyboardWidth : 0
     readonly property real plotWidth: Math.max(page.width - page.plotOrigin, 0)
-    /// The snapped surface scroll the handle container translates by. It tracks
-    /// the scene scroll row below, never a queued bridge scalar.
+    /// The snapped surface scroll the handle container translates by, and the
+    /// zoom scale handles place ticks with; both track the scene scroll row.
     property real contentScrollX: 0
+    property real contentPixelsPerTick: 0
+    readonly property real contentDpr: page.Screen.devicePixelRatio
     /// This page's own base-font seed, for the window before a document is
     /// presented.
     readonly property real seedBaseFontPx: 13
@@ -335,6 +337,7 @@ FocusScope {
                 if (frame) {
                     var dpr = page.Screen.devicePixelRatio
                     page.contentScrollX = Math.round(frame.x * dpr) / dpr
+                    page.contentPixelsPerTick = frame.width
                 }
             }
         }
@@ -384,8 +387,8 @@ FocusScope {
             Repeater {
                 model: (page.pageModel ? page.pageModel.handles : [])
 
-                // Handles publish scroll-stable x; scrolling moves only the
-                // container above, never each row's model.
+                // Handles publish tick-space rows; scroll and zoom move positions,
+                // never each row's model.
                 delegate: Item {
                     id: node
 
@@ -393,12 +396,17 @@ FocusScope {
                     // One packed spec per handle: every child binding reads the
                     // local map instead of paying a metaCall per property.
                     readonly property var s: model ? model.spec : ({})
+                    // Zoom re-evaluates only the root x and the stem end; children sit relative.
+                    x: Math.round(node.s.tick * page.contentPixelsPerTick * page.contentDpr)
+                       / page.contentDpr
+                    readonly property real endX: Math.round(
+                        node.s.endTick * page.contentPixelsPerTick * page.contentDpr) / page.contentDpr
 
                     Rectangle {
                         objectName: node.s.primitiveName + "Stem"
-                        x: Math.min(node.s.x, node.s.endX)
+                        x: Math.min(0, node.endX - node.x)
                         y: node.s.y - node.s.stemWidth / 2
-                        width: Math.max(1, Math.abs(node.s.endX - node.s.x))
+                        width: Math.max(1, Math.abs(node.endX - node.x))
                         height: node.s.stemWidth
                         color: node.s.stemColor
                     }
@@ -406,7 +414,7 @@ FocusScope {
                     Rectangle {
                         objectName: node.s.primitiveName + "Ring"
                         visible: node.s.selected
-                        x: node.s.x - node.s.ringRadius
+                        x: -node.s.ringRadius
                         y: node.s.y - node.s.ringRadius
                         width: 2 * node.s.ringRadius
                         height: 2 * node.s.ringRadius
@@ -418,7 +426,7 @@ FocusScope {
 
                     Rectangle {
                         objectName: node.s.primitiveName + "Fill"
-                        x: node.s.x - node.s.nodeRadius
+                        x: -node.s.nodeRadius
                         y: node.s.y - node.s.nodeRadius
                         width: 2 * node.s.nodeRadius
                         height: 2 * node.s.nodeRadius
@@ -432,7 +440,7 @@ FocusScope {
                     Rectangle {
                         objectName: node.s.primitiveName + "Hover"
                         visible: node.s.hovered && !node.s.selected
-                        x: node.s.x - node.s.outlineRadius
+                        x: -node.s.outlineRadius
                         y: node.s.y - node.s.outlineRadius
                         width: 2 * node.s.outlineRadius
                         height: 2 * node.s.outlineRadius

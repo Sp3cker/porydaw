@@ -80,6 +80,21 @@ extension VelocityPage {
                                               axis: axis, previousHandles: handlesByID)
     }
 
+    /// Camera-only publication: handle rows are tick-space and stay put while
+    /// their Swift hit-test x moves in place; transients follow the camera.
+    @QtIgnored
+    public func refreshCamera() {
+        guard session != nil else { return }
+        let projection = self.projection
+        for handle in publishedHandles {
+            let x = projection.stableXForTick(handle.tick)
+            let endX = projection.stableXForTick(handle.endTick)
+            if handle.x != x { handle.x = x }
+            if handle.endX != endX { handle.endX = endX }
+        }
+        publishTransient(updateDrawing: false)
+    }
+
     /// The handle-reuse decision: geometry, track, DPR and axis mode form one
     /// key, and an unchanged key reuses the previous handle objects in place.
     private func handleReuseGeometry() -> Bool {

@@ -61,8 +61,8 @@ enum VelocityModifier {
 
 // MARK: - Published note handle
 
-/// One published note handle in scroll-stable plot space; QML draws it in one
-/// scroll-shifted container and hit tests read the same objects.
+/// One published note handle: QML places it from its ticks inside one
+/// scroll-shifted container; hit tests read its scroll-stable x.
 @MainActor
 @QtBridgeable
 public final class VelocityHandle {
@@ -104,7 +104,7 @@ public final class VelocityHandle {
     @QtIgnored
     func refreshSpec() {
         spec = [
-            "x": x, "endX": endX, "y": y,
+            "tick": tick, "endTick": endTick, "y": y,
             "stemWidth": stemWidth, "stemColor": stemColor,
             "nodeRadius": nodeRadius, "fillColor": fillColor,
             "outlineRadius": outlineRadius, "outlineWidth": outlineWidth,
@@ -121,7 +121,7 @@ public final class VelocityHandle {
     @QtIgnored
     func matches(_ other: VelocityHandle) -> Bool {
         noteIdText == other.noteIdText && tick == other.tick && endTick == other.endTick
-            && x == other.x && endX == other.endX && value == other.value && y == other.y
+            && value == other.value && y == other.y
             && selected == other.selected && hovered == other.hovered
             && preview == other.preview && dimmed == other.dimmed && level == other.level
             && label == other.label && hitRadius == other.hitRadius
@@ -392,16 +392,6 @@ public final class VelocityPage: EditorDrawerPage {
         let next = VelocityContextKey(context: presented, playing: false)
         guard lastContextKey != next else { return }
         rebuildContent()
-    }
-
-    @QtIgnored
-    public func refreshCamera() {
-        guard session != nil else { return }
-        let input = sceneInput(reuseGeometry: true)
-        publishHandles(
-            VelocitySceneSnapshot.buildHandleRows(
-                input, axis: axis, previousHandles: handlesByID))
-        publishTransient(updateDrawing: false)
     }
 
     /// One shared-playhead presentation, delivered by `ApplicationSession`'s

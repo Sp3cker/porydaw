@@ -37,8 +37,9 @@ extension GridScene {
     @QtIgnored
     func rebuildStatic(_ input: GridSceneInput) {
         let snapshot = input.camera.snapshot
+        // The carrier's width hands drawer delegates the same-turn zoom scale.
         sync(cameraScroll, [SceneRect(
-            x: snapshot.scrollX, y: snapshot.scrollY, width: 0, height: 0,
+                    x: snapshot.scrollX, y: snapshot.scrollY, width: snapshot.pixelsPerTick, height: 0,
             fillColor: "")])
         rebuildHover(input)
     }

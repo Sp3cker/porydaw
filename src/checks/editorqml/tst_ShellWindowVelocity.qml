@@ -139,8 +139,10 @@ ShellWindowSupport {
             verify(earlier && following, "both velocity nodes publish rendered delegates")
             var stem = findChild(earlier.parent, "velocityNodeStem")
             var point = following.mapToItem(input, following.width / 2, following.height / 2)
-            verify(stem && following.parent.model.x > stem.x
-                   && following.parent.model.x < stem.x + stem.width
+            // Stems sit relative to their handle delegate; compare in content space.
+            var stemX = stem ? stem.parent.x + stem.x : 0
+            verify(stem && following.parent.model.x > stemX
+                   && following.parent.model.x < stemX + stem.width
                    && point.x > 0 && point.x < input.width && point.y > 0
                    && point.y < input.height, "the following node covers the earlier duration stem")
             return { node: following, point: point }

@@ -190,7 +190,9 @@ EditorDrawerTestSupport {
             var next = projected(nextId)
             var stem = findChild(first.parent, "velocityNodeStem")
             var point = next.mapToItem(input, next.width / 2, next.height / 2)
-            verify(next.parent.model.x > stem.x && next.parent.model.x < stem.x + stem.width
+            // Stems sit relative to their handle delegate; compare in content space.
+            var stemX = stem.parent.x + stem.x
+            verify(next.parent.model.x > stemX && next.parent.model.x < stemX + stem.width
                    && Math.abs(next.parent.model.y - first.parent.model.y) < stem.height
                    && point.x > 0 && point.x < input.width,
                    "production velocity geometry exposes the following node over the selected stem")

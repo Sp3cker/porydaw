@@ -248,11 +248,12 @@ struct VelocitySceneSnapshot {
             let previous = previousHandles[note.id]
             if input.reuseGeometry, let previous,
                previous.tick == Double(note.tick), previous.endTick == endTick,
-               previous.x == x, previous.endX == endX, previous.y == y,
-               previous.value == displayed, previous.level == level,
+                previous.y == y, previous.value == displayed, previous.level == level,
                previous.selected == isSelected, previous.hovered == isHovered,
                previous.preview == (previewValue != nil),
                previous.dimmed == (dimUnselected && !isSelected) {
+                if previous.x != x { previous.x = x }
+                if previous.endX != endX { previous.endX = endX }
                 result.append(previous)
                 continue
             }

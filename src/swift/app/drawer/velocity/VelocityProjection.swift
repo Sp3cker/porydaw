@@ -26,11 +26,8 @@ struct VelocityProjection: Sendable {
         self.axis = axis
     }
 
-    /// Scroll-stable x: the tick's content position without the camera scroll,
-    /// snapped to the device grid exactly like `displayX` at zero scroll. Handle
-    /// rows publish this, so a scroll-only camera change republishes identical
-    /// values and the row models emit nothing; QML offsets each delegate by the
-    /// published origin to restore plot positions.
+    /// Scroll-stable x: the tick's content position without camera scroll,
+    /// snapped to the device grid exactly like `displayX` at zero scroll.
     func stableXForTick(_ tick: Double) -> Double {
         guard let camera else { return 0 }
         return camera.contentTickX(tick: tick, dpr: devicePixelRatio)
