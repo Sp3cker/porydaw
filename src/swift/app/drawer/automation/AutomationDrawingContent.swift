@@ -17,6 +17,14 @@ extension AutomationPage {
         }
         let grid = session.grid
         let axis = timeAxis(session)
+        // One integer parse per palette slot per build; every record below
+        // reuses these, and ghost ink is node ink at alpha 128 as integers.
+        let separatorArgb = SceneRectPacking.argb(palette.separator)
+        let gridSub2Argb = SceneRectPacking.argb(palette.gridLineSub2)
+        let curveArgb = SceneRectPacking.argb(palette.automationNodeInk)
+        let ghostArgb = (curveArgb & 0x00FF_FFFF) | 0x8000_0000
+        let selectionFillArgb = SceneRectPacking.argb(palette.selectionFill)
+        let selectionEdgeArgb = SceneRectPacking.argb(palette.selectionEdge)
         let gridPalette: [Int: String] = [
             3: palette.gridLineBar, 4: palette.gridLineBeat,
             5: palette.gridLineSub1, 6: palette.gridLineSub2,
@@ -29,7 +37,7 @@ extension AutomationPage {
                 axisRects.append(
                     DrawerStaticRect(
                         tickStart: 0, tickEnd: UInt32(plotWidth),
-                        y: y, height: frame, argb: SceneRectPacking.argb(palette.separator), flags: 3))
+                        y: y, height: frame, argb: separatorArgb, flags: 3))
             }
         }
         let rule = Float(max(1, fontPxF(baseFontPx, 1.0 / 12.0)))
@@ -39,7 +47,7 @@ extension AutomationPage {
                 axisRects.append(
                     DrawerStaticRect(
                         tickStart: 0, tickEnd: UInt32(max(0, plotWidth)),
-                        y: y, height: rule, argb: SceneRectPacking.argb(palette.gridLineSub2), flags: 3))
+                        y: y, height: rule, argb: gridSub2Argb, flags: 3))
             }
             let tickLength = Typography(baseFontPx: Int(baseFontPx.rounded())).space(.half) * 3
             for label in lane.scaleLabels {
@@ -47,7 +55,7 @@ extension AutomationPage {
                     DrawerStaticRect(
                         tickStart: 0, tickEnd: UInt32(tickLength),
                         y: Float((label.y - Double(rule) / 2).rounded()), height: rule,
-                        argb: SceneRectPacking.argb(palette.separator), flags: 3))
+                        argb: separatorArgb, flags: 3))
             }
         }
         var ghostRuns: [DrawerStaticRect] = []
@@ -62,11 +70,11 @@ extension AutomationPage {
                     facts: facts(parameter: ghost.parameter, modifiers: .init(), session: session),
                     camera: session.camera)
                 appendDrawingCurve(
-                    ghost, projection: ghostProjection, ghost: true,
+                    ghost, projection: ghostProjection, argb: ghostArgb,
                     runs: &ghostRuns, edges: &ghostEdges)
             }
             appendDrawingCurve(
-                lane, projection: curveProjection, ghost: false,
+                lane, projection: curveProjection, argb: curveArgb,
                 runs: &runs, edges: &curveEdges)
         }
         var selectionFill: [DrawerStaticRect] = []
@@ -77,8 +85,8 @@ extension AutomationPage {
             selectionFill.append(
                 DrawerStaticRect(
                     tickStart: selection.range.startTick, tickEnd: selection.range.endTick,
-                    y: 0, height: Float(plotHeight), argb: SceneRectPacking.argb(palette.selectionFill)))
-            let edgeColor = SceneRectPacking.argb(palette.selectionEdge)
+                    y: 0, height: Float(plotHeight), argb: selectionFillArgb))
+            let edgeColor = selectionEdgeArgb
             selectionEdges.append(
                 DrawerAnchoredRect(
                     tick: selection.range.startTick,
@@ -93,7 +101,7 @@ extension AutomationPage {
         if let facts = frozen, !previewPoints.isEmpty {
             let previewProjection = makeProjection(facts: facts, camera: gestureCamera)
             let extent = Float(nodePaint.nodeRadius)
-            let ink = SceneRectPacking.argb(palette.selectionEdge)
+            let ink = selectionEdgeArgb
             let phantomPreview: Bool
             if case .phantom = gesture { phantomPreview = true } else { phantomPreview = false }
             for point in previewPoints {
@@ -175,19 +183,10 @@ extension AutomationPage {
 
     private func appendDrawingCurve(
         _ lane: AutomationLaneProjection,
-        projection: AutomationProjection, ghost: Bool,
+        projection: AutomationProjection, argb: UInt32,
         runs: inout [DrawerStaticRect], edges: inout [DrawerAnchoredRect]
     ) {
         guard !lane.points.isEmpty else { return }
-        let ink = palette.automationNodeInk
-        let color: String
-        if ghost {
-            let channels = PaletteMath.channels(ink)
-            color = PaletteMath.hex(r: channels.r, g: channels.g, b: channels.b, a: 128)
-        } else {
-            color = ink
-        }
-        let argb = SceneRectPacking.argb(color)
         for (index, segment) in lane.segments.enumerated() {
             let fromY = projection.y(segment.fromValue, metadata: lane.metadata)
             runs.append(

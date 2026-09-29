@@ -42,7 +42,7 @@ bool pd_dl_decode(const void *bytes, size_t length, PdDlView *out) {
     if (!pd_dl_align8(labelOff + (size_t)header->labelCount * sizeof(PdDlLabel), &textOff)) {
         return false;
     }
-    if (textOff > length || (size_t)header->textBytes > length - textOff) {
+    if (textOff > length || (size_t)header->textBytes != length - textOff) {
         return false;
     }
 
@@ -66,6 +66,24 @@ bool pd_dl_decode(const void *bytes, size_t length, PdDlView *out) {
         const uint64_t textEnd =
             (uint64_t)labels[i].textOffset + (uint64_t)labels[i].textLength;
         if (textEnd > (uint64_t)header->textBytes) {
+            return false;
+        }
+    }
+    for (uint32_t i = 0; i < header->rectCount; ++i) {
+        if (rects[i].flags & (uint32_t)~PD_DL_RECT_OVER) {
+            return false;
+        }
+    }
+    for (uint32_t i = 0; i < header->labelCount; ++i) {
+        if (labels[i].flags
+            & (uint32_t)~(PD_DL_LABEL_CLIP | PD_DL_LABEL_ALIGN_MASK)) {
+            return false;
+        }
+        uint32_t j = 0;
+        while (j < header->fontCount && fonts[j].id != labels[i].fontId) {
+            ++j;
+        }
+        if (j == header->fontCount) {
             return false;
         }
     }

@@ -146,6 +146,9 @@ which is why the round-trip check exists.
 Record ids: note faces use the note's id; the two loop markers use the reserved ids; every other rect
 uses `PD_DL_ID_NONE`. Reserved ids are exported to QML as `CONSTANT` properties of the item
 (`loopStartId`, `loopEndId`) so check helpers never spell the numbers.
+Clipping (execution ruling): rects are viewport-clipped by the builders; labels keep the layout rect the
+C++ used (unclipped x/width) and are emitted only when it intersects the viewport; every `DisplayList`
+item that replaced a renderer band sets `clip: true`, which bounds label pixels exactly as the old root clip did.
 
 ### 2. Item — `src/render/display_list_item.{h,cpp}` (C++, Qt-bound)
 

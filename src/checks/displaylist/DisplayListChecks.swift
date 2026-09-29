@@ -221,6 +221,40 @@ private func displayListRejects(_ report: CheckReport) {
         familyLengthOffset..<familyLengthOffset + 4,
         with: [0xFF, 0xFF, 0xFF, 0xFF])
     check.expect(!displayListDecodes(pastFamily), message: "font family range past text block")
+
+    check.expect(!displayListDecodes(valid + Data([0x00])), message: "trailing byte past text block")
+
+    var unknownFont = valid
+    let fontIdOffset =
+        MemoryLayout<PdDlHeader>.stride
+        + 2 * MemoryLayout<PdDlFont>.stride
+        + 3 * MemoryLayout<PdDlRect>.stride
+        + MemoryLayout<PdDlLabel>.offset(of: \.fontId)!
+    unknownFont.replaceSubrange(
+        fontIdOffset..<fontIdOffset + 4,
+        with: [99, 0, 0, 0])
+    check.expect(!displayListDecodes(unknownFont), message: "label references unknown font id")
+
+    var unknownRectFlag = valid
+    let rectFlagsOffset =
+        MemoryLayout<PdDlHeader>.stride
+        + 2 * MemoryLayout<PdDlFont>.stride
+        + MemoryLayout<PdDlRect>.offset(of: \.flags)!
+    unknownRectFlag.replaceSubrange(
+        rectFlagsOffset..<rectFlagsOffset + 4,
+        with: [2, 0, 0, 0])
+    check.expect(!displayListDecodes(unknownRectFlag), message: "rect carries unknown flag bit")
+
+    var unknownLabelFlag = valid
+    let labelFlagsOffset =
+        MemoryLayout<PdDlHeader>.stride
+        + 2 * MemoryLayout<PdDlFont>.stride
+        + 3 * MemoryLayout<PdDlRect>.stride
+        + MemoryLayout<PdDlLabel>.offset(of: \.flags)!
+    unknownLabelFlag.replaceSubrange(
+        labelFlagsOffset..<labelFlagsOffset + 4,
+        with: [8, 0, 0, 0])
+    check.expect(!displayListDecodes(unknownLabelFlag), message: "label carries unknown flag bit")
 }
 
 // MARK: - Field-by-field comparison

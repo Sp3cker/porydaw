@@ -129,5 +129,20 @@ func drawerAutomationDrawingContentChecks(
             },
         cppID: drawerAutomationProjectionID,
         message: "automation selection emits tick span and anchored pixel-width edges")
+    let armAxis = page.displayList(list: 0)
+    let armStatics = page.displayList(list: 1)
+    let armRevision = page.displayRevision
+    let armCamera = fixture.session.camera.snapshot
+    let armTarget =
+        armCamera.scrollX + 24 <= armCamera.maxHScroll
+        ? armCamera.scrollX + 24 : armCamera.scrollX - 24
+    fixture.session.mutateCamera { _ = $0.setHScroll(armTarget) }
+    page.refreshHorizontalProjection()
+    report.expect(
+        page.displayRevision == armRevision + 1 && page.displayList(list: 0) != armAxis
+            && page.displayList(list: 1) != armStatics,
+        cppID: drawerAutomationProjectionID,
+        message: "automation scroll-only arm republishes viewport lists once")
+
     page.detach()
 }
