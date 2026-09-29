@@ -24,6 +24,7 @@ extern "C" {
 namespace {
 QByteArray gFixtureRoot;
 QByteArray gMid2agbPath;
+QByteArray gSampleCorpus;
 
 constexpr std::array<const char *, 14> kRoundtripSongs = {
     "mus_caught",       "mus_dummy",       "mus_gsc_route38", "mus_gym",      "mus_littleroot_test",
@@ -239,6 +240,16 @@ extern "C" const char *pdc_check_fixture_root()
 extern "C" void pdc_check_set_mid2agb_path(const char *path)
 {
     gMid2agbPath = path ? QByteArray(path) : QByteArray();
+}
+
+extern "C" void pdc_check_set_sample_corpus(const char *path)
+{
+    gSampleCorpus = path ? QByteArray(path) : QByteArray();
+}
+
+extern "C" const char *pdc_check_sample_corpus(void)
+{
+    return gSampleCorpus.isEmpty() ? nullptr : gSampleCorpus.constData();
 }
 
 extern "C" PdcMidiExportResult pdc_check_midi_exports()

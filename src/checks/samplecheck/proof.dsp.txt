@@ -3,11 +3,12 @@ Assertion correspondence: samplecheck/dsp.cpp
 Reference revision: 1f9f8a5faa78069bf86c0ed9997c04c07f1f37d7
 Original: src/checks/samplecheck/dsp.cpp
 Original SHA-256: 54d949e10083ce459182fa650cae3eb9d601769ab5fa6a052286cfe0924b6b7d
-Swift counterpart: src/checks/samplecheck/DspKernelChecks.swift
+Swift counterpart: src/checks/samplecheck/DspKernelChecks.swift; src/checks/samplecheck/RenderPipelineChecks.swift
 
 Swift counterpart SHA-256: 9f15d10849eaaffdc2a37bb52a2860e31a85da7c765eb456269e15f6f5b5686e
+Swift counterpart SHA-256 (RenderPipelineChecks.swift): d31016f1c816fed7c784c536b8114a4002a68fc8ea76d45b0272b06699f6ee79
 
-Inventory: 67 sites across 16 test methods (dspDeterminism, markerMapping, normalization, parityCases, parityLoopGeometry, parityRiffPadding, quantizationDither, quantizationU8Roundtrip, quantizationVectors, resampleAliasRejection, resampleDcGain, resampleFrequencyAccuracy, resampleIdentity, resampleImpulseSymmetry, resamplePassband, retuneVectors). Tally: 36 GAP, 6 NATIVE, 24 MATCHED, 1 RETIRED-REPRESENTATION, 0 PARTIAL.
+Inventory: 67 sites across 16 test methods (dspDeterminism, markerMapping, normalization, parityCases, parityLoopGeometry, parityRiffPadding, quantizationDither, quantizationU8Roundtrip, quantizationVectors, resampleAliasRejection, resampleDcGain, resampleFrequencyAccuracy, resampleIdentity, resampleImpulseSymmetry, resamplePassband, retuneVectors). Tally: 11 GAP, 6 NATIVE, 49 MATCHED, 1 RETIRED-REPRESENTATION, 0 PARTIAL.
 
 Command: deno task checks --filter samplecheck --verbose
 Result: controller-observed 2026-09-29 for this tree — checks: 1/38 ok, no failures; proof check --executed: 0 dsp sites not executed.
@@ -524,8 +525,8 @@ Original expression:
   QFAIL("unsupported normalization profile")
 
 A026 | SampleProcessingTest::dspDeterminism | src/checks/samplecheck/dsp.cpp:318
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S025
 Source context since previous assertion:
   ;
   }
@@ -538,8 +539,8 @@ Original expression:
   QVERIFY2(imported.ok, qPrintable(imported.error))
 
 A027 | SampleProcessingTest::dspDeterminism | src/checks/samplecheck/dsp.cpp:321
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S026
 Source context since previous assertion:
   ;
       const ImportedSample &source = imported.sample;
@@ -549,8 +550,8 @@ Original expression:
   QCOMPARE(SampleDocument::defaultParams(source).targetRate, 13379.0)
 
 A028 | SampleProcessingTest::dspDeterminism | src/checks/samplecheck/dsp.cpp:325
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S027
 Source context since previous assertion:
   ;
       ImportedSample lowRate = source;
@@ -561,8 +562,8 @@ Original expression:
   QCOMPARE(SampleDocument::defaultParams(lowRate).targetRate, 8000.0)
 
 A029 | SampleProcessingTest::dspDeterminism | src/checks/samplecheck/dsp.cpp:340
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S028
 Source context since previous assertion:
   ;
 
@@ -587,8 +588,8 @@ Original expression:
               firstRender.pitchFraction == secondRender.pitchFraction)
 
 A030 | SampleProcessingTest::dspDeterminism | src/checks/samplecheck/dsp.cpp:350
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S029
 Source context since previous assertion:
   ;
 
@@ -602,8 +603,8 @@ Original expression:
   QCOMPARE(first.processed().s8, secondRender.s8)
 
 A031 | SampleProcessingTest::dspDeterminism | src/checks/samplecheck/dsp.cpp:354
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S030
 Source context since previous assertion:
   ;
 
@@ -614,8 +615,8 @@ Original expression:
   QVERIFY(midLoop.processed().seam.valid)
 
 A032 | SampleProcessingTest::dspDeterminism | src/checks/samplecheck/dsp.cpp:355
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S031
 Source context since previous assertion:
   ;
 
@@ -623,8 +624,8 @@ Original expression:
   QVERIFY(midLoop.processed().seam.nccValid)
 
 A033 | SampleProcessingTest::dspDeterminism | src/checks/samplecheck/dsp.cpp:360
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S032
 Source context since previous assertion:
   ;
       SampleEditParams fromZero = SampleDocument::defaultParams(source);
@@ -636,8 +637,8 @@ Original expression:
   QVERIFY(zeroLoop.processed().seam.valid)
 
 A034 | SampleProcessingTest::dspDeterminism | src/checks/samplecheck/dsp.cpp:361
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S033
 Source context since previous assertion:
   ;
 
@@ -813,8 +814,8 @@ A051 | SampleProcessingTest::parityCases | src/checks/samplecheck/dsp.cpp:430
 Disposition: NATIVE
 
 A052 | SampleProcessingTest::parityLoopGeometry | src/checks/samplecheck/dsp.cpp:437
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S034
 Source context since previous assertion:
   ;
   }
@@ -827,8 +828,8 @@ Original expression:
   QVERIFY2(imported.ok, qPrintable(imported.error))
 
 A053 | SampleProcessingTest::parityLoopGeometry | src/checks/samplecheck/dsp.cpp:442
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S035
 Source context since previous assertion:
   ;
       SampleDocument document(imported.sample);
@@ -840,8 +841,8 @@ Original expression:
   QVERIFY(render.looped)
 
 A054 | SampleProcessingTest::parityLoopGeometry | src/checks/samplecheck/dsp.cpp:443
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S036
 Source context since previous assertion:
   ;
 
@@ -849,8 +850,8 @@ Original expression:
   QCOMPARE(render.loopStart, quint32(607))
 
 A055 | SampleProcessingTest::parityLoopGeometry | src/checks/samplecheck/dsp.cpp:444
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S037
 Source context since previous assertion:
   ;
 
@@ -858,8 +859,8 @@ Original expression:
   QCOMPARE(render.size, quint32(3034))
 
 A056 | SampleProcessingTest::parityLoopGeometry | src/checks/samplecheck/dsp.cpp:445
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S038
 Source context since previous assertion:
   ;
 
@@ -867,8 +868,8 @@ Original expression:
   QCOMPARE(render.declaredRate, 13379.0)
 
 A057 | SampleProcessingTest::parityRiffPadding | src/checks/samplecheck/dsp.cpp:451
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S039
 Source context since previous assertion:
   ;
   }
@@ -881,8 +882,8 @@ Original expression:
   QVERIFY2(imported.ok, qPrintable(imported.error))
 
 A058 | SampleProcessingTest::parityRiffPadding | src/checks/samplecheck/dsp.cpp:456
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S040
 Source context since previous assertion:
   ;
       SampleDocument document(imported.sample);
@@ -894,8 +895,8 @@ Original expression:
   QCOMPARE(render.size, quint32(7281))
 
 A059 | SampleProcessingTest::parityRiffPadding | src/checks/samplecheck/dsp.cpp:460
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S041
 Source context since previous assertion:
   ;
 
@@ -906,8 +907,8 @@ Original expression:
   QCOMPARE(bytes.mid(12, 4), QByteArray("fmt "))
 
 A060 | SampleProcessingTest::parityRiffPadding | src/checks/samplecheck/dsp.cpp:461
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S042
 Source context since previous assertion:
   ;
 
@@ -915,8 +916,8 @@ Original expression:
   QCOMPARE(bytes.mid(dataAt, 4), QByteArray("data"))
 
 A061 | SampleProcessingTest::parityRiffPadding | src/checks/samplecheck/dsp.cpp:462
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S043
 Source context since previous assertion:
   ;
 
@@ -924,8 +925,8 @@ Original expression:
   QCOMPARE(getU32(bytes, dataAt + 4), quint32(7281))
 
 A062 | SampleProcessingTest::parityRiffPadding | src/checks/samplecheck/dsp.cpp:463
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S044
 Source context since previous assertion:
   ;
 
@@ -933,8 +934,8 @@ Original expression:
   QCOMPARE(bytes[dataAt + 8 + 7281], '\0')
 
 A063 | SampleProcessingTest::parityRiffPadding | src/checks/samplecheck/dsp.cpp:464
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S045
 Source context since previous assertion:
   ;
 
@@ -942,8 +943,8 @@ Original expression:
   QCOMPARE(bytes.mid(dataAt + 8 + 7281 + 1, 4), QByteArray("smpl"))
 
 A064 | SampleProcessingTest::parityRiffPadding | src/checks/samplecheck/dsp.cpp:465
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S046
 Source context since previous assertion:
   ;
 
@@ -951,8 +952,8 @@ Original expression:
   QCOMPARE(bytes.mid(dataAt + 8 + 7281 + 1 + 8 + 36, 4), QByteArray("agbp"))
 
 A065 | SampleProcessingTest::parityRiffPadding | src/checks/samplecheck/dsp.cpp:466
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S047
 Source context since previous assertion:
   ;
 
@@ -960,8 +961,8 @@ Original expression:
   QCOMPARE(bytes.mid(dataAt + 8 + 7281 + 1 + 8 + 36 + 12, 4), QByteArray("agbl"))
 
 A066 | SampleProcessingTest::retuneVectors | src/checks/samplecheck/dsp.cpp:497
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S048
 Source context since previous assertion:
   ;
   }
@@ -1000,8 +1001,8 @@ Original expression:
                qPrintable(error))
 
 A067 | SampleProcessingTest::retuneVectors | src/checks/samplecheck/dsp.cpp:506
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S049
 Source context since previous assertion:
   ;
 
@@ -1071,6 +1072,57 @@ S023 | dspNormalization | src/checks/samplecheck/DspKernelChecks.swift
 Anchor: message "A023 near-silent sample is not amplified"
 S024 | dspNormalization | src/checks/samplecheck/DspKernelChecks.swift
 Anchor: message "A024 near-silent warning"
+
+S025 | renderDeterminism | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "high resolution fixture imports for determinism" #2
+S026 | renderDeterminism | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "fresh high-rate default caps at 13379"
+S027 | renderDeterminism | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "low-rate default remains 8000"
+S028 | renderDeterminism | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "identical source and params render identical bytes and metadata"
+S029 | renderDeterminism | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "reverting params reconstructs identical bytes"
+S030 | renderDeterminism | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "mid-loop seam metrics valid"
+S031 | renderDeterminism | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "mid-loop seam correlation meaningful"
+S032 | renderDeterminism | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "zero-start loop seam amplitude valid"
+S033 | renderDeterminism | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "zero-start loop seam correlation unavailable"
+S034 | renderLoopGeometry | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "high resolution fixture imports for loop geometry" #2
+S035 | renderLoopGeometry | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "profile A keeps loop enabled"
+S036 | renderLoopGeometry | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "profile A loop begins at output frame 607"
+S037 | renderLoopGeometry | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "profile A ends at output frame 3034"
+S038 | renderLoopGeometry | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "profile A declared rate is 13379"
+S039 | renderRiffPadding | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "high resolution fixture imports for RIFF padding" #2
+S040 | renderRiffPadding | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "profile F produces 7281 odd frames"
+S041 | renderRiffPadding | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "fmt chunk starts after RIFF header"
+S042 | renderRiffPadding | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "data chunk follows 16-byte fmt"
+S043 | renderRiffPadding | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "data chunk declares 7281 frames"
+S044 | renderRiffPadding | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "odd data chunk has zero padding byte"
+S045 | renderRiffPadding | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "smpl follows padded data chunk"
+S046 | renderRiffPadding | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "agbp follows 36-byte unlooped smpl"
+S047 | renderRiffPadding | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "agbl follows agbp as final chunk"
+S048 | renderRetune | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "flat WAV fixture imports for retune vectors" #2
+S049 | renderRetune | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "all fork retune pitch words match their golden vectors"
 
 Shared helpers
 The shared C++ fixture sources src/checks/samplecheck/fixtures.h and

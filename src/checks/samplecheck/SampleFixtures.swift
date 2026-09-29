@@ -1,4 +1,5 @@
 import Foundation
+import PorydawSample
 
 struct SampleFixtureSpec {
     var formatTag: UInt16 = 1
@@ -203,3 +204,40 @@ func genSaw(_ rate: Double, _ freq: Double, _ seconds: Double, _ amp: Double) ->
     return result
 }
 func centsOff(_ frequency: Double, _ reference: Double) -> Double { 1200 * log2(frequency / reference) }
+
+enum ParityProfile { case a, b, c, d, e, f }
+
+func parityParams(_ profile: ParityProfile, sourceRate: Double, params initial: SampleEditParams) -> SampleEditParams {
+    var params = initial
+    switch profile {
+    case .a: params.targetRate = 13379
+    case .b:
+        params.loopOn = false
+        params.cropStart = 500
+        params.cropEnd = 8500
+        params.baseKey = 58
+        params.fineTuneCents = 25
+        params.targetRate = 13379
+    case .c:
+        params.targetRate = 6689.5
+        params.normalizeMode = .off
+        params.dcRemove = .off
+        params.fadeIn = false
+        params.fadeOut = false
+    case .d:
+        params.targetRate = sourceRate
+        params.normalizeMode = .looped
+    case .e:
+        params.targetRate = 13379
+        params.ditherOn = true
+        params.normalizeMode = .off
+    case .f:
+        params.loopOn = false
+        params.targetRate = 26758
+        params.normalizeMode = .off
+        params.dcRemove = .off
+        params.fadeIn = false
+        params.fadeOut = false
+    }
+    return params
+}

@@ -207,6 +207,14 @@ int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments
     } else {
         pdc_check_set_mid2agb_path(nullptr);
     }
+    const QString corpusPrefix = QStringLiteral("--pdc-sample-corpus=");
+    if (!selectedArguments.isEmpty() && selectedArguments.front().startsWith(corpusPrefix)) {
+        const QByteArray encodedCorpus =
+            QFile::encodeName(selectedArguments.takeFirst().mid(corpusPrefix.size()));
+        pdc_check_set_sample_corpus(encodedCorpus.constData());
+    } else {
+        pdc_check_set_sample_corpus(nullptr);
+    }
 
     SwiftCoreTest test;
     // qExec treats arguments[0] as the program name; without it the first

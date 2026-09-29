@@ -9,6 +9,8 @@ void pdc_check_set_fixture_root(const char *path);
 const char *pdc_check_fixture_root(void);
 
 void pdc_check_set_mid2agb_path(const char *path);
+void pdc_check_set_sample_corpus(const char *path);
+const char *pdc_check_sample_corpus(void);
 
 typedef struct PdcMidiExportResult {
     uint32_t matchingSongBits;

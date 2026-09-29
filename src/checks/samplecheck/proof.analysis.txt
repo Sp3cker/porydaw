@@ -3,12 +3,13 @@ Assertion correspondence: samplecheck/analysis.cpp
 Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/samplecheck/analysis.cpp
 Original SHA-256: da34a411ca0833f4ad3ed01404c49b8e8eee735abc4a5b49b321088e08fbb582
-Swift counterpart: src/checks/audio/AudioAuditionChecks.swift
+Swift counterpart: src/checks/audio/AudioAuditionChecks.swift; src/checks/samplecheck/RenderPipelineChecks.swift
+Swift counterpart SHA-256 (RenderPipelineChecks.swift): d31016f1c816fed7c784c536b8114a4002a68fc8ea76d45b0272b06699f6ee79
 
-Inventory: 35 sites across 4 test methods (auditionSlotLifecycle, loopAndCrossfade, pitchMatrix, pitchNegativeCases). Tally: 21 GAP, 0 NATIVE, 14 MATCHED, 0 PARTIAL.
+Inventory: 35 sites across 4 test methods (auditionSlotLifecycle, loopAndCrossfade, pitchMatrix, pitchNegativeCases). Tally: 15 GAP, 0 NATIVE, 20 MATCHED, 0 PARTIAL.
 
-Command: deno task verify --filter swiftcore --verbose
-Result: passed (swiftcore; 23 other harnesses skipped) after the real 32768 Hz engine destroy/reinitialize path was added. This run exercises the complete audition lifecycle but not the missing pitch or loop sites.
+Command: deno task checks --filter samplecheck --verbose
+Result: controller-observed 2026-09-29 for this tree — checks: 1/38 ok, no failures; proof check --executed: 0 analysis sites not executed (pitch/loop rows remain GAP for 245).
 
 A001 | SampleProcessingTest::pitchMatrix | src/checks/samplecheck/analysis.cpp:69
 Disposition: GAP
@@ -314,8 +315,8 @@ Original expression:
                "window-starved pitched buffer returns no candidates")
 
 A016 | SampleProcessingTest::loopAndCrossfade | src/checks/samplecheck/analysis.cpp:199
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S015
 Source context since previous assertion:
   ;
 
@@ -338,8 +339,8 @@ Original expression:
                "crossfade fixture imports")
 
 A017 | SampleProcessingTest::loopAndCrossfade | src/checks/samplecheck/analysis.cpp:212
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S016
 Source context since previous assertion:
   ;
       SampleEditParams p = SampleDocument::defaultParams(cfSrc);
@@ -359,8 +360,8 @@ Original expression:
                "mis-seated loop clicks without the bake")
 
 A018 | SampleProcessingTest::loopAndCrossfade | src/checks/samplecheck/analysis.cpp:221
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S017
 Source context since previous assertion:
   ;
 
@@ -375,8 +376,8 @@ Original expression:
   QVERIFY2(bakedOut.s8 == baked2.processed().s8, "crossfade renders deterministically")
 
 A019 | SampleProcessingTest::loopAndCrossfade | src/checks/samplecheck/analysis.cpp:222
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S018
 Source context since previous assertion:
   ;
 
@@ -386,8 +387,8 @@ Original expression:
                "crossfade bake tames the seam click")
 
 A020 | SampleProcessingTest::loopAndCrossfade | src/checks/samplecheck/analysis.cpp:226
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S019
 Source context since previous assertion:
   ;
       // Only the fade window changes; everything before it is untouched.
@@ -398,8 +399,8 @@ Original expression:
                "bake touches only the fade window")
 
 A021 | SampleProcessingTest::loopAndCrossfade | src/checks/samplecheck/analysis.cpp:235
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S020
 Source context since previous assertion:
   ;
       // A loop start too close to the buffer start refuses actionably.
@@ -505,6 +506,19 @@ Anchor: message "cold reset retires every slot"
 
 S014 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift
 Anchor: message "audition works after reset"
+
+S015 | renderCrossfade | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "crossfade fixture imports" #2
+S016 | renderCrossfade | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "mis-seated loop clicks before baking"
+S017 | renderCrossfade | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "crossfade bake is deterministic"
+S018 | renderCrossfade | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "crossfade bake tames the seam click"
+S019 | renderCrossfade | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "crossfade changes only the final fade window"
+S020 | renderCrossfade | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "impossible crossfade refuses with a warning"
 
 Shared helpers
 The shared C++ fixture sources src/checks/samplecheck/fixtures.h and

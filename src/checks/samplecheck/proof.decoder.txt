@@ -3,10 +3,11 @@ Assertion correspondence: samplecheck/decoder.cpp
 Reference revision: 5af4355e8fc1337f38da60c545da4af246160bcf
 Original: src/checks/samplecheck/decoder.cpp
 Original SHA-256: 567e1efd7c3739345c23cadd4fd8ebbc5b9c422c74e6fd252454472f5f1e0d03
-Swift counterpart: src/checks/samplecheck/DecoderChecks.swift; src/checks/samplecheck/CompressedDecoderChecks.swift
+Swift counterpart: src/checks/samplecheck/DecoderChecks.swift; src/checks/samplecheck/CompressedDecoderChecks.swift; src/checks/samplecheck/RenderPipelineChecks.swift
 Swift counterpart SHA-256 (DecoderChecks.swift): b164c7eda4879391530c0acc787b61c9b6c407afa4799c68fb2367d6c47d199a
+Swift counterpart SHA-256 (RenderPipelineChecks.swift): d31016f1c816fed7c784c536b8114a4002a68fc8ea76d45b0272b06699f6ee79
 
-Inventory: 93 sites across 7 test methods (compressedContainers, compressedRefusals, decodeAiff, decodeRefusalBoundaries, decodeStereoPolicy, decodeWidths, optionalCorpus). Tally: 76 MATCHED, 1 RETIRED-REPRESENTATION, 16 GAP.
+Inventory: 93 sites across 7 test methods (compressedContainers, compressedRefusals, decodeAiff, decodeRefusalBoundaries, decodeStereoPolicy, decodeWidths, optionalCorpus). Tally: 78 MATCHED, 2 RETIRED-REPRESENTATION, 13 GAP.
 
 Command: deno task checks --filter samplecheck --verbose
 Result: controller-observed 2026-09-29 for this tree — checks: 1/38 ok, no failures; proof check --executed: 0 not executed.
@@ -449,8 +450,8 @@ Original expression:
   QVERIFY2(std::abs(lamp - 0.5) < 0.05, "ogg left-only amplitude near 0.5")
 
 A072 | SampleProcessingTest::compressedContainers | src/checks/samplecheck/decoder.cpp:387
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S081
 Source context since previous assertion:
   ;
       }
@@ -468,8 +469,8 @@ Original expression:
                    "flac fixture decodes for pipeline coverage")
 
 A073 | SampleProcessingTest::compressedContainers | src/checks/samplecheck/decoder.cpp:392
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S082
 Source context since previous assertion:
   ;
           SampleDocument doc(flac);
@@ -551,8 +552,8 @@ Original expression:
   QVERIFY2(!error.isEmpty(), "refused stream reports an error")
 
 A080 | SampleProcessingTest::optionalCorpus | src/checks/samplecheck/decoder.cpp:420
-Disposition: GAP
-Mapping/reason: Corpus-gated skip site: the optional external corpus comparison below is skipped without a catalog argument. No Swift counterpart establishes this comparison; the skip and everything it guards remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness skip guard; the Swift corpus predicate is gated by the optional corpus argument and records nothing when absent.
 Source context since previous assertion:
   ;
   }
@@ -883,6 +884,11 @@ S079 | compressedRefusals | src/checks/samplecheck/CompressedDecoderChecks.swift
 Anchor: message "corrupt flac refuses"
 S080 | compressedRefusals | src/checks/samplecheck/CompressedDecoderChecks.swift
 Anchor: message "refused FLAC stream reports an error"
+
+S081 | renderCompressed | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "FLAC source imports for render" #2
+S082 | renderCompressed | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "FLAC source renders 8-bit playable output"
 
 Shared helpers
 The shared C++ fixture sources src/checks/samplecheck/fixtures.h and

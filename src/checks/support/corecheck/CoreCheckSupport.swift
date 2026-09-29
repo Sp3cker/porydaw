@@ -113,6 +113,10 @@ enum CheckEnvironment {
         guard let pointer = pdc_check_fixture_root() else { return nil }
         return String(cString: pointer)
     }()
+    static let sampleCorpus: String? = {
+        guard let pointer = pdc_check_sample_corpus() else { return nil }
+        return String(cString: pointer)
+    }()
 
     static func fixturePath(_ relativePath: String) -> String? {
         fixtureRoot.map { URL(fileURLWithPath: $0).appendingPathComponent(relativePath).path }

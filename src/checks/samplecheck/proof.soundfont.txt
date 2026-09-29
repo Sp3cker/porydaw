@@ -3,10 +3,11 @@ Assertion correspondence: samplecheck/soundfont.cpp
 Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/samplecheck/soundfont.cpp
 Original SHA-256: 6e45372c5a0d33c5d55f1a07d883a5ba5c65a9833877a07076ea517ed1fba310
-Swift counterpart: src/checks/samplecheck/SoundFontChecks.swift
+Swift counterpart: src/checks/samplecheck/SoundFontChecks.swift; src/checks/samplecheck/RenderPipelineChecks.swift
 Swift counterpart SHA-256 (SoundFontChecks.swift): 486cdaf035735c7ef7474172319203261ec03bb4c2f7edd83eb6672c4e381968
+Swift counterpart SHA-256 (RenderPipelineChecks.swift): d31016f1c816fed7c784c536b8114a4002a68fc8ea76d45b0272b06699f6ee79
 
-Inventory: 34 sites across 3 test methods (soundFontExtraction, soundFontPicker, soundFontRefusals). Tally: 2 GAP, 0 NATIVE, 30 MATCHED, 0 PARTIAL, 2 RETIRED-REPRESENTATION.
+Inventory: 34 sites across 3 test methods (soundFontExtraction, soundFontPicker, soundFontRefusals). Tally: 0 GAP, 1 NATIVE, 31 MATCHED, 0 PARTIAL, 2 RETIRED-REPRESENTATION.
 
 Command: deno task checks --filter samplecheck --verbose
 Result: controller-observed 2026-09-29 for this tree — checks: 1/38 ok, no failures; proof check --executed: 0 soundfont sites not executed.
@@ -345,8 +346,8 @@ Original expression:
                "unpitched (255) zone defers to pitch detection")
 
 A018 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:203
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S031
 Source context since previous assertion:
   ;
 
@@ -541,6 +542,9 @@ S029 | soundFontPicker | src/checks/samplecheck/SoundFontChecks.swift
 Anchor: message "filtered zone row selects source index"
 S030 | soundFontPicker | src/checks/samplecheck/SoundFontChecks.swift
 Anchor: message "cleared filter restores groups"
+
+S031 | renderSoundFont | src/checks/samplecheck/RenderPipelineChecks.swift
+Anchor: message "SoundFont zone zero renders a looped sample"
 
 Shared helpers
 The shared C++ fixture sources src/checks/samplecheck/fixtures.h and

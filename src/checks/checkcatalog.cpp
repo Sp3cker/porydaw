@@ -44,6 +44,16 @@ int swiftCore(QApplication &, const QStringList &arguments, const QStringList &q
     return runSwiftCoreCheck(argumentAt(arguments, 1), selected);
 }
 
+int swiftSample(QApplication &, const QStringList &arguments, const QStringList &qtArguments)
+{
+    auto selected = QStringList{QStringLiteral("--pdc-mid2agb=") + argumentAt(arguments, 2)};
+    if (!argumentAt(arguments, 4).isEmpty())
+        selected.append(QStringLiteral("--pdc-sample-corpus=") + arguments.at(4));
+    selected.append(argumentAt(arguments, 3));
+    selected.append(qtArguments);
+    return runSwiftCoreCheck(argumentAt(arguments, 1), selected);
+}
+
 int swiftBank(QApplication &, const QStringList &arguments, const QStringList &qtArguments)
 {
     return runSwiftCoreCheck(argumentAt(arguments, 1), QStringList{"bankLeases"} + qtArguments);
@@ -130,13 +140,14 @@ const std::vector<CheckDefinition> &catalog()
         swiftSuite("swiftcore-displaylist", "displayList");
         result.push_back(
             {.name = "samplecheck",
-             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "sampleCheck"}),
-             .handler = swiftCore,
+             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "sampleCheck", "{sample-corpus?}"}),
+             .handler = swiftSample,
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = swiftCoreFixtures +
                              strings({"samplesources/tone.mp3", "samplesources/tone.flac",
                                       "samplesources/tone.ogg", "samplesources/tone.opus"}),
+             .optionalArgumentEnvironment = {{"{sample-corpus?}", "PORYDAW_SAMPLE_CORPUS"}},
              .platforms = swiftPlatforms});
         result.push_back(
             {.name = "projectidentitycheck",

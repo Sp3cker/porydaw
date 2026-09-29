@@ -9,6 +9,10 @@ add_library(PorydawSample STATIC
     SampleDsp.swift
     SampleResampler.swift
     SampleSeam.swift
+    SampleEditParams.swift
+    SampleDocument.swift
+    SampleRender.swift
+    SampleWavWriter.swift
 )
 set_target_properties(PorydawSample PROPERTIES
     Swift_MODULE_NAME PorydawSample
