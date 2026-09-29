@@ -2,7 +2,7 @@
 // Keep Qt's terminal payload opaque: only the runner options are ours to parse.
 export const DEFAULT_CHECK_POOL = Math.max(
   1,
-  Math.min(6, navigator.hardwareConcurrency),
+  Math.min(12, navigator.hardwareConcurrency),
 );
 
 export const CHECKS_HELP =
