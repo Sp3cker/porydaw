@@ -238,6 +238,7 @@ if(APPLE)
         drawerpresentation/drawer_basics.swift
         drawerpresentation/drawer_resize.swift
         drawerpresentation/drawer_state.swift
+        drawerpresentation/DrawerStaticsParityChecks.swift
         velocity/velocitydetentdragging.swift
         velocity/tst_velocityediting.swift
         velocity/VelocityClickSelectionChecks.swift

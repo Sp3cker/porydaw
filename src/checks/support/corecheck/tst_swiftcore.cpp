@@ -188,6 +188,11 @@ void SwiftCoreTest::displayList()
     pdc_suite_run(PDC_SUITE_DISPLAY_LIST, reportSwiftCheck, this);
 }
 
+void SwiftCoreTest::drawerStaticsParity()
+{
+    pdc_suite_run(PDC_SUITE_DRAWER_STATICS_PARITY, reportSwiftCheck, this);
+}
+
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments)
 {
     const QByteArray encodedRoot = QFile::encodeName(fixtureRoot);

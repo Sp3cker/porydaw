@@ -245,6 +245,11 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
         }
     case 34:
         runDisplayListChecks(report)
+    case 35:
+        let boxedParity = ReportBox(report)
+        MainActor.assumeIsolated {
+            runDrawerStaticsParityChecks(boxedParity.report)
+        }
     default:
         report.fail("swiftcore/suite-selection", "unknown suite \(suite)")
     }

@@ -126,6 +126,7 @@ const std::vector<CheckDefinition> &catalog()
         swiftSuite("swiftcore-bankhistory", "bankHistory");
         swiftSuite("swiftcore-themecolor", "themeColor");
         swiftSuite("swiftcore-displaylist", "displayList");
+        swiftSuite("swiftcore-drawerstatics-parity", "drawerStaticsParity");
         result.push_back(
             {.name = "projectidentitycheck",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectIdentity"}),
