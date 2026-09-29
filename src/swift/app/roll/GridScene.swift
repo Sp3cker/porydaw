@@ -108,17 +108,21 @@ public final class GridScene {
     /// Projection the cached records were resolved against. Camera seams
     /// compare this (fixed-size) instead of rebuilding the content key.
     @QtIgnored var builtProjection: PitchProjection?
-    // Retained display-list buffers; lists 1-2 stay valid-but-empty until Tasks 4b/5.
+    // Retained display-list buffers; list 2 stays valid-but-empty until Task 5.
     @QtIgnored var displayLists: [Data] = []
     @QtIgnored var displayFrameKey: RollDisplayFrameKey?
     @QtIgnored var plotBuilder = RollPlotBuilder()
+    @QtIgnored var keyboardBuilder = RollKeyboardBuilder()
     @QtIgnored var cachedEmptyDisplayList: Data?
+    // The keyboard names the list-1 build consumed; list-1 label readers
+    // consult this instead of the removed legacy keyboard section.
+    @QtIgnored var keyboardNamesForDisplay: [String]?
     /// Content-tier generation backing the frame key; bumped on record or
     /// legacy resolve so camera seams skip by integer compare.
     @QtIgnored var contentGeneration = 0
 
-    /// Retained per-list display buffer. Lists 1 (keyboard) and 2 (ruler)
-    /// return a valid empty list until Tasks 4b/5 port them.
+    /// Retained per-list display buffer. List 2 (ruler) returns a valid
+    /// empty list until Task 5 ports it.
     public func displayList(list: Int) -> Data {
         guard displayLists.indices.contains(list) else { return retainedEmptyDisplayList() }
         return displayLists[list]
@@ -170,6 +174,10 @@ public final class GridScene {
         hoverChipFill = p.hoverChipFill
         hoverChipTextColor = p.hoverChipText
         hoverChipRadius = m.chipRadius
+        // The hover highlight is emitted keyboard-list content: hover-only
+        // moves rebuild the lists and bump displayRevision once. The frame
+        // key makes this a no-op when hover and camera are unchanged.
+        rebuildDisplayLists(input)
     }
 
     @QtIgnored

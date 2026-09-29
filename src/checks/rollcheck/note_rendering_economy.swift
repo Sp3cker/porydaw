@@ -63,14 +63,20 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
     let revisionSelected = scene.contentRevision
     let contentSelected = scene.drawingContent()
     let frameSelected = frame()
+    let keyboardBefore = scene.displayList(list: 1)
     let summarySelected = grid.fetchNoteSummary()
     grid.updateHover(x: 4, y: box.y + box.h / 2)
     grid.refreshCamera()
     report.expect(
         untouched(since: revisionSelected, content: contentSelected)
-            && frame() == frameSelected,
+            && frame().bytes == frameSelected.bytes,
                   cppID: id,
-                  message: "a hover-only refresh reuses the published fills with no box or fill work")
+        message: "a hover-only refresh republishes no content boxes or fills and leaves the plot frame byte-identical")
+    report.expect(
+        frame().display == frameSelected.display + 1
+            && scene.displayList(list: 1) != keyboardBefore,
+                  cppID: id,
+        message: "a hover-only refresh rebuilds only the keyboard frame for the highlight")
     report.expect(grid.fetchNoteSummary() == summarySelected,
                   cppID: id,
                   message: "a hover-only refresh leaves the pulled note summary byte-identical")
@@ -144,7 +150,7 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
         frame().display != frameBeforeScroll.display
             && frame().bytes != frameBeforeScroll.bytes,
         cppID: id,
-        message: "an in-window camera scroll rebuilds only the plot frame")
+        message: "an in-window camera scroll rebuilds the display frames with fresh list bytes")
     report.expect(grid.fetchNoteSummary() == summaryBeforeScroll,
                   cppID: id,
                   message: "a camera-only refresh leaves the pulled note summary byte-identical")

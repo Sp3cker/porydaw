@@ -26,18 +26,13 @@ Item {
         clip: true
         z: 3
 
-        TimelineRenderer {
+        DisplayList {
             objectName: "timelineRendererKeyboard"
             anchors.fill: parent
-            band: 1
-            contentSource: root.gridModel.scene
-            contentRevision: root.gridModel.scene.contentRevision
-            pixelsPerTick: root.gridModel.pixelsPerTick
-            keyHeight: root.gridModel.rowHeight
-            scrollX: root.gridModel.cameraScrollX
-            scrollY: root.gridModel.cameraScrollY
-            devicePixelRatio: root.gridModel.devicePixelRatio
-            hoverPitch: root.gridModel.hoverKey
+            clip: true
+            source: root.gridModel.scene
+            list: 1
+            revision: root.gridModel.scene.displayRevision
         }
     }
 

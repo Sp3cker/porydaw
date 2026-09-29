@@ -249,12 +249,16 @@ private func checkKeyboardGutterHoverTracksRows(
     grid.updateHover(x: 4, y: y)
     report.expect(expected > 0 && grid.hoverKey == expected, cppID: id,
                   message: "gutter midpoint hover selects the projected pitch")
+    report.expect(RollContentProbe(grid).keyboardHighlightRects().count == 1, cppID: id,
+                  message: "gutter midpoint hover paints one keyboard highlight record")
     grid.updateHover(x: 4, y: y + camera.keyHeight)
     report.expect(grid.hoverKey == expected - 1, cppID: id,
                   message: "adjacent lower gutter row changes hover pitch by one")
     grid.clearKeyboardHover()
     report.expect(grid.hoverKey == -1, cppID: id,
                   message: "gutter leave clears the hover pitch")
+    report.expect(RollContentProbe(grid).keyboardHighlightRects().isEmpty, cppID: id,
+                  message: "gutter leave removes the painted keyboard highlight")
 }
 
 @MainActor

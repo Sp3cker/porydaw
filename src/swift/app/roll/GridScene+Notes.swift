@@ -22,7 +22,7 @@ extension GridScene {
             contentRevision += 1
             contentGeneration += 1
         }
-        rebuildPlot(input, colors: colors)
+        rebuildRollLists(input, colors: colors)
     }
 
     /// Camera-only seam: O(visible), no content-key scan. Cold start with
@@ -34,7 +34,7 @@ extension GridScene {
             return
         }
         let (_, colors) = resolvePalette(input)
-        rebuildPlot(input, colors: colors)
+        rebuildRollLists(input, colors: colors)
     }
 
     /// True when the cached records were resolved against this projection.
@@ -45,30 +45,41 @@ extension GridScene {
     }
 
     @QtIgnored
-    private func rebuildPlot(_ input: GridSceneInput, colors: [UInt32]) {
+    private func rebuildRollLists(_ input: GridSceneInput, colors: [UInt32]) {
         let snapshot = input.camera.snapshot
         let band = input.bandSelection.map {
             RollBandSignature(x: $0.x, y: $0.y, w: $0.w, h: $0.h)
         }
         let frame = RollDisplayFrameKey(
             generation: contentGeneration, camera: snapshot,
-            dpr: input.metrics.dpr, band: band)
+            dpr: input.metrics.dpr, band: band, hoverKey: input.hoverKey)
         if frame == displayFrameKey { return }
         if displayLists.count != 3 {
             displayLists = [Data(), retainedEmptyDisplayList(), retainedEmptyDisplayList()]
         }
-        // Release the previous buffer before the retained writer reuses its
-        // own: otherwise finish()'s shared output copies on write each frame.
+        // Release the previous buffers before the retained writers reuse
+        // their own: otherwise finish()'s shared output copies on write.
         displayLists[0] = Data()
+        displayLists[1] = Data()
         let built = plotBuilder.build(
             input, records: noteRecords, palette: colors,
             maxDuration: noteRecordsMaxDuration,
             width: snapshot.viewportWidth, height: snapshot.rollHeight)
         displayLists[0] = built.data
+        // The keyboard item fills the full-width band beside the headers, so
+        // the list clips to the band width: overflowing drum labels paint
+        // past the keyboard edge exactly as the band-1 item did.
+        displayLists[1] = keyboardBuilder.build(
+            input, palette: colors,
+            width: input.metrics.keyboardWidth + snapshot.viewportWidth,
+            height: snapshot.rollHeight)
+        // The names the keyboard list consumed, for list-1 readers.
+        keyboardNamesForDisplay = input.keyboardNames
         displayFrameKey = frame
         noteRecordCount = built.count
         displayRevision += 1
     }
+
 
     /// Palette colors resolved once per palette identity + velocity; the
     /// legacy packed bytes derive from the same colors in slot order.

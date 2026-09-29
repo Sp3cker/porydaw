@@ -178,7 +178,7 @@ TimelinePanSupport {
         tryCompare(scene, "hoverChipVisible", false, 5000)
 
         var keyboard = keyboardRenderer()
-        verify(keyboard.visible && keyboard.band === 1,
+        verify(keyboard.visible && keyboard.list === 1,
                "the native keyboard label renderer is realized")
         waitForRendering(gutterBoxItem)
         var keys = grabItem(gutterBoxItem)

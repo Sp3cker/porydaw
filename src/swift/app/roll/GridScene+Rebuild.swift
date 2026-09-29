@@ -42,6 +42,9 @@ struct RollDisplayFrameKey: Equatable {
     var camera: EditorCamera.Snapshot
     var dpr: Double
     var band: RollBandSignature?
+    // The keyboard highlight is emitted list content: hover-only moves
+    // rebuild the lists and bump displayRevision once.
+    var hoverKey: Int
 }
 
 struct RollBandSignature: Equatable {

@@ -91,6 +91,8 @@ import PorydawCore
     let plotRects: [PlotRect]
     let plotLabels: [PlotLabel]
     let plotBytes: Data
+    let keyboardRects: [PlotRect]
+    let keyboardLabels: [PlotLabel]
 
     private struct Reader {
         let bytes: [UInt8]
@@ -177,7 +179,6 @@ import PorydawCore
         var overlay = Overlay(
             active: false, startTick: 0, endTick: 0, selectedTrack: 0, usedTrackCount: 0,
             scopeTracks: Array(repeating: false, count: 32))
-        var keyboardNames: [Int: String] = [:]
         var palette: [UInt32] = []
         var loopStart = 0
         var loopEnd = 0
@@ -202,15 +203,6 @@ import PorydawCore
                     let pitch = Int(r.u8())
                     let flags = r.u8()
                     return Row(pitch: pitch, accidentalLane: flags & 1 != 0, scaleHighlight: flags & 2 != 0)
-                }
-            case 6:
-                for _ in 0..<r.u16() {
-                    let pitch = Int(r.u8())
-                    let count = r.u16()
-                    let start = min(r.offset, r.bytes.count)
-                    let stop = min(start + count, r.bytes.count)
-                    keyboardNames[pitch] = String(decoding: r.bytes[start..<stop], as: UTF8.self)
-                    r.offset += count
                 }
             case 7:
                 _ = r.u8()
@@ -266,7 +258,19 @@ import PorydawCore
             self.drawPreview = DrawPreview(
                 active: false, tick: 0, duration: 0, pitch: 0, lastVelocity: 0)
         }
-        self.keyboardNames = keyboardNames
+        // Key labels decode from displayList(1); the published names carry
+        // the builder input with empty pads omitted, as the legacy section did.
+        let keyboardDecoded = Self.decodePlot(scene.displayList(list: 1))
+        self.keyboardRects = keyboardDecoded.rects
+        self.keyboardLabels = keyboardDecoded.labels
+        if let published = scene.keyboardNamesForDisplay {
+            self.keyboardNames = Dictionary(
+                uniqueKeysWithValues: published.enumerated().compactMap {
+                    $0.element.isEmpty ? nil : ($0.offset, $0.element)
+                })
+        } else {
+            self.keyboardNames = [:]
+        }
         self.palette = palette
         self.loopStartTick = loopStart
         self.loopEndTick = loopEnd
@@ -329,6 +333,17 @@ import PorydawCore
     func ringRects(_ id: NoteID) -> [PlotRect] {
         guard let ring = slot(.selectionRing) else { return [] }
         return plotRects.filter { $0.id == id.rawValue && $0.over && $0.argb == ring }
+    }
+
+    /// Emitted hover-highlight records from the painted keyboard list.
+    func keyboardHighlightRects() -> [PlotRect] {
+        guard let highlight = slot(.keyboardHighlight) else { return [] }
+        return keyboardRects.filter { $0.argb == highlight }
+    }
+
+    /// Painted key-label texts from the keyboard list, in record order.
+    func keyLabelTexts() -> [String] {
+        keyboardLabels.map(\.text)
     }
 
     func borderRects(_ id: NoteID) -> [PlotRect] {

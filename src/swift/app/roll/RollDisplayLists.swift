@@ -111,7 +111,6 @@ enum RollDrawingContent {
         case fonts = 2
         case palette = 3
         case rows = 4
-        case keyboardNames = 6
         case timeAxis = 7
         case overlay = 8
         case modes = 10
@@ -158,12 +157,14 @@ enum RollDrawingContent {
     }
 
     static func pack(_ input: GridSceneInput, palette: Data) -> Data {
+        // The keyboard section left with Task 4b: key labels decode from
+        // displayList(1) and the consumed names publish on the scene. The
+        // ruler section stays until Task 5.
         let sections: [(Kind, Data)] = [
             (.metrics, metricsSection(input)),
             (.fonts, fontsSection(input)),
             (.palette, palette),
             (.rows, rowsSection(input)),
-            (.keyboardNames, keyboardNamesSection(input)),
             (.timeAxis, timeAxisSection(input)),
             (.overlay, overlaySection(input)),
             (.modes, modesSection(input)),
@@ -356,28 +357,6 @@ enum RollDrawingContent {
         let preferred = contrast(light) >= contrast(dark) ? light : dark
         if contrast(preferred) >= 4.5 { return preferred }
         return contrast(0xFFFFFFFF) >= contrast(0xFF000000) ? 0xFFFFFFFF : 0xFF000000
-    }
-
-    private static func keyboardNamesSection(_ input: GridSceneInput) -> Data {
-        var d = Data()
-        guard let names = input.keyboardNames else {
-            DrawingContentBinary.append(&d, UInt16(0))
-            return d
-        }
-        d.reserveCapacity(2 + 128 * 8)
-        DrawingContentBinary.append(&d, UInt16(0))  // count placeholder, patched below
-        var count = 0
-        for pitch in 0..<min(128, names.count) {
-            let name = names[pitch]
-            if name.isEmpty { continue }
-            DrawingContentBinary.append(&d, UInt8(pitch))
-            DrawingContentBinary.append(&d, UInt16(min(name.utf8.count, Int(UInt16.max))))
-            d.append(contentsOf: name.utf8.prefix(Int(UInt16.max)))
-            count += 1
-        }
-        let patched: UInt16 = UInt16(count).littleEndian
-        d.withUnsafeMutableBytes { $0.storeBytes(of: patched, toByteOffset: 0, as: UInt16.self) }
-        return d
     }
 
     private static func timeAxisSection(_ input: GridSceneInput) -> Data {

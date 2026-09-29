@@ -125,7 +125,7 @@ TestCase {
         verify(piano !== null, "the piano grid surface is mounted")
         verify(plotRenderer !== null && plotRenderer.visible, "the row layer is mounted")
         verify(plotRenderer !== null && plotRenderer.width > 0, "the time layer is mounted")
-        verify(keys !== null && keys.band === 1, "the keyboard layer is mounted")
+        verify(keys !== null && keys.list === 1, "the keyboard layer is mounted")
         verify(chip !== null, "the hover chip is mounted")
 
         var rowHeight = grid.rowHeight
@@ -268,11 +268,11 @@ TestCase {
         var scrolledY = grid.cameraScrollY
         var hoverRow = Math.min(127, Math.max(0, Math.floor(
                     (scrolledY + plot.height * 0.5) / rowHeight)))
-        var hoverPitch = 127 - hoverRow
+        var hoveredPitch = 127 - hoverRow
         var hoverViewportY = (hoverRow + 0.5) * rowHeight - scrolledY
         mouseMove(gutter, keyboardWidth * 0.5, hoverViewportY)
         verify(waitForNative(function() {
-            return grid.hoverKey === hoverPitch && chip.visible
+            return grid.hoverKey === hoveredPitch && chip.visible
         }, 5000), "hovering the keyboard publishes the pitch and shows the chip")
         var chipCenter = win(chip, chip.width / 2, chip.height / 2)
         var hoverCenter = win(gutter, keyboardWidth * 0.5, hoverViewportY)
