@@ -404,4 +404,5 @@ internal func runExportChecks(_ report: CheckReport) {
             error == .nothingToRender && !FileManager.default.fileExists(atPath: emptyPath.path),
             cppID: "\(id)::emptyRefusal", message: "empty render refuses before creating file")
     }
+    runExportCaptureChecks(report)
 }

@@ -59,7 +59,7 @@ public final class NativeAudio {
 
     public func bind(timeline: PlaybackTimeline, bank: NativeBankLease,
                      config: SongConfig) throws {
-        try bind(timeline: timeline, bank: bank, settings: settings(for: config))
+        try bind(timeline: timeline, bank: bank, settings: songSettings(for: config))
     }
 
     public func bind(timeline: PlaybackTimeline, bank: NativeBankLease,
@@ -88,7 +88,7 @@ public final class NativeAudio {
     }
 
     public func updateSettings(config: SongConfig) {
-        updateSettings(settings(for: config))
+        updateSettings(songSettings(for: config))
     }
 
     public func setEngineSettings(_ engine: EngineSettings, config: SongConfig?) {
@@ -150,11 +150,8 @@ public final class NativeAudio {
 
     public func auditionSampleOff() { device.renderer.audition.sampleOff() }
 
-    private func settings(for config: SongConfig) -> AudioSettings {
-        var settings = engineSettings
-        settings.songVolume = UInt8(clamping: config.masterVolume)
-        settings.reverb = UInt8(clamping: config.reverb ?? 50)
-        return settings
+    public func songSettings(for config: SongConfig) -> AudioSettings {
+        engineSettings.applyingSong(config)
     }
 
     /// Borrow the lease's pinned external allocation through its typed native API.
