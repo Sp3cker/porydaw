@@ -5,7 +5,7 @@
 Automation cuts over from the C++ drawer raster to per-frame Swift
 viewport-space `PdDlRect`s. It replaces `AutomationPage.drawingContent()` /
 `contentRevision` with plan Contract §3 lists (0 axis, 1 statics, 2 preview)
-and consumes the Task 6 `DrawerStaticsContent` builder API. Axis rules and
+and consumes the Task 6a `DrawerStaticsContent` builder API. Axis rules and
 value lines (§11 with `pxSpace`/`viewportSticky` flags), curve runs (§11),
 step edges and selection/preview nodes (§12 anchored), and layer breaks (§13)
 map onto the three lists; nodes, bands, hover guides and labels stay QML.
@@ -28,12 +28,11 @@ map onto the three lists; nodes, bands, hover guides and labels stay QML.
 - `src/checks/editorqml/tst_EditorDrawerAutomationPreview.qml`
 - `src/checks/editorqml/tst_ShellDrawerParityAutomation.qml`
 
-## Prerequisites
-
 - Task 1 interfaces (`DisplayListWriter`, wire format) and Task 2
   (`DisplayList` item fetch protocol).
-- Task 6's rewritten `DrawerStaticsContent` builder API; this task calls it
-  and must not modify it.
+- Task 6a's `DrawerStaticsContent` builder API; this task calls it
+  and must not modify it. This task does not edit
+  `DrawerStaticsContent.swift`; its legacy packer is deleted in Task 9.
 
 ## Interface contract
 
@@ -74,7 +73,7 @@ map onto the three lists; nodes, bands, hover guides and labels stay QML.
 ## Implementation steps
 
 1. Rewrite `publishDrawingContent` to emit the three lists via
-   `DisplayListWriter` + Task 6 builders, preserving the assembly order in
+   `DisplayListWriter` + Task 6a builders, preserving the assembly order in
    the `layers` array (`AutomationDrawingContent.swift:113-118`) as list
    assignment (axis → 0, ghost/curve/selection → 1, preview → 2).
 2. Add `displayRevision` / `displayList(_:)`; remove `contentRevision`,
@@ -93,7 +92,7 @@ map onto the three lists; nodes, bands, hover guides and labels stay QML.
    palette republish, selection), `presentation/painting.swift:334-379,433-437`
    and `painting_raster.swift:72-91,166-170`, `automationcanvasediting.swift:44-63,353-357`,
    `domain/gestureNodeDragPhantom.swift:250-266`, keeping the
-   camera-stability assertions' intent inverted as in Task 6 (camera moves
+   camera-stability assertions' intent inverted as in Task 6b (camera moves
    change bytes + revision). The QML files keep working through preserved
    objectNames (`automationAxis`, `automationStatics`,
    `automationPreviewRects`); edit them only where an assertion names
@@ -117,6 +116,6 @@ map onto the three lists; nodes, bands, hover guides and labels stay QML.
 ## Task-specific constraints
 
 - This task does not edit `DrawerStaticsContent.swift` (single writer:
-  Task 6); gaps in the builder API are reported, not worked around.
+  Task 6a; legacy packer deleted in Task 9); gaps in the builder API are reported, not worked around.
 - All records use `PD_DL_ID_NONE`; paint order is record order per list;
   cross-list interleaving follows the existing QML item order.

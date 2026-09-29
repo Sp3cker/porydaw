@@ -9,8 +9,8 @@ QtBridge). Supersedes the ownership split in `docs/plans/native-timeline-rendere
 Task 0 (2026-09-28, `swiftc -O`, arm64): a writer shaped like Contract §3 packing the per-frame
 worst case — 3 000 visible notes × (fill + 4 border rects) + 400 grid lines + 500 labels = 15 400
 rects + 500 labels, 768 KB — costs **≈185 µs per frame (12 ns per record)** including the snapped
-projection arithmetic. Budget was 0.5 ms → proceed. Synthetic (no `GridSceneInput` walk); Task 4's
-smoke re-measures on the production path.
+projection arithmetic. Budget was 0.5 ms → proceed. Synthetic (no `GridSceneInput` walk); Task 0b's bench
+re-measures on the production path.
 
 ## The problem this plan removes
 
@@ -213,7 +213,7 @@ All lists of one source rebuild together and bump `displayRevision` once. Source
 
 | source | lists | replaces |
 |---|---|---|
-| `GridScene` | 0 plot, 1 keyboard, 2 ruler | `drawingContent()` + `contentRevision` (`GridScene.swift:91-102`); item camera props `pixelsPerTick/keyHeight/scrollX/scrollY/devicePixelRatio/bandSelection*/hoverPitch` (`PianoRollCanvas.qml:18-27,44-49`, `EditorRulerBand.qml:38-44`). Between Tasks 4 and 5 `displayList(2)` returns an empty list and the ruler stays on `TimelineRenderer` via the legacy pair |
+| `GridScene` | 0 plot, 1 keyboard, 2 ruler | `drawingContent()` + `contentRevision` (`GridScene.swift:91-102`); item camera props `pixelsPerTick/keyHeight/scrollX/scrollY/devicePixelRatio/bandSelection*/hoverPitch` (`PianoRollCanvas.qml:18-27,44-49`, `EditorRulerBand.qml:38-44`). Keyboard stays on the legacy pair through 4a, ruler through 4b; `displayList` returns an empty list for a band not yet cut over |
 | `VelocityPage` | 0 grid, 1 transient | `drawingContent()` (`VelocityPage.swift:211-212`), `DrawerStaticsContent` §11/§14 |
 | `VoiceChangesPage` | 0 grid | `drawingContent()` (`VoiceChangesPage.swift:174-175`) |
 | `AutomationPage` | 0 axis, 1 statics, 2 preview | `drawingContent()` (`AutomationPage.swift:116-117`), `AutomationDrawingContent` §11/§12/§13 |
@@ -302,7 +302,7 @@ and bridge-wakeup paths, not the painted batch, so the design stands — with th
 |---|---|
 | QtBridge same-thread NOTIFY coalescing (`cmake/patches/qtbridge/qtbridge-object-return.patch`, `flushEmissions`): emissions queue and flush once per event-loop turn, FIFO | Neutral for the item: freshness is the frame-time pull (Contract §2), which reads `displayRevision` directly and never waits for the NOTIFY. The NOTIFY only guarantees a frame for list-only changes. What is **not** solved by the list alone: items driven by the synchronous `cameraScroll` row (velocity handles, playhead, drawer containers — `VelocityPage.qml:122-130` exists precisely so the container never lags a queued NOTIFY) render in the same turn; without the pull the grid would follow one flush later, as `TimelineRenderer.scrollX` does today. Task 2 adds the same-frame check that proves handles and grid agree in the first frame after a scroll |
 | Hidden drawer sections defer camera work (`DocumentWorkspace.deferredCameraZoom`, `:376-399`, flushed on show/attach; document rebuilds clear it) | Kept. Deferral now covers scroll-only too (all lists are viewport-space); `applyCamera` calls each visible page's `refreshCamera` for both scroll and zoom (Contract §3). Invariant: a hidden page's lists may be stale; a visible page's lists are never stale |
-| Velocity handles are tick-space QML delegates placed from the camera carrier's `pixelsPerTick` (`VelocityPage.qml:122-130,396-404`; carrier `GridScene+Rebuild.swift:38-46` publishes `scrollX/scrollY/pixelsPerTick`); `VelocityPage.refreshCamera` updates handle `x/endX` in place (`VelocityPublication.swift:85-98`) | Untouched by Tasks 4–8: handles, ramp, hover guides and the `cameraScroll` carrier are interactive delegates, not painted lists. Task 6 adds the list rebuild to `refreshCamera` after the in-place handle update and leaves `contentScrollX`/`contentPixelsPerTick` bindings alone. `VelocityProjection.stableXForTick` keeps calling `contentTickX` (survives Contract §4) |
+| Velocity handles are tick-space QML delegates placed from the camera carrier's `pixelsPerTick` (`VelocityPage.qml:122-130,396-404`; carrier `GridScene+Rebuild.swift:38-46` publishes `scrollX/scrollY/pixelsPerTick`); `VelocityPage.refreshCamera` updates handle `x/endX` in place (`VelocityPublication.swift:85-98`) | Untouched by Tasks 4a–8: handles, ramp, hover guides and the `cameraScroll` carrier are interactive delegates, not painted lists. Task 6b adds the list rebuild to `refreshCamera` after the in-place handle update and leaves `contentScrollX`/`contentPixelsPerTick` bindings alone. `VelocityProjection.stableXForTick` keeps calling `contentTickX` (survives Contract §4) |
 | Notes section cached across draw-preview-only rebuilds (`notesSectionCache`, `RollNotesSectionKey`, `displacesNotes`; `1c690352`) | Content-tier keying survives as a tick-sorted record array (Contract §3 “Frame-tier skip”); the packed-bytes cache is deleted with `RollDrawingContent`. `displacesNotes` stays a `GridSceneInput` field |
 | `syncModel` prefix/suffix diff (`QListModelSync.swift`) | Unrelated to lists; not in any write set |
 
@@ -350,17 +350,22 @@ upload. The delta is the copy and decode, tens of µs at the worst-case list siz
 | 0b | Commit the xctrace wheel bench; capture the pre-cutover baseline | Direct | user + orchestrator | `profiler/` (bench script + baseline report) |
 | 1 | Wire format, C decoder, Swift writer, round-trip check | SDD | sdd-implementer | `src/render/display_list.{h,c}`, `src/render/module.modulemap`, `src/swift/app/timeline/DisplayListWriter.swift`, `src/swift/app/CMakeLists.txt`, root `CMakeLists.txt`, `src/checks/CMakeLists.txt`, `src/checks/displaylist/DisplayListChecks.swift`, `src/checks/checkcatalog.cpp`, swiftcore suite dispatch |
 | 2 | `DisplayList` QQuickItem + same-frame check | SDD | qt-cpp-reviewer (Qt ownership/threading) | `src/render/display_list_item.{h,cpp}`, root `CMakeLists.txt`, `src/checks/editorqml/{DisplayListProbe.swift,tst_DisplayListSameFrame.qml}`, `src/checks/CMakeLists.txt` |
-| 3 | One projection in Swift | SDD | sdd-implementer | `src/swift/app/timeline/EditorCamera.swift`, `src/swift/app/timeline/GridGeometry.swift`, callers named in `inventory.md` §3, every check file calling `displayX`/`noteContentRect`/`noteContentBox` (mechanical rename only; assertions unchanged except `src/checks/rollcheck/static/camera.swift`), affected `proof.*.txt` rows |
-| 4 | Roll plot + keyboard on display lists; roll check migration | SDD | sdd-implementer | `src/swift/app/roll/{RollDisplayLists,GridScene,GridScene+Notes,GridScene+Rebuild,PianoGrid,PianoGrid+SceneSync}.swift`, `src/ui/songview/quick/PianoRollCanvas.qml`, `src/checks/editorqml/RollNoteFaces.js` + roll consumers, `src/checks/rollcheck/note_rendering_*.swift`, `note_name_labels.swift`, `proof.*` rows |
+| 3a | Projection rename (no behavior change) | SDD | sdd-implementer | `src/swift/app/timeline/EditorCamera.swift`, `src/swift/app/timeline/GridGeometry.swift`, callers named in `inventory.md` §3, every check file calling `displayX`/`noteContentRect`/`noteContentBox` (rename only; assertions unchanged), affected `proof.*.txt` rows (path/line anchors only) |
+| 3b | One projection formula (the plan's only behavior change) | SDD | sdd-implementer | `EditorCamera.swift` (`viewX`, `PitchProjection.snappedEdge` bodies), `src/checks/rollcheck/static/camera.swift`, its `proof.*.txt` rows via `proof:edit` |
+| 4a | Roll plot (list 0) on display lists; plot check migration | SDD | sdd-implementer `:high` | `src/swift/app/roll/{RollDisplayLists,GridScene,GridScene+Notes,GridScene+Rebuild,PianoGrid,PianoGrid+SceneSync}.swift`, `src/ui/songview/quick/PianoRollCanvas.qml` (plot item only), `src/checks/editorqml/RollNoteFaces.js` + roll consumers, `src/checks/rollcheck/note_rendering_*.swift`, `note_name_labels.swift`, `proof.*` rows |
+| 4b | Roll keyboard (list 1) on display lists; keyboard check migration | SDD | sdd-implementer | `RollDisplayLists.swift`, `GridScene.swift`, `PianoRollCanvas.qml` (keyboard item), keyboard checks in `src/checks/rollcheck/` and `src/checks/rollqml/`, `proof.*` rows |
 | 5 | Ruler on display lists | SDD | sdd-implementer | `RollDisplayLists.swift`, `src/ui/songview/quick/swiftroll/EditorRulerBand.qml`, ruler check helpers (`ShellGridMenuSupport.qml`, `tst_EditorDrawerChrome.qml`, `tst_ShellChromeVisuals.qml`, `tst_ShellMenusLoop.qml`) |
-| 6 | Velocity drawer on display lists | SDD | sdd-implementer | `src/swift/app/drawer/velocity/{VelocityPage,VelocityPublication}.swift`, `src/swift/app/drawer/DrawerStaticsContent.swift`, `src/ui/songview/quick/drawer/VelocityPage.qml` |
+| 6a | `DrawerStaticsContent` builder API + parity check against the legacy packer | SDD | sdd-implementer `:high` | `src/swift/app/drawer/DrawerStaticsContent.swift` (additive: builders beside the legacy packer, which Task 9 deletes), `src/checks/drawerpresentation/DrawerStaticsParityChecks.swift`, `src/checks/checkcatalog.cpp`, swiftcore suite dispatch |
+| 6b | Velocity drawer on display lists | SDD | sdd-implementer | `src/swift/app/drawer/velocity/{VelocityPage,VelocityPublication}.swift`, `src/ui/songview/quick/drawer/VelocityPage.qml`, velocity checks (task-6b brief) |
 | 7 | Voice-changes drawer on display lists | SDD | sdd-implementer | `src/swift/app/drawer/voicechanges/{VoiceChangesPage,VoiceChangesPublication}.swift`, `src/ui/songview/quick/drawer/VoiceChangesPage.qml` |
 | 8 | Automation drawer on display lists | SDD | sdd-implementer | `src/swift/app/drawer/automation/{AutomationPage,AutomationDrawingContent,AutomationContentPublication,AutomationOverlayPublication}.swift`, `src/ui/songview/quick/drawer/AutomationPlot.qml` |
-| 9 | Delete `TimelineRenderer` and the C++ scene code; docs | Direct | controller | `src/render/` deletions, root `CMakeLists.txt`, `src/swift/app/timeline/DrawingContentBinary.swift`, `docs/plans/native-timeline-renderer/plan.md` status note, release notes |
+| 9 | Delete `TimelineRenderer`, the C++ scene code and the legacy Swift packers; docs | Direct | controller | `src/render/` deletions, root `CMakeLists.txt`, `src/swift/app/timeline/DrawingContentBinary.swift`, legacy packer in `src/swift/app/drawer/DrawerStaticsContent.swift` and its transitional `drawerstatics-parity` suite, `docs/plans/native-timeline-renderer/plan.md` status note, AGENTS.md transitional sentence, release notes |
 
-Serial dependencies: 1 → 2; 1, 3 → 4 → 5; 1, 2 → 6, 7, 8 (parallel, disjoint writes; 6 and 7 share
-`DrawerStaticsContent.swift` only if Task 6 rewrites it first — Task 7 consumes the rewritten API); 5, 6,
-7, 8 → 9. Task 0 precedes 4.
+Serial dependencies: 1 → 2; 3a → 3b; 1, 3b → 4a → 4b → 5; 1, 2, 3b → 6a → 6b ∥ 7 ∥ 8 (disjoint writes;
+none of the three touches `DrawerStaticsContent.swift` — the legacy packer goes in Task 9 with
+`DrawingContentBinary.swift`); 5, 6b, 7, 8 → 9. Task 0b precedes 4a.
+The legacy `contentRevision`/`drawingContent()` pair on `GridScene` serves whichever bands are not yet
+on lists (keyboard through 4a, ruler through 4b) and dies in Task 5.
 
 ### Task 0 (Direct) — inline
 
@@ -384,19 +389,23 @@ the full Verification list green, `deno task checks:bridge` clean.
 
 Target: `profiler/` — the user's xctrace wheel bench (600 wheel ops, main-thread totals), not in
 tree at `f234686a`; the user lands it, the orchestrator runs it. Change: run the four Verification
-scenarios three times each at checkpoint 1b (Task 3 landed, nothing painted by Swift yet); commit a
+scenarios three times each at checkpoint 1b (Task 3b landed, nothing painted by Swift yet); commit a
 baseline report beside the script naming commit, scenario, min and median. Acceptance: the report
-exists before Task 4 is dispatched; every later bench run compares against it.
+exists before Task 4a is dispatched; every later bench run compares against it.
 
 ## Checkpoints
 
 1. After Tasks 1 + 2 (new boundary exists and is round-trip checked; nothing uses it yet).
-1b. After Task 3 alone, every lane green on its own commit: rasters byte-identical (C++ still paints),
-    only hit-test points moved ≤1 px. Bench baseline captured here (Task 0b).
-2. After Task 4 (roll plot/keyboard cut over): rasters still byte-identical, hit points unchanged from
-    1b — a raster diff is a port bug, a hit-test diff is not this task's.
+1a. After Task 3a (pure rename): every lane green, nothing moved.
+1b. After Task 3b alone, every lane green on its own commit: rasters byte-identical (C++ still paints),
+    only hit-test points moved ≤1 px; the diff is the plan's only behavior change. Bench baseline
+    captured here (Task 0b).
+2. After Task 4a (plot on list 0): rasters still byte-identical, hit points unchanged from 1b — a
+    raster diff is a port bug, a hit-test diff is not this task's. Bench: roll pan/zoom ≤ baseline.
+2b. After Task 4b (keyboard on list 1): same gates.
 3. After Task 5 (roll surface complete; `GridScene` has no legacy blob path).
-4. After Tasks 6–8 (drawers; `TimelineRenderer` unreferenced).
+3b. After Task 6a (builder API + parity check green; nothing in production uses it yet).
+4. After Tasks 6b, 7, 8 (drawers; `TimelineRenderer` unreferenced). Bench: drawer scenarios ≤ baseline.
 5. Final: Task 9.
 
 ## Verification (cumulative; exact commands)
@@ -406,15 +415,15 @@ exists before Task 4 is dispatched; every later bench run compares against it.
 - `deno task checks --filter swiftcore --verbose` — camera/projection, economy, roll semantics.
 - `deno task checks:qml-roll --verbose` — roll QML + raster identity (plot, keyboard, ruler).
 - `deno task checks:shell --verbose` — shell journeys via `face()`, chrome/ruler rasters.
-- `deno task checks:qml --verbose` — drawer pages (Tasks 6–8).
+- `deno task checks:qml --verbose` — drawer pages (Tasks 6a–8).
 - `deno task checks:bridge` — QtBridge surface guard (new `displayRevision`/`displayList` members).
 - `deno task proof check --executed` — ledger health after each checkpoint.
 - `deno task format --check`.
 - Bench gate (Task 0b, replaces manual smoke): the user's xctrace wheel bench — 600 wheel ops per
-  scenario, main-thread totals from `xctrace` — must be committed under `profiler/` before Task 4 is
+  scenario, main-thread totals from `xctrace` — must be committed under `profiler/` before Task 4a is
   dispatched (not in tree at `f234686a`). Scenarios: roll pan, roll zoom, drawer pan with velocity
   visible, drawer pan with automation visible. Three runs per measurement (pan totals vary ~2× run to
-  run); report min and median; gate on min. Baseline at checkpoint 1b; re-measure after Tasks 4, 5 and
+  run); report min and median; gate on min. Baseline at checkpoint 1b; re-measure after Tasks 4a, 4b, 5 and
   the 6–8 wave; a min-of-3 regression on any scenario stops the plan and goes to the user with the
   numbers. Task 0's 185 µs was a synthetic roll-only packing bound (go/no-go for the approach); it is
   not the performance gate.
@@ -432,8 +441,8 @@ exists before Task 4 is dispatched; every later bench run compares against it.
 3. Hit-test behavior change (Contract §4) is deliberate and ≤ 1 physical pixel; any shell check that
    clicked a computed point inside that pixel will surface it — fix the check's point, not the formula.
 4. Per-frame Swift cost on pathological songs is bounded by culling, not by note count; the cull itself
-   walks `notesByTick`-ordered records (today's C++ does the same, `roll_scene.cpp:181-224`). Task 0's
-   measurement is the gate; Task 4's smoke re-measures on the real path.
+   walks `notesByTick`-ordered records (today's C++ does the same, `roll_scene.cpp:181-224`). Task 0b's bench
+   is the gate (Verification).
 5. ~~AGENTS.md boundary text needs human permission~~ landed with the user's AGENTS.md review.
 
 ## Orchestrator brief (for whoever runs this plan)
@@ -446,10 +455,15 @@ orchestrator never implements Tasks 1–8 inline and never edits a proof ledger.
 | wave | tasks | seat | gate before the next wave |
 |---|---|---|---|
 | A | 1 | `sdd-implementer` | `deno task checks --filter displaylist --verbose` green; `checks:bridge` clean; `lsp:swift` re-run |
-| B | 2 ∥ 3 | 2: `qt-cpp-reviewer`; 3: `sdd-implementer` | Task 2: same-frame check green (Contract §2 invariant), 1-arg `invokeMethod` exercised. Task 3 lands **alone** and passes every lane on its own commit (`swiftcore`, `qml-roll`, `shell`, `qml`) with rasters byte-identical; `camera.swift` re-pin via `proof:edit` in the same commit. Checkpoints 1, 1b; bench baseline (Task 0b) at 1b. Task 4 is not dispatched before both |
-| C | 4 → 5 | `sdd-implementer` | after 4: `checks:qml-roll`, `checks:shell`, `checks --filter swiftcore`, rasters byte-identical to 1b, bench ≤ baseline; after 5: same, `GridScene` has no `drawingContent`. Checkpoints 2, 3 |
-| D | 6 ∥ 7 ∥ 8 | `sdd-implementer` ×3 | Task 6 first if 7 needs the rewritten `buildGrid` (it does — Task 7 consumes `DrawerStaticsContent.buildGrid(paletteColors:)`); 7 and 8 start when 6's `DrawerStaticsContent.swift` lands. `checks:qml`, `checks:shell`. Checkpoint 4 |
+| B | 2 ∥ 3a → 3b | 2: `qt-cpp-reviewer`; 3a/3b: `sdd-implementer` | Task 2: same-frame check green (Contract §2 invariant), 1-arg `invokeMethod` exercised. 3a: every lane green, no raster or hit-point change (checkpoint 1a). 3b lands **alone**, every lane green, rasters byte-identical, `camera.swift` re-pin via `proof:edit` in the same commit (checkpoint 1b); bench baseline (Task 0b) at 1b. Task 4a is not dispatched before Task 2 and 1b |
+| C | 4a → 4b → 5 | `sdd-implementer` (4a at `:high`, then default) | after each: `checks:qml-roll`, `checks:shell`, `checks --filter swiftcore`, rasters byte-identical to 1b, bench ≤ baseline; after 5: `GridScene` has no `drawingContent`. Checkpoints 2, 2b, 3 |
+| D | 6a → 6b ∥ 7 ∥ 8 | `sdd-implementer` (6a at `:high`, then default ×3) | 6a: `checks --filter drawerstatics-parity` green (builders reproduce the legacy packer's geometry for the same inputs) — checkpoint 3b; then 6b, 7, 8 in parallel, disjoint write sets, none touching `DrawerStaticsContent.swift`. `checks:qml`, `checks:shell`. Checkpoint 4 |
 | E | 9 | orchestrator, Direct | full Verification list; `grep TimelineRenderer src/ui src/checks` empty; AGENTS.md: remove the transitional sentence only |
+
+Reasoning levels: overrides are per agent name (`cfg://task/agentModelOverrides`), so flip
+`sdd-implementer` to `:high` before dispatching 4a and 6a and back to default after each lands;
+`qt-cpp-reviewer` stays `:xhigh` for Task 2; `sdd-task-reviewer` runs `:high` for 2, 4a, 6a and
+default elsewhere. Do not raise 1, 3a, 3b — their risk is caught by lanes, not by thinking longer.
 
 Each brief is self-contained: dispatch with `task-N-brief.md` + this file's Contract and Global
 Constraints; do not paraphrase either. Review every task with `sdd-task-reviewer` against the brief's
@@ -486,7 +500,7 @@ acceptance predicate before marking it done; bounded fix loop of 2, then escalat
 - A bench scenario's min-of-3 regresses against the 1b baseline.
 - A `pd_dl_decode` failure reaches `qFatal` in a check — the writer or the header changed shape;
   the format is versioned, so a bump is a user decision.
-- Any raster check differs at all after Task 3 or Task 4 (both must be byte-identical); after Task 5–8
+- Any raster check differs at all after Tasks 3a, 3b, 4a or 4b (all byte-identical); after Tasks 5–8
   only the deliberate-inversion list may change.
 - Any failing check not on the deliberate-inversion list, or a pre-existing failure an implementer
   reports. Never hand off red.

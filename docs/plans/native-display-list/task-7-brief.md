@@ -5,7 +5,7 @@
 Voice-changes cuts over from the C++ drawer raster to per-frame Swift
 viewport-space `PdDlRect`s. It replaces `VoiceChangesPage.drawingContent()` /
 `contentRevision` with plan Contract §3 list 0 (grid) and consumes the
-`DrawerStaticsContent` builder API defined by Task 6 without re-deciding it.
+`DrawerStaticsContent` builder API defined by Task 6a without re-deciding it.
 Held-span fills (§11 tick-space rects) and grid lines (§7 time axis) move
 into one Swift-built list; markers stay QML delegates.
 
@@ -16,20 +16,20 @@ into one Swift-built list; markers stay QML delegates.
 - `src/ui/songview/quick/drawer/VoiceChangesPage.qml`
 - `src/swift/app/DocumentWorkspace.swift` (only `applyCamera`, `:383-391`)
 - `src/checks/drawerpresentation/VoiceChangesPageChecks.swift` (scroll/zoom stability, lane-write republish)
-- `src/checks/drawerpresentation/voice_projection.swift` (held-span count via `VelocityContentProbe`, rewritten by Task 6 — consume, do not co-edit)
+- `src/checks/drawerpresentation/voice_projection.swift` (held-span count via `VelocityContentProbe`, rewritten by Task 6b — consume, do not co-edit)
 - `src/checks/drawerpresentation/voice_interaction.swift` (detach publishes no held span)
 - `src/checks/editorqml/tst_EditorDrawerVoiceTransactions.qml`
 - `src/checks/editorqml/tst_EditorDrawerVoicePicker.qml`
 - `src/checks/editorqml/tst_EditorDrawerVoiceInputIsolation.qml`
-- `src/checks/editorqml/tst_ShellDrawerParityVoiceVelocity.qml` (shared with Task 6; this task owns the voice-half edits only)
-
-## Prerequisites
+- `src/checks/editorqml/tst_ShellDrawerParityVoiceVelocity.qml` (shared with Task 6b; this task owns the voice-half edits only)
 
 - Task 1 interfaces (`DisplayListWriter`, wire format) and Task 2
   (`DisplayList` item fetch protocol).
-- Task 6's rewritten `DrawerStaticsContent` builder API (`buildGrid`,
+- Task 6a's `DrawerStaticsContent` builder API (`buildGrid`,
   `buildTickRects`, `buildAnchored`, `buildDashedFrame`); this task calls it
-  and must not modify it — mismatches are reported, not worked around.
+  and must not modify it — mismatches are reported, not worked around. This
+  task does not edit `DrawerStaticsContent.swift`; its legacy packer is
+  deleted in Task 9.
 
 ## Interface contract
 
@@ -61,7 +61,7 @@ into one Swift-built list; markers stay QML delegates.
 ## Implementation steps
 
 1. Replace `publishDrawingContent(entries:session:)` internals to emit
-   through `DisplayListWriter` + Task 6 builders instead of
+   through `DisplayListWriter` + Task 6a builders instead of
    `DrawerStaticsContent.pack` (`VoiceChangesPublication.swift:130-135`);
    keep the held-span assembly (`:97-120`) and palette/metrics inputs.
 2. Add `displayRevision` / `displayList(_:)`; remove `contentRevision`,
@@ -85,9 +85,9 @@ into one Swift-built list; markers stay QML delegates.
    `contentRevision` to `displayList(0)` / `displayRevision`:
    `VoiceChangesPageChecks.swift:224-270` (scroll/zoom stability, lane-write
    republish), `voice_projection.swift:40-44`, `voice_interaction.swift:272-276`
-   (decode via the Task 6-rewritten `VelocityContentProbe`; do not co-edit the
+   (decode via the Task 6b-rewritten `VelocityContentProbe`; do not co-edit the
    probe), keeping the camera-stability assertions' intent inverted as in Task
-   6 (camera moves change bytes + revision). The QML files keep working
+   6b (camera moves change bytes + revision). The QML files keep working
    through the preserved `voiceGridLines` objectName; edit them only where an
    assertion names `TimelineRenderer` properties or `contentRevision`.
 
@@ -108,6 +108,6 @@ into one Swift-built list; markers stay QML delegates.
 ## Task-specific constraints
 
 - This task does not edit `DrawerStaticsContent.swift` (single writer: Task
-  6). If the Task 6 API cannot express the held-span fills, stop and report
+  6a; legacy packer deleted in Task 9). If the 6a API cannot express the held-span fills, stop and report
   the gap instead of adding a local pack path.
 - All records use `PD_DL_ID_NONE`; paint order is record order.
