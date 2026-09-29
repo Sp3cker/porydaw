@@ -128,7 +128,16 @@ const std::vector<CheckDefinition> &catalog()
         swiftSuite("swiftcore-bankhistory", "bankHistory");
         swiftSuite("swiftcore-themecolor", "themeColor");
         swiftSuite("swiftcore-displaylist", "displayList");
-        swiftSuite("samplecheck", "sampleCheck");
+        result.push_back(
+            {.name = "samplecheck",
+             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "sampleCheck"}),
+             .handler = swiftCore,
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = swiftCoreFixtures +
+                             strings({"samplesources/tone.mp3", "samplesources/tone.flac",
+                                      "samplesources/tone.ogg", "samplesources/tone.opus"}),
+             .platforms = swiftPlatforms});
         result.push_back(
             {.name = "projectidentitycheck",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectIdentity"}),

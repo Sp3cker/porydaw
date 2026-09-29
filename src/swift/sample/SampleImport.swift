@@ -27,6 +27,15 @@ public enum SampleImport {
             } else if matches(0, "RIFF") && matches(8, "sfbk") {
                 throw SampleImportFailure(
                     "SoundFont files hold multiple samples — pick a zone with the SoundFont zone picker.")
+            } else if matches(0, "fLaC") {
+                sample = try SampleCompressedDecode.decode(bytes, kind: .flac, leftChannelOnly: leftChannelOnly)
+            } else if matches(0, "OggS") {
+                sample = try SampleCompressedDecode.decode(bytes, kind: .ogg, leftChannelOnly: leftChannelOnly)
+            } else if data.byteCount >= 4
+                && (matches(0, "ID3")
+                    || (data[0] == 0xFF && data[1] & 0xE0 == 0xE0))
+            {
+                sample = try SampleCompressedDecode.decode(bytes, kind: .mp3, leftChannelOnly: leftChannelOnly)
             } else {
                 throw SampleImportFailure(
                     "not a supported audio file (WAV, AIFF, MP3, FLAC, and Ogg Vorbis sources are supported).")

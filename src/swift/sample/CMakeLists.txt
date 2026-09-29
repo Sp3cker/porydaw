@@ -4,6 +4,7 @@ add_library(PorydawSample STATIC
     SampleImport.swift
     SampleWavReader.swift
     SampleAiffReader.swift
+    SampleCompressedDecode.swift
 )
 set_target_properties(PorydawSample PROPERTIES
     Swift_MODULE_NAME PorydawSample
@@ -18,3 +19,7 @@ target_include_directories(PorydawSample INTERFACE
 )
 porydaw_enable_swift_batch_mode(PorydawSample)
 target_link_libraries(PorydawSample PRIVATE BinaryParsing)
+target_compile_options(PorydawSample PUBLIC
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_SOURCE_DIR}/src/audio/sample_codec.modulemap>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src/audio>"
+)

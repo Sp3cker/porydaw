@@ -3,10 +3,10 @@ Assertion correspondence: samplecheck/decoder.cpp
 Reference revision: 5af4355e8fc1337f38da60c545da4af246160bcf
 Original: src/checks/samplecheck/decoder.cpp
 Original SHA-256: 567e1efd7c3739345c23cadd4fd8ebbc5b9c422c74e6fd252454472f5f1e0d03
-Swift counterpart: src/checks/samplecheck/DecoderChecks.swift
-Swift counterpart SHA-256: b164c7eda4879391530c0acc787b61c9b6c407afa4799c68fb2367d6c47d199a
+Swift counterpart: src/checks/samplecheck/DecoderChecks.swift; src/checks/samplecheck/CompressedDecoderChecks.swift
+Swift counterpart SHA-256 (DecoderChecks.swift): b164c7eda4879391530c0acc787b61c9b6c407afa4799c68fb2367d6c47d199a
 
-Inventory: 93 sites across 7 test methods (compressedContainers, compressedRefusals, decodeAiff, decodeRefusalBoundaries, decodeStereoPolicy, decodeWidths, optionalCorpus). Tally: 55 MATCHED, 1 RETIRED-REPRESENTATION, 37 GAP.
+Inventory: 93 sites across 7 test methods (compressedContainers, compressedRefusals, decodeAiff, decodeRefusalBoundaries, decodeStereoPolicy, decodeWidths, optionalCorpus). Tally: 76 MATCHED, 1 RETIRED-REPRESENTATION, 16 GAP.
 
 Command: deno task checks --filter samplecheck --verbose
 Result: controller-observed 2026-09-29 for this tree — checks: 1/38 ok, no failures; proof check --executed: 0 not executed.
@@ -236,8 +236,8 @@ Disposition: MATCHED
 Mapping: S056
 
 A057 | SampleProcessingTest::compressedContainers | src/checks/samplecheck/decoder.cpp:318
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S060
 Source context since previous assertion:
   ;
   }
@@ -279,8 +279,8 @@ Original expression:
                    "mp3 fixture decodes")
 
 A058 | SampleProcessingTest::compressedContainers | src/checks/samplecheck/decoder.cpp:320
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S061
 Source context since previous assertion:
   ;
 
@@ -292,8 +292,8 @@ Original expression:
                    "mp3 structure and metadata defaults")
 
 A059 | SampleProcessingTest::compressedContainers | src/checks/samplecheck/decoder.cpp:325
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S062
 Source context since previous assertion:
   ;
 
@@ -301,8 +301,8 @@ Original expression:
   QCOMPARE(mp3.frameCount(), qint64(5512))
 
 A060 | SampleProcessingTest::compressedContainers | src/checks/samplecheck/decoder.cpp:328
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S063
 Source context since previous assertion:
   ;
           const double amp =
@@ -312,8 +312,8 @@ Original expression:
   QVERIFY2(std::abs(amp - 0.5) < 0.05, "mp3 tone amplitude near 0.5")
 
 A061 | SampleProcessingTest::compressedContainers | src/checks/samplecheck/decoder.cpp:338
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S064
 Source context since previous assertion:
   ;
       }
@@ -331,8 +331,8 @@ Original expression:
                    "flac fixture decodes")
 
 A062 | SampleProcessingTest::compressedContainers | src/checks/samplecheck/decoder.cpp:340
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S065
 Source context since previous assertion:
   ;
 
@@ -343,8 +343,8 @@ Original expression:
                    "flac structure and metadata defaults")
 
 A063 | SampleProcessingTest::compressedContainers | src/checks/samplecheck/decoder.cpp:344
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S066
 Source context since previous assertion:
   ;
 
@@ -352,8 +352,8 @@ Original expression:
   QCOMPARE(flac.frameCount(), qint64(5512))
 
 A064 | SampleProcessingTest::compressedContainers | src/checks/samplecheck/decoder.cpp:350
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S067
 Source context since previous assertion:
   ;
           {
@@ -366,8 +366,8 @@ Original expression:
   QVERIFY2(maxDiff < 3e-7, "flac decode matches the source sine")
 
 A065 | SampleProcessingTest::compressedContainers | src/checks/samplecheck/decoder.cpp:351
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S068
 Source context since previous assertion:
   ;
 
@@ -375,8 +375,8 @@ Original expression:
   QCOMPARE(hashFloats(flac.buffer), 0x6c3d054141a6aae7ull)
 
 A066 | SampleProcessingTest::compressedContainers | src/checks/samplecheck/decoder.cpp:362
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S069
 Source context since previous assertion:
   ;
           }
@@ -395,8 +395,8 @@ Original expression:
                    "ogg fixture decodes")
 
 A067 | SampleProcessingTest::compressedContainers | src/checks/samplecheck/decoder.cpp:364
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S070
 Source context since previous assertion:
   ;
 
@@ -407,8 +407,8 @@ Original expression:
                    "ogg structure and metadata defaults")
 
 A068 | SampleProcessingTest::compressedContainers | src/checks/samplecheck/decoder.cpp:368
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S071
 Source context since previous assertion:
   ;
 
@@ -416,8 +416,8 @@ Original expression:
   QCOMPARE(ogg.frameCount(), qint64(5512))
 
 A069 | SampleProcessingTest::compressedContainers | src/checks/samplecheck/decoder.cpp:370
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S072
 Source context since previous assertion:
   ;
           const double amp = toneAmp(ogg.buffer, 22050.0, 440.0, 512, size_t(ogg.frameCount()) - 512);
@@ -426,8 +426,8 @@ Original expression:
   QVERIFY2(std::abs(amp - 0.45) < 0.05, "ogg stereo mean-downmix amplitude near 0.45")
 
 A070 | SampleProcessingTest::compressedContainers | src/checks/samplecheck/decoder.cpp:372
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S073
 Source context since previous assertion:
   ;
           ImportedSample left;
@@ -438,8 +438,8 @@ Original expression:
                    "ogg left-only re-import decodes with the warning")
 
 A071 | SampleProcessingTest::compressedContainers | src/checks/samplecheck/decoder.cpp:377
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S074
 Source context since previous assertion:
   ;
           const double lamp =
@@ -481,8 +481,8 @@ Original expression:
                    "flac source renders through the pipeline")
 
 A074 | SampleProcessingTest::compressedRefusals | src/checks/samplecheck/decoder.cpp:403
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S075
 Source context since previous assertion:
   ;
       }
@@ -500,8 +500,8 @@ Original expression:
                "ogg opus refuses")
 
 A075 | SampleProcessingTest::compressedRefusals | src/checks/samplecheck/decoder.cpp:405
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S076
 Source context since previous assertion:
   ;
 
@@ -509,8 +509,8 @@ Original expression:
   QVERIFY2(!error.isEmpty(), "refused codec reports an error")
 
 A076 | SampleProcessingTest::compressedRefusals | src/checks/samplecheck/decoder.cpp:409
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S077
 Source context since previous assertion:
   ;
       QByteArray badMp3 = QByteArray("ID3\x04", 4);
@@ -522,8 +522,8 @@ Original expression:
                "sync-less mp3 refuses")
 
 A077 | SampleProcessingTest::compressedRefusals | src/checks/samplecheck/decoder.cpp:411
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S078
 Source context since previous assertion:
   ;
 
@@ -531,8 +531,8 @@ Original expression:
   QVERIFY2(!error.isEmpty(), "refused stream reports an error")
 
 A078 | SampleProcessingTest::compressedRefusals | src/checks/samplecheck/decoder.cpp:412
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S079
 Source context since previous assertion:
   ;
 
@@ -542,8 +542,8 @@ Original expression:
                "corrupt flac refuses")
 
 A079 | SampleProcessingTest::compressedRefusals | src/checks/samplecheck/decoder.cpp:415
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S080
 Source context since previous assertion:
   ;
 
@@ -840,6 +840,49 @@ S058 | decoderRefusals | src/checks/samplecheck/DecoderChecks.swift
 Anchor: message "AIFF-C refusal text"
 S059 | decoderRefusals | src/checks/samplecheck/DecoderChecks.swift
 Anchor: message "rejected AIFF-C reports a refusal"
+
+S060 | compressedContainers | src/checks/samplecheck/CompressedDecoderChecks.swift
+Anchor: message "mp3 fixture decodes"
+S061 | compressedContainers | src/checks/samplecheck/CompressedDecoderChecks.swift
+Anchor: message "mp3 structure and metadata defaults"
+S062 | compressedContainers | src/checks/samplecheck/CompressedDecoderChecks.swift
+Anchor: message "mp3 gapless frame count"
+S063 | compressedContainers | src/checks/samplecheck/CompressedDecoderChecks.swift
+Anchor: message "mp3 tone amplitude near 0.5"
+S064 | compressedContainers | src/checks/samplecheck/CompressedDecoderChecks.swift
+Anchor: message "flac fixture decodes"
+S065 | compressedContainers | src/checks/samplecheck/CompressedDecoderChecks.swift
+Anchor: message "flac structure and metadata defaults"
+S066 | compressedContainers | src/checks/samplecheck/CompressedDecoderChecks.swift
+Anchor: message "flac frame count"
+S067 | compressedContainers | src/checks/samplecheck/CompressedDecoderChecks.swift
+Anchor: message "flac decode matches the source sine"
+S068 | compressedContainers | src/checks/samplecheck/CompressedDecoderChecks.swift
+Anchor: message "flac bit-exact PCM golden hash"
+S069 | compressedContainers | src/checks/samplecheck/CompressedDecoderChecks.swift
+Anchor: message "ogg fixture decodes"
+S070 | compressedContainers | src/checks/samplecheck/CompressedDecoderChecks.swift
+Anchor: message "ogg structure and metadata defaults"
+S071 | compressedContainers | src/checks/samplecheck/CompressedDecoderChecks.swift
+Anchor: message "ogg frame count"
+S072 | compressedContainers | src/checks/samplecheck/CompressedDecoderChecks.swift
+Anchor: message "ogg stereo mean-downmix amplitude near 0.45"
+S073 | compressedContainers | src/checks/samplecheck/CompressedDecoderChecks.swift
+Anchor: message "ogg left-only re-import decodes with the warning"
+S074 | compressedContainers | src/checks/samplecheck/CompressedDecoderChecks.swift
+Anchor: message "ogg left-only amplitude near 0.5"
+S075 | compressedRefusals | src/checks/samplecheck/CompressedDecoderChecks.swift
+Anchor: message "ogg opus refuses"
+S076 | compressedRefusals | src/checks/samplecheck/CompressedDecoderChecks.swift
+Anchor: message "refused codec reports an error"
+S077 | compressedRefusals | src/checks/samplecheck/CompressedDecoderChecks.swift
+Anchor: message "sync-less mp3 refuses"
+S078 | compressedRefusals | src/checks/samplecheck/CompressedDecoderChecks.swift
+Anchor: message "refused MP3 stream reports an error"
+S079 | compressedRefusals | src/checks/samplecheck/CompressedDecoderChecks.swift
+Anchor: message "corrupt flac refuses"
+S080 | compressedRefusals | src/checks/samplecheck/CompressedDecoderChecks.swift
+Anchor: message "refused FLAC stream reports an error"
 
 Shared helpers
 The shared C++ fixture sources src/checks/samplecheck/fixtures.h and
