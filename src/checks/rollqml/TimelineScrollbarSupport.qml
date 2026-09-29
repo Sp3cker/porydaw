@@ -100,6 +100,9 @@ TestCase {
         verify(waitForNative(function() {
             return session.songOpen || openFailure.length > 0
         }, 30000), "the song opened: " + openFailure)
+        verify(waitForNative(function() {
+            return session.songDockController().songListPresenter().totalCount > 0
+        }, 5000), "the Songs dock catalog is ready before checking scene-removal retention")
         overlay = overlayComponent.createObject(testCase, {
             "width": testCase.width, "height": testCase.height
         })

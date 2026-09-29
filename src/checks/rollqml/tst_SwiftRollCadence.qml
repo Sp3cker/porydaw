@@ -51,6 +51,9 @@ TestCase {
             return session.songOpen || testCase.openFailure.length > 0
         }, 30000), "the staged route101 song opens")
         verify(session.songOpen, "the staged route101 song is open")
+        verify(waitForNative(function() {
+            return session.songDockController().songListPresenter().totalCount > 0
+        }, 5000), "the Songs dock catalog is ready before checking scene-removal retention")
         var item = overlayComponent.createObject(testCase, {
             "width": testCase.width,
             "height": testCase.height
