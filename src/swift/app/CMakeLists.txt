@@ -5,6 +5,7 @@ add_library(PorydawApp STATIC
     ProjectService.swift
     ProjectService+Songs.swift
     ProjectService+Bank.swift
+    ProjectService+Picker.swift
     ProjectService+Import.swift
     SharedBankState.swift
     ServiceBankHistory.swift

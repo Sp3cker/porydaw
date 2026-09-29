@@ -14,6 +14,10 @@ Item {
     required property bool waveMode
     property string clickedSymbol: ""
     property bool positioning: false
+    onVisibleChanged: {
+        if (!visible)
+            popup.close()
+    }
     readonly property var entries: {
         controller.catalogRevision
         const filter = search.text.trim().toLowerCase()
@@ -120,6 +124,10 @@ Item {
             picker.positioning = false
             search.forceActiveFocus()
         }
+        onVisibleChanged: {
+            if (visible)
+                picker.controller.requestPickerSampleInfo()
+        }
         onClosed: {
             auditionOff.stop()
             picker.controller.stopSampleAudition()
@@ -178,20 +186,39 @@ Item {
                     height: picker.baseFontPx * 1.83
                     enabled: !!modelData.symbol
                     highlighted: list.currentIndex === index
-                    contentItem: Label {
-                        text: entry.modelData.label
-                        font: entry.modelData.typed
-                              ? Qt.font(Object.assign({},
-                                                      picker.applicationSession.typographyFonts.body,
-                                                      { italic: true }))
-                              : !entry.modelData.symbol
-                                ? Qt.font(picker.applicationSession.typographyFonts.bodyBold)
-                                : entry.font
-                        elide: Text.ElideRight
-                        verticalAlignment: Text.AlignVCenter
-                        color: !entry.modelData.symbol ? picker.colors.secondaryText
-                               : entry.highlighted ? picker.colors.selectionText
-                                                   : picker.colors.windowText
+                    contentItem: RowLayout {
+                        spacing: popup.spacingPx
+                        Label {
+                            objectName: "vgSamplePickerRowText"
+                            Layout.fillWidth: true
+                            text: entry.modelData.label
+                            font: entry.modelData.typed
+                                  ? Qt.font(Object.assign({},
+                                                          picker.applicationSession.typographyFonts.body,
+                                                          { italic: true }))
+                                  : !entry.modelData.symbol
+                                    ? Qt.font(picker.applicationSession.typographyFonts.bodyBold)
+                                    : entry.font
+                            elide: Text.ElideRight
+                            verticalAlignment: Text.AlignVCenter
+                            color: !entry.modelData.symbol ? picker.colors.secondaryText
+                                   : entry.highlighted ? picker.colors.selectionText
+                                                       : picker.colors.windowText
+                        }
+                        Label {
+                            objectName: "vgSamplePickerLoopBadge"
+                            Layout.preferredWidth: implicitWidth
+                            visible: !!entry.modelData.symbol && !entry.modelData.split
+                                     && !entry.modelData.typed
+                                     && (picker.controller.pickerInfoRevision,
+                                         picker.controller.pickerRowLoops(entry.modelData.symbol))
+                            text: "∞"
+                            color: entry.highlighted ? picker.colors.selectionText
+                                                     : picker.colors.windowText
+                            ToolTip.text: qsTr("Loops")
+                            ToolTip.visible: badgeHover.hovered
+                            HoverHandler { id: badgeHover }
+                        }
                     }
                     onClicked: {
                         const symbol = modelData.symbol
@@ -204,24 +231,15 @@ Item {
                     }
                 }
             }
-            RowLayout {
+            Label {
+                objectName: "vgSamplePickerDetail"
                 Layout.fillWidth: true
-                Label {
-                    objectName: "vgSamplePickerDetail"
-                    Layout.fillWidth: true
-                    color: picker.colors.secondaryText
-                    text: {
-                        const entry = picker.currentEntry()
-                        return !entry ? "" : entry.typed ? qsTr("Unlisted symbol")
-                               : picker.controller.pickerSampleDetail
-                                 || (entry.split ? qsTr("Keysplit instrument") : "")
-                    }
-                }
-                Label {
-                    objectName: "vgSamplePickerLoop"
-                    visible: picker.controller.pickerSampleLoop
-                    color: picker.colors.primaryText
-                    text: qsTr("Loop")
+                color: picker.colors.secondaryText
+                text: {
+                    const entry = picker.currentEntry()
+                    picker.controller.pickerInfoRevision
+                    return entry ? picker.controller.pickerDetail(
+                                       entry.symbol, !!entry.split, !!entry.typed) : ""
                 }
             }
         }

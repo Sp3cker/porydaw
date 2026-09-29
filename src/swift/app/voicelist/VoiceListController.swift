@@ -198,8 +198,9 @@ public final class VoiceListController {
     @QtIgnored public var synthDefinitions: [String: VgSynthDesc] = [:]
     @QtIgnored public var synthChoices: [String] = []
     @QtTracked public var canMintSynths = false
-    @QtTracked public var pickerSampleDetail = ""
-    @QtTracked public var pickerSampleLoop = false
+    @QtIgnored public var pickerSampleInfo: [String: PickerSampleInfo] = [:]
+    @QtTracked public var pickerInfoRevision = 0
+    @QtIgnored public var onPickerSampleInfoRequested: (() -> Void)?
     @QtIgnored public var adsrDefaults = VoiceListAdsrDefaults()
     @QtIgnored public var waveSymbols: [String] = []
     @QtIgnored public var drumkitSymbols: [String] = []
@@ -217,6 +218,24 @@ public final class VoiceListController {
     public func keysplitPickerSymbols() -> [String] { keysplitTables.keys.sorted() }
     public func drumkitChoices() -> [String] { drumkitSymbols }
     public func synthCatalogChoices() -> [String] { synthChoices }
+
+    public func requestPickerSampleInfo() {
+        onPickerSampleInfoRequested?()
+    }
+
+    public func pickerRowLoops(symbol: String) -> Bool {
+        pickerSampleInfo[symbol]?.looped ?? false
+    }
+
+    public func pickerDetail(symbol: String, keysplit: Bool, typed: Bool) -> String {
+        if typed { return "Unlisted symbol" }
+        if keysplit { return "Keysplit instrument" }
+        guard let info = pickerSampleInfo[symbol] else { return "" }
+        let mode = info.looped ? "Loops" : "One-shot"
+        let seconds = String(format: "%.2f", locale: Locale(identifier: "en_US_POSIX"),
+                             info.seconds)
+        return "\(mode) · \(info.rateHz) Hz · \(seconds) s"
+    }
 
     @QtIgnored weak var session: DocumentSession?
 

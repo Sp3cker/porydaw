@@ -59,11 +59,24 @@ extension ApplicationSession {
             self?.statusMessage(message: message)
         }
         voiceList.onSaveRequested = { [weak self] in self?.requestSave() }
+        voiceList.onPickerSampleInfoRequested = { [weak self] in
+            guard let self, let service = self.catalogService,
+                  let session = self.selectedDocument else { return }
+            self.voiceList.pickerInfoRevision += 1
+            let revision = self.voiceList.pickerInfoRevision
+            self.voiceList.pickerSampleInfo = [:]
+            Task { [weak self, weak session] in
+                let info = await service.pickerSampleInfo()
+                guard let self, let session, self.selectedDocument === session,
+                      self.catalogService === service,
+                      self.voiceList.pickerInfoRevision == revision else { return }
+                self.voiceList.pickerSampleInfo = info
+                self.voiceList.pickerInfoRevision += 1
+            }
+        }
         voiceList.onSampleAuditionRequested = { [weak self] symbol, kind, adsr in
             guard let self, let service = self.catalogService,
                   let session = self.selectedDocument else { return }
-            self.voiceList.pickerSampleDetail = ""
-            self.voiceList.pickerSampleLoop = false
             self.audio?.auditionSampleOff()
             self.pickerAuditionRevision += 1
             let revision = self.pickerAuditionRevision
@@ -86,21 +99,16 @@ extension ApplicationSession {
                     _ = audio.auditionSample(samples: bytes, frequency: frequency,
                                              loopStart: loopStart, looped: looped,
                                              key: 60, adsr: envelope, toneKey: toneKey)
-                    self.voiceList.pickerSampleDetail = "\(bytes.count) samples · \(frequency) Hz"
-                    self.voiceList.pickerSampleLoop = looped
                 case let .wave(bytes, envelope):
                     let envelope = envelope.map {
                         AudioADSR(attack: $0.0, decay: $0.1, sustain: $0.2, release: $0.3)
                     } ?? chosen
                     _ = audio.auditionWave(wave16: bytes, key: 60, adsr: envelope)
-                    self.voiceList.pickerSampleDetail = "16 samples"
                 }
             }
         }
         voiceList.onSampleAuditionStopRequested = { [weak self] in
             self?.pickerAuditionRevision += 1
-            self?.voiceList.pickerSampleDetail = ""
-            self?.voiceList.pickerSampleLoop = false
             self?.audio?.auditionSampleOff()
         }
     }

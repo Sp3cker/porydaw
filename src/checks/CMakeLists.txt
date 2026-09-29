@@ -549,6 +549,7 @@ if(APPLE)
         editorqml/GatedVisualsProbe.swift
         editorqml/PolyphonyShellProbe.swift
         editorqml/WavFileProbe.swift
+        editorqml/SampleBinProbe.swift
         editorqml/TabsDrawerProbe.swift
         keyboard/KeybindingRegistryChecks.swift
         editorqml/ImportWizardProbe.swift

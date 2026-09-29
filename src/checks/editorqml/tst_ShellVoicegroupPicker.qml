@@ -7,6 +7,90 @@ import ShellQmlCheck 1.0
 import Porydaw.Ui
 
 ShellVoicegroupSupport {
+    SampleBinProbe { id: sampleHeader }
+
+    function expectedDetail(symbol, looped) {
+        verify(sampleHeader.inspect(bootstrap.projectRoot
+                                    + "/sound/direct_sound_samples/" + symbol + ".bin"),
+               "fixture header independently decodes " + symbol)
+        compare(sampleHeader.looped, looped, "fixture loop flag " + symbol)
+        return (looped ? "Loops" : "One-shot") + " · " + sampleHeader.rateHz
+               + " Hz · " + sampleHeader.seconds.toFixed(2) + " s"
+    }
+
+    function pickerBadge(list, index) {
+        list.positionViewAtIndex(index, ListView.Contain)
+        tryVerify(function() { return !!list.itemAtIndex(index) }, 5000,
+                  "picker row is mounted for badge inspection")
+        return findChild(list.itemAtIndex(index), "vgSamplePickerLoopBadge")
+    }
+
+    function test_xMountedPickerVisibilityAndMetadata() {
+        const controller = app.voiceListController()
+        controller.selectSlot(0)
+        const draft = controller.editorModel()
+        compare(draft.macro, 0, "A013 DirectSound picker belongs to the selected slot")
+        const trigger = findChild(panel, "vgSamplePickerButton")
+        verify(trigger !== null, "A013 DirectSound slot mounts its picker trigger")
+        tryVerify(function() { return trigger.visible }, 5000,
+                  "selected DirectSound slot shows the picker trigger")
+        const scroll = findChild(panel, "voiceEditorScrollView")
+        scroll.contentY = 0
+        waitForRendering(trigger)
+        mouseClick(trigger, trigger.width / 2, trigger.height / 2)
+        const popup = findChild(panel, "vgSamplePickerPopup")
+        verify(popup !== null, "A014 picker trigger creates the popup")
+        tryCompare(popup, "opened", true, 5000, "A015 picker popup becomes visible")
+        const list = findChild(popup, "vgSamplePickerList")
+        const detail = findChild(popup, "vgSamplePickerDetail")
+        const loop = "DirectSoundWaveData_fixture_loop"
+        const drum = "DirectSoundWaveData_fixture_drum"
+        verify(waitForNative(function() {
+            return controller.pickerDetail(loop, false, false).length > 0
+        }, 15000), "picker reads the committed sample set on open")
+        verify(waitForNative(function() {
+            return list.model.some(row => row.symbol === loop)
+                   && list.model.some(row => row.symbol === drum)
+        }, 15000), "loop and one-shot rows populate from the project catalog")
+        const loopIndex = list.model.findIndex(row => row.symbol === loop)
+        const drumIndex = list.model.findIndex(row => row.symbol === drum)
+        const loopBadge = pickerBadge(list, loopIndex)
+        verify(loopBadge !== null && loopBadge.visible && loopBadge.text === "∞",
+               "looped sample carries the infinity badge")
+        compare(loopBadge.ToolTip.text, "Loops", "loop badge explains its meaning")
+        const drumBadge = pickerBadge(list, drumIndex)
+        verify(drumBadge !== null && !drumBadge.visible,
+               "one-shot sample does not carry the badge")
+        for (let index = 0; index < list.model.length; index++) {
+            const row = list.model[index]
+            const badge = pickerBadge(list, index)
+            verify(badge !== null, "each picker row owns a badge position")
+            compare(badge.visible,
+                    !!row.symbol && !row.split && !row.typed
+                    && controller.pickerRowLoops(row.symbol),
+                    "only looped sample row shows badge: " + row.symbol)
+        }
+        list.currentIndex = loopIndex
+        tryCompare(detail, "text", expectedDetail("fixture_loop", true))
+        list.currentIndex = drumIndex
+        tryCompare(detail, "text", expectedDetail("fixture_drum", false))
+        const splitIndex = list.model.findIndex(row => row.symbol === "fixture_bass")
+        verify(splitIndex >= 0, "keysplit row exists")
+        list.currentIndex = splitIndex
+        compare(detail.text, "Keysplit instrument", "keysplit uses the fork detail")
+        const search = findChild(popup, "vgSamplePickerSearch")
+        search.text = "unlisted_typography_sample"
+        const typedIndex = list.model.findIndex(row => row.typed)
+        verify(typedIndex >= 0, "typed row exists")
+        list.currentIndex = typedIndex
+        compare(detail.text, "Unlisted symbol", "typed row uses the fork detail")
+        const editor = findChild(panel, "voicegroupEditorSurface")
+        editor.visible = false
+        tryCompare(popup, "opened", false, 5000,
+                   "A017 popup closes when its editor dock hides")
+        editor.visible = true
+    }
+
     function test_yPickerReturnFallbackAndWaveUndo() {
         const controller = app.voiceListController()
         controller.selectSlot(0)
@@ -108,7 +192,6 @@ ShellVoicegroupSupport {
             compareRole(trigger, "body", "sample picker trigger")
             compareRole(popup, "body", "sample picker popup")
             compareRole(findChild(popup, "vgSamplePickerDetail"), "body", "sample picker detail")
-            compareRole(findChild(popup, "vgSamplePickerLoop"), "body", "sample picker loop")
             compare(popup.width, Math.max(trigger.width, app.baseFontPx * 28.33),
                     "sample picker width follows the session base")
             compare(popup.height, app.baseFontPx * 35,
@@ -128,7 +211,7 @@ ShellVoicegroupSupport {
                 list.positionViewAtIndex(headingIndex, ListView.Contain)
                 tryVerify(function() { return !!list.itemAtIndex(headingIndex) }, 1000,
                           "sample picker section header is mounted")
-                compareRole(list.itemAtIndex(headingIndex).contentItem,
+                compareRole(findChild(list.itemAtIndex(headingIndex), "vgSamplePickerRowText"),
                             "bodyBold", "sample picker section heading")
             }
             search.text = "unlisted_typography_sample"
@@ -137,9 +220,9 @@ ShellVoicegroupSupport {
             list.positionViewAtIndex(typedIndex, ListView.Contain)
             tryVerify(function() { return !!list.itemAtIndex(typedIndex) }, 1000,
                       "sample picker typed fallback is mounted")
-            compareRole(list.itemAtIndex(typedIndex).contentItem,
-                        "body", "sample picker typed fallback")
-            compare(list.itemAtIndex(typedIndex).contentItem.font.italic, true,
+            const typedText = findChild(list.itemAtIndex(typedIndex), "vgSamplePickerRowText")
+            compareRole(typedText, "body", "sample picker typed fallback")
+            compare(typedText.font.italic, true,
                     "sample picker typed fallback uses the published body's italic variant")
             search.text = symbol
             tryVerify(function() {
@@ -150,23 +233,17 @@ ShellVoicegroupSupport {
             tryVerify(function() { return list.itemAtIndex(index) !== null }, 5000)
             const item = list.itemAtIndex(index)
             compareRole(item, "body", "sample picker sample row")
-            compareRole(item.contentItem, "body", "sample picker sample text")
+            compareRole(findChild(item, "vgSamplePickerRowText"),
+                        "body", "sample picker sample text")
             compare(item.height, app.baseFontPx * 1.83,
                     "sample picker row height follows the session base")
             const before = draft.symbol
             mouseClick(item, item.width / 2, item.height / 2)
             compare(draft.symbol, before, "first click only auditions")
-            verify(waitForNative(function() { return controller.pickerSampleDetail.length > 0 },
-                                 15000), "resolved audition details for " + symbol)
-            if (symbol === "DirectSoundWaveData_fixture_loop")
-                verify(findChild(popup, "vgSamplePickerLoop").visible
-                       && controller.pickerSampleLoop,
-                       "the sampled loop publishes a mounted loop badge")
             mouseClick(item, item.width / 2, item.height / 2)
             tryCompare(popup, "opened", false)
             verify(waitForNative(function() { return draft.symbol === symbol }, 15000),
                    "second click commits " + symbol)
-            compare(controller.pickerSampleDetail, "", "popup close ends the audition")
         }
         choose("DirectSoundWaveData_fixture_loop")
         choose("DirectSoundWaveData_fixture_bass")

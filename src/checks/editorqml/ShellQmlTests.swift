@@ -72,6 +72,7 @@ enum ShellQmlLane {
         TabsDrawerProbe.registerQmlElement()
         PolyphonyShellProbe.registerQmlElement()
         WavFileProbe.registerQmlElement()
+        SampleBinProbe.registerQmlElement()
         ImportWizardProbe.registerQmlElement()
         let inputFile = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
             .appendingPathComponent(entry.inputFileName).path

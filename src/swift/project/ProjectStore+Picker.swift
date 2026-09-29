@@ -8,6 +8,19 @@ public enum PickerSound: Sendable {
     case wave(bytes: [UInt8], envelope: (UInt8, UInt8, UInt8, UInt8)?)
 }
 
+/// Committed direct-sound metadata shown in the sample picker.
+public struct PickerSampleInfo: Sendable, Equatable {
+    public let looped: Bool
+    public let rateHz: Int
+    public let seconds: Double
+
+    public init(looped: Bool, rateHz: Int, seconds: Double) {
+        self.looped = looped
+        self.rateHz = rateHz
+        self.seconds = seconds
+    }
+}
+
 struct PickerSampleCache {
     let set: SampleSetHandle
     let direct: [String]
@@ -16,27 +29,32 @@ struct PickerSampleCache {
 }
 
 extension ProjectStore {
+    /// Reads direct-sound metadata from the project's cached sample set.
+    /// - Returns: Metadata for loaded symbols with nonempty sample data.
+    public func pickerSampleInfo() -> [String: PickerSampleInfo] {
+        guard let cache = loadPickerSamples() else { return [:] }
+        let set = cache.set.raw.pointee
+        var info: [String: PickerSampleInfo] = [:]
+        info.reserveCapacity(cache.direct.count)
+        for (index, symbol) in cache.direct.enumerated() {
+            guard index < Int(set.count), let wave = set.waves[index],
+                  wave.pointee.data != nil, wave.pointee.size > 0 else { continue }
+            let rateHz = Int(wave.pointee.freq / 1024)
+            guard rateHz > 0 else { continue }
+            info[symbol] = PickerSampleInfo(
+                looped: wave.pointee.status & 0x4000 != 0,
+                rateHz: rateHz, seconds: Double(wave.pointee.size) / Double(rateHz))
+        }
+        return info
+    }
+
     /// Resolves the picker's symbol through the same project loader as the bank.
     /// - Parameters:
     ///   - symbol: The complete assembler symbol.
     ///   - kind: `sample`, `wave`, or `keysplit`.
     /// - Returns: Playable detached bytes, or nil for an unresolved or unsupported instrument.
     public func pickerSound(symbol: String, kind: String) -> PickerSound? {
-        guard let projectContext else { return nil }
-        let cache: PickerSampleCache
-        if let pickerSamples {
-            cache = pickerSamples
-        } else {
-            let direct = VoicegroupSource.directSoundSymbols(projectRoot)
-            let waves = VoicegroupSource.progWaveSymbols(projectRoot)
-            let keysplits = VoicegroupSource.keysplitInstruments(projectRoot)
-            guard let set = projectContext.loadSamples(
-                direct: direct, wave: waves, keysplit: keysplits.map(\.symbol),
-                tables: keysplits.map(\.table)) else { return nil }
-            cache = PickerSampleCache(set: set, direct: direct, waves: waves,
-                                      keysplits: keysplits)
-            pickerSamples = cache
-        }
+        guard let cache = loadPickerSamples() else { return nil }
         let set = cache.set
         switch kind {
         case "sample":
@@ -70,6 +88,21 @@ extension ProjectStore {
         default:
             return nil
         }
+    }
+
+    private func loadPickerSamples() -> PickerSampleCache? {
+        guard let projectContext else { return nil }
+        if let pickerSamples { return pickerSamples }
+        let direct = VoicegroupSource.directSoundSymbols(projectRoot)
+        let waves = VoicegroupSource.progWaveSymbols(projectRoot)
+        let keysplits = VoicegroupSource.keysplitInstruments(projectRoot)
+        guard let set = projectContext.loadSamples(
+            direct: direct, wave: waves, keysplit: keysplits.map(\.symbol),
+            tables: keysplits.map(\.table)) else { return nil }
+        let cache = PickerSampleCache(set: set, direct: direct, waves: waves,
+                                      keysplits: keysplits)
+        pickerSamples = cache
+        return cache
     }
 
     private static func sampleSound(

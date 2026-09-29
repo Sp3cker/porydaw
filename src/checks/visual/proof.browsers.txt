@@ -5,13 +5,13 @@ Deleted in: S6 flip cutover (feature/swift-project-store, base 2d1c92d0)
 Retirement: historical deletion record only; the deleted C++ source above is recoverable from the Reference revision and Original SHA-256, never from HEAD. The dispositions and S citations below were established while the file was live and were not re-verified in this cutover; no execution or parity claim is made by this record.
 Original: src/checks/visual/browsers.cpp
 Original SHA-256: 3f358911eebfb7b37f1327fccbf2449627c1be34ca20e2c6595a0b199d17a59d
-Swift counterpart: none identified
+Swift counterpart: src/checks/editorqml/tst_ShellVoicegroupPicker.qml (sample-picker lifecycle A013–A015/A017)
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-This file: 18 assertion sites: 8 GAP, 10 RETIRED-REPRESENTATION. Dispositions tally: 8 GAP, 10 RETIRED-REPRESENTATION. The voicegroup-browser population and captures (A007/A009/A011) and the sample-picker popup observations and baseline (A013/A014/A015/A017/A018) are GAP, features not yet ported with no converted-window owner; fixture and loader preconditions (A001-A006), theme plumbing (A008/A010/A012) and the popup size pin (A016) stay RETIRED-REPRESENTATION of an uncompiled QWidget harness whose runVisualBrowsersCheck entry point has no callsite and which is unregistered in checkcatalog, so no lane executes them.
+This file: 18 assertion sites: 1 GAP, 3 PARTIAL, 4 MATCHED, 10 RETIRED-REPRESENTATION. Dispositions tally: 1 GAP, 3 PARTIAL, 4 MATCHED, 10 RETIRED-REPRESENTATION. The sample-picker trigger, popup and hide lifecycle (A013–A015/A017) execute in the mounted shell picker lane; voicegroup-browser profile residues (A007/A009/A011) remain PARTIAL and the frozen picker pixel baseline (A018) remains GAP.
 
-Command: deno task verify --filter visual --verbose
-Result: pending integrated run.
+Command: deno task checks:shell --filter shell-voicegroup-picker --verbose
+Result: controller-observed 2026-09-29 — shell-voicegroup-picker 1/1 ok; proof check --executed: 0 browsers sites not executed.
 
 A001 | VisualBrowsersTest::initTestCase | src/checks/visual/browsers.cpp:286
 Disposition: RETIRED-REPRESENTATION
@@ -70,60 +70,22 @@ A012 | VisualBrowsersTest::samplePickerPopup | src/checks/visual/browsers.cpp:48
 Disposition: RETIRED-REPRESENTATION
 
 A013 | VisualBrowsersTest::samplePickerPopup | src/checks/visual/browsers.cpp:485
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: sample picker. No-ingress fact retained: browsers.cpp uncompiled in all CMake targets, runVisualBrowsersCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Real opened SamplePickerButton popup must exist in the native widget tree.
-Source context since previous assertion:
-
-      m_browser->selectSlot(kDirectSoundSlot);
-      QApplication::processEvents();
-
-      auto *picker = m_browser->findChild<SamplePickerButton *>();
-Original expression:
-  QVERIFY(picker);
+Disposition: MATCHED
+Mapping: S001
 
 A014 | VisualBrowsersTest::samplePickerPopup | src/checks/visual/browsers.cpp:488
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: sample picker. No-ingress fact retained: browsers.cpp uncompiled in all CMake targets, runVisualBrowsersCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Popup widget must be found; native widget-tree observation.
-Source context since previous assertion:
-
-      picker->openPopup();
-      QWidget *popup = pickerPopup();
-Original expression:
-  QVERIFY(popup);
-
+Disposition: MATCHED
+Mapping: S002
 A015 | VisualBrowsersTest::samplePickerPopup | src/checks/visual/browsers.cpp:489
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: sample picker. No-ingress fact retained: browsers.cpp uncompiled in all CMake targets, runVisualBrowsersCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Popup becomes visible within 5 s; native async window state.
-Source context since previous assertion:
-
-Original expression:
-  QTRY_VERIFY_WITH_TIMEOUT(popup->isVisible(), 5000);
+Disposition: MATCHED
+Mapping: S003
 
 A016 | VisualBrowsersTest::samplePickerPopup | src/checks/visual/browsers.cpp:494
 Disposition: RETIRED-REPRESENTATION
 
 A017 | VisualBrowsersTest::samplePickerPopup | src/checks/visual/browsers.cpp:515
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: sample picker. No-ingress fact retained: browsers.cpp uncompiled in all CMake targets, runVisualBrowsersCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Popup closes after hide; native popup state.
-Source context since previous assertion:
-
-      QApplication::processEvents();
-      // The search field takes focus on open; a blinking caret is transient
-      // state the baseline must not depend on.
-      if (QWidget *focused = QApplication::focusWidget())
-          focused->clearFocus();
-      QApplication::processEvents();
-
-      QString error;
-      const bool ok = visual::compareWidget(QStringLiteral("samplepicker/%1").arg(theme), *popup,
-                                            popupRegions(*popup), &error);
-      if (!ok)
-          qWarning().noquote() << error;
-
-      popup->hide();
-      QApplication::processEvents();
-Original expression:
-  QVERIFY2(!picker->popupVisible(), "sample picker popup did not close");
+Disposition: MATCHED
+Mapping: S004
 
 A018 | VisualBrowsersTest::samplePickerPopup | src/checks/visual/browsers.cpp:516
 Disposition: GAP
@@ -165,4 +127,14 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-No Swift counterpart identified; no S-items.
+S001 | test_xMountedPickerVisibilityAndMetadata (shell-voicegroup-picker lane) | src/checks/editorqml/tst_ShellVoicegroupPicker.qml
+Anchor: message "A013 DirectSound slot mounts its picker trigger"
+
+S002 | test_xMountedPickerVisibilityAndMetadata (shell-voicegroup-picker lane) | src/checks/editorqml/tst_ShellVoicegroupPicker.qml
+Anchor: message "A014 picker trigger creates the popup"
+
+S003 | test_xMountedPickerVisibilityAndMetadata (shell-voicegroup-picker lane) | src/checks/editorqml/tst_ShellVoicegroupPicker.qml
+Anchor: message "A015 picker popup becomes visible"
+
+S004 | test_xMountedPickerVisibilityAndMetadata (shell-voicegroup-picker lane) | src/checks/editorqml/tst_ShellVoicegroupPicker.qml
+Anchor: message "A017 popup closes when its editor dock hides"
