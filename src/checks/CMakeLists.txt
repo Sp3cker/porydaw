@@ -620,6 +620,7 @@ if(APPLE)
         editorqml/tst_ShellDrawerParityAutomation.qml
         editorqml/tst_ShellDrawerParityVoiceVelocity.qml
         editorqml/ShellVoicegroupSupport.qml
+        editorqml/tst_ShellSettings.qml
         editorqml/tst_ShellVoicegroupEditing.qml
         editorqml/tst_ShellVoicegroupPicker.qml
         editorqml/tst_ShellVoicegroupSave.qml

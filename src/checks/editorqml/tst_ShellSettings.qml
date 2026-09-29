@@ -147,6 +147,18 @@ TestCase {
         tryCompare(model, "maxPcmChannels", savedChannels)
         tryCompare(reopenedField, "value", savedChannels)
     }
+    function test_escapeDismissesAndRestoresWindowFocus() {
+        const presenter = createShell()
+        presenter.activate("edit.engine_settings")
+        const settings = dialog()
+        tryCompare(settings, "visible", true)
+        tryCompare(settings, "active", true)
+        const body = findChild(settings, "settingsBody")
+        verify(body, "settings dialog body receives key events")
+        keyClick(body, Qt.Key_Escape)
+        tryCompare(settings, "visible", false)
+        tryCompare(shell, "active", true)
+    }
     function test_gridContrastPreviewApplyAndRevert() {
         nativeSettings.setString("theme.mode", "vanilla")
         nativeSettings.setInt("theme.grid-line-contrast", 50)

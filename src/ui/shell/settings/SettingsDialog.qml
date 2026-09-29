@@ -40,6 +40,24 @@ ThemedWindow {
         presenter.commitGridLineContrast()
     }
     onClosing: presenter.discardGridLineContrast()
+    onVisibleChanged: {
+        if (visible || !transientParent)
+            return
+        const owner = transientParent
+        Qt.callLater(() => {
+            if (!dialog.visible && owner.visible) {
+                owner.raise()
+                owner.requestActivate()
+            }
+        })
+    }
+
+    Shortcut {
+        objectName: "settingsEscapeShortcut"
+        sequence: "Esc"
+        context: Qt.WindowShortcut
+        onActivated: dialog.close()
+    }
 
     Rectangle {
         id: body
