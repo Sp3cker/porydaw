@@ -174,6 +174,8 @@ private func checkSampleAuditionSlots(_ report: CheckReport) {
         report.fail(id, "fixture engine initialization failed")
         return
     }
+    report.expect(engine.mainHandle != engine.previewHandle, cppID: id,
+                  message: "A022 audition engine initializes")
     let audition = engine.audition
     let adsr = AudioADSR(attack: 255, decay: 0, sustain: 255, release: 0)
     func publish(_ value: Int8, _ key: UInt8) -> Bool {

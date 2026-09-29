@@ -113,23 +113,7 @@ public final class SampleStudioPresenter {
     public func setLoopOn(enabled: Bool) { update(-1) { $0.loopOn = enabled } }
 
     public func setBaseKeyText(text: String) {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        let key: Int
-        if let direct = Int(trimmed) {
-            key = min(127, max(0, direct))
-        } else {
-            let pattern = #"^([A-Ga-g])([#b]?)(-?\d+)"#
-            guard let match = trimmed.range(of: pattern, options: .regularExpression) else { return }
-            let letters: [Character: Int] = ["C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11]
-            let matched = trimmed[match]
-            guard let letter = matched.first, let semitone = letters[Character(letter.uppercased())] else { return }
-            let rest = matched.dropFirst()
-            let accidental = rest.first == "#" ? 1 : (rest.first == "b" ? -1 : 0)
-            let octaveText = accidental == 0 ? rest : rest.dropFirst()
-            let octave = Int(octaveText) ?? 0
-            key = octave >= 11 ? 127 : octave <= -3 ? 0
-                : min(127, max(0, (octave + 1) * 12 + semitone + accidental))
-        }
+        guard let key = SampleStudioReadouts.midiKey(from: text) else { return }
         update(5) { $0.baseKey = key }
     }
 

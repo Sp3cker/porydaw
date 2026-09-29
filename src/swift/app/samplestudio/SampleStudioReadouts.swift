@@ -8,6 +8,21 @@ public enum SampleStudioReadouts {
     static func decimal(_ value: Double, places: Int) -> String {
         String(format: "%.*f", locale: posixLocale, places, value)
     }
+    /// Parses the editor's numeric or note-name prefix, including its displayed "C4 (60)" form.
+    public static func midiKey(from text: String) -> Int? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let direct = Int(trimmed) { return min(127, max(0, direct)) }
+        let pattern = #"^([A-Ga-g])([#b]?)(-?\d+)"#
+        guard let match = trimmed.range(of: pattern, options: .regularExpression),
+              let letter = trimmed[match].first else { return nil }
+        let semitones: [Character: Int] = ["C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11]
+        guard let semitone = semitones[Character(letter.uppercased())] else { return nil }
+        let rest = trimmed[match].dropFirst()
+        let accidental = rest.first == "#" ? 1 : (rest.first == "b" ? -1 : 0)
+        let octave = Int(accidental == 0 ? rest : rest.dropFirst()) ?? 0
+        return octave >= 11 ? 127 : octave <= -3 ? 0
+            : min(127, max(0, (octave + 1) * 12 + semitone + accidental))
+    }
 
     public static func sourceLine(_ source: ImportedSample) -> String {
         var kind: String
