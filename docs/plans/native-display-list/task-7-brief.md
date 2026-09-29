@@ -14,6 +14,7 @@ into one Swift-built list; markers stay QML delegates.
 - `src/swift/app/drawer/voicechanges/VoiceChangesPage.swift`
 - `src/swift/app/drawer/voicechanges/VoiceChangesPublication.swift`
 - `src/ui/songview/quick/drawer/VoiceChangesPage.qml`
+- `src/swift/app/DocumentWorkspace.swift` (only `applyCamera`, `:383-391`)
 - `src/checks/drawerpresentation/VoiceChangesPageChecks.swift` (scroll/zoom stability, lane-write republish)
 - `src/checks/drawerpresentation/voice_projection.swift` (held-span count via `VelocityContentProbe`, rewritten by Task 6 — consume, do not co-edit)
 - `src/checks/drawerpresentation/voice_interaction.swift` (detach publishes no held span)
@@ -68,7 +69,12 @@ into one Swift-built list; markers stay QML delegates.
    `rebuildContent` and its camera path (`VoiceChangesPage.refreshCamera` at
    `VoiceChangesPage.swift:377-381` → `rebuildContent` at
    `VoiceChangesPublication.swift:82-95`); camera moves must change bytes +
-   revision since grid lines are camera-derived.
+   revision since grid lines are camera-derived. Today scroll-only camera
+   changes skip this page (`DocumentWorkspace.applyCamera`, arm
+   `(.voiceChanges, false): break`, `:383-391`) because the C++ item read
+   `scrollX` itself; the list is viewport-space, so that arm becomes
+   `voiceChangesPage.refreshCamera()`. Leave `deferredCameraZoom` and the
+   other arms alone (plan Contract §7).
 3. Flip `VoiceChangesPage.qml`: replace the `TimelineRenderer` item
    (`voiceGridLines` at `:279-288`) with
    `DisplayList { source: pageModel (existing contentSource); list: 0; revision: pageModel.displayRevision }`,

@@ -205,21 +205,40 @@ All lists of one source rebuild together and bump `displayRevision` once. Source
 | `AutomationPage` | 0 axis, 1 statics, 2 preview | `drawingContent()` (`AutomationPage.swift:116-117`), `AutomationDrawingContent` §11/§12/§13 |
 
 Rebuild triggers: the source's existing content-change path **and** its camera-change path
-(`PianoGrid.refreshCamera`, `PianoGrid+SceneSync.swift:143-164`; `VelocityPage.refreshCamera`
-`VelocityPage.swift:398-405`; `VoiceChangesPage.refreshCamera` `VoiceChangesPage.swift:377-381`;
-`AutomationContentPublication.refreshHorizontalProjection` `:132-153`). Every camera-stability
-assertion inverts deliberately — this is a behavior change to pinned checks, not a rename:
+(`PianoGrid.refreshCameraPresentation`, `PianoGrid+SceneSync.swift:99-122`; `VelocityPage.refreshCamera`
+`VelocityPublication.swift:85-98`; `VoiceChangesPage.refreshCamera` `VoiceChangesPage.swift:377-381`;
+`AutomationContentPublication.refreshHorizontalProjection` `:131-153`). Lists are viewport-space, so
+**every** camera change (scroll-only included) rebuilds the visible source's lists:
+`DocumentWorkspace.applyCamera` (`DocumentWorkspace.swift:383-391`) loses its `(.voiceChanges, false):
+break` arm, and `refreshCamera` on each page ends with the list rebuild instead of
+`publishTransient(updateDrawing: false)`. The hidden-section deferral (`deferredCameraZoom`, `:376-399`)
+stays: a hidden page's lists may be stale; showing or re-attaching it flushes one rebuild. Every
+camera-stability assertion inverts deliberately — this is a behavior change to pinned checks, not a rename:
 `note_rendering_economy.swift`, `VelocityContentProbe.swift:241-257`, `VoiceChangesPageChecks.swift`,
 `AutomationDrawingContentChecks.swift:190-230` now assert that camera moves change `displayRevision`
 and the list bytes while the content-tier inputs (`GridSceneInput` key, page content keys) stay
 untouched. Automation list numbering follows today's `drawerLayer` values in `AutomationPlot.qml`
 (axis 0, statics 1, preview 2).
 
+Frame-tier skip: a source rebuilds only when `(content key, camera snapshot, viewport size, dpr)` moved;
+the content tier keeps `RollNotesSectionKey`/`displacesNotes` keying (`RollDrawingContent.swift:42-50`,
+`GridScene+Rebuild.swift:16-20`) for the per-note fills, spans and selection it resolves once per content
+key into a tick-sorted record array; the frame tier culls and projects that array — O(visible) per frame,
+never O(notes). `notesSectionCache` (`GridScene.swift:101`) is replaced by that record array, not kept as
+packed bytes.
+
 Writer: `src/swift/app/timeline/DisplayListWriter.swift` — `struct DisplayListWriter` with
 `rect(_ r: PdDlRect)`, `label(_ l: PdDlLabel, text: String)`, `font(_ f: PdDlFont, family: String)`
-(the writer fills the text offsets/lengths), `finish() -> Data`; appends the imported C structs' bytes
-with `withUnsafeBytes(of:)`, pads arrays to 8 bytes, keeps its `Data` capacity across frames
-(`removeAll(keepingCapacity:)`). Replaces `DrawingContentBinary.swift`.
+(the writer fills the text offsets/lengths), `finish() -> Data`. Storage is four typed arrays of the
+imported C structs — `[PdDlFont]`, `[PdDlRect]`, `[PdDlLabel]`, `[UInt8]` text — so appends are plain
+value appends with no pointer code; `finish()` writes `PdDlHeader` then each array's `span.bytes` into
+the retained `Data`, padding to 8 bytes. The only unsafe calls are the `RawSpan.withUnsafeBytes`
+hand-offs into `Data.append` inside `finish()` (proven on Swift 6.4: `Array.span.bytes`,
+`RawSpan.withUnsafeBytes`, `Data.bytes: RawSpan`, `Array(capacity:initializingWith: OutputSpan)`
+all compile; `Data.append(contentsOf: RawSpan)` does not exist). Arrays keep capacity across frames
+(`removeAll(keepingCapacity:)`). Readers in Swift (the round-trip check) walk `data.bytes` with
+`unsafeLoadUnaligned(fromByteOffset:as:)` — never a stored `RawSpan` (it cannot escape its scope).
+Replaces `DrawingContentBinary.swift`.
 
 Builders (per-frame, Swift): `RollDisplayLists.swift` (rewrite of `RollDrawingContent.swift`; ports
 `roll_scene.cpp`, `ruler_scene.cpp` and the label passes of `timeline_renderer.cpp:300-338,430-500`
@@ -262,6 +281,24 @@ them read `face()` or raster instead. QML: every camera binding on renderer item
 > code never projects, culls, lays out or decides visibility; if a formula is needed on the native side,
 > Swift emits its result into the display list instead.
 
+### 7. Reconciliation with `feature/grid-cpu` (`ccb68ab5..ed6e9d26`, now on this branch)
+
+The plan was written at `5ac7c63c`; four perf commits landed on top. They optimize the QML-delegate
+and bridge-wakeup paths, not the painted batch, so the design stands — with these normative deltas:
+
+| grid-cpu change | effect on this plan |
+|---|---|
+| QtBridge same-thread NOTIFY coalescing (`cmake/patches/qtbridge/qtbridge-object-return.patch`, `flushEmissions`): emissions queue and flush once per event-loop turn, FIFO | `displayRevision` reaches the QML binding one queued flush later; the item's fetch stays synchronous in `updatePolish`, so the frame paints the bytes current at flush time — never older. Checks that mutate Swift then read `face()`/rasters MUST spin the loop first (`waitForRendering(item)` / `tryVerify`); a same-turn read of `revision` is a check bug, not an item bug. `DirectConnection` `invokeMethod` is unaffected by the patch |
+| Hidden drawer sections defer camera work (`DocumentWorkspace.deferredCameraZoom`, `:376-399`, flushed on show/attach; document rebuilds clear it) | Kept. Deferral now covers scroll-only too (all lists are viewport-space); `applyCamera` calls each visible page's `refreshCamera` for both scroll and zoom (Contract §3). Invariant: a hidden page's lists may be stale; a visible page's lists are never stale |
+| Velocity handles are tick-space QML delegates placed from the camera carrier's `pixelsPerTick` (`VelocityPage.qml:122-130,396-404`; carrier `GridScene+Rebuild.swift:38-46` publishes `scrollX/scrollY/pixelsPerTick`); `VelocityPage.refreshCamera` updates handle `x/endX` in place (`VelocityPublication.swift:85-98`) | Untouched by Tasks 4–8: handles, ramp, hover guides and the `cameraScroll` carrier are interactive delegates, not painted lists. Task 6 adds the list rebuild to `refreshCamera` after the in-place handle update and leaves `contentScrollX`/`contentPixelsPerTick` bindings alone. `VelocityProjection.stableXForTick` keeps calling `contentTickX` (survives Contract §4) |
+| Notes section cached across draw-preview-only rebuilds (`notesSectionCache`, `RollNotesSectionKey`, `displacesNotes`; `1c690352`) | Content-tier keying survives as a tick-sorted record array (Contract §3 “Frame-tier skip”); the packed-bytes cache is deleted with `RollDrawingContent`. `displacesNotes` stays a `GridSceneInput` field |
+| `syncModel` prefix/suffix diff (`QListModelSync.swift`) | Unrelated to lists; not in any write set |
+
+Cost model after cutover, per scroll frame: today = C++ `buildRoll` O(visible) + node upload; after =
+Swift build O(visible) (Task 0: 12 ns/record) + one `QByteArray` copy + `pd_dl_decode` + the same node
+upload. The delta is the copy and decode, tens of µs at the worst-case list size. What grid-cpu removed
+(per-row model rewrites, per-NOTIFY wakeups) stays removed because lists ride one NOTIFY per turn.
+
 ## Global Constraints (read once; briefs carry deltas only)
 
 - Rules in force: `.omp/rules/proof-ledger-workflow.md`, `qtbridge-surface`, `swift-standards`,
@@ -283,6 +320,15 @@ them read `face()` or raster instead. QML: every camera binding on renderer item
   colors are `UInt32` ARGB resolved from the theme tables (`ThemeColorTables.swift`) or note fills
   computed at content time; parsing a palette slot string (`SceneRectPacking.argb`) is allowed only
   per palette slot, never per record. `PaletteMath` never runs on the frame path.
+- Swift 6.4 buffer vocabulary (verified on this toolchain): `Array.span` / `.span.bytes` (`RawSpan`),
+  `Data.bytes` (`RawSpan`) with `unsafeLoad[Unaligned]`, `Array(capacity:initializingWith:)` over
+  `OutputSpan`, `InlineArray<N, T>` for fixed slot tables (the six palette slots). `RawSpan` values are
+  non-escaping: use them inline or as borrowed parameters, never stored. Unsafe pointers appear only in
+  `DisplayListWriter.finish()` and where a C decoder/metrics function takes a pointer. Not in scope:
+  `~Copyable` writer types, `-strict-memory-safety`, `@lifetime` annotations.
+- QML checks: after any Swift mutation, spin the loop (`waitForRendering(item)` or `tryVerify`)
+  before reading `face()`, `revision` or a raster — QtBridge NOTIFYs flush once per event-loop turn
+  (Contract §7). A same-turn read is a check bug; never "fix" it in the item or the bridge.
 
 ## Tasks
 
@@ -360,3 +406,71 @@ the full Verification list green, `deno task checks:bridge` clean.
    measurement is the gate; Task 4's smoke re-measures on the real path.
 5. AGENTS.md boundary text needs human permission (Contract §6); until granted, the boundary is stated
    only here.
+
+## Orchestrator brief (for whoever runs this plan)
+
+Run `.omp/rules/sdd-execution-loop.md` as written; this section is only the plan-specific delta. The
+orchestrator never implements Tasks 1–8 inline and never edits a proof ledger.
+
+### Waves and seats
+
+| wave | tasks | seat | gate before the next wave |
+|---|---|---|---|
+| A | 1 | `sdd-implementer` | `deno task checks --filter displaylist --verbose` green; `checks:bridge` clean; `lsp:swift` re-run |
+| B | 2 ∥ 3 | 2: `qt-cpp-reviewer`; 3: `sdd-implementer` | Task 2's smoke proves 1-arg `invokeMethod` (open risk 1) **before** Task 4 is dispatched; Task 3: `checks --filter swiftcore` green, `camera.swift` re-pin landed with `proof:edit` in the same commit. Checkpoint 1 commit + push |
+| C | 4 → 5 | `sdd-implementer` | after 4: `checks:qml-roll`, `checks:shell`, `checks --filter swiftcore`; after 5: same, `GridScene` has no `drawingContent`. Checkpoints 2, 3 |
+| D | 6 ∥ 7 ∥ 8 | `sdd-implementer` ×3 | Task 6 first if 7 needs the rewritten `buildGrid` (it does — Task 7 consumes `DrawerStaticsContent.buildGrid(paletteColors:)`); 7 and 8 start when 6's `DrawerStaticsContent.swift` lands. `checks:qml`, `checks:shell`. Checkpoint 4 |
+| E | 9 | orchestrator, Direct | full Verification list; `grep TimelineRenderer src/ui src/checks` empty; AGENTS.md text only with the user's permission |
+
+Each brief is self-contained: dispatch with `task-N-brief.md` + this file's Contract and Global
+Constraints; do not paraphrase either. Review every task with `sdd-task-reviewer` against the brief's
+acceptance predicate before marking it done; bounded fix loop of 2, then escalate to the user.
+
+### Reject on sight (agents will try these)
+
+- Any geometry, culling, clipping or font-fit decision in `display_list.c` or `display_list_item.cpp`.
+  Native code positions what Swift emitted; nothing else. A "small helper" that rounds or snaps is the
+  drifted twin this plan removes.
+- Camera properties on `DisplayList` (`scrollX`, `pixelsPerTick`, `devicePixelRatio`, `keyHeight`…).
+  The item has `source`, `list`, `revision` and the two constant ids — Contract §2, closed.
+- A JS or QML path that decodes the blob, or per-list slots added "for now" without the Task 2 smoke
+  failing first (open risk 1 names the only sanctioned fallback).
+- Keeping `TimelineRenderer`, `RollDrawingContent`, `DrawingContentBinary` or a §11–§14 record kind
+  alive past the task that replaces it, or re-adding `contentRevision`/`drawingContent()` on a source.
+- Re-pinning a camera-stability check to "bytes unchanged" instead of inverting it (Contract §3).
+- Fixing a hit-test point disagreement by changing `viewX`/`snappedEdge` instead of the check's point
+  (open risk 3).
+- Per-record string work on the frame path: hex parsing, `String(format:)`, `PaletteMath`; label text
+  is the only string a record carries.
+- Stored `RawSpan`/`Span` properties, `UnsafeMutableRawPointer` bookkeeping in the writer, or
+  `withUnsafeBytes` anywhere but `finish()` and the C hand-offs.
+- Proof-ledger edits outside the commit whose checks prove them, "GAP → covered" flips without a new
+  Swift predicate, or an agent editing a ledger it was not assigned (`proof-ledger-workflow`).
+- `cmake`/`ninja` invoked directly; a root-scoped `grep`; comments over two lines; pixel literals.
+- Scope creep dressed as prerequisite: "while here" refactors of `EditorCamera`, drawer publication
+  rewrites beyond the write set, new QtBridge patches.
+
+### Stop and ask the user
+
+- Task 2's smoke cannot make the 1-arg `invokeMethod` work (decide between per-list slots and a
+  QtBridge patch).
+- A `pd_dl_decode` failure reaches `qFatal` in a check — the writer or the header changed shape;
+  the format is versioned, so a bump is a user decision.
+- A raster-identity check differs by more than the ≤1 px hit-test class in Contract §4.
+- Any failing check not on the deliberate-inversion list, or a pre-existing failure an implementer
+  reports. Never hand off red.
+- The AGENTS.md boundary text (Contract §6) — permission is required before Task 9 writes it.
+
+### Ledger hand-off
+
+Each task's implementer freezes its Swift check sources and reports affected ledger paths, site
+identities and final predicate locations; the orchestrator then dispatches `ledger-agent` for those
+proof files only, serially per file, and verifies `A###`→`S###` links, hashes, tallies and
+`deno task proof check --executed` before accepting the task. Unresolved `GAP`/`PARTIAL` rows stay
+as they are.
+
+### Done means
+
+`src/render/` contains exactly `display_list.{h,c}`, `display_list_item.{h,cpp}`, `module.modulemap`;
+every Verification command is green on the final commit; the commit is pushed; the superseded plan
+`docs/plans/native-timeline-renderer/plan.md` carries a status note pointing here.

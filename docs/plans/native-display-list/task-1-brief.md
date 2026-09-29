@@ -59,10 +59,11 @@ Tasks 4–8 (Swift builders emit through `DisplayListWriter`).
   `struct DisplayListWriter` with `rect(_ r: PdDlRect)`,
   `label(_ l: PdDlLabel, text: String)`, `font(_ f: PdDlFont, family: String)`
   (C structs by value; the writer fills the text offsets/lengths),
-  `finish() -> Data`; pads each array to 8 bytes; retains `Data` capacity
-  across frames (`removeAll(keepingCapacity:)`); appends imported C struct
-  bytes with `withUnsafeBytes(of:)` — the sanctioned C-interop exception to
-  the Span/RawSpan buffer rule.
+  `finish() -> Data`. Storage: `[PdDlFont]`, `[PdDlRect]`, `[PdDlLabel]`,
+  `[UInt8]` text — plain value appends, no pointers; `finish()` writes the
+  header then each array's `span.bytes` via `RawSpan.withUnsafeBytes` into
+  `Data.append`, padding to 8 bytes; arrays keep capacity across frames
+  (`removeAll(keepingCapacity:)`). Plan Contract §3 "Writer" is normative.
  - Check suite `src/checks/displaylist/DisplayListChecks.swift` registered as
   `swiftSuite("swiftcore-displaylist", "displayList")` beside the existing
   entries in `src/checks/checkcatalog.cpp:107-127`, with matching dispatch:
@@ -120,6 +121,7 @@ Tasks 4–8 (Swift builders emit through `DisplayListWriter`).
 
 ## Task-specific constraints
 
-- `withUnsafeBytes(of:)` is allowed only for appending the imported C
-  structs; all other buffer work follows the Span/RawSpan rule.
+- Unsafe pointers only in `finish()` (span → `Data`) and at the C decoder
+  call; readers walk `data.bytes` inline with `unsafeLoadUnaligned`; no
+  stored `RawSpan`/`Span`.
 - ≤2-line comments; no hard-coded pixels in Swift sources; `deno task` only.

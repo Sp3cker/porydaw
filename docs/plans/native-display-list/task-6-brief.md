@@ -64,10 +64,14 @@ prerequisite and must not re-decide it.
    (`VelocityPage.swift:211-212` today); remove `contentRevision`,
    `drawingContent()`, `drawingContentData`. Rebuild trigger: existing
    content path (`publishDrawingContent` at
-   `VelocityPublication.swift:223-235`) and camera path
-   (`VelocityPage.refreshCamera` at `VelocityPage.swift:398-405`, which today
-   republishes handles but not drawing content — extend it to rebuild both
-   lists, since camera moves must change bytes + revision).
+   `VelocityPublication.swift:238-270`) and camera path
+   (`VelocityPage.refreshCamera` at `VelocityPublication.swift:85-96`: it
+   moves each tick-space handle's `x`/`endX` in place, then
+   `publishTransient(updateDrawing: false)` — keep the in-place handle
+   update, and end with a rebuild of both lists + one `displayRevision`
+   bump, since camera moves must change bytes + revision; plan Contract §7).
+   Handles stay tick-space QML delegates; `contentScrollX` /
+   `contentPixelsPerTick` bindings in `VelocityPage.qml` are not yours.
 3. Emit grid lines in Swift over the visible tick range with
    `forEachSubdivision` / `forEachGridLine`; project node/band/transient
    geometry with the unified `viewX` (Contract §4). Cull to the viewport and
