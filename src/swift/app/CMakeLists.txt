@@ -18,6 +18,7 @@ add_library(PorydawApp STATIC
     export/WavExportJob.swift
     export/WavExportPresenter.swift
     samplestudio/Sf2ZonePickerModel.swift
+    samplestudio/Sf2ZonePickerPresenter.swift
     samplestudio/SampleStudioHistory.swift
     samplestudio/SampleStudioReadouts.swift
     samplestudio/SampleStudioPresenter.swift
@@ -35,6 +36,7 @@ add_library(PorydawApp STATIC
     ApplicationSession+Audio.swift
     ApplicationSession+Commands.swift
     ApplicationSession+Catalog.swift
+    ApplicationSession+Samples.swift
     midiimport/ImportAnalysisSummary.swift
     midiimport/MidiImportWizardState.swift
     midiimport/MidiImportController.swift

@@ -17,6 +17,12 @@ public final class SampleStudioWorkflow {
     private var leftOnly = false
     private var committing = false
     private var pendingTask: Task<Void, Never>?
+    private var destinationSlot = -1
+    private var editName: String?
+    private var reopenFromSource = false
+    private var sf2File: Sf2File?
+    private var zonePresenter: Sf2ZonePickerPresenter?
+    private var selectedZone = -1
 
     @QtTracked public var editorOpen = false
     @QtTracked public var editorRevision = 0
@@ -27,13 +33,19 @@ public final class SampleStudioWorkflow {
     @QtTracked public var alertRevision = 0
     @QtTracked public var stereoPromptText = ""
     @QtTracked public var stereoPromptOpen = false
+    @QtTracked public var zonePickerOpen = false
 
     @QtIgnored public init(session: ApplicationSession) { self.session = session }
 
-    // Destination slots are wired by the voice-initiated route in task 254.
     public func requestImport(slot: Int) {
         guard let session, session.projectOpen, let service = session.catalogService,
-              !editorOpen, !stereoPromptOpen, !committing, pendingTask == nil else { return }
+              !editorOpen, !zonePickerOpen, !stereoPromptOpen, !committing, pendingTask == nil,
+              slot < 0 || (slot < VoiceListController.slotCount
+                           && session.voiceList.isBound && !session.voiceList.isLoading
+                           && session.voiceList.session != nil) else { return }
+        destinationSlot = slot
+        editName = nil
+        reopenFromSource = false
         pendingTask = Task { [weak self] in
             defer { self?.pendingTask = nil }
             do {
@@ -55,6 +67,48 @@ public final class SampleStudioWorkflow {
         }
     }
 
+    public func requestEdit(slot: Int) {
+        guard let session, session.projectOpen, let service = session.catalogService,
+              !editorOpen, !zonePickerOpen, !stereoPromptOpen, !committing, pendingTask == nil,
+              slot >= 0, slot < VoiceListController.slotCount,
+              session.voiceList.isBound, !session.voiceList.isLoading,
+              session.voiceList.session != nil else { return }
+        let prefix = "DirectSoundWaveData_"
+        guard let symbol = session.voiceList.slots[slot].voice?.symbol,
+              symbol.hasPrefix(prefix) else {
+            showAlert(title: "Edit Sample", text: "This voice does not reference a project sample.")
+            return
+        }
+        let name = String(symbol.dropFirst(prefix.count))
+        destinationSlot = -1
+        pendingTask = Task { [weak self] in
+            defer { self?.pendingTask = nil }
+            do {
+                let committed = try await service.readCommittedSample(name: name)
+                let result = try SampleReopen.resolve(wav: committed.wav,
+                                                      wavPath: committed.wavPath,
+                                                      sidecar: committed.sidecar)
+                guard let self, self.session?.catalogService === service else { return }
+                self.editName = name
+                self.reopenFromSource = result.fromSource
+                if let sidecar = result.sidecar {
+                    self.sourcePath = sidecar.sourcePath
+                    self.sourceBytes = try Data(contentsOf: URL(fileURLWithPath: sidecar.sourcePath))
+                    self.leftOnly = sidecar.leftOnly
+                    self.selectedZone = sidecar.sf2Zone
+                } else {
+                    self.sourcePath = committed.wavPath
+                    self.sourceBytes = committed.wav
+                    self.leftOnly = false
+                    self.selectedZone = -1
+                }
+                self.open(result.sample, restoredParams: result.restoredParams)
+            } catch {
+                self?.showAlert(title: "Edit Sample", text: String(describing: error))
+            }
+        }
+    }
+
     public func chooseSource(fileURL: String) {
         pickerRequested = false
         guard let url = URL(string: fileURL), url.isFileURL else { return }
@@ -66,7 +120,20 @@ public final class SampleStudioWorkflow {
         }
         sourceBytes = bytes
         leftOnly = false
-        decodeSource()
+        selectedZone = -1
+        if Sf2Reader.isSoundFont(bytes) {
+            do {
+                let file = try Sf2Reader.read(bytes, sourcePath: sourcePath)
+                sf2File = file
+                zonePresenter = Sf2ZonePickerPresenter(file: file)
+                zonePickerOpen = true
+            } catch {
+                showAlert(title: "Import Sample",
+                          text: "\(url.lastPathComponent): \(error.message)")
+            }
+        } else {
+            decodeSource()
+        }
     }
 
     public func cancelSource() { pickerRequested = false }
@@ -78,6 +145,28 @@ public final class SampleStudioWorkflow {
         decodeSource(promptForPhaseCancellation: false)
     }
 
+    public func zonePicker() -> Optional<Sf2ZonePickerPresenter> { zonePresenter }
+
+    public func acceptZone() {
+        guard zonePickerOpen, let sf2File, let zonePresenter,
+              zonePresenter.canAccept else { return }
+        do {
+            let zone = zonePresenter.selectedZone
+            let sample = try Sf2Reader.extractZone(sf2File, index: zone)
+            selectedZone = zone
+            zonePickerOpen = false
+            self.sf2File = nil
+            open(sample)
+        } catch {
+            showAlert(title: "Import Sample", text: error.message)
+        }
+    }
+
+    public func cancelZone() {
+        guard zonePickerOpen else { return }
+        close()
+    }
+
     public func accept() {
         guard !committing, let session, let service = session.catalogService,
               let presenter, presenter.canCommit else { return }
@@ -87,11 +176,15 @@ public final class SampleStudioWorkflow {
         sidecar.sourcePath = sourcePath
         sidecar.sourceSha256 = SampleSourceHash.sha256Hex(sourceBytes)
         sidecar.leftOnly = leftOnly
-        sidecar.sf2Zone = -1
+        sidecar.sf2Zone = selectedZone
         sidecar.params = presenter.params
         let name = presenter.sampleName
+        let editing = editName != nil
+        let destination = destinationSlot
         let request = SampleCommitRequest(name: name, wav: presenter.wavBytes(),
-                                          sidecar: sidecar, removeSidecar: false, update: false)
+                                          sidecar: editing && !reopenFromSource ? nil : sidecar,
+                                          removeSidecar: editing && !reopenFromSource,
+                                          update: editing)
         pendingTask = Task { [weak self] in
             defer {
                 self?.pendingTask = nil
@@ -105,7 +198,18 @@ public final class SampleStudioWorkflow {
                 }
                 _ = await session.refreshVoicegroupCatalog()
                 guard self.session?.catalogService === service else { return }
-                session.statusMessage(message: "Imported \(name) - DirectSoundWaveData_\(name) is now available to voicegroups")
+                if !editing && destination >= 0 {
+                    do {
+                        try await self.assign(name: name, slot: destination)
+                    } catch {
+                        self.close()
+                        self.showAlert(title: "Sample", text: String(describing: error))
+                        return
+                    }
+                }
+                session.statusMessage(message: editing
+                    ? "Saved \(name) - the ROM's .bin recompiles on the next build"
+                    : "Imported \(name) - DirectSoundWaveData_\(name) is now available to voicegroups")
                 self.close()
             } catch {
                 self?.showAlert(title: "Sample", text: String(describing: error))
@@ -121,15 +225,33 @@ public final class SampleStudioWorkflow {
     public func audition() -> Optional<SampleStudioAudition> { player }
 
     @QtIgnored public func close() {
+        pendingTask?.cancel()
+        pendingTask = nil
+        committing = false
         player?.close()
         editorOpen = false
         stereoPromptOpen = false
         pickerRequested = false
-        presenter = nil
-        tools = nil
-        wave = nil
-        player = nil
+        zonePickerOpen = false
+        sf2File = nil
         sourceBytes = Data()
+        sourcePath = ""
+        leftOnly = false
+        destinationSlot = -1
+        editName = nil
+        selectedZone = -1
+        reopenFromSource = false
+        // The Loader still evaluates bindings while it tears down the dialog.
+        // Yield the main actor so QML can unload the dialog first.
+        Task { @MainActor [weak self] in
+            await Task.yield()
+            guard let self, !self.editorOpen, !self.zonePickerOpen else { return }
+            self.zonePresenter = nil
+            self.presenter = nil
+            self.tools = nil
+            self.wave = nil
+            self.player = nil
+        }
     }
 
     private func decodeSource(promptForPhaseCancellation: Bool = true) {
@@ -147,16 +269,25 @@ public final class SampleStudioWorkflow {
         }
     }
 
-    private func open(_ sample: ImportedSample) {
+    private func open(_ sample: ImportedSample, restoredParams: SampleEditParams? = nil) {
         guard let session else { return }
         let root = session.projectRoot
         let presenter = SampleStudioPresenter(source: sample) { name in
             SampleRegistrar.validate(projectRoot: root, name: name,
                                      existingSymbols: VoicegroupSource.directSoundSymbols(root))
         }
+        if let editName { presenter.setEditTarget(name: editName) }
+        if let restoredParams { presenter.applyParamsExternal(restoredParams) }
         let wave = SampleWaveformModel(presenter: presenter, palette: session.palette)
+        let voice = session.voiceList.slots.indices.contains(destinationSlot)
+            ? session.voiceList.slots[destinationSlot].voice : nil
+        let destinationAdsr: VoiceListAdsr? = voice.flatMap {
+            VoiceListSemantics.macroIsCgb($0.macro) ? nil
+                : VoiceListAdsr(attack: $0.attack, decay: $0.decay,
+                                sustain: $0.sustain, release: $0.release)
+        }
         let player = SampleStudioAudition(presenter: presenter, output: session.audio,
-                                           destinationAdsr: nil)
+                                           destinationAdsr: destinationAdsr)
         player.onPlayhead = { [weak wave] frame in wave?.setPlayhead(sourceFrame: frame) }
         self.presenter = presenter
         tools = SampleLoopTools(presenter: presenter)
@@ -164,6 +295,35 @@ public final class SampleStudioWorkflow {
         self.player = player
         editorRevision += 1
         editorOpen = true
+    }
+
+    private func assign(name: String, slot: Int) async throws {
+        guard let session, session.voiceList.isBound, !session.voiceList.isLoading,
+              session.voiceList.session != nil,
+              session.voiceList.slots.indices.contains(slot) else {
+            throw ProjectServiceError.operationFailed("The destination voicegroup is no longer available.")
+        }
+        let symbol = "DirectSoundWaveData_\(name)"
+        let current = session.voiceList.slots[slot].voice
+        var voice: BankVoice
+        if let current, [BankVoiceMacro.directSound, BankVoiceMacro.directSoundNoResample,
+                         BankVoiceMacro.directSoundAlt].contains(current.macro) {
+            voice = current
+        } else {
+            voice = BankVoice()
+            voice.macro = BankVoiceMacro.directSound
+            voice.key = 60
+            voice.pan = 0
+            let adsr = VoiceListSemantics.defaultAdsr(session.voiceList.adsrDefaults,
+                                                       macro: voice.macro, symbol: symbol)
+            voice.attack = adsr.attack
+            voice.decay = adsr.decay
+            voice.sustain = adsr.sustain
+            voice.release = adsr.release
+        }
+        voice.symbol = symbol
+        try await session.voiceList.applyVoiceEdit(slot: slot, voice: voice)
+        session.voiceList.revealSlot(slot: slot)
     }
 
     private func showAlert(title: String, text: String) {

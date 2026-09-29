@@ -51,6 +51,18 @@ Item {
         }
         onLoaded: item.present()
     }
+    Loader {
+        id: zones
+        active: host.workflow.zonePickerOpen
+        sourceComponent: Sf2ZonePickerDialog {
+            workflow: host.workflow
+            picker: host.workflow.zonePicker()
+            applicationSession: host.applicationSession
+            colors: host.colors
+            transientParent: host.hostWindow
+        }
+        onLoaded: item.present()
+    }
     Connections {
         target: host.workflow
         function onPickerRequestedChanged() {

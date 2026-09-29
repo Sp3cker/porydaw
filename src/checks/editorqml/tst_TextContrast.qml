@@ -215,9 +215,11 @@ TestCase {
     function auditSampleStudio(context) {
         const picker = findChild(shell, "shellImportSamplePicker")
         verify(picker !== null, "sample picker is mounted")
+        // The native dialog may reset selectedFile on open; seed it and reapply once visible.
         picker.selectedFile = "file://" + bootstrap.projectRoot + "/samplesources/hires_tone.wav"
         shell.shellPresenter.activate("tools.import_sample")
         verify(waitForNative(function() { return picker.visible }, 5000), "sample picker opens")
+        picker.selectedFile = "file://" + bootstrap.projectRoot + "/samplesources/hires_tone.wav"
         picker.accept()
         verify(waitForNative(function() {
             const opened = findChild(shell, "sampleStudioDialog")
@@ -234,6 +236,16 @@ TestCase {
         }
         dialog.close()
         verify(waitForNative(function() { return !dialog.visible }, 5000), "editor closes")
+        shell.shellPresenter.session.sampleStudio().chooseSource(
+                    "file://" + bootstrap.projectRoot + "/samplesources/zones.sf2")
+        verify(waitForNative(function() {
+            const opened = findChild(shell, "sf2ZonePickerDialog")
+            return opened && opened.visible
+        }, 15000), "SoundFont zone picker opens")
+        const zones = findChild(shell, "sf2ZonePickerDialog")
+        record(context + " SoundFont zones", Audit.audit(zones.contentItem, grab))
+        zones.close()
+        verify(waitForNative(function() { return !zones.visible }, 5000), "zone picker closes")
     }
 
     function auditClippedKeyboardLabel(context) {

@@ -22,6 +22,7 @@ enum ShellQmlRegistry {
                 fixtureFiles: songs("mus_route101") + [
                     "test_midis/external_import.mid", "Makefile", "audio_rules.mk",
                     "samplesources/hires_tone.wav",
+                    "samplesources/zones.sf2",
                 ],
                 testFunctions: ["TextContrast::test_\(state)ShellText:\(mode)"])
         }
@@ -336,6 +337,13 @@ enum ShellQmlRegistry {
                     "Makefile", "audio_rules.mk", "samplesources/hires_tone.wav",
                     "samplesources/tone.flac",
                 ], testFunctions: ["ShellSampleStudio::test_commitAndCollision"]),
+            Entry(
+                name: "shell-sample-studio-voice",
+                inputFileName: "tst_ShellSampleStudioVoice.qml",
+                fixtureFiles: songs("mus_route101") + [
+                    "Makefile", "audio_rules.mk", "samplesources/hires_tone.wav",
+                    "samplesources/tone.flac", "samplesources/zones.sf2",
+                ]),
             Entry(
                 name: "shell-sample-studio-refusal",
                 inputFileName: "tst_ShellSampleStudioRefusal.qml",

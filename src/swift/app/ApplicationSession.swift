@@ -159,6 +159,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
             self?.performEventListCommand(command: command)
         }
         connectVoiceAudition()
+        connectVoiceSamples()
         songTabs.attach(app: self)
         transportBar.attach(session: self)
         wavExport.attach(session: self)
