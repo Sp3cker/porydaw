@@ -9,4 +9,5 @@ internal func runSampleChecks(_ report: CheckReport) {
     runRenderPipelineChecks(report)
     runAnalysisChecks(report)
     runRegistrationChecks(report)
+    runProvenanceChecks(report)
 }

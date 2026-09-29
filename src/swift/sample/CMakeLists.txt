@@ -14,6 +14,9 @@ add_library(PorydawSample STATIC
     SampleRender.swift
     SampleWavWriter.swift
     SampleAnalysis.swift
+    SampleSourceHash.swift
+    SampleSidecar.swift
+    SampleReopen.swift
 )
 set_target_properties(PorydawSample PROPERTIES
     Swift_MODULE_NAME PorydawSample

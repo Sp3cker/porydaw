@@ -3,13 +3,14 @@ Assertion correspondence: samplecheck/integration.cpp
 Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/samplecheck/integration.cpp
 Original SHA-256: 6c9de17973a3ede8a7dd643d494f606a9c1fb0b0fab1742a2b6f7d84abc2bf49
-Swift counterpart: src/checks/samplecheck/RegistrationChecks.swift
-Swift counterpart SHA-256: 8fdf170d20ded19a7539155ec847129b62f7e60f0aa091455b3225a383a0fccd
+Swift counterpart: src/checks/samplecheck/RegistrationChecks.swift; src/checks/samplecheck/ProvenanceChecks.swift
+Swift counterpart SHA-256 (RegistrationChecks.swift): 8fdf170d20ded19a7539155ec847129b62f7e60f0aa091455b3225a383a0fccd
+Swift counterpart SHA-256 (ProvenanceChecks.swift): fdb2f6ca9a839dfddab639d4e09f26a8ac8ce2f75668f9b8b5ef212d5b0c0229
 
-Inventory: 71 sites across 9 test methods (engineLoop, sampleUpdate, sampleUpdateRefusals, sidecarEditDialog, sidecarFallback, sidecarRemove, sidecarRerender, sidecarRoundtrip, sidecarTouchedSource). Tally: 56 GAP, 3 NATIVE, 3 RETIRED-REPRESENTATION, 9 MATCHED, 0 PARTIAL.
+Inventory: 71 sites across 9 test methods (engineLoop, sampleUpdate, sampleUpdateRefusals, sidecarEditDialog, sidecarFallback, sidecarRemove, sidecarRerender, sidecarRoundtrip, sidecarTouchedSource). Tally: 2 GAP, 3 NATIVE, 23 RETIRED-REPRESENTATION, 43 MATCHED, 0 PARTIAL.
 
 Command: deno task checks --filter samplecheck --verbose
-Result: controller-observed 2026-09-29 for this tree — checks: 1/38 ok, no failures; proof check --executed: 0 not executed (engineLoop A001–A012 closed by 246).
+Result: controller-observed 2026-09-29 for this tree — checks: 1/38 ok, no failures; proof check --executed: 0 not executed (engineLoop A001–A012 by 246; provenance A013–A059, A065–A071 by 247; A060–A064 open for 249).
 
 A001 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:46
 Disposition: RETIRED-REPRESENTATION
@@ -227,8 +228,8 @@ Original expression:
                "loop-wrap steps stay within source steps plus two LSB")
 
 A013 | SampleProcessingTest::sidecarRoundtrip | src/checks/samplecheck/integration.cpp:126
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness scratch-directory scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
   }
@@ -241,8 +242,8 @@ Original expression:
   QVERIFY2(scratch.isValid(), "sidecar-roundtrip scratch directory is available")
 
 A014 | SampleProcessingTest::sidecarRoundtrip | src/checks/samplecheck/integration.cpp:128
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness project-fixture scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
       const QString root = scratch.filePath(QStringLiteral("wavproj"));
@@ -251,8 +252,8 @@ Original expression:
   QVERIFY2(createWav2AgbProject(root), "sidecar-roundtrip synthetic project is created")
 
 A015 | SampleProcessingTest::sidecarRoundtrip | src/checks/samplecheck/integration.cpp:132
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S010
 Source context since previous assertion:
   ;
       const QByteArray sourceBytes = hiResSampleWav();
@@ -264,8 +265,8 @@ Original expression:
                qPrintable(error))
 
 A016 | SampleProcessingTest::sidecarRoundtrip | src/checks/samplecheck/integration.cpp:135
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness source-file fixture scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
       const QString sourcePath = scratch.filePath(QStringLiteral("sources/hires_tone.wav"));
@@ -274,8 +275,8 @@ Original expression:
   QVERIFY(writeFile(sourcePath, sourceBytes))
 
 A017 | SampleProcessingTest::sidecarRoundtrip | src/checks/samplecheck/integration.cpp:143
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S011
 Source context since previous assertion:
   ;
       SampleEditParams params = SampleDocument::defaultParams(hiRes);
@@ -292,8 +293,8 @@ Original expression:
                "provenance sample registers")
 
 A018 | SampleProcessingTest::sidecarRoundtrip | src/checks/samplecheck/integration.cpp:150
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S012
 Source context since previous assertion:
   ;
       SampleSidecar sidecar;
@@ -307,8 +308,8 @@ Original expression:
                "sidecar writes")
 
 A019 | SampleProcessingTest::sidecarRoundtrip | src/checks/samplecheck/integration.cpp:155
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S013
 Source context since previous assertion:
   ;
 
@@ -319,8 +320,8 @@ Original expression:
                "sidecar reads back")
 
 A020 | SampleProcessingTest::sidecarRoundtrip | src/checks/samplecheck/integration.cpp:157
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S014
 Source context since previous assertion:
   ;
 
@@ -331,8 +332,8 @@ Original expression:
                "sidecar round-trips every field")
 
 A021 | SampleProcessingTest::sidecarRerender | src/checks/samplecheck/integration.cpp:166
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness scratch-directory scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
   }
@@ -345,8 +346,8 @@ Original expression:
   QVERIFY2(scratch.isValid(), "sidecar-rerender scratch directory is available")
 
 A022 | SampleProcessingTest::sidecarRerender | src/checks/samplecheck/integration.cpp:168
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness project-fixture scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
       const QString root = scratch.filePath(QStringLiteral("wavproj"));
@@ -355,8 +356,8 @@ Original expression:
   QVERIFY2(createWav2AgbProject(root), "sidecar-rerender synthetic project is created")
 
 A023 | SampleProcessingTest::sidecarRerender | src/checks/samplecheck/integration.cpp:172
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S015
 Source context since previous assertion:
   ;
       const QByteArray sourceBytes = hiResSampleWav();
@@ -368,8 +369,8 @@ Original expression:
                qPrintable(error))
 
 A024 | SampleProcessingTest::sidecarRerender | src/checks/samplecheck/integration.cpp:175
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness source-file fixture scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
       const QString sourcePath = scratch.filePath(QStringLiteral("sources/hires_tone.wav"));
@@ -378,8 +379,8 @@ Original expression:
   QVERIFY(writeFile(sourcePath, sourceBytes))
 
 A025 | SampleProcessingTest::sidecarRerender | src/checks/samplecheck/integration.cpp:184
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S016
 Source context since previous assertion:
   ;
       SampleEditParams params = SampleDocument::defaultParams(hiRes);
@@ -397,8 +398,8 @@ Original expression:
           "provenance sample registers")
 
 A026 | SampleProcessingTest::sidecarRerender | src/checks/samplecheck/integration.cpp:191
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S017
 Source context since previous assertion:
   ;
       SampleSidecar sidecar;
@@ -412,8 +413,8 @@ Original expression:
                "sidecar writes")
 
 A027 | SampleProcessingTest::sidecarRerender | src/checks/samplecheck/integration.cpp:195
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S018
 Source context since previous assertion:
   ;
       SampleSidecar back;
@@ -423,8 +424,8 @@ Original expression:
                "sidecar reads back")
 
 A028 | SampleProcessingTest::sidecarRerender | src/checks/samplecheck/integration.cpp:199
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S019
 Source context since previous assertion:
   ;
 
@@ -434,8 +435,8 @@ Original expression:
   QCOMPARE(SampleRegistrar::sourceHashHex(reread), back.sourceSha256)
 
 A029 | SampleProcessingTest::sidecarRerender | src/checks/samplecheck/integration.cpp:201
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S020
 Source context since previous assertion:
   ;
       ImportedSample reopened;
@@ -445,8 +446,8 @@ Original expression:
                "sidecar source re-imports")
 
 A030 | SampleProcessingTest::sidecarRerender | src/checks/samplecheck/integration.cpp:205
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S021
 Source context since previous assertion:
   ;
       SampleDocument redoc(reopened);
@@ -456,8 +457,8 @@ Original expression:
   QCOMPARE(writeSampleWav(redoc.processed()), committed)
 
 A031 | SampleProcessingTest::sidecarTouchedSource | src/checks/samplecheck/integration.cpp:211
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness scratch-directory scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
   }
@@ -470,8 +471,8 @@ Original expression:
   QVERIFY2(scratch.isValid(), "sidecar-touch scratch directory is available")
 
 A032 | SampleProcessingTest::sidecarTouchedSource | src/checks/samplecheck/integration.cpp:213
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness project-fixture scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
       const QString root = scratch.filePath(QStringLiteral("wavproj"));
@@ -480,8 +481,8 @@ Original expression:
   QVERIFY2(createWav2AgbProject(root), "sidecar-touch synthetic project is created")
 
 A033 | SampleProcessingTest::sidecarTouchedSource | src/checks/samplecheck/integration.cpp:217
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S022
 Source context since previous assertion:
   ;
       const QByteArray sourceBytes = hiResSampleWav();
@@ -493,8 +494,8 @@ Original expression:
                qPrintable(error))
 
 A034 | SampleProcessingTest::sidecarTouchedSource | src/checks/samplecheck/integration.cpp:220
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness source-file fixture scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
       const QString sourcePath = scratch.filePath(QStringLiteral("sources/hires_tone.wav"));
@@ -503,8 +504,8 @@ Original expression:
   QVERIFY(writeFile(sourcePath, sourceBytes))
 
 A035 | SampleProcessingTest::sidecarTouchedSource | src/checks/samplecheck/integration.cpp:224
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S023
 Source context since previous assertion:
   ;
       SampleSidecar sidecar;
@@ -517,8 +518,8 @@ Original expression:
                "provenance sample registers")
 
 A036 | SampleProcessingTest::sidecarTouchedSource | src/checks/samplecheck/integration.cpp:230
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S024
 Source context since previous assertion:
   ;
       sidecar.sourcePath = sourcePath;
@@ -531,8 +532,8 @@ Original expression:
                "sidecar writes")
 
 A037 | SampleProcessingTest::sidecarTouchedSource | src/checks/samplecheck/integration.cpp:234
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness source-file mutation scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
 
@@ -541,8 +542,8 @@ Original expression:
   QVERIFY(writeFile(sourcePath, sourceBytes + QByteArray(4, '\0')))
 
 A038 | SampleProcessingTest::sidecarTouchedSource | src/checks/samplecheck/integration.cpp:235
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S025
 Source context since previous assertion:
   ;
 
@@ -551,8 +552,8 @@ Original expression:
                "a touched source no longer matches the sidecar hash")
 
 A039 | SampleProcessingTest::sidecarFallback | src/checks/samplecheck/integration.cpp:242
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness scratch-directory scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
   }
@@ -565,8 +566,8 @@ Original expression:
   QVERIFY2(scratch.isValid(), "sidecar-fallback scratch directory is available")
 
 A040 | SampleProcessingTest::sidecarFallback | src/checks/samplecheck/integration.cpp:244
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness project-fixture scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
       const QString root = scratch.filePath(QStringLiteral("wavproj"));
@@ -575,8 +576,8 @@ Original expression:
   QVERIFY2(createWav2AgbProject(root), "sidecar-fallback synthetic project is created")
 
 A041 | SampleProcessingTest::sidecarFallback | src/checks/samplecheck/integration.cpp:247
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S026
 Source context since previous assertion:
   ;
       ImportedSample hiRes;
@@ -588,8 +589,8 @@ Original expression:
           qPrintable(error))
 
 A042 | SampleProcessingTest::sidecarFallback | src/checks/samplecheck/integration.cpp:258
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S027
 Source context since previous assertion:
   ;
       SampleEditParams params = SampleDocument::defaultParams(hiRes);
@@ -607,8 +608,8 @@ Original expression:
           "provenance sample registers")
 
 A043 | SampleProcessingTest::sidecarFallback | src/checks/samplecheck/integration.cpp:263
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S028
 Source context since previous assertion:
   ;
 
@@ -620,8 +621,8 @@ Original expression:
           "committed .wav re-imports")
 
 A044 | SampleProcessingTest::sidecarFallback | src/checks/samplecheck/integration.cpp:266
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S029
 Source context since previous assertion:
   ;
 
@@ -629,8 +630,8 @@ Original expression:
   QVERIFY2(fallback.gbaReady, "committed .wav re-imports GBA-ready")
 
 A045 | SampleProcessingTest::sidecarFallback | src/checks/samplecheck/integration.cpp:269
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S030
 Source context since previous assertion:
   ;
       SampleDocument fallbackDocument(fallback);
@@ -640,8 +641,8 @@ Original expression:
   QCOMPARE(writeSampleWav(fallbackDocument.processed()), committed)
 
 A046 | SampleProcessingTest::sampleUpdate | src/checks/samplecheck/integration.cpp:275
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness scratch-directory scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
   }
@@ -654,8 +655,8 @@ Original expression:
   QVERIFY2(scratch.isValid(), "sample-update scratch directory is available")
 
 A047 | SampleProcessingTest::sampleUpdate | src/checks/samplecheck/integration.cpp:277
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness project-fixture scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
       const QString root = scratch.filePath(QStringLiteral("wavproj"));
@@ -664,8 +665,8 @@ Original expression:
   QVERIFY2(createWav2AgbProject(root), "sample-update synthetic project is created")
 
 A048 | SampleProcessingTest::sampleUpdate | src/checks/samplecheck/integration.cpp:280
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S031
 Source context since previous assertion:
   ;
       ImportedSample hiRes;
@@ -677,8 +678,8 @@ Original expression:
           qPrintable(error))
 
 A049 | SampleProcessingTest::sampleUpdate | src/checks/samplecheck/integration.cpp:291
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S032
 Source context since previous assertion:
   ;
       SampleEditParams params = SampleDocument::defaultParams(hiRes);
@@ -696,8 +697,8 @@ Original expression:
           "provenance sample registers")
 
 A050 | SampleProcessingTest::sampleUpdate | src/checks/samplecheck/integration.cpp:297
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S033
 Source context since previous assertion:
   ;
       params.fineTuneCents = 40.0;
@@ -708,8 +709,8 @@ Original expression:
   QVERIFY(updated != committed)
 
 A051 | SampleProcessingTest::sampleUpdate | src/checks/samplecheck/integration.cpp:300
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S034
 Source context since previous assertion:
   ;
       const QString incPath = root + QStringLiteral("/sound/direct_sound_data.inc");
@@ -721,8 +722,8 @@ Original expression:
           "updateSample succeeds")
 
 A052 | SampleProcessingTest::sampleUpdate | src/checks/samplecheck/integration.cpp:303
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S035
 Source context since previous assertion:
   ;
 
@@ -730,8 +731,8 @@ Original expression:
   QCOMPARE(readFileBytes(incPath), incBefore)
 
 A053 | SampleProcessingTest::sampleUpdate | src/checks/samplecheck/integration.cpp:304
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S036
 Source context since previous assertion:
   ;
 
@@ -741,8 +742,8 @@ Original expression:
           updated)
 
 A054 | SampleProcessingTest::sampleUpdateRefusals | src/checks/samplecheck/integration.cpp:320
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness scratch-directory scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
   }
@@ -763,8 +764,8 @@ Original expression:
   QVERIFY2(scratch.isValid(), "sample-update refusal scratch directory is available")
 
 A055 | SampleProcessingTest::sampleUpdateRefusals | src/checks/samplecheck/integration.cpp:322
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness project-fixture scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
       const QString root = scratch.filePath(QStringLiteral("wavproj"));
@@ -773,8 +774,8 @@ Original expression:
   QVERIFY2(createWav2AgbProject(root), "sample-update refusal synthetic project is created")
 
 A056 | SampleProcessingTest::sampleUpdateRefusals | src/checks/samplecheck/integration.cpp:325
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S037
 Source context since previous assertion:
   ;
       ImportedSample hiRes;
@@ -786,8 +787,8 @@ Original expression:
           qPrintable(error))
 
 A057 | SampleProcessingTest::sampleUpdateRefusals | src/checks/samplecheck/integration.cpp:337
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness bin-only fixture scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
       SampleDocument doc(hiRes);
@@ -806,8 +807,8 @@ Original expression:
                    "append .bin-only sample fixture")
 
 A058 | SampleProcessingTest::sampleUpdateRefusals | src/checks/samplecheck/integration.cpp:343
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S038
 Source context since previous assertion:
   ;
       }
@@ -819,8 +820,8 @@ Original expression:
                "updating a non-updatable sample refuses")
 
 A059 | SampleProcessingTest::sampleUpdateRefusals | src/checks/samplecheck/integration.cpp:345
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S039
 Source context since previous assertion:
   ;
 
@@ -863,8 +864,8 @@ A064 | SampleProcessingTest::sidecarEditDialog | src/checks/samplecheck/integrat
 Disposition: NATIVE
 
 A065 | SampleProcessingTest::sidecarRemove | src/checks/samplecheck/integration.cpp:389
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness scratch-directory scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
   }
@@ -877,8 +878,8 @@ Original expression:
   QVERIFY2(scratch.isValid(), "sidecar-remove scratch directory is available")
 
 A066 | SampleProcessingTest::sidecarRemove | src/checks/samplecheck/integration.cpp:391
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness project-fixture scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
       const QString root = scratch.filePath(QStringLiteral("wavproj"));
@@ -887,8 +888,8 @@ Original expression:
   QVERIFY2(createWav2AgbProject(root), "sidecar-remove synthetic project is created")
 
 A067 | SampleProcessingTest::sidecarRemove | src/checks/samplecheck/integration.cpp:395
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S040
 Source context since previous assertion:
   ;
       const QByteArray sourceBytes = hiResSampleWav();
@@ -900,8 +901,8 @@ Original expression:
                qPrintable(error))
 
 A068 | SampleProcessingTest::sidecarRemove | src/checks/samplecheck/integration.cpp:398
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness source-file fixture scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
       const QString sourcePath = scratch.filePath(QStringLiteral("sources/hires_tone.wav"));
@@ -910,8 +911,8 @@ Original expression:
   QVERIFY(writeFile(sourcePath, sourceBytes))
 
 A069 | SampleProcessingTest::sidecarRemove | src/checks/samplecheck/integration.cpp:405
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S041
 Source context since previous assertion:
   ;
       SampleSidecar sidecar;
@@ -927,8 +928,8 @@ Original expression:
                "provenance sample registers")
 
 A070 | SampleProcessingTest::sidecarRemove | src/checks/samplecheck/integration.cpp:408
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S042
 Source context since previous assertion:
   ;
 
@@ -938,8 +939,8 @@ Original expression:
                "sidecar writes")
 
 A071 | SampleProcessingTest::sidecarRemove | src/checks/samplecheck/integration.cpp:414
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S043
 Source context since previous assertion:
   ;
 
@@ -976,6 +977,75 @@ S008 | registrationEngineLoop | src/checks/samplecheck/RegistrationChecks.swift
 Anchor: message "A011 at least four full loop wraps render"
 S009 | registrationEngineLoop | src/checks/samplecheck/RegistrationChecks.swift
 Anchor: message "A012 loop-wrap steps stay within source steps plus two LSB"
+
+S010 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A015 sidecar-roundtrip high-resolution source imports"
+S011 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A017 provenance sample registers"
+S012 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A018 sidecar writes"
+S013 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A019 sidecar reads back"
+S014 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A020 sidecar round-trips every field"
+S015 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A023 sidecar-rerender high-resolution source imports"
+S016 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A025 provenance sample registers"
+S017 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A026 sidecar writes"
+S018 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A027 sidecar reads back"
+S019 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A028 reread source matches sidecar hash"
+S020 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A029 sidecar source re-imports"
+S021 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A030 sidecar re-render equals committed WAV"
+S022 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A033 sidecar-touched high-resolution source imports"
+S023 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A035 provenance sample registers"
+S024 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A036 sidecar writes"
+S025 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A038 touched source no longer matches sidecar hash"
+S026 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A041 sidecar-fallback high-resolution source imports"
+S027 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A042 provenance sample registers"
+S028 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A043 committed WAV re-imports"
+S029 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A044 committed WAV re-imports GBA-ready"
+S030 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A045 committed WAV re-renders byte-identically"
+S031 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A048 sample-update high-resolution source imports"
+S032 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A049 provenance sample registers"
+S033 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A050 changed tuning changes output"
+S034 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A051 update succeeds"
+S035 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A052 update preserves assembly bytes"
+S036 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A053 update rewrites WAV bytes"
+S037 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A056 sample-update-refusals high-resolution source imports"
+S038 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A058 unregistered update refuses"
+S039 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A059 unregistered refusal explains why"
+S040 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A067 sidecar-remove high-resolution source imports"
+S041 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A069 provenance sample registers for removal"
+S042 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A070 sidecar writes"
+S043 | runProvenanceChecks | src/checks/samplecheck/ProvenanceChecks.swift
+Anchor: message "A071 removed sidecar no longer reads"
 
 Shared helpers
 The shared C++ fixture sources src/checks/samplecheck/fixtures.h and

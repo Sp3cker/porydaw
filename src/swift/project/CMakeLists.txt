@@ -30,6 +30,7 @@ add_library(PorydawProject STATIC
     ProjectStore+Picker.swift
     ProjectStore+Synth.swift
     SampleRegistrar.swift
+    SampleRegistrar+Provenance.swift
 )
 
 configure_file(
