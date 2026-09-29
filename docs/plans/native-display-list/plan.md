@@ -156,24 +156,38 @@ class DisplayList : public QQuickItem {
     QML_NAMED_ELEMENT(DisplayList)
     Q_PROPERTY(QObject *source READ source WRITE setSource NOTIFY sourceChanged)
     Q_PROPERTY(int list READ list WRITE setList NOTIFY listChanged)
-    Q_PROPERTY(int revision READ revision WRITE setRevision NOTIFY revisionChanged)
+    Q_PROPERTY(int revision READ revision WRITE setRevision NOTIFY revisionChanged)   // wake-up only
+    Q_PROPERTY(int fetchedRevision READ fetchedRevision NOTIFY fetchedRevisionChanged) // check probe
     Q_PROPERTY(double loopStartId READ loopStartId CONSTANT)
     Q_PROPERTY(double loopEndId READ loopEndId CONSTANT)
 public:
     Q_INVOKABLE QVariantMap face(double id);   // {x,y,width,height,fill} of the first rect with that id
                                                // in the last decoded list; empty map if absent
 protected:
-    void updatePolish() override;              // GUI thread: fetch + pd_dl_decode when revision moved
+    void itemChange(ItemChange, const ItemChangeData &) override;  // (dis)connect window afterAnimating
     QSGNode *updatePaintNode(QSGNode *, UpdatePaintNodeData *) override;  // upload only
+private:
+    void pullFrame();                          // GUI thread, once per frame before sync: fetch if moved
 };
 ```
 
-Fetch protocol (unchanged mechanism, narrower surface): `revision` binds `source.displayRevision`; a
-change schedules polish; polish reads the live `displayRevision` property, and when it differs from the
-fetched one calls `QMetaObject::invokeMethod(source, "displayList", Qt::DirectConnection,
-Q_RETURN_ARG(QByteArray, blob), Q_ARG(int, list))`, keeps the `QByteArray`, and decodes into a
-`PdDlView` over it. A decode failure is `qFatal` (today's policy, `timeline_renderer.cpp:270-273`).
-An empty list (valid header, zero records) and a null source both paint nothing.
+Fetch protocol — **frame-time pull, not NOTIFY-driven**. `revision` binds `source.displayRevision` and
+its setter only calls `update()`: it exists so a list-only change (no other item moved) still produces
+a frame. Freshness comes from `pullFrame`, connected to `QQuickWindow::afterAnimating` — emitted on the
+GUI thread before the window asks the render thread to synchronize (Qt 6.11 docs). `pullFrame` reads the
+live `displayRevision` property (direct metacall into the Swift getter, no signal), and when it differs
+from `fetchedRevision` calls `QMetaObject::invokeMethod(source, "displayList", Qt::DirectConnection,
+Q_RETURN_ARG(QByteArray, blob), Q_ARG(int, list))` (QtBridge registers Swift `Int` as `QMetaType::Int`,
+`QVariant.swift:224-228`, `QMetaObjectBuilder.swift:332-335`), keeps the `QByteArray`, decodes into a
+`PdDlView`, updates `fetchedRevision` and calls `update()`. Invariant: **every frame, whatever triggered
+it, syncs the newest list** — including a frame triggered by the synchronous `cameraScroll` row that
+moves velocity handles, the playhead and the drawer containers in the same turn. Today's item lags that
+row by one queued NOTIFY (`TimelineRenderer.scrollX`), so handles and grid can disagree for a frame; the
+pull closes it. [INFERENCE: `QQuickItem::update()` issued inside `afterAnimating` is collected by that
+frame's sync — Task 2's same-frame check is the proof; if it is not, stop and ask before choosing a
+different GUI-thread hook.] `updatePolish` is not used. A decode failure is `qFatal` (today's policy,
+`timeline_renderer.cpp:270-273`). An empty list (valid header, zero records) and a null source both
+paint nothing.
 Node building: `RectGeometryNode`/`PainterRectNode`/`RectLayerNode`/`RectClipNode`/`LayoutCache`/
 `LabelLayerNode` from `timeline_renderer_nodes.cpp:45-374` move into the item file; `RollRootNode`
 (`:376-398`) is replaced by a fixed `under → labels → over` root with no band switch; `LayoutKey`
@@ -181,7 +195,7 @@ Node building: `RectGeometryNode`/`PainterRectNode`/`RectLayerNode`/`RectClipNod
 `LabelSlot.background` (`:271`) goes — backgrounds arrive as rects. The software-scene-graph painter
 path and `QSGTextNode` NativeRendering stay. Fonts: `QFont` per `(PdDlFont, pixelSize)` built as
 `font_metrics.cpp:18-26` does, cached by key. Today's `ensureScene`/`fetchContent`
-(`timeline_renderer.cpp:247-281`) collapse into `updatePolish`; no scene rebuild step remains.
+(`timeline_renderer.cpp:247-281`) collapse into `pullFrame`; no scene rebuild step remains.
 
 Registration rides `qt_add_qml_module(porydaw_app …)` exactly like `TimelineRenderer` and `ItemCursor`.
 
@@ -288,7 +302,7 @@ and bridge-wakeup paths, not the painted batch, so the design stands — with th
 
 | grid-cpu change | effect on this plan |
 |---|---|
-| QtBridge same-thread NOTIFY coalescing (`cmake/patches/qtbridge/qtbridge-object-return.patch`, `flushEmissions`): emissions queue and flush once per event-loop turn, FIFO | `displayRevision` reaches the QML binding one queued flush later; the item's fetch stays synchronous in `updatePolish`, so the frame paints the bytes current at flush time — never older. Checks that mutate Swift then read `face()`/rasters MUST spin the loop first (`waitForRendering(item)` / `tryVerify`); a same-turn read of `revision` is a check bug, not an item bug. `DirectConnection` `invokeMethod` is unaffected by the patch |
+| QtBridge same-thread NOTIFY coalescing (`cmake/patches/qtbridge/qtbridge-object-return.patch`, `flushEmissions`): emissions queue and flush once per event-loop turn, FIFO | Neutral for the item: freshness is the frame-time pull (Contract §2), which reads `displayRevision` directly and never waits for the NOTIFY. The NOTIFY only guarantees a frame for list-only changes. What is **not** solved by the list alone: items driven by the synchronous `cameraScroll` row (velocity handles, playhead, drawer containers — `VelocityPage.qml:122-130` exists precisely so the container never lags a queued NOTIFY) render in the same turn; without the pull the grid would follow one flush later, as `TimelineRenderer.scrollX` does today. Task 2 adds the same-frame check that proves handles and grid agree in the first frame after a scroll |
 | Hidden drawer sections defer camera work (`DocumentWorkspace.deferredCameraZoom`, `:376-399`, flushed on show/attach; document rebuilds clear it) | Kept. Deferral now covers scroll-only too (all lists are viewport-space); `applyCamera` calls each visible page's `refreshCamera` for both scroll and zoom (Contract §3). Invariant: a hidden page's lists may be stale; a visible page's lists are never stale |
 | Velocity handles are tick-space QML delegates placed from the camera carrier's `pixelsPerTick` (`VelocityPage.qml:122-130,396-404`; carrier `GridScene+Rebuild.swift:38-46` publishes `scrollX/scrollY/pixelsPerTick`); `VelocityPage.refreshCamera` updates handle `x/endX` in place (`VelocityPublication.swift:85-98`) | Untouched by Tasks 4–8: handles, ramp, hover guides and the `cameraScroll` carrier are interactive delegates, not painted lists. Task 6 adds the list rebuild to `refreshCamera` after the in-place handle update and leaves `contentScrollX`/`contentPixelsPerTick` bindings alone. `VelocityProjection.stableXForTick` keeps calling `contentTickX` (survives Contract §4) |
 | Notes section cached across draw-preview-only rebuilds (`notesSectionCache`, `RollNotesSectionKey`, `displacesNotes`; `1c690352`) | Content-tier keying survives as a tick-sorted record array (Contract §3 “Frame-tier skip”); the packed-bytes cache is deleted with `RollDrawingContent`. `displacesNotes` stays a `GridSceneInput` field |
@@ -326,17 +340,18 @@ upload. The delta is the copy and decode, tens of µs at the worst-case list siz
   non-escaping: use them inline or as borrowed parameters, never stored. Unsafe pointers appear only in
   `DisplayListWriter.finish()` and where a C decoder/metrics function takes a pointer. Not in scope:
   `~Copyable` writer types, `-strict-memory-safety`, `@lifetime` annotations.
-- QML checks: after any Swift mutation, spin the loop (`waitForRendering(item)` or `tryVerify`)
-  before reading `face()`, `revision` or a raster — QtBridge NOTIFYs flush once per event-loop turn
-  (Contract §7). A same-turn read is a check bug; never "fix" it in the item or the bridge.
+- QML checks: after any Swift mutation, let one frame render (`waitForRendering(item)`) before reading
+  `face()` or a raster; `fetchedRevision` is the probe for "what this frame drew". The same-frame
+  invariant (Contract §2) is proven once by Task 2's check; other checks do not re-prove it.
 
 ## Tasks
 
 | # | Task | Route | Seat | Write set (closed) |
 |---|---|---|---|---|
 | 0 | Measure per-frame pack cost (throwaway, Release build) | Direct | controller | none committed; number recorded in this file |
+| 0b | Commit the xctrace wheel bench; capture the pre-cutover baseline | Direct | user + orchestrator | `profiler/` (bench script + baseline report) |
 | 1 | Wire format, C decoder, Swift writer, round-trip check | SDD | sdd-implementer | `src/render/display_list.{h,c}`, `src/render/module.modulemap`, `src/swift/app/timeline/DisplayListWriter.swift`, `src/swift/app/CMakeLists.txt`, root `CMakeLists.txt`, `src/checks/CMakeLists.txt`, `src/checks/displaylist/DisplayListChecks.swift`, `src/checks/checkcatalog.cpp`, swiftcore suite dispatch |
-| 2 | `DisplayList` QQuickItem | SDD | qt-cpp-reviewer (Qt ownership/threading) | `src/render/display_list_item.{h,cpp}`, root `CMakeLists.txt` |
+| 2 | `DisplayList` QQuickItem + same-frame check | SDD | qt-cpp-reviewer (Qt ownership/threading) | `src/render/display_list_item.{h,cpp}`, root `CMakeLists.txt`, `src/checks/editorqml/{DisplayListProbe.swift,tst_DisplayListSameFrame.qml}`, `src/checks/CMakeLists.txt` |
 | 3 | One projection in Swift | SDD | sdd-implementer | `src/swift/app/timeline/EditorCamera.swift`, `src/swift/app/timeline/GridGeometry.swift`, callers named in `inventory.md` §3, every check file calling `displayX`/`noteContentRect`/`noteContentBox` (mechanical rename only; assertions unchanged except `src/checks/rollcheck/static/camera.swift`), affected `proof.*.txt` rows |
 | 4 | Roll plot + keyboard on display lists; roll check migration | SDD | sdd-implementer | `src/swift/app/roll/{RollDisplayLists,GridScene,GridScene+Notes,GridScene+Rebuild,PianoGrid,PianoGrid+SceneSync}.swift`, `src/ui/songview/quick/PianoRollCanvas.qml`, `src/checks/editorqml/RollNoteFaces.js` + roll consumers, `src/checks/rollcheck/note_rendering_*.swift`, `note_name_labels.swift`, `proof.*` rows |
 | 5 | Ruler on display lists | SDD | sdd-implementer | `RollDisplayLists.swift`, `src/ui/songview/quick/swiftroll/EditorRulerBand.qml`, ruler check helpers (`ShellGridMenuSupport.qml`, `tst_EditorDrawerChrome.qml`, `tst_ShellChromeVisuals.qml`, `tst_ShellMenusLoop.qml`) |
@@ -366,10 +381,21 @@ file named in Contract §5 once `grep TimelineRenderer src/ui src/checks` and
 entry; request AGENTS.md permission with the Contract §6 text. Acceptance: `deno task build:checks`,
 the full Verification list green, `deno task checks:bridge` clean.
 
+### Task 0b (Direct) — inline
+
+Target: `profiler/` — the user's xctrace wheel bench (600 wheel ops, main-thread totals), not in
+tree at `f234686a`; the user lands it, the orchestrator runs it. Change: run the four Verification
+scenarios three times each at checkpoint 1b (Task 3 landed, nothing painted by Swift yet); commit a
+baseline report beside the script naming commit, scenario, min and median. Acceptance: the report
+exists before Task 4 is dispatched; every later bench run compares against it.
+
 ## Checkpoints
 
 1. After Tasks 1 + 2 (new boundary exists and is round-trip checked; nothing uses it yet).
-2. After Tasks 3 + 4 (roll plot/keyboard cut over; hit-test and paint share one formula).
+1b. After Task 3 alone, every lane green on its own commit: rasters byte-identical (C++ still paints),
+    only hit-test points moved ≤1 px. Bench baseline captured here (Task 0b).
+2. After Task 4 (roll plot/keyboard cut over): rasters still byte-identical, hit points unchanged from
+    1b — a raster diff is a port bug, a hit-test diff is not this task's.
 3. After Task 5 (roll surface complete; `GridScene` has no legacy blob path).
 4. After Tasks 6–8 (drawers; `TimelineRenderer` unreferenced).
 5. Final: Task 9.
@@ -385,16 +411,21 @@ the full Verification list green, `deno task checks:bridge` clean.
 - `deno task checks:bridge` — QtBridge surface guard (new `displayRevision`/`displayList` members).
 - `deno task proof check --executed` — ledger health after each checkpoint.
 - `deno task format --check`.
-- Manual smoke at each cutover (controller, native desktop): launch `build/release/porydaw`, open the
-  largest fixture, scroll/zoom/pinch, hover, band-select; compare screenshots against pre-cutover at dpr
-  1 and 2; Instruments time profile shows the Swift list build under the Task 0 budget.
+- Bench gate (Task 0b, replaces manual smoke): the user's xctrace wheel bench — 600 wheel ops per
+  scenario, main-thread totals from `xctrace` — must be committed under `profiler/` before Task 4 is
+  dispatched (not in tree at `f234686a`). Scenarios: roll pan, roll zoom, drawer pan with velocity
+  visible, drawer pan with automation visible. Three runs per measurement (pan totals vary ~2× run to
+  run); report min and median; gate on min. Baseline at checkpoint 1b; re-measure after Tasks 4, 5 and
+  the 6–8 wave; a min-of-3 regression on any scenario stops the plan and goes to the user with the
+  numbers. Task 0's 185 µs was a synthetic roll-only packing bound (go/no-go for the approach); it is
+  not the performance gate.
 
 ## Open risks
 
-1. `invokeMethod` with `Q_ARG(int, list)` on a QtBridge slot taking `Int` — the 0-arg form is proven
-   (`timeline_renderer.cpp:268-270`); the 1-arg form is not. Task 2 proves it in its throwaway smoke
-   before Task 4 starts. Fallback with the same public shape: one source property per list
-   (`displayListPlot()` …) — still no JS.
+1. ~~`invokeMethod` with `Q_ARG(int, list)` type mismatch~~ resolved by reading QtBridge: Swift `Int`
+   registers as `QMetaType::Int` (`QVariant.swift:224-228`, `QMetaObjectBuilder.swift:332-335`), so
+   `int` matches. Task 2's smoke still exercises the call once; if it returns false for any other
+   reason, stop and ask (fallback with the same public shape: one slot per list).
 2. Label raster identity: Swift now decides fitted pixel sizes and clip widths; C++ only positions. The
    fit functions are the same `sgf_fit`/`sgf_advance` calls (`GridTypography.swift:150-175`), so the
    numbers are identical by construction; subpixel placement is unchanged because the same node code
@@ -417,8 +448,8 @@ orchestrator never implements Tasks 1–8 inline and never edits a proof ledger.
 | wave | tasks | seat | gate before the next wave |
 |---|---|---|---|
 | A | 1 | `sdd-implementer` | `deno task checks --filter displaylist --verbose` green; `checks:bridge` clean; `lsp:swift` re-run |
-| B | 2 ∥ 3 | 2: `qt-cpp-reviewer`; 3: `sdd-implementer` | Task 2's smoke proves 1-arg `invokeMethod` (open risk 1) **before** Task 4 is dispatched; Task 3: `checks --filter swiftcore` green, `camera.swift` re-pin landed with `proof:edit` in the same commit. Checkpoint 1 commit + push |
-| C | 4 → 5 | `sdd-implementer` | after 4: `checks:qml-roll`, `checks:shell`, `checks --filter swiftcore`; after 5: same, `GridScene` has no `drawingContent`. Checkpoints 2, 3 |
+| B | 2 ∥ 3 | 2: `qt-cpp-reviewer`; 3: `sdd-implementer` | Task 2: same-frame check green (Contract §2 invariant), 1-arg `invokeMethod` exercised. Task 3 lands **alone** and passes every lane on its own commit (`swiftcore`, `qml-roll`, `shell`, `qml`) with rasters byte-identical; `camera.swift` re-pin via `proof:edit` in the same commit. Checkpoints 1, 1b; bench baseline (Task 0b) at 1b. Task 4 is not dispatched before both |
+| C | 4 → 5 | `sdd-implementer` | after 4: `checks:qml-roll`, `checks:shell`, `checks --filter swiftcore`, rasters byte-identical to 1b, bench ≤ baseline; after 5: same, `GridScene` has no `drawingContent`. Checkpoints 2, 3 |
 | D | 6 ∥ 7 ∥ 8 | `sdd-implementer` ×3 | Task 6 first if 7 needs the rewritten `buildGrid` (it does — Task 7 consumes `DrawerStaticsContent.buildGrid(paletteColors:)`); 7 and 8 start when 6's `DrawerStaticsContent.swift` lands. `checks:qml`, `checks:shell`. Checkpoint 4 |
 | E | 9 | orchestrator, Direct | full Verification list; `grep TimelineRenderer src/ui src/checks` empty; AGENTS.md text only with the user's permission |
 
@@ -452,11 +483,13 @@ acceptance predicate before marking it done; bounded fix loop of 2, then escalat
 
 ### Stop and ask the user
 
-- Task 2's smoke cannot make the 1-arg `invokeMethod` work (decide between per-list slots and a
-  QtBridge patch).
+- Task 2's same-frame check fails (an `update()` from `afterAnimating` missed that frame's sync) or
+  the 1-arg `invokeMethod` returns false — choose the hook or the slot shape with the user.
+- A bench scenario's min-of-3 regresses against the 1b baseline.
 - A `pd_dl_decode` failure reaches `qFatal` in a check — the writer or the header changed shape;
   the format is versioned, so a bump is a user decision.
-- A raster-identity check differs by more than the ≤1 px hit-test class in Contract §4.
+- Any raster check differs at all after Task 3 or Task 4 (both must be byte-identical); after Task 5–8
+  only the deliberate-inversion list may change.
 - Any failing check not on the deliberate-inversion list, or a pre-existing failure an implementer
   reports. Never hand off red.
 - The AGENTS.md boundary text (Contract §6) — permission is required before Task 9 writes it.

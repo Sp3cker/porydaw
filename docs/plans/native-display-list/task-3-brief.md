@@ -127,19 +127,19 @@ unchanged — plus `camera.swift`):
 
 ## Acceptance predicate
 
-- `deno task checks --filter swiftcore --verbose` — covers the re-pinned
-  camera assertions, projection parity, economy, and roll semantics after
-  the rename.
-- `deno task checks:shell --verbose` — covers hit-test journeys that click
-  computed points (plan Open risk 3: a click inside the moved pixel
-  surfaces here; fix the check's point, not the formula).
+- Every lane on this commit alone, before Task 4 is dispatched:
+  `deno task checks --filter swiftcore --verbose` (re-pinned camera
+  assertions, projection parity, economy, roll semantics),
+  `deno task checks:qml-roll --verbose`, `deno task checks:qml --verbose`,
+  `deno task checks:shell --verbose` (hit-test journeys that click computed
+  points — plan Open risk 3: fix the check's point, not the formula).
+- Rasters byte-identical: C++ still paints, so any raster diff in this task
+  is a defect. This separates Task 3 (hit points move ≤1 px, pixels do not)
+  from Task 4 (pixels must not move either; hit points do not change again).
 - `deno task proof check --executed` — covers ledger health after anchor
   repair.
-- Gaps: byte-level paint/hit agreement at straddling fractional scrolls is
-  not asserted by any check (raster suites still see only the C++ side
-  until Task 4); the controller's manual smoke at dpr 1 and 2 (plan
-  Verification) covers it — scroll a song to a fractional offset, confirm
-  hover/hit and paint agree within the deliberate ≤1-physical-pixel move.
+- Gap: byte-level paint/hit agreement at straddling fractional scrolls is
+  first asserted when Task 4 paints with the same formula.
 
 ## Task-specific constraints
 

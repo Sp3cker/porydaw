@@ -181,10 +181,11 @@ Checks:
 - `deno task proof check --executed` — covers ledger health after anchor
   repair (known anchors: `proof.clipboardchecks.txt` S026-S035 for
   `EditorGridProjectionChecks.swift` messages).
-- Gaps: subpixel label placement differences below raster threshold are
-  invisible to these suites; the controller's dpr-1-and-2 screenshot
-  comparison plus Instruments re-measure against the Task 0 budget
-  (plan Verification) covers them.
+- Rasters byte-identical to the Task 3 checkpoint (1b): Swift paints with
+  the formula C++ painted with, so any diff is a port bug, not tolerance.
+- Bench (plan Verification, Task 0b): roll pan and roll zoom scenarios,
+  three runs, min-of-3 not above the 1b baseline; a regression stops the
+  plan.
 
 ## Task-specific constraints
 

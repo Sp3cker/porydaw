@@ -102,8 +102,8 @@ into one Swift-built list; markers stay QML delegates.
 - `deno task checks:bridge` covers the new `displayRevision`/`displayList`
   surface and removed members.
 - `deno task proof check --executed` covers ledger health.
-- Gap: per-frame pack cost is covered only by controller manual smoke
-  (screenshots + Instruments against the Task 0 budget).
+- Gap: per-frame cost is gated by the bench (plan Verification, Task 0b),
+  not by a check in this task.
 
 ## Task-specific constraints
 

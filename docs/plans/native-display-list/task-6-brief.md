@@ -23,6 +23,7 @@ prerequisite and must not re-decide it.
 - `src/checks/editorqml/tst_EditorDrawerVelocityPrompt.qml`
 - `src/checks/editorqml/tst_EditorDrawerVelocityRaster.qml`
 - `src/checks/editorqml/tst_ShellDrawerParityVoiceVelocity.qml` (shared with Task 7; Tasks 6 and 7 coordinate — Task 6 owns the velocity-half edits, Task 7 the voice-half edits)
+- `src/checks/editorqml/tst_EditorDrawerVelocitySameFrame.qml` (new)
 
 ## Prerequisites
 
@@ -105,9 +106,16 @@ prerequisite and must not re-decide it.
 - `deno task checks:bridge` covers the new `displayRevision`/`displayList`
   QtBridge surface and the removed `drawingContent`/`contentRevision`.
 - `deno task proof check --executed` covers ledger health.
-- Gap: no automated check asserts per-frame Swift pack cost; controller
-  manual smoke (plan Verification) compares screenshots and Instruments time
-  against the Task 0 budget.
+- `deno task checks:qml --filter EditorDrawerVelocitySameFrame --verbose`
+  covers the production half of the plan Contract §2 invariant: after each
+  of ten wheel-scroll steps on the velocity page, in the window's
+  `onAfterAnimating` record a handle stem's x (tick-space delegate placed
+  from the synchronous carrier row) and the grid line list's `face()` for
+  the same tick's grid rect; assert they agree in every frame — handles
+  never lead the drawn grid by a frame. Pattern: Task 2's
+  `tst_DisplayListSameFrame.qml`.
+- Gap: per-frame cost is gated by the bench (plan Verification, Task 0b),
+  not by a check in this task.
 
 ## Task-specific constraints
 
