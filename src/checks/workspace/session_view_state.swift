@@ -55,9 +55,8 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
                        "windowGeometry", "windowState"]
     func storedSessionKeys() -> [String: Any] {
         var values: [String: Any] = [:]
-        let domain = stagedPreferences.persistentDomain(forName: plistPath) ?? [:]
         for key in sessionKeys {
-            guard domain.keys.contains(key), let value = stagedPreferences.object(forKey: key) else { continue }
+            guard let value = stagedPreferences.object(forKey: key) else { continue }
             values[key] = value
         }
         return values

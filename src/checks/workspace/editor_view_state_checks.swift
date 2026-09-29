@@ -67,11 +67,11 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
     EditorViewStateCodec.saveLanes(decoded, store: store)
     report.expectEqual(expected: decoded, actual: EditorViewStateCodec.loadLanes(store: store),
                        cppID: codec, what: "application preferences retain one lane blob")
-    let stagedDomain = CheckEnvironment.fixturePath("settings.plist").flatMap { path in
-        UserDefaults(suiteName: path)?.persistentDomain(forName: path)
+    let stagedLanes = CheckEnvironment.fixturePath("settings.plist").flatMap { path in
+        UserDefaults(suiteName: path)?.object(forKey: "editorDrawer.automationLanes")
     }
     report.expect(
-        stagedDomain?.keys.contains("editorDrawer.automationLanes") == true, cppID: codec,
+        stagedLanes != nil, cppID: codec,
         message: "preferences remain in the staged scratch domain")
 
     let chrome = "workspace/EditorViewStateCodec::chrome"

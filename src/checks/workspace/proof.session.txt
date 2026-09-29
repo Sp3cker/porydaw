@@ -954,10 +954,10 @@ S235 | test_kStartupRestoresTabsAndFreshCamera (shell-tabs lane) | src/checks/ed
 Anchor: message "restart restores the project and selected-song window title"
 
 S236 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
-Anchor: message "the staged plist contains the recipe, filter and editor keys"
+Anchor: message "the staged preferences contain the recipe, filter and editor keys"
 
 S237 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
-Anchor: message "successful live-project restore leaves every session and editor preference key unchanged"
+Anchor: message "successful live-project restore leaves preferences unchanged; changed: \(changedKeys)"
 
 S238 | test_kStartupRestoresTabsAndFreshCamera (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: message "restart restores the entered search on the mounted control"
