@@ -2,6 +2,10 @@ import Foundation
 import PorydawCore
 import QtBridge
 
+#if canImport(CoreGraphics)
+    import CoreGraphics
+#endif
+
 // Publication machinery for the drawer's Velocity section: the content rebuild
 // that resolves the presented context and republishes every static projection,
 // the scene-input assembly a build reads, and the per-row apply paths that sync

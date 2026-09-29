@@ -2,6 +2,10 @@ import Foundation
 import NativeDisplayList
 import PorydawCore
 
+#if canImport(CoreGraphics)
+    import CoreGraphics
+#endif
+
 struct DrawerStaticRect {
     var tickStart: UInt32
     var tickEnd: UInt32

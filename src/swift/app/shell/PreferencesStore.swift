@@ -112,8 +112,9 @@ public final class PreferencesStore: QmlInstantiableStatus {
         if let path = Self.stagedPlistPath {
             if FileManager.default.fileExists(atPath: path) {
                 guard let data = FileManager.default.contents(atPath: path),
+                    // ReadOptions is Int on macOS (C++ interop) and an OptionSet on Linux.
                     let entries = try? PropertyListSerialization.propertyList(
-                        from: data, options: [], format: nil) as? [String: Any]
+                        from: data, options: .init(), format: nil) as? [String: Any]
                 else {
                     return false
                 }
