@@ -141,6 +141,22 @@ func preparedSampleWav() -> Data {
     spec.agbl = 64
     return fixtureWav(spec)
 }
+
+func hiResSampleWav() -> Data {
+    var spec = SampleFixtureSpec()
+    spec.bits = 16
+    spec.rate = 44100
+    spec.numLoops = 1
+    spec.loopStart = 2000
+    spec.loopEndInclusive = 9999
+    spec.samples.reserveCapacity(24_000)
+    for frame in 0..<12_000 {
+        let value = 0.5 * sin(2.0 * 3.14159265358979323846 * 220.5 * Double(frame) / 44100.0)
+        putU16(&spec.samples, UInt16(bitPattern: Int16((value * 32000.0).rounded())))
+    }
+    return fixtureWav(spec)
+}
+
 func genSine(_ rate: Double, _ freq: Double, _ seconds: Double, _ amp: Double) -> [Float] {
     (0..<Int(rate * seconds)).map { Float(amp * sin(2 * .pi * freq * Double($0) / rate)) }
 }

@@ -5,6 +5,10 @@ add_library(PorydawSample STATIC
     SampleWavReader.swift
     SampleAiffReader.swift
     SampleCompressedDecode.swift
+    Sf2Reader.swift
+    SampleDsp.swift
+    SampleResampler.swift
+    SampleSeam.swift
 )
 set_target_properties(PorydawSample PROPERTIES
     Swift_MODULE_NAME PorydawSample

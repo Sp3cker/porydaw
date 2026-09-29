@@ -3,16 +3,18 @@ Assertion correspondence: samplecheck/dsp.cpp
 Reference revision: 1f9f8a5faa78069bf86c0ed9997c04c07f1f37d7
 Original: src/checks/samplecheck/dsp.cpp
 Original SHA-256: 54d949e10083ce459182fa650cae3eb9d601769ab5fa6a052286cfe0924b6b7d
-Swift counterpart: none identified
+Swift counterpart: src/checks/samplecheck/DspKernelChecks.swift
 
-Inventory: 67 sites across 16 test methods (dspDeterminism, markerMapping, normalization, parityCases, parityLoopGeometry, parityRiffPadding, quantizationDither, quantizationU8Roundtrip, quantizationVectors, resampleAliasRejection, resampleDcGain, resampleFrequencyAccuracy, resampleIdentity, resampleImpulseSymmetry, resamplePassband, retuneVectors). Tally: 61 GAP, 6 NATIVE, 0 MATCHED, 0 PARTIAL.
+Swift counterpart SHA-256: 9f15d10849eaaffdc2a37bb52a2860e31a85da7c765eb456269e15f6f5b5686e
 
-Command: deno task verify --filter samplecheck --verbose
-Result: pending integrated run.
+Inventory: 67 sites across 16 test methods (dspDeterminism, markerMapping, normalization, parityCases, parityLoopGeometry, parityRiffPadding, quantizationDither, quantizationU8Roundtrip, quantizationVectors, resampleAliasRejection, resampleDcGain, resampleFrequencyAccuracy, resampleIdentity, resampleImpulseSymmetry, resamplePassband, retuneVectors). Tally: 36 GAP, 6 NATIVE, 24 MATCHED, 1 RETIRED-REPRESENTATION, 0 PARTIAL.
+
+Command: deno task checks --filter samplecheck --verbose
+Result: controller-observed 2026-09-29 for this tree — checks: 1/38 ok, no failures; proof check --executed: 0 dsp sites not executed.
 
 A001 | SampleProcessingTest::resamplePassband | src/checks/samplecheck/dsp.cpp:120
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S001
 Source context since previous assertion:
   #include "checks/samplecheck/fixtures.h"
   #include "checks/samplecheck/samplecheck.h"
@@ -140,8 +142,8 @@ Original expression:
           qPrintable(QStringLiteral("passband %1 Hz offset %2 dB").arg(frequency).arg(decibels)))
 
 A002 | SampleProcessingTest::resampleAliasRejection | src/checks/samplecheck/dsp.cpp:144
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S002
 Source context since previous assertion:
   ;
   }
@@ -171,8 +173,8 @@ Original expression:
                qPrintable(QStringLiteral("alias %1 Hz leaked").arg(frequency)))
 
 A003 | SampleProcessingTest::resampleDcGain | src/checks/samplecheck/dsp.cpp:157
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S003
 Source context since previous assertion:
   ;
   }
@@ -191,8 +193,8 @@ Original expression:
   QVERIFY(std::abs(double(output[size_t(i)]) - 0.25) <= 1e-4)
 
 A004 | SampleProcessingTest::resampleImpulseSymmetry | src/checks/samplecheck/dsp.cpp:165
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S004
 Source context since previous assertion:
   ;
   }
@@ -207,8 +209,8 @@ Original expression:
   QVERIFY(output[1000] > 0.1f)
 
 A005 | SampleProcessingTest::resampleImpulseSymmetry | src/checks/samplecheck/dsp.cpp:167
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S005
 Source context since previous assertion:
   ;
       for (int distance = 1; distance <= 500; ++distance)
@@ -218,8 +220,8 @@ Original expression:
                            double(output[size_t(1000 - distance)])) <= 2e-6)
 
 A006 | SampleProcessingTest::resampleFrequencyAccuracy | src/checks/samplecheck/dsp.cpp:188
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S006
 Source context since previous assertion:
   ;
   }
@@ -246,8 +248,8 @@ Original expression:
   QVERIFY(std::abs(bestFrequency - 1000.0) <= 0.5)
 
 A007 | SampleProcessingTest::resampleIdentity | src/checks/samplecheck/dsp.cpp:200
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S007
 Source context since previous assertion:
   ;
   }
@@ -266,8 +268,8 @@ Original expression:
   QCOMPARE(output.size(), input.size())
 
 A008 | SampleProcessingTest::resampleIdentity | src/checks/samplecheck/dsp.cpp:201
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S008
 Source context since previous assertion:
   ;
 
@@ -275,8 +277,8 @@ Original expression:
   QVERIFY(std::memcmp(input.data(), output.data(), input.size() * sizeof(float)) == 0)
 
 A009 | SampleProcessingTest::quantizationVectors | src/checks/samplecheck/dsp.cpp:225
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S009
 Source context since previous assertion:
   ;
   }
@@ -307,8 +309,8 @@ Original expression:
   QCOMPARE(int(SampleDsp::quantizeToAgb8(input)), expected)
 
 A010 | SampleProcessingTest::quantizationU8Roundtrip | src/checks/samplecheck/dsp.cpp:231
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S010
 Source context since previous assertion:
   ;
   }
@@ -321,8 +323,8 @@ Original expression:
   QCOMPARE(int(SampleDsp::quantizeToAgb8((value - 128) / 128.0)), value - 128)
 
 A011 | SampleProcessingTest::quantizationDither | src/checks/samplecheck/dsp.cpp:243
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S011
 Source context since previous assertion:
   ;
   }
@@ -341,8 +343,8 @@ Original expression:
   QCOMPARE(SampleDsp::quantizeBuffer(noise, true), dithered)
 
 A012 | SampleProcessingTest::quantizationDither | src/checks/samplecheck/dsp.cpp:244
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S012
 Source context since previous assertion:
   ;
 
@@ -350,8 +352,8 @@ Original expression:
   QVERIFY(SampleDsp::quantizeBuffer(noise, false) != dithered)
 
 A013 | SampleProcessingTest::markerMapping | src/checks/samplecheck/dsp.cpp:251
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S013
 Source context since previous assertion:
   ;
   }
@@ -365,8 +367,8 @@ Original expression:
   QCOMPARE(SampleDsp::nearestZeroCrossing(std::span<const float>(zeroCrossings), 5), qint64(4))
 
 A014 | SampleProcessingTest::markerMapping | src/checks/samplecheck/dsp.cpp:252
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S014
 Source context since previous assertion:
   ;
 
@@ -374,8 +376,8 @@ Original expression:
   QCOMPARE(SampleDsp::nearestZeroCrossing(std::span<const float>(zeroCrossings), 7), qint64(8))
 
 A015 | SampleProcessingTest::markerMapping | src/checks/samplecheck/dsp.cpp:253
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S015
 Source context since previous assertion:
   ;
 
@@ -383,8 +385,8 @@ Original expression:
   QCOMPARE(SampleDsp::nearestZeroCrossing(std::span<const float>(zeroCrossings), 0), qint64(4))
 
 A016 | SampleProcessingTest::markerMapping | src/checks/samplecheck/dsp.cpp:254
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S016
 Source context since previous assertion:
   ;
 
@@ -392,8 +394,8 @@ Original expression:
   QCOMPARE(SampleDsp::mapMarker(2000, 500, 0.5), qint64(750))
 
 A017 | SampleProcessingTest::markerMapping | src/checks/samplecheck/dsp.cpp:255
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S017
 Source context since previous assertion:
   ;
 
@@ -401,8 +403,8 @@ Original expression:
   QCOMPARE(SampleDsp::mapMarker(2001, 0, 13379.0 / 44100.0), qint64(607))
 
 A018 | SampleProcessingTest::normalization | src/checks/samplecheck/dsp.cpp:278
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S018
 Source context since previous assertion:
   ;
   }
@@ -432,8 +434,8 @@ Original expression:
   QVERIFY(std::abs(20.0 * std::log10(rms / SampleDsp::kTargetLoopRms)) < 0.1)
 
 A019 | SampleProcessingTest::normalization | src/checks/samplecheck/dsp.cpp:279
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S019
 Source context since previous assertion:
   ;
 
@@ -441,8 +443,8 @@ Original expression:
   QVERIFY(warning.isEmpty())
 
 A020 | SampleProcessingTest::normalization | src/checks/samplecheck/dsp.cpp:290
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S020
 Source context since previous assertion:
   ;
           return;
@@ -460,8 +462,8 @@ Original expression:
   QVERIFY(peak <= SampleDsp::kPeakCeiling + 1e-9)
 
 A021 | SampleProcessingTest::normalization | src/checks/samplecheck/dsp.cpp:291
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S021
 Source context since previous assertion:
   ;
 
@@ -469,8 +471,8 @@ Original expression:
   QVERIFY(std::abs(peak - SampleDsp::kPeakCeiling) < 1e-6)
 
 A022 | SampleProcessingTest::normalization | src/checks/samplecheck/dsp.cpp:301
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S022
 Source context since previous assertion:
   ;
           return;
@@ -487,8 +489,8 @@ Original expression:
   QVERIFY(std::abs(peak - SampleDsp::kPeakCeiling) < 1e-6)
 
 A023 | SampleProcessingTest::normalization | src/checks/samplecheck/dsp.cpp:307
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S023
 Source context since previous assertion:
   ;
           return;
@@ -501,8 +503,8 @@ Original expression:
   QCOMPARE(SampleDsp::normalizeGain(quiet, false, 0, &warning), 1.0)
 
 A024 | SampleProcessingTest::normalization | src/checks/samplecheck/dsp.cpp:308
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S024
 Source context since previous assertion:
   ;
 
@@ -510,8 +512,8 @@ Original expression:
   QVERIFY(!warning.isEmpty())
 
 A025 | SampleProcessingTest::normalization | src/checks/samplecheck/dsp.cpp:312
-Disposition: GAP
-Mapping/reason: Defensive default for an unsupported data-row branch, unreachable with the registered rows. No Swift counterpart establishes this guard; it remains an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Unsupported QTest data-row dispatch guard; Swift normalization profiles execute explicit calls without a data-row default branch.
 Source context since previous assertion:
   ;
           return;
@@ -1021,12 +1023,58 @@ Remaining original source (closing sequence and helper bodies):
 
 
 Swift assertion predicates
-No Swift counterpart file was identified for this suite, so no report.expect*/expectEqual
-predicates exist. The S-list is empty.
+S001 | dspResamplePassband | src/checks/samplecheck/DspKernelChecks.swift
+Anchor: message "A001 passband 100–6000 Hz stays within 0.1 dB"
+S002 | dspResampleAlias | src/checks/samplecheck/DspKernelChecks.swift
+Anchor: message "A002 aliases 8, 10, 14 kHz remain below −80 dB"
+S003 | dspResampleDc | src/checks/samplecheck/DspKernelChecks.swift
+Anchor: message "A003 interior DC gain retains 0.25 within 1e-4"
+S004 | dspResampleImpulse | src/checks/samplecheck/DspKernelChecks.swift
+Anchor: message "A004 centered impulse survives decimation"
+S005 | dspResampleImpulse | src/checks/samplecheck/DspKernelChecks.swift
+Anchor: message "A005 impulse has symmetric taps within 2e-6"
+S006 | dspResampleFrequency | src/checks/samplecheck/DspKernelChecks.swift
+Anchor: message "A006 resampled 1 kHz stays within 0.5 Hz"
+S007 | dspResampleIdentity | src/checks/samplecheck/DspKernelChecks.swift
+Anchor: message "A007 identity preserves sample count"
+S008 | dspResampleIdentity | src/checks/samplecheck/DspKernelChecks.swift
+Anchor: message "A008 identity preserves every float bit pattern"
+S009 | dspQuantization | src/checks/samplecheck/DspKernelChecks.swift
+Anchor: message "A009 quantizer matches fork floor/clamp golden vectors"
+S010 | dspQuantization | src/checks/samplecheck/DspKernelChecks.swift
+Anchor: message "A010 unsigned PCM roundtrips every byte through signed quantization"
+S011 | dspQuantization | src/checks/samplecheck/DspKernelChecks.swift
+Anchor: message "A011 fixed-seed TPDF gives byte-identical repeated renders"
+S012 | dspQuantization | src/checks/samplecheck/DspKernelChecks.swift
+Anchor: message "A012 TPDF actually changes the signed PCM"
+S013 | dspMarkers | src/checks/samplecheck/DspKernelChecks.swift
+Anchor: message "A013 nearest left crossing"
+S014 | dspMarkers | src/checks/samplecheck/DspKernelChecks.swift
+Anchor: message "A014 nearest right crossing"
+S015 | dspMarkers | src/checks/samplecheck/DspKernelChecks.swift
+Anchor: message "A015 nearest edge crossing"
+S016 | dspMarkers | src/checks/samplecheck/DspKernelChecks.swift
+Anchor: message "A016 cropped half-rate marker"
+S017 | dspMarkers | src/checks/samplecheck/DspKernelChecks.swift
+Anchor: message "A017 downsampled inclusive loop marker"
+S018 | dspNormalization | src/checks/samplecheck/DspKernelChecks.swift
+Anchor: message "A018 loop-region RMS gain stays within 0.1 dB of target"
+S019 | dspNormalization | src/checks/samplecheck/DspKernelChecks.swift
+Anchor: message "A019 normal looped sample has no warning"
+S020 | dspNormalization | src/checks/samplecheck/DspKernelChecks.swift
+Anchor: message "A020 looped crest never exceeds peak ceiling"
+S021 | dspNormalization | src/checks/samplecheck/DspKernelChecks.swift
+Anchor: message "A021 crest reaches peak ceiling"
+S022 | dspNormalization | src/checks/samplecheck/DspKernelChecks.swift
+Anchor: message "A022 one-shot reaches peak ceiling"
+S023 | dspNormalization | src/checks/samplecheck/DspKernelChecks.swift
+Anchor: message "A023 near-silent sample is not amplified"
+S024 | dspNormalization | src/checks/samplecheck/DspKernelChecks.swift
+Anchor: message "A024 near-silent warning"
 
 Shared helpers
 The shared C++ fixture sources src/checks/samplecheck/fixtures.h and
 src/checks/samplecheck/fixtures.cpp (SHA-256 543265f5d4274c58c8bf5131850cd55da1a625024ee91731f4aaf57ad96b641b) carry no assertion sites
 (verified: no QVERIFY, QCOMPARE, QFAIL, QSKIP, QTRY_*, or QEXPECT_FAIL sites); they only
-build byte fixtures, generators, and metrics used by the setups above. There are no Swift
-fixture files for this suite.
+build byte fixtures, generators, and metrics used by the setups above. Swift fixtures and
+generators for this surface live in src/checks/samplecheck/SampleFixtures.swift.

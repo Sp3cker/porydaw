@@ -15,6 +15,7 @@ add_library(PorydawApp STATIC
     NativeAudio.swift
     export/WavExportJob.swift
     export/WavExportPresenter.swift
+    samplestudio/Sf2ZonePickerModel.swift
     audio/PolyphonyPanelPresenter.swift
     ApplicationSession.swift
     ApplicationSession+Tabs.swift
@@ -205,7 +206,7 @@ target_compile_options(PorydawApp PUBLIC
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
 )
 
-target_link_libraries(PorydawApp PUBLIC PorydawCore PorydawPlayback PorydawProject QtBridge Qt6::Gui)
+target_link_libraries(PorydawApp PUBLIC PorydawCore PorydawPlayback PorydawProject PorydawSample QtBridge Qt6::Gui)
 
 add_dependencies(PorydawApp QtBridgeMacros)
 

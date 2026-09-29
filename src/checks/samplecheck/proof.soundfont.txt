@@ -3,16 +3,17 @@ Assertion correspondence: samplecheck/soundfont.cpp
 Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/samplecheck/soundfont.cpp
 Original SHA-256: 6e45372c5a0d33c5d55f1a07d883a5ba5c65a9833877a07076ea517ed1fba310
-Swift counterpart: none identified
+Swift counterpart: src/checks/samplecheck/SoundFontChecks.swift
+Swift counterpart SHA-256 (SoundFontChecks.swift): 486cdaf035735c7ef7474172319203261ec03bb4c2f7edd83eb6672c4e381968
 
-Inventory: 34 sites across 3 test methods (soundFontExtraction, soundFontPicker, soundFontRefusals). Tally: 22 GAP, 12 NATIVE, 0 MATCHED, 0 PARTIAL.
+Inventory: 34 sites across 3 test methods (soundFontExtraction, soundFontPicker, soundFontRefusals). Tally: 2 GAP, 0 NATIVE, 30 MATCHED, 0 PARTIAL, 2 RETIRED-REPRESENTATION.
 
-Command: deno task verify --filter samplecheck --verbose
-Result: pending integrated run.
+Command: deno task checks --filter samplecheck --verbose
+Result: controller-observed 2026-09-29 for this tree — checks: 1/38 ok, no failures; proof check --executed: 0 soundfont sites not executed.
 
 A001 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:157
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S001
 Source context since previous assertion:
   #include "checks/samplecheck/fixtures.h"
   #include "checks/samplecheck/samplecheck.h"
@@ -175,8 +176,8 @@ Original expression:
   QVERIFY2(sf2Magic(fixture.bytes), "sf2 magic sniffs")
 
 A002 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:159
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S002
 Source context since previous assertion:
   ;
       Sf2File font;
@@ -186,8 +187,8 @@ Original expression:
                "sf2 fixture reads")
 
 A003 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:161
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S003
 Source context since previous assertion:
   ;
 
@@ -195,8 +196,8 @@ Original expression:
   QCOMPARE(font.zones.size(), 3)
 
 A004 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:163
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S004
 Source context since previous assertion:
   ;
       const Sf2Zone &tone = font.zones[0];
@@ -208,8 +209,8 @@ Original expression:
                "grouping labels resolve through the pdta index arrays")
 
 A005 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:167
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S005
 Source context since previous assertion:
   ;
 
@@ -219,8 +220,8 @@ Original expression:
                "left-linked zone flags as a stereo pair, ungrouped")
 
 A006 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:172
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S006
 Source context since previous assertion:
   ;
 
@@ -230,8 +231,8 @@ Original expression:
   QVERIFY2(extractSf2Zone(font, 0, &z0, &error), "zone 0 extracts")
 
 A007 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:173
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S007
 Source context since previous assertion:
   ;
 
@@ -241,8 +242,8 @@ Original expression:
                "zone 0 structure")
 
 A008 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:176
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S008
 Source context since previous assertion:
   ;
 
@@ -251,8 +252,8 @@ Original expression:
                "zone 0 pool segment bounds")
 
 A009 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:178
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S009
 Source context since previous assertion:
   ;
 
@@ -261,8 +262,8 @@ Original expression:
                "negative pitchCorrection renormalizes below the unity key")
 
 A010 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:180
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S010
 Source context since previous assertion:
   ;
 
@@ -271,8 +272,8 @@ Original expression:
                "sf2 exclusive loop end converts to inclusive")
 
 A011 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:182
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S011
 Source context since previous assertion:
   ;
 
@@ -281,8 +282,8 @@ Original expression:
                "zone name sanitizes into the suggested name")
 
 A012 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:185
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S012
 Source context since previous assertion:
   ;
       for (int i = 0; i < 400; ++i)
@@ -291,8 +292,8 @@ Original expression:
   QCOMPARE(z0.buffer[size_t(i)], float(double(fixture.pool[size_t(i)]) / 32768.0))
 
 A013 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:188
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S013
 Source context since previous assertion:
   ;
 
@@ -302,8 +303,8 @@ Original expression:
   QVERIFY2(extractSf2Zone(font, 1, &z1, &error), "zone 1 extracts")
 
 A014 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:189
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S014
 Source context since previous assertion:
   ;
 
@@ -311,8 +312,8 @@ Original expression:
   QVERIFY2(!z1.warnings.isEmpty(), "stereo-pair extraction reports its one-channel conversion")
 
 A015 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:190
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S015
 Source context since previous assertion:
   ;
 
@@ -323,8 +324,8 @@ Original expression:
                "positive pitchCorrection becomes the semitone fraction")
 
 A016 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:196
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S016
 Source context since previous assertion:
   ;
 
@@ -334,8 +335,8 @@ Original expression:
   QVERIFY2(extractSf2Zone(font, 2, &z2, &error), "zone 2 extracts")
 
 A017 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:197
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S017
 Source context since previous assertion:
   ;
 
@@ -358,8 +359,8 @@ Original expression:
                "sf2 zone renders through the pipeline")
 
 A019 | SampleProcessingTest::soundFontRefusals | src/checks/samplecheck/soundfont.cpp:228
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S018
 Source context since previous assertion:
   ;
   }
@@ -390,8 +391,8 @@ Original expression:
   QVERIFY2(!accepted, "invalid SoundFont input is refused")
 
 A020 | SampleProcessingTest::soundFontRefusals | src/checks/samplecheck/soundfont.cpp:229
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S019
 Source context since previous assertion:
   ;
 
@@ -399,8 +400,8 @@ Original expression:
   QVERIFY2(!error.isEmpty(), "rejected input reports a refusal")
 
 A021 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:237
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S020
 Source context since previous assertion:
   ;
   }
@@ -416,11 +417,12 @@ Original expression:
                "sf2 fixture reads")
 
 A022 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:247
-Disposition: NATIVE
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QWidget objectName lookup; the zone picker is a Swift model plus a QML dialog.
 
 A023 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:249
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QDialogButtonBox::Ok lookup; the zone picker is a Swift model plus a QML dialog.
 Source context since previous assertion:
   ;
       QPushButton *ok = buttons->button(QDialogButtonBox::Ok);
@@ -429,34 +431,44 @@ Original expression:
   QVERIFY2(ok, "picker has an accept button")
 
 A024 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:250
-Disposition: NATIVE
+Disposition: MATCHED
+Mapping: S021
 
 A025 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:253
-Disposition: NATIVE
+Disposition: MATCHED
+Mapping: S022
 
 A026 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:255
-Disposition: NATIVE
+Disposition: MATCHED
+Mapping: S023
 
 A027 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:257
-Disposition: NATIVE
+Disposition: MATCHED
+Mapping: S024
 
 A028 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:260
-Disposition: NATIVE
+Disposition: MATCHED
+Mapping: S025
 
 A029 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:262
-Disposition: NATIVE
+Disposition: MATCHED
+Mapping: S026
 
 A030 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:264
-Disposition: NATIVE
+Disposition: MATCHED
+Mapping: S027
 
 A031 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:265
-Disposition: NATIVE
+Disposition: MATCHED
+Mapping: S028
 
 A032 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:267
-Disposition: NATIVE
+Disposition: MATCHED
+Mapping: S029
 
 A033 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:269
-Disposition: NATIVE
+Disposition: MATCHED
+Mapping: S030
 
 A034 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:272
 Disposition: NATIVE
@@ -469,12 +481,70 @@ Remaining original source (closing sequence and helper bodies):
 
 
 Swift assertion predicates
-No Swift counterpart file was identified for this suite, so no report.expect*/expectEqual
-predicates exist. The S-list is empty.
+S001 | soundFontExtraction | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "sf2 magic sniffs"
+S002 | soundFontExtraction | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "sf2 fixture reads"
+S003 | soundFontExtraction | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "ROM and EOS omitted from three zones"
+S004 | soundFontExtraction | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "grouping labels resolve through the pdta index arrays"
+S005 | soundFontExtraction | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "left-linked zone flags as a stereo pair, ungrouped"
+S006 | soundFontExtraction | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "zone 0 extracts"
+S007 | soundFontExtraction | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "zone 0 structure"
+S008 | soundFontExtraction | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "zone 0 pool segment bounds"
+S009 | soundFontExtraction | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "negative pitchCorrection renormalizes below the unity key"
+S010 | soundFontExtraction | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "sf2 exclusive loop end converts to inclusive"
+S011 | soundFontExtraction | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "zone name sanitizes into the suggested name"
+S012 | soundFontExtraction | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "zone 0 entire pool converts to canonical PCM"
+S013 | soundFontExtraction | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "zone 1 extracts"
+S014 | soundFontExtraction | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "stereo-pair extraction reports its one-channel conversion"
+S015 | soundFontExtraction | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "positive pitchCorrection becomes the semitone fraction"
+S016 | soundFontExtraction | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "zone 2 extracts"
+S017 | soundFontExtraction | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "unpitched (255) zone defers to pitch detection"
+S018 | soundFontRefusals | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "invalid SoundFont inputs are refused"
+S019 | soundFontRefusals | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "rejected inputs report a refusal"
+S020 | soundFontPicker | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "picker sf2 fixture reads"
+S021 | soundFontPicker | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "picker has two groups"
+S022 | soundFontPicker | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "instrument/preset zones form one picker group"
+S023 | soundFontPicker | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "unreferenced zones fall under (no instrument)"
+S024 | soundFontPicker | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "nothing picked until a zone row is chosen"
+S025 | soundFontPicker | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "selecting a zone row arms OK"
+S026 | soundFontPicker | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "group rows are not pickable"
+S027 | soundFontPicker | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "search filters picker groups"
+S028 | soundFontPicker | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "search filters picker rows"
+S029 | soundFontPicker | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "filtered zone row selects source index"
+S030 | soundFontPicker | src/checks/samplecheck/SoundFontChecks.swift
+Anchor: message "cleared filter restores groups"
 
 Shared helpers
 The shared C++ fixture sources src/checks/samplecheck/fixtures.h and
 src/checks/samplecheck/fixtures.cpp (SHA-256 543265f5d4274c58c8bf5131850cd55da1a625024ee91731f4aaf57ad96b641b) carry no assertion sites
 (verified: no QVERIFY, QCOMPARE, QFAIL, QSKIP, QTRY_*, or QEXPECT_FAIL sites); they only
-build byte fixtures, generators, and metrics used by the setups above. There are no Swift
-fixture files for this suite.
+build byte fixtures, generators, and metrics used by the setups above. The Swift fixture
+writer lives in src/checks/samplecheck/SoundFontChecks.swift.
