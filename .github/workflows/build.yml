@@ -6,6 +6,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -33,19 +37,27 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 1
+
+      - name: Cache C/C++ objects
+        uses: mozilla-actions/sccache-action@v0.0.9
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.11.*'
+          version: "6.11.*"
           cache: true
 
       - name: Configure
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        run: >-
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DPORYDAW_BUILD_CHECKS=OFF
+          -DCMAKE_C_COMPILER_LAUNCHER=sccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
         run: cmake --build build
-
 
       - name: Upload Linux binary
         uses: actions/upload-artifact@v4
@@ -62,11 +74,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 1
+
+      - name: Cache C/C++ objects
+        uses: mozilla-actions/sccache-action@v0.0.9
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.11.*'
+          version: "6.11.*"
           cache: true
           # aqtinstall 3.3 cannot read Qt 6.11's flattened Windows repository layout.
           aqtsource: ${{ runner.os == 'Windows' && 'git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7' || '' }}
@@ -76,13 +92,29 @@ jobs:
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
 
+      # windows-latest ships no Swift; ubuntu-latest ships Swift 6.4 and macOS
+      # uses Xcode's. The Qt main executor needs >= 6.4 (CMakeLists.txt:168).
+      - name: Set up Swift
+        if: runner.os == 'Windows'
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.4"
+          cache-name: porydaw-swift
+
+      # Artifact builds don't run harnesses; the asan-checks job compiles them.
       - name: Configure
         run: >-
           cmake -S . -B build -G Ninja
           -DCMAKE_BUILD_TYPE=Release
+          -DPORYDAW_BUILD_CHECKS=OFF
+          -DCMAKE_C_COMPILER_LAUNCHER=sccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
         run: cmake --build build
+
+      - name: sccache stats
+        run: sccache --show-stats || true
 
       - name: Verify Windows SVG deployment
         if: runner.os == 'Windows'
@@ -147,11 +179,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 1
+
+      - name: Cache C/C++ objects
+        uses: mozilla-actions/sccache-action@v0.0.9
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.11.*'
+          version: "6.11.*"
           cache: true
 
       - name: Set up Deno
@@ -170,7 +206,11 @@ jobs:
           pulseaudio -D --exit-idle-time=-1 || true
           pactl load-module module-null-sink sink_name=ci || true
       - name: Configure
-        run: cmake -S . -B build-asan -G Ninja -DPORYDAW_ASAN=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        run: >-
+          cmake -S . -B build-asan -G Ninja -DPORYDAW_ASAN=ON
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          -DCMAKE_C_COMPILER_LAUNCHER=sccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
         run: cmake --build build-asan -j"$(nproc)"
@@ -184,3 +224,6 @@ jobs:
           --no-windowing-checks --pool=1
           --exclude=vgsavecheck --exclude=tabcheck --exclude=onboardcheck
           --exclude=sessioncheck --exclude=editor-drawer
+
+      - name: sccache stats
+        run: sccache --show-stats || true

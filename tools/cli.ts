@@ -75,6 +75,7 @@ Examples:
   deno task format src/swift/core/Xcmd.swift`;
     default:
       return `usage: deno task <command> [options]
+  build            this help (deno task build, not a real build)
   build:app        build the application
   build:checks     build the application, checks, and mid2agb
   build:render     build the Swift-backed offline renderer
@@ -83,7 +84,14 @@ Examples:
   checks:qml-roll  build and run the QML roll window lane
   checks:shell     build and run the production QML shell lane
   checks:bridge    check the Swift/QML QtBridge surface
+  bridge:baseline  regenerate the QtBridge surface baseline
   format           format changed Swift and TypeScript (or --check)
+  proof            read proof-ledger status
+  proof:edit       edit proof ledgers
+  proof:compact    compact proof ledgers
+  setup            provision a fresh checkout
+  lsp:swift        regenerate the Swift compile database
+  worktree:create  create a linked worktree
 help: deno task <command> --help`;
   }
 }
@@ -291,6 +299,10 @@ async function runFormat(args: string[]): Promise<void> {
 const [command, ...rest] = Deno.args;
 if (command === undefined) usage();
 if (command === "--help") showHelp();
+// The deno.json `build` alias exists so a bare `deno task build` prints this
+// task list instead of Deno's raw task dump.
+if (command === "build") usage();
+
 switch (command) {
   case "build:app":
     await runBuild(["porydaw"], buildConfig(rest, command));
