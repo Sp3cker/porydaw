@@ -425,7 +425,9 @@ the full Verification list green, `deno task checks:bridge` clean.
    clicked a computed point inside that pixel will surface it — fix the check's point, not the formula.
 4. Per-frame Swift cost on pathological songs is bounded by culling, not by note count; the cull itself
    walks `notesByTick`-ordered records (today's C++ does the same, `roll_scene.cpp:210-254`), guarded
-   for the roll plot by Task 4a's `checkRollPlotCullBound` cull-bound check (drawers remain ungated).
+   for the roll plot by Task 4a's `checkRollPlotCullBound` cull-bound check. No timing gate exists on
+   any path and drawers have no cull check: the user dropped the xctrace bench (2026-09-28), so wall
+   cost is judged by the user in the running app.
 5. ~~AGENTS.md boundary text needs human permission~~ landed with the user's AGENTS.md review.
 
 ## Orchestrator brief (for whoever runs this plan)

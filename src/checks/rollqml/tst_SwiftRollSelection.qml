@@ -367,15 +367,18 @@ TestCase {
                 continue
             var cursor = findChild(surf, "swiftRollCursor")
             verify(cursor !== null, "the roll input carries its production cursor binding")
-            var expectedExtent = Math.max(1, Math.round(surf.baseFontPx * 2.0))
-            verify(cursorProbe.artDiffers(roll, "qrc:/cursors/left-drag.png",
-                                          "qrc:/cursors/right-drag.png", expectedExtent),
-                   "left and right resize cursor bitmaps differ at the roll window DPI")
+            verify(g.resizeCursorExtent > 0, "the grid publishes its cursor bitmap extent")
+            var expectedExtent = g.resizeCursorExtent
+            verify(cursorProbe.artDiffers("qrc:/cursors/left-drag.png",
+                                          "qrc:/cursors/right-drag.png", expectedExtent,
+                                          g.devicePixelRatio),
+                   "left and right resize cursor bitmaps differ at the grid DPI")
             verify(waitForNative(function() {
                 return roll.cursorShape === Qt.BitmapCursor
                     && String(cursor.source) === "qrc:/cursors/right-drag.png"
             }, 5000), "the right edge hover shows the right-drag cursor art")
-            verify(cursorProbe.matchesArt(roll, "qrc:/cursors/right-drag.png", expectedExtent),
+            verify(cursorProbe.matchesArt(roll, "qrc:/cursors/right-drag.png", expectedExtent,
+                                          g.devicePixelRatio),
                    "right note edge applies the DPI-matched right bitmap cursor")
             var leftEdge = Qt.point(item.x + 1, item.y + item.height / 2)
             mouseMove(roll, leftEdge.x, leftEdge.y)
@@ -383,7 +386,8 @@ TestCase {
                 return g.cursorKind === 2 && roll.cursorShape === Qt.BitmapCursor
                     && String(cursor.source) === "qrc:/cursors/left-drag.png"
             }, 5000), "the left edge hover shows the left-drag cursor art")
-            verify(cursorProbe.matchesArt(roll, "qrc:/cursors/left-drag.png", expectedExtent),
+            verify(cursorProbe.matchesArt(roll, "qrc:/cursors/left-drag.png", expectedExtent,
+                                          g.devicePixelRatio),
                    "left note edge applies the DPI-matched left bitmap cursor")
             mouseMove(roll, center.x, center.y)
             verify(waitForNative(function() {
@@ -469,19 +473,22 @@ TestCase {
             }, 8000), "both abutting notes realize with distinct resize grips")
             var boundary = rightItem.x
             var centerY = rightItem.y + rightItem.height / 2
-            var expectedExtent = Math.max(1, Math.round(surf.baseFontPx * 2.0))
+            verify(g.resizeCursorExtent > 0, "the grid publishes its cursor bitmap extent")
+            var expectedExtent = g.resizeCursorExtent
             mouseMove(roll, boundary - inset, centerY)
             verify(waitForNative(function() { return g.cursorKind === 3 }, 5000),
                    "boundary-left hover selects the first note's trailing grip")
             verify(waitForNative(function() {
-                return cursorProbe.matchesArt(roll, "qrc:/cursors/right-drag.png", expectedExtent)
+                return cursorProbe.matchesArt(roll, "qrc:/cursors/right-drag.png", expectedExtent,
+                                              g.devicePixelRatio)
             }, 5000),
                    "boundary-left applies the DPI-matched right-drag bitmap")
             mouseMove(roll, boundary + inset, centerY)
             verify(waitForNative(function() { return g.cursorKind === 2 }, 5000),
                    "boundary-right hover selects the second note's leading grip")
             verify(waitForNative(function() {
-                return cursorProbe.matchesArt(roll, "qrc:/cursors/left-drag.png", expectedExtent)
+                return cursorProbe.matchesArt(roll, "qrc:/cursors/left-drag.png", expectedExtent,
+                                              g.devicePixelRatio)
             }, 5000),
                    "boundary-right applies the DPI-matched left-drag bitmap")
         } finally {

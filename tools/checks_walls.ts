@@ -1,6 +1,5 @@
-// Measured per-check walls, verbose runs 2026-09-28 (18 cores, pool 6).
-// Used only for LPT ordering — heaviest first minimizes makespan — so coarse
-// values are fine; unlisted checks fall back to 0.3.
+// Measured walls (2026-09-28, 18 cores, pools 6 and 8) for LPT: heaviest first.
+// Only rows ≥ ~0.8 s (checks) / ~2.5 s (shell) are listed; lighter ones at the 0.3 default fill gaps.
 export const WALL_ESTIMATE: Record<string, number> = {
   // checks (porydaw_checks)
   "swiftcore-projectsession": 9.51,

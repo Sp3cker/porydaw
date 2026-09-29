@@ -518,6 +518,12 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
         return session.selectedTrack == track && session.selectedNoteOrder == [selected]
     }
 
+    /// Lightweight poll for the reveal journeys: selected track only,
+    /// without the captureSave + base64 snapshot that polyphonyRevealState builds.
+    public func polyphonyRevealTrack() -> Int {
+        polyphonySession?.selectedDocument?.selectedTrack ?? -1
+    }
+
     public func polyphonyRevealState() -> String {
         guard let session = polyphonySession?.selectedDocument,
             let saved = try? session.document.captureSave()

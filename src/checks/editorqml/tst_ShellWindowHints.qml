@@ -90,6 +90,9 @@ ShellWindowSupport {
                    "choosing Rename targets the menu track")
         var rename = findChild(surface, "timelineTrackHeaderRename")
         tryVerify(function() { return rename && rename.visible }, 3000)
+        // Visibility can still describe the previous row until queued bindings and the scene settle.
+        tryCompare(rename.parent, "rowIndex", 1, 3000)
+        verify(waitForRendering(rename, 3000))
         mouseMove(rename, rename.width / 2, rename.height / 2)
         tryVerify(function() { return hints.text.length > 0 }, 3000)
         var renameHint = hints.text
