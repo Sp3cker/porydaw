@@ -4,7 +4,7 @@ Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/samplecheck/integration.cpp
 Original SHA-256: 6c9de17973a3ede8a7dd643d494f606a9c1fb0b0fab1742a2b6f7d84abc2bf49
 Swift counterpart: src/checks/samplecheck/RegistrationChecks.swift
-Swift counterpart SHA-256: af16948c6e6dbb279b41abf56056cfbbf1efe7539b13b2755c041ce172c3d062
+Swift counterpart SHA-256: 8fdf170d20ded19a7539155ec847129b62f7e60f0aa091455b3225a383a0fccd
 
 Inventory: 71 sites across 9 test methods (engineLoop, sampleUpdate, sampleUpdateRefusals, sidecarEditDialog, sidecarFallback, sidecarRemove, sidecarRerender, sidecarRoundtrip, sidecarTouchedSource). Tally: 56 GAP, 3 NATIVE, 3 RETIRED-REPRESENTATION, 9 MATCHED, 0 PARTIAL.
 
