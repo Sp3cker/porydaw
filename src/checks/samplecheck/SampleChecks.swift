@@ -12,4 +12,5 @@ internal func runSampleChecks(_ report: CheckReport) {
     runRegistrationChecks(report)
     runProvenanceChecks(report)
     runEditorPresenterChecks(report)
+    runLoopToolsChecks(report)
 }

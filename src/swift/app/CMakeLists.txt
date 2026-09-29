@@ -21,6 +21,7 @@ add_library(PorydawApp STATIC
     samplestudio/SampleStudioHistory.swift
     samplestudio/SampleStudioReadouts.swift
     samplestudio/SampleStudioPresenter.swift
+    samplestudio/SampleLoopTools.swift
     audio/PolyphonyPanelPresenter.swift
     ApplicationSession.swift
     ApplicationSession+Tabs.swift
