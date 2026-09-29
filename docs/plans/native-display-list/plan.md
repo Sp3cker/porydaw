@@ -286,14 +286,12 @@ machinery in `DrawerStaticsContent.swift`; `GridScene.contentRevision`/`drawingC
 copies `src/checks/rollcheck/note_name_labels.swift:21-59` (`faceFits`/`nameFits`) — the checks that used
 them read `face()` or raster instead. QML: every camera binding on renderer items.
 
-### 6. Native boundary statement (needs the user's permission to land in AGENTS.md)
+### 6. Native boundary statement — landed in AGENTS.md ("Native boundary" section)
 
-> C/C++ is allowed only at: `src/app/clipboard_host.cpp`, `src/app/qml_engine_host.cpp`,
-> `src/app/item_cursor.{h,cpp}`, `src/ui/songview/quick/swiftroll/native/font_metrics.cpp`,
-> `src/project/`, and the display-list boundary `src/render/display_list.{h,c}` (wire format + decoder,
-> shared with Swift) and `src/render/display_list_item.{h,cpp}` (the Qt scene-graph uploader). Native
-> code never projects, culls, lays out or decides visibility; if a formula is needed on the native side,
-> Swift emits its result into the display list instead.
+AGENTS.md now names `src/app/`, `src/audio/`, `src/project/`, `font_metrics.cpp` and the display-list
+pair in `src/render/` as the only native code, states that native code never projects, culls, lays out
+or decides visibility, and carries one transitional sentence about the `TimelineRenderer` scene code.
+Task 9 deletes that sentence with the code.
 
 ### 7. Reconciliation with `feature/grid-cpu` (`ccb68ab5..ed6e9d26`, now on this branch)
 
@@ -378,7 +376,8 @@ Target: `src/render/` (keep only `display_list.{h,c}`, `display_list_item.{h,cpp
 root `CMakeLists.txt:180-201` source list, `DrawingContentBinary.swift`, docs. Change: delete every
 file named in Contract §5 once `grep TimelineRenderer src/ui src/checks` and
 `grep DrawingContentBinary src/swift` are empty; mark the renderer plan superseded; add a release-notes
-entry; request AGENTS.md permission with the Contract §6 text. Acceptance: `deno task build:checks`,
+entry; delete the transitional `TimelineRenderer` sentence from AGENTS.md "Native boundary" (the only
+AGENTS.md edit this plan makes after the user's review). Acceptance: `deno task build:checks`,
 the full Verification list green, `deno task checks:bridge` clean.
 
 ### Task 0b (Direct) — inline
@@ -435,8 +434,7 @@ exists before Task 4 is dispatched; every later bench run compares against it.
 4. Per-frame Swift cost on pathological songs is bounded by culling, not by note count; the cull itself
    walks `notesByTick`-ordered records (today's C++ does the same, `roll_scene.cpp:181-224`). Task 0's
    measurement is the gate; Task 4's smoke re-measures on the real path.
-5. AGENTS.md boundary text needs human permission (Contract §6); until granted, the boundary is stated
-   only here.
+5. ~~AGENTS.md boundary text needs human permission~~ landed with the user's AGENTS.md review.
 
 ## Orchestrator brief (for whoever runs this plan)
 
@@ -451,7 +449,7 @@ orchestrator never implements Tasks 1–8 inline and never edits a proof ledger.
 | B | 2 ∥ 3 | 2: `qt-cpp-reviewer`; 3: `sdd-implementer` | Task 2: same-frame check green (Contract §2 invariant), 1-arg `invokeMethod` exercised. Task 3 lands **alone** and passes every lane on its own commit (`swiftcore`, `qml-roll`, `shell`, `qml`) with rasters byte-identical; `camera.swift` re-pin via `proof:edit` in the same commit. Checkpoints 1, 1b; bench baseline (Task 0b) at 1b. Task 4 is not dispatched before both |
 | C | 4 → 5 | `sdd-implementer` | after 4: `checks:qml-roll`, `checks:shell`, `checks --filter swiftcore`, rasters byte-identical to 1b, bench ≤ baseline; after 5: same, `GridScene` has no `drawingContent`. Checkpoints 2, 3 |
 | D | 6 ∥ 7 ∥ 8 | `sdd-implementer` ×3 | Task 6 first if 7 needs the rewritten `buildGrid` (it does — Task 7 consumes `DrawerStaticsContent.buildGrid(paletteColors:)`); 7 and 8 start when 6's `DrawerStaticsContent.swift` lands. `checks:qml`, `checks:shell`. Checkpoint 4 |
-| E | 9 | orchestrator, Direct | full Verification list; `grep TimelineRenderer src/ui src/checks` empty; AGENTS.md text only with the user's permission |
+| E | 9 | orchestrator, Direct | full Verification list; `grep TimelineRenderer src/ui src/checks` empty; AGENTS.md: remove the transitional sentence only |
 
 Each brief is self-contained: dispatch with `task-N-brief.md` + this file's Contract and Global
 Constraints; do not paraphrase either. Review every task with `sdd-task-reviewer` against the brief's
@@ -492,7 +490,7 @@ acceptance predicate before marking it done; bounded fix loop of 2, then escalat
   only the deliberate-inversion list may change.
 - Any failing check not on the deliberate-inversion list, or a pre-existing failure an implementer
   reports. Never hand off red.
-- The AGENTS.md boundary text (Contract §6) — permission is required before Task 9 writes it.
+- Any AGENTS.md edit beyond removing the transitional `TimelineRenderer` sentence in Task 9.
 
 ### Ledger hand-off
 
