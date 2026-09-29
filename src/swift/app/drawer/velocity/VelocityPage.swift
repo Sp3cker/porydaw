@@ -208,8 +208,11 @@ public final class VelocityPage: EditorDrawerPage {
     /// Accepted prompt values also seed subsequently drawn notes, including no-op edits.
     @QtIgnored public var onVelocityAccepted: ((UInt8) -> Void)?
 
-    @QtTracked public var contentRevision = 0
-    public func drawingContent() -> Data { drawingContentData }
+    @QtTracked public var displayRevision = 0
+    public func displayList(list: Int) -> Data {
+        guard displayLists.indices.contains(list) else { return retainedEmptyDisplayList() }
+        return displayLists[list]
+    }
     public var axisTicks: QListModel<SceneRect> = QListModel()
     public var axisGraduations: QListModel<SceneRect> = QListModel()
     public var axisMarkers: QListModel<SceneRect> = QListModel()
@@ -258,7 +261,11 @@ public final class VelocityPage: EditorDrawerPage {
     @QtIgnored var resolvedContextValue = VelocityVoiceContext(status: .unresolvedVoice)
     @QtIgnored var publishedHandles: [VelocityHandle] = []
     @QtIgnored var drawingBands: [DrawerStaticRect] = []
-    @QtIgnored var drawingContentData = Data()
+    // Retained display-list buffers (list 0 grid + bands, list 1 transient)
+    // and the writer reused across frames; lists rebuild together with one bump.
+    @QtIgnored var displayLists: [Data] = []
+    @QtIgnored var listWriter = DisplayListWriter()
+    @QtIgnored var cachedEmptyDisplayList: Data?
     @QtIgnored var gesture: VelocityGestureState?
     @QtIgnored var prompt: VelocityPromptState?
     @QtIgnored var hovered: NoteID?

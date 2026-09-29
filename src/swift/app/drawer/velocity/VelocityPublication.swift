@@ -1,3 +1,5 @@
+import CoreGraphics
+import Foundation
 import PorydawCore
 import QtBridge
 
@@ -16,10 +18,16 @@ import QtBridge
 
 @MainActor
 extension VelocityPage {
-    // MARK: Content rebuild
+    /// Valid empty list for out-of-range fetches before the first publish.
+    /// Built once and retained.
+    @QtIgnored func retainedEmptyDisplayList() -> Data {
+        if let cached = cachedEmptyDisplayList { return cached }
+        var writer = DisplayListWriter()
+        let empty = writer.finish()
+        cachedEmptyDisplayList = empty
+        return empty
+    }
 
-    /// Rebuilds every static projection: the ruler, the grid, the PSG bands and
-    /// the note handles.
     @QtIgnored func rebuildContent() {
         guard session != nil, plotHeight > 0 || plotWidth > 0 else { return }
         contentBuildCount &+= 1
@@ -37,7 +45,7 @@ extension VelocityPage {
         let snapshot = buildScene()
         refreshAxisAndHandles(snapshot)
         publishTransient(updateDrawing: false)
-        publishDrawingContent()
+        publishDisplayLists()
     }
 
     /// Hover and detent changes republish the ruler and handle rows: a content
@@ -52,7 +60,7 @@ extension VelocityPage {
         publishHandles(built.handles)
         publishAxis(built.rows)
         publishReadout()
-        if snapshot == nil { publishDrawingContent() }
+        if snapshot == nil { publishDisplayLists() }
     }
 
     /// Applies one build's value axis to the page's published axis values.
@@ -93,6 +101,8 @@ extension VelocityPage {
             if handle.endX != endX { handle.endX = endX }
         }
         publishTransient(updateDrawing: false)
+        // Viewport-space lists: every camera move rebuilds both lists together.
+        publishDisplayLists(rebuildBands: false)
     }
 
     /// The handle-reuse decision: geometry, track, DPR and axis mode form one
@@ -235,18 +245,50 @@ extension VelocityPage {
         return value
     }
 
-    @QtIgnored func publishDrawingContent(rebuildBands: Bool = true) {
+    @QtIgnored func publishDisplayLists(rebuildBands: Bool = true) {
         guard session != nil else { return }
         let input = sceneInput(reuseGeometry: true)
-        guard let metrics = input.metrics, let grid = input.grid else { return }
+        guard let metrics = input.metrics, let grid = input.grid,
+              let camera = input.camera
+        else { return }
         if rebuildBands { drawingBands = VelocityScene.modelBands(input, axis: axis) }
-        let data = DrawerStaticsContent.pack(
-            axis: metrics.timeAxis, grid: grid, metrics: metrics,
-            palette: input.palette, bands: drawingBands,
-            transient: drawingTransientRects())
-        guard drawingContentData != data else { return }
-        drawingContentData = data
-        contentRevision &+= 1
+        let viewport = CGSize(width: plotWidth, height: plotHeight)
+        let dpr = devicePixelRatio
+        let colors = [
+            3: input.palette.gridLineBar, 4: input.palette.gridLineBeat,
+            5: input.palette.gridLineSub1, 6: input.palette.gridLineSub2,
+            7: input.palette.gridLineSub3, 25: input.palette.gridLineBeatFine,
+        ]
+        // Release the previous buffers before the retained writer reuses its
+        // own: otherwise finish()'s shared output copies on write each frame.
+        var writer = listWriter
+        DrawerStaticsContent.buildGrid(
+            into: &writer, axis: metrics.timeAxis, grid: grid,
+            camera: camera, viewport: viewport, paletteColors: colors)
+        DrawerStaticsContent.buildTickRects(
+            into: &writer, rects: drawingBands,
+            camera: camera, dpr: dpr, viewport: viewport)
+        let list0 = writer.finish()
+        if let transient = drawingTransientRects() {
+            DrawerStaticsContent.buildTickRects(
+                into: &writer, rects: [transient.fill],
+                camera: camera, dpr: dpr, viewport: viewport)
+            let x0 = camera.viewX(tick: Double(transient.frame.tickStart), dpr: dpr)
+            let x1 = camera.viewX(tick: Double(transient.frame.tickEnd), dpr: dpr)
+            let box = CGRect(
+                x: x0, y: Double(transient.frame.y),
+                width: x1 - x0, height: Double(transient.frame.height))
+            DrawerStaticsContent.buildDashedFrame(
+                into: &writer, box: box, argb: transient.frame.argb,
+                dashDevicePx: 4, gapDevicePx: 2,
+                camera: camera, dpr: dpr, viewport: viewport)
+        }
+        let list1 = writer.finish()
+        listWriter = writer
+        let next = [list0, list1]
+        guard next != displayLists else { return }
+        displayLists = next
+        displayRevision &+= 1
     }
 
     private func drawingTransientRects()
@@ -294,7 +336,7 @@ extension VelocityPage {
             }
         }
         publishReadout()
-        if updateDrawing { publishDrawingContent(rebuildBands: false) }
+        if updateDrawing { publishDisplayLists(rebuildBands: false) }
     }
 
     /// The readout: the hovered or dragged value plus the selection count. An

@@ -38,9 +38,18 @@ func drawerVoiceMarkerProjection(_ report: CheckReport, suite: DocumentSession,
                       message: "marker \(tick) is inside the visible plot")
     }
     let tail = fixture.session.timeline.lengthTicks > 120 ? 1 : 0
-    let heldSpans = VelocityContentProbe(page.drawingContent())
+    let spanArgb = RollContentProbe.argb(
+        PaletteMath.hex(PaletteMath.trackIdentityOklab(0), alpha: 18))
+    guard let voiceList = velocityDisplayRects(page.displayList(list: 0)) else {
+        report.fail(
+            drawerVoiceProjectionID,
+            "each program section publishes one held span "
+                + "(timeline ends at \(fixture.session.timeline.lengthTicks))")
+        return
+    }
+    let heldSpans = voiceList.filter { $0.argb == spanArgb }
     report.expectEqual(
-        expected: 2 + tail, actual: heldSpans.records.count, cppID: drawerVoiceProjectionID,
+        expected: 2 + tail, actual: heldSpans.count, cppID: drawerVoiceProjectionID,
                        what: "each program section publishes one held span "
                            + "(timeline ends at \(fixture.session.timeline.lengthTicks))")
     report.expect(page.trackAvailable, cppID: drawerVoiceProjectionID,
