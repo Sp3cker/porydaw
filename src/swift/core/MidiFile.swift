@@ -334,11 +334,11 @@ public struct MidiFile: Equatable, Sendable {
                 guard input.count >= 8 else {
                     throw MidiCodecError.missingTrack(index: trackIndex, count: Int(trackCount))
                 }
-                let magic: UInt32
-                do { magic = try UInt32(parsingBigEndian: &input) } catch {
+                let trackMagic: UInt32
+                do { trackMagic = try UInt32(parsingBigEndian: &input) } catch {
                     throw MidiCodecError.missingTrack(index: trackIndex, count: Int(trackCount))
                 }
-                guard magic == 0x4D54_726B else {
+                guard trackMagic == 0x4D54_726B else {
                     throw MidiCodecError.missingTrack(index: trackIndex, count: Int(trackCount))
                 }
                 let length: UInt32

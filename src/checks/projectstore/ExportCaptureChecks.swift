@@ -35,7 +35,8 @@ private func captureJourney(_ label: String, report: CheckReport) throws {
     let options = WavExportOptions(
         sampleRate: 44_100, loopCount: 1,
         fadeoutSeconds: 1, tailSeconds: 1)
-    let settings = AudioSettings().applyingSong(session.document.state.config)
+    let songConfig = session.document.state.config
+    let settings = AudioSettings().applyingSong(songConfig)
     let midiPath = root + "/sound/songs/midi/\(label).mid"
     let bankPath = root + "/" + session.bankLease.sourcePath
     let midiBefore = try Data(contentsOf: URL(filePath: midiPath))
@@ -53,9 +54,10 @@ private func captureJourney(_ label: String, report: CheckReport) throws {
     let a = session.wavExportCapture(settings: settings, options: options)
     let (_, pcmA) = try render(a, "before-note")
     // Keep the edit inside the first rendered pass, including the looping fixture.
-    _ = try session.document.addNotes([
+    let addedNotes = try session.document.addNotes([
         NewNote(track: 0, tick: 6, pitch: 74, duration: 24, velocity: 110)
     ])
+    report.expect(!addedNotes.isEmpty, cppID: id, message: "the captured note edit adds a note")
     let b = session.wavExportCapture(settings: settings, options: options)
     let revision = session.document.revision
     let undoCount = session.document.history.undoCount
@@ -82,7 +84,12 @@ private func captureJourney(_ label: String, report: CheckReport) throws {
     }
     var edited = original
     edited.release = original.release == 1 ? 255 : 1
-    try runBlocking { try await session.applyBankEdit(slot: slot, value: edited, expected: original) }
+    let bankEdit = try runBlocking {
+        try await session.applyBankEdit(slot: slot, value: edited, expected: original)
+    }
+    report.expect(
+        bankEdit.lease === session.bankLease && bankEdit.dirty,
+        cppID: id, message: "the bank edit replaces the lease and remains unsaved")
     let c = session.wavExportCapture(settings: settings, options: options)
     report.expect(
         c.lease === session.bankLease && c.lease !== a.lease, cppID: id,
@@ -96,7 +103,8 @@ private func captureJourney(_ label: String, report: CheckReport) throws {
         session.bankDirty && bankAfter == bankBefore,
         cppID: id, message: "exporting leaves the bank edit unsaved")
 
-    _ = try runBlocking { await session.close() }
+    let closeOutcome = try runBlocking { await session.close() }
+    report.expect(closeOutcome, cppID: id, message: "the captured session closes successfully")
     try runBlocking { await service.close() }
     let (rerendered, pcmAgain) = try render(c, "after-close")
     report.expect(
@@ -134,7 +142,7 @@ private func captureJourney(_ label: String, report: CheckReport) throws {
     engine.maxPcmChannels = 9
     engine.pcmMixRate = 22_050
     engine.analogFilter = true
-    var config = session.document.state.config
+    var config = songConfig
     config.reverb = nil
     let defaulted = engine.applyingSong(config)
     config.reverb = 30
@@ -153,11 +161,15 @@ private func captureJourney(_ label: String, report: CheckReport) throws {
 
 @MainActor
 internal func runExportCaptureChecks(_ report: CheckReport) {
-    for label in ["mus_route101", "mus_route102"]
-    where
-        CheckEnvironment.fixturePath("sound/songs/midi/\(label).mid")
-        .map({ FileManager.default.fileExists(atPath: $0) }) == true
-    {
+    let labels = ["mus_route101", "mus_route102"].filter {
+        CheckEnvironment.fixturePath("sound/songs/midi/\($0).mid")
+            .map { FileManager.default.fileExists(atPath: $0) } == true
+    }
+    guard !labels.isEmpty else {
+        report.fail("exportcheck/WavExportCapture", "no capture fixture labels are staged")
+        return
+    }
+    for label in labels {
         do {
             try captureJourney(label, report: report)
         } catch {

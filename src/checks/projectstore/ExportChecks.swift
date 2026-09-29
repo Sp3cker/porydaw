@@ -213,6 +213,27 @@ internal func runExportChecks(_ report: CheckReport) {
         }
     }
 
+    exportCase("zeroFadeLoopPreservesPcm", labels: stagedLabels, report) { fixture in
+        guard fixture.timeline.hasLoop else { return }
+        var options = exportOptions
+        options.fadeoutSeconds = 0
+        let totals = WavExportTotals(timeline: fixture.timeline, options: options)
+        let path = fixture.scratch.appendingPathComponent("zero-fade.wav")
+        let result = try fixture.song.bank.withVoices { voices in
+            try WavExport.render(
+                to: path.path, timeline: fixture.timeline, voices: voices,
+                settings: fixture.settings, options: options, progress: { _ in true })
+        }
+        let bytes = try Data(contentsOf: path)
+        let peak = stride(from: 44, to: bytes.count - 1, by: 2)
+            .map { abs(Int(Int16(bitPattern: le16(bytes, $0)))) }.max() ?? 0
+        report.expect(
+            result == .completed && totals.totalFrames == totals.fadeStartFrame
+                && bytes.count == 44 + Int(totals.totalFrames) * 4 && peak >= 256,
+            cppID: "exportcheck/WavExport::zeroFadeLoop",
+            message: "zero-fade loop exports non-silent full-length PCM")
+    }
+
     exportCase("resonanceSuppressionChangesPcmWithoutChangingFrames", labels: stagedLabels, report) { fixture in
         let baselinePath = fixture.scratch.appendingPathComponent("baseline.wav")
         let suppressedPath = fixture.scratch.appendingPathComponent("suppressed.wav")

@@ -152,7 +152,7 @@ TestCase {
         compare(warning.title, "Import MIDI", "overflow warning title")
         verify(warning.text.indexOf("Tick rescale to division 48 exceeds 32-bit tick range") >= 0,
                "A052 overflow warning explains 32-bit tick range")
-        verify(!probe.fileExists(rootPath + "/sound/songs/midi/mus_overflow.mid")
+        verify(!probe.exists(rootPath + "/sound/songs/midi/mus_overflow.mid")
                && probe.fingerprint(config) === configBefore
                && probe.fingerprint(table) === tableBefore,
                "A050 overflow refuses every project write")
@@ -195,7 +195,7 @@ TestCase {
         choose(child("importVoicegroup"), 0)
         finish()
         const vg = rootPath + "/sound/voicegroups/mus_newvg_import.inc"
-        verify(waitForNative(function() { return probe.fileExists(vg) }, 30000),
+        verify(waitForNative(function() { return probe.exists(vg) }, 30000),
                "new voicegroup file is written; error=" + presenter.session.lastSaveError)
         verify(probe.fileContains(rootPath + "/sound/voice_groups.inc",
                                   "sound/voicegroups/mus_newvg_import.inc"),
@@ -228,7 +228,7 @@ TestCase {
                 "collision warning names existing voicegroup")
         compare(child("importWizardTitle").text, "Sound settings", "collision stays on Sound page")
         verify(child("midiImportWizard").visible && probe.fingerprint(cfg) === before
-               && !probe.fileExists(rootPath + "/sound/songs/midi/fixture_alt.mid"),
+               && !probe.exists(rootPath + "/sound/songs/midi/fixture_alt.mid"),
                "collision preserves wizard and files")
         warning.close()
     }
@@ -302,7 +302,7 @@ TestCase {
         const warning = child("shellCriticalDialog")
         verify(waitForNative(function() { return warning.visible }, 5000),
                "partial registration error appears")
-        verify(probe.fileExists(rootPath + "/sound/songs/midi/mus_partial_import.mid"),
+        verify(probe.exists(rootPath + "/sound/songs/midi/mus_partial_import.mid"),
                "partial import retains MIDI")
         verify(waitForNative(function() {
             const row = songRow("mus_partial_import")

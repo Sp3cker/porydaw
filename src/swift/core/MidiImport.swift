@@ -66,10 +66,10 @@ public enum MidiImport {
     }
 
     public static func suggestedSongLabel(sourceFileName: String) -> String {
-        let name = String(sourceFileName.split(separator: "/", omittingEmptySubsequences: false).last ?? "")
+        let name = URL(fileURLWithPath: sourceFileName).lastPathComponent
         let base = name.lastIndex(of: ".").map { name[..<$0] } ?? name[...]
         var label = ""
-        for character in base.lowercased().unicodeScalars {
+        for character in base.lowercased(with: Locale(identifier: "en_US_POSIX")).unicodeScalars {
             if character.value >= 97 && character.value <= 122 || character.value >= 48 && character.value <= 57 {
                 label.unicodeScalars.append(character)
             } else if !label.isEmpty && !label.hasSuffix("_") {

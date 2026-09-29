@@ -38,7 +38,7 @@ public final class ImportWizardProbe: QmlInstantiableStatus {
         return ""
     }
 
-    public func fileExists(path: String) -> Bool {
+    public func exists(path: String) -> Bool {
         FileManager.default.fileExists(atPath: path)
     }
 
@@ -101,9 +101,12 @@ public final class ImportWizardProbe: QmlInstantiableStatus {
         guard let index = lines.firstIndex(where: {
             $0.trimmingCharacters(in: .whitespaces).hasPrefix(prefix)
         }) else { return false }
-        let parts = lines[index].split(whereSeparator: \.isWhitespace)
-        guard parts.contains(where: { $0 == Substring(flag) }) else { return false }
-        lines[index] = parts.filter { $0 != Substring(flag) }.joined(separator: " ")
+        let line = lines[index]
+        guard let range = line.range(of: flag, options: [], range: line.startIndex..<line.endIndex),
+            (range.lowerBound == line.startIndex || line[line.index(before: range.lowerBound)].isWhitespace),
+            (range.upperBound == line.endIndex || line[range.upperBound].isWhitespace)
+        else { return false }
+        lines[index].removeSubrange(range)
         do {
             try lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
             return true

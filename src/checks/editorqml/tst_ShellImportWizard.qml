@@ -135,7 +135,7 @@ TestCase {
         keyClick(Qt.Key_Escape)
         verify(waitForNative(function() { return !wizard.visible }, 5000), "Escape cancels wizard")
         compare(probe.fingerprint(config), before, "cancellation does not change config")
-        verify(!probe.fileExists(rootPath + "/sound/songs/midi/mus_external_import.mid"),
+        verify(!probe.exists(rootPath + "/sound/songs/midi/mus_external_import.mid"),
                "cancellation creates no MIDI")
         compare(bootstrap.preferences.string("lastImportDir", ""), rootPath + "/test_midis",
                 "accepted source remembers directory")
@@ -244,7 +244,7 @@ TestCase {
                "Finish closes wizard")
         verify(waitForNative(function() {
             return !presenter.session.songDockController().midiImportController().busy
-                && probe.fileExists(rootPath + "/sound/songs/midi/mus_external_import.mid")
+                && probe.exists(rootPath + "/sound/songs/midi/mus_external_import.mid")
         }, 30000), "A059 import finishes writing registered song")
         const songs = child("songList")
         const listings = presenter.session.songDockController().songListPresenter()

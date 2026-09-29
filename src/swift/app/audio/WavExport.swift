@@ -65,7 +65,7 @@ public struct WavExportTotals: Equatable, Sendable {
     }
 
     public func gain(atFrame frame: UInt64) -> Float {
-        guard frame >= fadeStartFrame else { return 1 }
+        guard frame >= fadeStartFrame, totalFrames > fadeStartFrame else { return 1 }
         return 1 - Float(frame - fadeStartFrame) / Float(totalFrames - fadeStartFrame)
     }
 
@@ -210,8 +210,8 @@ public enum WavExport {
                     let gain = totals.gain(atFrame: position + UInt64(frame))
                     let l = options.resonanceSuppression ? interleaved[2 * frame] : left[frame]
                     let r = options.resonanceSuppression ? interleaved[2 * frame + 1] : right[frame]
-                    putU16(pcm16(l * gain), into: &bytes, at: 4 * frame)
-                    putU16(pcm16(r * gain), into: &bytes, at: 4 * frame + 2)
+                    putU16(clampPCM16(l * gain), into: &bytes, at: 4 * frame)
+                    putU16(clampPCM16(r * gain), into: &bytes, at: 4 * frame + 2)
                 }
             }
             try write(pcm, count: count * 4, to: file, path: path)
@@ -246,20 +246,16 @@ public enum WavExport {
                 }
             }
         }
-        do {
-            var l = left.mutableSpan
-            var r = right.mutableSpan
-            for frame in sourceCount..<count {
-                l[frame] = 0
-                r[frame] = 0
-            }
+        var l = left.mutableSpan
+        var r = right.mutableSpan
+        for frame in sourceCount..<count {
+            l[frame] = 0
+            r[frame] = 0
         }
-        do {
-            var samples = interleaved.mutableSpan
-            for frame in 0..<count {
-                samples[2 * frame] = left[frame]
-                samples[2 * frame + 1] = right[frame]
-            }
+        var samples = interleaved.mutableSpan
+        for frame in 0..<count {
+            samples[2 * frame] = left[frame]
+            samples[2 * frame + 1] = right[frame]
         }
         interleaved.withUnsafeMutableBufferPointer {
             if let base = $0.baseAddress { suppressor.process(base, frames: UInt32(count)) }
@@ -267,7 +263,8 @@ public enum WavExport {
         sourcePos += UInt64(sourceCount)
     }
 
-    private static func pcm16(_ sample: Float) -> UInt16 {
+    /// Clamps scaled PCM samples to signed 16-bit bounds [-32768, 32767].
+    private static func clampPCM16(_ sample: Float) -> UInt16 {
         let scaled = sample * 32767
         guard !scaled.isNaN else { return 0 }
         return UInt16(

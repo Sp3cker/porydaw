@@ -157,11 +157,17 @@ public final class WavExportPresenter {
                 self.failureMessage = message
                 self.failureRevision += 1
             }
+            self.progressJob?.cancel()
+            self.progressJob = nil
             self.rendering = false
             self.active = false
             self.job = nil
         }
     }
 
-    public func cancelRender() { job?.cancel() }
+    public func cancelRender() {
+        job?.cancel()
+        progressJob?.cancel()
+        progressJob = nil
+    }
 }

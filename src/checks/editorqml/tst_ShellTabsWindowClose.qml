@@ -6,6 +6,10 @@ import Porydaw.Ui
 
 ShellTabsSupport {
     SignalSpy { id: projectReadySpy; signalName: "projectRootChanged" }
+    function safeDisconnect(signal, fn) {
+        if (signal !== undefined)
+            signal.disconnect(fn)
+    }
 
     function test_aProjectSwitchThenWindowCloseKeepsSongBytes() {
         var root = bootstrap.projectRoot
@@ -49,10 +53,8 @@ ShellTabsSupport {
                 "A177 the window close preserves the second song's pinned MIDI bytes")
         compare(fileProbe.projectTreeFingerprint(root), tree,
                 "the switch-and-close journey leaves every staged project file unchanged")
-        if (dialog.visibleChanged !== undefined)
-            dialog.visibleChanged.disconnect(onVisible)
-        if (session().closeCancelled !== undefined)
-            session().closeCancelled.disconnect(onCancelled)
+        safeDisconnect(dialog.visibleChanged, onVisible)
+        safeDisconnect(session().closeCancelled, onCancelled)
         projectReadySpy.target = null
     }
 
@@ -87,8 +89,7 @@ ShellTabsSupport {
             return shell.shellPresenter.closeReady && !shell.visible
         }, 30000), "Discard lets the window close and hide")
         compare(fileProbe.fileFingerprint(path), before, "Discard wrote no song bytes")
-        if (session().closeCancelled !== undefined)
-            session().closeCancelled.disconnect(onCancelled)
+        safeDisconnect(session().closeCancelled, onCancelled)
     }
 
     function test_cWindowCloseRetiresPageBeforeDocument() {
