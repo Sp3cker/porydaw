@@ -65,6 +65,11 @@ private func checkFailedProjectSwitch(report: CheckReport, projectDir: String) {
     report.expect(
         app.projectOpen && app.songTabs.tabCount == 1, cppID: id,
         message: "A009 recovery publishes the staged project with its first ready tab")
+    report.expect(
+        until {
+            app.settingsVoicegroupArgs() == ["_test_vg"]
+                && !app.songDockController().songListPresenter().songListings.isEmpty
+        }, cppID: id, message: "deferred project catalogs arrive after the first tab is ready")
     report.expectEqual(
         expected: ["_test_vg"], actual: app.settingsVoicegroupArgs(),
         cppID: id, what: "recovery publishes the fixture's exact voicegroup catalog")

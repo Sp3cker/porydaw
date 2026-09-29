@@ -16,6 +16,7 @@ extension ApplicationSession {
                 installVoicegroupCatalog(catalog)
                 catalogRefreshApplied = generation
                 voiceList.catalogRevision += 1
+                onVoicegroupCatalogChanged?()
             }
             return true
         } catch {
@@ -46,6 +47,7 @@ extension ApplicationSession {
         voiceList.canMintSynths = false
         voiceList.adsrDefaults = VoiceListAdsrDefaults()
         voiceList.catalogRevision += 1
+        onVoicegroupCatalogChanged?()
     }
 
     private func installVoicegroupCatalog(_ catalog: VoicegroupCatalog) {

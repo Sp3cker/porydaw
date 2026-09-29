@@ -46,24 +46,10 @@ public struct SongCatalog: Sendable {
     public var songs: [ProjectSong]
     public var players: [MusicPlayer]
 
-    // Qt's project labels are ASCII tokens. ICU's `\\w` also accepts Unicode
-    // letters, so spell out the class to avoid accepting additional labels.
-    private static let songPattern = compile(
-        pattern: #"^\s*song\s+([A-Za-z0-9_]+)\s*,\s*([A-Za-z0-9_]+)\s*,\s*([A-Za-z0-9_]+)"#)
-    private static let constantPattern = compile(
-        pattern: #"^\s*#define\s+([A-Z0-9_]+)\s+(\d+)\s*$"#)
-    private static let equivPattern = compile(
-        pattern: #"^\s*\.equiv\s+([A-Za-z0-9_]+)\s*,\s*(\d+)"#)
-    private static let playerPattern = compile(
-        pattern: #"^\s*music_player\s+[A-Za-z0-9_]+\s*,\s*[A-Za-z0-9_]+\s*,\s*([A-Za-z0-9_]+)"#)
-
-    private static func compile(pattern: String) -> NSRegularExpression {
-        do {
-            return try NSRegularExpression(pattern: pattern)
-        } catch {
-            preconditionFailure("Invalid built-in song regex \(pattern): \(error)")
-        }
-    }
+    private static let songDirective = Array("song".utf8)
+    private static let defineDirective = Array("#define".utf8)
+    private static let equivDirective = Array(".equiv".utf8)
+    private static let playerDirective = Array("music_player".utf8)
 
     /// Reads the song table and attaches constants, MIDI files, supplied flags, and player limits.
     /// - Parameters:
@@ -83,12 +69,12 @@ public struct SongCatalog: Sendable {
         let midiDir = root.appendingPathComponent("sound/songs/midi", isDirectory: true)
         var songs: [ProjectSong] = []
         for line in tableLines {
-            guard let captures = match(songPattern, in: line), captures.count == 3 else { continue }
-            let label = captures[0]
+            guard let fields = songFields(line) else { continue }
+            let label = AsmLine.text(fields.label)
             let midFile = midiDir.appendingPathComponent(label + ".mid")
             let hasMid = ProjectFileStore.exists(midFile.path)
             songs.append(ProjectSong(id: songs.count, label: label, constant: "",
-                                     player: captures[1], midPath: hasMid ? midFile.path : nil,
+                    player: AsmLine.text(fields.player), midPath: hasMid ? midFile.path : nil,
                                      hasMid: hasMid, hasCfg: false, registered: true, cfg: SongConfig()))
         }
         guard !songs.isEmpty else { throw SongCatalogError.noSongs(table.path) }
@@ -97,9 +83,10 @@ public struct SongCatalog: Sendable {
         if let data = try? ProjectFileStore.read(constants.path) {
             var byID: [Int: String] = [:]
             for line in lines(data) {
-                guard let captures = match(constantPattern, in: line), captures.count == 2,
-                      let id = Int(captures[1]) else { continue }
-                if byID[id] == nil { byID[id] = captures[0] }
+                guard let fields = constantFields(line),
+                    let id = Int(AsmLine.text(fields.number))
+                else { continue }
+                if byID[id] == nil { byID[id] = AsmLine.text(fields.name) }
             }
             for index in songs.indices {
                 if let constant = byID[songs[index].id] { songs[index].constant = constant }
@@ -161,12 +148,15 @@ public struct SongCatalog: Sendable {
         return candidates
     }
 
-    private static func musicPlayers(root: URL, tableLines: [String]) -> [MusicPlayer] {
+    private static func musicPlayers(root: URL, tableLines: [AsmLine.Bytes]) -> [MusicPlayer] {
         var players: [MusicPlayer] = []
         for line in tableLines {
-            guard let captures = match(equivPattern, in: line), captures.count == 2 else { continue }
-            players.append(MusicPlayer(name: captures[0], number: Int(captures[1]) ?? 0,
-                                       trackCount: -1))
+            guard let fields = equivFields(line) else { continue }
+            players.append(
+                MusicPlayer(
+                    name: AsmLine.text(fields.name),
+                    number: Int(AsmLine.text(fields.number)) ?? 0,
+                    trackCount: -1))
         }
         if players.isEmpty {
             players.append(MusicPlayer(name: "MUSIC_PLAYER_BGM", number: 0, trackCount: -1))
@@ -177,9 +167,10 @@ public struct SongCatalog: Sendable {
         var symbols: [String: Int] = [:]
         var counts: [Int] = []
         for line in lines(data) {
-            if let captures = match(equivPattern, in: line), captures.count == 2 {
-                symbols[captures[0]] = Int(captures[1]) ?? 0
-            } else if let captures = match(playerPattern, in: line), let arg = captures.first {
+            if let fields = equivFields(line) {
+                symbols[AsmLine.text(fields.name)] = Int(AsmLine.text(fields.number)) ?? 0
+            } else if let field = playerCountField(line) {
+                let arg = AsmLine.text(field)
                 let count = Int(arg) ?? symbols[arg] ?? -1
                 counts.append(count < 0 ? -1 : min(count, 16))
             }
@@ -191,19 +182,89 @@ public struct SongCatalog: Sendable {
         return players
     }
 
-    private static func lines(_ data: Data) -> [String] {
-        // Swift's Character split treats CRLF as one grapheme; split on the LF
-        // scalar so CRLF song tables yield the same lines as QIODevice::Text.
-        String(decoding: data, as: UTF8.self).unicodeScalars
-            .split(separator: Unicode.Scalar(10), omittingEmptySubsequences: false)
-            .map { String(String.UnicodeScalarView($0)) }
+    private static func lines(_ data: Data) -> [AsmLine.Bytes] {
+        let bytes = [UInt8](data)
+        var result: [AsmLine.Bytes] = []
+        var start = 0
+        for index in bytes.indices where bytes[index] == 10 {
+            result.append(bytes[start..<index])
+            start = index + 1
+        }
+        result.append(bytes[start..<bytes.count])
+        return result
     }
 
-    private static func match(_ regex: NSRegularExpression, in line: String) -> [String]? {
-        let range = NSRange(line.startIndex..<line.endIndex, in: line)
-        guard let result = regex.firstMatch(in: line, range: range) else { return nil }
-        return (1..<result.numberOfRanges).compactMap {
-            Range(result.range(at: $0), in: line).map { String(line[$0]) }
+    private static func songFields(
+        _ line: AsmLine.Bytes
+    )
+        -> (label: AsmLine.Bytes, player: AsmLine.Bytes)?
+    {
+        var cursor = AsmLine(line)
+        cursor.skipSpaces()
+        guard cursor.consume(songDirective), cursor.skipSpaces(), let label = cursor.word() else { return nil }
+        cursor.skipSpaces()
+        guard cursor.consume(44) else { return nil }
+        cursor.skipSpaces()
+        guard let player = cursor.word() else { return nil }
+        cursor.skipSpaces()
+        guard cursor.consume(44) else { return nil }
+        cursor.skipSpaces()
+        guard cursor.word() != nil else { return nil }
+        return (label, player)
+    }
+
+    private static func constantFields(
+        _ line: AsmLine.Bytes
+    )
+        -> (name: AsmLine.Bytes, number: AsmLine.Bytes)?
+    {
+        var cursor = AsmLine(line)
+        cursor.skipSpaces()
+        guard cursor.consume(defineDirective), cursor.skipSpaces(), let name = cursor.word(),
+            name.allSatisfy({ ($0 >= 65 && $0 <= 90) || ($0 >= 48 && $0 <= 57) || $0 == 95 }),
+            cursor.skipSpaces(), let number = decimal(&cursor)
+        else { return nil }
+        cursor.skipSpaces()
+        guard cursor.position == line.endIndex else { return nil }
+        return (name, number)
+    }
+
+    private static func equivFields(
+        _ line: AsmLine.Bytes
+    )
+        -> (name: AsmLine.Bytes, number: AsmLine.Bytes)?
+    {
+        var cursor = AsmLine(line)
+        cursor.skipSpaces()
+        guard cursor.consume(equivDirective), cursor.skipSpaces(), let name = cursor.word() else { return nil }
+        cursor.skipSpaces()
+        guard cursor.consume(44) else { return nil }
+        cursor.skipSpaces()
+        guard let number = decimal(&cursor) else { return nil }
+        return (name, number)
+    }
+
+    private static func playerCountField(_ line: AsmLine.Bytes) -> AsmLine.Bytes? {
+        var cursor = AsmLine(line)
+        cursor.skipSpaces()
+        guard cursor.consume(playerDirective), cursor.skipSpaces(), cursor.word() != nil else { return nil }
+        cursor.skipSpaces()
+        guard cursor.consume(44) else { return nil }
+        cursor.skipSpaces()
+        guard cursor.word() != nil else { return nil }
+        cursor.skipSpaces()
+        guard cursor.consume(44) else { return nil }
+        cursor.skipSpaces()
+        return cursor.word()
+    }
+
+    private static func decimal(_ cursor: inout AsmLine) -> AsmLine.Bytes? {
+        let start = cursor.position
+        while cursor.position < cursor.bytes.endIndex {
+            let byte = cursor.bytes[cursor.position]
+            guard byte >= 48 && byte <= 57 else { break }
+            _ = cursor.consume(byte)
         }
+        return cursor.position > start ? cursor.bytes[start..<cursor.position] : nil
     }
 }

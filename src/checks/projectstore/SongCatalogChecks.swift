@@ -19,13 +19,18 @@ private func songCatalogDiscovery(_ report: CheckReport) {
         let constants = root.appendingPathComponent("include/constants", isDirectory: true)
         try FileManager.default.createDirectory(at: midi, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: constants, withIntermediateDirectories: true)
-        try Data("# comment\n\n.equiv MUSIC_PLAYER_BGM,0\n.equiv MUSIC_PLAYER_SE,1\n"
+        try Data(
+            "# comment\r\n\r\n.equiv MUSIC_PLAYER_BGM,0\r\n.equiv MUSIC_PLAYER_SE,1\r\n"
             .appending(".equiv MUSIC_PLAYER_UNKNOWN,2\n")
-            .appending("song mus_target, MUSIC_PLAYER_BGM, 0\n")
+                .appending("  song mus_target , MUSIC_PLAYER_BGM , 0 # trailing comment\r\n")
+                .appending("song mus_truncated, MUSIC_PLAYER_BGM,\n")
+                .appending("songmus_prefix, MUSIC_PLAYER_BGM, 0\n")
             .appending("song mus_missing, MUSIC_PLAYER_SE, 0\n")
             .appending("song mús_unicode, MUSIC_PLAYER_BGM, 0\n").utf8)
             .write(to: sound.appendingPathComponent("song_table.inc"))
-        try Data("#define MUS_FIRST 0\n#define MUS_LATER 0\n#define MUS_MISSING 1\n"
+        try Data(
+            "#define MUS_FIRST 0\r\n#define MUS_LATER 0\n"
+                .appending("#define MUS_COMMENT 1 // trailing comment\n#define MUS_MISSING 1\n")
             .appending("#define MUS_HEX 0x2\n#define MUS_ALIAS 0xFFFF\n").utf8)
             .write(to: constants.appendingPathComponent("songs.h"))
         try Data(".equiv NUM_TRACKS_BGM,25\n"

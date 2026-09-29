@@ -196,6 +196,8 @@ TestCase {
             return session.songOpen && session.songTabs.selectedPage
                 && session.songTabs.selectedPage.isReady
         }, 30000), "the current source is ready before cancelling creation")
+        verify(waitForNative(function() { return presenter().rowCount > 0 }, 5000),
+               "the Songs dock catalog is ready before cancelling creation")
         const priorId = session.songTabs.selectedId
         const originalFiles = registrationBytes()
         const priorCount = presenter().rowCount
@@ -238,6 +240,8 @@ TestCase {
             return session.songOpen && session.songTabs.selectedPage
                 && session.songTabs.selectedPage.isReady
         }, 30000), "the current song opens before the collision attempt")
+        verify(waitForNative(function() { return presenter().rowCount > 0 }, 5000),
+               "the Songs dock catalog is ready before the collision attempt")
         const priorId = session.songTabs.selectedId
         const priorCount = presenter().rowCount
         const originalFiles = registrationBytes()

@@ -7,15 +7,14 @@ import PorydawAppCommands
 
 @MainActor
 extension ApplicationSession {
-    /// A fully read project waiting to replace the open one: everything that can
-    /// fail is read before any live tab is released.
+    /// An opened project waiting to replace the current one. Song registration
+    /// and voice editor catalogs are populated after its first tab opens.
     struct ProjectSwitchCandidate {
         let path: String
         let label: String?
         let restore: WorkspaceTabRecipe?
         let service: ProjectService
         let labels: [String]
-        let songs: [SongListing]
     }
 
     @QtIgnored
@@ -39,14 +38,14 @@ extension ApplicationSession {
 
     private struct ProjectRead: Sendable {
         let service: ProjectService
-        let songs: [SongListing]
+        let labels: [String]
 
         static func load(path: String) async throws -> ProjectRead {
             let service = ProjectService()
             do {
                 try await service.open(root: path)
-                let songs = try await service.songs()
-                return ProjectRead(service: service, songs: songs)
+                let labels = try await service.songLabels()
+                return ProjectRead(service: service, labels: labels)
             } catch {
                 await service.close()
                 throw error
@@ -80,7 +79,7 @@ extension ApplicationSession {
             self.lastSaveError = ""
             let candidate = ProjectSwitchCandidate(
                 path: path, label: label, restore: restore, service: loaded.service,
-                labels: loaded.songs.map(\.label), songs: loaded.songs)
+                labels: loaded.labels)
             self.pendingProjectSwitch = candidate
             self.songTabs.startProjectSwitchCloseAll()
         }
@@ -106,10 +105,9 @@ extension ApplicationSession {
         projectRoot = candidate.path
         projectRootChanged()
         labels = candidate.labels
-        songDock.install(service: candidate.service, songs: candidate.songs)
+        songDock.install(service: candidate.service, songs: [])
         voiceList.projectService = candidate.service
         resetVoicegroupCatalog()
-        await refreshVoicegroupCatalog()
         projectOpen = true
         if let recipe = candidate.restore {
             let restored = recipe.normalized(available: candidate.labels)
@@ -128,5 +126,27 @@ extension ApplicationSession {
         }
         isReplacingProject = false
         if candidate.restore == nil { persistTabRecipe() }
+        populateProjectCatalogs(for: candidate.service)
+    }
+
+    private func populateProjectCatalogs(for service: ProjectService) {
+        Task { [weak self] in
+            do {
+                let songs = try await service.songs()
+                guard let self, !self.isDisposed, self.pendingProjectSwitch == nil,
+                    self.catalogService === service
+                else { return }
+                if self.songDock.presenter.songListings.isEmpty {
+                    self.songDock.presenter.setSongs(songs)
+                    self.songDock.syncSelection()
+                }
+                _ = await self.refreshVoicegroupCatalog()
+            } catch {
+                guard let self, !self.isDisposed, self.pendingProjectSwitch == nil,
+                    self.catalogService === service
+                else { return }
+                self.operationFailed(message: String(describing: error))
+            }
+        }
     }
 }

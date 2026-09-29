@@ -186,8 +186,12 @@ public final class ShellPresenter: QmlInstantiableStatus {
     public init() {
         session = ApplicationSession()
         mouseHints = session.mouseHintsPresenter()
-        settingsStore = EngineSettingsStore()
+        let settingsStore = EngineSettingsStore()
+        self.settingsStore = settingsStore
         settingsStore.attach(session: session)
+        session.onVoicegroupCatalogChanged = { [weak settingsStore] in
+            settingsStore?.refreshVoicegroups()
+        }
         actionIds = Self.allActionIds
         fileActionIds = Self.fileIds
         fileExportActionIds = Self.fileExportIds

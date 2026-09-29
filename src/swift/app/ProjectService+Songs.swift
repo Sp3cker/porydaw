@@ -41,7 +41,8 @@ extension ProjectService {
     }
 
     public func songLabels() async throws -> [String] {
-        try await songs().map(\.label)
+        let store = try requireStore()
+        do { return try await store.songs().filter(\.hasMid).map(\.label) } catch { throw projectFailure(error) }
     }
 
     /// Copies a playable song's MIDI and flags under a new registered identity.

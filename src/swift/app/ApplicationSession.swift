@@ -50,6 +50,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored
     var settingsVoicegroups: [String] = []
     @QtIgnored
+    var onVoicegroupCatalogChanged: (() -> Void)?
+    @QtIgnored
     var catalogService: ProjectService?
     @QtIgnored var catalogRefreshIssued: UInt64 = 0
     @QtIgnored var catalogRefreshApplied: UInt64 = 0

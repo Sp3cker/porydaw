@@ -300,7 +300,8 @@ public final class DocumentSession {
     public static func open(service: ProjectService, label: String,
                             sampleRate: Double = 48_000) async throws -> DocumentSession {
         let loaded = try await service.openSong(label: label)
-        let file = try MidiFile.decode(loaded.midiBytes)
+        let midiBytes = loaded.midiBytes
+        let file = try await Task { @concurrent in try MidiFile.decode(midiBytes) }.value
         let document = SongDocument(file: file, config: loaded.config,
                                     source: loaded.source, trackBudget: loaded.trackBudget)
         return DocumentSession(document: document, service: service, lease: loaded.bank,

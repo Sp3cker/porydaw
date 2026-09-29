@@ -87,8 +87,7 @@ public final class EngineSettingsStore: QmlInstantiableStatus {
         target = session?.selectedDocument
         songAvailable = target != nil
         songLabel = session?.settingsSongLabel() ?? ""
-        let args = session?.settingsVoicegroupArgs() ?? []
-        voicegroups = args.map(VoiceListSemantics.voicegroupDisplayName)
+        refreshVoicegroups()
         guard let config = target?.document.state.config else { return }
         voicegroup = VoiceListSemantics.voicegroupDisplayName(config.voicegroupArgument)
         masterVolume = config.masterVolume
@@ -97,6 +96,12 @@ public final class EngineSettingsStore: QmlInstantiableStatus {
         exactGate = config.exactGate
         extendedClocks = config.extendedClocks
         noCompression = config.noCompression
+    }
+
+    @QtIgnored
+    public func refreshVoicegroups() {
+        voicegroups = (session?.settingsVoicegroupArgs() ?? [])
+            .map(VoiceListSemantics.voicegroupDisplayName)
     }
 
     public func restoreDefaults() {
