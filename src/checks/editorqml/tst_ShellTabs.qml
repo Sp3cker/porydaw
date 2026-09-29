@@ -164,6 +164,8 @@ ShellTabsSupport {
                 "a legacy selected song becomes the active tab")
         waitForPage(tabs().selectedId)
         var songs = session().songDockController().songListPresenter()
+        verify(waitForNative(function() { return songs.totalCount > 0 }, 5000),
+               "the restored Songs dock listing is ready before checking the selected row")
         verify(songs.selectedSongId >= 0, "the restored song has a visible Songs row")
         compare(songs.selectedSongId, songs.currentSongId,
                 "the restored selected song is revealed in the Songs dock")
@@ -215,6 +217,9 @@ ShellTabsSupport {
         }, 5000), "setting the editor range propagates to the other tab's value axis")
         clickSelectTab(ids[0])
 
+        verify(waitForNative(function() {
+            return session().songDockController().songListPresenter().totalCount > 0
+        }, 5000), "the Songs dock catalog is ready before choosing a category")
         var search = findChild(shell, "songListSearch")
         var sort = findChild(shell, "songListSort")
         var category = findChild(shell, "songListCategory")
@@ -277,6 +282,9 @@ ShellTabsSupport {
         compare(tabs().selectedId, restored[1], "startup restores the selected tab")
         compare(shell.title, "mus_route101 — " + bootstrap.projectRoot.split("/").pop()
                 + " — porydaw", "restart restores the project and selected-song window title")
+        verify(waitForNative(function() {
+            return session().songDockController().songListPresenter().totalCount > 0
+        }, 5000), "the restored Songs dock catalog is ready before checking its category")
         compare(findChild(shell, "songListSearch").text, "filterme",
                 "restart restores the entered search on the mounted control")
         compare(findChild(shell, "songListSort").currentIndex, 1,

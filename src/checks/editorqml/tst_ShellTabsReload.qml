@@ -18,6 +18,8 @@ ShellTabsSupport {
         var originalId = openShell(["mus_route101"])[0]
         var originalPage = tabs().selectedPage
         var songs = session().songDockController().songListPresenter()
+        verify(waitForNative(function() { return songs.totalCount > 0 }, 5000),
+               "the Songs dock catalog is ready before filtering the replacement song")
         songs.selectCategory(0)
         songs.updateSearch("mus_route102")
         compare(songs.rowCount, 1, "replacement song is the only filtered Songs dock row")

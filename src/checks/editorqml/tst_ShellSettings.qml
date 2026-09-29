@@ -238,6 +238,9 @@ TestCase {
                "song loads: " + app.lastSaveError)
         presenter.activate("edit.song_settings")
         tryCompare(dialog(), "visible", true)
+        verify(waitForNative(function() {
+            return presenter.settingsStore.voicegroups.indexOf("fixture_rich") >= 0
+        }, 5000), "the deferred voicegroup catalog reaches the song settings dialog")
         compare(dialog().selectedTab, 1)
         const model = presenter.settingsStore
         compare(model.songAvailable, true)
