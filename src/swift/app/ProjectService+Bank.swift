@@ -1,7 +1,7 @@
 import Foundation
-import PorydawBankLease
 import PorydawCore
 import PorydawProject
+import PorydawBankLease
 
 extension ProjectService {
 
@@ -37,16 +37,14 @@ extension ProjectService {
         var adsrBySymbol: [String: VoiceListAdsr] = [:]
         adsrBySymbol.reserveCapacity(groups.typicalAdsr.bySymbol.count)
         for (symbol, adsr) in groups.typicalAdsr.bySymbol {
-            adsrBySymbol[symbol] = VoiceListAdsr(
-                attack: Int32(adsr.attack),
+            adsrBySymbol[symbol] = VoiceListAdsr(attack: Int32(adsr.attack),
                 decay: Int32(adsr.decay), sustain: Int32(adsr.sustain),
                 release: Int32(adsr.release))
         }
         var adsrByFamily: [Int32: VoiceListAdsr] = [:]
         adsrByFamily.reserveCapacity(groups.typicalAdsr.byFamily.count)
         for (key, adsr) in groups.typicalAdsr.byFamily {
-            adsrByFamily[Int32(key)] = VoiceListAdsr(
-                attack: Int32(adsr.attack),
+            adsrByFamily[Int32(key)] = VoiceListAdsr(attack: Int32(adsr.attack),
                 decay: Int32(adsr.decay), sustain: Int32(adsr.sustain),
                 release: Int32(adsr.release))
         }
@@ -70,10 +68,8 @@ extension ProjectService {
     /// Writes a per-file voicegroup, appends its hub include, then rescans
     /// the project so the catalog publishes the new arg. Refusals throw.
     /// `copyFromFile` is project-relative ("" for the dummy template).
-    public func createVoicegroup(
-        name: String, copyFromFile: String,
-        copySectionLabel: String
-    ) async throws {
+    public func createVoicegroup(name: String, copyFromFile: String,
+                                 copySectionLabel: String) async throws {
         let store = try requireStore()
         guard Self.isValidVoicegroupName(name: name) else {
             throw ProjectServiceError.operationFailed("Invalid voicegroup name: \(name).")
@@ -84,10 +80,9 @@ extension ProjectService {
                 throw ProjectServiceError.operationFailed("A voicegroup named \(name) already exists.")
             }
             let copyPath = copyFromFile.isEmpty ? "" : projectRoot + "/" + copyFromFile
-            try VoicegroupSource.createVoicegroup(
-                projectRoot: projectRoot, name: name,
-                copyFromFile: copyPath,
-                copySectionLabel: copySectionLabel)
+            try VoicegroupSource.createVoicegroup(projectRoot: projectRoot, name: name,
+                                                  copyFromFile: copyPath,
+                                                  copySectionLabel: copySectionLabel)
             try VoicegroupSource.appendIncludeLine(projectRoot: projectRoot, name: name)
             try await open(root: projectRoot)
         } catch {
@@ -121,7 +116,8 @@ extension ProjectService {
     /// - Throws: A project failure if the required macros are unavailable.
     public func mintSynth(_ descriptor: VgSynthDesc) async throws -> String {
         let store = try requireStore()
-        do { return try await store.mintSynth(descriptor) } catch { throw projectFailure(error) }
+        do { return try await store.mintSynth(descriptor) }
+        catch { throw projectFailure(error) }
     }
 
     /// Opens a playable song: raw MIDI bytes, metadata and the owned bank lease.
@@ -138,21 +134,15 @@ extension ProjectService {
             guard song.hasMid, let midiPath = song.midPath else {
                 throw ProjectServiceError.songNotPlayable(label: label)
             }
-            // The MIDI bytes and the bank lease are independent: the MIDI
-            // read overlaps the native bank load on its worker. Awaiting
-            // the bytes first preserves the sequential error precedence
-            // (unreadable MIDI reports before an unloadable bank).
-            async let midiBytes = store.readFile(midiPath)
-            async let bankLease = store.loadBank(voicegroupArg: song.cfg.voicegroupArgument)
             let bytes: Data
             do {
-                bytes = try await midiBytes
+                bytes = try await store.readFile(midiPath)
             } catch ProjectFileStoreError.cannotRead(let path) {
                 throw ProjectServiceError.songMidiUnavailable(label: label, path: path)
             }
             let bank: ProjectBankLease
             do {
-                bank = try await bankLease
+                bank = try await store.loadBank(voicegroupArg: song.cfg.voicegroupArgument)
             } catch VoicegroupStoreError.operationFailed(let reason) {
                 throw ProjectServiceError.songBankUnavailable(
                     label: label, voicegroupArgument: song.cfg.voicegroupArgument,
@@ -164,15 +154,13 @@ extension ProjectService {
                 label: song.label, midiPath: midiPath, constant: song.constant,
                 player: song.player, trackBudget: snapshot?.trackBudgetFor(song: song) ?? 16,
                 hasMid: song.hasMid, hasCfg: song.hasCfg, registered: song.registered,
-                config: song.cfg,
-                source: SongSource(
-                    label: song.label, midiPath: midiPath,
-                    hasConfig: song.hasCfg),
+                config: song.cfg, source: SongSource(label: song.label, midiPath: midiPath,
+                                                    hasConfig: song.hasCfg),
                 midiBytes: Array(bytes), bank: published.lease, bankSlots: published.slots,
                 bankDirty: published.dirty, bankLoadName: published.loadName)
         } catch {
             let failure = projectFailure(error)
-            guard case .operationFailed(let message) = failure else { throw failure }
+            guard case let .operationFailed(message) = failure else { throw failure }
             throw ProjectServiceError.operationFailed("Open song \(label): \(message)")
         }
     }
@@ -197,15 +185,14 @@ extension ProjectService {
             if snapshot.flagsNeeded {
                 let midiDir = URL(filePath: snapshot.destination.midiPath)
                     .deletingLastPathComponent()
-                try await store.saveSongFlags(
-                    midiDir: midiDir, label: snapshot.destination.label,
-                    config: snapshot.config)
+                try await store.saveSongFlags(midiDir: midiDir, label: snapshot.destination.label,
+                                              config: snapshot.config)
                 flagsWritten = true
             }
             return SaveReceipt(flagsWritten: flagsWritten, bank: refreshed)
         } catch {
             let failure = projectFailure(error)
-            guard case .operationFailed(let message) = failure else { throw failure }
+            guard case let .operationFailed(message) = failure else { throw failure }
             throw ProjectServiceError.operationFailed(
                 "Save song \(snapshot.destination.label): \(message)")
         }
@@ -220,10 +207,8 @@ extension ProjectService {
         }
     }
 
-    private func saveBankStage(
-        _ bank: NativeBankLease,
-        in store: ProjectStore
-    ) async throws -> AppliedBankEdit {
+    private func saveBankStage(_ bank: NativeBankLease,
+                               in store: ProjectStore) async throws -> AppliedBankEdit {
         guard bank.publicationOwner == store.publicationOwner else {
             throw ProjectServiceError.serviceClosed
         }
@@ -239,11 +224,9 @@ extension ProjectService {
     /// Applies a set-slot edit against the lease's bank. A nil expected value
     /// requires the slot to still be blank (materialization); a set expected
     /// value requires an exact match. Mismatches throw bankConflict.
-    public func bankApply(
-        lease: NativeBankLease, slot: Int,
-        value: BankVoice, expected: BankVoice?,
-        publishResult: Bool = true
-    ) async throws -> AppliedBankEdit {
+    public func bankApply(lease: NativeBankLease, slot: Int,
+                          value: BankVoice, expected: BankVoice?,
+                          publishResult: Bool = true) async throws -> AppliedBankEdit {
         let store = try requireStore()
         guard lease.publicationOwner == store.publicationOwner else {
             throw ProjectServiceError.serviceClosed
@@ -264,10 +247,8 @@ extension ProjectService {
 
     /// Reverts a blank-slot materialization via its single-shot token. Spent
     /// or unknown tokens throw bankConflict; the source bytes stay untouched.
-    public func bankRevert(
-        lease: NativeBankLease, token: UInt64,
-        publishResult: Bool = true
-    ) async throws -> AppliedBankEdit {
+    public func bankRevert(lease: NativeBankLease, token: UInt64,
+                           publishResult: Bool = true) async throws -> AppliedBankEdit {
         let store = try requireStore()
         guard lease.publicationOwner == store.publicationOwner else {
             throw ProjectServiceError.serviceClosed
