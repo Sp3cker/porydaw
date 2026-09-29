@@ -93,7 +93,8 @@ public struct PitchProjection: Equatable, Sendable {
     private static func snappedEdge(_ row: Int, keyHeight: Double,
                                     scrollY: Double, dpr: Double) -> Double {
         let scale = dpr.isFinite && dpr > 0 ? dpr : 1
-        return ((Double(row) * keyHeight - scrollY) * scale).rounded() / scale
+        return (Double(row) * keyHeight * scale).rounded() / scale
+            - (scrollY * scale).rounded() / scale
     }
 }
 
@@ -231,8 +232,8 @@ public struct EditorCamera: Sendable {
     public func contentX(tick: Double) -> Double { tick * pixelsPerTick - scrollX }
     public func tickAtContentX(_ x: Double) -> Double { (x + scrollX) / pixelsPerTick }
     public func viewX(tick: Double, dpr: Double) -> Double {
-        let x = contentX(tick: tick)
-        return dpr.isFinite && dpr > 0 ? (x * dpr).rounded() / dpr : x
+        guard dpr.isFinite && dpr > 0 else { return contentX(tick: tick) }
+        return contentTickX(tick: tick, dpr: dpr) - (scrollX * dpr).rounded() / dpr
     }
 
     public func contentTickX(tick: Double, dpr: Double) -> Double {
