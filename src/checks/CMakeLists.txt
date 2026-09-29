@@ -192,6 +192,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         songlist/SongRegionRegistrationChecks.swift
         songlist/SongDebugLayoutChecks.swift
         songlist/SongImportChecks.swift
+        songlist/MidiImportWizardChecks.swift
         voicelist/VoiceListChecks.swift
         voicelist/VoiceListIntentChecks.swift
         voicelist/voicelist_session.swift
@@ -290,6 +291,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         projectstore/ProjectStoreSaveChecks.swift
         projectstore/BankLeasesChecks.swift
         projectstore/ExportChecks.swift
+        projectstore/ExportCaptureChecks.swift
         workspace/session_support.swift
         workspace/editor_view_state_checks.swift
         workspace/session_view_state.swift

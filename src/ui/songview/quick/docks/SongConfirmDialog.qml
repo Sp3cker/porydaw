@@ -64,14 +64,19 @@ Basic.Dialog {
             visible: dialog.controller.confirmation === "create"
             placeholderText: qsTr("mus_new_song")
             onTextChanged: {
-                const normalized = dialog.controller.songListPresenter().normalizeSongLabel(text)
-                if (normalized !== text) {
-                    const kept = dialog.controller.songListPresenter()
-                        .normalizeSongLabel(text.substring(0, cursorPosition))
-                    text = normalized
-                    cursorPosition = kept.length
+                const previous = dialog.controller.newSongLabel
+                const proposed = text
+                const cursor = cursorPosition
+                const accepted = dialog.controller.songListPresenter()
+                    .acceptSongLabelEdit(previous, proposed)
+                if (accepted !== proposed) {
+                    text = accepted
+                    cursorPosition = accepted === previous
+                        ? Math.max(0, Math.min(accepted.length,
+                            cursor - (proposed.length - previous.length)))
+                        : Math.min(cursor, accepted.length)
                 }
-                dialog.controller.newSongLabel = text
+                dialog.controller.newSongLabel = accepted
             }
             onAccepted: {
                 if (dialog.footer.standardButton(Dialog.Ok).enabled)

@@ -8,6 +8,7 @@ import QtBridge
 @QtBridgeable
 public final class SongDockController {
     @QtIgnored public let presenter = SongListPresenter()
+    @QtIgnored public let midiImport = MidiImportController()
     @QtTracked public var confirmation = ""
     @QtTracked public var confirmationLabel = ""
     @QtTracked public var registrationConstant = ""
@@ -30,9 +31,13 @@ public final class SongDockController {
     }
 
     public func songListPresenter() -> SongListPresenter { presenter }
+    public func midiImportController() -> MidiImportController { midiImport }
 
     @QtIgnored
-    func attach(session: ApplicationSession) { self.session = session }
+    func attach(session: ApplicationSession) {
+        self.session = session
+        midiImport.attach(dock: self, session: session)
+    }
 
     @QtIgnored
     func install(service: ProjectService, songs: [SongListing]) {
@@ -41,6 +46,7 @@ public final class SongDockController {
         busy = false
         clearConfirmation()
         self.service = service
+        midiImport.install(service: service)
         presenter.setSongs(songs)
         syncSelection()
     }
@@ -51,6 +57,7 @@ public final class SongDockController {
         operation = nil
         busy = false
         service = nil
+        midiImport.detach()
         presenter.setSongs([])
         clearConfirmation()
     }
@@ -59,6 +66,13 @@ public final class SongDockController {
     func syncSelection() {
         let label = session?.songTabs.selectedPage?.title
         presenter.setCurrentSong(songId: presenter.songListings.first { $0.label == label }?.id ?? -1)
+    }
+
+    @QtIgnored
+    func publishSongs(_ songs: [SongListing]) {
+        presenter.setSongs(songs)
+        session?.refreshSongLabels(songs.map(\.label))
+        syncSelection()
     }
     // File-menu ingress: the fork acts on the selected tab regardless of
     // dock filter state, so this resolves through the full snapshot listing.
@@ -166,8 +180,7 @@ public final class SongDockController {
                 guard !Task.isCancelled, self.service === service else { return }
                 let songs = try await service.songs()
                 guard !Task.isCancelled, self.service === service else { return }
-                self.presenter.setSongs(songs)
-                self.session?.refreshSongLabels(songs.map(\.label))
+                self.publishSongs(songs)
                 if creating {
                     self.session?.openSongFromDock(label: label, newTab: true)
                 }

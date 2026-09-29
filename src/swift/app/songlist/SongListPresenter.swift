@@ -264,8 +264,8 @@ public final class SongListPresenter {
 
     // MARK: - New Song name laws (fork newsongwizard identity field)
 
-    /// Folds capitals, drops non-name characters and a leading digit: the
-    /// field always holds a folded ^[a-z_][a-z0-9_]*$ prefix. Idempotent.
+    /// Filters each character for the existing ProjectService create-song path.
+    /// The text field uses acceptSongLabelEdit instead.
     @QtIgnored public nonisolated static func normalizeSongLabel(text: String) -> String {
         var out = ""
         out.reserveCapacity(text.count)
@@ -277,13 +277,24 @@ public final class SongListPresenter {
         return out
     }
 
-    /// QML entry for the mounted name field (bridgeable instance shape).
-    public func normalizeSongLabel(text: String) -> String {
-        Self.normalizeSongLabel(text: text)
+    /// Folds the whole proposed edit and accepts only an ASCII song name or empty text.
+    @QtIgnored public nonisolated static func acceptSongLabelEdit(previous: String, proposed: String) -> String {
+        let folded = proposed.lowercased()
+        guard let first = folded.utf8.first else { return folded }
+        guard first == 95 || (97...122).contains(first),
+            folded.utf8.dropFirst().allSatisfy({ $0 == 95 || (97...122).contains($0) || (48...57).contains($0) })
+        else { return previous }
+        return folded
     }
 
-    /// Exact-match over registered snapshot rows: mid-less table entries trip
-    /// the hint; unregistered strays reach the service refusal instead.
+    public func acceptSongLabelEdit(previous: String, proposed: String) -> String {
+        Self.acceptSongLabelEdit(previous: previous, proposed: proposed)
+    }
+
+    @QtIgnored public func registeredLabels() -> Set<String> {
+        Set(allListings.lazy.filter(\.registered).map(\.label))
+    }
+
     public func songLabelTaken(label: String) -> Bool {
         allListings.contains { $0.registered && $0.label == label }
     }

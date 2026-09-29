@@ -7,6 +7,12 @@ public struct SongImportProjectData: Equatable, Sendable {
     public var players: [MusicPlayer]
     public var voicegroupArgs: [String]
     public var canCreateVoicegroup: Bool
+
+    public init(players: [MusicPlayer], voicegroupArgs: [String], canCreateVoicegroup: Bool) {
+        self.players = players
+        self.voicegroupArgs = voicegroupArgs
+        self.canCreateVoicegroup = canCreateVoicegroup
+    }
 }
 
 /// Prepared MIDI and the identity and sound choices to commit.

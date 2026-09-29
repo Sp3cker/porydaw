@@ -18,6 +18,7 @@ import PorydawPlayback
 internal func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: String) {
     runSongRegistrationChecks(report, fixtureRoot: fixtureRoot)
     runSongImportChecks(report, fixtureRoot: fixtureRoot)
+    runMidiImportWizardChecks(report, fixtureRoot: fixtureRoot)
     runSongDebugLayoutChecks(report, fixtureRoot: fixtureRoot)
     runSongDeletionChecks(report, fixtureRoot: fixtureRoot)
     runSongRegionRegistrationChecks(report, fixtureRoot: fixtureRoot)

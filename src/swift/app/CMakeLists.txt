@@ -13,6 +13,7 @@ add_library(PorydawApp STATIC
     DocumentSession+Internals.swift
     DocumentWorkspace.swift
     NativeAudio.swift
+    export/WavExportJob.swift
     audio/PolyphonyPanelPresenter.swift
     ApplicationSession.swift
     ApplicationSession+Tabs.swift
@@ -23,6 +24,8 @@ add_library(PorydawApp STATIC
     ApplicationSession+Commands.swift
     ApplicationSession+Catalog.swift
     midiimport/ImportAnalysisSummary.swift
+    midiimport/MidiImportWizardState.swift
+    midiimport/MidiImportController.swift
     EditorCommandRouter.swift
     typography/Typography.swift
     transport/TransportBarPresenter.swift

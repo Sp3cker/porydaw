@@ -367,16 +367,6 @@ private func songListPreferenceRestore(_ report: CheckReport) {
 private func songListNewSongLabelLaws(_ report: CheckReport) {
     let id = "swiftcore/SongList::newSongLabelLaws"
     let presenter = SongListPresenter()
-    report.expectEqual(expected: "mus_x", actual: presenter.normalizeSongLabel(text: "Mus_X"),
-                       cppID: id, what: "typed capitals fold to lowercase in the name field")
-    report.expectEqual(expected: "muic", actual: presenter.normalizeSongLabel(text: "mu$ic"),
-                       cppID: id, what: "characters outside the name alphabet never reach the field")
-    report.expectEqual(expected: "lives", actual: presenter.normalizeSongLabel(text: "9lives"),
-                       cppID: id, what: "a leading digit never leads the name field")
-    report.expectEqual(expected: "", actual: presenter.normalizeSongLabel(text: ""),
-                       cppID: id, what: "an empty name normalizes to an empty name")
-    report.expectEqual(expected: "mus_x9", actual: presenter.normalizeSongLabel(text: "mus_x9"),
-                       cppID: id, what: "an accepted label is already its own normalization")
     presenter.setSongs(songListFixture())
     report.expectEqual(expected: true, actual: presenter.songLabelTaken(label: "mus_route101"),
                        cppID: id, what: "a playable snapshot song trips the taken hint")

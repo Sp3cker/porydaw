@@ -339,3 +339,5 @@ Gaps:
 - The existing New Song tests and the other `tst_ShellMenus` assertions
   stay unedited, except for the single File-order pin.
 - No `Qt.callLater`, no test-only properties, and no hard-coded pixels.
+
+Controller amendment (2026-09-29, after 232): the QtBridge surface guard rejects unobserved signals, so 232 shipped without `sourcePickerRequested()`/`warningRequested(title:message:)` and publishes interim request counters + warning text instead. This task declares both signals on `MidiImportController` together with their QML `Connections` consumers, emits them at the intent sites, and deletes the interim counters.
