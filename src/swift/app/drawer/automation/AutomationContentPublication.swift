@@ -78,7 +78,7 @@ extension AutomationPage {
 
     func xForTick(_ tick: Tick) -> Double {
         guard let session else { return 0 }
-        return session.camera.displayX(tick: Double(tick), origin: 0, dpr: devicePixelRatio)
+        return session.camera.viewX(tick: Double(tick), dpr: devicePixelRatio)
     }
     // MARK: Internals: publication
 

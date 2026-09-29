@@ -232,7 +232,7 @@ func checkThresholdDrawCell(_ report: CheckReport, session: DocumentSession) {
         report.fail(id, "no free grid cell for the threshold draw")
         return
     }
-    let pressX = session.camera.displayX(tick: Double(cell.tick), origin: 0,
+    let pressX = session.camera.viewX(tick: Double(cell.tick),
                                          dpr: grid.devicePixelRatio) + 2
     let dragX = pressX + 8
     guard pressX >= 4,

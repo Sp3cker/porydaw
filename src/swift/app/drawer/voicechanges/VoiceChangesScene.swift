@@ -151,11 +151,10 @@ struct VoiceChangesSceneSnapshot {
 enum VoiceChangesScene {
     // MARK: Plot queries
 
-    /// The shared camera's plot-local x for one tick. `origin: 0` is the page's
-    /// own body: the gutter is the plot origin, never part of the camera mapping.
+    /// The shared camera's plot-local x for one tick.
     static func xForTick(_ tick: Tick, camera: EditorCamera,
                          devicePixelRatio: Double) -> Double {
-        camera.displayX(tick: Double(tick), origin: 0, dpr: devicePixelRatio)
+        camera.viewX(tick: Double(tick), dpr: devicePixelRatio)
     }
 
 

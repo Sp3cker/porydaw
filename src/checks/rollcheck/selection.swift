@@ -13,8 +13,8 @@ extension PianoGrid {
     {
         guard session.camera.projection.row(forPitch: pitch) != PitchProjection.hiddenRow
         else { return nil }
-        let x0 = session.camera.displayX(tick: Double(tick), origin: 0, dpr: metrics.dpr)
-        let x1 = session.camera.displayX(tick: Double(end), origin: 0, dpr: metrics.dpr)
+        let x0 = session.camera.viewX(tick: Double(tick), dpr: metrics.dpr)
+        let x1 = session.camera.viewX(tick: Double(end), dpr: metrics.dpr)
         return metrics.noteBox(camera: session.camera, x0: x0, x1: x1, pitch: pitch)
     }
 }

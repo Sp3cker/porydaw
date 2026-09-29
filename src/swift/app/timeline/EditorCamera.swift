@@ -230,8 +230,8 @@ public struct EditorCamera: Sendable {
 
     public func contentX(tick: Double) -> Double { tick * pixelsPerTick - scrollX }
     public func tickAtContentX(_ x: Double) -> Double { (x + scrollX) / pixelsPerTick }
-    public func displayX(tick: Double, origin: Double, dpr: Double) -> Double {
-        let x = origin + contentX(tick: tick)
+    public func viewX(tick: Double, dpr: Double) -> Double {
+        let x = contentX(tick: tick)
         return dpr.isFinite && dpr > 0 ? (x * dpr).rounded() / dpr : x
     }
 
@@ -335,7 +335,7 @@ public struct EditorCamera: Sendable {
 
     @discardableResult public mutating func ensureTickVisible(_ tick: UInt64, dpr: Double) -> Bool {
         let physicalPixel = dpr.isFinite && dpr > 0 ? 1 / dpr : 1
-        let x = displayX(tick: Double(tick), origin: 0, dpr: dpr)
+        let x = viewX(tick: Double(tick), dpr: dpr)
         guard x < 0 || x > viewportWidth - physicalPixel else { return false }
         return setHScroll(Double(tick) * pixelsPerTick - viewportWidth * limits.revealViewportFraction)
     }
@@ -345,8 +345,8 @@ public struct EditorCamera: Sendable {
         let x0 = contentX(tick: Double(startTick)), x1 = contentX(tick: Double(endTick))
         let physicalPixel = dpr.isFinite && dpr > 0 ? 1 / dpr : 1
         let right = viewportWidth - physicalPixel
-        let displayed0 = displayX(tick: Double(startTick), origin: 0, dpr: dpr)
-        let displayed1 = displayX(tick: Double(endTick), origin: 0, dpr: dpr)
+        let displayed0 = viewX(tick: Double(startTick), dpr: dpr)
+        let displayed1 = viewX(tick: Double(endTick), dpr: dpr)
         let delta: Double
         if displayed1 - displayed0 > right { delta = preferEnd ? x1 - right : x0 }
         else if displayed1 > right { delta = x1 - right }

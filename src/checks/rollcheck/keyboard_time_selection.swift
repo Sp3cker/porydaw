@@ -44,9 +44,9 @@ func checkTimeSelectionHighlights(_ report: CheckReport, session: DocumentSessio
         let x0 = session.camera.contentTickX(tick: Double(seed.tick), dpr: grid.devicePixelRatio)
         let x1 = session.camera.contentTickX(tick: Double(seed.tick + seed.duration),
                                             dpr: grid.devicePixelRatio)
-        let plainBox = metrics.noteContentBox(
+        let plainBox = metrics.noteBox(
             camera: session.camera, x0: x0, x1: x1, pitch: seed.pitch)
-        let ghostBox = metrics.noteContentBox(
+        let ghostBox = metrics.noteBox(
             camera: session.camera, x0: x0, x1: x1, pitch: ghostPitch)
         guard plainBox.w > 0, plainBox.h > 0, ghostBox.w > 0, ghostBox.h > 0 else {
             report.fail(id, "time-scoped fixtures have no projected boxes")

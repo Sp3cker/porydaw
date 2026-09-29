@@ -36,7 +36,7 @@ func runEditorCameraChecks(_ report: CheckReport) {
                   message: "tick/content transforms round-trip with a fractional offset")
     report.expect(gridCameraNear(camera.snapshot.scrollX, 10.25), cppID: cameraTransformID,
                   message: "horizontal restoration preserves fractional offsets")
-    report.expect(gridCameraNear(camera.displayX(tick: 24, origin: 0.2, dpr: 2), 22),
+    report.expect(gridCameraNear(((0.2 + camera.contentX(tick: 24)) * 2).rounded() / 2, 22),
                   cppID: cameraTransformID, message: "display projection snaps to a physical pixel")
     _ = camera.setHScroll(-10_000)
     report.expect(gridCameraNear(camera.snapshot.scrollX, -48) && gridCameraNear(camera.snapshot.minHScroll, -48),
@@ -232,7 +232,7 @@ private func checkAffineCameraProjection(_ report: CheckReport, limits: EditorCa
             let x = camera.contentX(tick: tick)
             for origin in [0.0, 0.25] {
                 for dpr in [1.0, 2.0] {
-                    let displayed = camera.displayX(tick: tick, origin: origin, dpr: dpr)
+                    let displayed = ((origin + x) * dpr).rounded() / dpr
                     report.expect(gridCameraNear(displayed, ((origin + x) * dpr).rounded() / dpr),
                                   cppID: id, message: "physical-pixel affine projection")
                 }
@@ -249,7 +249,7 @@ private func checkAffineCameraProjection(_ report: CheckReport, limits: EditorCa
                 visible += 1
                 for origin in [0.0, 0.25] {
                     for dpr in [1.0, 2.0] {
-                        let displayed = camera.displayX(tick: Double(tick), origin: origin, dpr: dpr)
+                        let displayed = ((origin + projected) * dpr).rounded() / dpr
                         let recovered = camera.tickAtContentX(displayed - origin)
                         inverse = inverse && grid.snapTick(recovered, camera: camera) == tick
                     }

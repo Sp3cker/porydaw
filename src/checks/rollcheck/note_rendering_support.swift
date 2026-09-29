@@ -92,18 +92,27 @@ func noteBox(_ grid: PianoGrid, session: DocumentSession, note: Note)
 }
 
 @MainActor
+/// Content-space note box (scroll-free): consumers map it through `viewportPoint`.
 func contentNoteBox(
     _ grid: PianoGrid, session: DocumentSession, tick: Int, end: Int, pitch: Int
 )
     -> (x: Double, y: Double, w: Double, h: Double)? {
     let camera = session.camera
+    let metrics = grid.metrics
     guard camera.projection.row(forPitch: pitch) != PitchProjection.hiddenRow
     else { return nil }
-    return grid.metrics.noteContentBox(
-        camera: camera,
-        x0: camera.contentTickX(tick: Double(tick), dpr: grid.devicePixelRatio),
-        x1: camera.contentTickX(tick: Double(end), dpr: grid.devicePixelRatio),
-        pitch: pitch)
+    let row = camera.projection.row(forPitch: min(127, max(0, pitch)))
+    let x0 = camera.contentTickX(tick: Double(tick), dpr: grid.devicePixelRatio)
+    let x1 = camera.contentTickX(tick: Double(end), dpr: grid.devicePixelRatio)
+    guard row != PitchProjection.hiddenRow,
+          let top = camera.projection.contentRowTop(
+              row, keyHeight: camera.snapshot.keyHeight, dpr: metrics.dpr),
+          let bottom = camera.projection.contentRowBottom(
+              row, keyHeight: camera.snapshot.keyHeight, dpr: metrics.dpr)
+    else { return (x0, 0, 0, -metrics.pixel) }
+    return (x0, top + metrics.pixel, max(metrics.noteMinWidth, x1 - x0),
+            max(metrics.noteMinHeight * metrics.pixel, bottom - top - metrics.pixel)
+                - metrics.pixel)
 }
 
 @MainActor

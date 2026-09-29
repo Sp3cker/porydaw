@@ -128,12 +128,12 @@ private func checkTicksPerBeatKeepsGeometry(_ report: CheckReport) {
     var camera = geometryCamera(lengthTicks: 16 * 4 * 24)
     let original = (1...8).map { camera.contentX(tick: Double($0 * 24)) }
     let initialZoom = camera.snapshot.pixelsPerBeat
-    let originalColumns = (1...3).map { camera.displayX(tick: Double($0 * 24), origin: 0, dpr: 1) }
+    let originalColumns = (1...3).map { camera.viewX(tick: Double($0 * 24), dpr: 1) }
     camera.updateTimeDomain(ticksPerBeat: 48, lengthTicks: 16 * 4 * 48)
     report.expect(gridCameraNear(camera.snapshot.pixelsPerBeat, initialZoom, tolerance: 1e-9),
                   cppID: id, message: "A037 binding 48 TPB retains the default beat zoom")
     for beat in 1...3 {
-        report.expect(abs(camera.displayX(tick: Double(beat * 48), origin: 0, dpr: 1)
+        report.expect(abs(camera.viewX(tick: Double(beat * 48), dpr: 1)
                           - originalColumns[beat - 1]) <= 1,
                       cppID: id, message: "A039 beat \(beat) retains its display column")
     }

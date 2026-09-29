@@ -250,9 +250,9 @@ extension PianoGrid {
         let reach = metrics.edgeGripReach
         let rect = metrics.noteRect(
             camera: session.camera,
-            x0: session.camera.displayX(tick: Double(note.tick), origin: 0, dpr: metrics.dpr),
-            x1: session.camera.displayX(
-                tick: Double(note.tick + note.duration), origin: 0, dpr: metrics.dpr),
+            x0: session.camera.viewX(tick: Double(note.tick), dpr: metrics.dpr),
+            x1: session.camera.viewX(
+                tick: Double(note.tick + note.duration), dpr: metrics.dpr),
             pitch: note.pitch)
         guard y >= rect.y, y < rect.y + rect.h else { return (.none, false) }
         let right = rect.x + rect.w

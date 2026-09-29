@@ -141,9 +141,7 @@ public struct AutomationProjection {
     /// The display x of a tick: the camera's projection, snapped to the physical
     /// pixel grid exactly as the roll and every other page snap theirs.
     public func x(_ tick: Tick) -> Double {
-        let value = camera.contentX(tick: Double(tick))
-        let scale = bounds.devicePixelRatio
-        return scale > 0 ? (value * scale).rounded() / scale : value
+        camera.viewX(tick: Double(tick), dpr: bounds.devicePixelRatio)
     }
 
     /// The raw (unsnapped) tick under an x, clamped to `[0, songEnd]`.

@@ -170,7 +170,7 @@ func drawerVoiceOriginalMenuTransactions(_ report: CheckReport, suite: DocumentS
         document.lanePoints(track: 0, lane: .voice).first { $0.tick == 144 }?.value
     }
     func openMenu() {
-        _ = page.pointerPress(x: session.camera.displayX(tick: 144, origin: 0, dpr: 1),
+        _ = page.pointerPress(x: session.camera.viewX(tick: 144, dpr: 1),
                               y: 10, surface: 1, button: 2, modifiers: 0)
     }
     let before = DocumentSnapshot(document)

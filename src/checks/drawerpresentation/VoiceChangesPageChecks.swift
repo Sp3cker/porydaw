@@ -137,7 +137,7 @@ struct drawerVoiceVoiceChangesFixture {
     /// Plot-local x of one tick through the shared camera, which is the space
     /// the page's own input arrives in.
     func markerX(_ tick: Tick) -> Double {
-        session.camera.displayX(tick: Double(tick), origin: 0, dpr: 1)
+        session.camera.viewX(tick: Double(tick), dpr: 1)
     }
 
     func marker(at tick: Tick) -> VoiceMarkerHandle? {

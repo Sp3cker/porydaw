@@ -102,8 +102,8 @@ extension PianoGrid {
             let displayed = displayedNote(note)
             let rect = metrics.noteRect(
                 camera: session.camera,
-                x0: session.camera.displayX(tick: Double(displayed.tick), origin: 0, dpr: metrics.dpr),
-                x1: session.camera.displayX(tick: Double(displayed.end), origin: 0, dpr: metrics.dpr),
+                x0: session.camera.viewX(tick: Double(displayed.tick), dpr: metrics.dpr),
+                x1: session.camera.viewX(tick: Double(displayed.end), dpr: metrics.dpr),
                 pitch: displayed.pitch)
             return rect.x < band.x + band.w && rect.x + rect.w > band.x
                 && rect.y < band.y + band.h && rect.y + rect.h > band.y

@@ -27,7 +27,7 @@ struct VelocityProjection: Sendable {
     }
 
     /// Scroll-stable x: the tick's content position without camera scroll,
-    /// snapped to the device grid exactly like `displayX` at zero scroll.
+    /// snapped to the device grid exactly like `viewX` at zero scroll.
     func stableXForTick(_ tick: Double) -> Double {
         guard let camera else { return 0 }
         return camera.contentTickX(tick: tick, dpr: devicePixelRatio)

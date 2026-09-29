@@ -102,8 +102,8 @@ public final class PitchBendPresenter {
         cancelAndClose()
         self.note = note
         noteEnd = end
-        let x0 = session.camera.displayX(tick: Double(note.tick), origin: 0, dpr: grid.devicePixelRatio)
-        let x1 = session.camera.displayX(tick: Double(end), origin: 0, dpr: grid.devicePixelRatio)
+        let x0 = session.camera.viewX(tick: Double(note.tick), dpr: grid.devicePixelRatio)
+        let x1 = session.camera.viewX(tick: Double(end), dpr: grid.devicePixelRatio)
         let row = session.camera.projection.row(forPitch: Int(note.pitch))
         anchorX = x0
         anchorWidth = max(grid.baseFontPx / 6, x1 - x0)

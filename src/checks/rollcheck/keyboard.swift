@@ -183,15 +183,15 @@ private func checkKeyboardKeepsEditedNoteVisible(_ report: CheckReport, session:
         _ = session.mutateCamera {
             _ = $0.setHScroll($0.contentX(tick: Double(parkedTick + seed.snap)) + 1 / dpr)
         }
-        report.expect(session.camera.displayX(tick: Double(parkedTick + seed.snap),
-                                               origin: 0, dpr: dpr) < 0,
+        report.expect(session.camera.viewX(tick: Double(parkedTick + seed.snap),
+                                               dpr: dpr) < 0,
                       cppID: id, message: "the next nudge starts left of the viewport")
         grid.performCommand(command: EditCommand.nudgeRight.rawValue)
         guard let nudged = session.document.note(seed.id) else {
             report.fail(id, "nudge lost the keep-visible note")
             return
         }
-        let startX = session.camera.displayX(tick: Double(nudged.tick), origin: 0, dpr: dpr)
+        let startX = session.camera.viewX(tick: Double(nudged.tick), dpr: dpr)
         report.expect(nudged.tick == parkedTick + seed.snap && startX == 0,
                       cppID: id, message: "Right reveals the parked note at the left edge")
         let cellWidth = session.camera.contentX(tick: Double(parkedTick + 2 * seed.snap))
@@ -206,10 +206,10 @@ private func checkKeyboardKeepsEditedNoteVisible(_ report: CheckReport, session:
                 report.fail(id, "repeated nudge lost the keep-visible note")
                 return
             }
-            let left = session.camera.displayX(tick: Double(current.tick), origin: 0, dpr: dpr)
-            let right = session.camera.displayX(tick: Double(UInt64(current.tick)
+            let left = session.camera.viewX(tick: Double(current.tick), dpr: dpr)
+            let right = session.camera.viewX(tick: Double(UInt64(current.tick)
                                                               + UInt64(current.duration)),
-                                                origin: 0, dpr: dpr)
+                                                dpr: dpr)
             everyRideVisible = everyRideVisible && left >= 0
                 && right <= session.camera.snapshot.viewportWidth - 1 / dpr
         }
@@ -224,10 +224,10 @@ private func checkKeyboardKeepsEditedNoteVisible(_ report: CheckReport, session:
                 report.fail(id, "return nudge lost the keep-visible note")
                 return
             }
-            let left = session.camera.displayX(tick: Double(current.tick), origin: 0, dpr: dpr)
-            let right = session.camera.displayX(tick: Double(UInt64(current.tick)
+            let left = session.camera.viewX(tick: Double(current.tick), dpr: dpr)
+            let right = session.camera.viewX(tick: Double(UInt64(current.tick)
                                                               + UInt64(current.duration)),
-                                                origin: 0, dpr: dpr)
+                                                dpr: dpr)
             everyReturnVisible = everyReturnVisible && left >= 0
                 && right <= session.camera.snapshot.viewportWidth - 1 / dpr
         }

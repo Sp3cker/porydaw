@@ -45,10 +45,10 @@ func pencilFreeCell(
             let cell = grid.gridCell(at: tick)
             let duration = fractional ? step : cell.duration
             guard fractional || (tick - cell.start) % duration == 0 else { continue }
-            let left = camera.displayX(tick: Double(tick), origin: 0, dpr: grid.devicePixelRatio)
-            let right = camera.displayX(tick: Double(tick + duration), origin: 0,
+            let left = camera.viewX(tick: Double(tick), dpr: grid.devicePixelRatio)
+            let right = camera.viewX(tick: Double(tick + duration),
                                         dpr: grid.devicePixelRatio)
-            let snapRight = camera.displayX(tick: Double(tick + step), origin: 0,
+            let snapRight = camera.viewX(tick: Double(tick + step),
                                             dpr: grid.devicePixelRatio)
             let center = (left + snapRight) / 2
             guard left >= 4, right <= snapshot.viewportWidth - 4,
@@ -420,8 +420,8 @@ private func checkDrawLatchAndCancel(_ report: CheckReport, session: DocumentSes
             else { continue }
             for candidateX in [500.0, 550.0, 450.0, 600.0, 400.0] {
                 let tick = Int(session.camera.tickAtContentX(candidateX)) / snap * snap
-                let x = session.camera.displayX(
-                    tick: Double(tick), origin: 0, dpr: grid.devicePixelRatio)
+                let x = session.camera.viewX(
+                    tick: Double(tick), dpr: grid.devicePixelRatio)
                 let occupied = rollNoteRects(grid).contains { rect in
                     rect.x < x + 20 && rect.x + rect.width > x
                         && rect.y <= candidateY && rect.y + rect.height >= candidateY

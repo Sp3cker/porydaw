@@ -416,25 +416,6 @@ struct GridMetrics {
         return (r.x, r.y, r.w, r.h - pixel)
     }
 
-    func noteContentRect(camera: EditorCamera, x0: Double, x1: Double, pitch: Int) ->
-        (x: Double, y: Double, w: Double, h: Double) {
-        let row = camera.projection.row(forPitch: min(127, max(0, pitch)))
-        guard row != PitchProjection.hiddenRow,
-              let top = camera.projection.contentRowTop(
-                row, keyHeight: camera.snapshot.keyHeight, dpr: dpr),
-              let bottom = camera.projection.contentRowBottom(
-                row, keyHeight: camera.snapshot.keyHeight, dpr: dpr)
-        else { return (x0, 0, 0, 0) }
-        return (x0, top + pixel, max(noteMinWidth, x1 - x0),
-                max(noteMinHeight * pixel, bottom - top - pixel))
-    }
-
-    func noteContentBox(camera: EditorCamera, x0: Double, x1: Double, pitch: Int) ->
-        (x: Double, y: Double, w: Double, h: Double) {
-        let r = noteContentRect(camera: camera, x0: x0, x1: x1, pitch: pitch)
-        return (r.x, r.y, r.w, r.h - pixel)
-    }
-
     func edgeGripInnerReach(rectWidth: Double) -> Double {
         min(edgeGripReach, max(0.0, (rectWidth - moveZoneMinWidth) / 2.0))
     }

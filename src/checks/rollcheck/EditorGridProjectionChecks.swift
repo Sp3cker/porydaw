@@ -131,7 +131,7 @@ func checkProjection(
         projected,
         cppID: projectionID, message: "known note rectangle equals the camera projection")
 
-    let zeroX = session.camera.displayX(tick: 0, origin: 0, dpr: grid.devicePixelRatio)
+    let zeroX = session.camera.viewX(tick: 0, dpr: grid.devicePixelRatio)
     let maskSlot = Int(RollPaletteSlot.preRollMask.rawValue)
     let maskPublished =
         contentProbe.palette.indices.contains(maskSlot)
@@ -199,8 +199,8 @@ func checkProjection(
         else { continue }
         for candidateX in [500.0, 550.0, 450.0, 600.0, 400.0] {
             let tick = Int(session.camera.tickAtContentX(candidateX)) / snap * snap
-            let x = session.camera.displayX(
-                tick: Double(tick), origin: 0, dpr: grid.devicePixelRatio)
+            let x = session.camera.viewX(
+                tick: Double(tick), dpr: grid.devicePixelRatio)
             let occupied = session.document.notes(in: grid.trackIndex).contains { note in
                 guard let box = viewBox(note) else { return false }
                 return box.x < x + 20 && box.x + box.w > x

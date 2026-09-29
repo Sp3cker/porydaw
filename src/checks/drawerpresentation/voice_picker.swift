@@ -144,7 +144,7 @@ func drawerVoiceOriginalPickerRows(_ report: CheckReport, suite: DocumentSession
         }
     }
     func open(_ tick: Tick) {
-        _ = page.pointerDoubleClick(x: session.camera.displayX(tick: Double(tick), origin: 0, dpr: 1), y: 10)
+        _ = page.pointerDoubleClick(x: session.camera.viewX(tick: Double(tick), dpr: 1), y: 10)
     }
     func expect(_ condition: @autoclosure () -> Bool, _ line: Int) {
         report.expect(condition(), cppID: "drawerpresentation/DrawerPresentationTest::voicePickerTransactions",
