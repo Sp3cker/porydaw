@@ -6,7 +6,7 @@ Spec sources: `spec.md` export contract; `inventory.md` WAV rows; `verification.
 
 ## Hard obligations (extracted)
 
-- Capture the **unsaved** document + effective bank + song/engine settings; private renderer holds captured data/lease for its whole lifetime; source-session/job teardown must not invalidate a borrowed bank (spec.md:40).
+- Capture the **live unsaved session state** — user ruling 2026-09-29: the export renders what the app currently sounds like, not what's on disk. That means the *edit-buffer* document (all in-flight edits, nothing re-read from the project file), the *effective* bank as currently mounted (including an unsaved bank selection/lease), and the engine/song settings as currently applied. The renderer holds the captured data/lease for its whole lifetime; source-session or job teardown must not invalidate a borrowed bank (spec.md:40).
 - Options: 32000/44100/48000 Hz (48k default); looping mode loops 1–99 (default 2), fade 0–60 s (default 5); non-loop tail 0–60 s (default 3). Live m:ss duration preview; loop-vs-tail control swap; remember output dir (`lastWavExportDir`, default MIDI dir); suggested name = song label + `.wav`.
 - Duration law: `fadeStart = loopStart + loopCount*(loopEnd-loopStart)`; `total = fadeStart + round(fade*rate)`; non-loop `total = length + round(tail*rate)`; linear fade gain `1→(pos-fadeStart)/fadeLength`; zero-fade/tail and terminal-frame semantics per `wavexport.cpp:45-57,174-178`.
 - Propagate song volume/reverb + engine `maxPcmChannels`/`pcmMixer`/`pcmMixRate`/`analogFilter`. Suppression: `ResonanceSuppressor` pre-roll `kLatency` frames + final zero flush, duration unchanged.
@@ -30,5 +30,6 @@ Spec sources: `spec.md` export contract; `inventory.md` WAV rows; `verification.
 ## Open decisions for go-ahead
 
 - Effective-bank snapshot policy (VG05 freeze is the named prerequisite).
+- RESOLVED 2026-09-29 — snapshot source: the export uses the application's live unsaved state (edit-buffer document + effective mounted bank + applied settings). No disk round-trip, no implicit save.
 - `proof.tst_midiexport.txt`: all 23 MATCHED rows re-derive from the production owner or drop to PARTIAL — no row stays MATCHED on check-local predicates.
 - `wavexport.cpp` retirement belongs to P3-T5's commit once the replacement is proven.
