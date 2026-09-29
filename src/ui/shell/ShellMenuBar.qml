@@ -351,6 +351,29 @@ MenuBar {
             }
         }
         Menu {
+            id: toolsMenu
+            objectName: "shellToolsMenu"
+            title: qsTr("&Tools")
+            onAboutToShow: ++root.windowRoot.actionRevision
+            Instantiator {
+                model: shell.toolsActionIds
+                delegate: MenuItem {
+                    arrow: null
+                    indicator: null
+                    required property string modelData
+                    objectName: "shellAction_" + modelData
+                    text: root.nativeMenuText(modelData)
+                    enabled: {
+                        root.actionRevision
+                        return shell.actionEnabled(modelData)
+                    }
+                    onTriggered: shell.activate(modelData)
+                }
+                onObjectAdded: (index, object) => toolsMenu.insertItem(index, object)
+                onObjectRemoved: (index, object) => toolsMenu.removeItem(object)
+            }
+        }
+        Menu {
             id: helpMenu
             objectName: "shellHelpMenu"
             title: qsTr("&Help")

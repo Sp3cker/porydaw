@@ -212,6 +212,30 @@ TestCase {
         verify(waitForNative(function() { return !dialog.visible }, 5000), "import wizard closes")
     }
 
+    function auditSampleStudio(context) {
+        const picker = findChild(shell, "shellImportSamplePicker")
+        verify(picker !== null, "sample picker is mounted")
+        picker.selectedFile = "file://" + bootstrap.projectRoot + "/samplesources/hires_tone.wav"
+        shell.shellPresenter.activate("tools.import_sample")
+        verify(waitForNative(function() { return picker.visible }, 5000), "sample picker opens")
+        picker.accept()
+        verify(waitForNative(function() {
+            const opened = findChild(shell, "sampleStudioDialog")
+            return opened && opened.visible
+        }, 15000), "sample editor opens")
+        const dialog = findChild(shell, "sampleStudioDialog")
+        const result = Audit.audit(dialog.contentItem, grab)
+        record(context + " sample editor", result)
+        auditPopups(context + " sample editor", result.popups)
+        const advanced = findChild(dialog, "sampleStudioAdvanced")
+        if (advanced) {
+            mouseClick(advanced)
+            record(context + " sample advanced", Audit.audit(dialog.contentItem, grab))
+        }
+        dialog.close()
+        verify(waitForNative(function() { return !dialog.visible }, 5000), "editor closes")
+    }
+
     function auditClippedKeyboardLabel(context) {
         const tabs = shell.shellPresenter.session.songTabs
         const page = findChild(shell.sceneLoader.item, "songTab_" + tabs.selectedId)
@@ -336,6 +360,7 @@ TestCase {
         auditSettings(mode + " song")
         auditWavExport(mode + " song")
         auditImportWizard(mode + " song")
+        auditSampleStudio(mode + " song")
         report(mode + " song shell")
     }
 }

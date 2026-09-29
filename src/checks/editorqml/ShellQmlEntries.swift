@@ -19,7 +19,10 @@ enum ShellQmlRegistry {
             Entry(
                 name: "shell-text-contrast-\(state)-\(mode)",
                 inputFileName: "tst_TextContrast.qml",
-                fixtureFiles: songs("mus_route101") + ["test_midis/external_import.mid"],
+                fixtureFiles: songs("mus_route101") + [
+                    "test_midis/external_import.mid", "Makefile", "audio_rules.mk",
+                    "samplesources/hires_tone.wav",
+                ],
                 testFunctions: ["TextContrast::test_\(state)ShellText:\(mode)"])
         }
     }
@@ -317,6 +320,26 @@ enum ShellQmlRegistry {
                     "ShellExport::test_modalRenderBlocksInputAndCancels",
                     "ShellExport::test_writeFailureReportsAndLeavesNoFile",
                 ]),
+            Entry(
+                name: "shell-sample-studio", inputFileName: "tst_ShellSampleStudio.qml",
+                fixtureFiles: songs("mus_route101") + [
+                    "Makefile", "audio_rules.mk", "samplesources/hires_tone.wav",
+                    "samplesources/tone.flac",
+                ], testFunctions: [
+                    "ShellSampleStudio::test_dragZoomScrollSplitterAndSpace",
+                    "ShellSampleStudio::test_flacOpensEditor",
+                    "ShellSampleStudio::test_menuRouteAndCancel",
+                ]),
+            Entry(
+                name: "shell-sample-studio-commit", inputFileName: "tst_ShellSampleStudio.qml",
+                fixtureFiles: songs("mus_route101") + [
+                    "Makefile", "audio_rules.mk", "samplesources/hires_tone.wav",
+                    "samplesources/tone.flac",
+                ], testFunctions: ["ShellSampleStudio::test_commitAndCollision"]),
+            Entry(
+                name: "shell-sample-studio-refusal",
+                inputFileName: "tst_ShellSampleStudioRefusal.qml",
+                fixtureFiles: songs("mus_route101")),
             Entry(
                 name: "shell-settings", inputFileName: "tst_ShellSettings.qml",
                 fixtureFiles: songs("mus_route101"),

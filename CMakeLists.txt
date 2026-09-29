@@ -289,6 +289,9 @@ qt_add_qml_module(porydaw_app
         src/ui/shell/midiimport/ImportAnalysisPage.qml
         src/ui/shell/midiimport/ImportIdentityPage.qml
         src/ui/shell/midiimport/ImportSoundPage.qml
+        src/ui/shell/samplestudio/SampleStudioHost.qml
+        src/ui/shell/samplestudio/SampleStudioDialog.qml
+        src/ui/shell/samplestudio/SampleWaveform.qml
 )
 
 qt_add_resources(porydaw_app "swift_roll_tabart"

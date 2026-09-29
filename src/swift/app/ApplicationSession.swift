@@ -76,6 +76,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored
     let transportBar: TransportBarPresenter
     @QtIgnored let wavExport = WavExportPresenter()
+    @QtIgnored var sampleStudioWorkflow: SampleStudioWorkflow?
     @QtIgnored
     let voiceList = VoiceListController()
     @QtIgnored
@@ -266,6 +267,16 @@ public final class ApplicationSession: QmlInstantiableStatus {
     public func reportSettingsFailure(_ message: String) {
         lastSaveError = message
         operationFailed(message: message)
+    }
+    public func sampleStudio() -> SampleStudioWorkflow {
+        if let sampleStudioWorkflow { return sampleStudioWorkflow }
+        let workflow = SampleStudioWorkflow(session: self)
+        sampleStudioWorkflow = workflow
+        return workflow
+    }
+
+    public func closeSampleStudio() {
+        sampleStudioWorkflow?.close()
     }
     public func voiceListController() -> VoiceListController { voiceList }
 

@@ -79,6 +79,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         Action("view.voice_changes_drawer"),
         Action("view.polyphony_debugger"),
         Action("view.note_names"),
+        Action("tools.import_sample"),
         Action("help.about"),
     ]
     private static let byId = Dictionary(uniqueKeysWithValues: actions.map { ($0.id, $0) })
@@ -117,6 +118,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
     ]
     private static let viewIds = allActionIds.filter { $0.hasPrefix("view.") }
         + ["transport.follow_playhead"]
+    private static let toolsIds = ["tools.import_sample"]
     private static let contextHeadIds = ["edit.set_velocity"]
     private static let contextBodyIds = [
         "roll.copy", "roll.cut", "roll.duplicate_time", "roll.split", "roll.join", "roll.delete",
@@ -125,6 +127,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         "file.open_project": "Open Project...",
         "file.import_midi": "Import MIDI...",
         "file.export_wav": "Export WAV...",
+        "tools.import_sample": "Import Sample...",
         "edit.preferences": "Preferences...",
         "edit.song_settings": "Song Settings...",
         "edit.engine_settings": "Engine Settings...",
@@ -163,6 +166,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
     public var tracksActionIds: [String]
     public var transportActionIds: [String]
     public var viewActionIds: [String]
+    public var toolsActionIds: [String]
     public var windowActionIds: [String]
     public var contextHeadActionIds: [String]
     public var contextBodyActionIds: [String]
@@ -200,6 +204,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         fileQuitActionIds = Self.fileQuitIds
         editTopActionIds = Self.editTopIds
         editClipboardActionIds = Self.editClipboardIds
+        toolsActionIds = Self.toolsIds
         notesActionIds = Self.notesIds
         moveActionIds = Self.moveIds
         automationActionIds = Self.automationIds
@@ -268,6 +273,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         case "songs.find": return session.projectOpen
         case "file.new_song": return session.projectOpen && session.songOpen
         case "file.import_midi": return session.projectOpen
+        case "tools.import_sample": return session.projectOpen && !session.sampleStudio().editorOpen
         case "file.save_song": return session.songOpen && !session.saveInProgress
         case "file.register_song": return session.songOpen
             && session.songDockController().selectedTabRegistrationPending()
@@ -342,6 +348,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         case "songs.find": session.songDockController().presenter.focusSearch()
         case "file.new_song": session.songDockController().requestNewSong()
         case "file.import_midi": session.songDockController().midiImportController().requestImport()
+        case "tools.import_sample": session.sampleStudio().requestImport(slot: -1)
         case "file.save_song": session.requestSave()
         case "file.register_song": session.songDockController().requestRegisterSelectedTab()
         case "file.close_tab":

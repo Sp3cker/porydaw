@@ -93,6 +93,7 @@ extension ApplicationSession {
     }
 
     func finishProjectSwitch(_ candidate: ProjectSwitchCandidate) async {
+        closeSampleStudio()
         isReplacingProject = true
         await releaseTabs()
         await catalogService?.close()

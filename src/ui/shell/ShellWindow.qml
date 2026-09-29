@@ -133,6 +133,10 @@ ThemedWindow {
         function onCloseCancelled() { shell.closeCancelled() }
     }
     Connections {
+        target: shell.session.sampleStudio()
+        function onEditorOpenChanged() { ++root.actionRevision }
+    }
+    Connections {
         target: shell.session.songTabs
         function onSelectedTabShowsEventsChanged() { ++root.actionRevision }
         function onSelectedPageChanged() {
@@ -260,6 +264,12 @@ ThemedWindow {
         hostWindow: root
         colors: root.colors
         applicationSession: shell.session
+    }
+    SampleStudioHost {
+        workflow: shell.session.sampleStudio()
+        hostWindow: root
+        applicationSession: shell.session
+        colors: root.colors
     }
     WavExportSurface {
         presenter: shell.session.wavExportPresenter()

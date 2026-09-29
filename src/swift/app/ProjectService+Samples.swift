@@ -2,6 +2,12 @@ import Foundation
 import PorydawProject
 
 extension ProjectService {
+    /// Inspects sample-registration prerequisites on the store's owner.
+    public func probeSamples() async throws -> SampleRegistrar.Probe {
+        _ = try requireStore()
+        return SampleRegistrar.probe(projectRoot: projectRoot)
+    }
+
     /// Commits a sample and republishes refreshed banks to every sharing session.
     /// - Parameter request: Sample bytes and sidecar operation.
     /// - Returns: The commit receipt, including nonfatal provenance failure.

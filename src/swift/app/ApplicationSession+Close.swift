@@ -11,6 +11,7 @@ extension ApplicationSession {
     /// Never earlier: the QML surface binds to every tab's grid, pages and
     /// workspace until the scene is really gone.
     func releaseDocumentPresentation() {
+        closeSampleStudio()
         polyphony.setVisible(showing: false)
         polyphony.setContext(session: nil)
         songTabs.releaseAllDetached()
@@ -143,6 +144,7 @@ extension ApplicationSession {
     }
 
     func hostClosingImpl() {
+        closeSampleStudio()
         isDisposed = true
         if let pending = pendingProjectSwitch {
             pendingProjectSwitch = nil

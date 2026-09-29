@@ -27,12 +27,14 @@ ShellMenusSupport {
         var fileMenu = findChild(shell, "shellFileMenu")
         var transportMenu = findChild(shell, "shellTransportMenu")
         var viewMenu = findChild(shell, "shellViewMenu")
+        var toolsMenu = findChild(shell, "shellToolsMenu")
         var helpMenu = findChild(shell, "shellHelpMenu")
-        verify(fileMenu && transportMenu && viewMenu && helpMenu,
-               "File, Transport, View and Help menus are mounted")
+        verify(fileMenu && transportMenu && viewMenu && toolsMenu && helpMenu,
+               "File, Transport, View, Tools and Help menus are mounted")
         compare(fileMenu.title, "&File")
         compare(transportMenu.title, "Trans&port")
         compare(viewMenu.title, "&View")
+        compare(toolsMenu.title, "&Tools")
         compare(helpMenu.title, "&Help")
 
         var closeTab = checkMenuItem(fileMenu, "file.close_tab", "Close Tab")
@@ -75,6 +77,11 @@ ShellMenusSupport {
         compare(viewMenu.itemAt(7).objectName, "shellAction_transport.follow_playhead",
                 "Follow Playhead stays at the fork View position")
 
+        var importSample = checkMenuItem(toolsMenu, "tools.import_sample", "Import Sample")
+        verify(importSample.text.indexOf("Import Sample...") === 0,
+               "Tools displays the fork's Import Sample... label")
+        compare(importSample.enabled, false, "no project disables sample import")
+        menuOrder(toolsMenu, ["tools.import_sample"])
         var about = checkMenuItem(helpMenu, "help.about", "About porydaw")
         compare(about.enabled, true, "About stays available with no song")
     }
