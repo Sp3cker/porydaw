@@ -184,6 +184,7 @@ qt_add_library(porydaw_app STATIC
     src/app/qml_engine_host.cpp
     src/app/item_cursor.h
     src/app/item_cursor.cpp
+    src/render/display_list.c
     src/render/roll_content.h
     src/render/roll_projection.h
     src/render/roll_scene.h

@@ -243,6 +243,8 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
         MainActor.assumeIsolated {
             runEngineSettingsChecks(boxedSettings.report)
         }
+    case 34:
+        runDisplayListChecks(report)
     default:
         report.fail("swiftcore/suite-selection", "unknown suite \(suite)")
     }

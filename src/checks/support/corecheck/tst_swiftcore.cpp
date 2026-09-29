@@ -183,6 +183,11 @@ void SwiftCoreTest::themeColor()
     pdc_suite_run(PDC_SUITE_THEME_COLOR, reportSwiftCheck, this);
 }
 
+void SwiftCoreTest::displayList()
+{
+    pdc_suite_run(PDC_SUITE_DISPLAY_LIST, reportSwiftCheck, this);
+}
+
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments)
 {
     const QByteArray encodedRoot = QFile::encodeName(fixtureRoot);
