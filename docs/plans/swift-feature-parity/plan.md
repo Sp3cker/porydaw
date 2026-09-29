@@ -168,6 +168,7 @@ If these disagree, record the concrete behavior difference and resolve it before
 - Preserve independently owned work. Serialize edits to shared composition/build/registration files; parallelize domain work only with explicit ownership. Checkpoint accepted work before another task reuses its files; push every commit made. The accepted repair/integration batch is pushed as `fea4034d`.
 - Preserve the Linux Swift-main-actor/Qt GUI event-loop integration from `c47b55f4` and `ProjectContext`'s dedicated native-loader worker. The user reports that a Linux Qt timer/thread-affinity issue was fixed today; actor cleanup must not undo either ownership boundary.
 - Authorized bank-safety policy: extend existing project/window Save–Discard–Cancel handling to every dirty bank, including unbound banks. Ordinary Save stays current-song/current-bank-only; changing `-G` does not autosave or prompt. This explicitly repairs the inherited orphan-bank close gap without authorizing new unrelated UI.
+- Every new secondary window uses `DialogWindow` (`src/ui/shell/DialogWindow.qml`), the base the Settings window uses (user direction, 2026-09-29): a native `Qt.Dialog` top-level with the platform open animation and focus return to its `transientParent`. No in-scene `Popup`/`Dialog` stand-ins and no bare `ThemedWindow` for dialogs.
 
 ## Dependency-ordered work packages
 
@@ -193,7 +194,7 @@ P3's effective-bank snapshot contract and P4's bank assignment/commit-visibility
 1. **Accepted repair wave.** Tasks 4–8 repaired project operations, workspace/transport, QML consumers, queued voice identity and contrast. Covering native/QML/proof gates and task reviews passed; checkpoint accepted work before reusing its files.
 2. **Handoff: shared-bank safety and audio lifetime accepted.** Tasks 12/13 are complete at this checkpoint. The next implementation is task 14, same-file section preservation, followed by a bounded brief for the authorized all-dirty-bank close policy. The user requested a stop and handoff; these and other independent obligations remain pending for the successor.
 3. **Continue existing-surface parity (remaining P1/P5/P6/P7).** Freeze one behavior-sized brief at a time from current source and original assertions. Do not replay the three completed briefs or treat their partial proof coverage as full native parity.
-4. **Deferred delivery and release.** P2–P4 and absent P5/P7 workflows require scope expansion before implementation. Their dependency contracts below remain reference material, not authorization to add UI. P9 requires platform evidence; P10 stays blocked until the full required scope is accepted.
+4. **Released delivery (sprint 4).** User rulings (9)/(10) of 2026-09-28 release P3 WAV export and P2/P4 (Import MIDI wizard, Sample Studio, sample picker, SF2 zone picker); execution order and briefs are in [sprint-4.md](sprint-4.md). Theme/settings dialogs and absent P5/P7 workflows still require scope expansion. P9 requires platform evidence; P10 stays blocked until the full required scope is accepted.
 
 A checkpoint is a coherent accepted behavior boundary, not one commit per task. Earlier file-ownership checkpoints can satisfy a nearby milestone. Unreviewed or failing work is repaired before reuse.
 
