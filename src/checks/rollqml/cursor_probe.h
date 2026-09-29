@@ -11,7 +11,8 @@ class CursorProbe : public QObject
   public:
     using QObject::QObject;
 
-    Q_INVOKABLE bool artDiffers(QQuickItem *item, const QUrl &leftUrl, const QUrl &rightUrl,
-                                int extent) const;
-    Q_INVOKABLE bool matchesArt(QQuickItem *item, const QUrl &artUrl, int extent) const;
+    Q_INVOKABLE bool artDiffers(const QUrl &leftUrl, const QUrl &rightUrl,
+                                int extent, qreal devicePixelRatio) const;
+    Q_INVOKABLE bool matchesArt(QQuickItem *item, const QUrl &artUrl, int extent,
+                                qreal devicePixelRatio) const;
 };

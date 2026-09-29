@@ -296,20 +296,19 @@ TestCase {
                && baseline.noteX > baseline.viewportWidth,
                "the roll begins away from the event with a different note selected")
 
-        function clickEvent(index) {
+        function doubleClickEvent(index) {
             const row = findChild(pane, "polyphonyEventRow_" + index)
             verify(row !== null && row.width > 0 && row.height > 0,
                    "the addressed event delegate exists and has a pointer target")
             const location = row.mapToItem(pane, 0, 0)
             verify(location.y >= 0 && location.y + row.height <= pane.height,
                    "the addressed row is inside the visible debugger dock")
-            mouseClick(row, row.width / 2, row.height / 2)
             mouseDoubleClickSequence(row, row.width / 2, row.height / 2, Qt.LeftButton)
         }
 
-        clickEvent(2)
+        doubleClickEvent(2)
         tryVerify(function() {
-            return JSON.parse(bootstrap.polyphonyRevealState()).track === 0
+            return bootstrap.polyphonyRevealTrack() === 0
         }, 3000, "the real positioned-row gesture reaches the selected roll track")
         waitForRendering(pane)
         const hit = JSON.parse(bootstrap.polyphonyRevealState())
@@ -328,11 +327,11 @@ TestCase {
         verify(bootstrap.stagePolyphonyMiss(otherTrack, sounding),
                "the unused-key case restores a different track and the selected sounding note")
         tryVerify(function() {
-            return JSON.parse(bootstrap.polyphonyRevealState()).track === otherTrack
+            return bootstrap.polyphonyRevealTrack() === otherTrack
         }, 3000, "the miss starts on the alternate track after the QtBridge turn")
-        clickEvent(1)
+        doubleClickEvent(1)
         tryVerify(function() {
-            return JSON.parse(bootstrap.polyphonyRevealState()).track === 0
+            return bootstrap.polyphonyRevealTrack() === 0
         }, 3000, "the unused-key row dispatches to the roll selection consumer")
         waitForRendering(pane)
         const unused = JSON.parse(bootstrap.polyphonyRevealState())
@@ -348,11 +347,11 @@ TestCase {
         verify(bootstrap.stagePolyphonyMiss(otherTrack, sounding),
                "the expired-note case again restores the note on an alternate track")
         tryVerify(function() {
-            return JSON.parse(bootstrap.polyphonyRevealState()).track === otherTrack
+            return bootstrap.polyphonyRevealTrack() === otherTrack
         }, 3000, "the expired-note miss starts after the QtBridge turn")
-        clickEvent(0)
+        doubleClickEvent(0)
         tryVerify(function() {
-            return JSON.parse(bootstrap.polyphonyRevealState()).track === 0
+            return bootstrap.polyphonyRevealTrack() === 0
         }, 3000, "the expired-note row dispatches to the roll selection consumer")
         waitForRendering(pane)
         const expired = JSON.parse(bootstrap.polyphonyRevealState())
