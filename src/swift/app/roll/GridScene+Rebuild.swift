@@ -16,6 +16,8 @@ struct GridSceneInput {
     var displayedNote: (GridNote) -> (tick: Int, end: Int, pitch: Int) = {
         ($0.tick, $0.tick + $0.duration, $0.pitch)
     }
+    // False when displayedNote is the identity, so content keys skip the per-note spans.
+    var displacesNotes = false
     var selectedNotes: Set<NoteID> = []
     var drawPreview: (tick: Int, duration: Int, pitch: Int)?
     var lastVelocity: Int = 100

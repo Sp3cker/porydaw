@@ -413,3 +413,90 @@ index acce22e..ad3c8c5 100644
      }
  
      var isVoid: Bool {
+diff --git a/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp b/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp
+index 6dd803f..51ee057 100644
+--- a/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp
++++ b/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp
+@@ -4,6 +4,8 @@
+ #include "swiftmetaobjectbuilder.h"
+ 
+ #include <QtCore/qmetaobject.h>
++#include <QtCore/qpointer.h>
++#include <QtCore/qthread.h>
+ #include <QtCore/private/qmetaobjectbuilder_p.h>
+ 
+ #include "qobjectproxyimpl.h"
+@@ -27,6 +29,49 @@ static QByteArray generateFuncSignature(const std::string &name, const std::vect
+     return QMetaObject::normalizedSignature(sign.c_str());
+ }
+ 
++namespace {
++// Same-thread emissions batch here so one queued post + wakeup flushes a
++// whole event-loop turn in FIFO order; cross-thread keeps the direct path.
++struct PendingEmission {
++    QPointer<QObject> sender;
++    int signalIndex = -1;
++    std::vector<QVariant> args;
++};
++
++// The dispatcher is never deleted: thread-exit destruction can outlive Qt's
++// thread data. `spare` keeps the drained batch's capacity for the next turn.
++struct EmissionFlush {
++    std::vector<PendingEmission> pending;
++    std::vector<PendingEmission> spare;
++    QObject *dispatcher = nullptr;
++};
++
++thread_local EmissionFlush t_emissions;
++
++void flushEmissions()
++{
++    // Swap out first so emissions from slots start a new batch + post,
++    // keeping 'later than now' ordering. Dead senders are skipped.
++    std::vector<PendingEmission> batch;
++    batch.swap(t_emissions.pending);
++    t_emissions.pending.swap(t_emissions.spare);
++    std::vector<void *> argv;
++    for (auto &entry : batch) {
++        QObject *target = entry.sender.data();
++        if (!target)
++            continue;
++        argv.clear();
++        argv.push_back(nullptr); // Signal return value
++        for (auto &arg : entry.args)
++            argv.push_back(arg.data());
++        QMetaObject::activate(target, entry.signalIndex, argv.data());
++    }
++    batch.clear();
++    if (t_emissions.spare.capacity() < batch.capacity())
++        t_emissions.spare.swap(batch);
++}
++} // namespace
++
+ // BuilderImpl
+ 
+ class SwiftMetaObjectBuilder::BuilderImpl : public QDynamicMetaObjectData
+@@ -307,6 +352,23 @@ public:
+             convertedArgs.push_back(std::move(v));
+         }
+ 
++        if (obj && obj->thread() == QThread::currentThread()) {
++            // Batch; exactly one queued flush is posted per event-loop turn.
++            const bool wasEmpty = t_emissions.pending.empty();
++            if (!t_emissions.dispatcher)
++                t_emissions.dispatcher = new QObject();
++            PendingEmission entry;
++            entry.sender = obj;
++            entry.signalIndex = signalIndex;
++            entry.args = std::move(convertedArgs);
++            t_emissions.pending.push_back(std::move(entry));
++            if (wasEmpty) {
++                QMetaObject::invokeMethod(t_emissions.dispatcher, flushEmissions,
++                                           Qt::QueuedConnection);
++            }
++            return;
++        }
++
+         QMetaObject::invokeMethod(obj, [obj, signalIndex, args = std::move(convertedArgs)]() mutable {
+             std::vector<void*> argv;
+             argv.reserve(args.size() + 1);

@@ -43,12 +43,18 @@ extension PianoGrid {
             selectionBand != nil
                 && rightPointerModifiers & QtFact.controlModifier == 0
             ? [] : session.selectedNotes
+        let displacesNotes: Bool
+        switch gesture {
+        case .move, .resize: displacesNotes = true
+        default: displacesNotes = false
+        }
         return GridSceneInput(
             metrics: metrics, grid: session.grid, palette: palette, camera: session.camera,
             scale: session.scaleProjection,
             typography: typography, fontSpec: { self.fontSpec($0) },
             fonts: measurementFonts, notes: visibleNotes,
             displayedNote: { self.displayedNote($0) },
+            displacesNotes: displacesNotes,
             selectedNotes: selectedNotes,
             drawPreview: drawPreview, lastVelocity: lastVelocity,
             hoverKey: hoverKey,

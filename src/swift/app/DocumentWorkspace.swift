@@ -65,6 +65,9 @@ public final class DocumentWorkspace {
     private var lastPlayheadPresentation: SharedPlayheadPresentation?
     private var lastPolledPlaying: Bool?
     private var appliedSongConfig: SongConfig
+    // Camera work a hidden drawer section skipped; showing or re-attaching it
+    // replays one catch-up (zoom subsumes horizontal).
+    private var deferredCameraZoom: [DrawerSectionKind: Bool] = [:]
     private var isActive = false
     private var isTornDown = false
 
@@ -226,6 +229,9 @@ public final class DocumentWorkspace {
         drawer.attachSection(velocityPage)
         drawer.attachSection(voiceChangesPage)
         drawer.attachSection(automationPage)
+        for kind in [DrawerSectionKind.velocity, .voiceChanges, .automation] {
+            flushDeferredCamera(kind)
+        }
         playheadGuides.attach(session: session)
         let engineTracks = session.document.engineTracks
         let initialChunk: Int
@@ -363,15 +369,32 @@ public final class DocumentWorkspace {
         }
 
         guard change.contains(.scrollX) || change.contains(.zoom) else { return }
-        if change.contains(.zoom) {
-            otherEventsBand.refreshCamera()
-            velocityPage.refreshCamera()
-            voiceChangesPage.refreshCamera()
-            automationPage.refreshCamera()
-        } else {
-            velocityPage.refreshCamera()
-            automationPage.refreshHorizontalProjection()
+        let zoom = change.contains(.zoom)
+        if zoom { otherEventsBand.refreshCamera() }
+        for kind in [DrawerSectionKind.velocity, .voiceChanges, .automation] {
+            guard drawer.section(kind: kind.rawValue).visible else {
+                deferredCameraZoom[kind] = zoom || deferredCameraZoom[kind] == true
+                continue
+            }
+            applyCamera(kind, zoom: zoom)
         }
+    }
+
+    private func applyCamera(_ kind: DrawerSectionKind, zoom: Bool) {
+        switch (kind, zoom) {
+        case (.velocity, _): velocityPage.refreshCamera()
+        case (.voiceChanges, true): voiceChangesPage.refreshCamera()
+        case (.voiceChanges, false): break
+        case (.automation, true): automationPage.refreshCamera()
+        case (.automation, false): automationPage.refreshHorizontalProjection()
+        }
+    }
+
+    private func flushDeferredCamera(_ kind: DrawerSectionKind) {
+        guard drawer.section(kind: kind.rawValue).visible,
+            let zoom = deferredCameraZoom.removeValue(forKey: kind)
+        else { return }
+        applyCamera(kind, zoom: zoom)
     }
 
     private func sessionDidChange(_ change: SessionChange) {
@@ -426,10 +449,14 @@ public final class DocumentWorkspace {
             velocityPage.cancelSectionInteraction()
         }
         if !change.domains.intersection(fullPageDomains).isEmpty {
+            // Document rebuilds read the live camera, so they settle deferred camera work.
             velocityPage.refreshFromDocument()
+            deferredCameraZoom[.velocity] = nil
             voiceChangesPage.refreshFromDocument()
+            deferredCameraZoom[.voiceChanges] = nil
             if documentChanged || change.domains.contains(.bank) {
                 automationPage.refreshFromDocument()
+                deferredCameraZoom[.automation] = nil
             }
         } else if change.domains.contains(.cursor) {
             velocityPage.refreshEditCursor()
@@ -461,6 +488,7 @@ public final class DocumentWorkspace {
     }
 
     private func drawerSectionBecameVisible(_ kind: DrawerSectionKind) {
+        flushDeferredCamera(kind)
         guard let presentation = lastPlayheadPresentation else { return }
         switch kind {
         case .velocity:

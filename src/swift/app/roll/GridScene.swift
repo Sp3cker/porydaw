@@ -98,6 +98,7 @@ public final class GridScene {
         let lastVelocity: Int
     }
     @QtIgnored var paletteContentCache: (key: PaletteContentKey, data: Data)?
+    @QtIgnored var notesSectionCache: (key: RollNotesSectionKey, data: Data, count: Int)?
 
     public func drawingContent() -> Data { drawingContentData }
 

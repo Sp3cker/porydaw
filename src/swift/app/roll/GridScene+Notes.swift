@@ -9,10 +9,16 @@ extension GridScene {
         let palette = paletteContent(input)
         let key = RollDrawingContent.key(input, palette: palette)
         if key == drawingContentKey { return }
-        let packed = RollDrawingContent.pack(input, palette: palette)
-        drawingContentData = packed.data
+        let notes: (data: Data, count: Int)
+        if let cached = notesSectionCache, cached.key == key.notesSection {
+            notes = (cached.data, cached.count)
+        } else {
+            notes = RollDrawingContent.notesSection(input)
+            notesSectionCache = (key.notesSection, notes.data, notes.count)
+        }
+        drawingContentData = RollDrawingContent.pack(input, palette: palette, notes: notes.data)
         drawingContentKey = key
-        noteRecordCount = packed.noteRecords
+        noteRecordCount = notes.count
         contentRevision += 1
     }
 

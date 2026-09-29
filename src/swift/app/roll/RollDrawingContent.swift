@@ -39,10 +39,19 @@ public enum RollPaletteSlot: UInt16 {
     case noteVelocityZero
 }
 
-struct RollDrawingContentKey: Equatable {
+// Everything the notes section reads; draw-preview motion leaves it equal.
+struct RollNotesSectionKey: Equatable {
     var notes: [GridNote]
     var displayedSpans: [RollDrawingContent.DisplayedSpan]
     var selectedNotes: Set<NoteID>
+    var projection: PitchProjection
+    var timeSelection: AutomationTimeSelection?
+    var usedTrackCount: Int
+    var theme: ThemePreset
+}
+
+struct RollDrawingContentKey: Equatable {
+    var notesSection: RollNotesSectionKey
     var projection: PitchProjection
     var scale: ScaleProjection
     var baseFontPx: Double
@@ -98,19 +107,20 @@ enum RollDrawingContent {
         case modes = 10
     }
 
-    struct Result {
-        var data: Data
-        var noteRecords: Int
-    }
-
     static func key(_ input: GridSceneInput, palette: Data) -> RollDrawingContentKey {
         RollDrawingContentKey(
-            notes: input.notes,
-            displayedSpans: input.notes.map {
-                let span = input.displayedNote($0)
-                return DisplayedSpan(tick: span.tick, end: span.end, pitch: span.pitch)
-            },
-            selectedNotes: input.selectedNotes,
+            notesSection: RollNotesSectionKey(
+                notes: input.notes,
+                displayedSpans: input.displacesNotes
+                    ? input.notes.map {
+                        let span = input.displayedNote($0)
+                        return DisplayedSpan(tick: span.tick, end: span.end, pitch: span.pitch)
+                    } : [],
+                selectedNotes: input.selectedNotes,
+                projection: input.camera.projection,
+                timeSelection: input.timeSelection,
+                usedTrackCount: input.usedTrackCount,
+                theme: input.palette.theme),
             projection: input.camera.projection,
             scale: input.scale,
             baseFontPx: input.metrics.baseFontPx,
@@ -137,8 +147,7 @@ enum RollDrawingContent {
             selectedTrack: input.selectedTrack)
     }
 
-    static func pack(_ input: GridSceneInput, palette: Data) -> Result {
-        let (notes, noteRecords) = notesSection(input)
+    static func pack(_ input: GridSceneInput, palette: Data, notes: Data) -> Data {
         let sections: [(Kind, Data)] = [
             (.metrics, metricsSection(input)),
             (.fonts, fontsSection(input)),
@@ -152,9 +161,7 @@ enum RollDrawingContent {
             (.modes, modesSection(input)),
         ]
 
-        return Result(
-            data: DrawingContentBinary.frame(sections, kindValue: { $0.rawValue }),
-            noteRecords: noteRecords)
+        return DrawingContentBinary.frame(sections, kindValue: { $0.rawValue })
     }
 
     private static func metricsSection(_ input: GridSceneInput) -> Data {
@@ -268,7 +275,7 @@ enum RollDrawingContent {
         return d
     }
 
-    private static func notesSection(_ input: GridSceneInput) -> (Data, Int) {
+    static func notesSection(_ input: GridSceneInput) -> (Data, Int) {
         let projection = input.camera.projection
         let noteTable = ThemeColorTables.noteFillTable(input.palette.theme)
         let ghostTable = ThemeColorTables.ghostFillTable(input.palette.theme)

@@ -414,6 +414,13 @@ EditorDrawerTestSupport {
             }, 1000, "the pencil stroke paints its preview line")
             tryVerify(function() { return label && label.visible && label.text.length > 0 },
                       1000, "the pencil preview labels the drafted value")
+            // Bridge NOTIFYs arrive in coalesced batches; the label may settle a turn later.
+            tryVerify(function() {
+                var r = model.previewLabelRect
+                return Math.abs(label.x - r.x) < 0.01 && Math.abs(label.y - r.y) < 0.01
+                    && Math.abs(label.width - r.width) < 0.01
+                    && Math.abs(label.height - r.height) < 0.01
+            }, 1000, "the pencil preview labels the drafted value")
             var rect = model.previewLabelRect
             fuzzyCompare(label.x, rect.x, 0.01,
                          "the pencil preview labels the drafted value")
