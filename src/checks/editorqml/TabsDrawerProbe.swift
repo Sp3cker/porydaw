@@ -5,6 +5,8 @@ import QtBridge
 @MainActor
 @QtBridgeable
 public final class TabsDrawerProbe: QmlInstantiableStatus {
+    private weak var watchedDocument: DocumentSession?
+
     public init() {}
 
     public func componentComplete() {}
@@ -52,6 +54,42 @@ public final class TabsDrawerProbe: QmlInstantiableStatus {
             hash = hash &* 1_099_511_628_211
         }
         return "\(data.count):\(String(hash, radix: 16))"
+    }
+    public func projectTreeFingerprint(root: String) -> String {
+        let rootURL = URL(fileURLWithPath: root, isDirectory: true)
+        guard let enumerator = FileManager.default.enumerator(atPath: root) else { return "" }
+        var paths: [String] = []
+        for case let relative as String in enumerator {
+            let url = rootURL.appendingPathComponent(relative)
+            guard let properties = try? url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+            else { return "" }
+            guard properties.isSymbolicLink != true, properties.isRegularFile == true else { continue }
+            if relative != "settings.plist" { paths.append(relative) }
+        }
+        guard !paths.isEmpty else { return "" }
+        var hash: UInt64 = 14_695_981_039_346_656_037
+        for relative in paths.sorted() {
+            guard let data = try? Data(contentsOf: rootURL.appendingPathComponent(relative))
+            else { return "" }
+            for byte in relative.utf8 {
+                hash = (hash ^ UInt64(byte)) &* 1_099_511_628_211
+            }
+            for byte in data {
+                hash = (hash ^ UInt64(byte)) &* 1_099_511_628_211
+            }
+        }
+        return "\(paths.count):\(String(hash, radix: 16))"
+    }
+
+    public func watchSelectedDocument() -> Bool {
+        watchedDocument =
+            qmlChildren.compactMap { $0 as? ShellPresenter }
+            .first?.session.selectedDocument
+        return watchedDocument != nil
+    }
+
+    public func watchedDocumentReleased() -> Bool {
+        watchedDocument.map(\.isClosed) ?? true
     }
 
     public func fileBytesBase64(path: String) -> String {

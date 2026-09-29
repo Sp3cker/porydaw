@@ -16,6 +16,7 @@ Additional Swift counterpart: src/checks/workspace/session_view_state.swift
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
 Additional Swift counterpart: src/checks/editorqml/tst_ShellTabs.qml
+Additional Swift counterpart: src/checks/editorqml/tst_ShellTabsWindowClose.qml
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
@@ -794,31 +795,16 @@ Original expression:
         QCOMPARE(reopenedB->document().undoStack()->count(), undoB)
 
 A106 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:383
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        QCloseEvent close;
-        QApplication::sendEvent(&window, &close);
-Original expression:
-        QVERIFY(close.isAccepted())
+Disposition: MATCHED
+Mapping: S338
 
 A107 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:384
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(window.m_closeAccepted)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: MainWindow::m_closeAccepted is the fork's private close re-entry flag (host A175 retired the same flag); the Swift close outcome is the hidden window after an unprompted, uncancelled walk. [S338][S339]
 
 A108 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:386
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        window.close();
-Original expression:
-        QCOMPARE(checks::async_wait::waitUntil(
-                     [] { return true; }, [&window] { return window.m_closeAccepted; }, 30000, 1),
-                 checks::async_wait::Result::Ready)
+Disposition: MATCHED
+Mapping: S339
 
 A109 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:389
 Disposition: GAP
@@ -2076,3 +2062,9 @@ Anchor: message "A025 event-loop observations refuse any dropped view member whi
 
 S337 | sessionReloadRetainsViewState | src/checks/workspace/session_io.swift
 Anchor: message "A025 the ready replacement carries every seeded view member"
+
+S338 | test_aProjectSwitchThenWindowCloseKeepsSongBytes | src/checks/editorqml/tst_ShellTabsWindowClose.qml
+Anchor: message "A174/A106 the clean two-song window close is accepted with no prompt and no cancellation"
+
+S339 | test_aProjectSwitchThenWindowCloseKeepsSongBytes | src/checks/editorqml/tst_ShellTabsWindowClose.qml
+Anchor: message "A108 the real window close completes and hides the window within 30 s"

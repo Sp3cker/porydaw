@@ -8,6 +8,7 @@ Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — dele
 Additional Swift counterpart: src/checks/host/HostBehaviorChecks.swift :: hostNoteDiscovery + hostVelocityGestureContracts + hostVelocityExactGestures + hostLifecycleTermination + hostPlayheadFollowing + hostVelocityAxisVoice + hostCosmeticOnly + hostDocumentMutationUndoRedo + hostBandGeometry (SHA-256 4d82d459293030ecca63000a37e2645dd907c5e8e740379dff4bf6f23aeab2cc)
 Additional Swift counterpart: src/checks/workspace/session_view_state_fanout.swift (SHA-256 a856e21e1f145a33665fd7776a3b89635677e316ac21e3c6c6a3249339c587523)
 Additional QML counterpart: src/checks/editorqml/tst_ShellTabsClose.qml (SHA-256 39d1426b8b0ab46b1c6d02dd52c936fbfc5c09e19d758b13f3f9e4fc2d4c301a)
+Additional QML counterpart: src/checks/editorqml/tst_ShellTabsWindowClose.qml
 
 Additional Swift counterpart: src/checks/velocity/VelocityClickCancellationChecks.swift (SHA-256 35e2781445d126ca180843e5a513245d4b9d1312b9d3c885aede3c2b0ea48b8c)
 Additional QML counterpart: src/checks/editorqml/tst_ShellWindowVelocity.qml (SHA-256 074ce7a99b76b775e2c40ae062aa69e1289da921a9a3bfcaa7094567ec1d16bf)
@@ -991,14 +992,8 @@ A161 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_host
 Disposition: RETIRED-REPRESENTATION
 
 A162 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:670
-Disposition: GAP
-Mapping/reason: Swift ApplicationSession.openProject owns the staged project fingerprint non-empty; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-          const QByteArray projectBefore = directoryFingerprint(session->fixture->root());
-
-Original expression:
-  QVERIFY(!projectBefore.isEmpty())
+Disposition: MATCHED
+Mapping: S068
 
 A163 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:678
 Disposition: RETIRED-REPRESENTATION
@@ -1035,36 +1030,19 @@ A173 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_host
 Disposition: RETIRED-REPRESENTATION
 
 A174 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:697
-Disposition: GAP
-Mapping/reason: Swift ApplicationSession/SongTabsController close path owns the close event accepted by the host window; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-          QCloseEvent event;
-          QApplication::sendEvent(session->window.get(), &event);
-
-Original expression:
-  QVERIFY(event.isAccepted())
+Disposition: MATCHED
+Mapping: S069
 
 A175 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:698
 Disposition: RETIRED-REPRESENTATION
 
 A176 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:699
-Disposition: GAP
-Mapping/reason: Swift SongDocument state bytes owns the first song bytes preserved across the close; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(fileBytes(firstPath), beforeA)
+Disposition: MATCHED
+Mapping: S070
 
 A177 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:700
-Disposition: GAP
-Mapping/reason: Swift SongDocument state bytes owns the second song bytes preserved across the close; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(fileBytes(secondPath), beforeB)
+Disposition: MATCHED
+Mapping: S071
 
 A178 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:701
 Disposition: RETIRED-REPRESENTATION
@@ -1082,44 +1060,16 @@ A182 | songTabTeardownDestroysQuickWindowBeforeDocument | src/checks/host/tst_ho
 Disposition: RETIRED-REPRESENTATION
 
 A183 | songTabTeardownDestroysQuickWindowBeforeDocument | src/checks/host/tst_hostintegration.cpp:730
-Disposition: GAP
-Mapping/reason: Swift SongTabsController/SongTabSession teardown owns the quick window destroyed before the document (teardown order); no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-          SongDocument *const document = &session->active->document();
-          const auto order = std::make_shared<QStringList>();
-          QObject::connect(window, &QObject::destroyed, session->window.get(),
-                           [order, window](QObject *obj) {
-                               if (obj == window)
-                                   order->append(QStringLiteral("quickWindow"));
-                           });
-          QObject::connect(document, &QObject::destroyed, session->window.get(),
-                           [order, document](QObject *obj) {
-                               if (obj == document)
-                                   order->append(QStringLiteral("document"));
-                           });
-          session.reset();
-
-Original expression:
-  QCOMPARE(order->value(0), QStringLiteral("quickWindow"))
+Disposition: MATCHED
+Mapping: S072
 
 A184 | songTabTeardownDestroysQuickWindowBeforeDocument | src/checks/host/tst_hostintegration.cpp:731
-Disposition: GAP
-Mapping/reason: Swift SongTabsController/SongTabSession teardown owns the document destroyed second in the teardown order; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(order->value(1), QStringLiteral("document"))
+Disposition: MATCHED
+Mapping: S073
 
 A185 | songTabTeardownDestroysQuickWindowBeforeDocument | src/checks/host/tst_hostintegration.cpp:732
-Disposition: GAP
-Mapping/reason: Swift SongTabsController/SongTabSession teardown owns exactly two teardown notifications; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(order->size(), 2)
+Disposition: MATCHED
+Mapping: S074
 
 Remaining original source (closing sequence and helper bodies):
   ;
@@ -1548,3 +1498,24 @@ Source line: 799
 cppID: swiftcore/HostBehaviorChecks::seededContext
 Predicate: report.expect(first != nil, cppID: id, message: "A007: the route101 host session holds a steady 120-tick voice context")
 Anchor: message "A007: the route101 host session holds a steady 120-tick voice context"
+
+S068 | test_aProjectSwitchThenWindowCloseKeepsSongBytes | src/checks/editorqml/tst_ShellTabsWindowClose.qml
+Anchor: message "A162 the staged project tree fingerprints before the switch-and-close journey"
+
+S069 | test_aProjectSwitchThenWindowCloseKeepsSongBytes | src/checks/editorqml/tst_ShellTabsWindowClose.qml
+Anchor: message "A174/A106 the clean two-song window close is accepted with no prompt and no cancellation"
+
+S070 | test_aProjectSwitchThenWindowCloseKeepsSongBytes | src/checks/editorqml/tst_ShellTabsWindowClose.qml
+Anchor: message "A176 the window close preserves the first song's pinned MIDI bytes"
+
+S071 | test_aProjectSwitchThenWindowCloseKeepsSongBytes | src/checks/editorqml/tst_ShellTabsWindowClose.qml
+Anchor: message "A177 the window close preserves the second song's pinned MIDI bytes"
+
+S072 | test_cWindowCloseRetiresPageBeforeDocument | src/checks/editorqml/tst_ShellTabsWindowClose.qml
+Anchor: message "A183 the closing tab's page leaves the scene before its document is released"
+
+S073 | test_cWindowCloseRetiresPageBeforeDocument | src/checks/editorqml/tst_ShellTabsWindowClose.qml
+Anchor: message "A184 the closing tab's document is released after its page"
+
+S074 | test_cWindowCloseRetiresPageBeforeDocument | src/checks/editorqml/tst_ShellTabsWindowClose.qml
+Anchor: message "A185 the page-then-document teardown reports exactly two events"

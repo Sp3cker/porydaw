@@ -206,6 +206,9 @@ enum ShellQmlRegistry {
                 name: "shell-tabs-reload", inputFileName: "tst_ShellTabsReload.qml",
                 fixtureFiles: songs("mus_route101", "mus_littleroot_test", "mus_route102", "mus_gym")),
             Entry(
+                name: "shell-tabs-window-close", inputFileName: "tst_ShellTabsWindowClose.qml",
+                fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
+            Entry(
                 name: "shell-event-list-menus", inputFileName: "tst_ShellEventListMenus.qml",
                 fixtureFiles: songs("mus_route101")),
             Entry(
