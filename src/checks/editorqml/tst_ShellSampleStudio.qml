@@ -76,7 +76,7 @@ TestCase {
         verify(!row.enabled, "editor blocks duplicate import")
         editor.close()
         verify(waitForNative(function() { return !child("sampleStudioDialog") }, 5000), "Cancel tears down editor")
-        verify(!disk.fileExists(rootPath + "/sound/direct_sound_samples/hires_tone.wav"),
+        verify(!disk.exists(rootPath + "/sound/direct_sound_samples/hires_tone.wav"),
                "Cancel leaves project untouched")
     }
     function test_dragZoomScrollSplitterAndSpace() {
@@ -181,13 +181,13 @@ TestCase {
         verify(child("sampleStudioCommit").enabled, "new valid name can commit")
         mouseClick(child("sampleStudioCommit"))
         verify(waitForNative(function() {
-            return disk.fileExists(rootPath + "/sound/direct_sound_samples/hires_tone.wav")
+            return disk.exists(rootPath + "/sound/direct_sound_samples/hires_tone.wav")
                 && !child("sampleStudioDialog")
         }, 20000), "project receives committed WAV")
         verify(waitForNative(function() {
             return presenter.session.voiceListController().sampleSymbols().indexOf("DirectSoundWaveData_hires_tone") !== -1
         }, 15000), "catalog refresh exposes new symbol")
-        verify(disk.fileExists(rootPath + "/.porydaw/samples/hires_tone.json"), "sidecar saved")
+        verify(disk.exists(rootPath + "/.porydaw/samples/hires_tone.json"), "sidecar saved")
     }
     function test_flacOpensEditor() {
         openProject()

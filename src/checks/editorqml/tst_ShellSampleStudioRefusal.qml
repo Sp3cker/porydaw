@@ -38,7 +38,7 @@ TestCase {
         compare(alert.title, "Import Sample")
         verify(alert.text.indexOf("cannot find a wav2agb build rule") !== -1, "fork refusal")
         verify(!picker.visible && !child("sampleStudioDialog"), "no editor or picker")
-        verify(!disk.fileExists(bootstrap.projectRoot + "/sound/direct_sound_samples/hires_tone.wav"),
+        verify(!disk.exists(bootstrap.projectRoot + "/sound/direct_sound_samples/hires_tone.wav"),
                "refusal writes no sample")
         alert.close()
     }
