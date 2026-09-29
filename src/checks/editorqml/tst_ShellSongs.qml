@@ -329,6 +329,8 @@ TestCase {
             return session.songOpen && session.songTabs.selectedPage
                 && session.songTabs.selectedPage.isReady
         }, 30000), "the current source song is ready before the taken-name attempt")
+        verify(waitForNative(function() { return presenter().totalCount > 0 }, 5000),
+               "the Songs dock catalog is ready before checking the taken name")
         list().forceActiveFocus()
         keySequence(StandardKey.New)
         verify(waitForNative(function() { return controller().confirmation === "create" }, 5000),
@@ -870,6 +872,8 @@ TestCase {
         session.openProject(bootstrap.projectRoot)
         verify(waitForNative(function() { return session.projectOpen }, 30000),
                "the filter fixture project opens")
+        verify(waitForNative(function() { return presenter().totalCount > 0 }, 5000),
+               "the Songs dock catalog is ready before selecting a category")
         const search = findChild(shell, "songListSearch")
         const sort = findChild(shell, "songListSort")
         verify(search && sort && findChild(shell, "songListCategory"),
@@ -889,6 +893,8 @@ TestCase {
         const restored = shell.shellPresenter.session
         restored.openProject(bootstrap.projectRoot)
         verify(waitForNative(function() { return restored.projectOpen }, 30000))
+        verify(waitForNative(function() { return presenter().totalCount > 0 }, 5000),
+               "the reopened Songs dock catalog is ready before checking restored filters")
         tryVerify(function() {
             return findChild(shell, "songListSearch").text === "route"
                 && presenter().searchText === "route"
@@ -916,6 +922,8 @@ TestCase {
         const session = shell.shellPresenter.session
         session.openProject(bootstrap.projectRoot)
         verify(waitForNative(function() { return session.projectOpen }, 30000))
+        verify(waitForNative(function() { return presenter().totalCount > 0 }, 5000),
+               "the Songs dock catalog is ready before checking the missing category")
         tryCompare(presenter(), "categoryIndex", 0)
         compare(presenter().categoryPrefix(), "",
                 "a restored category the project does not have falls back to all songs")

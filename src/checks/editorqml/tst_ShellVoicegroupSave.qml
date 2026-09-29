@@ -208,6 +208,8 @@ ShellVoicegroupSupport {
         const controller = app.voiceListController()
         controller.selectSlot(0)
         const draft = controller.editorModel()
+        verify(waitForNative(function() { return controller.canMintSynths }, 5000),
+               "the deferred synth catalog is ready before minting")
         compare(controller.canMintSynths, true)
         draft.changeType(0, "DirectSoundWaveData_fixture_loop")
         verify(waitForNative(function() {
