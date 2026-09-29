@@ -77,7 +77,6 @@ endfunction()
 # with a debug app must not measure inflated audio DSP. -g stays on.
 set(PORYDAW_AUDIO_ALWAYS_OPTIMIZE_SRCS
     src/audio/miniaudio_impl.c
-    src/audio/stb_vorbis_impl.c
     src/audio/audioengine.cpp)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     foreach(PORYDAW_AUDIO_SRC IN LISTS PORYDAW_AUDIO_ALWAYS_OPTIMIZE_SRCS)
@@ -202,7 +201,6 @@ qt_add_library(porydaw_app STATIC
     src/audio/wavexport.cpp
     src/audio/wavexport.h
     src/audio/miniaudio_impl.c
-    src/audio/stb_vorbis_impl.c
     src/project/banklease.cpp
     src/project/banklease.h
     src/project/projectidentity.cpp
@@ -364,8 +362,6 @@ target_include_directories(porydaw_app PRIVATE
 )
 target_include_directories(porydaw_app SYSTEM PUBLIC
     ${PORYAAAA_DIR}/third_party
-    external/dr_libs
-    external/stb
     ${PORYAAAA_DIR}/plugin/porydaw/..
     ${PORYAAAA_DIR}/plugin/m4a
     ${PORYAAAA_DIR}/plugin/m4a/..
