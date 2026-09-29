@@ -1,6 +1,7 @@
 import Foundation
 import PorydawSample
 
+@MainActor
 internal func runSampleChecks(_ report: CheckReport) {
     runDecoderChecks(report)
     runCompressedDecoderChecks(report)
@@ -10,4 +11,5 @@ internal func runSampleChecks(_ report: CheckReport) {
     runAnalysisChecks(report)
     runRegistrationChecks(report)
     runProvenanceChecks(report)
+    runEditorPresenterChecks(report)
 }

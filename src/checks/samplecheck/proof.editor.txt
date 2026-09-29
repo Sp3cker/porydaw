@@ -3,16 +3,17 @@ Assertion correspondence: samplecheck/editor.cpp
 Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/samplecheck/editor.cpp
 Original SHA-256: 1ae310e3a37396448c692a91dbd51cac6ed6681ebf0b55e352ee2c488545f99b
-Swift counterpart: none identified
+Swift counterpart: src/checks/samplecheck/EditorPresenterChecks.swift
+Swift counterpart SHA-256 (EditorPresenterChecks.swift): c56f86d7a9a5b7f4452baa2645cffce975ad95a6af005742e15b07515ce062ba
 
-Inventory: 130 sites across 17 test methods (editorAuditionStrip, editorCommit, editorCrossfade, editorDrag, editorLoopPopulate, editorLoopRefine, editorPitchAdoption, editorScroll, editorSplitter, editorUndo, pipelineCropNormalize, pipelineKeyOverride, pipelineLoopToggle, pipelinePrefillCollision, pipelinePreparedDefaults, pipelineRateCommit, spaceAudition). Tally: 80 GAP, 50 NATIVE, 0 MATCHED, 0 PARTIAL.
+Inventory: 130 sites across 17 test methods (editorAuditionStrip, editorCommit, editorCrossfade, editorDrag, editorLoopPopulate, editorLoopRefine, editorPitchAdoption, editorScroll, editorSplitter, editorUndo, pipelineCropNormalize, pipelineKeyOverride, pipelineLoopToggle, pipelinePrefillCollision, pipelinePreparedDefaults, pipelineRateCommit, spaceAudition). Tally: 39 GAP, 41 NATIVE, 36 MATCHED, 14 RETIRED-REPRESENTATION, 0 PARTIAL.
 
-Command: deno task verify --filter samplecheck --verbose
-Result: pending integrated run.
+Command: deno task checks --filter samplecheck
+Result: controller-observed 2026-09-29 — samplecheck 1/38 ok; proof check --executed: 0 not executed (presenter rows by 249; remaining GAP rows owned by 250–253).
 
 A001 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:81
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness scratch-directory scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   #include "checks/samplecheck/fixtures.h"
   #include "checks/samplecheck/samplecheck.h"
@@ -99,8 +100,8 @@ Original expression:
   QVERIFY2(scratch.isValid(), "pipeline-prefill scratch directory is available")
 
 A002 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:83
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness project-fixture scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
       const QString root = scratch.filePath(QStringLiteral("wavproj"));
@@ -109,8 +110,8 @@ Original expression:
   QVERIFY2(createWav2AgbProject(root), "pipeline-prefill synthetic project is created")
 
 A003 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:87
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S001
 Source context since previous assertion:
   ;
       const QString registeredSampleName = QStringLiteral("samplecheck_tone");
@@ -122,8 +123,8 @@ Original expression:
                qPrintable(error))
 
 A004 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:90
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S002
 Source context since previous assertion:
   ;
       ImportedSample prepared;
@@ -135,8 +136,8 @@ Original expression:
                "prepared sample re-imports from the project")
 
 A005 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:101
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QWidget findChild lookup; the QML dialog binds presenter properties.
 Source context since previous assertion:
   ;
       const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
@@ -151,23 +152,28 @@ Original expression:
   QVERIFY2(nameEdit && addButton && status, "pipeline prefill widgets found")
 
 A006 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:102
-Disposition: NATIVE
+Disposition: MATCHED
+Mapping: S003
 
 A007 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:103
-Disposition: NATIVE
+Disposition: MATCHED
+Mapping: S004
 
 A008 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:104
-Disposition: NATIVE
+Disposition: MATCHED
+Mapping: S005
 
 A009 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:106
-Disposition: NATIVE
+Disposition: MATCHED
+Mapping: S006
 
 A010 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:107
-Disposition: NATIVE
+Disposition: MATCHED
+Mapping: S007
 
 A011 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:108
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S008
 Source context since previous assertion:
   ;
 
@@ -176,11 +182,12 @@ Original expression:
                "sampleName returns the edited name")
 
 A012 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:111
-Disposition: NATIVE
+Disposition: MATCHED
+Mapping: S009
 
 A013 | SampleProcessingTest::pipelinePreparedDefaults | src/checks/samplecheck/editor.cpp:118
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S029
 Source context since previous assertion:
   ;
   }
@@ -196,8 +203,8 @@ Original expression:
                qPrintable(error))
 
 A014 | SampleProcessingTest::pipelinePreparedDefaults | src/checks/samplecheck/editor.cpp:125
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QWidget findChild lookup; the QML dialog binds presenter properties.
 Source context since previous assertion:
   ;
       SampleEditorDialog dialog(prepared, [](const QString &, QString *) { return true; });
@@ -209,8 +216,8 @@ Original expression:
   QVERIFY2(baseKey && fineTune && document, "prepared pipeline controls found")
 
 A015 | SampleProcessingTest::pipelinePreparedDefaults | src/checks/samplecheck/editor.cpp:127
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S010
 Source context since previous assertion:
   ;
       const ProcessedSample &initial = document->processed();
@@ -221,11 +228,12 @@ Original expression:
                "prepared defaults keep the source header verbatim")
 
 A016 | SampleProcessingTest::pipelinePreparedDefaults | src/checks/samplecheck/editor.cpp:130
-Disposition: NATIVE
+Disposition: MATCHED
+Mapping: S011
 
 A017 | SampleProcessingTest::pipelinePreparedDefaults | src/checks/samplecheck/editor.cpp:135
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S012
 Source context since previous assertion:
   ;
       bool dataFaithful = true;
@@ -236,8 +244,8 @@ Original expression:
   QVERIFY2(dataFaithful, "prepared defaults render the data verbatim")
 
 A018 | SampleProcessingTest::pipelineKeyOverride | src/checks/samplecheck/editor.cpp:142
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S030
 Source context since previous assertion:
   ;
   }
@@ -253,8 +261,8 @@ Original expression:
                qPrintable(error))
 
 A019 | SampleProcessingTest::pipelineKeyOverride | src/checks/samplecheck/editor.cpp:148
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QWidget findChild lookup; the QML dialog binds presenter properties.
 Source context since previous assertion:
   ;
       SampleEditorDialog dialog(prepared, [](const QString &, QString *) { return true; });
@@ -265,8 +273,8 @@ Original expression:
   QVERIFY2(baseKey && document, "pipeline key controls found")
 
 A020 | SampleProcessingTest::pipelineKeyOverride | src/checks/samplecheck/editor.cpp:150
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S013
 Source context since previous assertion:
   ;
       baseKey->setValue(59);
@@ -277,8 +285,8 @@ Original expression:
                "key edit flows into the render and drops the override")
 
 A021 | SampleProcessingTest::pipelineKeyOverride | src/checks/samplecheck/editor.cpp:154
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S014
 Source context since previous assertion:
   ;
       baseKey->setValue(58);
@@ -328,8 +336,8 @@ Original expression:
                "loop toggle renders a one-shot")
 
 A025 | SampleProcessingTest::pipelineRateCommit | src/checks/samplecheck/editor.cpp:187
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S031
 Source context since previous assertion:
   ;
   }
@@ -354,8 +362,8 @@ Original expression:
                qPrintable(error))
 
 A026 | SampleProcessingTest::pipelineRateCommit | src/checks/samplecheck/editor.cpp:194
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QWidget findChild lookup; the QML dialog binds presenter properties.
 Source context since previous assertion:
   ;
       SampleEditorDialog dialog(prepared, [](const QString &, QString *) { return true; });
@@ -368,8 +376,8 @@ Original expression:
                "pipeline rate controls found")
 
 A027 | SampleProcessingTest::pipelineRateCommit | src/checks/samplecheck/editor.cpp:202
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S015
 Source context since previous assertion:
   ;
 
@@ -383,8 +391,8 @@ Original expression:
   QVERIFY2(!document->processed().looped, "rate fixture is in one-shot mode")
 
 A028 | SampleProcessingTest::pipelineRateCommit | src/checks/samplecheck/editor.cpp:207
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S036
 Source context since previous assertion:
   ;
 
@@ -397,8 +405,8 @@ Original expression:
                "typing a rate does not re-render per keystroke")
 
 A029 | SampleProcessingTest::pipelineRateCommit | src/checks/samplecheck/editor.cpp:210
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S016
 Source context since previous assertion:
   ;
       QTest::keyClick(rateEdit, Qt::Key_Return);
@@ -407,8 +415,8 @@ Original expression:
   QCOMPARE(document->params().targetRate, targetRate)
 
 A030 | SampleProcessingTest::pipelineRateCommit | src/checks/samplecheck/editor.cpp:211
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S017
 Source context since previous assertion:
   ;
 
@@ -416,8 +424,8 @@ Original expression:
   QCOMPARE(document->processed().declaredRate, quint32(declaredRate))
 
 A031 | SampleProcessingTest::pipelineRateCommit | src/checks/samplecheck/editor.cpp:212
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S018
 Source context since previous assertion:
   ;
 
@@ -425,8 +433,8 @@ Original expression:
   QVERIFY2(document->params().exactPitchOverride == 0, "rate edit drops the verbatim agbp")
 
 A032 | SampleProcessingTest::pipelineRateCommit | src/checks/samplecheck/editor.cpp:215
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S019
 Source context since previous assertion:
   ;
       rateCombo->setCurrentIndex(1);
@@ -437,8 +445,8 @@ Original expression:
                "preset pick applies and restores the source rate")
 
 A033 | SampleProcessingTest::pipelineCropNormalize | src/checks/samplecheck/editor.cpp:223
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S032
 Source context since previous assertion:
   ;
   }
@@ -454,8 +462,8 @@ Original expression:
                qPrintable(error))
 
 A034 | SampleProcessingTest::pipelineCropNormalize | src/checks/samplecheck/editor.cpp:231
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QWidget findChild lookup; the QML dialog binds presenter properties.
 Source context since previous assertion:
   ;
       SampleEditorDialog dialog(prepared, [](const QString &, QString *) { return true; });
@@ -468,8 +476,8 @@ Original expression:
   QVERIFY2(loopOn && cropEnd && normalize && document, "pipeline crop controls found")
 
 A035 | SampleProcessingTest::pipelineCropNormalize | src/checks/samplecheck/editor.cpp:234
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S020
 Source context since previous assertion:
   ;
       loopOn->setChecked(false);
@@ -479,8 +487,8 @@ Original expression:
   QVERIFY2(document->processed().size == 32, "crop end trims the one-shot render")
 
 A036 | SampleProcessingTest::pipelineCropNormalize | src/checks/samplecheck/editor.cpp:236
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S021
 Source context since previous assertion:
   ;
       normalize->setCurrentIndex(2);
@@ -956,8 +964,8 @@ A088 | SampleProcessingTest::editorAuditionStrip | src/checks/samplecheck/editor
 Disposition: NATIVE
 
 A089 | SampleProcessingTest::editorUndo | src/checks/samplecheck/editor.cpp:477
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness scratch-directory scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
   }
@@ -970,8 +978,8 @@ Original expression:
   QVERIFY2(scratch.isValid(), "editor-undo scratch directory is available")
 
 A090 | SampleProcessingTest::editorUndo | src/checks/samplecheck/editor.cpp:479
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness project-fixture scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
       const QString root = scratch.filePath(QStringLiteral("wavproj"));
@@ -980,8 +988,8 @@ Original expression:
   QVERIFY2(createWav2AgbProject(root), "editor-undo synthetic project is created")
 
 A091 | SampleProcessingTest::editorUndo | src/checks/samplecheck/editor.cpp:482
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S033
 Source context since previous assertion:
   ;
       ImportedSample hiRes;
@@ -993,8 +1001,8 @@ Original expression:
                qPrintable(importError))
 
 A092 | SampleProcessingTest::editorUndo | src/checks/samplecheck/editor.cpp:492
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QWidget findChild lookup; the QML dialog binds presenter properties.
 Source context since previous assertion:
   ;
       const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
@@ -1009,11 +1017,12 @@ Original expression:
   QVERIFY2(document && undo && baseKey, "undo controls found")
 
 A093 | SampleProcessingTest::editorUndo | src/checks/samplecheck/editor.cpp:494
-Disposition: NATIVE
+Disposition: MATCHED
+Mapping: S022
 
 A094 | SampleProcessingTest::editorUndo | src/checks/samplecheck/editor.cpp:497
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S023
 Source context since previous assertion:
   ;
       while (undo->canUndo())
@@ -1024,8 +1033,8 @@ Original expression:
                "full undo restores the import defaults")
 
 A095 | SampleProcessingTest::editorUndo | src/checks/samplecheck/editor.cpp:501
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S024
 Source context since previous assertion:
   ;
       while (undo->canRedo())
@@ -1120,8 +1129,8 @@ A105 | SampleProcessingTest::editorSplitter | src/checks/samplecheck/editor.cpp:
 Disposition: NATIVE
 
 A106 | SampleProcessingTest::editorCommit | src/checks/samplecheck/editor.cpp:563
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness scratch-directory scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
       split->setSizes({10000, split->sizes().value(1)});
@@ -1136,8 +1145,8 @@ Original expression:
   QVERIFY2(scratch.isValid(), "editor-commit scratch directory is available")
 
 A107 | SampleProcessingTest::editorCommit | src/checks/samplecheck/editor.cpp:565
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness project-fixture scaffolding; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
       const QString root = scratch.filePath(QStringLiteral("wavproj"));
@@ -1146,8 +1155,8 @@ Original expression:
   QVERIFY2(createWav2AgbProject(root), "editor-commit synthetic project is created")
 
 A108 | SampleProcessingTest::editorCommit | src/checks/samplecheck/editor.cpp:569
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S034
 Source context since previous assertion:
   ;
       const QString incPath = root + QStringLiteral("/sound/direct_sound_data.inc");
@@ -1160,8 +1169,8 @@ Original expression:
                qPrintable(importError))
 
 A109 | SampleProcessingTest::editorCommit | src/checks/samplecheck/editor.cpp:579
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QWidget findChild lookup; the QML dialog binds presenter properties.
 Source context since previous assertion:
   ;
       const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
@@ -1176,8 +1185,8 @@ Original expression:
   QVERIFY2(nameEdit && document && baseKey, "commit controls found")
 
 A110 | SampleProcessingTest::editorCommit | src/checks/samplecheck/editor.cpp:581
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S025
 Source context since previous assertion:
   ;
       baseKey->setValue(57);
@@ -1187,8 +1196,8 @@ Original expression:
                "commit preserves edited render parameters")
 
 A111 | SampleProcessingTest::editorCommit | src/checks/samplecheck/editor.cpp:586
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S035
 Source context since previous assertion:
   ;
       nameEdit->setText(QStringLiteral("phase3_tone"));
@@ -1200,8 +1209,8 @@ Original expression:
                qPrintable(error))
 
 A112 | SampleProcessingTest::editorCommit | src/checks/samplecheck/editor.cpp:588
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S026
 Source context since previous assertion:
   ;
 
@@ -1214,8 +1223,8 @@ Original expression:
                "commit appends exactly the registration block")
 
 A113 | SampleProcessingTest::editorCommit | src/checks/samplecheck/editor.cpp:594
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Harness voicegroup-fixture write; the Swift predicate stages its own fixture.
 Source context since previous assertion:
   ;
 
@@ -1226,8 +1235,8 @@ Original expression:
           "\tvoice_directsound 60, 0, DirectSoundWaveData_phase3_tone, 255, 0, 255, 165\n"))
 
 A114 | SampleProcessingTest::editorCommit | src/checks/samplecheck/editor.cpp:601
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S027
 Source context since previous assertion:
   ;
       const QByteArray rootUtf8 = root.toLocal8Bit();
@@ -1238,7 +1247,8 @@ Original expression:
   QVERIFY2(voicegroup, "phase-3 voicegroup resolves")
 
 A115 | SampleProcessingTest::editorCommit | src/checks/samplecheck/editor.cpp:604
-Disposition: NATIVE
+Disposition: MATCHED
+Mapping: S028
 
 A116 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:614
 Disposition: GAP
@@ -1307,8 +1317,78 @@ Remaining original source (closing sequence and helper bodies):
 
 
 Swift assertion predicates
-No Swift counterpart file was identified for this suite, so no report.expect*/expectEqual
-predicates exist. The S-list is empty.
+S001 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A003 prepared sample registers"
+S002 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A004 prepared sample re-imports from project"
+S003 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A006 name prefilled from source file"
+S004 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A007 collision disables the commit"
+S005 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A008 collision displays validation status"
+S006 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A009 valid name enables the commit"
+S007 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A010 valid name displays registration status"
+S008 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A011 sampleName returns the edited name"
+S009 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A012 bad grammar disables the commit"
+S010 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A015 prepared defaults keep the source header verbatim"
+S011 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A016 key/cents prefilled from smpl"
+S012 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A017 prepared defaults render the data verbatim"
+S013 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A020 key edit flows into the render and drops the override"
+S014 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A021 restoring source key restores verbatim agbp"
+S015 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A027 rate fixture is in one-shot mode"
+S016 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A029 committed fractional target rate"
+S017 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A030 fractional rate rounds declared WAV rate"
+S018 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A031 rate edit drops verbatim agbp"
+S019 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A032 preset pick restores source rate"
+S020 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A035 crop end trims one-shot render"
+S021 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A036 normalize mode applies gain to render"
+S022 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A093 key edit creates an undo entry"
+S023 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A094 full undo restores import defaults"
+S024 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A095 full redo restores edited state"
+S025 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A110 commit preserves edited render parameters"
+S026 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A112 commit appends exactly registration block"
+S027 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A114 phase-3 voicegroup resolves"
+S028 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A115 committed sample loads back identical"
+S029 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A013 prepared source imports"
+S030 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A018 key-override source imports"
+S031 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A025 rate source imports"
+S032 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A033 crop source imports"
+S033 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A091 undo source imports"
+S034 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A108 commit source imports"
+S035 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A111 editor WAV registers"
+S036 | runEditorPresenterChecks | src/checks/samplecheck/EditorPresenterChecks.swift
+Anchor: message "A028 typing a rate does not re-render per keystroke"
 
 Shared helpers
 The shared C++ fixture sources src/checks/samplecheck/fixtures.h and

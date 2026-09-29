@@ -18,6 +18,9 @@ add_library(PorydawApp STATIC
     export/WavExportJob.swift
     export/WavExportPresenter.swift
     samplestudio/Sf2ZonePickerModel.swift
+    samplestudio/SampleStudioHistory.swift
+    samplestudio/SampleStudioReadouts.swift
+    samplestudio/SampleStudioPresenter.swift
     audio/PolyphonyPanelPresenter.swift
     ApplicationSession.swift
     ApplicationSession+Tabs.swift

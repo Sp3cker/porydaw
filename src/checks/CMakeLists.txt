@@ -90,6 +90,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         samplecheck/AnalysisChecks.swift
         samplecheck/RegistrationChecks.swift
         samplecheck/ProvenanceChecks.swift
+        samplecheck/EditorPresenterChecks.swift
         editcheck/tst_songdocument_songraw.swift
         editcheck/tst_songdocument_runner.swift
         editcheck/tst_songdocument_songranges.swift
