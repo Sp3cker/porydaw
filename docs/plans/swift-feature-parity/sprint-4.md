@@ -517,3 +517,7 @@ The controller runs every build/lane after writers settle, serialized with `/usr
 - Editor window = separate ThemedWindow, Qt.Dialog + ApplicationModal (fork QDialog::exec), font-derived 75×53.33 baseFontPx initial size; waveform drawn through the existing DisplayList boundary (displayRevision + displayList(list:)), no native changes.
 - Sample picker family (ruling 10) = parity of the existing SamplePicker.qml with fork samplepicker.cpp (per-row ∞ badge, 'Loops · N Hz · S s' detail, keysplit/typed detail) using the store's existing picker cache; closes browsers A013–A015/A017.
 - Hosting follows PlanMidiImport2's pattern (own Host.qml with FileDialog/MessageDialog + window Loader); P4 owns its workflow on ApplicationSession because it needs voiceList, audio and 215's refresh.
+
+## Following-sprint backlog (user, 2026-09-29)
+
+- Separate song saving from voicegroup saving: add a "Save" button around the voicegroup editor so bank edits save on their own. Related defect: unified Save rewrites the song MIDI with canonicalized bytes even for flags/bank-only edits (`ProjectService+Bank.swift:179` via `SongDocument.captureSave`, `SongDocument.swift:393-409`); `shell-voicegroup-save`'s `test_zzzzzUnifiedSaveAndUndoRestorationReceipts` fails when run in isolation.
