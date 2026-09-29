@@ -37,6 +37,8 @@ struct Options {
     var song = ""
     var songs = 450
     var voicegroupFiles = 64
+    var midiNotes = 1
+    var midiTracks = 1
     var runs = 6
 }
 
@@ -55,6 +57,8 @@ func parseOptions(_ args: [String]) -> Options {
         case "--song": opt.song = take()
         case "--songs": opt.songs = Int(take()) ?? opt.songs
         case "--voicegroup-files": opt.voicegroupFiles = Int(take()) ?? opt.voicegroupFiles
+        case "--midi-notes": opt.midiNotes = max(1, Int(take()) ?? opt.midiNotes)
+        case "--midi-tracks": opt.midiTracks = max(1, min(16, Int(take()) ?? opt.midiTracks))
         case "--runs": opt.runs = max(2, Int(take()) ?? opt.runs)
         default: break
         }
@@ -66,27 +70,51 @@ func parseOptions(_ args: [String]) -> Options {
 // MARK: - Synthetic decomp fixture
 
 enum Fixture {
-    /// Minimal valid SMF: MThd + one MTrk (program, note on/off, end of track).
-    static func midiBytes() -> Data {
-        let track: [UInt8] = [
-            0x00, 0xC0, 0x00, 0x00, 0x90, 0x3C, 0x64,
-            0x60, 0x80, 0x3C, 0x00, 0x00, 0xFF, 0x2F, 0x00,
-        ]
+    static func vlq(_ value: Int, into out: inout [UInt8]) {
+        var bytes: [UInt8] = [UInt8(value & 0x7F)]
+        var v = value >> 7
+        while v > 0 {
+            bytes.append(UInt8(v & 0x7F))
+            v >>= 7
+        }
+        for index in bytes.indices.reversed() {
+            out.append(index == 0 ? bytes[index] : bytes[index] | 0x80)
+        }
+    }
+
+    /// Valid SMF: MThd + `tracks` MTrks spreading `notes` note on/off pairs.
+    static func midiBytes(notes: Int, tracks: Int) -> Data {
+        let perTrack = max(1, (notes + tracks - 1) / tracks)
         var out: [UInt8] = [
             0x4D, 0x54, 0x68, 0x64, 0x00, 0x00, 0x00, 0x06,
-            0x00, 0x00, 0x00, 0x01, 0x00, 0x60,
-            0x4D, 0x54, 0x72, 0x6B,
+            0x00, 0x01, UInt8((tracks >> 8) & 0xFF), UInt8(tracks & 0xFF), 0x00, 0x60,
         ]
-        let n = track.count
-        out += [
-            UInt8((n >> 24) & 0xFF), UInt8((n >> 16) & 0xFF),
-            UInt8((n >> 8) & 0xFF), UInt8(n & 0xFF),
-        ]
-        out += track
+        for track in 0..<tracks {
+            var events: [UInt8] = [0x00, 0xC0, UInt8(track & 0x7F)]
+            var tick = 0
+            for n in 0..<perTrack {
+                let at = n * 48 + track
+                vlq(at - tick, into: &events)
+                tick = at
+                let pitch = UInt8(36 + ((n * 7 + track * 3) % 60))
+                events += [0x90, pitch, 0x64]
+                vlq(48, into: &events)
+                tick += 48
+                events += [0x80, pitch, 0x00]
+            }
+            events += [0x00, 0xFF, 0x2F, 0x00]
+            out += [0x4D, 0x54, 0x72, 0x6B]
+            let count = events.count
+            out += [
+                UInt8((count >> 24) & 0xFF), UInt8((count >> 16) & 0xFF),
+                UInt8((count >> 8) & 0xFF), UInt8(count & 0xFF),
+            ]
+            out += events
+        }
         return Data(out)
     }
 
-    static func make(root: String, songs: Int, voicegroupFiles: Int) throws {
+    static func make(root: String, songs: Int, voicegroupFiles: Int, midiNotes: Int, midiTracks: Int) throws {
         let fm = FileManager.default
         let midiDir = root + "/sound/songs/midi"
         let vgDir = root + "/sound/voicegroups"
@@ -99,7 +127,7 @@ enum Fixture {
         var table = ".equiv MUSIC_PLAYER_BGM, 0\n.equiv MUSIC_PLAYER_BATTLE, 1\n"
         var songsH = ""
         var cfg = ""
-        let midi = midiBytes()
+        let midi = midiBytes(notes: midiNotes, tracks: midiTracks)
         for i in 0..<songs {
             let label = String(format: "mus_song_%03d", i)
             let player = i % 5 == 4 ? "MUSIC_PLAYER_BATTLE" : "mus_player_bgm"
@@ -386,9 +414,13 @@ struct Bench {
             let dir = FileManager.default.temporaryDirectory
                 .appendingPathComponent("projio-bench-\(ProcessInfo.processInfo.processIdentifier)").path
             try? FileManager.default.removeItem(atPath: dir)
-            try Fixture.make(root: dir, songs: opt.songs, voicegroupFiles: opt.voicegroupFiles)
+            try Fixture.make(
+                root: dir, songs: opt.songs, voicegroupFiles: opt.voicegroupFiles, midiNotes: opt.midiNotes,
+                midiTracks: opt.midiTracks)
             root = dir
-            print("fixture: \(root) songs=\(opt.songs) voicegroupFiles=\(opt.voicegroupFiles)")
+            print(
+                "fixture: \(root) songs=\(opt.songs) voicegroupFiles=\(opt.voicegroupFiles) midiNotes=\(opt.midiNotes) midiTracks=\(opt.midiTracks)"
+            )
         }
         let rootURL = URL(fileURLWithPath: root, isDirectory: true)
         let label =
