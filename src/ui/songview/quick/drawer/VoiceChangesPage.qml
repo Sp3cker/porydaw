@@ -86,7 +86,6 @@ FocusScope {
         id: emptyModel
 
         readonly property var markers: []
-        readonly property int contentRevision: 0
         readonly property var gutterTexts: []
         readonly property var pickerRows: []
         readonly property var menuRows: []
@@ -276,15 +275,13 @@ FocusScope {
             color: page.gridPalette.outline
         }
 
-        TimelineRenderer {
+        DisplayList {
             objectName: "voiceGridLines"
             anchors.fill: parent
-            band: 3
-            contentSource: page.pageModel
-            contentRevision: page.pageModel.contentRevision
-            pixelsPerTick: page.gridModel ? page.gridModel.pixelsPerTick : 0
-            scrollX: page.gridModel ? page.gridModel.cameraScrollX : 0
-            devicePixelRatio: page.Screen.devicePixelRatio
+            clip: true
+            source: page.pageModel
+            list: 0
+            revision: page.pageModel ? page.pageModel.displayRevision : 0
         }
 
         // One delegate per marker: the vertical rule at its projected position

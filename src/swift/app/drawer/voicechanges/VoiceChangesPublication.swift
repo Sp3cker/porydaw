@@ -1,3 +1,5 @@
+import CoreGraphics
+import Foundation
 import PorydawCore
 import QtBridge
 
@@ -91,10 +93,20 @@ extension VoiceChangesPage {
         projectMarkers(snapshot.entries)
         publishReadout(snapshot.readout)
         publishTransient()
-        publishDrawingContent(entries: entries, session: session)
+        publishDisplayLists(entries: entries, session: session)
     }
 
-    private func publishDrawingContent(entries: [VoiceProjectionEntry], session: DocumentSession) {
+    /// Valid empty list for out-of-range fetches before the first publish.
+    /// Built once and retained.
+    @QtIgnored func retainedEmptyDisplayList() -> Data {
+        if let cached = cachedEmptyDisplayList { return cached }
+        var writer = DisplayListWriter()
+        let empty = writer.finish()
+        cachedEmptyDisplayList = empty
+        return empty
+    }
+
+    private func publishDisplayLists(entries: [VoiceProjectionEntry], session: DocumentSession) {
         var rects: [DrawerStaticRect] = []
         if let track = currentTrack(session), plotHeight > 0 {
             let color = SceneRectPacking.argb(
@@ -123,16 +135,23 @@ extension VoiceChangesPage {
             5: palette.gridLineSub1, 6: palette.gridLineSub2,
             7: palette.gridLineSub3, 25: palette.gridLineBeatFine,
         ]
-        let metrics = GridMetrics(
-            baseFontPx: baseFontPx, dpr: devicePixelRatio,
-            width: plotWidth, height: plotHeight,
-            timeAxis: session.projectionCache.timeAxis)
-        let data = DrawerStaticsContent.pack(
-            axis: metrics.timeAxis, grid: session.grid,
-            metrics: metrics, paletteColors: colors, rects: rects)
-        guard drawingContentData != data else { return }
-        drawingContentData = data
-        contentRevision &+= 1
+        let viewport = CGSize(width: plotWidth, height: plotHeight)
+        let camera = session.camera
+        // Release the previous buffer before the retained writer reuses its
+        // own: otherwise finish()'s shared output copies on write each frame.
+        var writer = listWriter
+        DrawerStaticsContent.buildGrid(
+            into: &writer, axis: session.projectionCache.timeAxis, grid: session.grid,
+            camera: camera, viewport: viewport, paletteColors: colors)
+        DrawerStaticsContent.buildTickRects(
+            into: &writer, rects: rects,
+            camera: camera, dpr: devicePixelRatio, viewport: viewport)
+        let list0 = writer.finish()
+        listWriter = writer
+        let next = [list0]
+        guard next != displayLists else { return }
+        displayLists = next
+        displayRevision &+= 1
     }
 
     /// The page's own facts for one scene build: the lane, the bank, the track,

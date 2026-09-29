@@ -171,8 +171,11 @@ public final class VoiceChangesPage: EditorDrawerPage {
     // MARK: Published models
 
     public var markers: QListModel<VoiceMarkerHandle> = QListModel()
-    @QtTracked public var contentRevision = 0
-    public func drawingContent() -> Data { drawingContentData }
+    @QtTracked public var displayRevision = 0
+    public func displayList(list: Int) -> Data {
+        guard displayLists.indices.contains(list) else { return retainedEmptyDisplayList() }
+        return displayLists[list]
+    }
     public var pickerRows: QListModel<VoicePickerRowHandle> = QListModel()
     public var menuRows: QListModel<VoiceMenuRowHandle> = QListModel()
 
@@ -247,7 +250,11 @@ public final class VoiceChangesPage: EditorDrawerPage {
     @QtIgnored var entriesRevision: UInt64?
     @QtIgnored var entriesTrack: Int?
     @QtIgnored var cachedEntries: [VoiceProjectionEntry] = []
-    @QtIgnored var drawingContentData = Data()
+    // Retained display-list buffer (list 0 grid + held spans) and the writer
+    // reused across frames; the one list rebuilds with one bump.
+    @QtIgnored var displayLists: [Data] = []
+    @QtIgnored var listWriter = DisplayListWriter()
+    @QtIgnored var cachedEmptyDisplayList: Data?
     @QtIgnored var markerLookup: [String: VoiceMarkerHandle] = [:]
 
 
@@ -291,9 +298,10 @@ public final class VoiceChangesPage: EditorDrawerPage {
         let scene = VoiceChangesSceneSnapshot.detached
         publishMarkers([])
         publishGutter(scene.gutterTexts)
-        if !drawingContentData.isEmpty {
-            drawingContentData = Data()
-            contentRevision &+= 1
+        let current = displayLists.first ?? Data()
+        if !current.isEmpty {
+            displayLists = []
+            displayRevision &+= 1
         }
     }
 

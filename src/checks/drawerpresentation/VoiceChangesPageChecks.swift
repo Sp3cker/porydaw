@@ -221,55 +221,73 @@ private func drawerVoiceContentBlob(
     let fixture = drawerVoiceVoiceChangesFixture(
         suite: suite, service: service, programs: programs)
     let page = fixture.page
-    let initial = page.drawingContent()
-    let revision = page.contentRevision
-    let decoded = VelocityContentProbe(initial)
+    let initial = page.displayList(list: 0)
+    let revision = page.displayRevision
     let expectedColor = RollContentProbe.argb(
         PaletteMath.hex(PaletteMath.trackIdentityOklab(0), alpha: 18))
-    var expectedBounds: [(Tick, Tick)] = [(0, 48), (48, 120)]
+    let barArgb = RollContentProbe.argb(GridPalette().gridLineBar)
+    var expectedSpanCount = 2
     if fixture.session.timeline.lengthTicks > 120 {
-        expectedBounds.append((120, fixture.session.timeline.lengthTicks))
+        expectedSpanCount += 1
     }
+    guard let decoded = velocityDisplayRects(initial) else {
+        report.fail(
+            drawerVoiceProjectionID,
+            "voice list 0 decodes the fixture's held sections and frame grid")
+        page.detach()
+        return
+    }
+    let spans = decoded.filter { $0.argb == expectedColor }
     report.expect(
-        decoded.valid && decoded.segments.first?.start == 0
-            && decoded.segments.last?.next == UInt64(TimeDefaults.noTick)
-            && decoded.palette.count > 25
-            && decoded.palette[3] == RollContentProbe.argb(GridPalette().gridLineBar)
-            && decoded.records.count == expectedBounds.count
-            && zip(decoded.records, expectedBounds).allSatisfy { rect, bounds in
-                rect.tickStart == bounds.0 && rect.tickEnd == bounds.1
-                    && rect.y == 0 && rect.height == 46
-                    && rect.argb == expectedColor && rect.flags == 0
-            },
+        !decoded.isEmpty && decoded.contains { $0.argb == barArgb }
+            && spans.count == expectedSpanCount
+            && spans.allSatisfy { $0.y == 0 && $0.h == page.plotHeight },
         cppID: drawerVoiceProjectionID,
-        message: "voice content decodes the fixture's held sections and frame grid")
+        message: "voice list 0 decodes the fixture's held sections and frame grid")
     let markerXs = page.publishedMarkers.map(\.x)
     fixture.session.mutateCamera { camera in _ = camera.setHScroll(17) }
     page.refreshCamera()
     report.expect(
-        page.contentRevision == revision && page.drawingContent() == initial
+        page.displayRevision == revision + 1 && page.displayList(list: 0) != initial
             && page.publishedMarkers.map(\.x) == markerXs,
         cppID: drawerVoiceProjectionID,
-        message: "voice scroll preserves drawing bytes, revision, and marker content x")
+        message: "voice scroll rebuilds the viewport list with one revision; marker content x holds")
+    let scrolledRevision = page.displayRevision
+    let scrolledBytes = page.displayList(list: 0)
     fixture.session.mutateCamera { camera in
         camera.setTimeZoom(camera.snapshot.pixelsPerBeat * 2)
     }
     page.refreshCamera()
     report.expect(
-        page.contentRevision == revision && page.drawingContent() == initial,
+        page.displayRevision == scrolledRevision + 1
+            && page.displayList(list: 0) != scrolledBytes,
         cppID: drawerVoiceProjectionID,
-        message: "voice zoom preserves drawing bytes and revision")
+        message: "voice zoom rebuilds the viewport list with one revision")
+    let settledRevision = page.displayRevision
+    let settledBytes = page.displayList(list: 0)
+    page.refreshCamera()
+    report.expect(
+        page.displayRevision == settledRevision
+            && page.displayList(list: 0) == settledBytes,
+        cppID: drawerVoiceProjectionID,
+        message: "a settled camera refresh republishes identical list bytes with no new revision")
     fixture.document.writeLane(
         track: 0, lane: .voice, from: 72, through: 72,
         points: [LaneWrite(tick: 72, value: programs[0])])
     page.refreshFromDocument()
-    let changed = VelocityContentProbe(page.drawingContent())
+    guard let changed = velocityDisplayRects(page.displayList(list: 0)) else {
+        report.fail(
+            drawerVoiceProjectionID,
+            "one voice change publishes exactly one revised held-span list")
+        page.detach()
+        return
+    }
+    let changedSpans = changed.filter { $0.argb == expectedColor }
     report.expect(
-        page.contentRevision == revision + 1
-            && changed.records.count == expectedBounds.count + 1
-            && changed.records[1].tickStart == 48 && changed.records[1].tickEnd == 72
-            && changed.records[2].tickStart == 72 && changed.records[2].tickEnd == 120,
+        page.displayRevision == settledRevision + 1
+            && changedSpans.count == expectedSpanCount + 1
+            && changedSpans.allSatisfy { $0.y == 0 && $0.h == page.plotHeight },
         cppID: drawerVoiceProjectionID,
-        message: "one voice change publishes exactly one revised held-span blob")
+        message: "one voice change publishes exactly one revised held-span list")
     page.detach()
 }

@@ -383,8 +383,7 @@ public final class DocumentWorkspace {
     private func applyCamera(_ kind: DrawerSectionKind, zoom: Bool) {
         switch (kind, zoom) {
         case (.velocity, _): velocityPage.refreshCamera()
-        case (.voiceChanges, true): voiceChangesPage.refreshCamera()
-        case (.voiceChanges, false): break
+        case (.voiceChanges, _): voiceChangesPage.refreshCamera()
         case (.automation, true): automationPage.refreshCamera()
         case (.automation, false): automationPage.refreshHorizontalProjection()
         }
