@@ -36,6 +36,13 @@ public final class TabsDrawerProbe: QmlInstantiableStatus {
             "\($0.track):\($0.controller)"
         }.joined(separator: ",")
     }
+    public func liveLaneCosmetics() -> String {
+        guard let session = qmlChildren.compactMap({ $0 as? ShellPresenter }).first?.session,
+            let lanes = session.selectedDocument?.editorViewState.lanes,
+            let encoded = EditorViewStateCodec.encodeLanes(lanes)
+        else { return "" }
+        return String(decoding: encoded, as: UTF8.self)
+    }
 
     public func fileFingerprint(path: String) -> String {
         guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else { return "" }

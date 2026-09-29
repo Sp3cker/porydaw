@@ -38,7 +38,15 @@ ShellTabsSupport {
     }
 
     function test_qReloadPreservesViewAndClearsHistory() {
+        function semanticNotes(gridModel) {
+            return JSON.stringify(JSON.parse(gridModel.fetchNoteSummary()).map(function(note) {
+                return [note.tick, note.duration, note.pitch, note.track,
+                        note.velocity, note.ghost]
+            }))
+        }
+        fileProbe.stageCompleteState()
         var id = openShell(["mus_route101"])[0]
+        fileProbe.children.push(shell.shellPresenter)
         var grid = gridOf(id)
         var beforeNotes = summaryOf(id)
         drawNote(id)
@@ -133,6 +141,10 @@ ShellTabsSupport {
                && tabs().selectedTabShowsEvents === prior.events
                && grid.fetchNoteSummary() === retainedNotes,
                "restoring the captured runtime view preserves all fields and the original MIDI notes")
+        waitForRendering(tabsRoot())
+        var priorCosmetics = fileProbe.liveLaneCosmetics()
+        var seededCosmetics = JSON.parse(priorCosmetics || "{}")
+        var priorNotes = semanticNotes(grid)
         session().openSong("mus_route101")
         verify(waitForNative(function() {
             return tabs().tabCount === 1 && tabs().selectedId === id
@@ -160,6 +172,31 @@ ShellTabsSupport {
         compare(landed.tripletGrid, prior.triplet, "reload retains triplet grid feel")
         compare(tabs().selectedTabShowsEvents, prior.events,
                 "reload retains event list visibility")
+        verify(seededCosmetics.laneHeight > 0
+               && seededCosmetics.laneHeights["cc:0:74"] > 0
+               && seededCosmetics.laneHeights["cc:1:7"] > 0
+               && seededCosmetics.laneRanges["cc:0:74"] === 90
+               && seededCosmetics.laneRanges.tempo === 100
+               && seededCosmetics.emptyLanes.length === 1
+               && seededCosmetics.emptyLanes[0].track === 0
+               && seededCosmetics.emptyLanes[0].cc === 74
+               && seededCosmetics.hiddenLanes.length === 2
+               && seededCosmetics.hiddenLanes[0].track === 1
+               && seededCosmetics.hiddenLanes[0].cc === 7
+               && seededCosmetics.hiddenLanes[1].track === 0
+               && seededCosmetics.hiddenLanes[1].cc === 80
+               && fileProbe.liveLaneCosmetics() === priorCosmetics
+               && Math.abs(landed.beatWidth - prior.beat) < 0.01
+               && Math.abs(landed.rowHeight - prior.height) < 0.01
+               && Math.abs(landed.cameraScrollX - prior.x) < 0.01
+               && Math.abs(landed.cameraScrollY - prior.y) < 0.01
+               && landed.trackIndex === prior.track
+               && landed.editCursorTick === prior.cursor
+               && landed.gridSelectionMenuId === prior.division
+               && landed.tripletGrid === prior.triplet
+               && tabs().selectedTabShowsEvents === prior.events
+               && semanticNotes(landed) === priorNotes,
+               "reload jointly retains live lane cosmetics runtime view and unchanged MIDI notes")
         verify(!session().canUndo && !session().canRedo,
                "reload clears the old document's undo and redo history")
     }

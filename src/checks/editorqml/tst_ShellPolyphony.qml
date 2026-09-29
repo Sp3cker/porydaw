@@ -67,6 +67,7 @@ TestCase {
             verify(waitForNative(function() { return shell.shellPresenter.closeReady }, 5000),
                    "the shell retires its editor scene")
         }
+        bootstrap.children.length = 0
         shell.destroy()
         shell = null
         wait(0)
@@ -255,6 +256,113 @@ TestCase {
         presenter.activate("view.polyphony_debugger")
         tryVerify(function() { return !dock().visible }, 3000,
                   "the same View action hides the mounted panel")
+    }
+
+    function test_mountedEventRowRevealsOnlySoundingNoteWithoutEditing() {
+        const presenter = createShell()
+        const session = presenter.session
+        bootstrap.children.push(presenter)
+        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        const loadSettled = waitForNative(function() {
+            return session.songOpen || session.lastSaveError.length > 0
+        }, 30000)
+        verify(loadSettled && session.songOpen && waitForNative(function() {
+            const root = shell.sceneLoader.item
+            const page = root && findChild(root, "songTab_" + session.songTabs.selectedId)
+            const surface = page && findChild(page, "swiftRollOverlay")
+            return !!surface && findChild(surface, "swiftRollInput") !== null
+        }, 10000), "the real roll mounts before the event-row journey")
+        presenter.activate("view.polyphony_debugger")
+        tryVerify(function() { return dock().visible && panel().visible }, 3000,
+                  "the View action opens the real debugger dock")
+
+        const fixtureText = bootstrap.seedPolyphonyReveal()
+        verify(fixtureText.length > 0, "the mounted song accepts three matched fixture notes")
+        const fixture = JSON.parse(fixtureText)
+        const earlier = fixture[0]
+        const sounding = fixture[1]
+        const otherTrack = fixture[3]
+        const pane = panel()
+        tryVerify(function() {
+            return session.polyphony.eventCount === 3
+                && findChild(pane, "polyphonyEventRow_2") !== null
+        }, 3000, "all three event delegates mount on the production panel")
+        const scroll = findChild(pane, "polyphonyScroll")
+        scroll.contentY = Math.max(0, scroll.contentHeight - scroll.height)
+        verify(waitForPolish(pane), "the mounted event log settles inside the visible dock")
+        const baseline = JSON.parse(bootstrap.polyphonyRevealState())
+        verify(baseline.selected.length === 1 && baseline.selected[0] === fixture[2]
+               && baseline.track === otherTrack && baseline.bytes.length > 0
+               && baseline.noteX > baseline.viewportWidth,
+               "the roll begins away from the event with a different note selected")
+
+        function clickEvent(index) {
+            const row = findChild(pane, "polyphonyEventRow_" + index)
+            verify(row !== null && row.width > 0 && row.height > 0,
+                   "the addressed event delegate exists and has a pointer target")
+            const location = row.mapToItem(pane, 0, 0)
+            verify(location.y >= 0 && location.y + row.height <= pane.height,
+                   "the addressed row is inside the visible debugger dock")
+            mouseClick(row, row.width / 2, row.height / 2)
+            mouseDoubleClickSequence(row, row.width / 2, row.height / 2, Qt.LeftButton)
+        }
+
+        clickEvent(2)
+        tryVerify(function() {
+            return JSON.parse(bootstrap.polyphonyRevealState()).track === 0
+        }, 3000, "the real positioned-row gesture reaches the selected roll track")
+        waitForRendering(pane)
+        const hit = JSON.parse(bootstrap.polyphonyRevealState())
+        verify(hit.scrollX > baseline.scrollX && hit.noteX >= 0
+               && hit.noteX <= hit.viewportWidth && hit.selected[0] === sounding
+               && hit.selected[0] !== earlier,
+               "mounted row reveals the last still-sounding same-key note inside the roll")
+        compare(hit.track, 0, "mounted hit row selects its losing track")
+        compare(JSON.stringify(hit.selected), JSON.stringify([sounding]),
+                "mounted hit row selects exactly the last sounding same-key note")
+        compare(JSON.stringify([hit.undoIndex, hit.undoCount]),
+                JSON.stringify([baseline.undoIndex, baseline.undoCount]),
+                "mounted hit row preserves undo index and count")
+        compare(hit.bytes, baseline.bytes, "mounted hit row preserves exact exported MIDI bytes")
+
+        verify(bootstrap.stagePolyphonyMiss(otherTrack, sounding),
+               "the unused-key case restores a different track and the selected sounding note")
+        tryVerify(function() {
+            return JSON.parse(bootstrap.polyphonyRevealState()).track === otherTrack
+        }, 3000, "the miss starts on the alternate track after the QtBridge turn")
+        clickEvent(1)
+        tryVerify(function() {
+            return JSON.parse(bootstrap.polyphonyRevealState()).track === 0
+        }, 3000, "the unused-key row dispatches to the roll selection consumer")
+        waitForRendering(pane)
+        const unused = JSON.parse(bootstrap.polyphonyRevealState())
+        compare(JSON.stringify(unused.selected), JSON.stringify([sounding]),
+                "mounted unused-key row retains the existing note without claiming another")
+        compare(unused.track, 0, "mounted unused-key row still switches to its losing track")
+        compare(JSON.stringify([unused.undoIndex, unused.undoCount]),
+                JSON.stringify([baseline.undoIndex, baseline.undoCount]),
+                "mounted unused-key row preserves undo index and count")
+        compare(unused.bytes, baseline.bytes,
+                "mounted unused-key row preserves exact exported MIDI bytes")
+
+        verify(bootstrap.stagePolyphonyMiss(otherTrack, sounding),
+               "the expired-note case again restores the note on an alternate track")
+        tryVerify(function() {
+            return JSON.parse(bootstrap.polyphonyRevealState()).track === otherTrack
+        }, 3000, "the expired-note miss starts after the QtBridge turn")
+        clickEvent(0)
+        tryVerify(function() {
+            return JSON.parse(bootstrap.polyphonyRevealState()).track === 0
+        }, 3000, "the expired-note row dispatches to the roll selection consumer")
+        waitForRendering(pane)
+        const expired = JSON.parse(bootstrap.polyphonyRevealState())
+        compare(JSON.stringify(expired.selected), JSON.stringify([sounding]),
+                "mounted expired same-key row never claims the earlier expired note")
+        compare(JSON.stringify([expired.undoIndex, expired.undoCount]),
+                JSON.stringify([baseline.undoIndex, baseline.undoCount]),
+                "mounted expired-key row preserves undo index and count")
+        compare(expired.bytes, baseline.bytes,
+                "mounted expired-key row preserves exact exported MIDI bytes")
     }
 
     function collectChannelCells(item, cells) {

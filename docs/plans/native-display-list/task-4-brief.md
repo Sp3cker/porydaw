@@ -16,8 +16,7 @@ and the economy-check inversion are stated once in plan Contract §3
 (`plan.md:207-216`, per-page camera seams named there); this brief cites
 that paragraph instead of restating it. Check migration funnel:
 `src/checks/editorqml/RollNoteFaces.js:6` is the only live `gridNote_`
-caller (verified by grep; other hits are quoted provenance in
-`proof.clipboardchecks.txt`), so all QML journeys migrate through one line.
+caller (verified by grep), so all QML journeys migrate through one line.
 
 ## Exact write set
 
@@ -178,9 +177,8 @@ Checks:
   through `face()`.
 - `deno task checks:bridge` — covers the new `displayRevision`/
   `displayList` QtBridge surface.
-- `deno task proof check --executed` — covers ledger health after anchor
-  repair (known anchors: `proof.clipboardchecks.txt` S026-S035 for
-  `EditorGridProjectionChecks.swift` messages).
+- `deno task proof check --executed` — covers ledger health (no rows
+  currently anchor `EditorGridProjectionChecks.swift` messages).
 - Rasters byte-identical to the Task 3 checkpoint (1b): Swift paints with
   the formula C++ painted with, so any diff is a port bug, not tolerance.
 - Bench (plan Verification, Task 0b): roll pan and roll zoom scenarios,

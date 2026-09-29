@@ -2,6 +2,7 @@ import QtQuick
 import QtTest
 import PorydawApp
 import RollQmlCheck 1.0
+import PorydawRollTest
 import Porydaw.Ui
 import "../editorqml/NativeWait.js" as NativeWait
 import "../editorqml/RollNoteFaces.js" as RollNoteFaces
@@ -23,6 +24,8 @@ TestCase {
 
         ApplicationSession { id: session }
     }
+
+    CursorProbe { id: cursorProbe }
 
     Connections {
         target: session
@@ -350,16 +353,24 @@ TestCase {
                 continue
             var cursor = findChild(surf, "swiftRollCursor")
             verify(cursor !== null, "the roll input carries its production cursor binding")
+            var expectedExtent = Math.max(1, Math.round(surf.baseFontPx * 2.0))
+            verify(cursorProbe.artDiffers(roll, "qrc:/cursors/left-drag.png",
+                                          "qrc:/cursors/right-drag.png", expectedExtent),
+                   "left and right resize cursor bitmaps differ at the roll window DPI")
             verify(waitForNative(function() {
                 return roll.cursorShape === Qt.BitmapCursor
                     && String(cursor.source) === "qrc:/cursors/right-drag.png"
             }, 5000), "the right edge hover shows the right-drag cursor art")
+            verify(cursorProbe.matchesArt(roll, "qrc:/cursors/right-drag.png", expectedExtent),
+                   "right note edge applies the DPI-matched right bitmap cursor")
             var leftEdge = Qt.point(item.x + 1, item.y + item.height / 2)
             mouseMove(roll, leftEdge.x, leftEdge.y)
             verify(waitForNative(function() {
                 return g.cursorKind === 2 && roll.cursorShape === Qt.BitmapCursor
                     && String(cursor.source) === "qrc:/cursors/left-drag.png"
             }, 5000), "the left edge hover shows the left-drag cursor art")
+            verify(cursorProbe.matchesArt(roll, "qrc:/cursors/left-drag.png", expectedExtent),
+                   "left note edge applies the DPI-matched left bitmap cursor")
             mouseMove(roll, center.x, center.y)
             verify(waitForNative(function() {
                 return g.cursorKind === 0 && roll.cursorShape === Qt.ArrowCursor
@@ -368,6 +379,112 @@ TestCase {
         }
         verify(probed, "a fully visible wide note takes the cursor probe")
     }
+    function test_resizeAbuttingCursorArt() {
+        var g = grid()
+        var roll = rollInput()
+        var surf = surface()
+        publishedNoteCount(g)
+        var savedZoom = g.beatWidth
+        var originalIds = gridNotes(g).map(function(note) { return note.id })
+        try {
+            if (savedZoom !== 140)
+                verify(bootstrap.setCameraTimeZoom(140),
+                       "the abutting notes have room for both resize grips")
+            verify(waitForNative(function() {
+                return g.beatWidth === 140 && gridNotes(g).some(function(note) {
+                    var item = noteItem(surf, note.id)
+                    return item && item.width > 0 && item.height > 0
+                })
+            }, 8000), "the zoomed song realizes its existing notes")
+            var snapWidth = g.snapTicks * g.beatWidth / g.ticksPerBeat
+            var span = 2 * snapWidth
+            var inset = surf.baseFontPx * 0.25 / 2
+            var gripReach = 2 * inset
+            var leftX = Math.ceil((g.cameraScrollX + roll.width * 0.3) / snapWidth)
+                        * snapWidth - g.cameraScrollX
+            var rowY = null
+            var existing = gridNotes(g)
+            for (var y = g.rowHeight * 2; y < roll.height - g.rowHeight * 2;
+                 y += g.rowHeight) {
+                var occupied = existing.some(function(note) {
+                    var item = noteItem(surf, note.id)
+                    return item && item.y <= y && item.y + item.height > y
+                           && item.x < leftX + 2 * span + gripReach
+                           && item.x + item.width > leftX - gripReach
+                })
+                if (!occupied) {
+                    rowY = y
+                    break
+                }
+            }
+            verify(rowY !== null && leftX > gripReach
+                   && leftX + 2 * span + gripReach < roll.width,
+                   "a free visible key row fits two adjoining notes")
+
+            mousePress(roll, leftX + span + inset, rowY, Qt.LeftButton)
+            mouseMove(roll, leftX + 2 * span - inset, rowY, -1, Qt.LeftButton)
+            mouseRelease(roll, leftX + 2 * span - inset, rowY, Qt.LeftButton)
+            var right = null
+            verify(waitForNative(function() {
+                right = gridNotes(g).find(function(note) {
+                    return originalIds.indexOf(note.id) < 0
+                })
+                return right !== undefined
+            }, 5000), "the right-hand note is committed to the key row")
+
+            mousePress(roll, leftX + inset, rowY, Qt.LeftButton)
+            mouseMove(roll, leftX + span - inset, rowY, -1, Qt.LeftButton)
+            mouseRelease(roll, leftX + span - inset, rowY, Qt.LeftButton)
+            var left = null
+            verify(waitForNative(function() {
+                left = gridNotes(g).find(function(note) {
+                    return originalIds.indexOf(note.id) < 0 && note.id !== right.id
+                })
+                return left !== undefined
+            }, 5000), "the left-hand note is committed next to its neighbor")
+            verify(left.pitch === right.pitch && left.track === right.track
+                   && left.tick + left.duration === right.tick,
+                   "the two notes share a key and meet at one tick boundary")
+            var leftItem = null
+            var rightItem = null
+            verify(waitForNative(function() {
+                leftItem = noteItem(surf, left.id)
+                rightItem = noteItem(surf, right.id)
+                return leftItem && rightItem && leftItem.width > 2 * gripReach
+                       && rightItem.width > 2 * gripReach
+            }, 8000), "both abutting notes realize with distinct resize grips")
+            var boundary = rightItem.x
+            var centerY = rightItem.y + rightItem.height / 2
+            var expectedExtent = Math.max(1, Math.round(surf.baseFontPx * 2.0))
+            mouseMove(roll, boundary - inset, centerY)
+            verify(waitForNative(function() { return g.cursorKind === 3 }, 5000),
+                   "boundary-left hover selects the first note's trailing grip")
+            verify(waitForNative(function() {
+                return cursorProbe.matchesArt(roll, "qrc:/cursors/right-drag.png", expectedExtent)
+            }, 5000),
+                   "boundary-left applies the DPI-matched right-drag bitmap")
+            mouseMove(roll, boundary + inset, centerY)
+            verify(waitForNative(function() { return g.cursorKind === 2 }, 5000),
+                   "boundary-right hover selects the second note's leading grip")
+            verify(waitForNative(function() {
+                return cursorProbe.matchesArt(roll, "qrc:/cursors/left-drag.png", expectedExtent)
+            }, 5000),
+                   "boundary-right applies the DPI-matched left-drag bitmap")
+        } finally {
+            var remaining = gridNotes(g).filter(function(note) {
+                return originalIds.indexOf(note.id) < 0
+            }).length
+            var undone = true
+            for (var i = 0; i < remaining; ++i)
+                if (!bootstrap.undoTimeSignature())
+                    undone = false
+            if (g.beatWidth !== savedZoom)
+                verify(bootstrap.setCameraTimeZoom(savedZoom),
+                       "the roll time zoom returns to its prior value")
+            verify(undone, "the abutting note edits are undone")
+        }
+    }
+
     function test_clickLatchesVelocityForNextPencilNote() {
         var g = grid()
         var roll = rollInput()

@@ -1,6 +1,9 @@
 import Foundation
 import PorydawApp
 import PorydawAppCommands
+import PorydawCore
+@testable import PorydawAppAudio
+import PorydawPlaybackNative
 import PorydawBankLease
 import QtBridge
 import QtBridgeCpp
@@ -451,6 +454,85 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
     /// Clear the previous song clip before the original focused-text Copy row.
     public func clearClipboardProbe() -> Bool {
         pd_clipboard_write(nil, 0)
+    }
+
+    private var polyphonySession: ApplicationSession? {
+        qmlChildren.compactMap { $0 as? ShellPresenter }.first?.session
+    }
+
+    /// Install deterministic diagnostic events on the mounted shell presenter,
+    /// with matching notes in its actual document rather than an isolated panel.
+    public func seedPolyphonyReveal() -> String {
+        guard let app = polyphonySession,
+            let session = app.selectedDocument,
+            let other = session.document.addTrack(voice: 0),
+            let planted = try? session.document.addNotes([
+                NewNote(track: 0, tick: 12_000, pitch: 60, duration: 6, velocity: 80),
+                NewNote(track: 0, tick: 12_024, pitch: 60, duration: 6, velocity: 80),
+                NewNote(track: 0, tick: 12_072, pitch: 60, duration: 6, velocity: 80),
+            ]), planted.count == 3
+        else { return "" }
+        session.selectPrimaryTrack(other)
+        session.setSelectedNotes([planted[2]])
+        // Pause audio polling while the mounted dock displays the synthetic event ring.
+        app.polyphony.setVisible(showing: false)
+        var snapshot = AudioPolySnapshot(
+            maxPcmChannels: 0, invert: false,
+            pcm: Array(
+                repeating: AudioPolyChannel(
+                    on: false, releasing: false,
+                    track: 0, midiKey: 0),
+                count: Int(TOTAL_PCM_CHANNELS)),
+            cgb: Array(
+                repeating: AudioPolyChannel(
+                    on: false, releasing: false,
+                    track: 0, midiKey: 0),
+                count: Int(TOTAL_CGB_CHANNELS)),
+            drop: Array(repeating: 0, count: Int(MAX_TRACKS)),
+            steal: Array(repeating: 0, count: Int(MAX_TRACKS)),
+            tailCut: Array(repeating: 0, count: Int(MAX_TRACKS)),
+            eventTotal: 3,
+            events: Array(
+                repeating: M4APolyEvent(
+                    type: 0, trackIndex: 0, midiKey: 0,
+                    byTrack: 0, program: 0, tick: 0),
+                count: Int(M4A_POLY_EVENT_CAPACITY)))
+        snapshot.events[0] = M4APolyEvent(
+            type: 1, trackIndex: 0, midiKey: 60,
+            byTrack: 1, program: 0, tick: 12_027)
+        snapshot.events[1] = M4APolyEvent(
+            type: 1, trackIndex: 0, midiKey: 127,
+            byTrack: 1, program: 0, tick: 12_048)
+        snapshot.events[2] = M4APolyEvent(
+            type: 1, trackIndex: 0, midiKey: 60,
+            byTrack: 1, program: 0, tick: 12_048)
+        app.polyphony.update(snapshot)
+        return "[\(planted.map { String($0.rawValue) }.joined(separator: ",")),\(other)]"
+    }
+
+    public func stagePolyphonyMiss(track: Int, noteID: Int) -> Bool {
+        guard let session = polyphonySession?.selectedDocument, noteID > 0 else { return false }
+        let selected = NoteID(UInt64(noteID))
+        session.selectPrimaryTrack(track)
+        session.setSelectedNotes([selected])
+        return session.selectedTrack == track && session.selectedNoteOrder == [selected]
+    }
+
+    public func polyphonyRevealState() -> String {
+        guard let session = polyphonySession?.selectedDocument,
+            let saved = try? session.document.captureSave()
+        else { return "" }
+        let camera = session.camera
+        let selected = session.selectedNoteOrder.map { String($0.rawValue) }.joined(separator: ",")
+        return """
+            {"track":\(session.selectedTrack ?? -1),"selected":[\(selected)],
+            "undoIndex":\(session.document.history.undoIndex),
+            "undoCount":\(session.document.history.undoCount),
+            "bytes":"\(Data(saved.bytes).base64EncodedString())",
+            "scrollX":\(camera.snapshot.scrollX),
+            "noteX":\(camera.contentX(tick: 12_027)),
+            "viewportWidth":\(camera.snapshot.viewportWidth)}
+            """
     }
 
     public func setVelocityCommand() -> Int { EditCommand.setVelocity.rawValue }

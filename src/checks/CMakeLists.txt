@@ -497,6 +497,8 @@ if(APPLE)
 
     add_executable(roll_qml_tests
         rollqml/RollQmlPaths.swift.in
+        rollqml/cursor_probe.cpp
+        rollqml/cursor_probe.h
         # Same shared waitForNative loop the editor lane lists above; rollqml
         # suites import it as "../editorqml/NativeWait.js", which Qt Quick Test
         # resolves against the importing file's source directory at runtime.
@@ -504,7 +506,7 @@ if(APPLE)
         "${PROJECT_SOURCE_DIR}/resources/fonts.qrc"
     )
     set_target_properties(roll_qml_tests PROPERTIES
-        AUTOMOC OFF
+        AUTOMOC ON
         AUTOUIC OFF
         AUTORCC ON
         LINKER_LANGUAGE CXX

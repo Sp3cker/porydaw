@@ -58,6 +58,7 @@ TestCase {
             verify(shell.shellPresenter.closeReady,
                    "teardown waits for scene destruction and grid detach")
         }
+        fileProbe.children.length = 0
         shell.destroy()
         shell = null
         wait(0)

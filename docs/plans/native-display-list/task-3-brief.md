@@ -118,8 +118,7 @@ unchanged — plus `camera.swift`):
    gone; the `0.25`-origin loop collapses to one case per tick). Keep
    `setHScroll`-fractional assertions (`:33-38`) unchanged.
 6. Grep each changed message text under `src/checks/**/proof.*.txt`
-   (known anchors: `proof.clipboardchecks.txt` S026-S030 for
-   `EditorGridProjectionChecks.swift` messages; no rows currently anchor
+   (no rows currently anchor `EditorGridProjectionChecks.swift` or
    `camera.swift` messages). Where an assertion class genuinely changes,
    repair the anchor with `deno task proof:edit` in the same commit; where
    only the formula name in code changed but the message is identical,
