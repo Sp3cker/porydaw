@@ -52,7 +52,7 @@ set_target_properties(porydaw_checks PROPERTIES
 target_include_directories(porydaw_checks PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 porydaw_enable_project_warnings(porydaw_checks)
 
-if(APPLE)
+if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_library(swift_core_check STATIC
         support/corecheck/CoreCheckSupport.swift
         midi/MidiSmfCodecChecks.swift
@@ -335,20 +335,21 @@ if(APPLE)
         support/corecheck/native_check.cpp
         support/corecheck/native_check.h
     )
-    set_target_properties(porydaw_checks PROPERTIES
-        LINKER_LANGUAGE CXX
-        MACOSX_BUNDLE TRUE
-        MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
-        MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
-        MACOSX_BUNDLE_GUI_IDENTIFIER com.sp3cker.porydaw.checks
-        NO_SYSTEM_FROM_IMPORTED ON
-    )
-    add_custom_command(TARGET porydaw_checks POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E rm -f "${PROJECT_BINARY_DIR}/porydaw_checks"
-        COMMAND ${CMAKE_COMMAND} -E create_symlink
-                "$<TARGET_FILE:porydaw_checks>" "${PROJECT_BINARY_DIR}/porydaw_checks"
-        VERBATIM
-    )
+    if(APPLE)
+        set_target_properties(porydaw_checks PROPERTIES
+            MACOSX_BUNDLE TRUE
+            MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
+            MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
+            MACOSX_BUNDLE_GUI_IDENTIFIER com.sp3cker.porydaw.checks
+            NO_SYSTEM_FROM_IMPORTED ON
+        )
+        add_custom_command(TARGET porydaw_checks POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E rm -f "${PROJECT_BINARY_DIR}/porydaw_checks"
+            COMMAND ${CMAKE_COMMAND} -E create_symlink
+                    "$<TARGET_FILE:porydaw_checks>" "${PROJECT_BINARY_DIR}/porydaw_checks"
+            VERBATIM
+        )
+    endif()
 endif()
 
 target_link_libraries(porydaw_checks PRIVATE
@@ -358,7 +359,7 @@ target_link_libraries(porydaw_checks PRIVATE
     QtBridgeCpp
 )
 porydaw_link_linux_swift_runtime(porydaw_checks
-    PorydawApp QtBridge PorydawProject PorydawPlayback PorydawCore)
+    swift_core_check PorydawApp QtBridge PorydawProject PorydawPlayback PorydawCore)
 target_precompile_headers(porydaw_checks PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${PROJECT_SOURCE_DIR}/src/porydaw_pch.hpp>")
 target_compile_definitions(porydaw_checks PRIVATE

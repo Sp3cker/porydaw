@@ -8,6 +8,8 @@
 namespace checks::detail {
 namespace {
 
+constexpr auto swiftPlatforms = Platforms{Platform::MacOS} | Platform::Linux;
+
 QStringList strings(std::initializer_list<const char *> values)
 {
     QStringList result;
@@ -29,7 +31,7 @@ int qtOnly(QApplication &, const QStringList &, const QStringList &qtArguments)
     return Run(qtArguments);
 }
 
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__linux__)
 int swiftCore(QApplication &, const QStringList &arguments, const QStringList &qtArguments)
 {
     auto selected = QStringList{
@@ -111,7 +113,7 @@ const std::vector<CheckDefinition> &catalog()
                               .scratchKind = ScratchKind::ExistingDirectory,
                               .fixtureRootKind = FixtureRootKind::DecompProject,
                               .fixtureFiles = swiftCoreFixtures,
-                              .platforms = Platform::MacOS});
+                              .platforms = swiftPlatforms});
         };
         swiftSuite("swiftcore-midicodec", "midiCodec");
         swiftSuite("swiftcore-musicalsemantics", "musicalSemantics");
@@ -123,6 +125,7 @@ const std::vector<CheckDefinition> &catalog()
         swiftSuite("swiftcore-midiimport", "midiImport");
         swiftSuite("swiftcore-timeedits", "timeEdits");
         swiftSuite("swiftcore-projectsession", "projectSession");
+        result.back().platforms = Platform::MacOS;
         swiftSuite("swiftcore-bankhistory", "bankHistory");
         swiftSuite("swiftcore-themecolor", "themeColor");
         swiftSuite("swiftcore-displaylist", "displayList");
@@ -133,35 +136,35 @@ const std::vector<CheckDefinition> &catalog()
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = project,
-             .platforms = Platform::MacOS});
+             .platforms = swiftPlatforms});
         result.push_back({.name = "projectstore-songmodel",
                           .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "songModel"}),
                           .handler = swiftCore,
                           .scratchKind = ScratchKind::ExistingDirectory,
                           .fixtureRootKind = FixtureRootKind::DecompProject,
                           .fixtureFiles = project,
-                          .platforms = Platform::MacOS});
+                          .platforms = swiftPlatforms});
         result.push_back({.name = "projectstore-midicfg",
                           .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "midiCfg"}),
                           .handler = swiftCore,
                           .scratchKind = ScratchKind::ExistingDirectory,
                           .fixtureRootKind = FixtureRootKind::DecompProject,
                           .fixtureFiles = project,
-                          .platforms = Platform::MacOS});
+                          .platforms = swiftPlatforms});
         result.push_back({.name = "projectstore-songsmk",
                           .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "songsMk"}),
                           .handler = swiftCore,
                           .scratchKind = ScratchKind::ExistingDirectory,
                           .fixtureRootKind = FixtureRootKind::DecompProject,
                           .fixtureFiles = project,
-                          .platforms = Platform::MacOS});
+                          .platforms = swiftPlatforms});
         result.push_back({.name = "projectstore-catalog",
                           .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "songCatalog"}),
                           .handler = swiftCore,
                           .scratchKind = ScratchKind::ExistingDirectory,
                           .fixtureRootKind = FixtureRootKind::DecompProject,
                           .fixtureFiles = project,
-                          .platforms = Platform::MacOS});
+                          .platforms = swiftPlatforms});
         result.push_back(
             {.name = "projectstore-synthcatalog",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "synthCatalog"}),
@@ -177,7 +180,7 @@ const std::vector<CheckDefinition> &catalog()
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = project,
-             .platforms = Platform::MacOS});
+             .platforms = swiftPlatforms});
         result.push_back({.name = "projectstore-savecore",
                           .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "saveCore"}),
                           .handler = swiftCore,
@@ -192,7 +195,7 @@ const std::vector<CheckDefinition> &catalog()
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = project + editor,
-             .platforms = Platform::MacOS});
+             .platforms = swiftPlatforms});
         result.push_back(
             {.name = "projectstore-open",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectStoreOpen"}),
@@ -203,7 +206,7 @@ const std::vector<CheckDefinition> &catalog()
                  project + editor +
                  strings({"include/constants/songs.h", "sound/music_player_table.inc"}) +
                  fixtures::decompMidiFiles(),
-             .platforms = Platform::MacOS});
+             .platforms = swiftPlatforms});
         result.push_back(
             {.name = "projectstore-checks",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectStoreChecks"}),
@@ -219,7 +222,7 @@ const std::vector<CheckDefinition> &catalog()
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = project + editor,
-             .platforms = Platform::MacOS});
+             .platforms = swiftPlatforms});
         result.push_back(
             {.name = "projectstore-banklogic",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "voicegroupBankLogic"}),
@@ -227,7 +230,7 @@ const std::vector<CheckDefinition> &catalog()
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = project + editor,
-             .platforms = Platform::MacOS});
+             .platforms = swiftPlatforms});
         result.push_back(
             {.name = "projectstore-actor",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectStoreActor"}),
@@ -235,7 +238,7 @@ const std::vector<CheckDefinition> &catalog()
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = project,
-             .platforms = Platform::MacOS});
+             .platforms = swiftPlatforms});
         result.push_back(
             {.name = "projectstore-reads",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectStoreReads"}),
@@ -246,7 +249,7 @@ const std::vector<CheckDefinition> &catalog()
                  project + editor +
                  strings({"include/constants/songs.h", "sound/music_player_table.inc"}) +
                  fixtures::decompMidiFiles(),
-             .platforms = Platform::MacOS});
+             .platforms = swiftPlatforms});
         result.push_back(
             {.name = "projectstore-loadbank",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectStoreLoadBank"}),
@@ -257,7 +260,7 @@ const std::vector<CheckDefinition> &catalog()
                  project + editor +
                  strings({"include/constants/songs.h", "sound/music_player_table.inc"}) +
                  fixtures::decompMidiFiles(),
-             .platforms = Platform::MacOS});
+             .platforms = swiftPlatforms});
         result.push_back(
             {.name = "projectstore-edit",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectStoreEdit"}),
@@ -268,7 +271,7 @@ const std::vector<CheckDefinition> &catalog()
                  project + editor +
                  strings({"include/constants/songs.h", "sound/music_player_table.inc"}) +
                  fixtures::decompMidiFiles(),
-             .platforms = Platform::MacOS});
+             .platforms = swiftPlatforms});
         result.push_back(
             {.name = "projectstore-savebank",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectStoreSave"}),
@@ -289,7 +292,7 @@ const std::vector<CheckDefinition> &catalog()
                                           strings({"include/constants/songs.h",
                                                    "sound/music_player_table.inc"}) +
                                           fixtures::decompMidiFiles(),
-                          .platforms = Platform::MacOS});
+                          .platforms = swiftPlatforms});
         const auto native = [](const char *name, const char *command, const char *song,
                                const QStringList &files, Handler handler) {
             return CheckDefinition{
@@ -301,7 +304,7 @@ const std::vector<CheckDefinition> &catalog()
                 .fixtureRootKind = FixtureRootKind::DecompProject,
                 .fixtureFiles = files,
                 .environment = {{QStringLiteral("PORYDAW_AUDIO_BACKEND"), QStringLiteral("null")}},
-                .platforms = Platform::MacOS,
+                .platforms = swiftPlatforms,
             };
         };
         result.push_back(native("vgbankcheck", "vgbankcheck", "mus_gym", bank, swiftBank));
