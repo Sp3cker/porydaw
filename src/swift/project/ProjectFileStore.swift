@@ -6,8 +6,8 @@ public enum ProjectFileStoreError: Error, Equatable, Sendable, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case let .cannotRead(path): "Cannot read \(path)"
-        case let .cannotWrite(path): "Cannot write \(path)"
+        case .cannotRead(let path): "Cannot read \(path)"
+        case .cannotWrite(let path): "Cannot write \(path)"
         }
     }
 }
@@ -102,12 +102,13 @@ public enum ProjectFileStore {
     /// - Throws: `ProjectFileStoreError.cannotRead` if enumeration fails.
     public static func listRecursive(url: URL, ext: String) throws -> [String] {
         var enumerationFailed = false
-        guard let enumerator = FileManager.default.enumerator(
-            at: url, includingPropertiesForKeys: [.isRegularFileKey],
-            errorHandler: { _, _ in
-                enumerationFailed = true
-                return false
-            })
+        guard
+            let enumerator = FileManager.default.enumerator(
+                at: url, includingPropertiesForKeys: [.isRegularFileKey],
+                errorHandler: { _, _ in
+                    enumerationFailed = true
+                    return false
+                })
         else {
             throw ProjectFileStoreError.cannotRead(path: url.path)
         }
@@ -161,7 +162,8 @@ public enum ProjectFileStore {
                 continue
             case "..":
                 if let last = resolved.last, last != "..",
-                   !(driveRoot && resolved.count == 1) {
+                    !(driveRoot && resolved.count == 1)
+                {
                     resolved.removeLast()
                 } else if !absolute && !driveRoot {
                     resolved.append(component)
@@ -212,5 +214,56 @@ public enum ProjectFileStore {
             lines.append(Data(data[start..<data.endIndex]))
         }
         return (lines, data.isEmpty || data.last == 10, crlf)
+    }
+}
+
+/// A load-scoped listing with positive existence evidence; misses still use filesystem lookup.
+struct ProjectDirectoryCache {
+    struct File {
+        let url: URL
+        let filename: String
+    }
+
+    private static let resourceKeys: Set<URLResourceKey> = [
+        .isRegularFileKey, .isDirectoryKey, .isSymbolicLinkKey,
+    ]
+    private static let prefetchedKeys = Array(resourceKeys)
+
+    let files: [File]
+    private let directory: URL
+    private let existingNames: [String: String]
+
+    init(directory: URL) {
+        self.directory = directory
+        let entries =
+            (try? FileManager.default.contentsOfDirectory(
+                at: directory, includingPropertiesForKeys: Self.prefetchedKeys,
+                options: [.skipsHiddenFiles])) ?? []
+        var files: [File] = []
+        var existingNames: [String: String] = [:]
+        existingNames.reserveCapacity(entries.count)
+        for url in entries {
+            let filename = String(decoding: url.lastPathComponent.utf8, as: UTF8.self)
+            let values = try? url.resourceValues(forKeys: Self.resourceKeys)
+            if values?.isRegularFile == true {
+                files.append(File(url: url, filename: filename))
+            }
+            if values?.isSymbolicLink == false,
+                values?.isRegularFile == true || values?.isDirectory == true
+            {
+                existingNames[filename] = filename
+            }
+        }
+        self.files = files
+        self.existingNames = existingNames
+    }
+
+    func exists(_ filename: String) -> Bool {
+        // Swift keys compare canonically; only byte-exact hits prove filesystem existence.
+        if let cached = existingNames[filename], cached.utf8.elementsEqual(filename.utf8) {
+            return true
+        }
+        let url = directory.appendingPathComponent(filename, isDirectory: false)
+        return ProjectFileStore.exists(url.path)
     }
 }

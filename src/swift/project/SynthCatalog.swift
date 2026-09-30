@@ -46,6 +46,7 @@ private enum CatalogLines {
     static let drumkit = Array("voice_keysplit_all".utf8)
     static let doubleColon = Array("::".utf8)
     static let cries = Array("cries/".utf8)
+    static let voiceMacroPrefix = Array("voice_".utf8)
     static let voiceMacros: [(type: VgMacro, word: [UInt8], spaced: Bool)] = [
         (.directSoundNoResample, Array("voice_directsound_no_resample".utf8), true),
         (.directSoundAlt, Array("voice_directsound_alt".utf8), true),
@@ -67,7 +68,8 @@ private enum CatalogLines {
         var cursor = AsmLine(line)
         cursor.skipSpaces()
         guard cursor.consume(incbinDirective), cursor.skipSpaces(), cursor.consume(UInt8(34)),
-              let binary = cursor.until(34), !binary.isEmpty else { return nil }
+            let binary = cursor.until(34), !binary.isEmpty
+        else { return nil }
         return binary
     }
 
@@ -75,7 +77,8 @@ private enum CatalogLines {
         var cursor = AsmLine(line)
         cursor.skipSpaces()
         guard cursor.consume(macroDirective), cursor.skipSpaces(), let word = cursor.word(),
-              word.count > synthMacroPrefix.count, AsmLine.hasPrefix(word, synthMacroPrefix) else { return nil }
+            word.count > synthMacroPrefix.count, AsmLine.hasPrefix(word, synthMacroPrefix)
+        else { return nil }
         return AsmLine.text(word)
     }
 
@@ -93,7 +96,8 @@ private enum CatalogLines {
             guard digit >= 48 && digit <= 57 else { return nil }
             let step = Int(digit - 48)
             let (scaled, scaleOverflow) = value.multipliedReportingOverflow(by: 10)
-            let (next, stepOverflow) = negative
+            let (next, stepOverflow) =
+                negative
                 ? scaled.subtractingReportingOverflow(step) : scaled.addingReportingOverflow(step)
             overflowed = overflowed || scaleOverflow || stepOverflow
             value = next
@@ -103,10 +107,16 @@ private enum CatalogLines {
     }
 
     static func voiceMacro(_ text: AsmLine.Bytes) -> (type: VgMacro, arguments: AsmLine.Bytes)? {
+        guard text.count > voiceMacroPrefix.count,
+            AsmLine.hasPrefix(text, voiceMacroPrefix)
+        else { return nil }
+        let kind = text[text.startIndex + voiceMacroPrefix.count]
         var index = 0
         while index < voiceMacros.count {
             let candidate = voiceMacros[index]
-            if AsmLine.hasPrefix(text, candidate.word) {
+            if candidate.word[voiceMacroPrefix.count] == kind,
+                AsmLine.hasPrefix(text, candidate.word)
+            {
                 let next = text.startIndex + candidate.word.count
                 if !candidate.spaced || (next < text.endIndex && text[next] == 32) {
                     return (candidate.type, text[next...])
@@ -117,22 +127,19 @@ private enum CatalogLines {
         return nil
     }
 
-    static func voiceFields(_ arguments: AsmLine.Bytes, count expected: Int)
-        -> (symbol: AsmLine.Bytes, attack: Int, decay: Int, sustain: Int, release: Int)? {
-        var commas = 0
+    static func voiceFields(
+        _ arguments: AsmLine.Bytes, count expected: Int
+    )
+        -> (symbol: AsmLine.Bytes, attack: Int, decay: Int, sustain: Int, release: Int)?
+    {
         var index = arguments.startIndex
-        while index < arguments.endIndex {
-            if arguments[index] == 44 { commas += 1 }
-            index += 1
-        }
-        guard commas + 1 == expected else { return nil }
         var symbol = arguments[arguments.startIndex..<arguments.startIndex]
         var envelope = (0, 0, 0, 0)
         var field = 0
         var start = arguments.startIndex
-        index = arguments.startIndex
         while index <= arguments.endIndex {
             if index == arguments.endIndex || arguments[index] == 44 {
+                guard field < expected else { return nil }
                 let value = arguments[start..<index]
                 if field == 2 { symbol = AsmLine.trimmed(value) }
                 let slot = field - (expected - 4)
@@ -150,6 +157,7 @@ private enum CatalogLines {
             }
             index += 1
         }
+        guard field == expected else { return nil }
         return (symbol, envelope.0, envelope.1, envelope.2, envelope.3)
     }
 
@@ -157,11 +165,13 @@ private enum CatalogLines {
         if recursive {
             return (try? ProjectFileStore.listRecursive(url: URL(filePath: directory), ext: ".inc")) ?? []
         }
-        guard let entries = try? FileManager.default.contentsOfDirectory(
-            at: URL(filePath: directory), includingPropertiesForKeys: [.isRegularFileKey]) else { return [] }
+        guard
+            let entries = try? FileManager.default.contentsOfDirectory(
+                at: URL(filePath: directory), includingPropertiesForKeys: [.isRegularFileKey])
+        else { return [] }
         return entries.filter {
-            $0.lastPathComponent.hasSuffix(".inc") &&
-                (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true
+            $0.lastPathComponent.hasSuffix(".inc")
+                && (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true
         }.map(\.path)
     }
 
@@ -199,8 +209,9 @@ private enum CatalogLines {
                 fields[index] = Int(UInt8(truncatingIfNeeded: negative ? 0 &- magnitude : magnitude))
                 remaining = remaining.dropFirst((signed ? 1 : 0) + (hex ? 2 : 0) + validDigits.count)
             }
-            return VgSynthDesc(waveform: waveform, baseDuty: fields[0], dutyStep: fields[1],
-                               modDepth: fields[2], phase: fields[3])
+            return VgSynthDesc(
+                waveform: waveform, baseDuty: fields[0], dutyStep: fields[1],
+                modDepth: fields[2], phase: fields[3])
         }
         return nil
     }
@@ -236,8 +247,9 @@ private enum CatalogLines {
         }
         let synthNames = Set(result.synths.defs.map(\.symbol))
         let sorted = Set(samples).sorted()
-        result.directSound = sorted.filter { !synthNames.contains($0) && !$0.contains("Phoneme") } +
-            sorted.filter { !synthNames.contains($0) && $0.contains("Phoneme") }
+        result.directSound =
+            sorted.filter { !synthNames.contains($0) && !$0.contains("Phoneme") }
+            + sorted.filter { !synthNames.contains($0) && $0.contains("Phoneme") }
         var seen: Set<String> = []
         for path in files("\(root)/asm/macros", recursive: false) {
             guard let lines = AsmLine.lines(path) else { continue }
@@ -271,7 +283,8 @@ private enum CatalogLines {
                             groups.insert("voicegroup_" + AsmLine.text(name))
                         }
                     } else if head.count > voicegroupPrefix.count, AsmLine.hasPrefix(head, voicegroupPrefix),
-                              cursor.consume(doubleColon) {
+                        cursor.consume(doubleColon)
+                    {
                         groups.insert(AsmLine.text(head))
                     } else if AsmLine.equals(head, keysplit) {
                         if cursor.skipSpaces(), let symbol = cursor.word() {
@@ -289,8 +302,9 @@ private enum CatalogLines {
                     }
                 }
                 guard let (type, arguments) = voiceMacro(AsmLine.content(raw)),
-                      let fields = voiceFields(arguments,
-                                               count: type == .square1 || type == .square1Alt ? 8 : 7)
+                    let fields = voiceFields(
+                        arguments,
+                        count: type == .square1 || type == .square1Alt ? 8 : 7)
                 else { continue }
                 let cgb = vgMacroIsCgb(type)
                 let attack = cgb ? fields.attack & 7 : fields.attack & 255
@@ -298,8 +312,7 @@ private enum CatalogLines {
                 let sustain = cgb ? fields.sustain & 15 : fields.sustain & 255
                 let release = cgb ? fields.release & 7 : fields.release & 255
                 guard release != 0, cgb || attack != 0 else { continue }
-                let code = UInt32(attack) << 24 | UInt32(decay) << 16 |
-                    UInt32(sustain) << 8 | UInt32(release)
+                let code = UInt32(attack) << 24 | UInt32(decay) << 16 | UInt32(sustain) << 8 | UInt32(release)
                 families[vgAdsrFamily(type), default: [:]][code, default: 0] += 1
                 if vgMacroHasSymbol(type), !fields.symbol.isEmpty {
                     symbols[AsmLine.text(fields.symbol), default: [:]][code, default: 0] += 1
@@ -312,11 +325,13 @@ private enum CatalogLines {
         }
         result.drumkits = drums.sorted()
         func mode(_ counts: [UInt32: Int]) -> VgAdsr {
-            let code = counts.max { lhs, rhs in
-                lhs.value == rhs.value ? lhs.key > rhs.key : lhs.value < rhs.value
-            }?.key ?? 0
-            return VgAdsr(attack: Int(code >> 24), decay: Int((code >> 16) & 255),
-                          sustain: Int((code >> 8) & 255), release: Int(code & 255))
+            let code =
+                counts.max { lhs, rhs in
+                    lhs.value == rhs.value ? lhs.key > rhs.key : lhs.value < rhs.value
+                }?.key ?? 0
+            return VgAdsr(
+                attack: Int(code >> 24), decay: Int((code >> 16) & 255),
+                sustain: Int((code >> 8) & 255), release: Int(code & 255))
         }
         for (family, counts) in families { result.typicalAdsr.byFamily[family] = mode(counts) }
         for (symbol, counts) in symbols { result.typicalAdsr.bySymbol[symbol] = mode(counts) }
