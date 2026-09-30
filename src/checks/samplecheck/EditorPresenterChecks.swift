@@ -172,7 +172,7 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
         edit.expect(editPresenter.canCommit && editPresenter.commitLabel == "Save Sample",
             message: "A062 edit mode exposes an enabled commit action")
         edit.expect(editPresenter.params == baseline && !editPresenter.canUndo,
-            message: "A064 sidecar params are baseline not undo entry")
+            message: "A064 restored provenance params are baseline not undo entry")
         let state = report.scoped(cppID: "swiftcore/SampleStudioPresenter::historyAndReadouts")
         let gesture = SampleStudioPresenter(source: hiRes, validateName: validator)
         var observed: [Int] = []

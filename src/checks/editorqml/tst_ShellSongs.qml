@@ -159,7 +159,6 @@ TestCase {
                 compare(JSON.stringify(paths.map(path => fileProbe.fileFingerprint(bootstrap.projectRoot + "/" + path))),
                         JSON.stringify(expected), "Cancel preserves literal registration, flags and bank images")
                 compare(bootstrap.dockSongMidiExists(), true, "Cancel preserves MIDI at the original path")
-                compare(bootstrap.dockTrashedMidiExists(), false, "Cancel creates no MIDI trash entry")
             } else {
                 if (branch === "opt-out") {
                     mouseClick(checkbox)
@@ -171,8 +170,8 @@ TestCase {
                 }, 30000), "confirmed deletion refreshes the mounted song listing")
                 compare(row(deletedId), null, "confirmed deletion removes the selected row")
                 compare(bootstrap.dockSongMidiExists(), false, "confirmed deletion removes the original MIDI path")
-                compare(fileProbe.fileFingerprint(bootstrap.projectRoot + "/.porydaw/trash/mus_stray_test.mid"),
-                        "471:d31e7c4a0a32a53f", "the disclosed trash destination contains the original MIDI bytes")
+                compare(bootstrap.projectPorydawFolderExists(), false,
+                        "confirmed deletion keeps no copy of the MIDI inside the project")
                 if (branch === "opt-out") {
                     compare(fileProbe.fileFingerprint(bootstrap.projectRoot + "/sound/voicegroups/fixture_songs_dock.inc"),
                             expected[4], "opt-out preserves the literal complete bank source")
@@ -294,9 +293,6 @@ TestCase {
         compare(presenter().rowCount, 7, "A047: deleting one song decreases the listed count by exactly one")
         compare(bootstrap.actionMidiExists(), false,
                 "A048: deleting the song removes its original MIDI path")
-        compare(fileProbe.fileFingerprint(root + "/.porydaw/trash/mus_route101.mid"),
-                "471:d31e7c4a0a32a53f",
-                "A049: deletion leaves the original MIDI bytes at the named trash path")
     }
 
     function test_fallbackDeletionRefusedWithOpenTab() {
@@ -594,8 +590,6 @@ TestCase {
         menuAction("delete")
         verify(waitForNative(function() { return controller().confirmation === "delete" }, 5000),
                "delete plan reaches the warning confirmation")
-        verify(controller().confirmationDetail.indexOf(".porydaw/trash") >= 0,
-               "delete discloses where the MIDI file moves")
         compare(controller().deletableVoicegroup, "fixture_songs_dock",
                 "an unused song-specific voicegroup is offered for deletion")
         const voicegroupOption = findChild(shell, "songDeleteVoicegroup")
@@ -613,8 +607,7 @@ TestCase {
         tryCompare(category, "displayText", "All (9)", 3000,
                    "the mounted category caption refreshes after deletion")
         verify(row(strayId) === null, "the deleted song is no longer painted in the dock")
-        verify(!bootstrap.dockSongMidiExists() && bootstrap.dockTrashedMidiExists(),
-               "deletion moves the .mid to .porydaw/trash")
+        verify(!bootstrap.dockSongMidiExists(), "deletion removes the .mid")
         verify(!bootstrap.dockVoicegroupExists(),
                "deleting with the checked option removes the unused voicegroup source")
     }

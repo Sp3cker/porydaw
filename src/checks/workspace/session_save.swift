@@ -10,7 +10,6 @@ internal func sessionSavePersistence(report: CheckReport, session: DocumentSessi
                                      service: ProjectService, projectDir: String) {
     sessionSaveConflictGate(report: report, fixtureRoot: projectDir)
     sessionSaveReceipts(report: report, fixtureRoot: projectDir)
-    sessionLegacySidecarPersistence(report: report, fixtureRoot: projectDir)
     sessionSaveJourney(report: report, fixtureRoot: projectDir)
     sessionSynthUndoTail(report: report, fixtureRoot: projectDir)
     session.document.setLoop(end: false, tick: 72)
@@ -427,103 +426,6 @@ private func sessionSaveReceipts(report: CheckReport, fixtureRoot: String) {
     } catch {
         report.fail(id, "Save receipt journey failed: \(error)")
     }
-}
-
-@MainActor
-private func sessionLegacySidecarPersistence(report: CheckReport, fixtureRoot: String) {
-    let id = "project-io-mutations/ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload"
-    let label = "mus_session_test"
-    let source = URL(fileURLWithPath: fixtureRoot, isDirectory: true)
-    let root = source.deletingLastPathComponent()
-        .appendingPathComponent("legacy-sidecar-\(UUID().uuidString)", isDirectory: true)
-    let fileManager = FileManager.default
-    do {
-        try fileManager.copyItem(at: source, to: root)
-    } catch {
-        report.fail(id, "Copying the isolated sidecar fixture failed")
-        return
-    }
-    defer { try? fileManager.removeItem(at: root) }
-
-    let service = ProjectService()
-    defer {
-        do {
-            try runBlocking { await service.close() }
-        } catch {
-            report.fail(id, "closing the isolated sidecar project failed")
-        }
-    }
-    let session: DocumentSession
-    do {
-        try runBlocking { try await service.open(root: root.path) }
-        session = try runBlocking { try await DocumentSession.open(service: service, label: label) }
-    } catch {
-        report.fail(id, "Opening the copied sidecar song failed")
-        return
-    }
-
-    let sidecar = root.appendingPathComponent(".porydaw/\(label).json")
-    let seed = Data(#"{"editor":{"laneHeight":96},"view":{"pxPerBeat":48,"selectedTrack":2}}"#.utf8)
-    do {
-        try fileManager.createDirectory(at: sidecar.deletingLastPathComponent(),
-                                        withIntermediateDirectories: true)
-        try seed.write(to: sidecar)
-    } catch {
-        report.fail(id, "Writing the literal legacy sidecar failed")
-        return
-    }
-
-    do {
-        var config = session.document.state.config
-        config.priority += 1
-        session.document.setConfig(config)
-        try runBlocking { try await session.save() }
-    } catch {
-        report.fail(id, "The bare document save failed")
-        return
-    }
-    let afterBare: Data
-    do {
-        afterBare = try Data(contentsOf: sidecar)
-    } catch {
-        report.fail(id, "Reading the legacy sidecar after bare save failed")
-        return
-    }
-    report.expect(afterBare == seed, cppID: id,
-                  message: "A033 bare document save preserves every literal legacy sidecar byte")
-
-    do {
-        let snapshot = try session.document.captureSave()
-        _ = try runBlocking { try await service.save(snapshot, bank: session.bankLease) }
-    } catch {
-        report.fail(id, "Saving the song with its bank lease failed")
-        return
-    }
-    let afterRecipe: Data
-    do {
-        afterRecipe = try Data(contentsOf: sidecar)
-    } catch {
-        report.fail(id, "Reading the legacy sidecar after bank-lease save failed")
-        return
-    }
-    report.expect(afterRecipe == seed, cppID: id,
-                  message: "A038 bank-lease song save preserves every literal legacy sidecar byte")
-
-    do {
-        _ = try runBlocking { try await DocumentSession.open(service: service, label: label) }
-    } catch {
-        report.fail(id, "Reopening the saved sidecar song failed")
-        return
-    }
-    let afterReload: Data
-    do {
-        afterReload = try Data(contentsOf: sidecar)
-    } catch {
-        report.fail(id, "Reading the legacy sidecar after reopen failed")
-        return
-    }
-    report.expect(afterReload == seed, cppID: id,
-                  message: "A041 reopening the saved song preserves every literal legacy sidecar byte")
 }
 
 @MainActor

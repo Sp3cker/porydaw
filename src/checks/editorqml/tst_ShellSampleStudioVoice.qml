@@ -81,6 +81,7 @@ TestCase {
         const wav = rootPath + "/sound/direct_sound_samples/voice_hires.wav"
         const inc = rootPath + "/sound/direct_sound_data.inc"
         verify(disk.exists(wav), "registration writes WAV")
+        verify(!disk.exists(rootPath + "/.porydaw"), "import keeps provenance out of the project")
         const incBytes = disk.fingerprint(inc)
         app.requestUndo()
         verify(nativeWait(function() { return controller.editorModel().symbol === original }, 15000),
@@ -114,10 +115,12 @@ TestCase {
                "changed source falls back to committed WAV")
         mouseClick(child("sampleStudioCommit"))
         verify(nativeWait(function() { return !child("sampleStudioDialog") }, 30000), "fallback saves")
-        verify(!disk.exists(rootPath + "/.porydaw/samples/voice_hires.json"),
-               "committed-WAV fallback discards stale sidecar")
         verify(sourceProbe.restoreSource() && disk.fingerprint(source) === sourceFingerprint,
-               "source fixture restored before next journey")
+               "source restored to its imported bytes")
+        mouseClick(edit)
+        verify(nativeWait(function() { return !!child("sampleStudioDialog") }, 15000), "edit reopens after fallback")
+        verify(child("sampleStudioSource").text.indexOf("8-bit PCM WAV") === 0,
+               "committed-WAV fallback forgets the stale provenance: " + child("sampleStudioSource").text)
     }
     function test_cgbDestinationAndSoundFontZone() {
         const app = start()

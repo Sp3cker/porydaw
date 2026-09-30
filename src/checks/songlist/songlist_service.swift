@@ -433,8 +433,7 @@ internal func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: Strin
             what: "deleting the engine fallback refuses")
 
         // Delete the now-registered stray: last table entry, removed
-        // outright; the .mid lands in .porydaw/trash and the listing drops
-        // the song.
+        // outright; the .mid is deleted and the listing drops the song.
         let deletePlan = try runBlocking {
             try await service.songDeletionPlan(label: "mus_stray_test")
         }
@@ -461,9 +460,9 @@ internal func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: Strin
             cppID: mutationId,
             what: "the deleted song leaves the refreshed listing")
         report.expect(
-            FileManager.default.fileExists(
-                atPath: projectDir + "/.porydaw/trash/mus_stray_test.mid"),
-            cppID: mutationId, message: "the .mid moved to .porydaw/trash")
+            !FileManager.default.fileExists(
+                atPath: projectDir + "/sound/songs/midi/mus_stray_test.mid"),
+            cppID: mutationId, message: "the .mid is deleted")
 
         // Unknown labels fail both plan halves.
         var planThrew = false

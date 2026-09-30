@@ -15,7 +15,7 @@ add_library(PorydawSample STATIC
     SampleWavWriter.swift
     SampleAnalysis.swift
     SampleSourceHash.swift
-    SampleSidecar.swift
+    SampleProvenance.swift
     SampleReopen.swift
     SamplePeakPyramid.swift
 )

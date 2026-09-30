@@ -309,7 +309,8 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
             }
             for relative in ["sound/songs/midi/mus_stray_test.mid",
                              "sound/songs/midi/mus_partial_test.mid",
-                             "sound/voicegroups/fixture_songs_dock.inc", ".porydaw"] {
+                "sound/voicegroups/fixture_songs_dock.inc",
+            ] {
                 let leftover = target.appendingPathComponent(relative)
                 if FileManager.default.fileExists(atPath: leftover.path) {
                     try FileManager.default.removeItem(at: leftover)
@@ -389,9 +390,8 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
             projectRoot + "/sound/songs/midi/mus_stray_test.mid")
     }
 
-    public func dockTrashedMidiExists() -> Bool {
-        FileManager.default.fileExists(atPath:
-            projectRoot + "/.porydaw/trash/mus_stray_test.mid")
+    public func projectPorydawFolderExists() -> Bool {
+        FileManager.default.fileExists(atPath: projectRoot + "/.porydaw")
     }
 
     /// Selects the frozen widget geometry for the actual mounted display

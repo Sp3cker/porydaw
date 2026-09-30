@@ -1,6 +1,7 @@
 import Foundation
 
-public struct SampleSidecar: Sendable, Equatable {
+/// Where a committed sample came from and how it was edited, so Edit can reopen the source.
+public struct SampleProvenance: Sendable, Equatable {
     public var version = 1
     public var sourcePath = ""
     public var sourceSha256 = ""
@@ -119,27 +120,27 @@ public struct SampleSidecar: Sendable, Equatable {
         let params: Parameters
     }
 
-    /// Encodes the fork's version-one keys and JSON numeric values without depending on key order.
+    /// Encodes the version-one keys without depending on key order.
     public func jsonData() -> Data {
         let document = Document(version: version,
             source: Source(path: sourcePath, sha256: sourceSha256, leftOnly: leftOnly, sf2Zone: sf2Zone),
             params: Parameters(params))
         let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.outputFormatting = [.sortedKeys]
         return (try? encoder.encode(document)) ?? Data()
     }
 
-    /// Reads version-one fork sidecars with its missing-field defaults and enum bounds.
-    public static func decode(_ data: Data) -> SampleSidecar? {
+    /// Reads a version-one record with its missing-field defaults and enum bounds.
+    public static func decode(_ data: Data) -> SampleProvenance? {
         guard let document = try? JSONDecoder().decode(Document.self, from: data),
             document.version == 1, !document.source.path.isEmpty, !document.source.sha256.isEmpty
         else { return nil }
-        var sidecar = SampleSidecar()
-        sidecar.sourcePath = document.source.path
-        sidecar.sourceSha256 = document.source.sha256
-        sidecar.leftOnly = document.source.leftOnly
-        sidecar.sf2Zone = document.source.sf2Zone
-        sidecar.params = document.params.editParams
-        return sidecar
+        var provenance = SampleProvenance()
+        provenance.sourcePath = document.source.path
+        provenance.sourceSha256 = document.source.sha256
+        provenance.leftOnly = document.source.leftOnly
+        provenance.sf2Zone = document.source.sf2Zone
+        provenance.params = document.params.editParams
+        return provenance
     }
 }

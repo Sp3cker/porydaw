@@ -3,21 +3,6 @@ import Foundation
 import PorydawCore
 import PorydawCoreCheckNative
 
-// Fork `porydawSnapshot`: recursive byte listing of the project sidecar dir.
-private func projectSidecarSnapshot(root: String) -> [String: Data] {
-    var snapshot: [String: Data] = [:]
-    let sidecar = URL(fileURLWithPath: root).appendingPathComponent(".porydaw").path
-    guard FileManager.default.fileExists(atPath: sidecar) else { return snapshot }
-    guard let enumerator = FileManager.default.enumerator(atPath: sidecar) else { return snapshot }
-    for case let relative as String in enumerator {
-        let full = (sidecar as NSString).appendingPathComponent(relative)
-        var isDir: ObjCBool = false
-        guard FileManager.default.fileExists(atPath: full, isDirectory: &isDir), !isDir.boolValue else { continue }
-        snapshot[relative] = (try? Data(contentsOf: URL(fileURLWithPath: full))) ?? Data()
-    }
-    return snapshot
-}
-
 @MainActor
 func runCompleteEditorViewStateChecks(report: CheckReport, store: PreferencesStore,
                                       fixtureRoot: String) {
@@ -285,7 +270,6 @@ func runCompleteEditorViewStateChecks(report: CheckReport, store: PreferencesSto
     siblingCount = 0
     let revision = second.document.revision
     let historyCount = second.document.history.undoCount
-    let sidecarBefore = projectSidecarSnapshot(root: root)
     var withEmpty = seed
     withEmpty.lanes.emptyLanes.insert(.init(track: 2, controller: 40))
     guard second.setEditorViewState(withEmpty) else {
@@ -312,8 +296,6 @@ func runCompleteEditorViewStateChecks(report: CheckReport, store: PreferencesSto
                   message: "A162 view-only insertion leaves document revision unchanged")
     report.expect(second.document.history.undoCount == historyCount, cppID: id,
                   message: "A163 view-only insertion leaves document history count unchanged")
-    report.expect(projectSidecarSnapshot(root: root) == sidecarBefore, cppID: id,
-                  message: "A164 view-only insertion leaves every project sidecar byte unchanged")
     report.expect(siblingCount == 0, cppID: id,
                   message: "view-only insertion never originates from selected sibling")
     guard second.setEditorViewState(seed) else {
@@ -332,8 +314,6 @@ func runCompleteEditorViewStateChecks(report: CheckReport, store: PreferencesSto
                   message: "A169 view-only removal leaves document revision unchanged")
     report.expect(second.document.history.undoCount == historyCount, cppID: id,
                   message: "A170 view-only removal leaves document history count unchanged")
-    report.expect(projectSidecarSnapshot(root: root) == sidecarBefore, cppID: id,
-                  message: "A171 view-only removal leaves every project sidecar byte unchanged")
     report.expect(first.editorViewState == seed, cppID: id,
                   message: "view-only removal restores selected sibling complete value")
     report.expect(EditorViewStateCodec.load(store: PreferencesStore()) == seed, cppID: id,
@@ -346,7 +326,6 @@ func runCompleteEditorViewStateChecks(report: CheckReport, store: PreferencesSto
     }
     let rejectedRevision = second.document.revision
     let rejectedSettings = EditorViewStateCodec.load(store: PreferencesStore())
-    let rejectedSidecar = projectSidecarSnapshot(root: root)
     originCount = 0
     siblingCount = 0
     hubCount = 0
@@ -365,8 +344,6 @@ func runCompleteEditorViewStateChecks(report: CheckReport, store: PreferencesSto
                   message: "A176 rejected live remap leaves document revision unchanged")
     report.expect(EditorViewStateCodec.load(store: PreferencesStore()) == rejectedSettings, cppID: id,
                   message: "A177 rejected live remap leaves persisted preferences unchanged")
-    report.expect(projectSidecarSnapshot(root: root) == rejectedSidecar, cppID: id,
-                  message: "A178 rejected live remap leaves every project sidecar byte unchanged")
     report.expect(originCount == 0, cppID: id,
                   message: "A179 rejected live remap emits no origin notification")
     report.expect(hubCount == 0, cppID: id,

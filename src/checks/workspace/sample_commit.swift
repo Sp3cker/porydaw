@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 import PorydawSample
 import PorydawProject
@@ -28,20 +28,14 @@ internal func sampleCommitRefreshChecks(_ report: CheckReport, fixtureRoot: Stri
         rendered.declaredRate = 22_050
         rendered.freq = 15_000_000
         let wav = SampleWavWriter.bytes(for: rendered)
-        var sidecar = SampleSidecar()
-        sidecar.sourcePath = "/source/commit_tone.wav"
-        sidecar.sourceSha256 = SampleSourceHash.sha256Hex(wav)
-        let request = SampleCommitRequest(name: name, wav: wav, sidecar: sidecar,
-                                          removeSidecar: false, update: false)
-        let receipt = try runBlocking { try await service.commitSample(request) }
-        check.expect(receipt.name == name && receipt.sidecarSaved && receipt.sidecarError.isEmpty,
-                     message: "sample commit reports successful provenance")
+        let request = SampleCommitRequest(name: name, wav: wav, update: false)
+        try runBlocking { try await service.commitSample(request) }
         let persisted = try Data(contentsOf: URL(filePath: sound + "/direct_sound_samples/\(name).wav"))
         check.expect(persisted == wav, message: "sample WAV persists exact rendered bytes")
         let registration = try String(contentsOfFile: inc, encoding: .utf8)
         check.expect(registration.contains(symbol + "::"), message: "new symbol registers in assembly")
         let reopened = try runBlocking { try await service.readCommittedSample(name: name) }
-        check.expect(reopened.sidecar == sidecar, message: "committed provenance can be reopened")
+        check.expect(reopened.wav == wav, message: "committed WAV can be reopened")
         let picked = try runBlocking { await service.pickerSound(symbol: symbol, kind: .sample) }
         if case .sample(let bytes, _, _, _, _, _) = picked {
             check.expect(bytes == rendered.s8, message: "picker reload resolves committed signed audio")
@@ -84,10 +78,7 @@ internal func sampleCommitRefreshChecks(_ report: CheckReport, fixtureRoot: Stri
         rendered.s8 = (0..<64).map { Int8(31 - $0) }
         let updatedWav = SampleWavWriter.bytes(for: rendered)
         let beforeInc = try Data(contentsOf: URL(filePath: inc))
-        let updatedReceipt = try runBlocking { try await service.commitSample(.init(
-            name: name, wav: updatedWav, sidecar: nil, removeSidecar: true, update: true)) }
-        check.expect(updatedReceipt.sidecarSaved && updatedReceipt.sidecarError.isEmpty,
-                     message: "sample update removes old provenance")
+        try runBlocking { try await service.commitSample(.init(name: name, wav: updatedWav, update: true)) }
         let afterInc = try Data(contentsOf: URL(filePath: inc))
         check.expect(afterInc == beforeInc, message: "sample update preserves registration bytes")
         check.expect(first.bankSlots[1].voice == unsaved && peer.bankSlots[1].voice == unsaved
@@ -131,29 +122,38 @@ internal func sampleCommitRefreshChecks(_ report: CheckReport, fixtureRoot: Stri
     } catch {
         check.expect(false, message: "sample commit lifecycle failed: \(error)")
     }
-    let blockedRoot = stageTestProject(in: fixtureRoot, projectName: "swiftcore-sample-sidecar-failure")
-    let blockedService = ProjectService()
-    do {
-        try Data().write(to: URL(filePath: blockedRoot + "/sound/direct_sound_data.inc"))
-        try Data("include audio_rules.mk\n".utf8).write(to: URL(filePath: blockedRoot + "/Makefile"))
-        try Data("$(SOUND_BIN_DIR)/%.bin: sound/%.wav\n\t$(WAV2AGB) -b $< $@\n".utf8)
-            .write(to: URL(filePath: blockedRoot + "/audio_rules.mk"))
-        try FileManager.default.createDirectory(atPath: blockedRoot + "/.porydaw", withIntermediateDirectories: true)
-        try Data("occupied".utf8).write(to: URL(filePath: blockedRoot + "/.porydaw/samples"))
-        try runBlocking { try await blockedService.open(root: blockedRoot) }
-        var sample = ProcessedSample()
-        sample.s8 = [Int8](repeating: 7, count: 64)
-        sample.size = 64
-        sample.declaredRate = 22_050
-        sample.freq = 15_000_000
-        let wav = SampleWavWriter.bytes(for: sample)
-        let receipt = try runBlocking { try await blockedService.commitSample(.init(
-            name: "sidecar_fail", wav: wav, sidecar: SampleSidecar(), removeSidecar: false, update: false)) }
-        check.expect(!receipt.sidecarSaved && receipt.sidecarError.contains("cannot write"),
-                     message: "sidecar failure reports error without rolling back sample")
-        let survived = try runBlocking { try await blockedService.readCommittedSample(name: "sidecar_fail") }
-        check.expect(survived.wav == wav, message: "committed WAV survives sidecar write refusal")
-    } catch {
-        check.expect(false, message: "sidecar failure fixture failed: \(error)")
-    }
+    check.expect(
+        !FileManager.default.fileExists(atPath: root + "/.porydaw"),
+        message: "sample commits create no .porydaw folder in the project")
+    sampleProvenanceStoreChecks(report, projectRoot: root, name: name)
+}
+
+@MainActor
+private func sampleProvenanceStoreChecks(_ report: CheckReport, projectRoot: String, name: String) {
+    let check = report.scoped(cppID: "swiftcore/SampleProvenanceStore::appData")
+    let store = SampleProvenanceStore(preferences: PreferencesStore())
+    let otherRoot = projectRoot + "-other"
+    var provenance = SampleProvenance()
+    provenance.sourcePath = "/source/commit_tone.wav"
+    provenance.sourceSha256 = "abc"
+    provenance.leftOnly = true
+    provenance.sf2Zone = 3
+    provenance.params.loopStart = 77
+    var other = provenance
+    other.sourcePath = "/source/other_tone.wav"
+    store.save(provenance, projectRoot: projectRoot, name: name)
+    store.save(other, projectRoot: otherRoot, name: name)
+    check.expect(
+        SampleProvenanceStore(preferences: PreferencesStore())
+            .load(projectRoot: projectRoot + "/", name: name) == provenance,
+        message: "a fresh preference store reloads every provenance field for the project")
+    check.expect(
+        store.load(projectRoot: otherRoot, name: name) == other,
+        message: "the same sample name in another project keeps its own provenance")
+    store.remove(projectRoot: projectRoot, name: name)
+    check.expect(
+        store.load(projectRoot: projectRoot, name: name) == nil
+            && store.load(projectRoot: otherRoot, name: name) == other,
+        message: "removing provenance forgets only that project's sample")
+    store.remove(projectRoot: otherRoot, name: name)
 }

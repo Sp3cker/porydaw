@@ -209,7 +209,7 @@ public final class SongDockController {
 
     private func deletionDetails(_ plan: SongDeletionPlan) -> String {
         var details = [
-            "Its .mid moves to .porydaw/trash.",
+            "Its .mid is deleted; only a Git commit can restore it.",
             plan.lastEntry
                 ? "Its song_table.inc line is removed outright."
                 : "Its song_table.inc entry becomes a reusable free slot, so no other song's ID changes.",

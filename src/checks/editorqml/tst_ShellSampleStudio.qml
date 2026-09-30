@@ -187,7 +187,6 @@ TestCase {
         verify(waitForNative(function() {
             return presenter.session.voiceListController().sampleSymbols().indexOf("DirectSoundWaveData_hires_tone") !== -1
         }, 15000), "catalog refresh exposes new symbol")
-        verify(disk.exists(rootPath + "/.porydaw/samples/hires_tone.json"), "sidecar saved")
     }
     function test_flacOpensEditor() {
         openProject()

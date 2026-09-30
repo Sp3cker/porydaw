@@ -124,11 +124,5 @@ internal func stageTestProject(in rootDirectory: String, projectName: String) ->
     let midi2Bytes = try! midi2.encoded()
     try! Data(midi2Bytes).write(to: URL(fileURLWithPath: songsDir).appendingPathComponent("mus_session_test2.mid"))
 
-    let legacyJson = """
-    {"legacy": true, "author": "porydaw", "protected": true}
-    """
-    try! legacyJson.write(toFile: URL(fileURLWithPath: songsDir).appendingPathComponent("mus_session_test.mid.json").path,
-                          atomically: true, encoding: .utf8)
-
     return projectDir
 }

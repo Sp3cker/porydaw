@@ -31,7 +31,7 @@ add_library(PorydawProject STATIC
     ProjectStore+Samples.swift
     ProjectStore+Synth.swift
     SampleRegistrar.swift
-    SampleRegistrar+Provenance.swift
+    SampleRegistrar+Committed.swift
 )
 
 configure_file(
@@ -66,4 +66,4 @@ target_include_directories(PorydawProject INTERFACE
 )
 porydaw_enable_swift_batch_mode(PorydawProject)
 
-target_link_libraries(PorydawProject PUBLIC PorydawCore PorydawSample)
+target_link_libraries(PorydawProject PUBLIC PorydawCore)
