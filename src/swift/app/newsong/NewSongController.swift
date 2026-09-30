@@ -105,19 +105,16 @@ public final class NewSongController {
 
     public func finish() {
         guard !busy, wizardOpen, let state, let service else { return }
-        wizardOpen = false
-        busy = true
         let request: SongImportRequest
         switch state.finishPlan() {
         case .failure(let refusal):
             warningRequested(title: refusal.title, message: refusal.message)
-            wizardOpen = true
-            busy = false
             return
         case .success(let value): request = value
         }
+        wizardOpen = false
         self.state = nil
-        publish()
+        busy = true
         operation = Task { [weak self] in
             guard let self else { return }
             do {
@@ -162,10 +159,6 @@ public final class NewSongController {
     }
 
     public func cancel() {
-        // Finish closes the wizard while busy, and that close calls back here.
-        guard !busy else { return }
-        operation?.cancel()
-        operation = nil
         wizardOpen = false
         state = nil
         publish()
