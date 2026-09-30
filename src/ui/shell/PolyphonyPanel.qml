@@ -17,6 +17,16 @@ Item {
     readonly property real margin: Math.round(em * 8 / 12)
     readonly property real contentWidth: width - 2 * margin
     readonly property real headingHeight: Math.round(em * 1.5)
+    // Measured layout results; section rects share the sections item's coordinate space.
+    readonly property rect usageSectionRect: Qt.rect(usage.x, usage.y, usage.width, usage.height)
+    readonly property rect overflowSectionRect: Qt.rect(overflow.x, overflow.y,
+                                                        overflow.width, overflow.height)
+    readonly property bool gridFullyVisible: grid.width > 0
+        && grid.height >= grid.implicitHeight
+        && grid.y + grid.height <= usage.height
+        && content.x + usage.x + grid.width <= scroll.width
+        && content.y + sections.y + usage.y + usage.height <= scroll.contentHeight
+    readonly property real vScrollRange: Math.max(0, scroll.contentHeight - scroll.height)
 
     Rectangle { anchors.fill: parent; color: panel.colors.windowBackground }
 

@@ -229,34 +229,16 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: Fork QVERIFY(session.has_value()) is the native openSession fixture guard, not the fresh-bind outcome; S302 observes the fresh tab's seeded editor state and S201 opens the second tab. [S302][S201]
 
 A043 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:176
-Disposition: PARTIAL
-Mapping/reason: Related predicates S029 and S092 in src/checks/workspace/session_io.swift (DocumentSession adopts the requested song source; native service round-trips the accepted playable label, proving the label resolves); unproved: snapshot.songs() linear-search identity (find_if by label) over the Qt project snapshot. [S029][S092]
-Source context since previous assertion:
-        WorkspaceUi &workspace = *session->window->m_workspace;
-        const SongName name = session->b->name();
-        const auto &songs = workspace.projectState().snapshot.songs();
-        const auto song = std::find_if(songs.cbegin(), songs.cend(), [&name](const SongInfo &info) {
-            return info.label == name.value();
-        });
-Original expression:
-        QVERIFY(song != songs.cend())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Qt snapshot.songs() linear search; Swift has no Qt project-snapshot song list to observe.
 
 A044 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:177
-Disposition: PARTIAL
-Mapping/reason: Related predicate S091 in src/checks/workspace/session_io.swift (native service publishes the project-relative normalized bank identity, proving the voicegroup resolves); unproved: Qt SongTab voicegroupId() optional binding value. [S091]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(session->b->voicegroupId())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Qt SongTab::voicegroupId() optional; Swift has no Qt song-tab binding to observe.
 
 A045 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:180
-Disposition: PARTIAL
-Mapping/reason: Related predicate S029 in src/checks/workspace/session_io.swift (DocumentSession open of the requested label succeeds, implying its MIDI source read); unproved: Qt SmfFile::readFile byte parsing of song->midPath. [S029]
-Source context since previous assertion:
-        SmfFile stage;
-        QString error;
-Original expression:
-        QVERIFY(SmfFile::readFile(song->midPath, &stage, &error))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Qt SmfFile::readFile call; Swift parses MIDI through MidiFile.decode, not SmfFile.
 
 A046 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:186
 Disposition: RETIRED-REPRESENTATION
@@ -307,43 +289,20 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: Fork QVERIFY(session.has_value()) is the native openSession fixture guard, not the reload outcome; S312 observes pending reload readiness. [S312]
 
 A056 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:217
-Disposition: PARTIAL
-Mapping/reason: Related predicates S029 and S092 in src/checks/workspace/session_io.swift (DocumentSession adopts the requested song source; native service round-trips the accepted playable label, proving the label resolves); unproved: snapshot.songs() linear-search identity (find_if by label) over the Qt project snapshot. [S029][S092]
-Source context since previous assertion:
-        WorkspaceUi &workspace = *session->window->m_workspace;
-        const SongName name = session->b->name();
-        const auto &songs = workspace.projectState().snapshot.songs();
-        const auto song = std::find_if(songs.cbegin(), songs.cend(), [&name](const SongInfo &info) {
-            return info.label == name.value();
-        });
-Original expression:
-        QVERIFY(song != songs.cend())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Qt snapshot.songs() linear search; Swift has no Qt project-snapshot song list to observe.
 
 A057 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:218
-Disposition: PARTIAL
-Mapping/reason: Related predicate S091 in src/checks/workspace/session_io.swift (native service publishes the project-relative normalized bank identity, proving the voicegroup resolves); unproved: Qt SongTab voicegroupId() optional binding value. [S091]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(session->b->voicegroupId())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Qt SongTab::voicegroupId() optional; Swift has no Qt song-tab binding to observe.
 
 A058 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:222
-Disposition: PARTIAL
-Mapping/reason: Related predicate S029 in src/checks/workspace/session_io.swift (DocumentSession open of the requested label succeeds, implying its MIDI source read); unproved: Qt SmfFile::readFile byte parsing of song->midPath. [S029]
-Source context since previous assertion:
-        QString error;
-        SmfFile initial;
-        SmfFile replacement;
-Original expression:
-        QVERIFY(SmfFile::readFile(song->midPath, &initial, &error))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Qt SmfFile::readFile call; Swift parses MIDI through MidiFile.decode, not SmfFile.
 
 A059 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:223
-Disposition: PARTIAL
-Mapping/reason: Related predicate S029 in src/checks/workspace/session_io.swift (DocumentSession open of the requested label succeeds, implying its MIDI source read); unproved: Qt SmfFile::readFile byte parsing of song->midPath. [S029]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(SmfFile::readFile(song->midPath, &replacement, &error))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Qt SmfFile::readFile call; Swift parses MIDI through MidiFile.decode, not SmfFile.
 
 A060 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:237
 Disposition: MATCHED
@@ -457,34 +416,16 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: Fork QVERIFY(session.has_value()) is the native openSession fixture guard, not the bank-rebind outcome; S324 observes the completed replacement ready at the original tab identity. [S324]
 
 A073 | MainWindowRoutingLifecycleTest::bankRebind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:275
-Disposition: PARTIAL
-Mapping/reason: Related predicates S029 and S092 in src/checks/workspace/session_io.swift (DocumentSession adopts the requested song source; native service round-trips the accepted playable label, proving the label resolves); unproved: snapshot.songs() linear-search identity (find_if by label) over the Qt project snapshot. [S029][S092]
-Source context since previous assertion:
-        WorkspaceUi &workspace = *session->window->m_workspace;
-        const SongName name = session->b->name();
-        const auto &songs = workspace.projectState().snapshot.songs();
-        const auto song = std::find_if(songs.cbegin(), songs.cend(), [&name](const SongInfo &info) {
-            return info.label == name.value();
-        });
-Original expression:
-        QVERIFY(song != songs.cend())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Qt snapshot.songs() linear search; Swift has no Qt project-snapshot song list to observe.
 
 A074 | MainWindowRoutingLifecycleTest::bankRebind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:276
-Disposition: PARTIAL
-Mapping/reason: Related predicate S091 in src/checks/workspace/session_io.swift (native service publishes the project-relative normalized bank identity, proving the voicegroup resolves); unproved: Qt SongTab voicegroupId() optional binding value. [S091]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(session->b->voicegroupId())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Qt SongTab::voicegroupId() optional; Swift has no Qt song-tab binding to observe.
 
 A075 | MainWindowRoutingLifecycleTest::bankRebind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:279
-Disposition: PARTIAL
-Mapping/reason: Related predicate S029 in src/checks/workspace/session_io.swift (DocumentSession open of the requested label succeeds, implying its MIDI source read); unproved: Qt SmfFile::readFile byte parsing of song->midPath. [S029]
-Source context since previous assertion:
-        SmfFile stage;
-        QString error;
-Original expression:
-        QVERIFY(SmfFile::readFile(song->midPath, &stage, &error))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Qt SmfFile::readFile call; Swift parses MIDI through MidiFile.decode, not SmfFile.
 
 A076 | MainWindowRoutingLifecycleTest::bankRebind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:294
 Disposition: RETIRED-REPRESENTATION
@@ -557,19 +498,8 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: Fork QVERIFY(session.has_value()) is the native openSession fixture guard, not the failed-open outcome; S340 observes both tabs and the live selection surviving the failed replacement. [S340]
 
 A083 | MainWindowRoutingLifecycleTest::failedOpenPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:324
-Disposition: PARTIAL
-Mapping/reason: Related predicates S030, S057, S060, S061, S062, S063 in src/checks/workspace/session_io.swift and src/checks/workspace/session_save.swift (document dirty tracking across open/save/edit/undo/redo); unproved: Qt undo-stack and reload/teardown dirtiness wiring in this test.
-Source context since previous assertion:
-        MainWindow &window = *session->window;
-        WorkspaceUi &workspace = *window.m_workspace;
-        const EditorViewState state = completeSeed();
-        session->b->view().setEditorViewState(state);
-        const auto snapshot = porydawSnapshot(session->fixture->root());
-        SongTab *old = session->b;
-        const qsizetype count = workspace.openTabCount();
-        const QString label = old->document().label();
-Original expression:
-        QVERIFY(!old->document().isDirty())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QUndoStack dirtiness wiring; Swift has no QUndoStack to observe.
 
 A084 | MainWindowRoutingLifecycleTest::failedOpenPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:337
 Disposition: RETIRED-REPRESENTATION
@@ -583,12 +513,8 @@ Disposition: MATCHED
 Mapping: S340
 
 A087 | MainWindowRoutingLifecycleTest::failedOpenPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:341
-Disposition: PARTIAL
-Mapping/reason: Related predicate S027 in src/checks/workspace/session_io.swift (failed replacement open retains the worker prior project, proving failed-open retention); unproved: Qt snapshot.root() path identity (Swift retains source.label, never the Qt snapshot root). [S027]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(workspace.projectState().snapshot.root(), session->fixture->root())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Qt snapshot.root() path identity; Swift has no Qt project-snapshot root to observe.
 
 A088 | MainWindowRoutingLifecycleTest::failedOpenPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:342
 Disposition: GAP
@@ -603,12 +529,8 @@ Disposition: MATCHED
 Mapping: S342
 
 A090 | MainWindowRoutingLifecycleTest::failedOpenPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:344
-Disposition: PARTIAL
-Mapping/reason: Related predicate S027 in src/checks/workspace/session_io.swift (failed replacement open retains the worker prior project with source.label == mus_session_test); unproved: Qt SongTab document().label() QString identity and reload/teardown wiring (Swift observes the service source.label, not the Qt document label). [S027]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(old->document().label(), label)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Qt SongTab::document().label() QString; Swift has no Qt document label object to observe.
 
 A091 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:350
 Disposition: MATCHED
@@ -660,21 +582,12 @@ Disposition: MATCHED
 Mapping: S341
 
 A096 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:367
-Disposition: PARTIAL
-Mapping/reason: Related predicate S092 in src/checks/workspace/session_io.swift (native service round-trips the accepted playable song label); unproved: Qt SongName::create spelling validation for the fixture names (Swift proves service-level label round-trip, not the Qt value constructor). [S092]
-Source context since previous assertion:
-        const auto aName = SongName::create(m_songA);
-        const auto bName = SongName::create(m_songB);
-Original expression:
-        QVERIFY(aName)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Qt SongName::create spelling constructor; Swift has no SongName value type to observe.
 
 A097 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:368
-Disposition: PARTIAL
-Mapping/reason: Related predicate S092 in src/checks/workspace/session_io.swift (native service round-trips the accepted playable song label); unproved: Qt SongName::create spelling validation for the fixture names (Swift proves service-level label round-trip, not the Qt value constructor). [S092]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(bName)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Qt SongName::create spelling constructor; Swift has no SongName value type to observe.
 
 A098 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:371
 Disposition: MATCHED
@@ -685,20 +598,12 @@ Disposition: MATCHED
 Mapping: S341
 
 A100 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:373
-Disposition: PARTIAL
-Mapping/reason: Related predicates S065 and S066 in src/checks/workspace/session_save.swift (reopen reproduces settings-sensitive note-release timing; note and non-tempo metadata streams survive save/reopen, proving reopen preservation); unproved: serialized Qt SmfFile::write() byte equality (Swift compares state streams and timing, never Qt SMF bytes). [S065][S066]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(reopenedA->document().smf().write(), midiA)
+Disposition: MATCHED
+Mapping: S343
 
 A101 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:374
-Disposition: PARTIAL
-Mapping/reason: Related predicates S061 and S079 in src/checks/workspace/session_save.swift (undo to the saved state is clean, proving undo restores the clean point); unproved: Qt undoStack()->count() integer equality across tab reopen (Swift proves dirty-flag restoration, never Qt undo-stack depth). [S061][S079]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(reopenedA->document().undoStack()->count(), undoA)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QUndoStack::count integer; Swift has no QUndoStack depth to observe.
 
 A102 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:377
 Disposition: MATCHED
@@ -709,20 +614,12 @@ Disposition: MATCHED
 Mapping: S341
 
 A104 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:379
-Disposition: PARTIAL
-Mapping/reason: Related predicates S065 and S066 in src/checks/workspace/session_save.swift (reopen reproduces settings-sensitive note-release timing; note and non-tempo metadata streams survive save/reopen, proving reopen preservation); unproved: serialized Qt SmfFile::write() byte equality (Swift compares state streams and timing, never Qt SMF bytes). [S065][S066]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(reopenedB->document().smf().write(), midiB)
+Disposition: MATCHED
+Mapping: S344
 
 A105 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:380
-Disposition: PARTIAL
-Mapping/reason: Related predicates S061 and S079 in src/checks/workspace/session_save.swift (undo to the saved state is clean, proving undo restores the clean point); unproved: Qt undoStack()->count() integer equality across tab reopen (Swift proves dirty-flag restoration, never Qt undo-stack depth). [S061][S079]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(reopenedB->document().undoStack()->count(), undoB)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QUndoStack::count integer; Swift has no QUndoStack depth to observe.
 
 A106 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:383
 Disposition: MATCHED
@@ -2003,3 +1900,9 @@ Anchor: message "A107 synchronized preferences hold every member of the complete
 
 S342 | test_liveTabCleanBeforeFailedProjectOpen | src/checks/editorqml/tst_ShellOpenFailure.qml
 Anchor: message "failed project replacement keeps the background document ready"
+
+S343 | test_aProjectSwitchThenWindowCloseKeepsSongBytes | src/checks/editorqml/tst_ShellTabsWindowClose.qml
+Anchor: message "reopened Route 101 SMF bytes match the bytes captured before the project switch"
+
+S344 | test_aProjectSwitchThenWindowCloseKeepsSongBytes | src/checks/editorqml/tst_ShellTabsWindowClose.qml
+Anchor: message "reopened Littleroot SMF bytes match the bytes captured before the project switch"

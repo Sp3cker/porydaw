@@ -18,6 +18,10 @@ ShellTabsSupport {
         compare(fileProbe.fileFingerprint(route), "471:d31e7c4a0a32a53f")
         compare(fileProbe.fileFingerprint(little), "425:c27d69bdefcd9207")
         openShell(["mus_route101", "mus_littleroot_test"])
+        var beforeRoute = session().songMidiBytes("mus_route101")
+        var beforeLittle = session().songMidiBytes("mus_littleroot_test")
+        verify(beforeRoute.length > 0 && beforeLittle.length > 0,
+               "both open songs expose SMF bytes before the project switch")
         var tree = fileProbe.projectTreeFingerprint(root)
         verify(tree.length > 0, "A162 the staged project tree fingerprints before the switch-and-close journey")
         projectReadySpy.target = session()
@@ -32,6 +36,10 @@ ShellTabsSupport {
         session().openSong("mus_littleroot_test")
         verify(waitForNative(function() { return tabs().tabCount === 2 }, 30000), "the second song reopens")
         waitForPage(tabs().selectedId)
+        compare(session().songMidiBytes("mus_route101"), beforeRoute,
+                "reopened Route 101 SMF bytes match the bytes captured before the project switch")
+        compare(session().songMidiBytes("mus_littleroot_test"), beforeLittle,
+                "reopened Littleroot SMF bytes match the bytes captured before the project switch")
         verify(!session().documentDirty, "the two-song close starts clean")
         var dialog = findChild(shell, "songTabCloseDialog")
         verify(dialog !== null, "the close gate is mounted")

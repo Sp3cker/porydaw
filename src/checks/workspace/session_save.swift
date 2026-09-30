@@ -22,6 +22,23 @@ internal func sessionSavePersistence(report: CheckReport, session: DocumentSessi
 
 
     let preSaveFile = session.document.state.file
+    let preSaveBytes: [UInt8]
+    let otherSongBytes: [UInt8]
+    do {
+        preSaveBytes = try preSaveFile.encoded()
+        otherSongBytes = try runBlocking {
+            let other = try await DocumentSession.open(
+                service: service, label: "mus_session_test2", sampleRate: 48_000)
+            let bytes = try other.document.state.file.encoded()
+            _ = await other.close()
+            return bytes
+        }
+    } catch {
+        report.fail(
+            "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+            "could not encode both songs before save: \(error)")
+        return
+    }
     let preSaveConfig = session.document.state.config
     let preSaveLoopStart = session.timeline.loopStartTick
     let preSaveLoopEnd = session.timeline.loopEndTick
@@ -91,6 +108,22 @@ internal func sessionSavePersistence(report: CheckReport, session: DocumentSessi
         report.expectEqual(expected: preSaveFile, actual: reopened.document.state.file,
                            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                            what: "note and non-tempo metadata streams survive save/reopen")
+        let reopenedBytes = try reopened.document.state.file.encoded()
+        report.expectEqual(
+            expected: preSaveBytes, actual: reopenedBytes,
+            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+            what: "reopened song SMF bytes match the bytes saved")
+        let reopenedOtherBytes = try runBlocking {
+            let other = try await DocumentSession.open(
+                service: service, label: "mus_session_test2", sampleRate: 48_000)
+            let bytes = try other.document.state.file.encoded()
+            _ = await other.close()
+            return bytes
+        }
+        report.expectEqual(
+            expected: otherSongBytes, actual: reopenedOtherBytes,
+            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+            what: "the other song's SMF bytes survive the edited song's save and reopen")
         report.expectEqual(expected: preSaveLoopStart, actual: reopened.timeline.loopStartTick,
                            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                            what: "loop-start marker survives save/reopen")
