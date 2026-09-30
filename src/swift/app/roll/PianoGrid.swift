@@ -79,6 +79,9 @@ public final class PianoGrid {
     var keyboardTransposeAuditionActive = false
     /// Receives roll auditions as (track, pitch, velocity), including band entrants.
     @QtIgnored public var onAudition: ((Int, Int, Int) -> Void)?
+    /// Fork commitEditCursor egress: a commit seeks the selected transport
+    /// while paused/playing; the owner guards selection, stopped only moves.
+    @QtIgnored public var onCommitCursor: ((Tick) -> Void)?
     @QtIgnored var didApplyInitialHome = false
     @QtIgnored
     var contentEndTick = GridMetrics.songLengthTicks
@@ -264,7 +267,9 @@ public final class PianoGrid {
 
     public func setEditCursorTick(tick: Int) {
         editCursorTick = max(0, tick)
-        session.editCursor = TimeDefaults.tick(from: Double(editCursorTick))
+        let committed = TimeDefaults.tick(from: Double(editCursorTick))
+        session.editCursor = committed
+        onCommitCursor?(committed)
         refreshNotes()
     }
 

@@ -129,13 +129,17 @@ ShellTransportSupport {
         verify(!bar.presenter.scaleFold, "first tab Fold stays off after the second tab enables Fold")
     }
 
-    function test_rulerCommitMovesCursorOnlyInEveryTransportState() {
+    // Fork selftest_transport.cpp:140-188: committing the edit cursor moves
+    // playback to the cursor while paused or playing; while stopped it only
+    // moves the cursor and a later Play starts from it.
+    function test_rulerCommitSeeksPausedAndPlayingTransport() {
         var bar = openShell()
         var session = shell.shellPresenter.session
         openSong()
         var clock = findChild(bar, "transportTimeLabel")
         var play = findChild(bar, "transport.play")
         var pause = findChild(bar, "transport.pause")
+        var stop = findChild(bar, "transport.stop")
         verify(waitForNative(function() { return rollSurface() !== null }, 10000),
                "the roll surface mounts for the fixture song")
         var surface = rollSurface()
@@ -153,9 +157,9 @@ ShellTransportSupport {
                    "the stopped ruler menu owns Escape focus")
         verify(grid.editCursorTick !== stoppedCursor, "the stopped press commits the cursor")
         verify(Math.abs(session.playheadPresenter().tick) < 0.5,
-               "stopped commit leaves the playhead at origin")
+               "a stopped commit leaves the playhead at the origin")
         bar.presenter.refresh()
-        verify(clock.text.startsWith("0:00.0 / "), "stopped commit leaves the transport clock")
+        verify(clock.text.startsWith("0:00.0 / "), "a stopped commit leaves the transport clock")
         keyClick(Qt.Key_Escape)
         tryCompare(session, "timeSigMenuOpen", false)
         verify(waitForNative(function() {
@@ -176,11 +180,15 @@ ShellTransportSupport {
         bar.presenter.refresh()
         var pausedClock = clock.text
         var pausedTick = session.playheadPresenter().tick
-        mouseClick(ruler, ruler.width * 0.6, ruler.height * 0.5, Qt.RightButton)
+        var targetTick = grid.ticksPerBeat * 4
+        var targetX = (targetTick * grid.beatWidth / grid.ticksPerBeat) - grid.cameraScrollX
+        verify(targetX > 0 && targetX < ruler.width, "paused target is on the mounted ruler")
+        mouseClick(ruler, targetX, ruler.height * 0.5, Qt.RightButton)
         var targetCursor = grid.editCursorTick
         verify(targetCursor > pausedTick, "the paused ruler target is ahead of playback")
-        verify(Math.abs(session.playheadPresenter().tick - pausedTick) < 0.5,
-               "the paused press leaves the shared playhead at the pause point")
+        verify(waitForNative(function() {
+            return Math.abs(session.playheadPresenter().tick - targetCursor) < 0.5
+        }, 5000), "a paused cursor commit moves the shared playhead to its target")
         tryCompare(session, "timeSigMenuOpen", true)
         verify(waitForNative(function() {
             return findChild(surface, "quickMenuPanelRoot") !== null
@@ -193,10 +201,38 @@ ShellTransportSupport {
         verify(waitForNative(function() {
             return findChild(surface, "quickMenuPanelRoot") === null
         }, 3000), "the paused menu panel leaves the visible scene")
-        bar.presenter.refresh()
-        compare(clock.text, pausedClock,
-                "the paused commit leaves the mounted clock at the pause point")
-        compare(bar.presenter.state, 2, "ruler commit preserves the paused transport")
+        verify(waitForNative(function() {
+            bar.presenter.refresh()
+            return clock.text !== pausedClock
+        }, 5000), "a paused cursor commit moves the audio playhead clock to its target")
+        compare(bar.presenter.state, 2, "a paused cursor commit seek preserves the paused transport")
+        mouseClick(play, play.width / 2, play.height / 2)
+        tryCompare(bar.presenter, "state", 3, 3000)
+        verify(waitForNative(function() {
+            return session.playheadPresenter().tick > targetCursor + 8
+        }, 5000), "play after a paused cursor commit advances past the committed target")
+        var seekTick = grid.ticksPerBeat * 10
+        var seekX = (seekTick * grid.beatWidth / grid.ticksPerBeat) - grid.cameraScrollX
+        verify(seekX > 0 && seekX < ruler.width, "playing seek target is on the mounted ruler")
+        surface.rulerMenu.beginSweep(seekX, 0, 0)
+        surface.rulerMenu.endSweep(seekX, 0)
+        var seekCursor = grid.editCursorTick
+        verify(waitForNative(function() {
+            return session.playheadPresenter().tick >= seekCursor - 1
+        }, 5000), "a playing cursor commit seeks audio past its tick while staying Playing")
+        compare(bar.presenter.state, 3, "a playing cursor commit keeps the Playing transport")
+        mouseClick(stop, stop.width / 2, stop.height / 2)
+        tryCompare(bar.presenter, "state", 1, 3000,
+                   "stop after a playing cursor commit leaves transport Stopped")
+        tryCompare(play, "actionable", true, 3000, "a stopped transport re-enables Play")
+        mouseClick(play, play.width / 2, play.height / 2)
+        tryCompare(bar.presenter, "state", 3, 3000)
+        verify(waitForNative(function() {
+            return session.playheadPresenter().tick > seekCursor + 8
+        }, 5000), "play after stop restarts from the committed cursor and advances a quarter second")
+        mouseClick(stop, stop.width / 2, stop.height / 2)
+        tryCompare(bar.presenter, "state", 1, 3000,
+                   "a second stop after the cursor journey leaves transport Stopped")
     }
 
     function test_backgroundRulerSeekCannotMoveSelectedSong() {

@@ -82,6 +82,8 @@ public final class RulerMenuPresenter {
     private var sweepWasRange = false
     private var sweepMultiTrack = false
     private var pendingInsert: (tick: Tick, revision: UInt64, beatTicks: UInt32, beatsPerBar: UInt32)?
+    /// Fork commitEditCursor egress, installed by the owning session.
+    @QtIgnored public var onCommitCursor: ((Tick) -> Void)?
     private var rowSnapshot: [RulerMenuRow] = []
     private var clipboardObserver: UUID?
     private var selectionObserver: UUID?
@@ -121,6 +123,7 @@ public final class RulerMenuPresenter {
         if !inside {
             session.clearTimeSelection()
             session.editCursor = tick
+            onCommitCursor?(tick)
         }
         capturedTick = tick
         capturedSelection = session.timeSelection
@@ -355,6 +358,7 @@ public final class RulerMenuPresenter {
             if session.timeSelection?.isActive != true { session.clearTimeSelection() }
         } else if let sweepAnchor {
             session.editCursor = sweepAnchor
+            onCommitCursor?(sweepAnchor)
         }
         sweepAnchor = nil
         sweepWasRange = false

@@ -292,6 +292,7 @@ extension PianoGrid {
                     let tick = session.grid.snapTick(state.pressTick, camera: session.camera)
                     session.editCursor = Tick(tick)
                     editCursorTick = Int(tick)
+                    onCommitCursor?(Tick(tick))
                     stopAudition()
                 }
             }

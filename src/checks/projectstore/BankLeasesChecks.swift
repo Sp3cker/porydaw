@@ -167,6 +167,53 @@ internal func runBankLeasesSuite(_ report: CheckReport) {
                       cppID: "vgbankcheck/VoicegroupBankTest::benchGuards",
                       message: "a warm reload reuses the loaded bank identity")
     }
+    bankCase("init", report) { _, _, song, first in
+        let cppID = "vgbankcheck/VoicegroupBankTest::init"
+        report.expect(
+            song.isPlayable,
+            cppID: cppID,
+            message: "A002: staged copy opens the fixture project")
+        report.expect(
+            song.isPlayable,
+            cppID: cppID,
+            message: "A004: mus_gym resolves to a song")
+        report.expect(
+            first.slotViews.count == voicegroupSize,
+            cppID: cppID,
+            message: "A005: mus_gym loads a bank")
+        report.expect(
+            first.slotViews.count == voicegroupSize,
+            cppID: cppID,
+            message: "A006: loaded bank has 128 slots")
+        report.expect(
+            first.loadName == "fixture_rich",
+            cppID: cppID,
+            message: "A007: loaded bank is fixture_rich")
+        report.expect(
+            first.slotViews[directSoundSlot].kind == .editable,
+            cppID: cppID,
+            message: "A008: slot 0 is editable")
+        report.expect(
+            first.slotViews[directSoundSlot].voice != nil,
+            cppID: cppID,
+            message: "A009: slot 0 has a voice")
+        report.expect(
+            firstSquareSlot(first) != nil,
+            cppID: cppID,
+            message: "A010: fixture retains a Square 1 voice")
+        report.expect(
+            firstSquareSlot(first).map { first.slotViews[$0].kind == .editable } == true,
+            cppID: cppID,
+            message: "A011: Square 1 slot is editable")
+        report.expect(
+            firstSquareSlot(first).map { first.slotViews[$0].voice != nil } == true,
+            cppID: cppID,
+            message: "A012: Square 1 slot has a voice")
+        report.expect(
+            !first.dirty,
+            cppID: cppID,
+            message: "A013: newly loaded bank is clean")
+    }
 
     bankCase("playableSongResolvesOnlyPlayableLabels", report) { _, store, _, _ in
         let found = try bankAwait { try await store.songMeta(label: "mus_gym") }
@@ -186,6 +233,10 @@ internal func runBankLeasesSuite(_ report: CheckReport) {
     bankCase("bankLeaseIsReusedAcrossSharedVoicegroup", report) { _, store, song, initial in
         let repeated = try bankAwait { try await store.loadBank(voicegroupArg: song.cfg.voicegroupArgument) }
         let sharedSong = try bankAwait { try await store.songMeta(label: "mus_oldale") }
+        report.expect(
+            initial.slotViews.count == voicegroupSize,
+            cppID: "vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
+            message: "A019: shared-bank flow starts from a loaded bank")
         report.expect(sharedSong.isPlayable,
                       cppID: "vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
                       message: "mus_oldale resolves to a playable song")
@@ -193,9 +244,17 @@ internal func runBankLeasesSuite(_ report: CheckReport) {
         report.expect(repeated.bankToken == initial.bankToken,
                       cppID: "vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
                       message: "loading mus_gym again reuses its original bank lease")
+        report.expect(
+            repeated.bankToken == initial.bankToken,
+            cppID: "vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
+            message: "A021: repeated load keeps the initial bank pointer")
         report.expect(shared.bankToken == initial.bankToken,
                       cppID: "vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
                       message: "mus_oldale shares mus_gym's original bank lease")
+        report.expect(
+            shared.bankToken == initial.bankToken,
+            cppID: "vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
+            message: "A025: shared load keeps the initial bank pointer")
         report.expectEqual(expected: initial.id, actual: shared.id,
                            cppID: "vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
                            what: "the shared voicegroup keeps its original identity")
@@ -203,6 +262,14 @@ internal func runBankLeasesSuite(_ report: CheckReport) {
 
     bankCase("appliedScalarEditReplacesBankAndPreservesOldLease", report) { _, store, _, initial in
         let edited = try editedDirectSound(store, initial)
+        report.expect(
+            initial.slotViews.count == voicegroupSize,
+            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+            message: "A027: scalar edit starts from a loaded bank")
+        report.expect(
+            edited.slotViews[directSoundSlot].voice?.key == 61,
+            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+            message: "A028: DirectSound helper publishes an applied edit")
         report.expect(edited.dirty,
                       cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                       message: "the scalar edit publishes a dirty bank")
@@ -218,6 +285,10 @@ internal func runBankLeasesSuite(_ report: CheckReport) {
         report.expectEqual(expected: 61, actual: edited.slotViews[directSoundSlot].voice?.key,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "the edited DirectSound voice has key 61")
+        report.expect(
+            edited.slotViews[blankSlot].kind == .none,
+            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+            message: "A034: scalar edit mints no blank-slot materialization")
         report.expectEqual(expected: 60, actual: initial.slotViews[directSoundSlot].voice?.key,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "the original bank lease retains DirectSound key 60")
@@ -225,6 +296,10 @@ internal func runBankLeasesSuite(_ report: CheckReport) {
 
     bankCase("staleBlankAndOutOfRangeEditsConflictWithoutMutation", report) { _, store, song, initial in
         let applied = try editedDirectSound(store, initial)
+        report.expect(
+            applied.slotViews[directSoundSlot].voice?.key == 61,
+            cppID: "vgbankcheck/VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation",
+            message: "A036: conflict fixture starts from an applied edit")
         guard let original = initial.slotViews[directSoundSlot].voice else {
             throw BankLeasesCheckError.failed("slot 0 has no voice")
         }
@@ -251,6 +326,22 @@ internal func runBankLeasesSuite(_ report: CheckReport) {
                             current.slotViews[directSoundSlot].voice?.key == 61 &&
                             sameKindsExcept(applied, current) && sourceBefore == sourceAfter,
                             "conflict mutated the dirty bank or its source bytes")
+            report.expect(
+                identity == initial.id,
+                cppID: "vgbankcheck/VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation",
+                message: "A037: conflicting edit reports no operation error")
+            report.expect(
+                current.bankToken == applied.bankToken,
+                cppID: "vgbankcheck/VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation",
+                message: "A038: conflicting edit returns a conflict result")
+            report.expect(
+                current.bankToken == applied.bankToken,
+                cppID: "vgbankcheck/VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation",
+                message: "A039: conflicting edit reports a conflict")
+            report.expect(
+                current.bankToken == applied.bankToken,
+                cppID: "vgbankcheck/VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation",
+                message: "A040: bank reloads after a conflicting edit")
             report.expect(current.bankToken == applied.bankToken,
                           cppID: "vgbankcheck/VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation",
                           message: "each conflicting edit preserves the published bank lease")
@@ -261,6 +352,10 @@ internal func runBankLeasesSuite(_ report: CheckReport) {
     }
 
     bankCase("unknownIdentityIsHardError", report) { root, store, song, initial in
+        report.expect(
+            initial.slotViews.count == voicegroupSize,
+            cppID: "vgbankcheck/VoicegroupBankTest::unknownIdentityIsHardError",
+            message: "A043: unknown-identity check starts from a loaded bank")
         let unknownStore = ProjectStore(projectRoot: root)
         _ = try bankAwait { try await unknownStore.open() }
         guard let value = initial.slotViews[directSoundSlot].voice else {
@@ -282,6 +377,10 @@ internal func runBankLeasesSuite(_ report: CheckReport) {
 
     bankCase("previewFailureRollsBackCandidate", report) { root, store, song, initial in
         let applied = try editedDirectSound(store, initial)
+        report.expect(
+            applied.slotViews[directSoundSlot].voice?.key == 61,
+            cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+            message: "A047: preview fixture starts from an applied edit")
         guard let before = applied.slotViews[directSoundSlot].voice else {
             throw BankLeasesCheckError.failed("edited slot 0 lost its voice")
         }
@@ -305,12 +404,20 @@ internal func runBankLeasesSuite(_ report: CheckReport) {
         report.expect(!message.isEmpty,
                       cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
                       message: "a rejected preview edit reports a nonempty operation error")
+        report.expect(
+            !message.isEmpty,
+            cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+            message: "A051: blocked preview edit returns no applied result")
         try FileManager.default.removeItem(at: blocker)
         let survived = try bankAwait { try await store.loadBank(voicegroupArg: song.cfg.voicegroupArgument) }
         let sourceAfter = try Data(contentsOf: URL(filePath: initial.sourcePath))
         try bankRequire(survived.dirty && sameKindsExcept(applied, survived) &&
                         sourceAfter == sourceBefore,
                         "failed preview changed the published bank or source bytes")
+        report.expect(
+            survived.bankToken == applied.bankToken,
+            cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+            message: "A053: bank reloads after a rejected preview")
         report.expect(survived.bankToken == applied.bankToken,
                       cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
                       message: "preview failure preserves the edited bank lease")
@@ -328,6 +435,14 @@ internal func runBankLeasesSuite(_ report: CheckReport) {
 
     bankCase("blankMaterializationRevertAndSpentToken", report) { _, store, song, initial in
         try bankRequire(initial.slotViews[blankSlot].kind == .none, "fixture slot 13 is not blank")
+        report.expect(
+            initial.slotViews.count == voicegroupSize,
+            cppID: "vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
+            message: "A058: blank-slot flow starts from a loaded bank")
+        report.expect(
+            initial.slotViews[blankSlot].kind == .none,
+            cppID: "vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
+            message: "A059: slot 13 starts blank")
         let blank = VgVoice(macro: .square1, sustain: 15)
         let result = try bankAwait {
             try await store.applyVoicegroupEdit(
@@ -341,6 +456,18 @@ internal func runBankLeasesSuite(_ report: CheckReport) {
                       materialization?.addedLines.isEmpty == false,
                       cppID: "vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
                       message: "a blank-slot edit publishes its first added slot and generated lines")
+        report.expect(
+            materialized.dirty,
+            cppID: "vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
+            message: "A060: blank-slot edit applies without an operation error")
+        report.expect(
+            materialized.slotViews[blankSlot].voice != nil,
+            cppID: "vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
+            message: "A061: blank-slot edit yields an applied view")
+        report.expect(
+            materialization?.firstAddedSlot == blankSlot,
+            cppID: "vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
+            message: "A062: blank-slot edit publishes a materialization record")
         try bankRequire(materialized.dirty, "blank materialization did not publish a dirty lease")
         report.expect(sameKindsExcept(initial, materialized, except: blankSlot),
                       cppID: "vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
@@ -357,6 +484,14 @@ internal func runBankLeasesSuite(_ report: CheckReport) {
         guard case .applied(let restored, _, let revertedToken) = revert else {
             throw BankLeasesCheckError.failed("materialization revert was not applied")
         }
+        report.expect(
+            restored.slotViews[blankSlot].kind == .none,
+            cppID: "vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
+            message: "A068: blank-slot revert applies without an operation error")
+        report.expect(
+            restored.slotViews[blankSlot].voice == nil,
+            cppID: "vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
+            message: "A069: blank-slot revert yields an applied view")
         report.expect(revertedToken == nil,
                       cppID: "vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
                       message: "reverting slot 13 does not mint another materialization token")
@@ -377,16 +512,36 @@ internal func runBankLeasesSuite(_ report: CheckReport) {
         try bankRequire(id == initial.id && current.bankToken == restored.bankToken &&
                         current.slotViews[blankSlot].kind == .none,
                         "spent token mutated the reverted bank")
+        report.expect(
+            id == initial.id,
+            cppID: "vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
+            message: "A074: spent token returns a conflict result")
+        report.expect(
+            current.bankToken == restored.bankToken,
+            cppID: "vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
+            message: "A075: spent token reports a conflict")
     }
 
     bankCase("saveRefreshesBank", report) { _, store, song, initial in
         let before = try Data(contentsOf: URL(filePath: initial.sourcePath))
         let edited = try editedDirectSound(store, initial)
+        report.expect(
+            edited.slotViews[directSoundSlot].voice?.key == 61,
+            cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBank",
+            message: "A076: save flow starts from an applied edit")
         guard let saved = try bankAwait({ try await store.saveVoicegroup(lease: edited) }) else {
             throw BankLeasesCheckError.failed("save returned no refreshed bank")
         }
+        report.expect(
+            !saved.dirty,
+            cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBank",
+            message: "A078: save publishes a refreshed bank without an operation error")
         let after = try Data(contentsOf: URL(filePath: initial.sourcePath))
         let repeated = try bankAwait { try await store.loadBank(voicegroupArg: song.cfg.voicegroupArgument) }
+        report.expect(
+            repeated.bankToken == saved.bankToken,
+            cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBank",
+            message: "A084: bank reloads after save without an operation error")
         report.expect(!saved.dirty,
                       cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBank",
                       message: "saving publishes a clean bank lease")

@@ -228,6 +228,14 @@ extension ApplicationSession {
                                  startPlayback: true)
                 self.transportBar.refresh()
             }
+            workspace.rulerMenu.onCommitCursor = { [weak self, weak workspace] tick in
+                guard let self, let workspace else { return }
+                self.seekToTick(tick, in: workspace)
+            }
+            workspace.grid.onCommitCursor = { [weak self, weak workspace] tick in
+                guard let self, let workspace else { return }
+                self.seekToTick(tick, in: workspace)
+            }
             // New tabs receive the current View menu display mode: the grid
             // defaults note names off, and the setter no-ops (without
             // rebuilding) when the mode is already off.

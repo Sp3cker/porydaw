@@ -169,6 +169,16 @@ extension ApplicationSession {
         playhead.observe(sample: target, transport: audio.transport)
     }
 
+    /// Fork commitEditCursor egress: commits seek paused/playing playback to
+    /// the cursor; stopped commits only move the cursor, background tabs never seek.
+    func seekToTick(_ tick: Tick, in origin: DocumentWorkspace) {
+        guard workspace === origin, let audio, audio.songLoaded,
+            audio.transport != AudioTransportState.stopped.rawValue
+        else { return }
+        publishSeek(tick: tick, timeline: origin.session.timeline, startPlayback: false)
+        transportBar.refresh()
+    }
+
     private func refreshTransportPresentation() {
         playhead.refreshImmediate()
         transportBar.refresh()

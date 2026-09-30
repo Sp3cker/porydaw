@@ -267,6 +267,95 @@ private func checkSelectedWorkspaceAudio(_ report: CheckReport, fixtureRoot: Str
     }
     checkTwoTabAudioIsolation(app: app, audio: audio, report: report, id: id, firstID: first.tabId)
     checkEngineStopResyncsTransportState(app: app, audio: audio, report: report)
+    checkCursorCommitSeeksPausedAndPlayingTransport(app: app, audio: audio, report: report)
+}
+
+@MainActor
+private func checkCursorCommitSeeksPausedAndPlayingTransport(
+    app: ApplicationSession, audio: NativeAudio,
+    report: CheckReport
+) {
+    let id = "workspace/WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport"
+    guard let page = app.songTabs.selectedPage else {
+        report.fail(id, "cursor-commit seek needs the selected workspace")
+        return
+    }
+    let session = page.workspace.session
+    let length = session.timeline.lengthTicks
+    guard length > 1 else {
+        report.fail(id, "fixture song has no seekable length")
+        return
+    }
+    let maxTick = length - 1
+    app.stop()
+    guard pollCheckUntil({ audio.transport == 0 }, seconds: 10) else {
+        report.fail(id, "transport did not stop before the cursor-commit journey")
+        return
+    }
+    let staged = min(Tick(session.timeline.ticksPerBeat) * 8, maxTick)
+    page.workspace.grid.setEditCursorTick(tick: Int(staged))
+    report.expect(
+        session.editCursor == staged, cppID: id,
+        message: "a stopped cursor commit moves only the edit cursor")
+    app.play()
+    guard pollCheckUntil({ audio.transport == 2 }, seconds: 10) else {
+        report.fail(id, "fixture song did not start from its edit cursor")
+        return
+    }
+    app.playPause()
+    guard pollCheckUntil({ audio.transport == 1 }, seconds: 10) else {
+        report.fail(id, "fixture song did not pause before the cursor-commit seek")
+        return
+    }
+    let pausedTick = audio.timeline.map { Tick(max(0, $0.tick(for: audio.playheadSamples))) } ?? 0
+    let ahead = pausedTick >= 960 ? pausedTick - 480 : min(pausedTick + 960, maxTick)
+    page.workspace.grid.setEditCursorTick(tick: Int(ahead))
+    report.expect(
+        pollCheckUntil(
+            {
+                audio.transport == 1
+                    && abs(app.playheadPresenter().tick - Double(ahead)) <= 0.25
+            }, seconds: 5), cppID: id,
+        message: "a paused cursor commit moves the shared playhead to its target")
+    report.expect(
+        pollCheckUntil(
+            {
+                guard let timeline = audio.timeline else { return false }
+                return audio.transport == 1
+                    && abs(timeline.tick(for: audio.playheadSamples) - Double(ahead)) <= 0.25
+            }, seconds: 5), cppID: id,
+        message: "a paused cursor commit moves the audio playhead within 0.25 ticks of its target")
+    let beforeResume = audio.playheadSamples
+    app.play()
+    report.expect(
+        pollCheckUntil(
+            {
+                audio.transport == 2 && audio.playheadSamples > beforeResume
+            }, seconds: 5), cppID: id,
+        message: "play after a paused cursor commit resumes past the committed sample")
+    let seekTick = min(length / 2, Tick(session.timeline.ticksPerBeat) * 16)
+    let seekSample = session.timeline.sample(for: seekTick)
+    page.workspace.grid.setEditCursorTick(tick: Int(seekTick))
+    report.expect(
+        pollCheckUntil(
+            {
+                audio.transport == 2
+                    && audio.playheadSamples >= seekSample
+            }, seconds: 5), cppID: id,
+        message: "a playing cursor commit seeks audio past its tick while staying Playing")
+    app.stop()
+    report.expect(
+        pollCheckUntil({ audio.transport == 0 }, seconds: 10),
+        cppID: id, message: "stop after a playing cursor commit leaves transport Stopped")
+    app.play()
+    let quarter = UInt64(Double(audio.sampleRate) * 0.25)
+    report.expect(
+        pollCheckUntil(
+            {
+                audio.transport == 2
+                    && audio.playheadSamples >= seekSample + quarter
+            }, seconds: 10), cppID: id,
+        message: "play after stop restarts from the committed cursor and advances a quarter second")
 }
 
 @MainActor

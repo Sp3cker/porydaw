@@ -10,7 +10,7 @@ Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml (shell ch
 Additional Swift counterpart: src/checks/editorqml/tst_ShellTransport.qml (toolbar typography and geometry tokens)
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-This file: 24 assertion sites: 3 GAP, 4 PARTIAL, 17 RETIRED-REPRESENTATION. A020/A021/A023/A024 have a mounted Swift/QML responsive-layout predicate and profile captures (S001), executed once per DPR/font profile at the base that profile captures, with nine named regions per state compared against the frozen baseline within px/2 to px*2 tolerances. A001 covers a shared screenshot helper and A018 the loaded-shell composite; both remain GAP because this polyphony suite does not cover their other captured surfaces. A019/A022 retire the nullable C++ MidiTimeline::build pointer checks, while A007 remains GAP pending song-name validation correspondence.
+This file: 24 assertion sites: 2 GAP, 4 PARTIAL, 18 RETIRED-REPRESENTATION. A020/A021/A023/A024 have a mounted Swift/QML responsive-layout predicate and profile captures (S001), executed once per DPR/font profile at the base that profile captures, with nine named regions per state compared against the frozen baseline within px/2 to px*2 tolerances. A001 covers a shared screenshot helper and A018 the loaded-shell composite; both remain GAP because this polyphony suite does not cover their other captured surfaces. A019/A022 retire the nullable C++ MidiTimeline::build pointer checks; A007 is harness scaffolding that constructs the fixture song name before opening it.
 
 Task 30 note (shell chrome typography and geometry): the mounted predicates indexed below as S002-S008 carry the shell-chrome role and geometry facts these captures depend on but no A site of this ledger asserts: the panel em follows the published session base, the channel-cell width follows fontPx(46/12), the window mounts at fontPx(92) by fontPx(57), and the transport inset and toolbar height follow the One and Two layout tokens. They prove no A site here and are indexed as the surface current predicate set. This bookkeeping pass re-ran only deno task proof check; no lane was re-run and no parser result is a semantic-parity claim.
 
@@ -151,13 +151,9 @@ A006 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:591
 Disposition: RETIRED-REPRESENTATION
 
 A007 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:596
-Disposition: GAP
-Mapping/reason: feature not yet ported: song-name validation in Swift; SongName::create (src/project/projectidentity.cpp:8-13) is active production code bridged at src/project/swift_project_service.cpp:427, so the mechanism is not retired, and Swift song labels are plain String values with no validation predicate.
-Source context since previous assertion:
+Disposition: RETIRED-REPRESENTATION
+Mapping: harness scaffolding: constructs the fixture song name before opening it; the Swift SongName law is proven in projectstore/ProjectIdentityChecks.swift
 
-      const auto name = SongName::create(QStringLiteral("mus_route101"));
-Original expression:
-  QVERIFY(name);
 
 A008 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:599
 Disposition: RETIRED-REPRESENTATION

@@ -11,6 +11,7 @@ internal func runHostBehaviorChecks(_ report: CheckReport, session: DocumentSess
     hostVelocityMarker(report, route: route)
     hostSeededTrackDiscovery(report, route: route)
     hostSteadyVoiceContext(report, route: route)
+    hostTwoTabActiveSelection(report)
     hostVelocityGestureContracts(report, session: session, service: service)
     hostDocumentMutationUndoRedo(report, session: session, service: service)
     hostLifecycleTermination(report, session: session, service: service)
@@ -76,6 +77,57 @@ private func hostNoteDiscovery(_ report: CheckReport, fixtureRoot: String,
         report.fail(id, "route101 fixture could not open: \(error)")
         return nil
     }
+}
+@MainActor
+private func hostTwoTabActiveSelection(_ report: CheckReport) {
+    let id = "swiftcore/HostBehaviorChecks::noteDiscovery"
+    guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
+        report.fail(id, "project-session fixture root is unavailable for the two-tab selection")
+        return
+    }
+    let root = stageTestProject(in: fixtureRoot, projectName: "swiftcore-host-two-tab-selection")
+    let shell = ShellPresenter()
+    let app = shell.session
+    defer {
+        app.hostClosing()
+        app.acknowledgeGridDetached()
+    }
+    app.openProjectAndSong(path: root, label: "mus_session_test")
+    var deadline = Date().addingTimeInterval(25)
+    while !app.songOpen && app.lastSaveError.isEmpty && Date() < deadline {
+        _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+    }
+    guard app.songOpen, app.lastSaveError.isEmpty else {
+        report.fail(id, "first staged song did not open for the two-tab selection: \(app.lastSaveError)")
+        return
+    }
+    app.openSong(label: "mus_session_test2")
+    deadline = Date().addingTimeInterval(25)
+    while app.songTabs.tabCount < 2 && app.lastSaveError.isEmpty && Date() < deadline {
+        _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+    }
+    // The fork's ready two-tab route fixture: the second open owns the
+    // active tab, and the selected document is that tab's own session.
+    guard app.songTabs.tabCount == 2, app.lastSaveError.isEmpty,
+        let first = app.songTabs.tab(label: "mus_session_test"),
+        let active = app.songTabs.selectedPage, first !== active,
+        let activeSession = app.selectedDocument,
+        activeSession === active.workspace.session
+    else {
+        report.fail(id, "ready two-tab session did not land on the second song")
+        return
+    }
+    guard
+        let track = (0..<activeSession.document.engineTracks.usedTrackCount).first(
+            where: { activeSession.document.notes(in: $0).count >= 2 })
+    else {
+        report.fail(id, "active tab song exposes no track holding two notes")
+        return
+    }
+    activeSession.setSelectedNotes(activeSession.document.notes(in: track).prefix(2).map(\.id))
+    report.expect(
+        activeSession.selectedNotes.count == 2, cppID: id,
+        message: "A004: the active tab of the ready two-tab session selects exactly two notes")
 }
 
 @MainActor

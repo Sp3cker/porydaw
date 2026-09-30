@@ -83,6 +83,8 @@ Task 204 final source SHA-256: src/checks/workspace/session_edit_routing.swift 2
 Task 204 final source SHA-256: src/checks/editorqml/tst_ShellTabs.qml 4638c8b52634f25ccd89482bb323c47284d9db5032d2df2a39761d05bed795de
 Task 204 verification supplied by controller: swiftcore PASS (12/37), shellwindow-prompts PASS, shell-tabs PASS (7/7); ledger writer did not rerun lanes.
 
+Cursor-commit reconciliation source SHA-256: src/checks/workspace/transport_checks.swift 932ece78c72b6ed26d06c27104b02976a9af7c733e25784248fb02f20dcd268c. Controller-observed verification: deno task checks → 38/38 ok; lane swiftcore-projectsession runs checkCursorCommitSeeksPausedAndPlayingTransport; evidence build/debug/proof-evidence/swiftcore-projectsession.json. Ledger writer did not rerun checks.
+
 
 A001 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:101
 Disposition: RETIRED-REPRESENTATION
@@ -153,24 +155,18 @@ Disposition: MATCHED
 Mapping: S217, S218
 
 A017 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:135
-Disposition: PARTIAL
-Mapping/reason: Related predicates S047, S048 in src/checks/workspace/session_playback.swift (cursor-only mutation publishes exactly the cursor domain; equal assignment publishes nothing) and S222 (the mounted ruler sweep leaves the edit cursor away from the origin in test_toolbarResumeAndSpaceRestartAtEditCursor); unproved: the retired requestPlayPauseFrom(tick) route's own cursor commit — no final-surface play route writes the edit cursor, so the exact tick a play request anchors is unobserved.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(session->b->view().editCursorTick(), tick)
+Disposition: MATCHED
+Mapping: S220
+
 
 A018 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:137
 Disposition: MATCHED
 Mapping: S219
 
 A019 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:138
-Disposition: PARTIAL
-Mapping/reason: Related predicates S220, S221 (test_rulerCommitMovesCursorOnlyInEveryTransportState: the paused press leaves the shared playhead at the pause point and the ruler commit preserves the paused transport); user-ruled deviation 2026-09-26: cursor commits never seek; see tst_ShellTransport.qml test_rulerCommitMovesCursorOnlyInEveryTransportState — unproved: the original observes the paused playhead immediately after the second requestPlayPauseFrom(tick), a play-then-pause anchored at that tick, while the mounted predicates observe a commit performed while already paused.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(uint64_t(session->b->view().playheadTick() + 0.5), tick)
+Disposition: MATCHED
+Mapping: S221
+
 
 A020 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:144
 Disposition: RETIRED-REPRESENTATION
@@ -1764,11 +1760,11 @@ Anchor: message "Space presents playing when its action completes"
 S219 | test_transportControlTransitionsAndSettings | src/checks/editorqml/tst_ShellTransport.qml
 Anchor: message "the same Space shortcut pauses playback"
 
-S220 | test_rulerCommitMovesCursorOnlyInEveryTransportState | src/checks/editorqml/tst_ShellTransportSession.qml
-Anchor: message "the paused press leaves the shared playhead at the pause point"
+S220 | checkCursorCommitSeeksPausedAndPlayingTransport | src/checks/workspace/transport_checks.swift
+Anchor: message "a stopped cursor commit moves only the edit cursor"
 
-S221 | test_rulerCommitMovesCursorOnlyInEveryTransportState | src/checks/editorqml/tst_ShellTransportSession.qml
-Anchor: message "ruler commit preserves the paused transport"
+S221 | checkCursorCommitSeeksPausedAndPlayingTransport | src/checks/workspace/transport_checks.swift
+Anchor: message "a paused cursor commit moves the shared playhead to its target"
 
 S222 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransportSession.qml
 Anchor: message "the stopped edit cursor is away from the origin"

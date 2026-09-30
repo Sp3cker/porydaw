@@ -310,4 +310,53 @@ ShellDrawerParitySupport {
         tryCompare(gridModel(), "appliedRevisionText", String(Number(before) + 1), 3000,
                    "the post-resize fresh sweep commits exactly one song edit")
     }
+    function test_aAutomationPanRealWindowDeactivation() {
+        openDrawerShell("automations")
+        var input = automationPlotInput()
+        var model = automationModel()
+        var grid = gridModel()
+        var before = revision()
+        var undoBefore = session().canUndo
+        verify(input && input.width > 0 && input.height > 0,
+               "the mounted automation plot exposes its live pan input")
+        var x = input.width / 2
+        var y = input.height / 2
+        var scrollStart = grid.cameraScrollX
+        mouseMove(input, x, y)
+        mousePress(input, x, y, Qt.MiddleButton)
+        mouseMove(input, x - 24, y, -1, Qt.MiddleButton)
+        tryCompare(model, "interactionActive", true, 3000,
+                   "the middle press starts a live automation pan")
+        tryVerify(function() { return grid.cameraScrollX !== scrollStart }, 3000,
+                  "the live automation pan moves the shared camera")
+        var frozenRevision = revision()
+        focusWindow = focusWindowComponent.createObject(null)
+        verify(focusWindow !== null, "the second real window opens for the pan")
+        focusWindow.requestActivate()
+        tryCompare(focusWindow, "active", true, 3000,
+                   "the second window actually takes activation from the pan")
+        tryCompare(shell, "active", false, 3000,
+                   "the automation window really deactivates mid-pan")
+        tryCompare(model, "interactionActive", false, 3000,
+                   "real window deactivation ends the live automation pan")
+        tryCompare(input, "pressed", false, 3000,
+                   "real window deactivation leaves no automation pointer grab")
+        compare(revision(), frozenRevision,
+                "real window deactivation writes no automation document revision")
+        compare(session().canUndo, undoBefore,
+                "real window deactivation arms no automation undo history")
+        var settledScroll = grid.cameraScrollX
+        mouseRelease(input, x - 24, y, Qt.MiddleButton)
+        mouseMove(input, x - 54, y)
+        wait(120)
+        compare(grid.cameraScrollX, settledScroll,
+                "the deactivated stale pan move leaves the camera frozen")
+        compare(revision(), before,
+                "the deactivated stale pan release writes nothing")
+        focusWindow.destroy()
+        focusWindow = null
+        shell.requestActivate()
+        tryCompare(shell, "active", true, 3000,
+                   "the panned shell regains window activation")
+    }
 }
