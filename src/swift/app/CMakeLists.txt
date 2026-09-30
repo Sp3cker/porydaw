@@ -40,6 +40,8 @@ add_library(PorydawApp STATIC
     midiimport/ImportAnalysisSummary.swift
     midiimport/MidiImportWizardState.swift
     midiimport/MidiImportController.swift
+    newsong/NewSongWizardState.swift
+    newsong/NewSongController.swift
     EditorCommandRouter.swift
     typography/Typography.swift
     transport/TransportBarPresenter.swift

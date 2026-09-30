@@ -207,6 +207,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         songlist/SongDebugLayoutChecks.swift
         songlist/SongImportChecks.swift
         songlist/MidiImportWizardChecks.swift
+        songlist/NewSongWizardChecks.swift
         voicelist/VoiceListChecks.swift
         voicelist/VoiceListIntentChecks.swift
         voicelist/voicelist_session.swift

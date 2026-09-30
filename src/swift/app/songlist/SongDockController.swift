@@ -9,6 +9,7 @@ import QtBridge
 public final class SongDockController {
     @QtIgnored public let presenter = SongListPresenter()
     @QtIgnored public let midiImport = MidiImportController()
+    @QtIgnored public let newSong = NewSongController()
     @QtTracked public var confirmation = ""
     @QtTracked public var confirmationLabel = ""
     @QtTracked public var registrationConstant = ""
@@ -32,11 +33,13 @@ public final class SongDockController {
 
     public func songListPresenter() -> SongListPresenter { presenter }
     public func midiImportController() -> MidiImportController { midiImport }
+    public func newSongController() -> NewSongController { newSong }
 
     @QtIgnored
     func attach(session: ApplicationSession) {
         self.session = session
         midiImport.attach(dock: self, session: session)
+        newSong.attach(dock: self, session: session)
     }
 
     @QtIgnored
@@ -47,6 +50,7 @@ public final class SongDockController {
         clearConfirmation()
         self.service = service
         midiImport.install(service: service)
+        newSong.install(service: service)
         presenter.setSongs(songs)
         syncSelection()
     }
@@ -58,6 +62,7 @@ public final class SongDockController {
         busy = false
         service = nil
         midiImport.detach()
+        newSong.detach()
         presenter.setSongs([])
         clearConfirmation()
     }
@@ -83,9 +88,10 @@ public final class SongDockController {
 
     public func requestRegisterSelectedTab() {
         guard !busy, confirmation.isEmpty, service != nil,
-              let page = session?.songTabs.selectedPage, page.isReady,
-              let song = presenter.songListings.first(where: { $0.label == page.title }),
-              song.registrationIncomplete else { return }
+            let page = session?.songTabs.selectedPage, page.isReady,
+            let song = presenter.songListings.first(where: { $0.label == page.title }),
+            song.registrationIncomplete
+        else { return }
         prepare(song.id, deleting: false)
     }
 
@@ -96,7 +102,8 @@ public final class SongDockController {
 
     private func prepare(_ songId: Int, deleting: Bool) {
         guard !busy, confirmation.isEmpty, let service,
-              let song = presenter.listing(songId: songId) else { return }
+            let song = presenter.listing(songId: songId)
+        else { return }
         busy = true
         operation = Task { [weak self] in
             guard let self else { return }
@@ -105,7 +112,10 @@ public final class SongDockController {
                     let plan = try await service.songDeletionPlan(label: song.label)
                     guard !Task.isCancelled, self.service === service else { return }
                     if plan.tableIndex == 0 {
-                        self.session?.operationFailed(message: "\(song.label) is the first usable table entry (song ID 0); the engine's fallback. It cannot be deleted.")
+                        self.session?.operationFailed(
+                            message:
+                                "\(song.label) is the first usable table entry (song ID 0); the engine's fallback. It cannot be deleted."
+                        )
                     } else {
                         self.deletionPlan = plan
                         self.confirmationLabel = song.label
@@ -119,8 +129,11 @@ public final class SongDockController {
                     self.registrationPlan = plan
                     self.confirmationLabel = song.label
                     self.registrationConstant = plan.constant
-                    self.confirmationDetail = plan.missingFiles.isEmpty ? "" :
-                        "The following registration files need updates:\n  - " + plan.missingFiles.joined(separator: "\n  - ")
+                    self.confirmationDetail =
+                        plan.missingFiles.isEmpty
+                        ? ""
+                        : "The following registration files need updates:\n  - "
+                            + plan.missingFiles.joined(separator: "\n  - ")
                     self.confirmation = "register"
                 }
             } catch {
@@ -134,7 +147,8 @@ public final class SongDockController {
 
     public func requestNewSong() {
         guard !busy, confirmation.isEmpty, service != nil,
-              session?.songTabs.selectedPage != nil else { return }
+            session?.songTabs.selectedPage != nil
+        else { return }
         newSongLabel = ""
         confirmation = "create"
     }
@@ -156,9 +170,10 @@ public final class SongDockController {
         let creating = confirmation == "create"
         let label = creating ? newSongLabel : confirmationLabel
         let sourceLabel = session?.songTabs.selectedPage?.title
-        guard (creating && validNewSongLabel(label: label) && sourceLabel != nil) ||
-              (confirmation == "register" && registration != nil) ||
-              (confirmation == "delete" && deletion != nil) else { return }
+        guard
+            (creating && validNewSongLabel(label: label) && sourceLabel != nil)
+                || (confirmation == "register" && registration != nil) || (confirmation == "delete" && deletion != nil)
+        else { return }
         if deletion != nil, hasUnsavedSong(label) {
             session?.operationFailed(message: "Save or close \(label) before deleting its MIDI file.")
             return
@@ -174,8 +189,10 @@ public final class SongDockController {
                 if let registration {
                     _ = try await service.registerSong(registration)
                 } else if let deletion {
-                    try await service.deleteSong(label: label, voicegroupName:
-                        alsoDeleteVoicegroup ? deletion.deletableVoicegroupName : nil)
+                    try await service.deleteSong(
+                        label: label,
+                        voicegroupName:
+                            alsoDeleteVoicegroup ? deletion.deletableVoicegroupName : nil)
                 }
                 guard !Task.isCancelled, self.service === service else { return }
                 let songs = try await service.songs()
@@ -209,9 +226,12 @@ public final class SongDockController {
     }
 
     private func deletionDetails(_ plan: SongDeletionPlan) -> String {
-        var details = ["Its .mid moves to .porydaw/trash.",
-                       plan.lastEntry ? "Its song_table.inc line is removed outright." :
-                        "Its song_table.inc entry becomes a reusable free slot, so no other song's ID changes."]
+        var details = [
+            "Its .mid moves to .porydaw/trash.",
+            plan.lastEntry
+                ? "Its song_table.inc line is removed outright."
+                : "Its song_table.inc entry becomes a reusable free slot, so no other song's ID changes.",
+        ]
         if plan.inSongsH { details.append("songs.h") }
         if plan.inLdScript { details.append("ld_script.ld") }
         if plan.inCharmap { details.append("charmap.txt") }
