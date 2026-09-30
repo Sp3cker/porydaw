@@ -201,7 +201,7 @@ Item {
                 width: 2 * node.s.radius
                 height: 2 * node.s.radius
                 radius: node.s.radius
-                color: node.s.fillColor
+                color: "transparent"
                 border.width: Math.max(1, node.s.outlineWidth)
                 border.color: node.s.outlineColor
             }

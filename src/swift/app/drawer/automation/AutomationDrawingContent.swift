@@ -73,11 +73,10 @@ extension AutomationPage {
                     argb: ghostArgb, runs: &ghostRuns, edges: &ghostEdges)
             }
             if let edit = previewEdit, edit.parameter == lane.parameter {
-                // A live draw paints the lane it would commit, the replaced span in preview ink.
+                // A live draw paints the lane it would commit.
                 appendDrawingCurve(
                     Self.previewCurve(lane, replacedBy: edit), metadata: lane.metadata,
                     projection: curveProjection, argb: curveArgb,
-                    preview: (edit.tickBegin...edit.tickEnd, selectionEdgeArgb),
                     runs: &runs, edges: &curveEdges)
             } else if !lane.points.isEmpty {
                 appendDrawingCurve(
@@ -109,9 +108,20 @@ extension AutomationPage {
         if let facts = frozen, !previewPoints.isEmpty {
             let previewProjection = makeProjection(facts: facts, camera: gestureCamera)
             let extent = Float(nodePaint.nodeRadius)
-            let ink = selectionEdgeArgb
             let phantomPreview: Bool
-            if case .phantom = gesture { phantomPreview = true } else { phantomPreview = false }
+            let ink: UInt32
+            switch gesture {
+            case .phantom:
+                phantomPreview = true
+                ink = selectionEdgeArgb
+            case .node:
+                phantomPreview = false
+                ink = selectionEdgeArgb
+            default:
+                // Pencil and sweep drafts share the lane ink of the curve they draw.
+                phantomPreview = false
+                ink = curveArgb
+            }
             for point in previewPoints {
                 previewNodes.append(
                     DrawerAnchoredRect(
@@ -192,20 +202,15 @@ extension AutomationPage {
     private func appendDrawingCurve(
         _ segments: [AutomationCurveSegment], metadata: AutomationParameterMetadata,
         projection: AutomationProjection, argb: UInt32,
-        preview: (span: ClosedRange<Tick>, argb: UInt32)? = nil,
         runs: inout [DrawerStaticRect], edges: inout [DrawerAnchoredRect]
     ) {
         for (index, segment) in segments.enumerated() {
-            var ink = argb
-            if let preview, !segment.isLeadIn, preview.span.contains(segment.tickBegin) {
-                ink = preview.argb
-            }
             let fromY = projection.y(segment.fromValue, metadata: metadata)
             runs.append(
                 DrawerStaticRect(
                     tickStart: segment.tickBegin,
                     tickEnd: segment.tickEnd ?? TimeDefaults.maxTick,
-                    y: Float((fromY - 1).rounded()), height: 2, argb: ink))
+                    y: Float((fromY - 1).rounded()), height: 2, argb: argb))
             let next = index + 1 < segments.count ? segments[index + 1] : nil
             if segment.kind == .step, let next, next.fromValue != segment.fromValue,
                 let end = segment.tickEnd
@@ -215,7 +220,7 @@ extension AutomationPage {
                     DrawerAnchoredRect(
                         tick: end, dx: -1, width: 2,
                         y: Float(min(fromY, nextY).rounded()),
-                        height: Float(max(2, abs(nextY - fromY))), argb: ink, flags: 1))
+                        height: Float(max(2, abs(nextY - fromY))), argb: argb, flags: 1))
             }
         }
     }

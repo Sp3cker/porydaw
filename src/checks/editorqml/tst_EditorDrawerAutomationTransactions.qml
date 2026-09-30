@@ -49,7 +49,7 @@ EditorDrawerTestSupport {
             var point = { x: free.x + Math.min(input.width - 4, free.x + 160)
                                 - Math.min(input.width - 4, free.x + 80), y: free.y }
             var region = AutomationGestureSupport.automationPreviewRegion(testCase, image, point, 8)
-            var ink = PixelSupport.channelsOf(testCase, testCase.drawerPalette().selectionEdge)
+            var ink = PixelSupport.channelsOf(testCase, testCase.drawerPalette().automationNodeInk)
             return PixelSupport.nearestPixel(testCase, image, region, ink).distance < 30
         }, 1000, "the moving sweep published its draft markers")
         mouseRelease(input, Math.min(input.width - 4, free.x + 160), free.y, Qt.LeftButton)

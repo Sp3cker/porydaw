@@ -45,7 +45,6 @@ public final class AutomationNodeHandle {
     public var radius: Double = 0
     public var ringRadius: Double = 0
     public var outlineWidth: Double = 0
-    public var fillColor: String = ""
     public var outlineColor: String = ""
     public var ringColor: String = ""
     public var selected: Bool = false
@@ -70,7 +69,7 @@ public final class AutomationNodeHandle {
             "x": x, "y": y, "tick": tick,
             "radius": radius, "ringRadius": ringRadius,
             "outlineWidth": outlineWidth,
-            "fillColor": fillColor, "outlineColor": outlineColor,
+            "outlineColor": outlineColor,
             "ringColor": ringColor,
             "selected": selected, "hovered": hovered, "phantom": phantom,
             "primitiveName": primitiveName,
@@ -81,7 +80,7 @@ public final class AutomationNodeHandle {
     func matches(_ other: AutomationNodeHandle) -> Bool {
         x == other.x && y == other.y && tick == other.tick && value == other.value
             && radius == other.radius && ringRadius == other.ringRadius
-            && outlineWidth == other.outlineWidth && fillColor == other.fillColor
+            && outlineWidth == other.outlineWidth
             && outlineColor == other.outlineColor && ringColor == other.ringColor
             && selected == other.selected && hovered == other.hovered
             && projected == other.projected && phantom == other.phantom

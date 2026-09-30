@@ -111,10 +111,10 @@ EditorDrawerTestSupport {
         var phantomPx = Math.round(phantomScene.x * phantomFrame.width / testCase.surface.width)
         var phantomPy = Math.round(phantomScene.y * phantomFrame.height / testCase.surface.height)
         var fillChannels = PixelSupport.channelsOf(testCase, testCase.drawerPalette().windowText)
-        verify(Math.abs(phantomFrame.red(phantomPx, phantomPy) - fillChannels[0]) <= 12
-               && Math.abs(phantomFrame.green(phantomPx, phantomPy) - fillChannels[1]) <= 12
-               && Math.abs(phantomFrame.blue(phantomPx, phantomPy) - fillChannels[2]) <= 12,
-               "the scrolled origin phantom paints its center fill at the plotted origin")
+        verify(Math.abs(phantomFrame.red(phantomPx, phantomPy) - fillChannels[0]) > 12
+               || Math.abs(phantomFrame.green(phantomPx, phantomPy) - fillChannels[1]) > 12
+               || Math.abs(phantomFrame.blue(phantomPx, phantomPy) - fillChannels[2]) > 12,
+               "the scrolled origin phantom leaves its interior unfilled at the plotted origin")
         var phantomHint = hint.text
         model.isPencilMode = true
         var pencilPoint = AutomationGestureSupport.automationFreePoint(testCase)
