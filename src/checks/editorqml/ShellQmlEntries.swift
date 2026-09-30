@@ -355,6 +355,8 @@ enum ShellQmlRegistry {
                     "ShellSettings::test_engineRoundTripAndInvalidMixer",
                     "ShellSettings::test_reopeningDiscardsCancelledDraft",
                     "ShellSettings::test_gridContrastPreviewApplyAndRevert",
+                    "ShellSettings::test_themeModePreviewCommitAndRevert",
+                    "ShellSettings::test_themeModeGeometryStableAcrossPreview",
                     "ShellSettings::test_songFlagsAndReferenceGeometry",
                 ]),
             Entry(

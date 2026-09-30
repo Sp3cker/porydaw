@@ -32,10 +32,13 @@ DialogWindow {
         if (store.songAvailable)
             songPage.item.finishVoicegroupEdit()
         store.apply()
+        presenter.commitThemeMode()
         presenter.commitGridLineContrast()
     }
-    onClosing: presenter.discardGridLineContrast()
-
+    onClosing: {
+        presenter.discardThemeMode()
+        presenter.discardGridLineContrast()
+    }
     Rectangle {
         id: body
         objectName: "settingsBody"
@@ -129,6 +132,62 @@ DialogWindow {
             typography: dialog.applicationSession.typographyFonts
         }
     }
+    Column {
+        id: themeRow
+        parent: body
+        objectName: "themeModeGroup"
+        x: enginePage.x
+        y: contrastRow.y - height - dialog.unit * 4
+        width: enginePage.width
+        height: implicitHeight
+        spacing: dialog.unit * 4
+        visible: dialog.selectedTab === 0
+        Text {
+            width: parent.width
+            height: implicitHeight
+            text: qsTr("Theme:")
+            color: dialog.colors.windowText
+            font: Qt.font(dialog.applicationSession.typographyFonts.body)
+        }
+        RadioButton {
+            id: vanillaButton
+            objectName: "vanillaModeButton"
+            width: themeRow.width
+            text: qsTr("Vanilla")
+            font: Qt.font(dialog.applicationSession.typographyFonts.body)
+            checked: dialog.presenter.themeMode === "vanilla"
+            onClicked: dialog.presenter.previewThemeMode("vanilla")
+        }
+        RadioButton {
+            id: darkNeutralHighButton
+            objectName: "darkNeutralHighModeButton"
+            width: themeRow.width
+            text: qsTr("Dark Neutral High")
+            font: Qt.font(dialog.applicationSession.typographyFonts.body)
+            checked: dialog.presenter.themeMode === "dark-neutral-high"
+            onClicked: dialog.presenter.previewThemeMode("dark-neutral-high")
+        }
+        RadioButton {
+            id: immaterialButton
+            objectName: "immaterialModeButton"
+            width: themeRow.width
+            text: qsTr("Immaterial")
+            font: Qt.font(dialog.applicationSession.typographyFonts.body)
+            checked: dialog.presenter.themeMode === "immaterial"
+            onClicked: dialog.presenter.previewThemeMode("immaterial")
+        }
+    }
+    function syncThemeChecks() {
+        vanillaButton.checked = dialog.presenter.themeMode === "vanilla"
+        darkNeutralHighButton.checked = dialog.presenter.themeMode === "dark-neutral-high"
+        immaterialButton.checked = dialog.presenter.themeMode === "immaterial"
+        contrastSlider.value = dialog.presenter.gridLineContrast
+    }
+    Connections {
+        target: dialog.presenter
+        function onThemeModeChanged() { dialog.syncThemeChecks() }
+        function onGridLineContrastChanged() { contrastSlider.value = dialog.presenter.gridLineContrast }
+    }
     Row {
         id: contrastRow
         parent: body
@@ -157,6 +216,9 @@ DialogWindow {
             to: 100
             stepSize: 1
             value: dialog.presenter.gridLineContrast
+            Accessible.name: qsTr("Grid Line Contrast")
+            ToolTip.visible: hovered
+            ToolTip.text: qsTr("50 uses the theme default. Lower values soften grid lines; higher values strengthen them.")
             font: Qt.font(dialog.applicationSession.typographyFonts.body)
             onMoved: dialog.presenter.setGridLineContrast(Math.round(value))
         }

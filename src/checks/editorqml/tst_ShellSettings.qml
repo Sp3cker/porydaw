@@ -230,6 +230,105 @@ TestCase {
                 "reopening preserves the committed grid contrast")
         nativeSettings.setInt("theme.grid-line-contrast", 50)
     }
+    function test_themeModePreviewCommitAndRevert() {
+        nativeSettings.setString("theme.mode", "vanilla")
+        nativeSettings.setInt("theme.grid-line-contrast", 50)
+        const presenter = createShell()
+        const palette = presenter.session.palette
+        tryCompare(presenter, "themeMode", "vanilla")
+        presenter.activate("edit.engine_settings")
+        tryCompare(dialog(), "visible", true)
+        const group = findChild(dialog(), "themeModeGroup")
+        verify(!!group, "theme picker group rides the mounted settings dialog")
+        const vanilla = findChild(dialog(), "vanillaModeButton")
+        const dark = findChild(dialog(), "darkNeutralHighModeButton")
+        const immaterial = findChild(dialog(), "immaterialModeButton")
+        verify(!!vanilla && !!dark && !!immaterial, "theme picker shows its three fork mode buttons")
+        compare(vanilla.text, "Vanilla", "vanilla mode button keeps the fork label")
+        compare(dark.text, "Dark Neutral High", "dark mode button keeps the fork label")
+        compare(immaterial.text, "Immaterial", "immaterial mode button keeps the fork label")
+        for (const entry of [[vanilla, "vanilla"], [dark, "dark-neutral-high"], [immaterial, "immaterial"]]) {
+            const label = entry[0].contentItem
+            verify(label && label.implicitWidth !== undefined, entry[1] + " mode button exposes its label item")
+            verify(label.implicitWidth <= entry[0].availableWidth + 1,
+                    entry[1] + " mode label is fully visible without elision")
+        }
+        tryCompare(vanilla, "checked", true)
+        compare(palette.chromeBackground.toString().toUpperCase(), "#BDB5AF",
+                "mounted settings reflect the committed vanilla chrome")
+        mouseClick(dark, dark.width / 2, dark.height / 2)
+        tryCompare(presenter, "themeMode", "dark-neutral-high")
+        tryCompare(dark, "checked", true)
+        compare(palette.chromeBackground.toString().toUpperCase(), "#424242",
+                "clicking dark previews the dark chrome live")
+        compare(nativeSettings.string("theme.mode", ""), "vanilla",
+                "mode preview does not persist the theme preference")
+        mouseClick(immaterial, immaterial.width / 2, immaterial.height / 2)
+        tryCompare(presenter, "themeMode", "immaterial")
+        compare(palette.chromeBackground.toString().toUpperCase(), "#363941",
+                "clicking immaterial previews the immaterial chrome live")
+        const cancel = findChild(dialog(), "settingsCancel")
+        verify(!!cancel, "the mounted settings dialog has a Cancel button")
+        mouseClick(cancel, cancel.width / 2, cancel.height / 2)
+        tryCompare(presenter, "themeMode", "vanilla")
+        compare(palette.chromeBackground.toString().toUpperCase(), "#BDB5AF",
+                "Cancel reverts the previewed mode to the committed vanilla chrome")
+        compare(nativeSettings.string("theme.mode", ""), "vanilla",
+                "cancelled preview leaves the persisted mode alone")
+        presenter.activate("edit.engine_settings")
+        tryCompare(dialog(), "visible", true)
+        tryCompare(vanilla, "checked", true)
+        const darkAgain = findChild(dialog(), "darkNeutralHighModeButton")
+        mouseClick(darkAgain, darkAgain.width / 2, darkAgain.height / 2)
+        tryCompare(presenter, "themeMode", "dark-neutral-high")
+        const apply = findChild(dialog(), "settingsApply")
+        verify(!!apply, "the mounted settings dialog has an Apply button")
+        mouseClick(apply, apply.width / 2, apply.height / 2)
+        verify(waitForNative(function() {
+            return nativeSettings.string("theme.mode", "") === "dark-neutral-high"
+        }, 5000), "Apply commits the previewed dark mode to preferences")
+        compare(presenter.themeMode, "dark-neutral-high",
+                "Apply keeps the committed dark mode applied")
+        dialog().close()
+        tryCompare(dialog(), "visible", false)
+        presenter.activate("edit.engine_settings")
+        tryCompare(dialog(), "visible", true)
+        tryCompare(findChild(dialog(), "darkNeutralHighModeButton"), "checked", true)
+        compare(nativeSettings.string("theme.mode", ""), "dark-neutral-high",
+                "reopening preserves the committed dark mode")
+        nativeSettings.setString("theme.mode", "vanilla")
+        nativeSettings.setInt("theme.grid-line-contrast", 50)
+    }
+    function test_themeModeGeometryStableAcrossPreview() {
+        nativeSettings.setString("theme.mode", "vanilla")
+        nativeSettings.setInt("theme.grid-line-contrast", 50)
+        const presenter = createShell()
+        tryCompare(presenter, "themeMode", "vanilla")
+        presenter.activate("edit.engine_settings")
+        tryCompare(dialog(), "visible", true)
+        const content = dialog().contentItem
+        function frame(item) {
+            const mapped = item.mapToItem(content, 0, 0)
+            return [mapped.x, mapped.y, item.width, item.height]
+        }
+        const beforeSize = [dialog().width, dialog().height]
+        const buttons = [findChild(dialog(), "vanillaModeButton"),
+                         findChild(dialog(), "darkNeutralHighModeButton"),
+                         findChild(dialog(), "immaterialModeButton")]
+        verify(buttons[0] && buttons[1] && buttons[2], "all three mode buttons mount for geometry")
+        const before = [frame(buttons[0]), frame(buttons[1]), frame(buttons[2])]
+        mouseClick(buttons[1], buttons[1].width / 2, buttons[1].height / 2)
+        tryCompare(presenter, "themeMode", "dark-neutral-high")
+        wait(0)
+        compare([dialog().width, dialog().height], beforeSize,
+                "settings size is unchanged across a mode preview click")
+        for (let index = 0; index < 3; ++index)
+            compare(frame(buttons[index]), before[index],
+                    "mode button " + index + " geometry is unchanged across a mode preview click")
+        dialog().close()
+        tryCompare(presenter, "themeMode", "vanilla")
+        nativeSettings.setString("theme.mode", "vanilla")
+    }
     function test_songFlagsAndReferenceGeometry() {
         const presenter = createShell()
         const app = presenter.session

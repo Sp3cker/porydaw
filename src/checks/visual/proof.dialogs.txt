@@ -6,7 +6,10 @@ Original SHA-256: 83b7c5889b8c614092920dd3054fe74bc478aa8fb3c4ddcce7dd515cc2c242
 Swift counterpart: src/checks/editorqml/tst_ShellImportWizard.qml (import-page flow; SHA-256 170a4fdd226e3e5e7e67f6a3712f182d869818741f1aa4129c8b9a4f56a4b257).
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-This file: 27 assertion sites: 6 GAP, 3 MATCHED, 18 RETIRED-REPRESENTATION. Dispositions tally: 6 GAP, 3 MATCHED, 18 RETIRED-REPRESENTATION. Import page flow is mapped to shell-import-wizard; its QWidget-only frozen-PNG region lookups are retired. Frozen screenshot rows for settings, sample studio, and SF2 zone rows are retired under user ruling 2026-09-29; theme picker and fork File > New Song wizard feature obligations remain open.
+This file: 27 assertion sites: 5 GAP, 4 MATCHED, 18 RETIRED-REPRESENTATION. Dispositions tally: 5 GAP, 4 MATCHED, 18 RETIRED-REPRESENTATION. Import page flow is mapped to shell-import-wizard; its QWidget-only frozen-PNG region lookups are retired. Frozen screenshot rows for settings, sample studio, and SF2 zone rows are retired under user ruling 2026-09-29; A009 theme picker controls are matched to the mounted Settings-window picker. Fork File > New Song wizard feature obligations remain open.
+
+Additional Swift counterpart: src/checks/editorqml/tst_ShellSettings.qml (SHA-256 c7d1c424fecb3919c4ac24b3b67fa086a4398c961cedf6310b68b923d28f32b0; test_themeModePreviewCommitAndRevert).
+Theme picker execution evidence (controller-observed): `deno task checks:shell --filter shell-settings --filter shell-theme` — shell-settings, shell-settings-window-focus, shell-theme all ok; bridge 0 findings. `build/debug/proof-evidence/shell-settings.json` lists both new theme functions as executed.
 
 Command: deno task checks:shell --filter shell-import-wizard --verbose
 Result: controller-observed 2026-09-29 — shell-import-wizard + shell-import-wizard-finish 2/2 ok; proof check --executed: 0 dialogs sites not executed.
@@ -373,34 +376,8 @@ Original expression:
   QVERIFY2(settingsRegions(dialog, regions), "settings dialog widgets not found");
 
 A009 | VisualDialogsTest::themeDialog | src/checks/visual/dialogs.cpp:549
-Disposition: GAP
-Mapping/reason: GAP: feature missing: theme picker (theme mode + grid contrast, Apply/Close); backlog: add it to the Settings window (sprint-4.md backlog).
-Source context since previous assertion:
-
-      compareShown(QStringLiteral("settings/song-darkneutralhigh"), dialog, regions);
-  }
-
-  void VisualDialogsTest::themeDialog()
-  {
-      themes::apply(*app(), themes::vanilla());
-      QSettings settings;
-      themes::ThemeController controller(*app(), settings);
-      controller.restore();
-      themes::ThemeDialog dialog(controller);
-      dialog.setFixedSize(dialog.size()); // ctor already resize(sizeHint())
-      showSettled(dialog);
-
-      QList<checks::visual::Region> regions;
-      for (const auto &entry : {std::pair{"mode-vanilla", "vanillaModeButton"},
-                                {"mode-dark", "darkNeutralHighModeButton"},
-                                {"mode-immaterial", "immaterialModeButton"},
-                                {"contrast-slider", "gridLineContrastSlider"},
-                                {"apply", "themeApplyButton"},
-                                {"close", "themeCloseButton"}})
-Original expression:
-  QVERIFY2(appendNamedRegion(regions, QString::fromLatin1(entry.first), dialog,
-                                     QString::fromLatin1(entry.second)),
-                   entry.second);
+Disposition: MATCHED
+Mapping: S004, S005, S006, S007
 
 A010 | VisualDialogsTest::sampleEditorVanilla | src/checks/visual/dialogs.cpp:560
 Disposition: RETIRED-REPRESENTATION
@@ -559,8 +536,7 @@ Mapping/reason: QWidget widget-tree region lookup feeds only the frozen QWidget 
 
 Swift assertion predicates
 
-Swift import-page predicates: shell-import-wizard; other dialog families have no counterpart.
-
+Swift import-page predicates: shell-import-wizard; theme picker controls: shell-settings.
 S001 | test_importWizardPageFlow (shell-import-wizard lane) | src/checks/editorqml/tst_ShellImportWizard.qml
 Anchor: message "A022 analysis title"
 
@@ -569,3 +545,15 @@ Anchor: message "A024 identity page"
 
 S003 | test_importWizardPageFlow (shell-import-wizard lane) | src/checks/editorqml/tst_ShellImportWizard.qml
 Anchor: message "A026 sound page"
+S004 | test_themeModePreviewCommitAndRevert | src/checks/editorqml/tst_ShellSettings.qml
+Anchor: message "theme picker shows its three fork mode buttons"
+
+S005 | test_gridContrastPreviewApplyAndRevert | src/checks/editorqml/tst_ShellSettings.qml
+Anchor: message "the engine settings page exposes the contrast control"
+
+S006 | test_themeModePreviewCommitAndRevert | src/checks/editorqml/tst_ShellSettings.qml
+Anchor: message "the mounted settings dialog has an Apply button"
+
+S007 | test_themeModePreviewCommitAndRevert | src/checks/editorqml/tst_ShellSettings.qml
+Anchor: message "the mounted settings dialog has a Cancel button"
+

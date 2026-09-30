@@ -4,7 +4,7 @@ Reference revision: 97dc7fea819cb7c4a97a0dac819244ee570e993f
 Original: src/checks/themelayout/tst_themelayout_settings.cpp
 Original SHA-256: 9e92739e88f01754265f606f62b2d5a3b8bbb4bc41053c902576bac95d23cd27
 Swift counterpart: src/checks/themecolor/ThemeColorChecks.swift
-Additional Swift counterpart: src/checks/editorqml/tst_Theme.qml
+Additional Swift counterparts: src/checks/editorqml/tst_Theme.qml; src/checks/editorqml/tst_ShellSettings.qml (SHA-256 c7d1c424fecb3919c4ac24b3b67fa086a4398c961cedf6310b68b923d28f32b0).
 
 Task 36 note (Swift-owned settings): the cited predicates now seed and read back
 through the shared PreferencesStore staged in the lane's scratch directory
@@ -24,6 +24,8 @@ Result: PASS swiftcore (1/24 ok); SwiftCoreTest::themeColor PASS, 0 failed.
 Command: deno task verify:shell --filter shell-theme --verbose
 Result: PASS shell-theme (1/2 ok, 1 skipped); Finished testing of Theme.
 Task 36 execution evidence: the task-36 lane runs refreshed build/proof-evidence/swiftcore-themecolor.json and shell-theme.json, which list the cited predicates executing; the task-36 implementer reported swiftcore 12/12 and the full shell lane 26/26 green. The PASS results above are the earlier recorded runs and were not re-observed by this bookkeeping pass.
+
+Theme picker execution evidence (controller-observed): `deno task checks:shell --filter shell-settings --filter shell-theme` — shell-settings, shell-settings-window-focus, shell-theme all ok; bridge 0 findings. `build/debug/proof-evidence/shell-settings.json` lists test_themeModePreviewCommitAndRevert and test_themeModeGeometryStableAcrossPreview as executed.
 Original lane: none; no registered lane executes this file (see file header:
 intentionally absent from the rewrite check target until the corresponding
 widgets return; no checkcatalog entry references DeferredThemeLayoutTest).
@@ -96,26 +98,12 @@ A008 | DeferredThemeLayoutTest::dialogCommitAndRevert | src/checks/themelayout/t
 Disposition: RETIRED-REPRESENTATION
 
 A009 | DeferredThemeLayoutTest::dialogCommitAndRevert | src/checks/themelayout/tst_themelayout_settings.cpp:168
-Disposition: GAP
-Mapping/reason: feature not yet ported: theme dialog (six-control dialog structure); the Swift shell has no theme dialog, so the committed/preview values it produced are covered by S004/S005 instead. Needs owner decision.
-Source context since previous assertion:
-  ;
-      QSettings settings(directory.filePath(QStringLiteral("settings.ini")), QSettings::IniFormat);
-      themes::ThemeController controller(*m_application, settings);
-      controller.restore();
-      themes::ThemeDialog dialog(controller);
-      const DialogControls controls = dialogControls(dialog);
-Original expression:
-  QVERIFY(controlsPresent(controls));
+Disposition: MATCHED
+Mapping: S009, S010, S011, S012, S013
 
 A010 | DeferredThemeLayoutTest::dialogCommitAndRevert | src/checks/themelayout/tst_themelayout_settings.cpp:170
-Disposition: GAP
-Mapping/reason: feature not yet ported: theme dialog (dialog visibility); the Swift shell has no theme dialog surface. Needs owner decision.
-Source context since previous assertion:
-  ;
-      dialog.show();
-Original expression:
-  QTRY_VERIFY(dialog.isVisible());
+Disposition: MATCHED
+Mapping: S009
 
 A011 | DeferredThemeLayoutTest::dialogCommitAndRevert | src/checks/themelayout/tst_themelayout_settings.cpp:177
 Disposition: MATCHED
@@ -219,90 +207,35 @@ A023 | DeferredThemeLayoutTest::themeDialogGeometry | src/checks/themelayout/tst
 Disposition: RETIRED-REPRESENTATION
 
 A024 | DeferredThemeLayoutTest::themeDialogGeometry | src/checks/themelayout/tst_themelayout_settings.cpp:244
-Disposition: GAP
-Mapping/reason: feature not yet ported: theme dialog (dialog visibility); the Swift shell has no theme dialog surface. Needs owner decision.
-Source context since previous assertion:
-  ;
-      QSettings settings(directory.filePath(QStringLiteral("settings.ini")), QSettings::IniFormat);
-      themes::ThemeController controller(*m_application, settings);
-      controller.restore();
-      themes::ThemeDialog dialog(controller);
-      dialog.show();
-      dialog.ensurePolished();
-Original expression:
-  QTRY_VERIFY(dialog.isVisible());
+Disposition: MATCHED
+Mapping: S014
 
 A025 | DeferredThemeLayoutTest::themeDialogGeometry | src/checks/themelayout/tst_themelayout_settings.cpp:247
-Disposition: GAP
-Mapping/reason: feature not yet ported: theme dialog (three mode radio buttons); the Swift shell has no theme dialog surface. Needs owner decision.
-Source context since previous assertion:
-  ;
-
-      const auto modeButtons = dialog.findChildren<QRadioButton *>();
-Original expression:
-  QCOMPARE(modeButtons.size(), 3);
+Disposition: MATCHED
+Mapping: S014
 
 A026 | DeferredThemeLayoutTest::themeDialogGeometry | src/checks/themelayout/tst_themelayout_settings.cpp:256
-Disposition: GAP
-Mapping/reason: feature not yet ported: theme dialog (darkNeutralHighModeButton); the Swift shell has no theme dialog surface. Needs owner decision.
-Source context since previous assertion:
-  ;
-      const QSize initialSize = dialog.size();
-      QList<QRect> initialGeometry;
-      initialGeometry.reserve(modeButtons.size());
-      for (const QRadioButton *button : modeButtons)
-          initialGeometry.append(QRect(button->mapTo(&dialog, QPoint()), button->size()));
-
-      QRadioButton *darkNeutralHigh =
-          dialog.findChild<QRadioButton *>(QStringLiteral("darkNeutralHighModeButton"));
-Original expression:
-  QVERIFY(darkNeutralHigh);
+Disposition: MATCHED
+Mapping: S010, S017
 
 A027 | DeferredThemeLayoutTest::themeDialogGeometry | src/checks/themelayout/tst_themelayout_settings.cpp:258
-Disposition: GAP
-Mapping/reason: feature not yet ported: theme dialog (dialog-size stability across a mode click); the Swift shell has no theme dialog surface. Needs owner decision.
-Source context since previous assertion:
-  ;
-      darkNeutralHigh->click();
-Original expression:
-  QTRY_COMPARE(dialog.size(), initialSize);
+Disposition: MATCHED
+Mapping: S015
 
 A028 | DeferredThemeLayoutTest::themeDialogGeometry | src/checks/themelayout/tst_themelayout_settings.cpp:260
-Disposition: GAP
-Mapping/reason: feature not yet ported: theme dialog (per-button geometry stability across a mode click); the Swift shell has no theme dialog surface. Needs owner decision.
-Source context since previous assertion:
-  ;
-      for (qsizetype index = 0; index < modeButtons.size(); ++index)
-Original expression:
-  QTRY_COMPARE(
-      QRect(modeButtons[index]->mapTo(&dialog, QPoint()), modeButtons[index]->size()),
-      initialGeometry.at(index));
+Disposition: MATCHED
+Mapping: S016
 
 A029 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:268
 Disposition: RETIRED-REPRESENTATION
 
 A030 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:275
-Disposition: GAP
-Mapping/reason: feature not yet ported: theme dialog (gridLineContrastSlider); the Swift shell exposes contrast as ShellPresenter.gridLineContrast with no slider surface. Needs owner decision.
-Source context since previous assertion:
-  ;
-      QSettings settings(directory.filePath(QStringLiteral("settings.ini")), QSettings::IniFormat);
-      themes::ThemeController controller(*m_application, settings);
-      controller.restore();
-      themes::ThemeDialog dialog(controller);
-      QSlider *gridLineContrast =
-          dialog.findChild<QSlider *>(QStringLiteral("gridLineContrastSlider"));
-Original expression:
-  QVERIFY(gridLineContrast);
+Disposition: MATCHED
+Mapping: S011
 
 A031 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:277
-Disposition: GAP
-Mapping/reason: feature not yet ported: theme dialog (dialog visibility); the Swift shell has no theme dialog surface. Needs owner decision.
-Source context since previous assertion:
-  ;
-      dialog.show();
-Original expression:
-  QTRY_VERIFY(dialog.isVisible());
+Disposition: MATCHED
+Mapping: S011, S014
 
 A032 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:283
 Disposition: GAP
@@ -549,3 +482,29 @@ Anchor: message "Copy is a real context-menu action"
 
 S008 | test_eventListRowsFollowAppliedTheme | src/checks/editorqml/tst_ShellEventListPresentation.qml
 Anchor: message "row 1 stripe paints the theme's alternate item surface"
+S009 | test_themeModePreviewCommitAndRevert | src/checks/editorqml/tst_ShellSettings.qml
+Anchor: message "theme picker group rides the mounted settings dialog"
+
+S010 | test_themeModePreviewCommitAndRevert | src/checks/editorqml/tst_ShellSettings.qml
+Anchor: message "theme picker shows its three fork mode buttons"
+
+S011 | test_gridContrastPreviewApplyAndRevert | src/checks/editorqml/tst_ShellSettings.qml
+Anchor: message "the engine settings page exposes the contrast control"
+
+S012 | test_themeModePreviewCommitAndRevert | src/checks/editorqml/tst_ShellSettings.qml
+Anchor: message "the mounted settings dialog has an Apply button"
+
+S013 | test_themeModePreviewCommitAndRevert | src/checks/editorqml/tst_ShellSettings.qml
+Anchor: message "the mounted settings dialog has a Cancel button"
+
+S014 | test_themeModeGeometryStableAcrossPreview | src/checks/editorqml/tst_ShellSettings.qml
+Anchor: message "all three mode buttons mount for geometry"
+
+S015 | test_themeModeGeometryStableAcrossPreview | src/checks/editorqml/tst_ShellSettings.qml
+Anchor: message "settings size is unchanged across a mode preview click"
+
+S016 | test_themeModeGeometryStableAcrossPreview | src/checks/editorqml/tst_ShellSettings.qml
+Anchor: message "mode button "
+
+S017 | test_themeModePreviewCommitAndRevert | src/checks/editorqml/tst_ShellSettings.qml
+Anchor: message "clicking dark previews the dark chrome live"

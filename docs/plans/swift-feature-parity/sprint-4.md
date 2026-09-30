@@ -521,4 +521,7 @@ The controller runs every build/lane after writers settle, serialized with `/usr
 ## Following-sprint backlog (user, 2026-09-29)
 
 - Separate song saving from voicegroup saving: add a "Save" button around the voicegroup editor so bank edits save on their own. Related defect: unified Save rewrites the song MIDI with canonicalized bytes even for flags/bank-only edits (`ProjectService+Bank.swift:179` via `SongDocument.captureSave`, `SongDocument.swift:393-409`); `shell-voicegroup-save`'s `test_zzzzzUnifiedSaveAndUndoRestorationReceipts` fails when run in isolation.
-- Theme picker (missing feature): the Swift app has no theme selection UI; add it to the Settings window (`DialogWindow`). Its obligations are `proof.tst_themelayout_settings.txt` A009/A010 (theme dialog structure/visibility) and plan.md P7's theme-controls residual.
+- Theme picker: landed in the Settings window (Theme row: Vanilla / Dark Neutral High / Immaterial with live preview, Cancel reverts, Apply persists); closes themelayout_settings A009/A010/A024–A028/A030/A031 and dialogs A009.
+- Project I/O rulings (user, 2026-09-29): no tests for (1) open refused while a load is in flight (workspace A003–A004), (6) reload rebinding (workspace A072–A083), (8) voicegroup preview paths/cleanup (ioflow A063–A065, iomutations A073–A076).
+- Feature: external MIDI change — when a song's MIDI changes on disk, prompt the user to overwrite it or save a copy (replaces the fork's silent reload rebinding, workspace A072–A083).
+- Fix: voicegroup preview must not write into the project folder (it interferes with the user's git). `VoicegroupSave.loadPreviewedSource` currently stages `<project>/.porydaw/vgpreview/`; stage outside the project.

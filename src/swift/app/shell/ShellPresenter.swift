@@ -605,7 +605,27 @@ public final class ShellPresenter: QmlInstantiableStatus {
         store.synchronize()
     }
 
+    private var committedThemeMode = "vanilla"
     private var committedGridLineContrast = 50
+
+    public func previewThemeMode(mode: String) {
+        themeMode = ShellAppearance.mode(mode)
+        ShellAppearance.apply(to: session.palette, mode: themeMode, contrast: gridLineContrast)
+        session.eventListPresenter().refreshAppearance()
+        if session.songOpen { session.gridPresenter().reloadVisuals() }
+    }
+
+    public func commitThemeMode() {
+        committedThemeMode = themeMode
+        let store = PreferencesStore()
+        store.setString(key: "theme.mode", value: themeMode)
+        store.synchronize()
+    }
+
+    public func discardThemeMode() {
+        previewThemeMode(mode: committedThemeMode)
+        setGridLineContrast(value: committedGridLineContrast)
+    }
 
     public func setGridLineContrast(value: Int) {
         gridLineContrast = min(100, max(0, value))
@@ -631,6 +651,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         themeMode = ShellAppearance.mode(store.string(key: "theme.mode", fallback: ""))
         gridLineContrast = ShellAppearance.contrast(
             store.string(key: "theme.grid-line-contrast", fallback: ""))
+        committedThemeMode = themeMode
         committedGridLineContrast = gridLineContrast
         ShellAppearance.apply(to: session.palette, mode: themeMode, contrast: gridLineContrast)
         session.eventListPresenter().refreshAppearance()
