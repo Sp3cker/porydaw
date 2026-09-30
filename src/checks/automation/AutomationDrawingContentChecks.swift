@@ -146,3 +146,60 @@ func drawerAutomationDrawingContentChecks(
 
     page.detach()
 }
+
+/// A live sweep paints the lane it would commit: the replaced span in preview
+/// ink, its covered nodes hidden, and Escape restores the lane untouched.
+@MainActor
+func drawerAutomationDrawPreviewChecks(
+    _ report: CheckReport,
+    suite: DocumentSession, service: ProjectService
+) {
+    let fixture = drawerAutomationAutomationFixture(
+        suite: suite, service: service, pan: [(24, 64), (72, 100), (120, 40)])
+    fixture.activate(fixture.panLane)
+    let page = fixture.page
+    let ink = SceneRectPacking.argb(page.palette.automationNodeInk)
+    let previewInk = SceneRectPacking.argb(page.palette.selectionEdge)
+    let coveredY = fixture.y(fixture.panLane, 100)
+    func heldRunAtCoveredValue(_ probe: AutomationDisplayProbe) -> Bool {
+        probe.statics.contains { $0.argb == ink && $0.h == 2 && abs($0.y - (coveredY - 1)) <= 1 }
+    }
+    func nodeTicks() -> [Double] { page.publishedNodes.map(\.tick) }
+    report.expect(
+        heldRunAtCoveredValue(AutomationDisplayProbe(page)) && nodeTicks().contains(72),
+        cppID: drawerAutomationProjectionID,
+        message: "the resting lane draws the 72 node and its held run")
+    let before = fixture.snapshot
+    let pressY = fixture.y(fixture.panLane, 20)
+    let button = AutomationQtButton.left
+    _ = page.pointerPress(x: fixture.x(48), y: pressY, surface: 1, button: button)
+    _ = page.pointerMove(x: fixture.x(48), y: pressY - 30, buttons: button)
+    _ = page.pointerMove(x: fixture.x(88), y: pressY - 30, buttons: button)
+    let drawing = AutomationDisplayProbe(page)
+    report.expect(
+        drawing.valid && drawing.statics.contains { $0.argb == previewInk },
+        cppID: drawerAutomationProjectionID,
+        message: "a live sweep draws its replacement curve in preview ink")
+    report.expect(
+        !heldRunAtCoveredValue(drawing), cppID: drawerAutomationProjectionID,
+        message: "a live sweep drops the held run it replaces")
+    report.expect(
+        !nodeTicks().contains(72) && nodeTicks().contains(24)
+            && nodeTicks().contains(120),
+        cppID: drawerAutomationProjectionID,
+        message: "a live sweep hides only the nodes it replaces")
+    report.expect(
+        page.handleEscape(), cppID: drawerAutomationProjectionID,
+        message: "Escape cancels the live sweep")
+    let restored = AutomationDisplayProbe(page)
+    report.expect(
+        !restored.statics.contains { $0.argb == previewInk }
+            && heldRunAtCoveredValue(restored) && nodeTicks().contains(72),
+        cppID: drawerAutomationProjectionID,
+        message: "a cancelled sweep restores the resting lane")
+    report.expectEqual(
+        expected: before, actual: fixture.snapshot,
+        cppID: drawerAutomationProjectionID,
+        what: "a previewed and cancelled sweep writes nothing")
+    page.detach()
+}

@@ -56,9 +56,9 @@ func pitchBendSharedGridPredicates(_ report: CheckReport, session: DocumentSessi
     let interiorTick = Int(scene.note.tick) + 1
     kernel.begin(x: kernel.x(at: interiorTick), y: kernel.y(at: 4096), line: false)
     kernel.finish()
+    let firstRule = Int(session.grid.nextSnapTickAfter(scene.note.tick, camera: session.camera))
     report.expect(kernel.points[interiorTick] != nil
-                  && kernel.snapTicks == Int(session.grid.snapTicksAt(scene.note.tick,
-                                                                       camera: session.camera)),
+            && (firstRule >= Int(scene.noteEnd) || kernel.gridTicks.first == firstRule),
                   cppID: gridID,
                   message: "clock grid selection permits a pitch-bend point one tick inside the selected note")
 }

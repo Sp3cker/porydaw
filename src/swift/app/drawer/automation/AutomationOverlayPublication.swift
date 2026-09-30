@@ -113,23 +113,31 @@ extension AutomationPage {
         ]
     }
 
-    /// The frozen gesture's draft: one marker per draft point and the value
+    /// The frozen gesture's draft: one marker per draft point, the lane drawn
+    /// through the replacement a pencil or sweep would commit, and the value
     /// readout at the last of them.
     func publishPreview() {
-        var rampProjection: AutomationProjection?
-        if case let .sweep(transaction) = gesture, transaction.mode == .ramp,
-           let facts = frozen {
-            let projection = makeProjection(facts: facts, camera: gestureCamera)
-            rampProjection = projection
-            let points = transaction.finishedPoints(fine: facts.modifiers.fine,
-                                                    projection: projection)
-            let text = points.last.map { facts.metadata.valueText($0.value) } ?? ""
-            applyPreviewDraft(AutomationPreviewDraft(parameter: facts.parameter,
-                                                    points: points, text: text))
-        } else {
-            applyPreviewDraft(AutomationPreviewDraft.resolve(gesture: gesture, frozen: frozen))
+        let gestureProjection = frozen.map { makeProjection(facts: $0, camera: gestureCamera) }
+        var draft = AutomationPreviewDraft.resolve(gesture: gesture, frozen: frozen)
+        var edit: AutomationLaneEdit?
+        if case let .pencil(transaction) = gesture { edit = transaction.preview }
+        if case let .sweep(transaction) = gesture, let facts = frozen,
+            let projection = gestureProjection
+        {
+            edit = transaction.finish(fine: facts.modifiers.fine, projection: projection)
+            if transaction.mode == .ramp {
+                let points = transaction.finishedPoints(
+                    fine: facts.modifiers.fine,
+                    projection: projection)
+                let text = points.last.map { facts.metadata.valueText($0.value) } ?? ""
+                draft = AutomationPreviewDraft(
+                    parameter: facts.parameter, points: points,
+                    text: text)
+            }
         }
-        guard let facts = frozen, !previewPoints.isEmpty else {
+        applyPreviewDraft(draft)
+        applyPreviewEdit(edit)
+        guard let facts = frozen, let projection = gestureProjection, !previewPoints.isEmpty else {
             publishDrawingContent()
             previewLabelVisible = false
             previewLabelText = ""
@@ -137,7 +145,6 @@ extension AutomationPage {
             return
         }
         publishDrawingContent()
-        let projection = rampProjection ?? makeProjection(facts: facts, camera: gestureCamera)
         let labelPoint: AutomationLanePoint?
         if case let .node(transaction) = gesture { labelPoint = transaction.grabbed?.current }
         else { labelPoint = previewPoints.last }

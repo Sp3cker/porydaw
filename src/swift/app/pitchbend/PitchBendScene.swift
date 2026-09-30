@@ -143,11 +143,9 @@ public final class PitchBendLane {
         focusColor = palette.focusOutline
         let gridColor = palette.gridLine
         var rules: [SceneRect] = []
-        var tick = (k.startTick / k.snapTicks + 1) * k.snapTicks
-        while tick < k.endTick {
+        for tick in k.gridTicks {
             rules.append(SceneRect(x: k.x(at: tick), y: g.canvasY, width: g.hairline,
                                    height: g.canvasHeight, fillColor: gridColor))
-            tick += k.snapTicks
         }
         let zero = k.y(at: 0)
         var x = g.canvasX

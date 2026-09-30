@@ -64,17 +64,26 @@ extension AutomationPage {
         if let lane = projection {
             let projectionFacts = facts(parameter: activeParameter, modifiers: .init(), session: session)
             let curveProjection = makeProjection(facts: projectionFacts, camera: session.camera)
-            for ghost in ghostProjections(session) {
+            for ghost in ghostProjections(session) where !ghost.points.isEmpty {
                 let ghostProjection = makeProjection(
                     facts: facts(parameter: ghost.parameter, modifiers: .init(), session: session),
                     camera: session.camera)
                 appendDrawingCurve(
-                    ghost, projection: ghostProjection, argb: ghostArgb,
-                    runs: &ghostRuns, edges: &ghostEdges)
+                    ghost.segments, metadata: ghost.metadata, projection: ghostProjection,
+                    argb: ghostArgb, runs: &ghostRuns, edges: &ghostEdges)
             }
-            appendDrawingCurve(
-                lane, projection: curveProjection, argb: curveArgb,
-                runs: &runs, edges: &curveEdges)
+            if let edit = previewEdit, edit.parameter == lane.parameter {
+                // A live draw paints the lane it would commit, the replaced span in preview ink.
+                appendDrawingCurve(
+                    Self.previewCurve(lane, replacedBy: edit), metadata: lane.metadata,
+                    projection: curveProjection, argb: curveArgb,
+                    preview: (edit.tickBegin...edit.tickEnd, selectionEdgeArgb),
+                    runs: &runs, edges: &curveEdges)
+            } else if !lane.points.isEmpty {
+                appendDrawingCurve(
+                    lane.segments, metadata: lane.metadata, projection: curveProjection,
+                    argb: curveArgb, runs: &runs, edges: &curveEdges)
+            }
         }
         var selectionFill: [DrawerStaticRect] = []
         var selectionEdges: [DrawerAnchoredRect] = []
@@ -181,29 +190,64 @@ extension AutomationPage {
     }
 
     private func appendDrawingCurve(
-        _ lane: AutomationLaneProjection,
+        _ segments: [AutomationCurveSegment], metadata: AutomationParameterMetadata,
         projection: AutomationProjection, argb: UInt32,
+        preview: (span: ClosedRange<Tick>, argb: UInt32)? = nil,
         runs: inout [DrawerStaticRect], edges: inout [DrawerAnchoredRect]
     ) {
-        guard !lane.points.isEmpty else { return }
-        for (index, segment) in lane.segments.enumerated() {
-            let fromY = projection.y(segment.fromValue, metadata: lane.metadata)
+        for (index, segment) in segments.enumerated() {
+            var ink = argb
+            if let preview, !segment.isLeadIn, preview.span.contains(segment.tickBegin) {
+                ink = preview.argb
+            }
+            let fromY = projection.y(segment.fromValue, metadata: metadata)
             runs.append(
                 DrawerStaticRect(
                     tickStart: segment.tickBegin,
                     tickEnd: segment.tickEnd ?? TimeDefaults.maxTick,
-                    y: Float((fromY - 1).rounded()), height: 2, argb: argb))
-            let next = index + 1 < lane.segments.count ? lane.segments[index + 1] : nil
+                    y: Float((fromY - 1).rounded()), height: 2, argb: ink))
+            let next = index + 1 < segments.count ? segments[index + 1] : nil
             if segment.kind == .step, let next, next.fromValue != segment.fromValue,
                 let end = segment.tickEnd
             {
-                let nextY = projection.y(next.fromValue, metadata: lane.metadata)
+                let nextY = projection.y(next.fromValue, metadata: metadata)
                 edges.append(
                     DrawerAnchoredRect(
                         tick: end, dx: -1, width: 2,
                         y: Float(min(fromY, nextY).rounded()),
-                        height: Float(max(2, abs(nextY - fromY))), argb: argb, flags: 1))
+                        height: Float(max(2, abs(nextY - fromY))), argb: ink, flags: 1))
             }
         }
+    }
+
+    /// The lane's curve as `edit` would leave it: the written points outside the
+    /// replaced span plus the replacement, with the snapshot's tick-zero rules.
+    static func previewCurve(
+        _ lane: AutomationLaneProjection,
+        replacedBy edit: AutomationLaneEdit
+    ) -> [AutomationCurveSegment] {
+        let metadata = lane.metadata
+        let begin = automationPartitionIndex(lane.points) { $0.tick < edit.tickBegin }
+        let end = automationPartitionIndex(lane.points) { $0.tick <= edit.tickEnd }
+        var points: [AutomationLanePoint] = []
+        points.reserveCapacity(begin + edit.points.count + lane.points.count - end + 1)
+        for point in lane.points[..<begin] where !point.projected {
+            points.append(AutomationLanePoint(tick: point.tick, value: point.value))
+        }
+        points.append(contentsOf: edit.points)
+        for point in lane.points[end...] {
+            points.append(AutomationLanePoint(tick: point.tick, value: point.value))
+        }
+        var leadIn: Int?
+        if points.first?.tick != 0, let value = metadata.defaultValue {
+            if metadata.projectsTickZero {
+                points.insert(AutomationLanePoint(tick: 0, value: metadata.clamp(value)), at: 0)
+            } else {
+                leadIn = metadata.clamp(value)
+            }
+        }
+        return AutomationCurveSegment.curve(
+            through: points, leadIn: leadIn, selection: nil,
+            interpolation: metadata.interpolation)
     }
 }

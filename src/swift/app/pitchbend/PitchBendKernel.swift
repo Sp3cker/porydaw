@@ -25,7 +25,8 @@ public struct PitchBendKernel {
     public let lane: Lane
     public let startTick: Int
     public let endTick: Int
-    public let snapTicks: Int
+    /// The snap lattice ticks strictly inside the note: one grid rule each.
+    public let gridTicks: [Int]
     public let fineTicks: Int
     private let snapTick: (Double, Bool) -> Int
     private let snapTickUp: (Double, Bool) -> Int
@@ -46,7 +47,15 @@ public struct PitchBendKernel {
         self.geometry = geometry
         self.startTick = startTick
         self.endTick = endTick
-        self.snapTicks = max(1, snapUp(Double(startTick), false) - startTick)
+        var gridTicks: [Int] = []
+        var tick = snapUp(Double(startTick), false)
+        while tick > startTick && tick < endTick {
+            gridTicks.append(tick)
+            let next = snapUp(Double(tick), false)
+            guard next > tick else { break }
+            tick = next
+        }
+        self.gridTicks = gridTicks
         self.fineTicks = max(1, fineTicks)
         snapTick = snap
         snapTickUp = snapUp
