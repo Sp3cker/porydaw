@@ -82,6 +82,15 @@ extension AutomationPage {
         previewText = draft.parameter == activeParameter ? draft.text : ""
     }
 
+    func applyPreviewEdit(_ edit: AutomationLaneEdit?) {
+        let next = edit?.parameter == activeParameter ? edit : nil
+        let coverageChanged =
+            next?.tickBegin != previewEdit?.tickBegin
+            || next?.tickEnd != previewEdit?.tickEnd
+        previewEdit = next
+        if coverageChanged { syncActiveNodes() }
+    }
+
     @discardableResult
     func applyHover(_ next: AutomationHover?, countingPublication: Bool) -> Bool {
         guard next != hover else { return false }

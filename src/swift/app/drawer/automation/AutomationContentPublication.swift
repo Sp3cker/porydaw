@@ -202,26 +202,37 @@ extension AutomationPage {
         }
     }
 
-    /// The active parameter's nodes and its projected origin phantom. Node markers
-    /// are drawn only at a zoom that can show them, exactly as production's
-    /// `nodeMarkersVisible` decides.
+    /// The active parameter's nodes and origin phantom, minus those a live draw
+    /// replaces; markers draw only at a zoom that can show them.
     func nodeHandles(_ lane: AutomationLaneProjection,
                              projection: AutomationProjection) -> [AutomationNodeHandle] {
         guard projection.markersVisible() else { return [] }
         let paint = nodePaint
+        let replaced = previewEdit.flatMap { edit in
+            edit.parameter == lane.parameter ? edit.tickBegin...edit.tickEnd : nil
+        }
         var values: [AutomationNodeHandle] = []
-        if let phantom = lane.originPhantom {
+        if let phantom = lane.originPhantom, !(replaced?.contains(phantom.point.tick) ?? false) {
             values.append(nodeHandle(phantom.point, paint: paint, parameter: lane.parameter,
                                      projection: projection, phantom: true))
         }
         let radius = max(paint.nodeRadius, paint.ringRadius) + paint.outlineWidth
         let begin = automationPartitionIndex(lane.points) { $0.x < -radius }
         let end = automationPartitionIndex(lane.points) { $0.x <= plotWidth + radius }
-        for point in lane.points[begin..<end] {
+        for point in lane.points[begin..<end] where !(replaced?.contains(point.tick) ?? false) {
             values.append(nodeHandle(point, paint: paint, parameter: lane.parameter,
                                      projection: projection, phantom: false))
         }
         return values
+    }
+
+    /// Republishes only the active node handles, for a live draw's coverage change.
+    func syncActiveNodes() {
+        guard let session, let lane = projection else { return }
+        let cameraProjection = makeProjection(
+            facts: facts(parameter: lane.parameter, modifiers: .init(), session: session),
+            camera: session.camera)
+        syncNodes(nodeHandles(lane, projection: cameraProjection))
     }
 
     func nodeHandle(_ point: AutomationProjectedPoint, paint: AutomationNodePaint,
@@ -229,18 +240,14 @@ extension AutomationPage {
                             projection: AutomationProjection,
                             phantom: Bool) -> AutomationNodeHandle {
         let node = AutomationNodeHandle()
-        node.x =
-            phantom
-            ? 0
-            : projection.camera.contentTickX(
-                tick: Double(point.tick), dpr: devicePixelRatio)
+        // Plot-relative x rides the row, so a zoom's x and scroll land in one frame.
+        node.x = phantom ? 0 : point.x
         node.y = point.y
         node.tick = Double(point.tick)
         node.value = point.value
         node.radius = paint.nodeRadius
         node.ringRadius = paint.ringRadius
         node.outlineWidth = paint.outlineWidth
-        node.fillColor = point.projected ? palette.secondaryText : palette.primaryText
         node.outlineColor = palette.automationNodeInk
         node.ringColor = palette.selectionRing
         node.selected = point.selected

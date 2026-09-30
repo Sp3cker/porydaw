@@ -46,7 +46,7 @@ public struct AutomationPlotGeometry: Equatable, Sendable {
         pointHitRadius = fontPx(base, 7.0 / 12.0)
         neutralSnapRadius = fontPx(base, 2.0 / 3.0)
         nodeDragActivationDistance = fontPx(base, 5.0 / 12.0)
-        pointDetailThreshold = fontPx(base, 2.0)
+        pointDetailThreshold = fontPx(base, 1.0 / 2.0)
         // Endpoint centers sit at the painted outer edge, marker stroke included.
         valuePlotPadding = (max(nodePaintRadius + nodeOutlineDipWidth,
                                 selectedRingRadius + selectedRingDipWidth * 0.5)).rounded()
@@ -264,24 +264,9 @@ public struct AutomationProjection {
                       projectedNode: true)
         }
 
-        // The step/ramp curve: each point holds (or ramps) into the next, the
-        // last one runs to the song's end, and the lead-in opens the lane.
-        var segments: [AutomationCurveSegment] = []
-        if let leadIn, let first = points.first, leadIn.value != first.value {
-            segments.append(AutomationCurveSegment(
-                kind: .step, tickBegin: 0, tickEnd: first.tick, fromValue: leadIn.value,
-                toValue: leadIn.value, isLeadIn: true, isSelected: false))
-        }
-        for (index, point) in points.enumerated() {
-            let next = index + 1 < points.count ? points[index + 1] : nil
-            let kind: AutomationCurveSegment.Kind =
-                metadata.interpolation == .ramp ? .ramp : .step
-            segments.append(AutomationCurveSegment(
-                kind: kind, tickBegin: point.tick, tickEnd: next?.tick,
-                fromValue: point.value,
-                toValue: kind == .ramp ? (next?.value ?? point.value) : point.value,
-                isLeadIn: false, isSelected: point.selected))
-        }
+        let segments = AutomationCurveSegment.curve(
+            through: points, leadIn: leadIn?.value, selection: range,
+            interpolation: metadata.interpolation)
 
         return AutomationLaneProjection(
             parameter: snapshot.parameter, metadata: metadata, revision: snapshot.revision,
@@ -308,5 +293,43 @@ public struct AutomationProjection {
                                                y: y(neutral, metadata: metadata)))
         }
         return labels
+    }
+}
+
+/// A tick-ordered lane value a curve runs through.
+protocol AutomationCurvePoint {
+    var tick: Tick { get }
+    var value: Int { get }
+}
+
+extension AutomationLanePoint: AutomationCurvePoint {}
+extension AutomationProjectedPoint: AutomationCurvePoint {}
+
+extension AutomationCurveSegment {
+    /// The step/ramp curve: each point holds (or ramps) into the next, the last
+    /// runs to the song's end, and a lead-in differing from the first point opens it.
+    static func curve<Point: AutomationCurvePoint>(
+        through points: [Point], leadIn: Int?, selection: TimeRange?,
+        interpolation: AutomationInterpolation
+    ) -> [AutomationCurveSegment] {
+        var segments: [AutomationCurveSegment] = []
+        segments.reserveCapacity(points.count + 1)
+        if let leadIn, let first = points.first, leadIn != first.value {
+            segments.append(
+                AutomationCurveSegment(
+                    kind: .step, tickBegin: 0, tickEnd: first.tick, fromValue: leadIn,
+                    toValue: leadIn, isLeadIn: true, isSelected: false))
+        }
+        let kind: Kind = interpolation == .ramp ? .ramp : .step
+        for (index, point) in points.enumerated() {
+            let next = index + 1 < points.count ? points[index + 1] : nil
+            segments.append(
+                AutomationCurveSegment(
+                    kind: kind, tickBegin: point.tick, tickEnd: next?.tick,
+                    fromValue: point.value,
+                    toValue: kind == .ramp ? (next?.value ?? point.value) : point.value,
+                    isLeadIn: false, isSelected: selection?.contains(point.tick) ?? false))
+        }
+        return segments
     }
 }

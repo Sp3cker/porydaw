@@ -428,3 +428,59 @@ func drawerAutomationFocusLossKeepsPress(_ report: CheckReport, suite: DocumentS
                        cppID: drawerAutomationFocusPressID,
                        what: "focus loss while still held freezes song bytes revision and undo")
 }
+
+// A stationary right click on the hover ghost types the value it inserts there.
+@MainActor
+func drawerAutomationGhostRightClickPrompt(
+    _ report: CheckReport, suite: DocumentSession,
+    service: ProjectService
+) {
+    let id = drawerAutomationHoverModelID
+    let fixture = drawerAutomationAutomationFixture(
+        suite: suite, service: service,
+        pan: [(24, 64), (120, 40)])
+    fixture.activate(fixture.panLane)
+    let page = fixture.page
+    let x = fixture.x(72)
+    let y = fixture.y(fixture.panLane, 20)
+    _ = page.pointerMove(x: x, y: y, buttons: 0)
+    guard let ghost = page.hover, !ghost.hasPoint,
+        page.hoverDisplay["hasGhost"] as? Bool == true
+    else {
+        report.fail(id, "the inter-node background shows its insertion ghost")
+        return
+    }
+    let before = fixture.snapshot
+    _ = page.pointerPress(x: x, y: y, surface: 1, button: AutomationQtButton.right)
+    _ = page.pointerRelease(x: x, y: y, button: AutomationQtButton.right)
+    report.expect(
+        page.hasPrompt && !page.menuOpen, cppID: id,
+        message: "a right click on the ghost opens its value prompt, not a menu")
+    report.expectEqual(
+        expected: "0", actual: page.promptDraft, cppID: id,
+        what: "the ghost prompt starts at the held value it previews")
+    report.expectEqual(
+        expected: before, actual: fixture.snapshot, cppID: id,
+        what: "opening the ghost prompt writes nothing")
+    report.expect(
+        page.acceptPrompt(displayedValue: 10), cppID: id,
+        message: "accepting the ghost prompt commits once")
+    report.expectEqual(
+        expected: ["24:64", "\(ghost.tick):74", "120:40"],
+        actual: fixture.values(fixture.panLane), cppID: id,
+        what: "the typed value lands at the ghost's tick")
+    report.expect(
+        fixture.undo() && fixture.values(fixture.panLane) == ["24:64", "120:40"],
+        cppID: id, message: "one undo removes the ghost insertion")
+
+    let selected = drawerAutomationAutomationFixture(
+        suite: suite, service: service,
+        pan: [(24, 64), (120, 40)])
+    selected.activate(selected.panLane)
+    selected.page.selectRange(from: 48, to: 96)
+    _ = selected.page.pointerPress(x: x, y: y, surface: 1, button: AutomationQtButton.right)
+    _ = selected.page.pointerRelease(x: x, y: y, button: AutomationQtButton.right)
+    report.expect(
+        selected.page.menuOpen && !selected.page.hasPrompt, cppID: id,
+        message: "a right click inside the time selection keeps its range menu")
+}

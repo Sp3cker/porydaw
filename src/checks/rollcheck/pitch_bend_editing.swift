@@ -93,6 +93,42 @@ func pitchBendParityPredicates(_ report: CheckReport, suite: DocumentSession) {
                   cppID: keyID, message: "auditioning from the popup changes no document bytes with the editor open")
 }
 
+/// An off-grid note's popup rules follow the shared lattice, not its offset from the note.
+@MainActor
+func pitchBendGridRulePredicates(_ report: CheckReport, suite: DocumentSession) {
+    let id = "swiftcore/PitchBendEditingTest::sharedGridSnap"
+    let service = ProjectService()
+    let session = pitchBendSyntheticSession(suite, service: service)
+    defer { withExtendedLifetime(service) {} }
+    session.grid.setSelection(.musical(4))
+    guard
+        let notes = try? session.document.addNotes([
+            NewNote(track: 0, tick: 290, pitch: 61, duration: 200, velocity: 100)
+        ]), let note = notes.first
+    else {
+        report.fail(id, "the off-grid note fixture exists")
+        return
+    }
+    session.selectPrimaryTrack(0)
+    session.setSelectedNotes([note])
+    let grid = PianoGrid(session: session)
+    let presenter = PitchBendPresenter(session: session, grid: grid, palette: grid.palette)
+    guard presenter.openSelected() else {
+        report.fail(id, "an off-grid note opens its editor")
+        return
+    }
+    defer { presenter.cancelAndClose() }
+    let step = Int(session.grid.snapTicksAt(290, camera: session.camera))
+    let expected = Array(stride(from: (290 / step + 1) * step, to: 490, by: step))
+    report.expect(
+        expected.count > 1, cppID: id,
+        message: "the off-grid note spans several snap steps")
+    report.expectEqual(
+        expected: expected, actual: presenter.pitchGraph().kernel.gridTicks,
+        cppID: id,
+        what: "an off-grid note's popup rules sit on every shared snap step")
+}
+
 @MainActor
 func pitchBendControllerPredicates(_ report: CheckReport, session: DocumentSession) {
     let id = "swiftcore/PitchBendControllerTest::wheelAndControllerWrites"

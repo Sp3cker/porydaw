@@ -13,6 +13,41 @@ EditorDrawerTestSupport {
     id: testCase
     name: "EditorDrawerLane"
 
+    // A frame drawn between a zoom and the queued camera flush must already
+    // show every node at its settled x.
+    function test_productionAutomationZoomNodesAgreeInOneFrame() {
+        if (testCase.containerPhase) skip("the production owner runs in its own process")
+        AutomationTabsSupport.mountProductionAutomation(testCase, "automation-zoom-node-frame")
+        var grid = testCase.surface.gridModel
+        var plot = AutomationTabsSupport.automationPlot(testCase)
+        var input = AutomationTabsSupport.automationPlotInput(testCase)
+        var model = AutomationTabsSupport.automationModel(testCase)
+        AutomationTabsSupport.clickAutomationTab(testCase, bootstrap.automationPanIndex())
+        model.isPencilMode = true
+        for (var k = 1; k < 8; ++k) {
+            var y = input.height * (k % 2 ? 0.3 : 0.7)
+            mousePress(input, input.width * k / 8, y, Qt.LeftButton)
+            mouseRelease(input, input.width * k / 8, y, Qt.LeftButton)
+        }
+        model.isPencilMode = false
+        tryVerify(function() { return AutomationTabsSupport.automationNodeItems(testCase).length > 4 },
+                  2000, "the pencil clicks draw several Pan nodes")
+        function drawnNodes() {
+            var fills = PageSupport.collectByNames(testCase, AutomationTabsSupport.automationPageItem(testCase),
+                                                   ["automationNodeFill"], [])
+            return fills.map(function(fill) {
+                return fill.parent.model.tick + "@" + Math.round(fill.mapToItem(plot, fill.width / 2, 0).x)
+            }).join(",")
+        }
+        for (var step = 0; step < 6; ++step) {
+            grid.handleWheel(0, step < 3 ? 120 : -120, 0, 0, Qt.NoModifier, 0, false, plot.width * 0.8, 10)
+            var immediate = drawnNodes()
+            wait(50)
+            compare(immediate, drawnNodes(),
+                    "zoom step " + step + " draws its nodes at their settled x before the camera flush")
+        }
+    }
+
     function test_productionAutomationOriginPhantomCurveRaster() {
         if (testCase.containerPhase) skip("the production owner runs in its own process")
         AutomationTabsSupport.mountProductionAutomation(testCase, "automation-origin-phantom-curve")
@@ -111,10 +146,10 @@ EditorDrawerTestSupport {
         var phantomPx = Math.round(phantomScene.x * phantomFrame.width / testCase.surface.width)
         var phantomPy = Math.round(phantomScene.y * phantomFrame.height / testCase.surface.height)
         var fillChannels = PixelSupport.channelsOf(testCase, testCase.drawerPalette().windowText)
-        verify(Math.abs(phantomFrame.red(phantomPx, phantomPy) - fillChannels[0]) <= 12
-               && Math.abs(phantomFrame.green(phantomPx, phantomPy) - fillChannels[1]) <= 12
-               && Math.abs(phantomFrame.blue(phantomPx, phantomPy) - fillChannels[2]) <= 12,
-               "the scrolled origin phantom paints its center fill at the plotted origin")
+        verify(Math.abs(phantomFrame.red(phantomPx, phantomPy) - fillChannels[0]) > 12
+               || Math.abs(phantomFrame.green(phantomPx, phantomPy) - fillChannels[1]) > 12
+               || Math.abs(phantomFrame.blue(phantomPx, phantomPy) - fillChannels[2]) > 12,
+               "the scrolled origin phantom leaves its interior unfilled at the plotted origin")
         var phantomHint = hint.text
         model.isPencilMode = true
         var pencilPoint = AutomationGestureSupport.automationFreePoint(testCase)
@@ -535,7 +570,8 @@ EditorDrawerTestSupport {
                 return node.model.tick === expected.tick && !node.model.phantom
             })
             verify(handle && !handle.model.selected
-                   && Math.abs(handle.model.x - expected.tick * grid.beatWidth / grid.ticksPerBeat) <= 1
+                   && Math.abs(handle.model.x - (expected.tick * grid.beatWidth / grid.ticksPerBeat
+                                                 - grid.cameraScrollX)) <= 1
                    && Math.abs(handle.model.y - forkY(expected.value)) <= 1
                    && Math.abs(handle.model.ringRadius - model.baseFontPx * 9 / 32) <= 0.5,
                    "each fork Pan group publishes independently projected node and annulus geometry")

@@ -258,8 +258,8 @@
                         && Math.abs(projected.y - node.at.y) <= 1,
                         "the written node center follows the independent tick and value projection")
         var fillPoint = physicalPoint(testCase, capture, idle, input, projected)
-        testCase.verify(pixelIs(testCase, idle, fillPoint.x, fillPoint.y, "#302c29"),
-                        "the written node center paints the palette primary fill")
+        testCase.verify(!pixelIs(testCase, idle, fillPoint.x, fillPoint.y, "#302c29"),
+                        "the written node center leaves its interior unfilled")
         var ring = testCase.findChild(node.item.parent, "automationNodeHover")
         testCase.verify(ring, "the Route 101 node carries its hover ring")
         testCase.mouseMove(input, projected.x, projected.y)

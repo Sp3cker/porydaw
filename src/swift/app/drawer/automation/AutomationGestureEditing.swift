@@ -152,8 +152,8 @@ extension AutomationPage {
         }
         guard let facts = frozenFacts(modifiers: .init()) else { return }
         let projection = makeProjection(facts: facts, camera: liveCamera())
-        if let lane = laneProjection(facts: facts, projection: projection),
-           let hit = lane.hitTest(x: x, y: y, radius: geometry.pointHitRadius) {
+        guard let lane = laneProjection(facts: facts, projection: projection) else { return }
+        if let hit = lane.hitTest(x: x, y: y, radius: geometry.pointHitRadius) {
             openPointMenu(hit: hit, facts: facts, x: x, y: y)
             return
         }
@@ -163,6 +163,14 @@ extension AutomationPage {
             } else {
                 openRangeMenu(x: x, y: y)
             }
+            return
+        }
+        // The hover ghost under a stationary right click: type the value it inserts.
+        let ghost = AutomationHover.resolve(
+            x: x, y: y, facts: facts, lane: lane, projection: projection,
+            pointHitRadius: geometry.pointHitRadius, isPencilMode: isPencilMode)
+        if !ghost.hasPoint, let value = ghost.value {
+            openInsertionPrompt(tick: Int(ghost.tick), value: value)
         }
     }
 

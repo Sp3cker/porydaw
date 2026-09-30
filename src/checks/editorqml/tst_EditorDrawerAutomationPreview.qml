@@ -12,14 +12,17 @@ EditorDrawerTestSupport {
     id: testCase
     name: "EditorDrawerLane"
 
-    function automationPreviewCovers(point, radius) {
+    // Node drags draft in the selection tint; pencil and sweep draw in lane ink.
+    function automationPreviewCovers(point, radius, laneInk) {
         var model = AutomationTabsSupport.automationModel(testCase)
         if (!model.previewLabelVisible)
             return false
         wait(0)
         var image = grabImage(testCase.surface)
         var region = AutomationGestureSupport.automationPreviewRegion(testCase, image, point, radius)
-        var ink = PixelSupport.channelsOf(testCase, testCase.drawerPalette().selectionEdge)
+        var palette = testCase.drawerPalette()
+        var ink = PixelSupport.channelsOf(testCase,
+                                          laneInk ? palette.automationNodeInk : palette.selectionEdge)
         return PixelSupport.nearestPixel(testCase, image, region, ink).distance < 30
     }
 
@@ -282,7 +285,7 @@ EditorDrawerTestSupport {
             mouseMove(input, finish, blank.y, -1, Qt.LeftButton)
             tryVerify(function() {
                 return testCase.automationPreviewCovers(
-                    { x: blank.x + finish - armX, y: blank.y }, 8)
+                    { x: blank.x + finish - armX, y: blank.y }, 8, true)
             }, 1000, "a sweep drag paints its preview at the target")
             compare(bootstrap.automationDocumentRevision(), revision,
                     "the live preview writes nothing")
@@ -303,7 +306,7 @@ EditorDrawerTestSupport {
             mouseMove(input, finish, endY, -1, Qt.LeftButton, Qt.ShiftModifier)
             tryVerify(function() {
                 return testCase.automationPreviewCovers(
-                    { x: (blank.x + finish) / 2, y: (blank.y + endY) / 2 }, 3)
+                    { x: (blank.x + finish) / 2, y: (blank.y + endY) / 2 }, 3, true)
             }, 1000, "a shift ramp paints its preview line")
             compare(bootstrap.automationDocumentRevision(), revision,
                     "the live preview writes nothing")
@@ -410,7 +413,7 @@ EditorDrawerTestSupport {
             mouseMove(input, endX, endY, -1, Qt.LeftButton)
             tryVerify(function() {
                 return testCase.automationPreviewCovers(
-                    { x: (blank.x + endX) / 2, y: (blank.y + endY) / 2 }, 8)
+                    { x: (blank.x + endX) / 2, y: (blank.y + endY) / 2 }, 8, true)
             }, 1000, "the pencil stroke paints its preview line")
             tryVerify(function() { return label && label.visible && label.text.length > 0 },
                       1000, "the pencil preview labels the drafted value")
@@ -436,15 +439,8 @@ EditorDrawerTestSupport {
                    "the pencil preview labels the drafted value")
             compare(bootstrap.automationDocumentRevision(), revision,
                     "the live preview writes nothing")
-            waitForRendering(testCase.surface)
-            var draftImage = grabImage(testCase.surface)
-            verify(testCase.automationPreviewCovers({ x: endX, y: endY }, 8),
-                   "the held pencil exposes painted draft markers")
-            var previewTint = PixelSupport.channelsOf(testCase, testCase.drawerPalette().selectionEdge)
-            verify(PixelSupport.nearestPixel(testCase, draftImage,
-                   AutomationGestureSupport.automationPreviewRegion(testCase, draftImage,
-                       { x: endX, y: endY }, 8), previewTint).distance < 30,
-                   "the held pencil paints its draft marker in the selection tint")
+            verify(testCase.automationPreviewCovers({ x: endX, y: endY }, 8, true),
+                   "the held pencil paints its draft marker in lane ink")
             mouseRelease(input, endX, endY, Qt.LeftButton)
             tryVerify(function() { return bootstrap.automationDocumentRevision() === revision + 1 },
                       1000, "the pencil commit lands one edit")

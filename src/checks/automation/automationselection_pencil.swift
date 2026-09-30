@@ -138,6 +138,12 @@ func drawerAutomationDetailThresholdPrecedence(_ report: CheckReport, suite: Doc
     report.expect(markersVisible(), cppID: id, message: "markers are visible at default zoom")
     let zoomAnchor = fixture.x(24)
     _ = fixture.session.mutateCamera {
+        $0.zoomAroundContentX(factor: 0.25, anchorContentX: zoomAnchor)
+    }
+    report.expect(
+        markersVisible(), cppID: id,
+        message: "markers stay visible at a quarter of the default zoom")
+    _ = fixture.session.mutateCamera {
         $0.zoomAroundContentX(factor: 0.02, anchorContentX: zoomAnchor)
     }
     report.expect(!markersVisible(), cppID: id,

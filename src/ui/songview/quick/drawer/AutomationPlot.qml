@@ -144,10 +144,6 @@ Item {
     }
 
     // Draw published nodes and the origin phantom with selected/hover rings.
-    Item {
-        x: -plot.gridModel.cameraScrollX
-        width: plot.width + plot.gridModel.cameraScrollX
-        height: plot.height
     Repeater {
         model: (plot.pageModel ? plot.pageModel.nodes : [])
 
@@ -160,7 +156,7 @@ Item {
             readonly property var s: model ? model.spec : ({})
 
             objectName: node.s.primitiveName + (node.s.phantom ? "Phantom" : "")
-            x: node.s.phantom ? plot.gridModel.cameraScrollX : 0
+            x: 0
             y: 0
             width: plot.width
             height: plot.height
@@ -201,12 +197,11 @@ Item {
                 width: 2 * node.s.radius
                 height: 2 * node.s.radius
                 radius: node.s.radius
-                color: node.s.fillColor
+                color: "transparent"
                 border.width: Math.max(1, node.s.outlineWidth)
                 border.color: node.s.outlineColor
             }
         }
-    }
     }
 
     // The range press's own band.

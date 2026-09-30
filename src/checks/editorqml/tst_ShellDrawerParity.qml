@@ -101,9 +101,9 @@ ShellDrawerParitySupport {
             var center = Raster.nodeCenter(testCase, input, expected.nodeTick,
                                            expected.nodeValue, parameter)
             var point = Raster.physicalPoint(testCase, page, idle, input, center)
-            verify(Raster.pixelIs(testCase, idle, point.x, point.y, "#302c29"),
-                   parameter === "Pan" ? "the physical DPR2 Pan node center paints primary ink"
-                                       : "the physical DPR2 Tempo node center paints primary ink")
+            verify(!Raster.pixelIs(testCase, idle, point.x, point.y, "#302c29"),
+                   parameter === "Pan" ? "the physical DPR2 Pan node center stays unfilled"
+                                       : "the physical DPR2 Tempo node center stays unfilled")
             mouseMove(input, center.x, center.y)
             verify(waitForNative(function() {
                 return collectByName(page, "automationNodeHover", []).some(

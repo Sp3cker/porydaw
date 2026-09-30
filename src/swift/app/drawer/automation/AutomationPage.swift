@@ -75,6 +75,9 @@ public final class AutomationPage: EditorDrawerPage {
     /// The live gesture draft: points only, never a document write.
     @QtIgnored public internal(set) var previewPoints: [AutomationLanePoint] = []
     @QtIgnored public internal(set) var previewText = ""
+    /// The span replacement a live pencil or sweep would commit: the plot draws
+    /// the lane through it and hides the nodes it replaces.
+    @QtIgnored public internal(set) var previewEdit: AutomationLaneEdit?
     /// The captured value prompt (`Set Value` / empty-lane insertion).
     @QtIgnored public internal(set) var prompt: AutomationPromptTransaction?
     /// The effective editing context: the shared playhead while playing, the
