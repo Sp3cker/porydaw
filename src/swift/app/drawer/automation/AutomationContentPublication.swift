@@ -241,11 +241,8 @@ extension AutomationPage {
                             projection: AutomationProjection,
                             phantom: Bool) -> AutomationNodeHandle {
         let node = AutomationNodeHandle()
-        node.x =
-            phantom
-            ? 0
-            : projection.camera.contentTickX(
-                tick: Double(point.tick), dpr: devicePixelRatio)
+        // Plot-relative x rides the row, so a zoom's x and scroll land in one frame.
+        node.x = phantom ? 0 : point.x
         node.y = point.y
         node.tick = Double(point.tick)
         node.value = point.value

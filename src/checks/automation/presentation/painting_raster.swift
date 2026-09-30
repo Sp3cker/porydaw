@@ -143,7 +143,7 @@ func drawerAutomationRasterHalfOpenGeometry(_ report: CheckReport, suite: Docume
     let normal = page.publishedNodes
     let nodes = [(Tick(48), 40), (Tick(72), 80), (Tick(120), 55)]
     for (tick, value) in nodes {
-        let expectedX = fixture.x(tick) + fixture.session.camera.snapshot.scrollX
+        let expectedX = fixture.x(tick)
         let expectedY = fixture.y(fixture.panLane, value)
         report.expect(normal.contains {
             $0.tick == Double(tick) && $0.value == value && abs($0.x - expectedX) <= 1
