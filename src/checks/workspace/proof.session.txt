@@ -35,9 +35,8 @@ closes a document-clean tab immediately (workspaceui_tabs.cpp:485-500 requestClo
 "Known limitation: users must save bank-only edits before closing the tab"); S196 records
 the Swift gate. (3) Queued editor commit: Swift drops a queued commit whose origin tab
 loses selection (src/swift/app/voicelist/VoiceEditorController.swift:79,99
-isCurrentEditOrigin guards) where the fork keeps the pending transition bound to its origin
-tab and resolves it through that tab's history; that fork law is the GAP recorded at
-src/checks/voicegroup/proof.tst_voicegroupviewcache.txt A047/A068.
+tab and resolves it through that tab's history; that fork law was voicegroupviewcache
+A047/A068, since closed (ledger deleted 2026-09-29).
 
 Bookkeeping does not overclaim: unsure cases are recorded as GAP, never
 

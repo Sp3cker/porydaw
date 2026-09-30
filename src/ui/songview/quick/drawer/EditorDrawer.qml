@@ -138,6 +138,51 @@ FocusScope {
             loader.item.forceActiveFocus(Qt.OtherFocusReason)
     }
 
+    // A monochrome SVG refilled with source-in (the retired chrome's CompositionMode_SourceIn).
+    // Rasterized at device pixels and reloaded whenever they change, so it never upscales.
+    component TintedIcon: Canvas {
+        id: tinted
+
+        required property url source
+        required property color tint
+        readonly property int pixelWidth: Math.ceil(width * tinted.Screen.devicePixelRatio)
+        readonly property int pixelHeight: Math.ceil(height * tinted.Screen.devicePixelRatio)
+        property int loadedWidth: 0
+        property int loadedHeight: 0
+
+        onPixelWidthChanged: tinted.sync()
+        onPixelHeightChanged: tinted.sync()
+        onTintChanged: tinted.requestPaint()
+        onImageLoaded: tinted.requestPaint()
+        onPaint: tinted.paintIcon()
+        Component.onCompleted: tinted.sync()
+
+        function sync() {
+            if (pixelWidth <= 0 || pixelHeight <= 0)
+                return
+            if (pixelWidth === loadedWidth && pixelHeight === loadedHeight) {
+                requestPaint()
+                return
+            }
+            unloadImage(source)
+            loadedWidth = pixelWidth
+            loadedHeight = pixelHeight
+            loadImage(source, Qt.size(pixelWidth, pixelHeight))
+        }
+
+        function paintIcon() {
+            if (width <= 0 || height <= 0 || !isImageLoaded(source))
+                return
+            var ctx = getContext("2d")
+            ctx.clearRect(0, 0, width, height)
+            ctx.globalCompositeOperation = "source-over"
+            ctx.drawImage(source, 0, 0, width, height)
+            ctx.globalCompositeOperation = "source-in"
+            ctx.fillStyle = tint
+            ctx.fillRect(0, 0, width, height)
+        }
+    }
+
     component DrawerSection: Item {
         id: section
 
@@ -282,48 +327,10 @@ FocusScope {
             Accessible.focusable: true
             Accessible.onPressAction: toggle.activate()
 
-            // The kind's own SVG, tinted in QML: the image is loaded once at the
-            // button size and drawn from that URL (Canvas paints only images
-            // loaded through loadImage), then the same rect is refilled with
-            // source-in. That is the retired chrome's
-            // QPainter::CompositionMode_SourceIn result with no image provider,
-            // no effect item and no second icon set.
-            Canvas {
-                id: icon
-
+            TintedIcon {
                 anchors.fill: parent
-
-                onImageLoaded: icon.requestPaint()
-                onWidthChanged: icon.sync()
-                onHeightChanged: icon.sync()
-                onPaint: icon.paintIcon()
-                Component.onCompleted: icon.sync()
-
-                // The drawn rect is this canvas's own size, so a resize always
-                // repaints. loadImage only starts a load, and a cached URL
-                // emits nothing, so the first paint must never wait on it.
-                function sync() {
-                    if (width <= 0 || height <= 0)
-                        return
-                    if (isImageLoaded(section.iconResource)
-                            || isImageLoading(section.iconResource)) {
-                        requestPaint()
-                        return
-                    }
-                    loadImage(section.iconResource, Qt.size(width, height))
-                }
-
-                function paintIcon() {
-                    if (width <= 0 || height <= 0)
-                        return
-                    var ctx = getContext("2d")
-                    ctx.clearRect(0, 0, width, height)
-                    ctx.globalCompositeOperation = "source-over"
-                    ctx.drawImage(section.iconResource, 0, 0, width, height)
-                    ctx.globalCompositeOperation = "source-in"
-                    ctx.fillStyle = drawerScope.drawerPalette.keyboardLabel
-                    ctx.fillRect(0, 0, width, height)
-                }
+                source: section.iconResource
+                tint: drawerScope.drawerPalette.keyboardLabel
             }
 
             MouseArea {
@@ -477,31 +484,13 @@ FocusScope {
         Accessible.focusable: true
         Accessible.onPressAction: detent.activate()
 
-        Canvas {
-            id: detentIcon
+        TintedIcon {
             anchors.fill: parent
             anchors.margins: drawerScope.presenter.detentIconInset
-            readonly property color tint: drawerScope.velocityModel
-                                          && drawerScope.velocityModel.detentsEnabled
-                                          ? drawerScope.drawerPalette.selectionRing
-                                          : drawerScope.drawerPalette.keyboardLabel
-            onTintChanged: requestPaint()
-            onWidthChanged: requestPaint()
-            onHeightChanged: requestPaint()
-            onImageLoaded: requestPaint()
-            Component.onCompleted: loadImage("qrc:/icons/velocity_labels.svg")
-            onPaint: {
-                if (width <= 0 || height <= 0
-                        || !isImageLoaded("qrc:/icons/velocity_labels.svg"))
-                    return
-                const ctx = getContext("2d")
-                ctx.clearRect(0, 0, width, height)
-                ctx.globalCompositeOperation = "source-over"
-                ctx.drawImage("qrc:/icons/velocity_labels.svg", 0, 0, width, height)
-                ctx.globalCompositeOperation = "source-in"
-                ctx.fillStyle = tint
-                ctx.fillRect(0, 0, width, height)
-            }
+            source: "qrc:/icons/velocity_labels.svg"
+            tint: drawerScope.velocityModel && drawerScope.velocityModel.detentsEnabled
+                  ? drawerScope.drawerPalette.selectionRing
+                  : drawerScope.drawerPalette.keyboardLabel
         }
 
         MouseArea {

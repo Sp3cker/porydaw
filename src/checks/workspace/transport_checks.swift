@@ -138,6 +138,9 @@ private func checkTransportVolumeIsolation(_ report: CheckReport, fixtureRoot: S
     bar.setMasterVolume(value: editedMaster)
     report.expectEqual(expected: editedMaster, actual: firstDocument.state.config.masterVolume,
                        cppID: id, what: "song master edit changes the first song cfg")
+    report.expectEqual(
+        expected: editedMaster, actual: audio.appliedSongVolume,
+        cppID: id, what: "edited song master reaches applied audio settings")
     report.expect(firstDocument.history.undoCount == initialCount + 1 &&
                   firstDocument.history.undoIndex == initialIndex + 1 &&
                   firstDocument.history.canUndo, cppID: id,

@@ -524,9 +524,7 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 Value predicates live in src/checks/themecolor/ThemeColorChecks.swift and the
-shell-theme entry; grid-contrast value rules are shared with the color proof
-(proof.tst_themelayout_color.txt S005/S009) and the item-surface rule with that
-proof's S003.
+shell-theme entry.
 
 S001 | themeTrackIdentityChecks | src/checks/themecolor/ThemeColorChecks.swift
 Anchor: function

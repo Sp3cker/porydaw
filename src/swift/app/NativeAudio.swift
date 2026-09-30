@@ -48,6 +48,7 @@ public final class NativeAudio {
     public var activePcmChannels: Int32 { Int32(device.renderer.activePcmChannels) }
     public var activeCgbChannels: Int32 { Int32(device.renderer.activeCgbChannels) }
     public var outputVolume: Int { device.renderer.outputVolume }
+    public var appliedSongVolume: Int { device.renderer.appliedSongVolume }
     public var loopEnabled: Bool { device.renderer.loopEnabled }
     public var resonanceSuppression: Bool { device.renderer.resonanceSuppression }
     public var polyDebugInvert: Bool { device.renderer.polyDebugInvert }

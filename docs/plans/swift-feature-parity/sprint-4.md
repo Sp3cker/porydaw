@@ -521,3 +521,4 @@ The controller runs every build/lane after writers settle, serialized with `/usr
 ## Following-sprint backlog (user, 2026-09-29)
 
 - Separate song saving from voicegroup saving: add a "Save" button around the voicegroup editor so bank edits save on their own. Related defect: unified Save rewrites the song MIDI with canonicalized bytes even for flags/bank-only edits (`ProjectService+Bank.swift:179` via `SongDocument.captureSave`, `SongDocument.swift:393-409`); `shell-voicegroup-save`'s `test_zzzzzUnifiedSaveAndUndoRestorationReceipts` fails when run in isolation.
+- Theme picker (missing feature): the Swift app has no theme selection UI; add it to the Settings window (`DialogWindow`). Its obligations are `proof.tst_themelayout_settings.txt` A009/A010 (theme dialog structure/visibility) and plan.md P7's theme-controls residual.

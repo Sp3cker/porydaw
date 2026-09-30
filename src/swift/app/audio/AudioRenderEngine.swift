@@ -90,6 +90,7 @@ public final class AudioRenderEngine {
     public var activePcmChannels: Int { telemetry.activePcm.load(ordering: .relaxed) }
     public var activeCgbChannels: Int { telemetry.activeCgb.load(ordering: .relaxed) }
     public var pcmMixerMode: M4APcmMixerMode { settings.pcmMixer }
+    public var appliedSongVolume: Int { Int(settings.songVolume) }
     public var maxPcmChannels: Int { Int(settings.maxPcmChannels) }
     public var pcmMixRate: Float { settings.pcmMixRate }
     public var analogFilter: Bool { settings.analogFilter }

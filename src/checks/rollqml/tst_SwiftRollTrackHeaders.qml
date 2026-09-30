@@ -235,8 +235,12 @@ SwiftRollTrackHeadersSupport {
             verify(rulerPlot.width > 0 && rulerPlot.height > 0
                    && rollPlotRect.width > 0 && rollPlotRect.height > 0
                    && velocityPlotRect.width > 0 && velocityPlotRect.height > 0)
-            verify(near(rulerPlot.x, split) && near(rollPlotRect.x, split)
-                   && near(velocityPlotRect.x, split))
+            verify(near(velocityPlotRect.x, split),
+                   "A043: mounted velocity plot starts at the shared timeline split")
+            verify(near(rollPlotRect.x, split),
+                   "A044: mounted roll plot starts at the shared timeline split")
+            verify(near(rulerPlot.x, split),
+                   "A087: mounted ruler plot origin matches the timeline split within a pixel")
             verify(near(rulerPlot.x + rulerPlot.width, rulerRect.x + rulerRect.width)
                    && near(rollPlotRect.x + rollPlotRect.width,
                            rollRect.x + rollRect.width)
@@ -245,7 +249,8 @@ SwiftRollTrackHeadersSupport {
             verify(headerRect.x + headerRect.width <= rulerPlot.x
                    && headerRect.x + headerRect.width <= rollPlotRect.x
                    && headerRect.x + headerRect.width <= velocityPlotRect.x)
-            verify(near(rollPlotRect.x - rollRect.x, s.gridModel.keyboardWidth))
+            verify(near(rollPlotRect.x - rollRect.x, s.gridModel.keyboardWidth),
+                   "A046: mounted roll plot starts one keyboard width past its band edge")
             verify(near(rollInput.width, rollPlotRect.width)
                    && near(rollInput.height, rollPlotRect.height),
                    "roll input " + rollInput.width + "x" + rollInput.height
@@ -253,22 +258,34 @@ SwiftRollTrackHeadersSupport {
             verify(near(pageRect.x, bodyRect.x) && near(pageRect.y, bodyRect.y)
                    && near(pageRect.width, bodyRect.width)
                    && near(pageRect.height, bodyRect.height))
-            verify(!automationHandle.visible && !voiceHandle.visible)
+            verify(velocityHandle.visible,
+                   "A071: mounted velocity handle is visible while automation and voice stay hidden")
+            verify(!automationHandle.visible,
+                   "A072: mounted automation handle stays hidden with velocity active")
+            verify(!voiceHandle.visible,
+                   "A073: mounted voice-changes handle stays hidden with velocity active")
             verify(near(rectOnSurface(velocityHandle, s).y + velocityHandle.height,
-                        bodyRect.y))
-            verify(near(bodyRect.y + bodyRect.height, rectOnSurface(bar, s).y))
+                        bodyRect.y),
+                   "A075: mounted velocity handle bottom meets the velocity body top")
+            verify(near(bodyRect.y + bodyRect.height, rectOnSurface(bar, s).y),
+                   "A076: mounted velocity body bottom meets the drawer bar top")
             verify(voiceToggle.visible && automationToggle.visible && velocityToggle.visible)
             verify(voiceToggle.x < automationToggle.x
                    && automationToggle.x < velocityToggle.x)
             verify(near(automationToggle.x - voiceToggle.x - voiceToggle.width,
-                        velocityToggle.x - automationToggle.x - automationToggle.width))
+                        velocityToggle.x - automationToggle.x - automationToggle.width),
+                   "A077: mounted drawer toggles keep uniform inter-toggle spacing")
             verify(near(automationToggle.x - voiceToggle.x - voiceToggle.width,
-                        voiceToggle.y - bar.y))
+                        voiceToggle.y - bar.y),
+                   "A078: mounted automation gap matches the bar inset, so the equal velocity step stays uniform")
             verify(rows.count > 0 && h.rowHeight > 0)
             compare(h.contentHeight, rows.count * h.rowHeight)
-            compare(scroll.width, h.scrollbarWidth)
-            compare(scroll.visible, h.maximumScrollY > 0)
-            compare(thumb.visible, h.maximumScrollY > 0)
+            compare(scroll.width, h.scrollbarWidth,
+                    "A084: mounted header scrollbar width matches the published model width")
+            compare(scroll.visible, h.maximumScrollY > 0,
+                    "A085: mounted header scrollbar shows exactly when the model can scroll")
+            compare(thumb.visible, h.maximumScrollY > 0,
+                    "A086: mounted header scroll thumb shows exactly when the model can scroll")
             verify(s.Screen.devicePixelRatio > 0)
         } finally {
             bootstrap.seedDrawerPreferences(false, true, true, 0)

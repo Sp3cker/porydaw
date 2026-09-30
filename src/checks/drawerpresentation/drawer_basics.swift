@@ -177,15 +177,25 @@ func drawerLayoutCheckDrawerStackingAndToggles(_ report: CheckReport) {
                   voiceChanges.toggleSize == buttonSize && automation.toggleSize == buttonSize,
                   cppID: drawerLayoutStackingID,
                   message: "toggle buttons take the production size for the resolved bar row")
+    // The group (3 buttons + 2 insets = 54) ends at the 56-pixel gutter's edge.
     drawerLayoutExpectDrawerToggle(report, cppID: drawerLayoutStackingID,
                        message: "voice changes occupy the first production toggle slot",
-                       voiceChanges, x: 1, y: snapshot.barY + 3, size: buttonSize)
+        voiceChanges, x: 2, y: snapshot.barY + 3, size: buttonSize)
     drawerLayoutExpectDrawerToggle(report, cppID: drawerLayoutStackingID,
                        message: "automations occupy the second production toggle slot",
-                       automation, x: 1 + buttonSize + 3, y: snapshot.barY + 3, size: buttonSize)
+        automation, x: 2 + buttonSize + 3, y: snapshot.barY + 3, size: buttonSize)
     drawerLayoutExpectDrawerToggle(report, cppID: drawerLayoutStackingID,
                        message: "velocity occupies the third production toggle slot",
-                       velocity, x: 1 + 2 * (buttonSize + 3), y: snapshot.barY + 3, size: buttonSize)
+        velocity, x: 2 + 2 * (buttonSize + 3), y: snapshot.barY + 3, size: buttonSize)
+    let wide = drawerLayoutMakeStoredDrawerHarness().harness.apply {
+        $0.configureHost(
+            hostWidth: drawerLayoutDrawerHostWidth, hostHeight: drawerLayoutDrawerHostHeight,
+            gutterWidth: 200)
+    }.snapshot
+    report.expect(
+        wide.velocity.toggleX + buttonSize == 200 && wide.voiceChanges.toggleX == 200 - (3 * buttonSize + 2 * 3),
+        cppID: drawerLayoutStackingID,
+        message: "the toggle group is right-aligned: its right edge meets the plot origin")
     report.expect(snapshot.detentX == 0 && snapshot.detentY == 48 &&
                   snapshot.detentSize == 16 && snapshot.detentIconInset == 1.5,
                   cppID: drawerLayoutStackingID,
@@ -200,8 +210,9 @@ func drawerLayoutCheckDrawerStackingAndToggles(_ report: CheckReport) {
     let slots = drawerLayoutMakeStoredDrawerHarness()
     let detached = slots.harness.apply { $0.detachPage(slots.pages[.voiceChanges]!) }
     let afterDetach = slots.harness.layout.snapshot
-    report.expect(detached.published && afterDetach[.automation].toggleX == 1 + buttonSize + 3 &&
-                  afterDetach[.velocity].toggleX == 1 + 2 * (buttonSize + 3) &&
+    report.expect(
+        detached.published && afterDetach[.automation].toggleX == 2 + buttonSize + 3
+            && afterDetach[.velocity].toggleX == 2 + 2 * (buttonSize + 3) &&
                   afterDetach[.voiceChanges].toggleSize == 0 &&
                   afterDetach[.voiceChanges].contentUrl.isEmpty,
                   cppID: drawerLayoutStackingID,

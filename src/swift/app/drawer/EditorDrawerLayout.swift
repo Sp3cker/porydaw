@@ -391,11 +391,12 @@ public struct EditorDrawerLayout {
         }
         next.barY = y
 
-        // The three production toggle slots stay put; only available kinds render.
+        // The three toggle slots stay put, right-aligned under the keyboard keys:
+        // the group's right edge meets the plot origin. Only available kinds render.
         let inset = max(0, metrics.toggleInset)
         let buttonSize = max(max(1, metrics.pixel), barHeight - 2 * inset)
         let groupWidth = 3 * buttonSize + 2 * inset
-        let groupX = min(max((origin - groupWidth) / 2, 0), max(0, width - groupWidth))
+        let groupX = min(max(origin - groupWidth, 0), max(0, width - groupWidth))
         for kind in DrawerSectionKind.toggleOrder where isAvailable(kind) {
             var geometry = next[kind]
             geometry.toggleX = groupX + kind.toggleSlot * (buttonSize + inset)
