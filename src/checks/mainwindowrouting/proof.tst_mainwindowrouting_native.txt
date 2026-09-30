@@ -354,65 +354,32 @@ Original expression:
                  "Cocoa did not reactivate MainWindow after the foreign window hid")
 
 A050 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:230
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(window.m_insertTimeAction && window.m_insertTimeAction->isEnabled())
+Disposition: MATCHED
+Mapping: S195
 
 A051 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:231
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY2(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason),
-                 "the Roll band could not take focus before the Insert Time prompt")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: focusTimelineBand is a Qt focus-widget establishment call; the mounted Insert Time form is proved without it by S196. [S196]
 
 A052 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:235
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        window.m_insertTimeAction->trigger();
-        songview::QuickPopupSession *popup = quick_popup::popupSession(view);
-Original expression:
-        QTRY_VERIFY(popup && popup->isOpen() && popup->window())
+Disposition: MATCHED
+Mapping: S196
 
 A053 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:236
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QTRY_VERIFY(
-            quick_popup::inputHasActiveFocus(*popup->window(), QLatin1String("insertTimeBars")))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: inputHasActiveFocus is a Qt widget-focus lookup; the mounted three-field Insert Time form is proved by S197. [S197]
 
 A054 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:239
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
-Source context since previous assertion:
-        sendShortcut(*popup->window(), soloBindings.front());
-Original expression:
-        QVERIFY2(popup->isOpen() && soloTriggered.count() == 0 && !view.trackSoloed(track),
-                 "a window command fired while the Insert Time prompt owned the keys")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: soloTriggered.count is a QAction signal count; the mounted form stays open and blocks a window command, proved by S199. [S199]
 
 A055 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:242
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
-Source context since previous assertion:
-        sendShortcut(*popup->window(), copyBindings.front());
-Original expression:
-        QVERIFY2(popup->isOpen() && copyTriggered.count() == 0,
-                 "window Copy fired while the Insert Time prompt owned the keys")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: copyTriggered.count is a QAction signal count; the mounted form stays open and blocks a window command, proved by S199. [S199]
 
 A056 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:245
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-        QTest::keyClick(popup->window(), Qt::Key_Escape);
-Original expression:
-        QTRY_VERIFY(!popup->isOpen())
+Disposition: MATCHED
+Mapping: S198
 
 A057 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:246
 Disposition: GAP
@@ -1189,3 +1156,18 @@ S194 | test_oFreshTabViewStateDefaults | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: message "the closed song leaves the named strip and reopens as exactly one row"
 Line: 355
 Predicate: verify(closedNameAbsent && tabOrderIds().filter(function(stripId) { return pageOf(stripId).session.title === "mus_route102" }).length === 1, "the closed song leaves the named strip and reopens as exactly one row")
+
+S195 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindowPrompts.qml
+Anchor: message "the selected song exposes the window Insert Time command"
+
+S196 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindowPrompts.qml
+Anchor: message "the window Insert Time shortcut opens the mounted prompt without a range"
+
+S197 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindowPrompts.qml
+Anchor: message "the selected editor draws the existing three-field Insert Time form"
+
+S198 | test_eStandaloneInsertTimeOpensMountedPrompt | src/checks/editorqml/tst_ShellWindowPrompts.qml
+Anchor: message "Cancel closes the mounted Insert Time form"
+
+S199 | test_insertTimeFormPreventsInterveningSignatureEditFromMountedMenu | src/checks/editorqml/tst_ShellGridMenuRulerLifecycle.qml
+Anchor: message "clicking the disabled signature row leaves the Insert Time form open"

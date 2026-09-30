@@ -225,16 +225,8 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: QApplication::focusWidget ancestry is unavailable in the QML shell; ready publication has no focus-grant path, while S330 observes explicit-selection retention without an automatic page switch. [S330]
 
 A042 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:169
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-open precondition for the two-song Qt MainWindow session (and the two tabs being distinct); no Swift predicate opens a two-song Qt session.
-Source context since previous assertion:
-    }
-
-    void freshBind()
-    {
-        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
-Original expression:
-        QVERIFY(session.has_value())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork QVERIFY(session.has_value()) is the native openSession fixture guard, not the fresh-bind outcome; S302 observes the fresh tab's seeded editor state and S201 opens the second tab. [S302][S201]
 
 A043 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:176
 Disposition: PARTIAL
@@ -311,16 +303,8 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: A single native readinessChanged emission is not observable; S331 watches the fresh-open strip for unready or extra published rows. [S331]
 
 A055 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:210
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-open precondition for the two-song Qt MainWindow session (and the two tabs being distinct); no Swift predicate opens a two-song Qt session.
-Source context since previous assertion:
-    }
-
-    void stagedReload()
-    {
-        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
-Original expression:
-        QVERIFY(session.has_value())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork QVERIFY(session.has_value()) is the native openSession fixture guard, not the reload outcome; S312 observes pending reload readiness. [S312]
 
 A056 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:217
 Disposition: PARTIAL
@@ -469,16 +453,8 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: The native pending/ready signal pair is not observable; S332 watches pending reload for no second row or partially installed page. [S332]
 
 A072 | MainWindowRoutingLifecycleTest::bankRebind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:268
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-open precondition for the two-song Qt MainWindow session (and the two tabs being distinct); no Swift predicate opens a two-song Qt session.
-Source context since previous assertion:
-    }
-
-    void bankRebind()
-    {
-        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
-Original expression:
-        QVERIFY(session.has_value())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork QVERIFY(session.has_value()) is the native openSession fixture guard, not the bank-rebind outcome; S324 observes the completed replacement ready at the original tab identity. [S324]
 
 A073 | MainWindowRoutingLifecycleTest::bankRebind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:275
 Disposition: PARTIAL
@@ -565,12 +541,8 @@ Original expression:
         QCOMPARE(probe.voicegroupLease().get(), &replacement)
 
 A080 | MainWindowRoutingLifecycleTest::bankRebind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:308
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (view-state store): Qt EditorViewState value/fanout observation; no Swift predicate observes the Qt SongView view state. Verified: neighboring camera/track/drawer/eventlist suites observe EditorCamera/header/drawer/row types, never SongView ViewState; not cited.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(sameViewState(probe.view().viewState(), state))
+Disposition: MATCHED
+Mapping: S318
 
 A081 | MainWindowRoutingLifecycleTest::bankRebind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:309
 Disposition: RETIRED-REPRESENTATION
@@ -581,16 +553,8 @@ Original expression:
         QCOMPARE(ready.count(), 0)
 
 A082 | MainWindowRoutingLifecycleTest::failedOpenPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:315
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-open precondition for the two-song Qt MainWindow session (and the two tabs being distinct); no Swift predicate opens a two-song Qt session.
-Source context since previous assertion:
-    }
-
-    void failedOpenPreservesLiveTab()
-    {
-        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
-Original expression:
-        QVERIFY(session.has_value())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork QVERIFY(session.has_value()) is the native openSession fixture guard, not the failed-open outcome; S340 observes both tabs and the live selection surviving the failed replacement. [S340]
 
 A083 | MainWindowRoutingLifecycleTest::failedOpenPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:324
 Disposition: PARTIAL
@@ -611,20 +575,12 @@ A084 | MainWindowRoutingLifecycleTest::failedOpenPreservesLiveTab | src/checks/m
 Disposition: RETIRED-REPRESENTATION
 
 A085 | MainWindowRoutingLifecycleTest::failedOpenPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:339
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (project switch/error recovery): selected-tab/tab-count retention across failed Qt project open; no Swift predicate retains Qt tabs across failed opens.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(workspace.selectedSongTab(), old)
+Disposition: MATCHED
+Mapping: S340
 
 A086 | MainWindowRoutingLifecycleTest::failedOpenPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:340
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (project switch/error recovery): selected-tab/tab-count retention across failed Qt project open; no Swift predicate retains Qt tabs across failed opens.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(workspace.openTabCount(), count)
+Disposition: MATCHED
+Mapping: S340
 
 A087 | MainWindowRoutingLifecycleTest::failedOpenPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:341
 Disposition: PARTIAL
@@ -643,12 +599,8 @@ Original expression:
         QVERIFY(porydawSnapshot(session->fixture->root()) == snapshot)
 
 A089 | MainWindowRoutingLifecycleTest::failedOpenPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:343
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (in-place reload): waitForTabReady readiness gate after in-place reload; no Swift predicate gates Qt tab readiness.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(waitForTabReady(workspace, old))
+Disposition: MATCHED
+Mapping: S342
 
 A090 | MainWindowRoutingLifecycleTest::failedOpenPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:344
 Disposition: PARTIAL
@@ -704,12 +656,8 @@ Original expression:
         QVERIFY(porydawSnapshot(session->fixture->root()) == snapshot)
 
 A095 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:364
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (project-level view-state settings): QSettings loadEditorViewState persistence observation; no Swift predicate persists Qt EditorViewState.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(loadEditorViewState(QSettings{}), state)
+Disposition: MATCHED
+Mapping: S341
 
 A096 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:367
 Disposition: PARTIAL
@@ -729,21 +677,12 @@ Original expression:
         QVERIFY(bName)
 
 A098 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:371
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (tab reopen): waitForTabReady readiness gate on the reopened Qt tab; no Swift predicate gates Qt tab readiness.
-Source context since previous assertion:
-        workspace.requestSongOpen(*aName);
-        SongTab *reopenedA = workspace.selectedSongTab();
-Original expression:
-        QVERIFY(waitForTabReady(workspace, reopenedA))
+Disposition: MATCHED
+Mapping: S207
 
 A099 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:372
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (project-level view-state settings): QSettings loadEditorViewState persistence observation; no Swift predicate persists Qt EditorViewState.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(reopenedA->view().editorViewState(), state)
+Disposition: MATCHED
+Mapping: S341
 
 A100 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:373
 Disposition: PARTIAL
@@ -762,21 +701,12 @@ Original expression:
         QCOMPARE(reopenedA->document().undoStack()->count(), undoA)
 
 A102 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:377
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (tab reopen): waitForTabReady readiness gate on the reopened Qt tab; no Swift predicate gates Qt tab readiness.
-Source context since previous assertion:
-        workspace.requestSongOpen(*bName, true);
-        SongTab *reopenedB = workspace.selectedSongTab();
-Original expression:
-        QVERIFY(waitForTabReady(workspace, reopenedB))
+Disposition: MATCHED
+Mapping: S207
 
 A103 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:378
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (project-level view-state settings): QSettings loadEditorViewState persistence observation; no Swift predicate persists Qt EditorViewState.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(reopenedB->view().editorViewState(), state)
+Disposition: MATCHED
+Mapping: S341
 
 A104 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:379
 Disposition: PARTIAL
@@ -815,12 +745,8 @@ Original expression:
         QVERIFY(porydawSnapshot(session->fixture->root()) == snapshot)
 
 A110 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:390
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (project-level view-state settings): QSettings loadEditorViewState persistence observation; no Swift predicate persists Qt EditorViewState.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(loadEditorViewState(QSettings{}), state)
+Disposition: MATCHED
+Mapping: S341
 
 A111 | MainWindowRoutingLifecycleTest::mouseHintWidgetDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:396
 Disposition: MATCHED
@@ -2068,3 +1994,12 @@ Anchor: message "A174/A106 the clean two-song window close is accepted with no p
 
 S339 | test_aProjectSwitchThenWindowCloseKeepsSongBytes | src/checks/editorqml/tst_ShellTabsWindowClose.qml
 Anchor: message "A108 the real window close completes and hides the window within 30 s"
+
+S340 | checkFailedProjectSwitch | src/checks/workspace/session_io.swift
+Anchor: message "failed replacement retains both tabs and their live selection"
+
+S341 | runCompleteEditorViewStateChecks | src/checks/workspace/session_view_state_fanout.swift
+Anchor: message "A107 synchronized preferences hold every member of the complete editor seed"
+
+S342 | test_liveTabCleanBeforeFailedProjectOpen | src/checks/editorqml/tst_ShellOpenFailure.qml
+Anchor: message "failed project replacement keeps the background document ready"
