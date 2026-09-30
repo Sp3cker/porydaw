@@ -51,6 +51,16 @@ public final class ImportWizardProbe: QmlInstantiableStatus {
         }
         return "\(data.count):\(String(hash, radix: 16))"
     }
+
+    public func blankSongFingerprint() -> String {
+        guard let bytes = try? MidiFile.blankSong().encoded() else { return "" }
+        var hash: UInt64 = 14_695_981_039_346_656_037
+        for byte in bytes {
+            hash ^= UInt64(byte)
+            hash = hash &* 1_099_511_628_211
+        }
+        return "\(bytes.count):\(String(hash, radix: 16))"
+    }
     public func fileContains(path: String, text: String) -> Bool {
         guard let contents = try? String(contentsOfFile: path, encoding: .utf8) else {
             return false
@@ -68,9 +78,11 @@ public final class ImportWizardProbe: QmlInstantiableStatus {
             cursor += min(maximumDelta, tick - cursor)
         }
         events.append(.channel(tick: tick, status: 0x90, data0: 60, data1: 100))
-        let file = MidiFile(division: 12, chunks: [
-            MidiChunk(events: events, endTick: tick),
-        ])
+        let file = MidiFile(
+            division: 12,
+            chunks: [
+                MidiChunk(events: events, endTick: tick)
+            ])
         guard let bytes = try? file.encoded() else { return false }
         do {
             try Data(bytes).write(to: URL(fileURLWithPath: path))
@@ -98,13 +110,15 @@ public final class ImportWizardProbe: QmlInstantiableStatus {
         guard let original = try? String(contentsOf: url, encoding: .utf8) else { return false }
         let prefix = label + ".mid:"
         var lines = original.components(separatedBy: "\n")
-        guard let index = lines.firstIndex(where: {
-            $0.trimmingCharacters(in: .whitespaces).hasPrefix(prefix)
-        }) else { return false }
+        guard
+            let index = lines.firstIndex(where: {
+                $0.trimmingCharacters(in: .whitespaces).hasPrefix(prefix)
+            })
+        else { return false }
         let line = lines[index]
         guard let range = line.range(of: flag, options: [], range: line.startIndex..<line.endIndex),
-            (range.lowerBound == line.startIndex || line[line.index(before: range.lowerBound)].isWhitespace),
-            (range.upperBound == line.endIndex || line[range.upperBound].isWhitespace)
+            range.lowerBound == line.startIndex || line[line.index(before: range.lowerBound)].isWhitespace,
+            range.upperBound == line.endIndex || line[range.upperBound].isWhitespace
         else { return false }
         lines[index].removeSubrange(range)
         do {
@@ -115,14 +129,15 @@ public final class ImportWizardProbe: QmlInstantiableStatus {
 
     public func chunkCount(path: String) -> Int {
         guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
-              let file = try? MidiFile.decode(Array(data)) else { return -1 }
+            let file = try? MidiFile.decode(Array(data))
+        else { return -1 }
         return file.chunks.count
     }
 
     public func controllerCount(path: String, chunk: Int, controller: Int) -> Int {
         guard let events = chunkEvents(path: path, chunk: chunk) else { return -1 }
         return events.filter {
-            if case let .channel(status, data0, _) = $0.payload {
+            if case .channel(let status, let data0, _) = $0.payload {
                 return status >> 4 == 0xB && Int(data0) == controller
             }
             return false
@@ -136,8 +151,9 @@ public final class ImportWizardProbe: QmlInstantiableStatus {
 
     private func chunkEvents(path: String, chunk: Int) -> [MidiEvent]? {
         guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
-              let file = try? MidiFile.decode(Array(data)),
-              file.chunks.indices.contains(chunk) else { return nil }
+            let file = try? MidiFile.decode(Array(data)),
+            file.chunks.indices.contains(chunk)
+        else { return nil }
         return file.chunks[chunk].events
     }
 }

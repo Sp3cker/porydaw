@@ -299,6 +299,17 @@ enum ShellQmlRegistry {
                         "include/constants/songs.h",
                     ]),
             Entry(
+                name: "shell-new-song-commit", inputFileName: "tst_ShellNewSongCommit.qml",
+                fixtureFiles: songs(
+                    "mus_route101", "mus_petalburg", "mus_gym", "mus_surf",
+                    "mus_victory_wild", "se_fanfare_1trk", "se_pc_login",
+                    "se_use_item") + [
+                        "sound/voice_groups.inc",
+                        "sound/voicegroups/dummy.inc",
+                        "sound/voicegroups/fixture_alt.inc",
+                        "include/constants/songs.h",
+                    ]),
+            Entry(
                 name: "shell-event-list", inputFileName: "tst_ShellEventList.qml",
                 fixtureFiles: songs("mus_route101")),
             Entry(

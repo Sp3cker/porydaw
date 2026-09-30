@@ -134,7 +134,13 @@ public final class NewSongController {
                 }
             } catch {
                 guard !Task.isCancelled, self.service === service else { return }
-                self.session?.operationFailed(message: String(describing: error))
+                self.session?.operationFailed(message: Self.failureText(error))
+                if let root = self.session?.projectRoot, !root.isEmpty {
+                    do { try await service.open(root: root) } catch {
+                        // The refusal is already reported. Keep the prior catalog.
+                    }
+                }
+                guard !Task.isCancelled, self.service === service else { return }
                 if let songs = try? await service.songs() {
                     guard !Task.isCancelled, self.service === service else { return }
                     self.dock?.publishSongs(songs)
@@ -148,12 +154,20 @@ public final class NewSongController {
         }
     }
 
+    private static func failureText(_ error: Error) -> String {
+        if case ProjectServiceError.operationFailed(let text) = error, !text.isEmpty {
+            return text
+        }
+        return String(describing: error)
+    }
+
     public func cancel() {
+        // Finish closes the wizard while busy, and that close calls back here.
+        guard !busy else { return }
         operation?.cancel()
         operation = nil
         wizardOpen = false
         state = nil
-        busy = false
         publish()
     }
 

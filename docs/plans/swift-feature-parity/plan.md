@@ -81,7 +81,7 @@ Details and pinned oracles remain in [inventory.md](inventory.md). “Pending”
 | SH06 | pending | Existing window/filter/follow/suppression/volume/debugger preference persistence. |
 | PJ01 | pending | Project open/change/startup arguments and dirty-safe failure paths. |
 | PJ02 | pending | Existing song search/filter/badges/reuse/deletion and available registration retry. |
-| PJ03 | blocked | New Song UI/transaction requires scope authorization. |
+| PJ03 | landed | `NewSongController`/`NewSongWizard` adopt the blank wizard and reuse `ProjectService.importSong`; [plan and acceptance](../new-song-blank-wizard/plan.md). |
 | PJ04 | blocked | File-picker MIDI import workflow requires scope authorization. |
 | PJ05 | pending | Ordered document/config/bank saves, conflicts, stale completion and byte conservation. |
 | PJ06 | complete | Task 18 accepted: `proof.tabs_lifecycle.txt` retired (74 MATCHED via new shell-tabs test_o/p/q/r + amended e/j/k + swiftcore); `proof.tabs_persistence.txt` 34 MATCHED/1 PARTIAL (A044 mixer-volume relaunch belongs to transport-settings surface)/36 RETIRED-*. Reload preserves same `tabId` + seeded view state (BEHAVIOR-GAP repaired in `SongTabsController`/`ApplicationSession`); fresh tab homes `scrollX` to `minHScroll` (repaired in `PianoGrid.configureViewport`). Shared-bank lifetime + restored recipe proven. Remaining `proof.session`/`tabs_scale`/`tabs_transport` GAPs route to PJ07/ED05/AU03. |
@@ -125,7 +125,7 @@ Details and pinned oracles remain in [inventory.md](inventory.md). “Pending”
 | ID | Status | Required journey |
 | --- | --- | --- |
 | J01 | pending | Existing composition edit/undo/save/relaunch; independent MIDI conservation. |
-| J02 | blocked | New composition requires PJ03/VG03 authorization. |
+| J02 | blocked | New composition still requires VG03 authorization. |
 | J03 | blocked | External MIDI journey requires PJ04 authorization. |
 | J04 | pending | Shared instruments edit/play/switch/undo/save/relaunch. |
 | J05 | blocked | Sample asset journey requires SA01–SA06 authorization. |
