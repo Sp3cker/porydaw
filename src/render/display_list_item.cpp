@@ -51,10 +51,13 @@ class RectGeometryNode final : public QSGGeometryNode
         int visible = 0;
         for (uint32_t i = 0; i < count; ++i)
             visible += onLayer(rects[i], over);
-        if (m_rectCount != visible) {
+        // Capacity only grows: allocate() invalidates the buffer and a fresh
+        // allocation per visible-count change would churn every scroll frame.
+        if (visible > m_rectCapacity) {
             m_geometry.allocate(visible * 6);
-            m_rectCount = visible;
+            m_rectCapacity = visible;
         }
+        m_geometry.setVertexCount(visible * 6);
         QSGGeometry::ColoredPoint2D *v = m_geometry.vertexDataAsColoredPoint2D();
         for (uint32_t i = 0; i < count; ++i) {
             const PdDlRect &rect = rects[i];
@@ -83,7 +86,7 @@ class RectGeometryNode final : public QSGGeometryNode
   private:
     QSGGeometry m_geometry;
     QSGVertexColorMaterial m_material;
-    int m_rectCount = 0;
+    int m_rectCapacity = 0;
 };
 
 class PainterRectNode final : public QSGRenderNode
