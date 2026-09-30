@@ -253,6 +253,15 @@ internal func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: Strin
                            what: "A028 first requested deletion targets its own fallback table entry")
         report.expectEqual(expected: 1, actual: secondServiceRemoval.tableIndex, cppID: planId,
                            what: "A029 second requested deletion targets its own table index one")
+        let plansKeyed =
+            firstServicePlan.label == "mus_session_test" && secondServicePlan.label == "mus_session_test2"
+            && firstServicePlan.songId != secondServicePlan.songId
+        report.expect(plansKeyed, cppID: planId, message: "registration plans key to their own requested song")
+        let deletionsKeyed =
+            firstServiceRemoval.tableIndex == firstServicePlan.songId
+            && secondServiceRemoval.tableIndex == secondServicePlan.songId
+        report.expect(
+            deletionsKeyed, cppID: planId, message: "deletion plans target their own requested song table entry")
         report.expectEqual(expected: 11, actual: firstServiceRemoval.tableCount, cppID: planId,
                            what: "A030 first deletion reports all eleven seeded table entries")
         report.expectEqual(expected: 11, actual: secondServiceRemoval.tableCount, cppID: planId,

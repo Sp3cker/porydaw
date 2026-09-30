@@ -55,6 +55,13 @@ public struct SelectionTransition: Equatable, Sendable {
     public let trackTime: TrackTimeSelection
 }
 
+/// The song's MIDI file changed on disk since this session last loaded or
+/// saved it. The caller prompts before overwriting; nothing was written.
+public struct SaveConflictError: Error, Sendable {
+    public let label: String
+    public init(label: String) { self.label = label }
+}
+
 // MARK: - Document session
 
 /// One document plus its confirmed bank history,
@@ -77,6 +84,9 @@ public final class DocumentSession {
     public var bankDirty: Bool { sharedBank.value.dirty }
     public var bankLoadName: String { sharedBank.value.loadName }
     public private(set) var isClosed = false
+    /// On-disk MIDI identity at the last load or save. Nil predates tracking
+    /// (direct init); the first save then adopts the disk without prompting.
+    public private(set) var lastKnownMidiBytes: [UInt8]?
     public private(set) var editorViewState = EditorViewState()
 
 
@@ -304,12 +314,18 @@ public final class DocumentSession {
         let file = try await Task { @concurrent in try MidiFile.decode(midiBytes) }.value
         let document = SongDocument(file: file, config: loaded.config,
                                     source: loaded.source, trackBudget: loaded.trackBudget)
-        return DocumentSession(document: document, service: service, lease: loaded.bank,
-                               slots: loaded.bankSlots, dirty: loaded.bankDirty,
-                               loadName: loaded.bankLoadName, sampleRate: sampleRate)
+        let session = DocumentSession(
+            document: document, service: service, lease: loaded.bank,
+            slots: loaded.bankSlots, dirty: loaded.bankDirty,
+            loadName: loaded.bankLoadName, sampleRate: sampleRate)
+        session.lastKnownMidiBytes = midiBytes
+        return session
     }
 
-    public func save() async throws {
+    /// Writes the song MIDI unless it changed on disk since the last load or
+    /// save, in which case nothing is written and SaveConflictError throws so
+    /// the caller can prompt. Bank-only voicegroup saves bypass this session.
+    public func save(forceOverwrite: Bool = false) async throws {
         try requireOpen()
         guard !bankPersistenceInFlight, !document.history.bankTransitionInFlight else {
             throw ProjectServiceError.operationFailed("A bank transition is already in progress.")
@@ -324,8 +340,10 @@ public final class DocumentSession {
             }
         }
         let snapshot = try document.captureSave()
+        if !forceOverwrite { try checkMidiConflict(against: snapshot) }
         let receipt = try await service.save(snapshot, bank: bank)
         document.didSave(snapshot)
+        lastKnownMidiBytes = snapshot.bytes
         var domains: SessionChangeDomains = [.dirty, .history]
         if let refreshed = receipt.bank {
             adoptBank(refreshed)
@@ -333,6 +351,30 @@ public final class DocumentSession {
         }
         if domains.contains(.bank) { pendingBankNotification = false }
         publishChange(domains)
+    }
+
+    /// Compares the MIDI file against the last load or save. Readable bytes
+    /// that differ prompt, unless the write would land identical bytes
+    /// anyway. A path that exists but cannot be read is a save failure, not
+    /// a conflict: it falls through so the bank stage still runs and the
+    /// write stage reports the real error. Outright deletion is the one
+    /// unreadable case that prompts — the write would succeed by recreating
+    /// the file, so the external change would otherwise pass silently.
+    private func checkMidiConflict(against snapshot: SaveSnapshot) throws {
+        guard let known = lastKnownMidiBytes else { return }
+        guard
+            let current = try? Data(
+                contentsOf: URL(
+                    fileURLWithPath: document.source.midiPath))
+        else {
+            if !FileManager.default.fileExists(atPath: document.source.midiPath) {
+                throw SaveConflictError(label: document.source.label)
+            }
+            return
+        }
+        if Array(current) != known && Array(current) != snapshot.bytes {
+            throw SaveConflictError(label: document.source.label)
+        }
     }
 
     /// Confirmed user bank edit: applies through the service, then records the

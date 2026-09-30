@@ -157,6 +157,19 @@ DialogWindow {
             font: Qt.font(dialog.applicationSession.typographyFonts.body)
             checked: dialog.presenter.themeMode === "vanilla"
             onClicked: dialog.presenter.previewThemeMode("vanilla")
+            // Basic CheckLabel offsets its glyphs by the 28px indicator, so the
+            // label below carries the visible text in the themed windowText ink.
+            contentItem: Item {}
+            Text {
+                objectName: "vanillaModeLabel"
+                x: vanillaButton.leftPadding + vanillaButton.indicator.width + vanillaButton.spacing
+                y: (parent.height - height) / 2
+                width: parent.width - x
+                text: vanillaButton.text
+                color: dialog.colors.windowText
+                font: vanillaButton.font
+                elide: Text.ElideRight
+            }
         }
         RadioButton {
             id: darkNeutralHighButton
@@ -166,6 +179,17 @@ DialogWindow {
             font: Qt.font(dialog.applicationSession.typographyFonts.body)
             checked: dialog.presenter.themeMode === "dark-neutral-high"
             onClicked: dialog.presenter.previewThemeMode("dark-neutral-high")
+            contentItem: Item {}
+            Text {
+                objectName: "darkNeutralHighModeLabel"
+                x: darkNeutralHighButton.leftPadding + darkNeutralHighButton.indicator.width + darkNeutralHighButton.spacing
+                y: (parent.height - height) / 2
+                width: parent.width - x
+                text: darkNeutralHighButton.text
+                color: dialog.colors.windowText
+                font: darkNeutralHighButton.font
+                elide: Text.ElideRight
+            }
         }
         RadioButton {
             id: immaterialButton
@@ -175,6 +199,17 @@ DialogWindow {
             font: Qt.font(dialog.applicationSession.typographyFonts.body)
             checked: dialog.presenter.themeMode === "immaterial"
             onClicked: dialog.presenter.previewThemeMode("immaterial")
+            contentItem: Item {}
+            Text {
+                objectName: "immaterialModeLabel"
+                x: immaterialButton.leftPadding + immaterialButton.indicator.width + immaterialButton.spacing
+                y: (parent.height - height) / 2
+                width: parent.width - x
+                text: immaterialButton.text
+                color: dialog.colors.windowText
+                font: immaterialButton.font
+                elide: Text.ElideRight
+            }
         }
     }
     function syncThemeChecks() {

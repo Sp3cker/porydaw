@@ -239,9 +239,12 @@ private func bankLogicHardFailures(_ report: CheckReport) {
             bankLogicExpect("B18A", missingEditError is VoicegroupStoreError, report,
                             "editing an unloaded identity throws a domain error")
             guard let original = initial.slotViews[4].voice else { throw BankLogicFixtureError.missingVoice }
-            // A regular file at the preview directory's parent prevents staging.
-            let previewParent = root.appendingPathComponent(".porydaw")
-            try Data("block preview directory".utf8).write(to: previewParent)
+            // A regular file at the per-process preview staging root prevents staging.
+            let blocker = FileManager.default.temporaryDirectory.appendingPathComponent(
+                "porydaw-vgpreview-\(ProcessInfo.processInfo.processIdentifier)", isDirectory: true)
+            try? FileManager.default.removeItem(at: blocker)
+            try Data("block preview directory".utf8).write(to: blocker)
+            defer { try? FileManager.default.removeItem(at: blocker) }
             var replacement = original
             replacement.release = original.release == 9 ? 10 : 9
             var editError: Error?

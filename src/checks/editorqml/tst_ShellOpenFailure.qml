@@ -247,4 +247,28 @@ TestCase {
                && tabs.tabCount === 1,
                "A017 recovered project persists its staged path and complete selected tab recipe")
     }
+
+    function test_startupRestoreReportsMissingSavedSong() {
+        bootstrap.seedStartupRecipe(bootstrap.projectRoot, ["mus_route101", "porydaw_missing_song"], "mus_route101")
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "the missing-song startup recipe loads the production ShellWindow")
+        shell.requestActivate()
+        tryCompare(shell, "active", true, 3000)
+        var session = shell.shellPresenter.session
+        openFailedSpy.target = session
+        criticalSpy.target = shell.shellPresenter
+        openFailedSpy.clear()
+        criticalSpy.clear()
+        verify(waitForNative(function() { return criticalSpy.count === 1 }, 30000), "A035 startup restore reports the missing saved song as one operation failure")
+        compare(criticalSpy.signalArguments[0][0], "Operation Failed", "the missing saved song raises the production operation dialog")
+        compare(criticalSpy.signalArguments[0][1], "Song porydaw_missing_song is not a playable song in this project.", "A036 the startup report names the missing saved song")
+        var dialog = findChild(shell, "shellCriticalDialog")
+        verify(dialog !== null && dialog.visible, "the production missing-song dialog is visible")
+        dialog.close()
+        verify(waitForNative(function() { return session.songTabs.tabCount === 1 && session.songTabs.selectedPage !== null && session.songTabs.selectedPage.title === "mus_route101" }, 30000), "A037 the missing saved song leaves no tab while the saved song restores")
+        compare(session.projectOpen, true, "the reported restore leaves the project open")
+        compare(session.songOpen, true, "the reported restore leaves the saved song ready")
+        compare(session.lastSaveError, "", "the startup report does not fail the restore result")
+        compare(openFailedSpy.count, 0, "the startup report raises no open failure")
+    }
 }

@@ -92,6 +92,11 @@ extension ApplicationSession {
         Task { [weak self] in
             do {
                 try await session.save()
+            } catch is SaveConflictError {
+                // Nothing was written; the prompt takes the answer.
+                self?.saveInProgress = false
+                self?.presentSaveConflict(session: session, closeTabId: nil)
+                return
             } catch {
                 self?.lastSaveError = String(describing: error)
                 self?.saveInProgress = false

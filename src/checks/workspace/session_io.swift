@@ -484,6 +484,23 @@ private func sessionStartupRestore(report: CheckReport, projectDir: String) {
         expected: ["mus_session_test", "mus_session_test2"],
         actual: app.songTabs.tabs.map(\.title), cppID: id,
         what: "A028 startup restores available song tabs in saved-selected-first order")
+    let listingDeadline = Date().addingTimeInterval(25)
+    while app.songDockController().songListPresenter().songListings.isEmpty && Date() < listingDeadline {
+        _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+    }
+    let restoredLabels = app.songDockController().songListPresenter().songListings.map(\.label)
+    report.expect(
+        !restoredLabels.contains("porydaw_missing_song"), cppID: id,
+        message: "A037 the missing saved song leaves no listing while startup completes")
+    let catalogDeadline = Date().addingTimeInterval(25)
+    while app.settingsVoicegroupArgs().isEmpty && Date() < catalogDeadline {
+        _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+    }
+    report.expectEqual(
+        expected: ["_test_vg"], actual: app.settingsVoicegroupArgs(), cppID: id,
+        what: "A043 startup publishes the fixture voicegroup catalog after all song outcomes")
+    report.expect(
+        !app.voiceListController().isLoading, cppID: id, message: "A048 startup catalog leaves the browser settled")
     store.synchronize()
     report.expectEqual(
         expected: WorkspaceTabRecipe(
@@ -496,6 +513,65 @@ private func sessionStartupRestore(report: CheckReport, projectDir: String) {
         actual: EditorViewStateCodec.loadTabs(store: store), cppID: id,
         what: "startup preserves all three saved recipe labels after restore")
 }
+@MainActor
+private func sessionCatalogRefreshReplace(report: CheckReport, projectDir: String) {
+    let id = "project-workspace/ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure"
+    let app = ApplicationSession()
+    defer { app.hostClosing(); app.acknowledgeGridDetached() }
+    func until(_ predicate: () -> Bool) -> Bool {
+        let deadline = Date().addingTimeInterval(25)
+        while !predicate() && Date() < deadline {
+            _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+        }
+        return predicate()
+    }
+    app.openProjectAndSong(path: projectDir, label: "mus_session_test")
+    guard until({ app.songOpen && !app.settingsVoicegroupArgs().isEmpty }) else {
+        report.fail(id, "catalog refresh fixture did not open its staged song")
+        return
+    }
+    let before = app.settingsVoicegroupArgs()
+    guard before == ["_test_vg"] else {
+        report.fail(id, "catalog refresh fixture lacks the staged voicegroup catalog")
+        return
+    }
+    let revision = app.voiceListController().catalogRevision
+    let replaced: Bool
+    do { replaced = try runBlocking { await app.refreshVoicegroupCatalog() } } catch {
+        report.fail(id, "catalog refresh could not settle: \(error)")
+        return
+    }
+    report.expect(replaced, cppID: id, message: "A051 catalog refresh republishes the voicegroup catalog")
+    report.expectEqual(
+        expected: before, actual: app.settingsVoicegroupArgs(), cppID: id,
+        what: "refresh replaces the catalog with the staged voicegroup choices")
+    report.expect(
+        app.voiceListController().catalogRevision == revision + 1, cppID: id,
+        message: "refresh applies exactly one catalog republication")
+    let service = ProjectService()
+    do { try runBlocking { try await service.open(root: projectDir) } } catch {
+        report.fail(id, "duplicate voicegroup fixture failed to open its project service: \(error)")
+        return
+    }
+    var refusal: ProjectServiceError?
+    do {
+        try runBlocking { try await service.createVoicegroup(name: "test_vg", copyFromFile: "", copySectionLabel: "") }
+    } catch {
+        refusal = error as? ProjectServiceError
+    }
+    let typedRefusal = refusal.map { if case .operationFailed = $0 { true } else { false } } ?? false
+    report.expect(typedRefusal, cppID: id, message: "A055 duplicate voicegroup creation returns a typed refusal")
+    let refusalMessage = refusal.map { if case let .operationFailed(message) = $0 { message } else { "" } } ?? ""
+    report.expect(
+        !refusalMessage.isEmpty && refusalMessage.contains("test_vg"), cppID: id,
+        message: "duplicate refusal names its voicegroup in a nonempty message")
+    report.expectEqual(
+        expected: before, actual: app.settingsVoicegroupArgs(), cppID: id,
+        what: "duplicate refusal keeps the prior voicegroup catalog")
+    report.expect(
+        app.voiceListController().catalogRevision == revision + 1, cppID: id,
+        message: "duplicate refusal publishes no further catalog")
+}
 
 @MainActor
 internal func sessionOpenAndRecovery(
@@ -503,6 +579,7 @@ internal func sessionOpenAndRecovery(
 ) -> (service: ProjectService, session: DocumentSession)? {
     checkFailedProjectSwitch(report: report, projectDir: projectDir)
     sessionStartupRestore(report: report, projectDir: projectDir)
+    sessionCatalogRefreshReplace(report: report, projectDir: projectDir)
     sessionReloadAtomicBinding(report: report, projectDir: projectDir)
     sessionReloadRetainsViewState(report: report, projectDir: projectDir)
     // 1. Service open and error recovery
@@ -574,6 +651,14 @@ internal func sessionOpenAndRecovery(
                 && before.1.bankSlots == after.1.bankSlots,
             cppID: failedOpenID,
             message: "failed replacement still opens the original song with identical complete metadata")
+        let firstPlayable = before.0.first { $0.isPlayable && $0.hasMid }
+        report.expect(
+            firstPlayable?.label == "mus_session_test" && after.1.label == firstPlayable?.label, cppID: failedOpenID,
+            message: "opened song equals the first playable song chosen from the snapshot")
+        let retainedCatalog = try runBlocking { try await service.voicegroupArgs() }
+        report.expectEqual(
+            expected: ["_test_vg"], actual: retainedCatalog, cppID: failedOpenID,
+            what: "failed replacement retains the prior voicegroup catalog")
         report.expectEqual(
             expected: "mus_session_test", actual: after.1.source.label,
             cppID: failedOpenID,

@@ -8,6 +8,7 @@ import PorydawProject
 @MainActor
 internal func sessionSavePersistence(report: CheckReport, session: DocumentSession,
                                      service: ProjectService, projectDir: String) {
+    sessionSaveConflictGate(report: report, fixtureRoot: projectDir)
     sessionSaveReceipts(report: report, fixtureRoot: projectDir)
     sessionLegacySidecarPersistence(report: report, fixtureRoot: projectDir)
     sessionSaveJourney(report: report, fixtureRoot: projectDir)
@@ -176,6 +177,107 @@ internal func sessionSavePersistence(report: CheckReport, session: DocumentSessi
     } catch {
         report.fail("vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
                     "lease reuse check failed: \(error)")
+    }
+}
+
+@MainActor
+private func sessionSaveConflictGate(report: CheckReport, fixtureRoot: String) {
+    let check = report.scoped(cppID: "swiftcore/SaveConflict::gate")
+    func overwriteMidi(at path: String, marker: UInt8) -> Data? {
+        guard var current = bytes(at: path) else { return nil }
+        current.append(marker)
+        try? Data(current).write(to: URL(fileURLWithPath: path), options: .atomic)
+        return bytes(at: path)
+    }
+    let root = stageTestProject(in: fixtureRoot, projectName: "save-conflict")
+    let midiPath = root + "/sound/songs/midi/mus_session_test.mid"
+    let forkPath = root + "/sound/songs/midi/mus_conflict_fork.mid"
+    let service = ProjectService()
+    do {
+        try runBlocking { try await service.open(root: root) }
+        let session = try runBlocking { try await DocumentSession.open(service: service, label: "mus_session_test") }
+        guard let stagedBytes = bytes(at: midiPath) else {
+            check.fail("conflict gate needs the staged MIDI bytes"); return
+        }
+        let tick = (session.document.state.file.chunks.map(\.endTick).max() ?? 0) + 96
+        _ = try session.document.addNotes([NewNote(track: 0, tick: tick, pitch: 74, duration: 24, velocity: 90)])
+        do { try runBlocking { try await session.save() } } catch {
+            check.fail("unchanged-on-disk save threw: \(error)"); return
+        }
+        guard let savedBytes = bytes(at: midiPath) else {
+            check.fail("unchanged-on-disk save left no MIDI bytes"); return
+        }
+        check.expect(
+            savedBytes != stagedBytes && !session.document.isDirty,
+            message: "unchanged-on-disk save writes without prompting and cleans the document")
+        _ = try session.document.addNotes([NewNote(track: 0, tick: tick + 96, pitch: 76, duration: 24, velocity: 89)])
+        guard let externalBytes = overwriteMidi(at: midiPath, marker: 0x7F) else {
+            check.fail("external MIDI modification needs the staged file"); return
+        }
+        var conflicted = false
+        do { try runBlocking { try await session.save() } } catch is SaveConflictError { conflicted = true } catch {
+            check.fail("conflicted save threw the wrong error: \(error)"); return
+        }
+        check.expect(conflicted, message: "externally modified MIDI raises the conflict instead of writing")
+        check.expect(
+            bytes(at: midiPath) == externalBytes, message: "the refused save leaves the on-disk bytes untouched")
+        check.expect(session.document.isDirty, message: "cancel keeps the refused document dirty")
+        let pending = try session.document.captureSave()
+        do { try runBlocking { try await session.save(forceOverwrite: true) } } catch {
+            check.fail("overwrite threw: \(error)"); return
+        }
+        check.expect(
+            bytes(at: midiPath) == Data(pending.bytes) && !session.document.isDirty,
+            message: "overwrite writes the in-app edits over the on-disk contents")
+        _ = try session.document.addNotes([NewNote(track: 0, tick: tick + 192, pitch: 77, duration: 24, velocity: 88)])
+        var cleanAgain = true
+        do { try runBlocking { try await session.save() } } catch { cleanAgain = false }
+        check.expect(
+            cleanAgain && !session.document.isDirty,
+            message: "overwrite refreshes the on-disk identity so the next save proceeds")
+        guard let original = session.bankSlots[0].voice else {
+            check.fail("conflict gate needs an editable bank voice"); return
+        }
+        var edited = original
+        edited.release = original.release == 7 ? 6 : original.release + 1
+        try runBlocking { try await session.applyBankEdit(slot: 0, value: edited, expected: original) }
+        _ = try session.document.addNotes([NewNote(track: 0, tick: tick + 288, pitch: 79, duration: 24, velocity: 87)])
+        guard let bankConflictBytes = overwriteMidi(at: midiPath, marker: 0x7E) else {
+            check.fail("bank-conflict staging needs the MIDI file"); return
+        }
+        var bankConflicted = false
+        do { try runBlocking { try await session.save() } } catch is SaveConflictError { bankConflicted = true } catch {
+            check.fail("bank-conflicted save threw the wrong error: \(error)"); return
+        }
+        check.expect(
+            bankConflicted && session.bankDirty,
+            message: "the conflicted unified save writes neither the bank nor the MIDI")
+        var bankSaved = false
+        do { _ = try runBlocking { try await service.saveBank(lease: session.bankLease) }; bankSaved = true } catch {
+            check.fail("bank-only save threw: \(error)"); return
+        }
+        check.expect(bankSaved, message: "bank-only voicegroup saves bypass the MIDI conflict gate")
+        check.expect(
+            bytes(at: midiPath) == bankConflictBytes,
+            message: "the bank-only save leaves the conflicted MIDI bytes alone")
+        let forkSnapshot = try session.document.captureSave()
+        do {
+            try runBlocking { try await service.forkSongAs(label: "mus_conflict_fork", snapshot: forkSnapshot) }
+        } catch { check.fail("fork threw: \(error)"); return }
+        check.expect(
+            bytes(at: forkPath) == Data(forkSnapshot.bytes),
+            message: "fork writes the in-app edits as the new song MIDI")
+        check.expect(
+            bytes(at: midiPath) == bankConflictBytes, message: "fork leaves the original on-disk file byte-identical")
+        let labels = try runBlocking { try await service.songLabels() }
+        check.expect(labels.contains("mus_conflict_fork"), message: "fork registers the new song in the project")
+        let forked = try runBlocking { try await DocumentSession.open(service: service, label: "mus_conflict_fork") }
+        check.expect(
+            forked.document.state.file == session.document.state.file,
+            message: "the forked song reopens with the in-app edits")
+        check.expect(session.document.isDirty, message: "the original document stays dirty after the fork")
+    } catch {
+        check.fail("save-conflict gate threw: \(error)")
     }
 }
 

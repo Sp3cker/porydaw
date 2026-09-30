@@ -121,6 +121,16 @@ extension ApplicationSession {
                 songTabs.selectTab(tabId: selected.tabId)
             }
             isRestoringTabs = false
+            // A saved name the project no longer publishes is not a playable
+            // song: the available tabs still restore, and each missing name
+            // is reported like the fork's Reconcile failure instead of
+            // failing the restore.
+            let playable = Set(candidate.labels)
+            var reported = Set<String>()
+            for song in recipe.orderedSongs
+            where !song.isEmpty && !playable.contains(song) && reported.insert(song).inserted {
+                operationFailed(message: "Song \(song) is not a playable song in this project.")
+            }
         } else if let label = candidate.label {
             isReplacingProject = false
             await openTab(label: label, at: nil)

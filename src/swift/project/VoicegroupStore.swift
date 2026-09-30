@@ -261,7 +261,7 @@ public final class VoicegroupStore {
         return record.published
     }
 
-    /// Auditions the current source via a staged `loadName.inc` shadow file.
+    /// Auditions the current source via a `loadName.inc` shadow staged outside the project.
     /// - Parameter id: Identity of a loaded bank.
     /// - Returns: A self-contained preview bank, or nil when loading fails.
     public func preview(id: VoicegroupId) -> BankHandle? {

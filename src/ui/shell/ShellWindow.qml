@@ -1,9 +1,9 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
+import QtQuick.Layouts
 import PorydawApp
 import Porydaw.Ui
-
 ThemedWindow {
     id: root
     objectName: "shellWindow"
@@ -422,6 +422,91 @@ ThemedWindow {
         onLoaded: {
             if (status === Loader.Ready)
                 item.open()
+        }
+    }
+    // Save-conflict prompt: modal, so local Space is allowed. The name field
+    // reuses the New Song label law; Register stays disabled until valid.
+    Dialog {
+        id: saveConflictDialog
+        objectName: "saveConflictDialog"
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        modal: true
+        focus: true
+        title: qsTr("Song Changed on Disk")
+        closePolicy: Popup.CloseOnEscape
+        visible: shell.session.saveConflictSongLabel.length > 0
+        onOpened: {
+            saveConflictNameField.text = ""
+            saveConflictNameField.forceActiveFocus()
+        }
+        onRejected: shell.session.cancelSaveConflict()
+        onClosed: {
+            if (shell.session.saveConflictSongLabel.length > 0)
+                shell.session.cancelSaveConflict()
+        }
+        contentItem: ColumnLayout {
+            spacing: root.chromeSpacing.four
+            Label {
+                objectName: "saveConflictMessage"
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                text: shell.session.saveConflictDetail
+            }
+            TextField {
+                id: saveConflictNameField
+                objectName: "saveConflictNewName"
+                Layout.fillWidth: true
+                placeholderText: qsTr("mus_new_song")
+                onTextChanged: {
+                    const previous = shell.session.saveConflictNewSongLabel
+                    const proposed = text
+                    const cursor = cursorPosition
+                    const accepted = shell.session.acceptSaveConflictLabelEdit(previous, proposed)
+                    if (accepted !== proposed) {
+                        text = accepted
+                        cursorPosition = Math.min(cursor, accepted.length)
+                    }
+                    shell.session.saveConflictNewSongLabel = accepted
+                }
+                onAccepted: {
+                    if (saveConflictForkButton.enabled)
+                        shell.session.resolveSaveConflictFork()
+                }
+            }
+            Label {
+                objectName: "saveConflictTaken"
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                text: qsTr("A song named %1 already exists.").arg(saveConflictNameField.text)
+                visible: saveConflictNameField.text.length > 0
+                    && shell.session.saveConflictLabelTaken(saveConflictNameField.text)
+            }
+        }
+        footer: DialogButtonBox {
+            Button {
+                id: saveConflictOverwriteButton
+                objectName: "saveConflictOverwrite"
+                text: qsTr("Overwrite")
+                DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
+                onClicked: shell.session.resolveSaveConflictOverwrite()
+            }
+            Button {
+                id: saveConflictForkButton
+                objectName: "saveConflictFork"
+                text: qsTr("Register changes as New Song...")
+                DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
+                enabled: saveConflictNameField.text.length > 0
+                    && shell.session.saveConflictLabelValid(saveConflictNameField.text)
+                    && !shell.session.saveConflictLabelTaken(saveConflictNameField.text)
+                onClicked: shell.session.resolveSaveConflictFork()
+            }
+            Button {
+                objectName: "saveConflictCancel"
+                text: qsTr("Cancel")
+                DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
+                onClicked: shell.session.cancelSaveConflict()
+            }
         }
     }
     header: TransportBar {

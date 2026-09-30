@@ -388,9 +388,9 @@ internal func runBankLeasesSuite(_ report: CheckReport) {
         var rejected = before
         rejected.key = 62
         let candidate = rejected
-        let blocker = root.appendingPathComponent(".porydaw/vgpreview")
-        try FileManager.default.createDirectory(at: blocker.deletingLastPathComponent(),
-                                                withIntermediateDirectories: true)
+        let blocker = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "porydaw-vgpreview-\(ProcessInfo.processInfo.processIdentifier)", isDirectory: true)
+        try? FileManager.default.removeItem(at: blocker)
         try Data().write(to: blocker)
         defer { try? FileManager.default.removeItem(at: blocker) }
         let attempted = awaitValue {

@@ -82,6 +82,44 @@ extension ProjectService {
         } catch { throw projectFailure(error) }
     }
 
+    /// Registers a new song carrying the caller's in-app MIDI snapshot: the
+    /// save-conflict fork. Unlike createSong no on-disk source is copied, so
+    /// the original file stays byte-identical whatever changed it externally.
+    public func forkSongAs(label: String, snapshot: SaveSnapshot) async throws {
+        let store = try requireStore()
+        let label = SongListPresenter.normalizeSongLabel(text: label)
+        guard Self.isValidSongLabel(label) else {
+            throw ProjectServiceError.operationFailed("Invalid song label: \(label).")
+        }
+        let midiDir = URL(filePath: projectRoot, directoryHint: .isDirectory)
+            .appending(path: "sound/songs/midi", directoryHint: .isDirectory)
+        let destination = midiDir.appendingPathComponent(label + ".mid")
+        do {
+            do {
+                _ = try FileManager.default.attributesOfItem(atPath: destination.path)
+                throw ProjectServiceError.operationFailed("MIDI file already exists for \(label): \(destination.path)")
+            } catch let error as NSError
+                where error.domain == NSCocoaErrorDomain
+                && error.code == CocoaError.fileReadNoSuchFile.rawValue
+            {
+                // A missing destination is the only state in which creation may write.
+            }
+            let source = try await store.songMeta(label: snapshot.destination.label)
+            guard try await store.songs().allSatisfy({ $0.label != label }) else {
+                throw ProjectServiceError.operationFailed("A song named \(label) already exists.")
+            }
+            try await store.writeFile(destination.path, data: Data(snapshot.bytes))
+            try MidiCfg.writeSongFlags(
+                midiDir: midiDir, label: label,
+                flags: SongFlags.merge(snapshot.config))
+            _ = try await store.registerSong(
+                label: label,
+                constant: SongCatalog.constantForLabel(label),
+                player: source.player)
+            self.snapshot = try await store.snapshot()
+        } catch { throw projectFailure(error) }
+    }
+
     public nonisolated static func isValidSongLabel(_ label: String) -> Bool {
         SongName(label) != nil &&
             label.range(of: #"^[a-z_][a-z0-9_]*$"#, options: .regularExpression) != nil

@@ -247,11 +247,10 @@ TestCase {
         compare(vanilla.text, "Vanilla", "vanilla mode button keeps the fork label")
         compare(dark.text, "Dark Neutral High", "dark mode button keeps the fork label")
         compare(immaterial.text, "Immaterial", "immaterial mode button keeps the fork label")
-        for (const entry of [[vanilla, "vanilla"], [dark, "dark-neutral-high"], [immaterial, "immaterial"]]) {
-            const label = entry[0].contentItem
-            verify(label && label.implicitWidth !== undefined, entry[1] + " mode button exposes its label item")
-            verify(label.implicitWidth <= entry[0].availableWidth + 1,
-                    entry[1] + " mode label is fully visible without elision")
+        for (const entry of [["vanillaModeLabel", "vanilla"], ["darkNeutralHighModeLabel", "dark-neutral-high"], ["immaterialModeLabel", "immaterial"]]) {
+            const label = findChild(dialog(), entry[0])
+            verify(!!label, entry[1] + " mode button exposes its label item")
+            verify(label.implicitWidth <= label.width + 1 && !label.truncated, entry[1] + " mode label is fully visible without elision")
         }
         tryCompare(vanilla, "checked", true)
         compare(palette.chromeBackground.toString().toUpperCase(), "#BDB5AF",

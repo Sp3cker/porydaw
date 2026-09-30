@@ -15,11 +15,10 @@ internal func bankPreviewFailure(report: CheckReport, session: DocumentSession, 
     let previewDirty = session.bankDirty
     let previewSourcePath = projectDir + "/" + session.bankLease.sourcePath
     let previewSourceBytes = bytes(at: previewSourcePath)
-    let previewRoot = projectDir + "/.porydaw"
-    let previewPath = previewRoot + "/vgpreview"
+    let previewPath = FileManager.default.temporaryDirectory.appendingPathComponent(
+        "porydaw-vgpreview-\(ProcessInfo.processInfo.processIdentifier)", isDirectory: true
+    ).path
     do {
-        try FileManager.default.createDirectory(atPath: previewRoot,
-                                                withIntermediateDirectories: true)
         try? FileManager.default.removeItem(atPath: previewPath)
         try Data([0]).write(to: URL(fileURLWithPath: previewPath))
         defer { try? FileManager.default.removeItem(atPath: previewPath) }

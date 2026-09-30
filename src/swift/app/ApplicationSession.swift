@@ -10,6 +10,11 @@ import PorydawAppCommands
 public final class ApplicationSession: QmlInstantiableStatus {
     @QtTracked public var saveInProgress = false
     @QtTracked public var lastSaveError = ""
+    /// Save-conflict prompt: empty label means no prompt. The fork name field
+    /// follows the New Song label law through acceptSaveConflictLabelEdit.
+    @QtTracked public var saveConflictSongLabel = ""
+    @QtTracked public var saveConflictDetail = ""
+    @QtTracked public var saveConflictNewSongLabel = ""
     @QtTracked public var documentDirty = false
     @QtTracked public var songDocumentDirty = false
     @QtTracked public var projectOpen = false
@@ -125,6 +130,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
     var isHostCloseWalk = false
     @QtIgnored
     var isReplacingProject = false
+    /// Close-gate tab awaiting the save-conflict answer, or -1 for File Save.
+    @QtIgnored
+    var pendingSaveConflictTabId = -1
 
 
     public required init() {
@@ -483,6 +491,32 @@ public final class ApplicationSession: QmlInstantiableStatus {
 
     public func requestSave() {
         requestSaveImpl()
+    }
+
+    /// The save-conflict prompt's QML surface. The prompt answers live beside
+    /// requestSave: the dialog asks, these answer, Impls do the work.
+    public func acceptSaveConflictLabelEdit(previous: String, proposed: String) -> String {
+        acceptSaveConflictLabelEditImpl(previous: previous, proposed: proposed)
+    }
+
+    public func saveConflictLabelValid(label: String) -> Bool {
+        saveConflictLabelValidImpl(label: label)
+    }
+
+    public func saveConflictLabelTaken(label: String) -> Bool {
+        saveConflictLabelTakenImpl(label: label)
+    }
+
+    public func resolveSaveConflictOverwrite() {
+        resolveSaveConflictOverwriteImpl()
+    }
+
+    public func resolveSaveConflictFork() {
+        resolveSaveConflictForkImpl()
+    }
+
+    public func cancelSaveConflict() {
+        cancelSaveConflictImpl()
     }
 
     public func requestUndo() {

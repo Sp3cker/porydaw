@@ -18,6 +18,7 @@ TestCase {
     property string originalProjectRoot: ""
     ShellQmlBootstrap { id: bootstrap }
     TabsDrawerProbe { id: fileProbe }
+    GatedVisualsProbe { id: rewriteProbe }
     Component { id: shellComponent; ShellWindow { width: 1100; height: 550; visible: true } }
     SignalSpy { id: failureSpy; signalName: "operationFailed" }
 
@@ -1008,5 +1009,176 @@ TestCase {
             return voice.mapToItem(dock, 0, 0).y >= songs.mapToItem(dock, 0, 0).y + songs.height
                 && Math.abs(songs.height / dock.height - 0.3) < 0.06
         }, 3000, "the voicegroup pane sits below Songs with the restored swiftDock/songsRatio")
+    }
+
+    function openConflictShell(label) {
+        verify(bootstrap.prepareSongActionFixture("open-delete"), "the conflict journey uses its own copied project")
+        shell = shellComponent.createObject(null)
+        shell.requestActivate()
+        tryCompare(shell, "active", true, 3000)
+        const session = shell.shellPresenter.session
+        session.openProjectAndSong(bootstrap.projectRoot, label)
+        verify(waitForNative(function() { return session.songOpen && session.songTabs.selectedPage && session.songTabs.selectedPage.isReady }, 30000), "the song is ready before the conflict journey")
+        return session
+    }
+
+    function dirtyConflictSong(shell, session) {
+        const settings = shell.shellPresenter.settingsStore
+        settings.open()
+        const changedVolume = settings.masterVolume === 110 ? 111 : 110
+        settings.changeMasterVolume(changedVolume)
+        settings.apply()
+        verify(waitForNative(function() { return !settings.isApplying && session.documentDirty }, 15000), "the mounted setting edit dirties the document")
+    }
+
+    function rewriteSongExternally(root, midi) {
+        verify(rewriteProbe.prepareUnsignedSong(root, "mus_route101", 48), "an external edit rewrites the on-disk MIDI bytes")
+        const modified = fileProbe.fileFingerprint(midi)
+        verify(modified.length > 0 && modified !== "471:d31e7c4a0a32a53f", "the external edit changes the pinned bytes")
+        return modified
+    }
+
+    function conflictDialog() { return findChild(shell, "saveConflictDialog") }
+
+    function waitConflictPrompt() {
+        verify(waitForNative(function() { const dialog = conflictDialog(); return dialog !== null && dialog.visible }, 5000), "the externally changed save raises the conflict prompt")
+    }
+
+    function test_saveConflictCleanSaveWritesWithoutPrompting() {
+        const session = openConflictShell("mus_route101")
+        const midi = bootstrap.projectRoot + "/sound/songs/midi/mus_route101.mid"
+        compare(fileProbe.fileFingerprint(midi), "471:d31e7c4a0a32a53f", "the song starts with the pinned MIDI bytes")
+        dirtyConflictSong(shell, session)
+        session.requestSave()
+        verify(waitForNative(function() { return !session.saveInProgress && !session.documentDirty }, 30000), "File Save settles clean")
+        compare(session.lastSaveError, "", "the clean save reports no error")
+        compare(session.saveConflictSongLabel, "", "the clean save raises no conflict prompt")
+        verify(conflictDialog() === null || !conflictDialog().visible, "no conflict dialog mounts for the clean save")
+        cleanup()
+    }
+
+    function test_saveConflictCancelWritesNothing() {
+        const session = openConflictShell("mus_route101")
+        const midi = bootstrap.projectRoot + "/sound/songs/midi/mus_route101.mid"
+        dirtyConflictSong(shell, session)
+        const modified = rewriteSongExternally(bootstrap.projectRoot, midi)
+        session.requestSave()
+        waitConflictPrompt()
+        compare(fileProbe.fileFingerprint(midi), modified, "the refused save writes nothing")
+        const cancel = findChild(shell, "saveConflictCancel")
+        verify(cancel !== null, "the conflict prompt offers Cancel")
+        mouseClick(cancel)
+        verify(waitForNative(function() { const dialog = conflictDialog(); return dialog === null || !dialog.visible }, 5000), "Cancel dismisses the conflict prompt")
+        tryCompare(session, "saveConflictSongLabel", "", 5000, "Cancel clears the conflict state")
+        verify(session.documentDirty, "Cancel keeps the refused document dirty")
+        compare(fileProbe.fileFingerprint(midi), modified, "Cancel writes no song bytes")
+        verify(rewriteProbe.restoreUnsignedSong(bootstrap.projectRoot, "mus_route101"), "the rewritten MIDI is restored for the retry")
+        session.requestSave()
+        verify(waitForNative(function() { return !session.saveInProgress && !session.documentDirty }, 30000), "the retry save settles clean")
+        const savedOnce = fileProbe.fileFingerprint(midi)
+        verify(savedOnce.length > 0 && savedOnce !== modified, "the retry save writes the in-app bytes over the external edit")
+        session.requestSave()
+        verify(waitForNative(function() { return !session.saveInProgress && !session.documentDirty }, 30000), "a second save is a clean no-op")
+        compare(fileProbe.fileFingerprint(midi), savedOnce, "the clean save preserves the saved bytes")
+        cleanup()
+    }
+
+    function test_saveConflictOverwriteWritesEdits() {
+        const session = openConflictShell("mus_route101")
+        const midi = bootstrap.projectRoot + "/sound/songs/midi/mus_route101.mid"
+        dirtyConflictSong(shell, session)
+        const modified = rewriteSongExternally(bootstrap.projectRoot, midi)
+        session.requestSave()
+        waitConflictPrompt()
+        const overwrite = findChild(shell, "saveConflictOverwrite")
+        verify(overwrite !== null, "the conflict prompt offers Overwrite")
+        mouseClick(overwrite)
+        verify(waitForNative(function() { return !session.saveInProgress && !session.documentDirty }, 30000), "Overwrite settles clean")
+        compare(session.lastSaveError, "", "Overwrite reports no error")
+        verify(conflictDialog() === null || !conflictDialog().visible, "Overwrite dismisses the conflict prompt")
+        const overwritten = fileProbe.fileFingerprint(midi)
+        verify(overwritten.length > 0 && overwritten !== modified, "Overwrite writes the in-app edits over the disk contents")
+        session.requestSave()
+        verify(waitForNative(function() { return !session.saveInProgress && !session.documentDirty }, 30000), "a second save is a clean no-op")
+        compare(fileProbe.fileFingerprint(midi), overwritten, "Overwrite refreshes the on-disk identity the next save trusts")
+        cleanup()
+    }
+
+    function test_saveConflictForkRegistersNewSong() {
+        const session = openConflictShell("mus_route101")
+        const root = bootstrap.projectRoot
+        const midi = root + "/sound/songs/midi/mus_route101.mid"
+        dirtyConflictSong(shell, session)
+        const modified = rewriteSongExternally(root, midi)
+        session.requestSave()
+        waitConflictPrompt()
+        const field = findChild(shell, "saveConflictNewName")
+        verify(field !== null, "the conflict prompt asks for a new song name")
+        field.forceActiveFocus()
+        for (const key of [Qt.Key_M, Qt.Key_U, Qt.Key_S, Qt.Key_C, Qt.Key_O, Qt.Key_N, Qt.Key_F, Qt.Key_L, Qt.Key_I, Qt.Key_C, Qt.Key_T])
+            keyClick(key)
+        compare(field.text, "musconflict", "real text input enters the fork label")
+        const fork = findChild(shell, "saveConflictFork")
+        verify(fork !== null && fork.enabled, "a valid label enables Register changes as New Song...")
+        const priorId = session.songTabs.selectedId
+        mouseClick(fork)
+        verify(waitForNative(function() { return session.songTabs.tabCount === 2 && session.songTabs.selectedPage && session.songTabs.selectedPage.title === "musconflict" && session.songTabs.selectedPage.isReady }, 30000), "the fork opens the created song in a new tab")
+        compare(fileProbe.fileFingerprint(midi), modified, "the fork leaves the original file byte-identical")
+        const forkedBytes = fileProbe.fileFingerprint(root + "/sound/songs/midi/musconflict.mid")
+        verify(forkedBytes.length > 0 && forkedBytes !== modified, "the fork carries the in-app MIDI bytes rather than the disk contents")
+        verify(session.songDockController().songListPresenter().songLabelTaken("musconflict"), "the fork registers the new song")
+        session.songTabs.selectTab(priorId)
+        verify(waitForNative(function() { return session.documentDirty && session.songTabs.selectedPage && session.songTabs.selectedPage.title === "mus_route101" }, 5000), "the original tab stays open and dirty after the fork")
+        cleanup()
+    }
+
+    function test_saveConflictCloseCancelAbortsClose() {
+        const session = openConflictShell("mus_route101")
+        const midi = bootstrap.projectRoot + "/sound/songs/midi/mus_route101.mid"
+        dirtyConflictSong(shell, session)
+        const modified = rewriteSongExternally(bootstrap.projectRoot, midi)
+        const onlyId = session.songTabs.selectedId
+        session.songTabs.requestClose(onlyId)
+        verify(waitForNative(function() { return session.songTabs.pendingCloseId === onlyId }, 5000), "the dirty close raises the gate")
+        verify(waitForNative(function() { const gateSave = findChild(shell, "songTabSave"); return gateSave !== null && gateSave.visible }, 5000), "the close gate shows its Save")
+        const save = findChild(shell, "songTabSave")
+        mouseClick(save)
+        waitConflictPrompt()
+        compare(fileProbe.fileFingerprint(midi), modified, "the close-time save writes nothing before the answer")
+        const cancel = findChild(shell, "saveConflictCancel")
+        verify(cancel !== null, "the conflict prompt offers Cancel")
+        mouseClick(cancel)
+        verify(waitForNative(function() { const dialog = conflictDialog(); return (dialog === null || !dialog.visible) && session.songTabs.pendingCloseId === -1 }, 5000), "Cancel dismisses both the prompt and the gate")
+        compare(session.songTabs.tabCount, 1, "Cancel keeps the tab open")
+        compare(session.songTabs.selectedId, onlyId, "Cancel keeps the original tab selected")
+        verify(session.documentDirty, "Cancel keeps the refused document dirty")
+        compare(fileProbe.fileFingerprint(midi), modified, "Cancel writes no song bytes")
+        cleanup()
+    }
+
+    function test_saveConflictDeletedFilePromptsAndCancels() {
+        const session = openConflictShell("mus_route101")
+        const midi = bootstrap.projectRoot + "/sound/songs/midi/mus_route101.mid"
+        dirtyConflictSong(shell, session)
+        verify(rewriteProbe.moveSongAside(bootstrap.projectRoot, "mus_route101"), "deleting the MIDI file is the external change")
+        session.requestSave()
+        waitConflictPrompt()
+        compare(fileProbe.fileFingerprint(midi), "", "the refused save writes nothing")
+        const cancel = findChild(shell, "saveConflictCancel")
+        verify(cancel !== null, "the conflict prompt offers Cancel")
+        mouseClick(cancel)
+        verify(waitForNative(function() { const dialog = conflictDialog(); return dialog === null || !dialog.visible }, 5000), "Cancel dismisses the conflict prompt")
+        tryCompare(session, "saveConflictSongLabel", "", 5000, "Cancel clears the conflict state")
+        verify(session.documentDirty, "Cancel keeps the refused document dirty")
+        compare(fileProbe.fileFingerprint(midi), "", "Cancel writes no song bytes")
+        verify(rewriteProbe.restoreSong(bootstrap.projectRoot, "mus_route101"), "the deleted MIDI is restored for the retry")
+        session.requestSave()
+        verify(waitForNative(function() { return !session.saveInProgress && !session.documentDirty }, 30000), "the retry save settles clean")
+        const savedOnce = fileProbe.fileFingerprint(midi)
+        verify(savedOnce.length > 0, "the retry save rewrites the restored song bytes")
+        session.requestSave()
+        verify(waitForNative(function() { return !session.saveInProgress && !session.documentDirty }, 30000), "a second save is a clean no-op")
+        compare(fileProbe.fileFingerprint(midi), savedOnce, "the clean save preserves the saved bytes")
+        cleanup()
     }
 }
