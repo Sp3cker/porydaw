@@ -113,27 +113,23 @@ extension AutomationPage {
         ]
     }
 
-    /// The frozen gesture's draft: one marker per draft point, the lane drawn
-    /// through the replacement a pencil or sweep would commit, and the value
-    /// readout at the last of them.
+    /// The frozen gesture's draft: one marker per point it would commit, the lane
+    /// drawn through that replacement, and the value readout at the release point.
     func publishPreview() {
         let gestureProjection = frozen.map { makeProjection(facts: $0, camera: gestureCamera) }
         var draft = AutomationPreviewDraft.resolve(gesture: gesture, frozen: frozen)
         var edit: AutomationLaneEdit?
+        var sweepRelease: AutomationLanePoint?
         if case let .pencil(transaction) = gesture { edit = transaction.preview }
         if case let .sweep(transaction) = gesture, let facts = frozen,
             let projection = gestureProjection
         {
+            let finished = transaction.finishedPoints(fine: facts.modifiers.fine, projection: projection)
             edit = transaction.finish(fine: facts.modifiers.fine, projection: projection)
-            if transaction.mode == .ramp {
-                let points = transaction.finishedPoints(
-                    fine: facts.modifiers.fine,
-                    projection: projection)
-                let text = points.last.map { facts.metadata.valueText($0.value) } ?? ""
-                draft = AutomationPreviewDraft(
-                    parameter: facts.parameter, points: points,
-                    text: text)
-            }
+            sweepRelease = finished.last
+            draft = AutomationPreviewDraft(
+                parameter: facts.parameter, points: edit?.points ?? finished,
+                text: sweepRelease.map { facts.metadata.valueText($0.value) } ?? "")
         }
         applyPreviewDraft(draft)
         applyPreviewEdit(edit)
@@ -147,7 +143,9 @@ extension AutomationPage {
         publishDrawingContent()
         let labelPoint: AutomationLanePoint?
         if case let .node(transaction) = gesture { labelPoint = transaction.grabbed?.current }
-        else { labelPoint = previewPoints.last }
+        else {
+            labelPoint = sweepRelease ?? previewPoints.last
+        }
         guard let last = labelPoint, !previewText.isEmpty else {
             previewLabelVisible = false
             previewLabelText = ""

@@ -202,9 +202,8 @@ extension AutomationPage {
         }
     }
 
-    /// The active parameter's nodes and its projected origin phantom, minus the
-    /// ones a live draw replaces. Node markers are drawn only at a zoom that can
-    /// show them, exactly as production's `nodeMarkersVisible` decides.
+    /// The active parameter's nodes and origin phantom, minus those a live draw
+    /// replaces; markers draw only at a zoom that can show them.
     func nodeHandles(_ lane: AutomationLaneProjection,
                              projection: AutomationProjection) -> [AutomationNodeHandle] {
         guard projection.markersVisible() else { return [] }
@@ -213,14 +212,14 @@ extension AutomationPage {
             edit.parameter == lane.parameter ? edit.tickBegin...edit.tickEnd : nil
         }
         var values: [AutomationNodeHandle] = []
-        if let phantom = lane.originPhantom, replaced?.contains(phantom.point.tick) != true {
+        if let phantom = lane.originPhantom, !(replaced?.contains(phantom.point.tick) ?? false) {
             values.append(nodeHandle(phantom.point, paint: paint, parameter: lane.parameter,
                                      projection: projection, phantom: true))
         }
         let radius = max(paint.nodeRadius, paint.ringRadius) + paint.outlineWidth
         let begin = automationPartitionIndex(lane.points) { $0.x < -radius }
         let end = automationPartitionIndex(lane.points) { $0.x <= plotWidth + radius }
-        for point in lane.points[begin..<end] where replaced?.contains(point.tick) != true {
+        for point in lane.points[begin..<end] where !(replaced?.contains(point.tick) ?? false) {
             values.append(nodeHandle(point, paint: paint, parameter: lane.parameter,
                                      projection: projection, phantom: false))
         }
@@ -230,10 +229,10 @@ extension AutomationPage {
     /// Republishes only the active node handles, for a live draw's coverage change.
     func syncActiveNodes() {
         guard let session, let lane = projection else { return }
-        let projection = makeProjection(
+        let cameraProjection = makeProjection(
             facts: facts(parameter: lane.parameter, modifiers: .init(), session: session),
             camera: session.camera)
-        syncNodes(nodeHandles(lane, projection: projection))
+        syncNodes(nodeHandles(lane, projection: cameraProjection))
     }
 
     func nodeHandle(_ point: AutomationProjectedPoint, paint: AutomationNodePaint,

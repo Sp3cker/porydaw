@@ -240,7 +240,7 @@ extension AutomationPage {
             points.append(AutomationLanePoint(tick: point.tick, value: point.value))
         }
         points.append(contentsOf: edit.points)
-        for point in lane.points[end...] {
+        for point in lane.points[end...] where !point.projected {
             points.append(AutomationLanePoint(tick: point.tick, value: point.value))
         }
         var leadIn: Int?

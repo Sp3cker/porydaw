@@ -210,5 +210,16 @@ func drawerAutomationDrawPreviewChecks(
         expected: before, actual: fixture.snapshot,
         cppID: drawerAutomationProjectionID,
         what: "a previewed and cancelled sweep writes nothing")
+    _ = page.pointerPress(x: fixture.x(48), y: pressY, surface: 1, button: button)
+    _ = page.pointerMove(x: fixture.x(48), y: pressY - 30, buttons: button)
+    _ = page.pointerMove(x: fixture.x(88), y: pressY - 30, buttons: button)
+    let drafted = page.previewPoints.map { "\($0.tick):\($0.value)" }
+    let draftTicks = (page.previewPoints.first?.tick ?? 0)...(page.previewPoints.last?.tick ?? 0)
+    _ = page.pointerRelease(x: fixture.x(88), y: pressY - 30, button: button)
+    let committed = fixture.lanePoints(fixture.panLane)
+        .filter { draftTicks.contains(Tick($0.tick)) }.map { "\($0.tick):\($0.value)" }
+    report.expectEqual(
+        expected: drafted, actual: committed, cppID: drawerAutomationProjectionID,
+        what: "a sweep's draft markers are exactly the points its release writes")
     page.detach()
 }
