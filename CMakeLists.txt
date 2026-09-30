@@ -289,6 +289,8 @@ qt_add_qml_module(porydaw_app
         src/ui/shell/midiimport/ImportAnalysisPage.qml
         src/ui/shell/midiimport/ImportIdentityPage.qml
         src/ui/shell/midiimport/ImportSoundPage.qml
+        src/ui/shell/newsong/NewSongHost.qml
+        src/ui/shell/newsong/NewSongWizard.qml
         src/ui/shell/samplestudio/SampleStudioHost.qml
         src/ui/shell/samplestudio/SampleStudioDialog.qml
         src/ui/shell/samplestudio/Sf2ZonePickerDialog.qml

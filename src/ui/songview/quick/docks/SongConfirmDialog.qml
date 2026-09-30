@@ -16,14 +16,9 @@ Basic.Dialog {
     focus: true
     closePolicy: Popup.CloseOnEscape
     width: Math.min(parent.width - 2 * baseFontPx, 30 * baseFontPx)
-    title: controller.confirmation === "create" ? qsTr("New Song")
-        : controller.confirmation === "register" ? qsTr("Register Song") : qsTr("Delete Song")
+    title: controller.confirmation === "register" ? qsTr("Register Song") : qsTr("Delete Song")
     standardButtons: Dialog.Ok | Dialog.Cancel
     onAccepted: controller.acceptConfirmation(alsoVoicegroup.checked)
-    onOpened: {
-        if (controller.confirmation === "create")
-            nameField.forceActiveFocus()
-    }
     onClosed: {
         if (controller.confirmation.length > 0)
             controller.cancelConfirmation()
@@ -33,14 +28,7 @@ Basic.Dialog {
         const ok = dialog.footer.standardButton(Dialog.Ok)
         if (ok) {
             ok.text = Qt.binding(function() {
-                return controller.confirmation === "create" ? qsTr("Create")
-                    : controller.confirmation === "register" ? qsTr("Register") : qsTr("Delete")
-            })
-            ok.enabled = Qt.binding(function() {
-                if (controller.confirmation !== "create")
-                    return true
-                return nameField.text.length > 0
-                    && !controller.songListPresenter().songLabelTaken(nameField.text)
+                return controller.confirmation === "register" ? qsTr("Register") : qsTr("Delete")
             })
         }
     }
@@ -50,47 +38,10 @@ Basic.Dialog {
             objectName: "songConfirmationPrompt"
             Layout.fillWidth: true
             wrapMode: Text.WordWrap
-            text: dialog.controller.confirmation === "create"
-                ? qsTr("Create a song from the current song:")
-                : dialog.controller.confirmation === "register"
-                    ? qsTr("Register %1 as %2?").arg(dialog.controller.confirmationLabel)
-                        .arg(dialog.controller.registrationConstant)
-                    : qsTr("Delete %1?").arg(dialog.controller.confirmationLabel)
-        }
-        TextField {
-            id: nameField
-            objectName: "songNewName"
-            Layout.fillWidth: true
-            visible: dialog.controller.confirmation === "create"
-            placeholderText: qsTr("mus_new_song")
-            onTextChanged: {
-                const previous = dialog.controller.newSongLabel
-                const proposed = text
-                const cursor = cursorPosition
-                const accepted = dialog.controller.songListPresenter()
-                    .acceptSongLabelEdit(previous, proposed)
-                if (accepted !== proposed) {
-                    text = accepted
-                    cursorPosition = accepted === previous
-                        ? Math.max(0, Math.min(accepted.length,
-                            cursor - (proposed.length - previous.length)))
-                        : Math.min(cursor, accepted.length)
-                }
-                dialog.controller.newSongLabel = accepted
-            }
-            onAccepted: {
-                if (dialog.footer.standardButton(Dialog.Ok).enabled)
-                    dialog.accept()
-            }
-        }
-        Label {
-            objectName: "songConfirmationTaken"
-            Layout.fillWidth: true
-            wrapMode: Text.WordWrap
-            text: qsTr("A song named %1 already exists.").arg(nameField.text)
-            visible: dialog.controller.confirmation === "create"
-                && nameField.text.length > 0
-                && dialog.controller.songListPresenter().songLabelTaken(nameField.text)
+            text: dialog.controller.confirmation === "register"
+                ? qsTr("Register %1 as %2?").arg(dialog.controller.confirmationLabel)
+                    .arg(dialog.controller.registrationConstant)
+                : qsTr("Delete %1?").arg(dialog.controller.confirmationLabel)
         }
         Label {
             objectName: "songConfirmationDetail"

@@ -265,6 +265,12 @@ ThemedWindow {
         colors: root.colors
         applicationSession: shell.session
     }
+    NewSongHost {
+        controller: shell.session.songDockController().newSongController()
+        hostWindow: root
+        colors: root.colors
+        applicationSession: shell.session
+    }
     SampleStudioHost {
         workflow: shell.session.sampleStudio()
         hostWindow: root

@@ -6,7 +6,7 @@ Original SHA-256: 83b7c5889b8c614092920dd3054fe74bc478aa8fb3c4ddcce7dd515cc2c242
 Swift counterpart: src/checks/editorqml/tst_ShellImportWizard.qml (import-page flow; SHA-256 170a4fdd226e3e5e7e67f6a3712f182d869818741f1aa4129c8b9a4f56a4b257).
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-This file: 27 assertion sites: 5 GAP, 4 MATCHED, 18 RETIRED-REPRESENTATION. Dispositions tally: 5 GAP, 4 MATCHED, 18 RETIRED-REPRESENTATION. Import page flow is mapped to shell-import-wizard; its QWidget-only frozen-PNG region lookups are retired. Frozen screenshot rows for settings, sample studio, and SF2 zone rows are retired under user ruling 2026-09-29; A009 theme picker controls are matched to the mounted Settings-window picker. Fork File > New Song wizard feature obligations remain open.
+This file: 27 assertion sites: 0 GAP, 7 MATCHED, 20 RETIRED-REPRESENTATION. Dispositions tally: 0 GAP, 7 MATCHED, 20 RETIRED-REPRESENTATION. Import page flow is mapped to shell-import-wizard; its QWidget-only frozen-PNG region lookups are retired. Frozen screenshot rows for settings, sample studio, and SF2 zone rows are retired under user ruling 2026-09-29; A009 theme picker controls are matched to the mounted Settings-window picker. File > New Song blank-mode pages are closed: A017, A018, and A020 MATCHED; A019 and A021 retired. Zero open rows.
 
 Additional Swift counterpart: src/checks/editorqml/tst_ShellSettings.qml (SHA-256 c7d1c424fecb3919c4ac24b3b67fa086a4398c961cedf6310b68b923d28f32b0; test_themeModePreviewCommitAndRevert).
 Theme picker execution evidence (controller-observed): `deno task checks:shell --filter shell-settings --filter shell-theme` — shell-settings, shell-settings-window-focus, shell-theme all ok; bridge 0 findings. `build/debug/proof-evidence/shell-settings.json` lists both new theme functions as executed.
@@ -449,70 +449,24 @@ Original expression:
   QVERIFY2(zonePickerRegions(picker, regions), "zone picker widgets not found");
 
 A017 | VisualDialogsTest::newSongWizardPages | src/checks/visual/dialogs.cpp:618
-Disposition: GAP
-Mapping/reason: GAP: feature missing: fork File > New Song blank-mode wizard (Identity page name field, Next to Sound page with player/voicegroup/config); Swift New Song creates from the current song via SongConfirmDialog.qml — pending user decision.
-Source context since previous assertion:
-
-      compareShown(QStringLiteral("sf2-zone-picker/dialog-vanilla"), picker, regions);
-  }
-
-  void VisualDialogsTest::newSongWizardPages()
-  {
-      themes::apply(*app(), themes::vanilla());
-      NewSongWizard wizard(visualProjectData());
-      // Pin the size Qt would choose pre-screen-fit: sizeHint expanded to
-      // the ctor's fontPx-derived minimum.
-      wizard.setFixedSize(wizard.sizeHint().expandedTo(wizard.minimumSize()));
-      // The blank wizard's identity page is incomplete until a name is typed;
-      // fill it so Next advances deterministically.
-      QLineEdit *name = nullptr;
-      for (QLineEdit *edit : wizard.findChildren<QLineEdit *>())
-          if (edit->placeholderText() == QStringLiteral("mus_my_song"))
-              name = edit;
-Original expression:
-  QVERIFY2(name, "identity name field not found");
+Disposition: MATCHED
+Mapping: S008
 
 A018 | VisualDialogsTest::newSongWizardPages | src/checks/visual/dialogs.cpp:621
-Disposition: GAP
-Mapping/reason: GAP: feature missing: fork File > New Song blank-mode wizard (Identity page name field, Next to Sound page with player/voicegroup/config); Swift New Song creates from the current song via SongConfirmDialog.qml — pending user decision.
-Source context since previous assertion:
-
-      name->setText(QStringLiteral("mus_visual_check"));
-      showSettled(wizard);
-Original expression:
-  QCOMPARE(wizard.currentId(), 0);
+Disposition: MATCHED
+Mapping: S009
 
 A019 | VisualDialogsTest::newSongWizardPages | src/checks/visual/dialogs.cpp:623
-Disposition: GAP
-Mapping/reason: GAP: feature missing: fork File > New Song blank-mode wizard (Identity page name field, Next to Sound page with player/voicegroup/config); Swift New Song creates from the current song via SongConfirmDialog.qml — pending user decision.
-Source context since previous assertion:
-
-      QList<checks::visual::Region> regions;
-Original expression:
-  QVERIFY2(wizardRegions(wizard, regions), "wizard chrome not found");
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QWidget widget-tree region lookup feeds only the frozen QWidget PNG comparison (A001); page content is exercised by S008–S010.
 
 A020 | VisualDialogsTest::newSongWizardPages | src/checks/visual/dialogs.cpp:630
-Disposition: GAP
-Mapping/reason: GAP: feature missing: fork File > New Song blank-mode wizard (Identity page name field, Next to Sound page with player/voicegroup/config); Swift New Song creates from the current song via SongConfirmDialog.qml — pending user decision.
-Source context since previous assertion:
-
-      compareShown(QStringLiteral("wizard/new-identity-vanilla"), wizard, regions);
-
-      wizard.next();
-      QApplication::processEvents();
-      parkFocus(wizard);
-      QApplication::processEvents();
-Original expression:
-  QCOMPARE(wizard.currentId(), 1);
+Disposition: MATCHED
+Mapping: S010
 
 A021 | VisualDialogsTest::newSongWizardPages | src/checks/visual/dialogs.cpp:632
-Disposition: GAP
-Mapping/reason: GAP: feature missing: fork File > New Song blank-mode wizard (Identity page name field, Next to Sound page with player/voicegroup/config); Swift New Song creates from the current song via SongConfirmDialog.qml — pending user decision.
-Source context since previous assertion:
-
-      regions.clear();
-Original expression:
-  QVERIFY2(wizardRegions(wizard, regions), "wizard chrome not found");
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QWidget widget-tree region lookup feeds only the frozen QWidget PNG comparison (A001); page content is exercised by S008–S010.
 
 A022 | VisualDialogsTest::midiImportWizardPages | src/checks/visual/dialogs.cpp:645
 Disposition: MATCHED
@@ -556,4 +510,13 @@ Anchor: message "the mounted settings dialog has an Apply button"
 
 S007 | test_themeModePreviewCommitAndRevert | src/checks/editorqml/tst_ShellSettings.qml
 Anchor: message "the mounted settings dialog has a Cancel button"
+
+S008 | test_newSongWizardPageFlow (shell-new-song-wizard lane) | src/checks/editorqml/tst_ShellNewSongWizard.qml
+Anchor: message "A017 identity name field found"
+
+S009 | test_newSongRouteGateAndOpen (shell-new-song-wizard lane) | src/checks/editorqml/tst_ShellNewSongWizard.qml
+Anchor: message "A018 wizard opens on identity page"
+
+S010 | test_newSongWizardPageFlow (shell-new-song-wizard lane) | src/checks/editorqml/tst_ShellNewSongWizard.qml
+Anchor: message "A020 next advances to sound page"
 

@@ -1,6 +1,6 @@
 import Foundation
-import QtBridge
 import PorydawAppCommands
+import QtBridge
 
 @MainActor
 @QtBridgeable
@@ -240,8 +240,10 @@ public final class ShellPresenter: QmlInstantiableStatus {
 
     /// The native menu advertises only QAction::shortcut()'s primary sequence.
     private var lastEventListGate:
-        (attached: Bool, visible: Bool, editing: Bool, menuOpen: Bool,
-         tableRevision: Int)?
+        (
+            attached: Bool, visible: Bool, editing: Bool, menuOpen: Bool,
+            tableRevision: Int
+        )?
 
     public func actionShortcut(id: String) -> String {
         keybindings.sequences(id).first?.nativeText ?? ""
@@ -251,14 +253,22 @@ public final class ShellPresenter: QmlInstantiableStatus {
         guard let action = Self.byId[id] else { return false }
         if session.wavExportPresenter().active { return false }
         if id == "view.polyphony_debugger" || id == "edit.preferences"
-            || id == "edit.engine_settings" { return true }
+            || id == "edit.engine_settings"
+        {
+            return true
+        }
         guard sceneActive else { return false }
         if id == "eventlist.move_up" || id == "eventlist.move_down" {
-            guard session.songOpen else { lastEventListGate = nil; return false }
+            guard session.songOpen else {
+                lastEventListGate = nil
+                return false
+            }
             let events = session.eventListPresenter()
-            let gate = (attached: events.attached, visible: events.visible,
-                        editing: events.editing, menuOpen: events.menuOpen,
-                        tableRevision: events.tableRevision)
+            let gate = (
+                attached: events.attached, visible: events.visible,
+                editing: events.editing, menuOpen: events.menuOpen,
+                tableRevision: events.tableRevision
+            )
             if lastEventListGate.map({ $0 == gate }) != true {
                 lastEventListGate = gate
                 eventListGateChanged()
@@ -271,12 +281,13 @@ public final class ShellPresenter: QmlInstantiableStatus {
         }
         switch id {
         case "songs.find": return session.projectOpen
-        case "file.new_song": return session.projectOpen && session.songOpen
+        case "file.new_song": return session.projectOpen
         case "file.import_midi": return session.projectOpen
         case "tools.import_sample": return session.projectOpen && !session.sampleStudio().editorOpen
         case "file.save_song": return session.songOpen && !session.saveInProgress
-        case "file.register_song": return session.songOpen
-            && session.songDockController().selectedTabRegistrationPending()
+        case "file.register_song":
+            return session.songOpen
+                && session.songDockController().selectedTabRegistrationPending()
         case "file.close_tab": return session.songTabs.selectedPage != nil
         case "file.export_wav": return session.wavExportPresenter().exportAvailable
         case "edit.undo": return session.songOpen && session.canUndo
@@ -299,7 +310,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
             return session.songTabs.selectedPage != nil
         case "view.automation_drawer", "view.velocity_drawer", "view.voice_changes_drawer":
             return session.songTabs.selectedPage != nil && !session.songTabs.selectedTabShowsEvents
-        default: return true // open project and quit were always enabled
+        default: return true  // open project and quit were always enabled
         }
     }
 
@@ -346,7 +357,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         switch id {
         case "file.open_project": chooseProjectRequested()
         case "songs.find": session.songDockController().presenter.focusSearch()
-        case "file.new_song": session.songDockController().requestNewSong()
+        case "file.new_song": session.songDockController().newSongController().requestNewSong()
         case "file.import_midi": session.songDockController().midiImportController().requestImport()
         case "tools.import_sample": session.sampleStudio().requestImport(slot: -1)
         case "file.save_song": session.requestSave()
@@ -375,8 +386,9 @@ public final class ShellPresenter: QmlInstantiableStatus {
             let transport = session.transportBarPresenter()
             transport.setResonanceSuppression(enabled: !transport.resonanceSuppression)
         case "view.event_list":
-            session.songTabs.setSelectedTabEventsVisible(visible:
-                !session.songTabs.selectedTabShowsEvents)
+            session.songTabs.setSelectedTabEventsVisible(
+                visible:
+                    !session.songTabs.selectedTabShowsEvents)
         case "view.automation_drawer":
             session.songTabs.selectedPage?.drawerPresenter()
                 .toggleSection(kind: DrawerSectionKind.automation.rawValue, drawerOwnsFocus: true)
@@ -404,17 +416,21 @@ public final class ShellPresenter: QmlInstantiableStatus {
         routeEditorKey(key: key, modifiers: modifiers, autoRepeat: autoRepeat, eventList: true)
     }
 
-    private func routeEditorKey(key: Int, modifiers: Int, autoRepeat: Bool,
-                                eventList: Bool) -> Bool {
+    private func routeEditorKey(
+        key: Int, modifiers: Int, autoRepeat: Bool,
+        eventList: Bool
+    ) -> Bool {
         guard sceneActive, session.songOpen else { return false }
         if !eventList && key == 0x0100_0000 && !autoRepeat && session.handleGridEscape() {
             return true
         }
         for action in Self.actions {
             guard let command = action.command,
-                  keybindings.scope(action.id) == .editorRouted,
-                  keybindings.matches(key, modifiers, action.id) else { continue }
-            let decision = eventList
+                keybindings.scope(action.id) == .editorRouted,
+                keybindings.matches(key, modifiers, action.id)
+            else { continue }
+            let decision =
+                eventList
                 ? session.routeEventListCommand(command: command.rawValue, autoRepeat: autoRepeat)
                 : session.routeGridKey(command: command.rawValue, autoRepeat: autoRepeat)
             if decision == EditKeyDecision.decline.rawValue { return false }
@@ -485,8 +501,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
             if argument == "--project" || argument == "--song" {
                 if index + 1 < arguments.count {
                     index += 1
-                    if argument == "--project" { project = arguments[index] }
-                    else { song = arguments[index] }
+                    if argument == "--project" { project = arguments[index] } else { song = arguments[index] }
                 }
             } else if argument.hasPrefix("--project=") {
                 project = String(argument.dropFirst("--project=".count))
@@ -496,8 +511,11 @@ public final class ShellPresenter: QmlInstantiableStatus {
             index += 1
         }
         if !project.isEmpty {
-            if song.isEmpty { session.openProject(path: project) }
-            else { session.openProjectAndSong(path: project, label: song) }
+            if song.isEmpty {
+                session.openProject(path: project)
+            } else {
+                session.openProjectAndSong(path: project, label: song)
+            }
         } else {
             session.restoreStartup()
         }
@@ -510,9 +528,9 @@ public final class ShellPresenter: QmlInstantiableStatus {
         session.openProject(path: url.path)
     }
 
-
     public func refreshWindowChrome() {
-        let project = session.projectOpen
+        let project =
+            session.projectOpen
             ? URL(fileURLWithPath: session.projectRoot, isDirectory: true).lastPathComponent : ""
         if let selected = session.songTabs.selectedPage {
             windowTitle = "\(selected.title) — \(project) — porydaw"
@@ -560,7 +578,8 @@ public final class ShellPresenter: QmlInstantiableStatus {
         dockColumnWidth = store.int(key: "swiftDock.columnWidth", fallback: 280)
         dockSongsRatio = store.double(key: "swiftDock.songsRatio", fallback: 0.5)
         let frame = store.string(key: "windowGeometry", fallback: "").split(
-            separator: ",", omittingEmptySubsequences: false).compactMap { Int($0) }
+            separator: ",", omittingEmptySubsequences: false
+        ).compactMap { Int($0) }
         if frame.count == 4, frame[2] > 0, frame[3] > 0 {
             windowX = frame[0]
             windowY = frame[1]
@@ -574,8 +593,10 @@ public final class ShellPresenter: QmlInstantiableStatus {
         session.songDockController().presenter.restoreFromPreferences()
     }
 
-    public func persistSessionState(x: Int, y: Int, width: Int, height: Int,
-                                    maximized: Bool, debuggerVisible: Bool) {
+    public func persistSessionState(
+        x: Int, y: Int, width: Int, height: Int,
+        maximized: Bool, debuggerVisible: Bool
+    ) {
         let store = PreferencesStore()
         store.setString(key: "windowGeometry", value: "\(x),\(y),\(width),\(height)")
         var state: [String] = []

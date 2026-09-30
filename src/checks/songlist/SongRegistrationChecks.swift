@@ -19,17 +19,22 @@ private struct RegistrationFixture {
     func bytes(_ text: String) -> Data { Data(text.utf8) }
 }
 
-private func registrationFixture(_ fixtureRoot: String, name: String,
-                                 aligned: Bool = false, crlf: Bool = false) throws -> RegistrationFixture {
+private func registrationFixture(
+    _ fixtureRoot: String, name: String,
+    aligned: Bool = false, crlf: Bool = false
+) throws -> RegistrationFixture {
     let root = stageTestProject(in: fixtureRoot, projectName: name)
-    let table = "gSongTable::\n\tsong mus_zero, MUSIC_PLAYER_BGM, 0\n\tsong mus_first, MUSIC_PLAYER_BGM, 0\n\tsong mus_last, MUSIC_PLAYER_BGM, 0\n"
+    let table =
+        "gSongTable::\n\tsong mus_zero, MUSIC_PLAYER_BGM, 0\n\tsong mus_first, MUSIC_PLAYER_BGM, 0\n\tsong mus_last, MUSIC_PLAYER_BGM, 0\n"
     let header = "#define MUS_ZERO 0\n#define MUS_FIRST 1\n#define MUS_LAST 2\n#define MUS_NONE 0xFFFF\n"
-    let charmap = aligned
+    let charmap =
+        aligned
         ? "MUS_ZERO                  = 00 00\nMUS_FIRST                 = 01 00\nMUS_LAST                  = 02 00\n"
         : "MUS_ZERO = 00 00\nMUS_FIRST = 01 00\nMUS_LAST = 02 00\n"
     let linker = "SECTIONS {\n\tsound/songs/midi/mus_zero.o(.rodata);\n\tsound/songs/midi/mus_first.o(.rodata);\n}\n"
-    let fixture = RegistrationFixture(root: root, table: table, header: header,
-                                      charmap: charmap, linker: linker)
+    let fixture = RegistrationFixture(
+        root: root, table: table, header: header,
+        charmap: charmap, linker: linker)
     let lineEnding = crlf ? "\r\n" : "\n"
     func staged(_ text: String) -> String {
         crlf ? text.replacingOccurrences(of: "\n", with: lineEnding) : text
@@ -41,10 +46,12 @@ private func registrationFixture(_ fixtureRoot: String, name: String,
     let original = try fixture.read("sound/songs/midi/mus_session_test.mid")
     try original.write(to: URL(fileURLWithPath: fixture.path("sound/songs/midi/mus_onboardcheck.mid")))
     try original.write(to: URL(fileURLWithPath: fixture.path("sound/songs/midi/mus_first.mid")))
-    try fixture.write("sound/songs/midi/midi.cfg", "mus_onboardcheck.mid: -R50 -G_test_vg -V100\n" +
-                      "mus_first.mid: -R50 -G_test_vg -V100\n")
-    return RegistrationFixture(root: root, table: staged(table), header: staged(header),
-                               charmap: staged(charmap), linker: staged(linker))
+    try fixture.write(
+        "sound/songs/midi/midi.cfg",
+        "mus_onboardcheck.mid: -R50 -G_test_vg -V100\n" + "mus_first.mid: -R50 -G_test_vg -V100\n")
+    return RegistrationFixture(
+        root: root, table: staged(table), header: staged(header),
+        charmap: staged(charmap), linker: staged(linker))
 }
 
 private func registrationExpected(_ fixture: RegistrationFixture, _ text: String) -> Data {
@@ -56,133 +63,180 @@ internal func runSongRegistrationChecks(_ report: CheckReport, fixtureRoot: Stri
     for (name, aligned, crlf) in [("ordinary", false, false), ("aligned-crlf", true, true)] {
         let id = "swiftcore/SongRegistration::\(name)"
         do {
-            let fixture = try registrationFixture(fixtureRoot, name: "registration-\(name)",
-                                                  aligned: aligned, crlf: crlf)
+            let fixture = try registrationFixture(
+                fixtureRoot, name: "registration-\(name)",
+                aligned: aligned, crlf: crlf)
             let service = ProjectService()
             defer { try? runBlocking { await service.close() } }
             try runBlocking { try await service.open(root: fixture.root) }
             let before = try runBlocking { try await service.songs() }
             let stray = before.first { $0.label == "mus_onboardcheck" }
-            report.expectEqual(expected: false, actual: stray?.registered, cppID: id,
-                               what: "A009 staged song is not registered")
-            report.expectEqual(expected: true, actual: stray?.isPlayable, cppID: id,
-                               what: "A010 staged song is playable")
-            report.expectEqual(expected: true, actual: stray?.hasCfg, cppID: id,
-                               what: "A011 staged song has config")
-            report.expectEqual(expected: "MUS_ONBOARDCHECK",
-                               actual: SongCatalog.constantForLabel("mus_onboardcheck"), cppID: id,
-                               what: "A004 label derives the registration constant directly")
-            report.expectEqual(expected: "MUS_ONBOARDCHECK", actual: stray?.constant, cppID: id,
-                               what: "A013 staged constant derives from label")
-            report.expectEqual(expected: "MUSIC_PLAYER_BGM", actual: stray?.player, cppID: id,
-                               what: "A014 staged song uses BGM player")
+            report.expectEqual(
+                expected: false, actual: stray?.registered, cppID: id,
+                what: "A009 staged song is not registered")
+            report.expectEqual(
+                expected: true, actual: stray?.isPlayable, cppID: id,
+                what: "A010 staged song is playable")
+            report.expectEqual(
+                expected: true, actual: stray?.hasCfg, cppID: id,
+                what: "A011 staged song has config")
+            report.expectEqual(
+                expected: "MUS_ONBOARDCHECK",
+                actual: SongCatalog.constantForLabel("mus_onboardcheck"), cppID: id,
+                what: "A004 label derives the registration constant directly")
+            report.expectEqual(
+                expected: "MUS_ONBOARDCHECK", actual: stray?.constant, cppID: id,
+                what: "A013 staged constant derives from label")
+            report.expectEqual(
+                expected: "MUSIC_PLAYER_BGM", actual: stray?.player, cppID: id,
+                what: "A014 staged song uses BGM player")
             let freshStore = ProjectStore(projectRoot: URL(filePath: fixture.root))
             let project = try runBlocking { try await freshStore.open() }
-            report.expectEqual(expected: "_test_vg",
-                               actual: project.songs.first { $0.label == "mus_onboardcheck" }?.cfg.voicegroupArgument,
-                               cppID: id, what: "A012 fresh project reload retains the staged voicegroup argument")
-            let status = SongRegistration.status(root: fixture.root, label: "mus_onboardcheck",
-                                                 constant: "MUS_ONBOARDCHECK")
-            report.expectEqual(expected: ["song_table.inc", "songs.h", "ld_script.ld", "charmap.txt"],
-                               actual: status.missingFiles, cppID: id,
-                               what: "A016 all four registration locations are missing before registration")
-            let plan = SongRegistration.plan(root: fixture.root, label: "mus_onboardcheck",
-                                             constant: "MUS_ONBOARDCHECK", player: "MUSIC_PLAYER_BGM")
-            report.expectEqual(expected: 3, actual: plan.songId, cppID: id,
-                               what: "A017 next song ID equals original table count")
-            report.expectEqual(expected: "\tsong mus_onboardcheck, MUSIC_PLAYER_BGM, 0",
-                               actual: plan.songTableLine, cppID: id,
-                               what: "A018 planned table entry keeps exact player and flags")
-            report.expectEqual(expected: "#define MUS_ONBOARDCHECK 3", actual: plan.songsHLine,
-                               cppID: id, what: "A019 A020 planned header defines the chosen ID")
+            report.expectEqual(
+                expected: "_test_vg",
+                actual: project.songs.first { $0.label == "mus_onboardcheck" }?.cfg.voicegroupArgument,
+                cppID: id, what: "A012 fresh project reload retains the staged voicegroup argument")
+            let status = SongRegistration.status(
+                root: fixture.root, label: "mus_onboardcheck",
+                constant: "MUS_ONBOARDCHECK")
+            report.expectEqual(
+                expected: ["song_table.inc", "songs.h", "ld_script.ld", "charmap.txt"],
+                actual: status.missingFiles, cppID: id,
+                what: "A016 all four registration locations are missing before registration")
+            let plan = SongRegistration.plan(
+                root: fixture.root, label: "mus_onboardcheck",
+                constant: "MUS_ONBOARDCHECK", player: "MUSIC_PLAYER_BGM")
+            report.expectEqual(
+                expected: 3, actual: plan.songId, cppID: id,
+                what: "A017 next song ID equals original table count")
+            report.expectEqual(
+                expected: "\tsong mus_onboardcheck, MUSIC_PLAYER_BGM, 0",
+                actual: plan.songTableLine, cppID: id,
+                what: "A018 planned table entry keeps exact player and flags")
+            report.expectEqual(
+                expected: "#define MUS_ONBOARDCHECK 3", actual: plan.songsHLine,
+                cppID: id, what: "A019 A020 planned header defines the chosen ID")
             let expectedCharmap = aligned ? "MUS_ONBOARDCHECK          = 03 00" : "MUS_ONBOARDCHECK = 03 00"
             if aligned {
-                report.expectEqual(expected: expectedCharmap, actual: plan.charmapLine, cppID: id,
-                                   what: "A025 aligned charmap uses the 26-column equals position")
+                report.expectEqual(
+                    expected: expectedCharmap, actual: plan.charmapLine, cppID: id,
+                    what: "A025 aligned charmap uses the 26-column equals position")
             } else {
-                report.expectEqual(expected: expectedCharmap, actual: plan.charmapLine, cppID: id,
-                                   what: "A023 ordinary charmap encodes the little-endian ID")
+                report.expectEqual(
+                    expected: expectedCharmap, actual: plan.charmapLine, cppID: id,
+                    what: "A023 ordinary charmap encodes the little-endian ID")
             }
-            report.expectEqual(expected: true, actual: plan.charmapApplicable, cppID: id,
-                               what: "A022 charmap applies to this fixture")
+            report.expectEqual(
+                expected: true, actual: plan.charmapApplicable, cppID: id,
+                what: "A022 charmap applies to this fixture")
             let servicePlan = try runBlocking {
                 try await service.songRegistrationPlan(label: "mus_onboardcheck")
             }
-            report.expectEqual(expected: 3, actual: servicePlan.songId, cppID: id,
-                               what: "A017 service plan proposes original table count")
+            report.expectEqual(
+                expected: 3, actual: servicePlan.songId, cppID: id,
+                what: "A017 service plan proposes original table count")
             let registeredId = try runBlocking { try await service.registerSong(servicePlan) }
-            report.expectEqual(expected: 3, actual: registeredId, cppID: id,
-                               what: "A028 registration returns the original table count")
-            let table = "gSongTable::\n\tsong mus_zero, MUSIC_PLAYER_BGM, 0\n\tsong mus_first, MUSIC_PLAYER_BGM, 0\n\tsong mus_last, MUSIC_PLAYER_BGM, 0\n\tsong mus_onboardcheck, MUSIC_PLAYER_BGM, 0\n"
-            let header = "#define MUS_ZERO 0\n#define MUS_FIRST 1\n#define MUS_LAST 2\n#define MUS_ONBOARDCHECK 3\n#define MUS_NONE 0xFFFF\n"
-            let charmap = aligned
+            report.expectEqual(
+                expected: 3, actual: registeredId, cppID: id,
+                what: "A028 registration returns the original table count")
+            let table =
+                "gSongTable::\n\tsong mus_zero, MUSIC_PLAYER_BGM, 0\n\tsong mus_first, MUSIC_PLAYER_BGM, 0\n\tsong mus_last, MUSIC_PLAYER_BGM, 0\n\tsong mus_onboardcheck, MUSIC_PLAYER_BGM, 0\n"
+            let header =
+                "#define MUS_ZERO 0\n#define MUS_FIRST 1\n#define MUS_LAST 2\n#define MUS_ONBOARDCHECK 3\n#define MUS_NONE 0xFFFF\n"
+            let charmap =
+                aligned
                 ? "MUS_ZERO                  = 00 00\nMUS_FIRST                 = 01 00\nMUS_LAST                  = 02 00\nMUS_ONBOARDCHECK          = 03 00\n"
                 : "MUS_ZERO = 00 00\nMUS_FIRST = 01 00\nMUS_LAST = 02 00\nMUS_ONBOARDCHECK = 03 00\n"
-            let linker = "SECTIONS {\n\tsound/songs/midi/mus_zero.o(.rodata);\n\tsound/songs/midi/mus_first.o(.rodata);\n\tsound/songs/midi/mus_onboardcheck.o(.rodata);\n}\n"
-            report.expectEqual(expected: registrationExpected(fixture, table),
-                               actual: try fixture.read("sound/song_table.inc"), cppID: id,
-                               what: "A018 first registration writes the entire table without disturbing rows")
-            report.expectEqual(expected: registrationExpected(fixture, header),
-                               actual: try fixture.read("include/constants/songs.h"), cppID: id,
-                               what: "A019 first registration writes the entire header without disturbing rows")
-            report.expectEqual(expected: registrationExpected(fixture, charmap),
-                               actual: try fixture.read("charmap.txt"), cppID: id,
-                               what: "A033 first registration writes the entire charmap without disturbing rows")
-            report.expectEqual(expected: registrationExpected(fixture, linker),
-                               actual: try fixture.read("ld_script.ld"), cppID: id,
-                               what: "A031 first registration writes the entire linker without disturbing rows")
+            let linker =
+                "SECTIONS {\n\tsound/songs/midi/mus_zero.o(.rodata);\n\tsound/songs/midi/mus_first.o(.rodata);\n\tsound/songs/midi/mus_onboardcheck.o(.rodata);\n}\n"
+            report.expectEqual(
+                expected: registrationExpected(fixture, table),
+                actual: try fixture.read("sound/song_table.inc"), cppID: id,
+                what: "A018 first registration writes the entire table without disturbing rows")
+            report.expectEqual(
+                expected: registrationExpected(fixture, header),
+                actual: try fixture.read("include/constants/songs.h"), cppID: id,
+                what: "A019 first registration writes the entire header without disturbing rows")
+            report.expectEqual(
+                expected: registrationExpected(fixture, charmap),
+                actual: try fixture.read("charmap.txt"), cppID: id,
+                what: "A033 first registration writes the entire charmap without disturbing rows")
+            report.expectEqual(
+                expected: registrationExpected(fixture, linker),
+                actual: try fixture.read("ld_script.ld"), cppID: id,
+                what: "A031 first registration writes the entire linker without disturbing rows")
             let reloaded = try runBlocking { try await service.songs() }
             let fresh = reloaded.first { $0.label == "mus_onboardcheck" }
-            report.expectEqual(expected: 3, actual: fresh?.id, cppID: id,
-                               what: "A056 refreshed listing retains assigned ID")
-            report.expectEqual(expected: true, actual: fresh?.registered, cppID: id,
-                               what: "A055 refreshed listing marks the song registered")
-            report.expectEqual(expected: "MUS_ONBOARDCHECK", actual: fresh?.constant, cppID: id,
-                               what: "A057 refreshed listing resolves the registered constant")
-            report.expectEqual(expected: [String](), actual: fresh?.registrationGaps, cppID: id,
-                               what: "A029 refreshed status is complete after registration")
+            report.expectEqual(
+                expected: 3, actual: fresh?.id, cppID: id,
+                what: "A056 refreshed listing retains assigned ID")
+            report.expectEqual(
+                expected: true, actual: fresh?.registered, cppID: id,
+                what: "A055 refreshed listing marks the song registered")
+            report.expectEqual(
+                expected: "MUS_ONBOARDCHECK", actual: fresh?.constant, cppID: id,
+                what: "A057 refreshed listing resolves the registered constant")
+            report.expectEqual(
+                expected: [String](), actual: fresh?.registrationGaps, cppID: id,
+                what: "A029 refreshed status is complete after registration")
             for damage in ["songs.h", "charmap", "reregister"] {
                 let relative = damage == "songs.h" ? "include/constants/songs.h" : "charmap.txt"
                 if damage == "songs.h" {
-                    try fixture.write(relative, String(decoding: registrationExpected(fixture, header), as: UTF8.self)
-                        .replacingOccurrences(of: "#define MUS_ONBOARDCHECK 3",
-                                              with: "#define MUS_ONBOARDCHECK 9999"))
-                    let damaged = SongRegistration.status(root: fixture.root, label: "mus_onboardcheck",
-                                                          constant: "MUS_ONBOARDCHECK")
-                    report.expectEqual(expected: false, actual: damaged.inSongsH, cppID: id,
-                                       what: "A040 wrong header ID is incomplete before repair")
+                    try fixture.write(
+                        relative,
+                        String(decoding: registrationExpected(fixture, header), as: UTF8.self)
+                            .replacingOccurrences(
+                                of: "#define MUS_ONBOARDCHECK 3",
+                                with: "#define MUS_ONBOARDCHECK 9999"))
+                    let damaged = SongRegistration.status(
+                        root: fixture.root, label: "mus_onboardcheck",
+                        constant: "MUS_ONBOARDCHECK")
+                    report.expectEqual(
+                        expected: false, actual: damaged.inSongsH, cppID: id,
+                        what: "A040 wrong header ID is incomplete before repair")
                 } else if damage == "charmap" {
-                    try fixture.write(relative, String(decoding: registrationExpected(fixture, charmap), as: UTF8.self)
-                        .replacingOccurrences(of: "03 00", with: "FF 7F"))
-                    let damaged = SongRegistration.status(root: fixture.root, label: "mus_onboardcheck",
-                                                          constant: "MUS_ONBOARDCHECK")
-                    report.expectEqual(expected: false, actual: damaged.inCharmap, cppID: id,
-                                       what: "A043 wrong charmap ID is incomplete before repair")
+                    try fixture.write(
+                        relative,
+                        String(decoding: registrationExpected(fixture, charmap), as: UTF8.self)
+                            .replacingOccurrences(of: "03 00", with: "FF 7F"))
+                    let damaged = SongRegistration.status(
+                        root: fixture.root, label: "mus_onboardcheck",
+                        constant: "MUS_ONBOARDCHECK")
+                    report.expectEqual(
+                        expected: false, actual: damaged.inCharmap, cppID: id,
+                        what: "A043 wrong charmap ID is incomplete before repair")
                 }
                 let repairPlan = try runBlocking {
                     try await service.songRegistrationPlan(label: "mus_onboardcheck")
                 }
                 let repairId = try runBlocking { try await service.registerSong(repairPlan) }
-                report.expectEqual(expected: 3, actual: repairId, cppID: id,
-                                   what: "A045 repeated registration keeps its original ID")
-                report.expectEqual(expected: registrationExpected(fixture, table),
-                                   actual: try fixture.read("sound/song_table.inc"), cppID: id,
-                                   what: "A046 repeated registration preserves the entire table")
-                report.expectEqual(expected: registrationExpected(fixture, header),
-                                   actual: try fixture.read("include/constants/songs.h"), cppID: id,
-                                   what: "A048 repeated registration restores the exact header")
-                report.expectEqual(expected: registrationExpected(fixture, charmap),
-                                   actual: try fixture.read("charmap.txt"), cppID: id,
-                                   what: "A052 repeated registration restores the exact charmap")
-                report.expectEqual(expected: registrationExpected(fixture, linker),
-                                   actual: try fixture.read("ld_script.ld"), cppID: id,
-                                   what: "A050 repeated registration preserves the entire linker")
+                report.expectEqual(
+                    expected: 3, actual: repairId, cppID: id,
+                    what: "A045 repeated registration keeps its original ID")
+                report.expectEqual(
+                    expected: registrationExpected(fixture, table),
+                    actual: try fixture.read("sound/song_table.inc"), cppID: id,
+                    what: "A046 repeated registration preserves the entire table")
+                report.expectEqual(
+                    expected: registrationExpected(fixture, header),
+                    actual: try fixture.read("include/constants/songs.h"), cppID: id,
+                    what: "A048 repeated registration restores the exact header")
+                report.expectEqual(
+                    expected: registrationExpected(fixture, charmap),
+                    actual: try fixture.read("charmap.txt"), cppID: id,
+                    what: "A052 repeated registration restores the exact charmap")
+                report.expectEqual(
+                    expected: registrationExpected(fixture, linker),
+                    actual: try fixture.read("ld_script.ld"), cppID: id,
+                    what: "A050 repeated registration preserves the entire linker")
                 let repaired = try runBlocking { try await service.songs() }
                     .first { $0.label == "mus_onboardcheck" }
-                report.expectEqual(expected: 3, actual: repaired?.id, cppID: id,
-                                   what: "A045 every repaired listing retains the first registered ID")
-                report.expectEqual(expected: [String](), actual: repaired?.registrationGaps, cppID: id,
-                                   what: "A029 every repaired listing has no registration gaps")
+                report.expectEqual(
+                    expected: 3, actual: repaired?.id, cppID: id,
+                    what: "A045 every repaired listing retains the first registered ID")
+                report.expectEqual(
+                    expected: [String](), actual: repaired?.registrationGaps, cppID: id,
+                    what: "A029 every repaired listing has no registration gaps")
             }
         } catch {
             report.fail(id, "registration scenario failed: \(error)")
@@ -190,7 +244,6 @@ internal func runSongRegistrationChecks(_ report: CheckReport, fixtureRoot: Stri
     }
     runSongRegistrationBackfillChecks(report, fixtureRoot: fixtureRoot)
     runSongRegistrationAliasChecks(report, fixtureRoot: fixtureRoot)
-    runSongCreationChecks(report, fixtureRoot: fixtureRoot)
 }
 
 @MainActor
@@ -210,30 +263,38 @@ private func runSongRegistrationBackfillChecks(_ report: CheckReport, fixtureRoo
             defer { try? runBlocking { await service.close() } }
             try runBlocking { try await service.open(root: fixture.root) }
             let before = try runBlocking { try await service.songs() }
-            report.expectEqual(expected: [missing == "songs.h" ? "songs.h" : "charmap.txt"],
-                               actual: before.first { $0.label == "mus_first" }?.registrationGaps,
-                               cppID: id, what: "A066 missing middle entry is reported before backfill")
+            report.expectEqual(
+                expected: [missing == "songs.h" ? "songs.h" : "charmap.txt"],
+                actual: before.first { $0.label == "mus_first" }?.registrationGaps,
+                cppID: id, what: "A066 missing middle entry is reported before backfill")
             let plan = try runBlocking { try await service.songRegistrationPlan(label: "mus_first") }
-            report.expectEqual(expected: 1, actual: plan.songId, cppID: id,
-                               what: "A068 missing middle entry retains index one")
+            report.expectEqual(
+                expected: 1, actual: plan.songId, cppID: id,
+                what: "A068 missing middle entry retains index one")
             let actualId = try runBlocking { try await service.registerSong(plan) }
-            report.expectEqual(expected: 1, actual: actualId, cppID: id,
-                               what: "A068 registration backfills index one")
-            report.expectEqual(expected: fixture.bytes(original), actual: try fixture.read(path), cppID: id,
-                               what: "A069 missing middle entry is restored in its original exact position")
-            report.expectEqual(expected: fixture.bytes(table), actual: try fixture.read("sound/song_table.inc"),
-                               cppID: id, what: "A069 backfill leaves the complete table byte-identical")
+            report.expectEqual(
+                expected: 1, actual: actualId, cppID: id,
+                what: "A068 registration backfills index one")
+            report.expectEqual(
+                expected: fixture.bytes(original), actual: try fixture.read(path), cppID: id,
+                what: "A069 missing middle entry is restored in its original exact position")
+            report.expectEqual(
+                expected: fixture.bytes(table), actual: try fixture.read("sound/song_table.inc"),
+                cppID: id, what: "A069 backfill leaves the complete table byte-identical")
             let after = try runBlocking { try await service.songs() }
-            report.expectEqual(expected: [String](), actual: after.first { $0.label == "mus_first" }?.registrationGaps,
-                               cppID: id, what: "A069 reloaded middle song is fully registered")
+            report.expectEqual(
+                expected: [String](), actual: after.first { $0.label == "mus_first" }?.registrationGaps,
+                cppID: id, what: "A069 reloaded middle song is fully registered")
         } catch { report.fail(id, "backfill scenario failed: \(error)") }
     }
 }
 
 @MainActor
 private func runSongRegistrationAliasChecks(_ report: CheckReport, fixtureRoot: String) {
-    let cases: [(name: String, headerId: Int?)] = [("complete", nil), ("drift", 9999),
-                                                ("later-alias", 2)]
+    let cases: [(name: String, headerId: Int?)] = [
+        ("complete", nil), ("drift", 9999),
+        ("later-alias", 2),
+    ]
     for (name, headerId) in cases {
         let id = "swiftcore/SongRegistration::alias-\(name)"
         do {
@@ -246,25 +307,33 @@ private func runSongRegistrationAliasChecks(_ report: CheckReport, fixtureRoot: 
             try runBlocking { try await service.open(root: fixture.root) }
             let firstPlan = try runBlocking { try await service.songRegistrationPlan(label: "mus_first") }
             let firstId = try runBlocking { try await service.registerSong(firstPlan) }
-            report.expectEqual(expected: 1, actual: firstId, cppID: id,
-                               what: "A073 first registration of the alias label allocates index one")
-            let firstTable = "gSongTable::\n\tsong mus_zero, MUSIC_PLAYER_BGM, 0\n\tsong mus_first, MUSIC_PLAYER_BGM, 0\n"
+            report.expectEqual(
+                expected: 1, actual: firstId, cppID: id,
+                what: "A073 first registration of the alias label allocates index one")
+            let firstTable =
+                "gSongTable::\n\tsong mus_zero, MUSIC_PLAYER_BGM, 0\n\tsong mus_first, MUSIC_PLAYER_BGM, 0\n"
             let firstHeader = "#define MUS_ZERO 0\n#define MUS_FIRST 1\n#define MUS_NONE 0xFFFF\n"
             let firstCharmap = "MUS_ZERO = 00 00\nMUS_FIRST = 01 00\n"
-            report.expectEqual(expected: fixture.bytes(firstTable), actual: try fixture.read("sound/song_table.inc"),
-                               cppID: id, what: "A073 first alias registration writes the exact complete table")
-            report.expectEqual(expected: fixture.bytes(firstHeader),
-                               actual: try fixture.read("include/constants/songs.h"), cppID: id,
-                               what: "A073 first alias registration writes the exact complete header")
-            report.expectEqual(expected: fixture.bytes(firstCharmap), actual: try fixture.read("charmap.txt"),
-                               cppID: id, what: "A073 first alias registration writes the exact complete charmap")
-            let duplicateTable = "gSongTable::\n\tsong mus_zero, MUSIC_PLAYER_BGM, 0\n\tsong mus_first, MUSIC_PLAYER_BGM, 0\n\tsong mus_first, MUSIC_PLAYER_BGM, 0\n"
+            report.expectEqual(
+                expected: fixture.bytes(firstTable), actual: try fixture.read("sound/song_table.inc"),
+                cppID: id, what: "A073 first alias registration writes the exact complete table")
+            report.expectEqual(
+                expected: fixture.bytes(firstHeader),
+                actual: try fixture.read("include/constants/songs.h"), cppID: id,
+                what: "A073 first alias registration writes the exact complete header")
+            report.expectEqual(
+                expected: fixture.bytes(firstCharmap), actual: try fixture.read("charmap.txt"),
+                cppID: id, what: "A073 first alias registration writes the exact complete charmap")
+            let duplicateTable =
+                "gSongTable::\n\tsong mus_zero, MUSIC_PLAYER_BGM, 0\n\tsong mus_first, MUSIC_PLAYER_BGM, 0\n\tsong mus_first, MUSIC_PLAYER_BGM, 0\n"
             try fixture.write("sound/song_table.inc", duplicateTable)
             let laterAlias = headerId == 2
-            let expectedHeader = laterAlias
+            let expectedHeader =
+                laterAlias
                 ? "#define MUS_ZERO 0\n#define MUS_FIRST 2\n#define MUS_NONE 0xFFFF\n"
                 : firstHeader
-            let expectedCharmap = laterAlias
+            let expectedCharmap =
+                laterAlias
                 ? "MUS_ZERO = 00 00\nMUS_FIRST = 02 00\n"
                 : firstCharmap
             if laterAlias {
@@ -272,151 +341,88 @@ private func runSongRegistrationAliasChecks(_ report: CheckReport, fixtureRoot: 
                 try fixture.write("charmap.txt", expectedCharmap)
             }
             let initial = try runBlocking { try await service.songs() }
-            report.expectEqual(expected: 1, actual: initial.first { $0.label == "mus_first" }?.id,
-                               cppID: id, what: "A078 duplicate table label lists its first ID")
+            report.expectEqual(
+                expected: 1, actual: initial.first { $0.label == "mus_first" }?.id,
+                cppID: id, what: "A078 duplicate table label lists its first ID")
             let status = SongRegistration.status(root: fixture.root, label: "mus_first", constant: "MUS_FIRST")
             if laterAlias {
-                report.expectEqual(expected: true, actual: status.inSongsH, cppID: id,
-                                   what: "A078 later-index header remains complete")
-                report.expectEqual(expected: true, actual: status.inCharmap, cppID: id,
-                                   what: "A078 later-index charmap remains complete")
+                report.expectEqual(
+                    expected: true, actual: status.inSongsH, cppID: id,
+                    what: "A078 later-index header remains complete")
+                report.expectEqual(
+                    expected: true, actual: status.inCharmap, cppID: id,
+                    what: "A078 later-index charmap remains complete")
             } else {
-                report.expectEqual(expected: [String](), actual: status.missingFiles, cppID: id,
-                                   what: "A078 duplicate alias remains complete at first ID")
+                report.expectEqual(
+                    expected: [String](), actual: status.missingFiles, cppID: id,
+                    what: "A078 duplicate alias remains complete at first ID")
             }
             if headerId == 9999 {
-                try fixture.write("include/constants/songs.h",
-                                  "#define MUS_ZERO 0\n#define MUS_FIRST 9999\n#define MUS_NONE 0xFFFF\n")
+                try fixture.write(
+                    "include/constants/songs.h",
+                    "#define MUS_ZERO 0\n#define MUS_FIRST 9999\n#define MUS_NONE 0xFFFF\n")
                 let damaged = SongRegistration.status(root: fixture.root, label: "mus_first", constant: "MUS_FIRST")
-                report.expectEqual(expected: false, actual: damaged.inSongsH, cppID: id,
-                                   what: "A082 duplicate alias reports a header that does not name its first ID")
+                report.expectEqual(
+                    expected: false, actual: damaged.inSongsH, cppID: id,
+                    what: "A082 duplicate alias reports a header that does not name its first ID")
             }
             let plan = try runBlocking { try await service.songRegistrationPlan(label: "mus_first") }
             if laterAlias {
-                report.expectEqual(expected: 2, actual: plan.songId, cppID: id,
-                                   what: "A079 later-index header selects its existing table ID")
+                report.expectEqual(
+                    expected: 2, actual: plan.songId, cppID: id,
+                    what: "A079 later-index header selects its existing table ID")
             } else {
-                report.expectEqual(expected: 1, actual: plan.songId, cppID: id,
-                                   what: "A079 duplicate alias plan chooses first ID")
+                report.expectEqual(
+                    expected: 1, actual: plan.songId, cppID: id,
+                    what: "A079 duplicate alias plan chooses first ID")
             }
             let actualId = try runBlocking { try await service.registerSong(plan) }
             if laterAlias {
-                report.expectEqual(expected: 2, actual: actualId, cppID: id,
-                                   what: "A084 duplicate alias registration preserves the later table ID")
+                report.expectEqual(
+                    expected: 2, actual: actualId, cppID: id,
+                    what: "A084 duplicate alias registration preserves the later table ID")
             } else {
-                report.expectEqual(expected: 1, actual: actualId, cppID: id,
-                                   what: "A084 duplicate alias registration returns first ID")
+                report.expectEqual(
+                    expected: 1, actual: actualId, cppID: id,
+                    what: "A084 duplicate alias registration returns first ID")
             }
-            report.expectEqual(expected: fixture.bytes(duplicateTable), actual: try fixture.read("sound/song_table.inc"),
-                               cppID: id, what: "A084 duplicate alias does not append or alter table rows")
+            report.expectEqual(
+                expected: fixture.bytes(duplicateTable), actual: try fixture.read("sound/song_table.inc"),
+                cppID: id, what: "A084 duplicate alias does not append or alter table rows")
             if laterAlias {
-                report.expectEqual(expected: fixture.bytes(expectedHeader),
-                                   actual: try fixture.read("include/constants/songs.h"), cppID: id,
-                                   what: "A085 duplicate alias preserves the valid later-index header")
+                report.expectEqual(
+                    expected: fixture.bytes(expectedHeader),
+                    actual: try fixture.read("include/constants/songs.h"), cppID: id,
+                    what: "A085 duplicate alias preserves the valid later-index header")
             } else {
-                report.expectEqual(expected: fixture.bytes(expectedHeader),
-                                   actual: try fixture.read("include/constants/songs.h"), cppID: id,
-                                   what: "A085 duplicate alias repairs only its header entry")
+                report.expectEqual(
+                    expected: fixture.bytes(expectedHeader),
+                    actual: try fixture.read("include/constants/songs.h"), cppID: id,
+                    what: "A085 duplicate alias repairs only its header entry")
             }
-            report.expectEqual(expected: fixture.bytes(expectedCharmap), actual: try fixture.read("charmap.txt"),
-                               cppID: id, what: "A087 duplicate alias preserves the entire charmap")
+            report.expectEqual(
+                expected: fixture.bytes(expectedCharmap), actual: try fixture.read("charmap.txt"),
+                cppID: id, what: "A087 duplicate alias preserves the entire charmap")
             let after = try runBlocking { try await service.songs() }
             if laterAlias {
-                report.expectEqual(expected: [String](),
-                                   actual: after.first { $0.label == "mus_first" }?.registrationGaps,
-                                   cppID: id, what: "A078 later-index alias remains complete after registration")
+                report.expectEqual(
+                    expected: [String](),
+                    actual: after.first { $0.label == "mus_first" }?.registrationGaps,
+                    cppID: id, what: "A078 later-index alias remains complete after registration")
             } else {
-                report.expectEqual(expected: [String](),
-                                   actual: after.first { $0.label == "mus_first" }?.registrationGaps,
-                                   cppID: id, what: "A078 refreshed alias remains complete")
+                report.expectEqual(
+                    expected: [String](),
+                    actual: after.first { $0.label == "mus_first" }?.registrationGaps,
+                    cppID: id, what: "A078 refreshed alias remains complete")
                 if headerId == 9999 {
-                    let repaired = SongRegistration.status(root: fixture.root, label: "mus_first",
-                                                           constant: "MUS_FIRST")
-                    report.expectEqual(expected: true, actual: repaired.inSongsH, cppID: id,
-                                       what: "A082 duplicate alias header is complete after repair")
+                    let repaired = SongRegistration.status(
+                        root: fixture.root, label: "mus_first",
+                        constant: "MUS_FIRST")
+                    report.expectEqual(
+                        expected: true, actual: repaired.inSongsH, cppID: id,
+                        what: "A082 duplicate alias header is complete after repair")
                 }
             }
         } catch { report.fail(id, "alias scenario failed: \(error)") }
     }
-}
-
-@MainActor
-private func runSongCreationChecks(_ report: CheckReport, fixtureRoot: String) {
-    let successId = "swiftcore/SongCreation::fromCurrentSong"
-    do {
-        let fixture = try registrationFixture(fixtureRoot, name: "creation-success")
-        let sourceBytes = try fixture.read("sound/songs/midi/mus_first.mid")
-        let service = ProjectService()
-        defer { try? runBlocking { await service.close() } }
-        try runBlocking { try await service.open(root: fixture.root) }
-        try runBlocking { try await service.createSong(label: "mus_new_song", from: "mus_first") }
-        let songs = try runBlocking { try await service.songs() }
-        let created = songs.first { $0.label == "mus_new_song" }
-        report.expectEqual(expected: "MUS_NEW_SONG", actual: created?.constant, cppID: successId,
-                           what: "created song derives a unique new constant from its label")
-        report.expectEqual(expected: "MUSIC_PLAYER_BGM", actual: created?.player, cppID: successId,
-                           what: "created song inherits the selected source player")
-        report.expectEqual(expected: true, actual: created?.registered, cppID: successId,
-                           what: "created song is registered and visible in the dock listing")
-        report.expectEqual(expected: [String](), actual: created?.registrationGaps, cppID: successId,
-                           what: "created song has no missing registration entries")
-        report.expectEqual(expected: sourceBytes,
-                           actual: try fixture.read("sound/songs/midi/mus_new_song.mid"),
-                           cppID: successId, what: "created MIDI copies the selected song bytes exactly")
-        let opened = try runBlocking { try await service.openSong(label: "mus_new_song") }
-        report.expectEqual(expected: "mus_new_song", actual: opened.label, cppID: successId,
-                           what: "created song reopens as its new identity")
-        report.expectEqual(expected: ["-R50", "-G_test_vg", "-V100"],
-                           actual: opened.config.rawFlags, cppID: successId,
-                           what: "reopened song inherits the selected song configuration")
-    } catch { report.fail(successId, "creation scenario failed: \(error)") }
-
-    let collisionId = "swiftcore/SongCreation::collisionRefusesLeavingStray"
-    do {
-        let fixture = try registrationFixture(fixtureRoot, name: "creation-collision")
-        let label = "mus_creation_stray"
-        let relative = "sound/songs/midi/\(label).mid"
-        try fixture.write(relative, "do not overwrite this stray MIDI")
-        let service = ProjectService()
-        defer { try? runBlocking { await service.close() } }
-        try runBlocking { try await service.open(root: fixture.root) }
-        let original = try runBlocking { try await service.songs() }
-        var failure: ProjectServiceError?
-        do {
-            try runBlocking { try await service.createSong(label: label, from: "mus_first") }
-        } catch {
-            failure = error as? ProjectServiceError
-        }
-        let typedFailure: Bool
-        if case .operationFailed? = failure { typedFailure = true }
-        else { typedFailure = false }
-        report.expect(typedFailure, cppID: collisionId,
-                      message: "A082: the colliding create returns a typed project command failure")
-        let failureMessage: String
-        if case let .operationFailed(message)? = failure { failureMessage = message }
-        else { failureMessage = "" }
-        report.expect(!failureMessage.isEmpty && failureMessage.contains(label), cppID: collisionId,
-                      message: "A083: the collision failure names its label in a nonempty message")
-        let preservedBytes = try fixture.read(relative)
-        report.expect(preservedBytes == Data("do not overwrite this stray MIDI".utf8),
-                      cppID: collisionId,
-                      message: "A085: collision leaves the independently seeded stray bytes exact")
-        report.expectEqual(expected: fixture.bytes(fixture.table),
-                           actual: try fixture.read("sound/song_table.inc"), cppID: collisionId,
-                           what: "collision does not modify the song registration table")
-        report.expectEqual(expected: fixture.bytes(fixture.header),
-                           actual: try fixture.read("include/constants/songs.h"), cppID: collisionId,
-                           what: "collision does not modify the registration constants")
-        report.expectEqual(expected: fixture.bytes("mus_onboardcheck.mid: -R50 -G_test_vg -V100\n" +
-                                                   "mus_first.mid: -R50 -G_test_vg -V100\n"),
-                           actual: try fixture.read("sound/songs/midi/midi.cfg"), cppID: collisionId,
-                           what: "collision does not create song flags or rewrite existing flags")
-        report.expectEqual(expected: original,
-                           actual: try runBlocking { try await service.songs() }, cppID: collisionId,
-                           what: "collision leaves the project listing unchanged")
-        report.expectEqual(expected: false,
-                           actual: FileManager.default.fileExists(
-                            atPath: fixture.path("sound/songs/midi/\(label).s")),
-                           cppID: collisionId, what: "collision leaves no generated MIDI assembly output")
-    } catch { report.fail(collisionId, "collision scenario failed: \(error)") }
 }

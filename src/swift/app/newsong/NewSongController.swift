@@ -25,8 +25,7 @@ public final class NewSongController {
     @QtTracked public var exactGate = true
     @QtTracked public var extendedClocks = false
     @QtTracked public var noCompression = false
-    @QtTracked public var warningTitle = ""
-    @QtTracked public var warningMessage = ""
+    @QtSignal public func warningRequested(title: String, message: String)
 
     private weak var dock: SongDockController?
     private weak var session: ApplicationSession?
@@ -111,8 +110,7 @@ public final class NewSongController {
         let request: SongImportRequest
         switch state.finishPlan() {
         case .failure(let refusal):
-            warningTitle = refusal.title
-            warningMessage = refusal.message
+            warningRequested(title: refusal.title, message: refusal.message)
             wizardOpen = true
             busy = false
             return

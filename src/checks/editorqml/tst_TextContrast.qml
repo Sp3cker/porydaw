@@ -212,6 +212,29 @@ TestCase {
         verify(waitForNative(function() { return !dialog.visible }, 5000), "import wizard closes")
     }
 
+    function auditNewSongWizard(context) {
+        const dialog = findChild(shell, "newSongWizard")
+        verify(dialog !== null, "new song wizard is mounted")
+        shell.shellPresenter.activate("file.new_song")
+        verify(waitForNative(function() { return dialog.visible }, 30000), "new song wizard opens")
+        const identity = Audit.audit(dialog.contentItem, grab)
+        record(context + " new song identity", identity)
+        auditPopups(context + " new song identity", identity.popups)
+        const name = findChild(dialog, "importSongName")
+        name.insert(0, "mus_contrast_audit")
+        verify(waitForNative(function() {
+            return findChild(dialog, "newSongWizardNext").enabled
+        }, 3000), "valid name enables Sound navigation")
+        mouseClick(findChild(dialog, "newSongWizardNext"))
+        verify(waitForNative(function() {
+            return findChild(dialog, "newSongWizardTitle").text === "Sound settings"
+        }, 3000), "Sound page opens")
+        const sound = Audit.audit(dialog.contentItem, grab)
+        record(context + " new song sound", sound)
+        auditPopups(context + " new song sound", sound.popups)
+        mouseClick(findChild(dialog, "newSongWizardCancel"))
+        verify(waitForNative(function() { return !dialog.visible }, 5000), "new song wizard closes")
+    }
     function auditSampleStudio(context) {
         const picker = findChild(shell, "shellImportSamplePicker")
         verify(picker !== null, "sample picker is mounted")
@@ -372,6 +395,7 @@ TestCase {
         auditSettings(mode + " song")
         auditWavExport(mode + " song")
         auditImportWizard(mode + " song")
+        auditNewSongWizard(mode + " song")
         auditSampleStudio(mode + " song")
         report(mode + " song shell")
     }
