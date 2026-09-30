@@ -462,6 +462,9 @@ porydaw_link_linux_swift_runtime(porydaw
 
 if(PORYDAW_BUILD_CHECKS)
     add_subdirectory(src/checks)
+    if(APPLE)
+        add_subdirectory(tools/automation-bench EXCLUDE_FROM_ALL)
+    endif()
 endif()
 qt_add_resources(porydaw "app_icon"
     PREFIX "/icons"
