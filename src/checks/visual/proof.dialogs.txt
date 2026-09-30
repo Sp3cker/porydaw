@@ -3,17 +3,17 @@ Assertion correspondence: visual/dialogs.cpp
 Reference revision: 4346c26abdcab317ccf97e178c959a82301081c9
 Original: src/checks/visual/dialogs.cpp
 Original SHA-256: 83b7c5889b8c614092920dd3054fe74bc478aa8fb3c4ddcce7dd515cc2c2428c
-Swift counterpart: src/checks/editorqml/tst_ShellImportWizard.qml (import-page flow; SHA-256 8161a46c69bb29dc4c662730e6e4443c5b3457698bdc7f669667deb2038ccfaa).
+Swift counterpart: src/checks/editorqml/tst_ShellImportWizard.qml (import-page flow; SHA-256 170a4fdd226e3e5e7e67f6a3712f182d869818741f1aa4129c8b9a4f56a4b257).
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-This file: 27 assertion sites: 18 GAP, 3 MATCHED, 6 RETIRED-REPRESENTATION. Dispositions tally: 18 GAP, 3 MATCHED, 6 RETIRED-REPRESENTATION. Import page flow is mapped to shell-import-wizard; its QWidget-only frozen-PNG region lookups are retired. Other dialog families and the shared PNG helper remain unresolved.
+This file: 27 assertion sites: 6 GAP, 3 MATCHED, 18 RETIRED-REPRESENTATION. Dispositions tally: 6 GAP, 3 MATCHED, 18 RETIRED-REPRESENTATION. Import page flow is mapped to shell-import-wizard; its QWidget-only frozen-PNG region lookups are retired. Frozen screenshot rows for settings, sample studio, and SF2 zone rows are retired under user ruling 2026-09-29; theme picker and fork File > New Song wizard feature obligations remain open.
 
 Command: deno task checks:shell --filter shell-import-wizard --verbose
 Result: controller-observed 2026-09-29 — shell-import-wizard + shell-import-wizard-finish 2/2 ok; proof check --executed: 0 dialogs sites not executed.
 
 A001 | compareShown (helper) | src/checks/visual/dialogs.cpp:248
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: settings/theme/sample-editor/sf2-zone-picker/wizard dialogs. No-ingress fact retained: dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Shared screenshot helper: frozen geometry + PNG comparison of the shown dialog. One site executes thirteen captures: settings engine/song x two themes, theme dialog, sample editor x two themes, zone picker, and wizard new-identity/new-sound plus import-analysis/identity/sound; native pixels throughout.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: user ruling 2026-09-29: frozen QWidget screenshot retired; Swift/QML analog settings (SettingsDialog.qml; tst_ShellSettings.qml), sample studio (SampleStudioDialog.qml; tst_ShellSampleStudio.qml), and SF2 zone rows (Sf2ZonePickerDialog.qml; tst_ShellSampleStudioVoice.qml).
 Source context since previous assertion:
   // Visual baselines for the modal dialog family: SettingsDialog (engine and
   // song tabs), ThemeDialog, SampleEditorDialog (waveform, handles, seam
@@ -269,8 +269,8 @@ A002 | VisualDialogsTest::initTestCase | src/checks/visual/dialogs.cpp:466
 Disposition: RETIRED-REPRESENTATION
 
 A003 | VisualDialogsTest::settingsDialogVanilla | src/checks/visual/dialogs.cpp:485
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: settings dialog. No-ingress fact retained: dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Settings dialog tab widget must exist; native widget-tree observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: user ruling 2026-09-29: frozen QWidget screenshot retired; Swift/QML analog SettingsDialog.qml tabs (tst_ShellSettings.qml).
 Source context since previous assertion:
 
       QSettings::setDefaultFormat(QSettings::IniFormat);
@@ -295,8 +295,8 @@ Original expression:
   QVERIFY(tabs);
 
 A004 | VisualDialogsTest::settingsDialogVanilla | src/checks/visual/dialogs.cpp:494
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: settings dialog. No-ingress fact retained: dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Engine-tab chrome (polyphony/mixer/rate/filter/defaults) must all render; native widget-tree observation gating the engine-vanilla screenshot.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: user ruling 2026-09-29: frozen QWidget screenshot retired; Swift/QML analog SettingsDialog.qml settingsEnginePage + EngineSettingsPage.qml (tst_ShellSettings.qml).
 Source context since previous assertion:
 
       // Pin the constructor's requested size before show: Qt shrinks
@@ -311,8 +311,8 @@ Original expression:
   QVERIFY2(settingsRegions(dialog, regions), "settings dialog widgets not found");
 
 A005 | VisualDialogsTest::settingsDialogVanilla | src/checks/visual/dialogs.cpp:502
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: settings dialog. No-ingress fact retained: dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Song-tab chrome (voicegroup/volume/reverb/priority/flags) must all render; native widget-tree observation gating the song-vanilla screenshot.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: user ruling 2026-09-29: frozen QWidget screenshot retired; Swift/QML analog SettingsDialog.qml settingsSongPage + SongSettingsPage.qml (tst_ShellSettings.qml).
 Source context since previous assertion:
 
       compareShown(QStringLiteral("settings/engine-vanilla"), dialog, regions);
@@ -326,8 +326,8 @@ Original expression:
   QVERIFY2(settingsRegions(dialog, regions), "settings dialog widgets not found");
 
 A006 | VisualDialogsTest::settingsDialogDark | src/checks/visual/dialogs.cpp:511
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: settings dialog. No-ingress fact retained: dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Settings dialog tab widget must exist under the dark theme.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: user ruling 2026-09-29: frozen QWidget screenshot retired; Swift/QML analog SettingsDialog.qml tabs (tst_ShellSettings.qml).
 Source context since previous assertion:
 
       compareShown(QStringLiteral("settings/song-vanilla"), dialog, regions);
@@ -342,8 +342,8 @@ Original expression:
   QVERIFY(tabs);
 
 A007 | VisualDialogsTest::settingsDialogDark | src/checks/visual/dialogs.cpp:520
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: settings dialog. No-ingress fact retained: dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Engine-tab chrome must render under the dark theme.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: user ruling 2026-09-29: frozen QWidget screenshot retired; Swift/QML analog SettingsDialog.qml settingsEnginePage + EngineSettingsPage.qml (tst_ShellSettings.qml).
 Source context since previous assertion:
 
       // Pin the constructor's requested size before show: Qt shrinks
@@ -358,8 +358,8 @@ Original expression:
   QVERIFY2(settingsRegions(dialog, regions), "settings dialog widgets not found");
 
 A008 | VisualDialogsTest::settingsDialogDark | src/checks/visual/dialogs.cpp:528
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: settings dialog. No-ingress fact retained: dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Song-tab chrome must render under the dark theme.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: user ruling 2026-09-29: frozen QWidget screenshot retired; Swift/QML analog SettingsDialog.qml settingsSongPage + SongSettingsPage.qml (tst_ShellSettings.qml).
 Source context since previous assertion:
 
       compareShown(QStringLiteral("settings/engine-darkneutralhigh"), dialog, regions);
@@ -374,7 +374,7 @@ Original expression:
 
 A009 | VisualDialogsTest::themeDialog | src/checks/visual/dialogs.cpp:549
 Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: theme dialog. No-ingress fact retained: dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Six theme-dialog rows (mode buttons, contrast slider, apply, close) must each resolve to a rendered region; loop expands one site over six named widgets in the native dialog tree.
+Mapping/reason: GAP: feature missing: theme picker (theme mode + grid contrast, Apply/Close); backlog: add it to the Settings window (sprint-4.md backlog).
 Source context since previous assertion:
 
       compareShown(QStringLiteral("settings/song-darkneutralhigh"), dialog, regions);
@@ -406,8 +406,8 @@ A010 | VisualDialogsTest::sampleEditorVanilla | src/checks/visual/dialogs.cpp:56
 Disposition: RETIRED-REPRESENTATION
 
 A011 | VisualDialogsTest::sampleEditorVanilla | src/checks/visual/dialogs.cpp:565
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: sample editor. No-ingress fact retained: dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Loop toggle must exist; deterministic loop chrome + seam badge precondition.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: user ruling 2026-09-29: frozen QWidget screenshot retired; Swift/QML analog SampleStudioDialog.qml sampleStudioLoop (tst_ShellSampleStudio.qml).
 Source context since previous assertion:
 
       SampleEditorDialog dialog(prepared, [](const QString &, QString *) { return true; });
@@ -416,8 +416,8 @@ Original expression:
   QVERIFY(loopOn);
 
 A012 | VisualDialogsTest::sampleEditorVanilla | src/checks/visual/dialogs.cpp:570
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: sample editor. No-ingress fact retained: dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Waveform, handles, seam region, and splitter chrome must render; native widget-tree observation gating the vanilla screenshot.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: user ruling 2026-09-29: frozen QWidget screenshot retired; Swift/QML analog SampleStudioDialog.qml sampleStudioWaveform + sampleStudioSplitter (tst_ShellSampleStudio.qml).
 Source context since previous assertion:
 
       loopOn->setChecked(true); // deterministic loop chrome + seam badge
@@ -431,8 +431,8 @@ A013 | VisualDialogsTest::sampleEditorDark | src/checks/visual/dialogs.cpp:579
 Disposition: RETIRED-REPRESENTATION
 
 A014 | VisualDialogsTest::sampleEditorDark | src/checks/visual/dialogs.cpp:584
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: sample editor. No-ingress fact retained: dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Loop toggle must exist under the dark theme.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: user ruling 2026-09-29: frozen QWidget screenshot retired; Swift/QML analog SampleStudioDialog.qml sampleStudioLoop (tst_ShellSampleStudio.qml).
 Source context since previous assertion:
 
       SampleEditorDialog dialog(prepared, [](const QString &, QString *) { return true; });
@@ -441,8 +441,8 @@ Original expression:
   QVERIFY(loopOn);
 
 A015 | VisualDialogsTest::sampleEditorDark | src/checks/visual/dialogs.cpp:589
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: sample editor. No-ingress fact retained: dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Editor chrome must render under the dark theme.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: user ruling 2026-09-29: frozen QWidget screenshot retired; Swift/QML analog SampleStudioDialog.qml sampleStudioWaveform + sampleStudioSplitter (tst_ShellSampleStudio.qml).
 Source context since previous assertion:
 
       loopOn->setChecked(true);
@@ -453,8 +453,8 @@ Original expression:
   QVERIFY2(sampleEditorRegions(dialog, regions), "sample editor widgets not found");
 
 A016 | VisualDialogsTest::sf2ZonePicker | src/checks/visual/dialogs.cpp:601
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: Sf2ZonePicker. No-ingress fact retained: dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Grouped zone rows of the parsed-font stand-in must render; native widget-tree observation gating the zone-picker screenshot.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: user ruling 2026-09-29: frozen QWidget screenshot retired; Swift/QML analog Sf2ZonePickerDialog.qml sf2ZoneRows (tst_ShellSampleStudioVoice.qml).
 Source context since previous assertion:
 
       compareShown(QStringLiteral("sample-editor/dialog-darkneutralhigh"), dialog, regions);
@@ -473,7 +473,7 @@ Original expression:
 
 A017 | VisualDialogsTest::newSongWizardPages | src/checks/visual/dialogs.cpp:618
 Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: new-song/MIDI-import wizard. No-ingress fact retained: dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Identity name field (placeholder mus_my_song) must exist so Next advances deterministically; native wizard-tree observation.
+Mapping/reason: GAP: feature missing: fork File > New Song blank-mode wizard (Identity page name field, Next to Sound page with player/voicegroup/config); Swift New Song creates from the current song via SongConfirmDialog.qml — pending user decision.
 Source context since previous assertion:
 
       compareShown(QStringLiteral("sf2-zone-picker/dialog-vanilla"), picker, regions);
@@ -497,7 +497,7 @@ Original expression:
 
 A018 | VisualDialogsTest::newSongWizardPages | src/checks/visual/dialogs.cpp:621
 Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard; the wizard flow has no Swift/QML owner (ShellPresenter's action list at src/swift/app/shell/ShellPresenter.swift carries no new-song/import action, ShellWindow.qml holds only the project picker, song picker, and information/critical dialogs, and newsongwizard.cpp is uncompiled), and dead QWizard mechanics cannot retire absent behavior.
+Mapping/reason: GAP: feature missing: fork File > New Song blank-mode wizard (Identity page name field, Next to Sound page with player/voicegroup/config); Swift New Song creates from the current song via SongConfirmDialog.qml — pending user decision.
 Source context since previous assertion:
 
       name->setText(QStringLiteral("mus_visual_check"));
@@ -507,7 +507,7 @@ Original expression:
 
 A019 | VisualDialogsTest::newSongWizardPages | src/checks/visual/dialogs.cpp:623
 Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: new-song/MIDI-import wizard. No-ingress fact retained: dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Wizard identity chrome must render; native widget-tree observation.
+Mapping/reason: GAP: feature missing: fork File > New Song blank-mode wizard (Identity page name field, Next to Sound page with player/voicegroup/config); Swift New Song creates from the current song via SongConfirmDialog.qml — pending user decision.
 Source context since previous assertion:
 
       QList<checks::visual::Region> regions;
@@ -516,7 +516,7 @@ Original expression:
 
 A020 | VisualDialogsTest::newSongWizardPages | src/checks/visual/dialogs.cpp:630
 Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard; the wizard flow has no Swift/QML owner (ShellPresenter's action list at src/swift/app/shell/ShellPresenter.swift carries no new-song/import action, ShellWindow.qml holds only the project picker, song picker, and information/critical dialogs, and newsongwizard.cpp is uncompiled), and dead QWizard mechanics cannot retire absent behavior.
+Mapping/reason: GAP: feature missing: fork File > New Song blank-mode wizard (Identity page name field, Next to Sound page with player/voicegroup/config); Swift New Song creates from the current song via SongConfirmDialog.qml — pending user decision.
 Source context since previous assertion:
 
       compareShown(QStringLiteral("wizard/new-identity-vanilla"), wizard, regions);
@@ -530,7 +530,7 @@ Original expression:
 
 A021 | VisualDialogsTest::newSongWizardPages | src/checks/visual/dialogs.cpp:632
 Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: new-song/MIDI-import wizard. No-ingress fact retained: dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Wizard sound-page chrome must render.
+Mapping/reason: GAP: feature missing: fork File > New Song blank-mode wizard (Identity page name field, Next to Sound page with player/voicegroup/config); Swift New Song creates from the current song via SongConfirmDialog.qml — pending user decision.
 Source context since previous assertion:
 
       regions.clear();

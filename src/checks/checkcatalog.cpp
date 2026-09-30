@@ -140,7 +140,7 @@ const std::vector<CheckDefinition> &catalog()
         swiftSuite("swiftcore-displaylist", "displayList");
         result.push_back(
             {.name = "samplecheck",
-             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "sampleCheck", "{sample-corpus?}"}),
+             .argv = strings({"--swiftsample", "{scratch}", "{mid2agb}", "sampleCheck", "{sample-corpus?}"}),
              .handler = swiftSample,
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
