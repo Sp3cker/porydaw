@@ -16,7 +16,7 @@ BP="${BINARY_PARSING_SRC:-$HOME/dev/swiftProjects/swift-binary-parsing/Sources/B
 OUT="$HERE/.build"
 mkdir -p "$OUT"
 
-SWIFTC=(swiftc -swift-version 6 -O)
+SWIFTC=(swiftc -swift-version 6 -O -g)
 BP_SRCS=()
 while IFS= read -r f; do BP_SRCS+=("$f"); done < <(find "$BP" -name "*.swift" -not -path "*/Macros/Macros.swift")
 CORE_SRCS=("$SRC"/src/swift/core/*.swift)
@@ -103,6 +103,11 @@ make_map "$OUT/proj-map.json" proj "${PROJ_SRCS[@]}"
 "${SWIFTC[@]}" -c -parse-as-library -I "$OUT" "${PROJ_SRCS[@]}" \
   -output-file-map "$OUT/proj-map.json" -module-name PorydawProject
 
-"${SWIFTC[@]}" -parse-as-library -I "$OUT" \
-  "$OUT"/objs/*.o "$HERE/BenchMain.swift" -o "$OUT/projio-bench"
+"${SWIFTC[@]}" -c -parse-as-library -I "$OUT" \
+  "$HERE/BenchMain.swift" -o "$OUT/objs/bench-main.o"
+"${SWIFTC[@]}" -I "$OUT" "$OUT"/objs/*.o -o "$OUT/projio-bench"
 echo "built: $OUT/projio-bench"
+if [ "$(uname -s)" = "Darwin" ]; then
+  xcrun dsymutil "$OUT/projio-bench" -o "$OUT/projio-bench.dSYM"
+  echo "debug symbols: $OUT/projio-bench.dSYM"
+fi

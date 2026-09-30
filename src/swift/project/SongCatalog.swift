@@ -7,9 +7,9 @@ public enum SongCatalogError: Error, Equatable, Sendable, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case let .cannotOpenSongTable(path):
+        case .cannotOpenSongTable(let path):
             "Cannot open \(path).\n\nIs this a pokeemerald/pokefirered/pokeruby project directory?"
-        case let .noSongs(path):
+        case .noSongs(let path):
             "No songs found in \(path)"
         }
     }
@@ -81,15 +81,19 @@ public struct SongCatalog: Sendable {
         }
         let tableLines = lines(tableData)
         let midiDir = root.appendingPathComponent("sound/songs/midi", isDirectory: true)
+        let midiDirectory = ProjectDirectoryCache(directory: midiDir)
         var songs: [ProjectSong] = []
         for line in tableLines {
             guard let captures = match(songPattern, in: line), captures.count == 3 else { continue }
             let label = captures[0]
-            let midFile = midiDir.appendingPathComponent(label + ".mid")
-            let hasMid = ProjectFileStore.exists(midFile.path)
-            songs.append(ProjectSong(id: songs.count, label: label, constant: "",
-                                     player: captures[1], midPath: hasMid ? midFile.path : nil,
-                                     hasMid: hasMid, hasCfg: false, registered: true, cfg: SongConfig()))
+            let filename = label + ".mid"
+            let midFile = midiDir.appendingPathComponent(filename, isDirectory: false)
+            let hasMid = midiDirectory.exists(filename)
+            songs.append(
+                ProjectSong(
+                    id: songs.count, label: label, constant: "",
+                    player: captures[1], midPath: hasMid ? midFile.path : nil,
+                    hasMid: hasMid, hasCfg: false, registered: true, cfg: SongConfig()))
         }
         guard !songs.isEmpty else { throw SongCatalogError.noSongs(table.path) }
 
@@ -98,7 +102,8 @@ public struct SongCatalog: Sendable {
             var byID: [Int: String] = [:]
             for line in lines(data) {
                 guard let captures = match(constantPattern, in: line), captures.count == 2,
-                      let id = Int(captures[1]) else { continue }
+                    let id = Int(captures[1])
+                else { continue }
                 if byID[id] == nil { byID[id] = captures[0] }
             }
             for index in songs.indices {
@@ -107,21 +112,23 @@ public struct SongCatalog: Sendable {
         }
 
         var known = Set(songs.map(\.label))
-        if let mids = try? FileManager.default.contentsOfDirectory(
-            at: midiDir, includingPropertiesForKeys: [.isRegularFileKey],
-            options: [.skipsHiddenFiles]) {
-            for mid in mids.filter({ $0.lastPathComponent.hasSuffix(".mid") })
-                .sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
-                guard (try? mid.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true else {
-                    continue
-                }
-                let label = mid.deletingPathExtension().lastPathComponent
-                guard known.insert(label).inserted else { continue }
-                songs.append(ProjectSong(id: songs.count, label: label,
-                                         constant: constantForLabel(label), player: "MUSIC_PLAYER_BGM",
-                                         midPath: mid.path, hasMid: true, hasCfg: false,
-                                         registered: false, cfg: SongConfig()))
-            }
+        var candidates: [(file: ProjectDirectoryCache.File, label: String)] = []
+        for file in midiDirectory.files {
+            guard file.filename.hasSuffix(".mid") else { continue }
+            let label = String(file.filename.dropLast(4))
+            guard !known.contains(label) else { continue }
+            candidates.append((file: file, label: label))
+        }
+        candidates.sort { $0.file.filename < $1.file.filename }
+        for candidate in candidates {
+            let label = candidate.label
+            guard known.insert(label).inserted else { continue }
+            songs.append(
+                ProjectSong(
+                    id: songs.count, label: label,
+                    constant: constantForLabel(label), player: "MUSIC_PLAYER_BGM",
+                    midPath: candidate.file.url.path, hasMid: true, hasCfg: false,
+                    registered: false, cfg: SongConfig()))
         }
         for index in songs.indices {
             if let cfg = cfgMap[songs[index].label] {
@@ -165,8 +172,10 @@ public struct SongCatalog: Sendable {
         var players: [MusicPlayer] = []
         for line in tableLines {
             guard let captures = match(equivPattern, in: line), captures.count == 2 else { continue }
-            players.append(MusicPlayer(name: captures[0], number: Int(captures[1]) ?? 0,
-                                       trackCount: -1))
+            players.append(
+                MusicPlayer(
+                    name: captures[0], number: Int(captures[1]) ?? 0,
+                    trackCount: -1))
         }
         if players.isEmpty {
             players.append(MusicPlayer(name: "MUSIC_PLAYER_BGM", number: 0, trackCount: -1))
