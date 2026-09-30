@@ -46,7 +46,7 @@ public struct AutomationPlotGeometry: Equatable, Sendable {
         pointHitRadius = fontPx(base, 7.0 / 12.0)
         neutralSnapRadius = fontPx(base, 2.0 / 3.0)
         nodeDragActivationDistance = fontPx(base, 5.0 / 12.0)
-        pointDetailThreshold = fontPx(base, 2.0)
+        pointDetailThreshold = fontPx(base, 1.0 / 2.0)
         // Endpoint centers sit at the painted outer edge, marker stroke included.
         valuePlotPadding = (max(nodePaintRadius + nodeOutlineDipWidth,
                                 selectedRingRadius + selectedRingDipWidth * 0.5)).rounded()
